@@ -15,6 +15,7 @@ using exec_fn_table = std::array<exec_fn, 256>;
 struct instr_info
 {
     exec_fn fn;
+    int extra_data_index;
 };
 
 struct block_info
@@ -25,10 +26,16 @@ struct block_info
     int stack_diff;
 };
 
+struct extra_data
+{
+    uint8_t bytes[32];
+};
+
 struct code_analysis
 {
     std::vector<instr_info> instrs;
     std::vector<block_info> blocks;
+    std::vector<extra_data> extra;
 };
 
 code_analysis analyze(const exec_fn_table& fns, const uint8_t* code, size_t code_size) noexcept;
