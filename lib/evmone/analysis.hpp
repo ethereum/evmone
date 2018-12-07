@@ -14,16 +14,26 @@ using exec_fn_table = std::array<exec_fn, 256>;
 
 struct instr_info
 {
-    exec_fn fn;
-    int extra_data_index;
+    exec_fn fn = nullptr;
+    int extra_data_index = -1;
+    int block_index = -1;
+
+    explicit constexpr instr_info(exec_fn fn) noexcept : fn{fn} {};
 };
 
 struct block_info
 {
-    int64_t gas_cost;
-    int stack_req;
-    int stack_max;
-    int stack_diff;
+    const int offset = -1;
+    const bool jumpdest = false;
+
+    int64_t gas_cost = 0;
+    int stack_req = 0;
+    int stack_max = 0;
+    int stack_diff = 0;
+
+    int terminator = -1;
+
+    explicit block_info(int offset, bool jumpdest) noexcept : offset{offset}, jumpdest{jumpdest} {}
 };
 
 struct extra_data

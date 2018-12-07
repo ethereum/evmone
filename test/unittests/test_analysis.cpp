@@ -51,24 +51,39 @@ std::string to_hex(const uint8_t bytes[], size_t size)
 
 void dump_analysis(const evmone::code_analysis& analysis)
 {
-    auto names = evmc_get_instruction_names_table(EVMC_BYZANTIUM);
+    using namespace evmone;
 
-    for (auto& instr : analysis.instrs)
+    auto names = evmc_get_instruction_names_table(EVMC_BYZANTIUM);
+    auto metrics = evmc_get_instruction_metrics_table(EVMC_BYZANTIUM);
+
+    const block_info* block = nullptr;
+    for (size_t i = 0; i < analysis.instrs.size(); ++i)
     {
+        auto& instr = analysis.instrs[i];
         auto c = static_cast<uint8_t>((size_t)instr.fn);
         auto name = names[c];
         if (!name)
             name = "XX";
 
-        std::cout << name;
+
+        if (instr.block_index >= 0)
+        {
+            block = &analysis.blocks[size_t(instr.block_index)];
+            std::cout << "┌ " << (block->jumpdest ? "⇲" : " ") << block->offset << " "
+                      << std::setw(10) << block->gas_cost << "\n";
+        }
+
+        if (i == static_cast<size_t>(block->terminator))
+            std::cout << "└ ";
+        else
+            std::cout << "│ ";
+
+        std::cout << std::setw(9) << std::left << name << std::setw(4) << std::right
+                  << metrics[c].gas_cost;
         if (instr.extra_data_index >= 0)
             std::cout << '\t' << to_hex(analysis.extra[size_t(instr.extra_data_index)].bytes, 32);
-        std::cout << '\n';
-    }
 
-    for (auto& b : analysis.blocks)
-    {
-        std::cout << "<" << b.gas_cost << ">\n";
+        std::cout << '\n';
     }
 }
 
@@ -135,5 +150,28 @@ TEST(analysis, jump1)
     auto analysis = evmone::analyze(fake_fn_table, &code[0], code.size());
     dump_analysis(analysis);
 
-    FAIL();
+    ASSERT_EQ(analysis.blocks.size(), 3);
+    EXPECT_FALSE(analysis.blocks[0].jumpdest);
+    EXPECT_TRUE(analysis.blocks[1].jumpdest);
+    EXPECT_FALSE(analysis.blocks[2].jumpdest);
+}
+
+TEST(analysis, empty)
+{
+    bytes code;
+    auto analysis = evmone::analyze(fake_fn_table, &code[0], code.size());
+    dump_analysis(analysis);
+
+    EXPECT_EQ(analysis.blocks.size(), 0);
+    EXPECT_EQ(analysis.instrs.size(), 0);
+}
+
+TEST(analysis, only_jumpdest)
+{
+    auto code = from_hex("5b");
+    auto analysis = evmone::analyze(fake_fn_table, &code[0], code.size());
+    dump_analysis(analysis);
+
+    ASSERT_EQ(analysis.blocks.size(), 1);
+    EXPECT_TRUE(analysis.blocks[0].jumpdest);
 }

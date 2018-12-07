@@ -8,6 +8,15 @@
 
 namespace evmone
 {
+namespace
+{
+bool is_terminator(uint8_t c) noexcept
+{
+    return c == OP_JUMP || c == OP_JUMPI || c == OP_STOP || c == OP_RETURN || c == OP_REVERT ||
+           c == OP_SELFDESTRUCT;
+}
+}
+
 code_analysis analyze(const exec_fn_table& fns, const uint8_t* code, size_t code_size) noexcept
 {
     code_analysis analysis;
@@ -15,17 +24,27 @@ code_analysis analyze(const exec_fn_table& fns, const uint8_t* code, size_t code
 
     auto* instr_table = evmc_get_instruction_metrics_table(EVMC_BYZANTIUM);
 
-    block_info block{};
-    for (size_t i = 0; i < code_size; ++i)
+    block_info* block = nullptr;
+    int instr_index = 0;
+    for (size_t i = 0; i < code_size; ++i, ++instr_index)
     {
-        int extra_data_index = -1;
         const auto c = code[i];
+        auto& instr = analysis.instrs.emplace_back(fns[c]);
+
+        const bool jumpdest = c == OP_JUMPDEST;
+        if (!block || jumpdest)
+        {
+            // Create new block.
+            block = &analysis.blocks.emplace_back(static_cast<int>(i), jumpdest);
+            instr.block_index = static_cast<int>(analysis.blocks.size() - 1);
+        }
+
         auto metrics = instr_table[c];
-        block.gas_cost += metrics.gas_cost;
-        auto stack_req = metrics.num_stack_arguments - block.stack_diff;
-        block.stack_diff += (metrics.num_stack_returned_items - metrics.num_stack_arguments);
-        block.stack_req = std::max(block.stack_req, stack_req);
-        block.stack_max = std::max(block.stack_max, block.stack_diff);
+        block->gas_cost += metrics.gas_cost;
+        auto stack_req = metrics.num_stack_arguments - block->stack_diff;
+        block->stack_diff += (metrics.num_stack_returned_items - metrics.num_stack_arguments);
+        block->stack_req = std::max(block->stack_req, stack_req);
+        block->stack_max = std::max(block->stack_max, block->stack_diff);
 
         // Skip PUSH data.
         if (c >= OP_PUSH1 && c <= OP_PUSH32)
@@ -35,21 +54,27 @@ code_analysis analyze(const exec_fn_table& fns, const uint8_t* code, size_t code
             analysis.extra.emplace_back();
             auto& extra = analysis.extra.back();
 
-            auto leading_zeros = size_t(32 - push_size);
+            auto leading_zeros = 32 - push_size;
             for (auto& b : extra.bytes)
                 b = 0;
             for (size_t j = 0; j < push_size && (i + j) < code_size; ++j)
                 extra.bytes[leading_zeros + j] = code[i + j];
-            extra_data_index = static_cast<int>(analysis.extra.size() - 1);
+            instr.extra_data_index = static_cast<int>(analysis.extra.size() - 1);
             i += push_size - 1;
         }
-
-        analysis.instrs.emplace_back(instr_info{fns[c], extra_data_index});
+        else if (is_terminator(c))
+        {
+            block->terminator = instr_index;
+            block = nullptr;
+        }
     }
-    analysis.blocks.emplace_back(block);
 
-    // Additional STOP:
-    analysis.instrs.emplace_back(instr_info{nullptr, -1});
+    // Not terminated block.
+    if (block)
+    {
+        analysis.instrs.emplace_back(nullptr);
+        block->terminator = static_cast<int>(analysis.instrs.size() - 1);
+    }
 
     return analysis;
 }
