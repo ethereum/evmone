@@ -17,6 +17,17 @@ bool is_terminator(uint8_t c) noexcept
 }
 }
 
+int code_analysis::find_jumpdest(int offset) noexcept
+{
+    // TODO: Replace with lower_bound().
+    for (const auto& d : jumpdest_map)
+    {
+        if (d.first == offset)
+            return d.second;
+    }
+    return -1;
+}
+
 code_analysis analyze(const exec_fn_table& fns, const uint8_t* code, size_t code_size) noexcept
 {
     code_analysis analysis;
@@ -35,8 +46,11 @@ code_analysis analyze(const exec_fn_table& fns, const uint8_t* code, size_t code
         if (!block || jumpdest)
         {
             // Create new block.
-            block = &analysis.blocks.emplace_back(static_cast<int>(i), jumpdest);
+            block = &analysis.blocks.emplace_back();
             instr.block_index = static_cast<int>(analysis.blocks.size() - 1);
+
+            if (jumpdest)
+                analysis.jumpdest_map.emplace_back(static_cast<int>(i), instr_index);
         }
 
         auto metrics = instr_table[c];
@@ -63,18 +77,12 @@ code_analysis analyze(const exec_fn_table& fns, const uint8_t* code, size_t code
             i += push_size - 1;
         }
         else if (is_terminator(c))
-        {
-            block->terminator = instr_index;
             block = nullptr;
-        }
     }
 
     // Not terminated block.
     if (block)
-    {
         analysis.instrs.emplace_back(nullptr);
-        block->terminator = static_cast<int>(analysis.instrs.size() - 1);
-    }
 
     return analysis;
 }

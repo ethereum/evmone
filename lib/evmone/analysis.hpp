@@ -23,17 +23,10 @@ struct instr_info
 
 struct block_info
 {
-    const int offset = -1;
-    const bool jumpdest = false;
-
     int64_t gas_cost = 0;
     int stack_req = 0;
     int stack_max = 0;
     int stack_diff = 0;
-
-    int terminator = -1;
-
-    explicit block_info(int offset, bool jumpdest) noexcept : offset{offset}, jumpdest{jumpdest} {}
 };
 
 struct extra_data
@@ -46,6 +39,9 @@ struct code_analysis
     std::vector<instr_info> instrs;
     std::vector<block_info> blocks;
     std::vector<extra_data> extra;
+    std::vector<std::pair<int, int>> jumpdest_map;
+
+    int find_jumpdest(int offset) noexcept;
 };
 
 code_analysis analyze(const exec_fn_table& fns, const uint8_t* code, size_t code_size) noexcept;

@@ -69,16 +69,29 @@ void dump_analysis(const evmone::code_analysis& analysis)
         if (instr.block_index >= 0)
         {
             block = &analysis.blocks[size_t(instr.block_index)];
-            std::cout << "┌ " << (block->jumpdest ? "⇲" : " ") << block->offset << " "
-                      << std::setw(10) << block->gas_cost << "\n";
+
+            auto get_jumpdest_offset = [&analysis](size_t i) noexcept {
+                // TODO: Replace with lower_bound().
+                for (const auto& d : analysis.jumpdest_map)
+                {
+                    if (d.second == static_cast<int>(i))
+                        return d.first;
+                }
+                return -1;
+            };
+
+            std::cout << "┌ ";
+            auto offset = get_jumpdest_offset(i);
+            if (offset >= 0)
+                std::cout << std::setw(2) << offset;
+            else
+                std::cout << "  ";
+
+            std::cout << " " << std::setw(10) << block->gas_cost << " " << block->stack_req << " "
+                      << block->stack_max << " " << block->stack_diff << "\n";
         }
 
-        if (i == static_cast<size_t>(block->terminator))
-            std::cout << "└ ";
-        else
-            std::cout << "│ ";
-
-        std::cout << std::setw(9) << std::left << name << std::setw(4) << std::right
+        std::cout << "│ " << std::setw(9) << std::left << name << std::setw(4) << std::right
                   << metrics[c].gas_cost;
         if (instr.extra_data_index >= 0)
             std::cout << '\t' << to_hex(analysis.extra[size_t(instr.extra_data_index)].bytes, 32);
@@ -151,9 +164,10 @@ TEST(analysis, jump1)
     dump_analysis(analysis);
 
     ASSERT_EQ(analysis.blocks.size(), 3);
-    EXPECT_FALSE(analysis.blocks[0].jumpdest);
-    EXPECT_TRUE(analysis.blocks[1].jumpdest);
-    EXPECT_FALSE(analysis.blocks[2].jumpdest);
+    ASSERT_EQ(analysis.jumpdest_map.size(), 1);
+    EXPECT_EQ(analysis.jumpdest_map[0], std::pair(6, 4));
+    EXPECT_EQ(analysis.find_jumpdest(6), 4);
+    EXPECT_EQ(analysis.find_jumpdest(0), -1);
 }
 
 TEST(analysis, empty)
@@ -173,5 +187,6 @@ TEST(analysis, only_jumpdest)
     dump_analysis(analysis);
 
     ASSERT_EQ(analysis.blocks.size(), 1);
-    EXPECT_TRUE(analysis.blocks[0].jumpdest);
+    ASSERT_EQ(analysis.jumpdest_map.size(), 1);
+    EXPECT_EQ(analysis.jumpdest_map[0], std::pair(0, 0));
 }
