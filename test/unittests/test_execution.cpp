@@ -25,3 +25,14 @@ TEST(execution, stack_underflow)
     EXPECT_EQ(r.status_code, EVMC_STACK_UNDERFLOW);
     EXPECT_EQ(r.gas_left, 0);
 }
+
+TEST(execution, add)
+{
+    auto code = from_hex("6007600d0160005260206000f3");
+    auto r = evmone::execute(25, &code[0], code.size());
+    EXPECT_EQ(r.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(r.gas_left, 1);
+    EXPECT_EQ(r.output_size, 32);
+    EXPECT_EQ(r.output_data[31], 20);
+    r.release(&r);
+}
