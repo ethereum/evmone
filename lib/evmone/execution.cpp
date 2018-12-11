@@ -24,7 +24,8 @@ void op_gas(execution_state& state, const bytes32* extra) noexcept
 
 void op_push_full(execution_state& state, const bytes32* extra) noexcept
 {
-    state.stack.emplace_back(*extra);
+    auto x = intx::be::uint256(extra->bytes);
+    state.stack.push_back(x);
 }
 
 void op_pop(execution_state& state, const bytes32*) noexcept
