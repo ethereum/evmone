@@ -2,109 +2,16 @@
 // Copyright 2018 Pawel Bylica.
 // Licensed under the Apache License, Version 2.0.
 
+#include "utils.hpp"
+
 #include <evmc/instructions.h>
 #include <evmone/analysis.hpp>
 
 #include <gtest/gtest.h>
-#include <iostream>
-
-using bytes = std::basic_string<uint8_t>;
-
-const auto fake_fn_table = []() noexcept
-{
-    evmone::exec_fn_table fns;
-    for (size_t i = 0; i < fns.size(); ++i)
-        fns[i] = (evmone::exec_fn)i;
-    return fns;
-}
-();
-
-inline bytes from_hex(const char hex[]) noexcept
-{
-    bytes bs;
-    int b = 0;
-    for (size_t i = 0; hex[i] != 0; ++i)
-    {
-        auto h = hex[i];
-        int v = (h <= '9') ? h - '0' : h - 'a' + 10;
-
-        if (i % 2 == 0)
-            b = v << 4;
-        else
-            bs.push_back(static_cast<uint8_t>(b | v));
-    }
-    return bs;
-}
-
-std::string to_hex(const uint8_t bytes[], size_t size)
-{
-    static const auto hex_chars = "0123456789abcdef";
-    std::string str;
-    str.reserve(size * 2);
-    for (size_t i = 0; i < size; ++i)
-    {
-        str.push_back(hex_chars[bytes[i] >> 4]);
-        str.push_back(hex_chars[bytes[i] & 0xf]);
-    }
-    return str;
-}
-
-void dump_analysis(const evmone::code_analysis& analysis)
-{
-    using namespace evmone;
-
-    auto names = evmc_get_instruction_names_table(EVMC_BYZANTIUM);
-    auto metrics = evmc_get_instruction_metrics_table(EVMC_BYZANTIUM);
-
-    const block_info* block = nullptr;
-    for (size_t i = 0; i < analysis.instrs.size(); ++i)
-    {
-        auto& instr = analysis.instrs[i];
-        auto c = static_cast<uint8_t>((size_t)instr.fn);
-        auto name = names[c];
-        if (!name)
-            name = "XX";
-
-
-        if (instr.block_index >= 0)
-        {
-            block = &analysis.blocks[size_t(instr.block_index)];
-
-            auto get_jumpdest_offset = [&analysis](size_t i) noexcept {
-                // TODO: Replace with lower_bound().
-                for (const auto& d : analysis.jumpdest_map)
-                {
-                    if (d.second == static_cast<int>(i))
-                        return d.first;
-                }
-                return -1;
-            };
-
-            std::cout << "┌ ";
-            auto offset = get_jumpdest_offset(i);
-            if (offset >= 0)
-                std::cout << std::setw(2) << offset;
-            else
-                std::cout << "  ";
-
-            std::cout << " " << std::setw(10) << block->gas_cost << " " << block->stack_req << " "
-                      << block->stack_max << " " << block->stack_diff << "\n";
-        }
-
-        std::cout << "│ " << std::setw(9) << std::left << name << std::setw(4) << std::right
-                  << metrics[c].gas_cost;
-        if (instr.extra_data_index >= 0)
-            std::cout << '\t' << to_hex(analysis.extra[size_t(instr.extra_data_index)].bytes, 32);
-
-        std::cout << '\n';
-    }
-}
-
 
 TEST(analysis, example1)
 {
     auto code = from_hex("602a601e5359600055");
-
     auto analysis = evmone::analyze(fake_fn_table, &code[0], code.size());
 
     ASSERT_EQ(analysis.instrs.size(), 7);
@@ -126,7 +33,6 @@ TEST(analysis, example1)
 TEST(analysis, stack_up_and_down)
 {
     auto code = from_hex("81808080808080505050505050505050506000");
-
     auto analysis = evmone::analyze(fake_fn_table, &code[0], code.size());
 
     ASSERT_EQ(analysis.instrs.size(), 19);
@@ -159,7 +65,6 @@ TEST(analysis, push)
 TEST(analysis, jump1)
 {
     auto code = from_hex("6002600401565b600360005260206000f3600656");
-
     auto analysis = evmone::analyze(fake_fn_table, &code[0], code.size());
     dump_analysis(analysis);
 
