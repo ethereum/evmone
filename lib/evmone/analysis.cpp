@@ -82,7 +82,7 @@ code_analysis analyze(const exec_fn_table& fns, const uint8_t* code, size_t code
 
     // Not terminated block.
     if (block)
-        analysis.instrs.emplace_back(nullptr);
+        analysis.instrs.emplace_back(fns[OP_STOP]);
 
     return analysis;
 }

@@ -7,6 +7,9 @@ find_package(GTest CONFIG REQUIRED)
 
 add_executable(evmone-unittests
     test_analysis.cpp
+    test_execution.cpp
+    utils.cpp
+    utils.hpp
 )
 
 target_link_libraries(evmone-unittests PRIVATE evmone evmc::instructions GTest::gtest GTest::main)
