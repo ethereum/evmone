@@ -8,4 +8,4 @@ add_library(evmone
     execution.cpp
     execution.hpp
 )
-target_link_libraries(evmone PRIVATE evmc::instructions)
+target_link_libraries(evmone PUBLIC intx::intx PRIVATE evmc::instructions)

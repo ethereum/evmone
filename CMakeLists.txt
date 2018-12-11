@@ -22,8 +22,11 @@ endif()
 project(evmone)
 set(PROJECT_VERSION 0.1.0-dev)
 
+option(INTX_TESTING "Build intx with tests" OFF)
+add_subdirectory(intx)
+
 cable_set_build_type(DEFAULT Release CONFIGURATION_TYPES Debug Release)
-cable_configure_compiler()
+cable_configure_compiler(NO_PEDANTIC NO_CONVERSION_WARNINGS)
 
 add_subdirectory(evmc)
 add_subdirectory(lib)

@@ -3,10 +3,11 @@
 // Licensed under the Apache License, Version 2.0.
 #pragma once
 
+#include <evmc/evmc.h>
+#include <intx/intx.hpp>
 #include <array>
 #include <cstdint>
 #include <vector>
-#include <evmc/evmc.h>
 
 namespace evmone
 {
