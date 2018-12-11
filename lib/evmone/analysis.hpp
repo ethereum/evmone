@@ -11,6 +11,8 @@
 
 namespace evmone
 {
+using uint256 = intx::uint256;
+
 struct bytes32
 {
     uint8_t bytes[32];
@@ -23,9 +25,9 @@ struct execution_state
     int64_t gas_left = 0;
     evmc_status_code status = EVMC_SUCCESS;
 
-    std::vector<bytes32> stack;
+    std::vector<uint256> stack;
 
-    bytes32& item(size_t index) noexcept { return stack[stack.size() - index - 1]; }
+    uint256& item(size_t index) noexcept { return stack[stack.size() - index - 1]; }
 };
 
 using exec_fn = void (*)(execution_state&, const bytes32*);
