@@ -11,6 +11,48 @@ namespace evmone
 {
 namespace
 {
+bool check_memory(execution_state& state, const uint256& offset, const uint256& size) noexcept
+{
+    if (size == 0)
+        return true;
+
+    constexpr auto limit = uint32_t(-1);
+
+    if (limit < offset || limit < size)  // TODO: Revert order of args in <.
+    {
+        state.run = false;
+        state.status = EVMC_OUT_OF_GAS;
+        return false;
+    }
+
+    const auto o = static_cast<int64_t>(offset);
+    const auto s = static_cast<int64_t>(size);
+
+    const auto m = static_cast<int64_t>(state.memory.size());
+
+    const auto new_size = o + s;
+    if (m < s)
+    {
+        auto w = (new_size + 31) / 32;
+        auto new_cost = 3 * w + w * w / 512;
+        auto cost = new_cost - state.memory_prev_cost;
+        state.memory_prev_cost = new_cost;
+
+        state.gas_left -= cost;
+        if (state.gas_left < 0)
+        {
+            state.run = false;
+            state.status = EVMC_OUT_OF_GAS;
+            return false;
+        }
+
+        state.memory.resize(static_cast<size_t>(new_size));
+    }
+
+    return true;
+}
+
+
 void op_stop(execution_state& state, const bytes32*) noexcept
 {
     state.run = false;
@@ -27,28 +69,8 @@ void op_mstore(execution_state& state, const bytes32*) noexcept
     auto index = state.item(0);
     auto x = state.item(1);
 
-    const auto s = state.memory.size();
-
-    if (s < 32 || (s - 32) < index)
-    {
-        auto new_size = static_cast<size_t>(index) + 32;
-
-        auto w = (new_size + 31) / 32;
-
-        auto new_cost = 3 * w + w * w / 512;
-        auto cost = new_cost - state.memory_prev_cost;
-        state.memory_prev_cost = new_cost;
-
-        state.gas_left -= cost;
-        if (state.gas_left < 0)
-        {
-            state.run = false;
-            state.status = EVMC_OUT_OF_GAS;
-            return;
-        }
-
-        state.memory.resize(new_size);
-    }
+    if (!check_memory(state, index, 32))
+        return;
 
     intx::be::store(&state.memory[static_cast<size_t>(index)], x);
 
