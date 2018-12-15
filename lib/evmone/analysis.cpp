@@ -69,11 +69,11 @@ code_analysis analyze(const exec_fn_table& fns, const uint8_t* code, size_t code
             auto& data = analysis.args_storage.back();
 
             auto leading_zeros = 32 - push_size;
-            for (auto& b : data.bytes)
+            for (auto& b : data)
                 b = 0;
             for (size_t j = 0; j < push_size && (i + j) < code_size; ++j)
-                data.bytes[leading_zeros + j] = code[i + j];
-            instr.arg = reinterpret_cast<std::ptrdiff_t>(data.bytes);
+                data[leading_zeros + j] = code[i + j];
+            instr.arg = reinterpret_cast<std::ptrdiff_t>(&data[0]);
             i += push_size - 1;
         }
         else if (is_terminator(c))

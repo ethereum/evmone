@@ -14,10 +14,7 @@ namespace evmone
 {
 using uint256 = intx::uint256;
 
-struct bytes32
-{
-    uint8_t bytes[32];
-};
+using bytes32 = std::array<uint8_t, 32>;
 
 struct execution_state
 {
