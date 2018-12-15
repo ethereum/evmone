@@ -53,3 +53,26 @@ TEST(execution, dup)
     EXPECT_EQ(r.output_data[31], 20);
     r.release(&r);
 }
+
+TEST(execution, sub_and_swap)
+{
+    auto code = from_hex("600180810380829052602090f3");
+    auto r = evmone::execute(33, &code[0], code.size());
+    EXPECT_EQ(r.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(r.gas_left, 0);
+    EXPECT_EQ(r.output_size, 32);
+    EXPECT_EQ(r.output_data[31], 1);
+    r.release(&r);
+}
+
+TEST(execution, memory_and_not)
+{
+    auto code = from_hex("600060018019815381518252800190f3");
+    auto r = evmone::execute(42, &code[0], code.size());
+    EXPECT_EQ(r.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(r.gas_left, 0);
+    EXPECT_EQ(r.output_size, 2);
+    EXPECT_EQ(r.output_data[1], 0xfe);
+    EXPECT_EQ(r.output_data[0], 0);
+    r.release(&r);
+}

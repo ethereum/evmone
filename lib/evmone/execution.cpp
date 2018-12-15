@@ -64,6 +64,27 @@ void op_add(execution_state& state, instr_argument) noexcept
     state.stack.pop_back();
 }
 
+void op_sub(execution_state& state, instr_argument) noexcept
+{
+    state.item(1) -= state.item(0);
+    state.stack.pop_back();
+}
+
+void op_not(execution_state& state, instr_argument) noexcept
+{
+    state.item(0) = ~state.item(0);
+}
+
+void op_mload(execution_state& state, instr_argument) noexcept
+{
+    auto& index = state.item(0);
+
+    if (!check_memory(state, index, 32))
+        return;
+
+    index = intx::be::uint256(&state.memory[static_cast<size_t>(index)]);
+}
+
 void op_mstore(execution_state& state, instr_argument) noexcept
 {
     auto index = state.item(0);
@@ -77,6 +98,21 @@ void op_mstore(execution_state& state, instr_argument) noexcept
     state.stack.pop_back();
     state.stack.pop_back();
 }
+
+void op_mstore8(execution_state& state, instr_argument) noexcept
+{
+    auto index = state.item(0);
+    auto x = state.item(1);
+
+    if (!check_memory(state, index, 1))
+        return;
+
+    state.memory[static_cast<size_t>(index)] = static_cast<uint8_t>(x);
+
+    state.stack.pop_back();
+    state.stack.pop_back();
+}
+
 
 void op_gas(execution_state& state, instr_argument) noexcept
 {
@@ -100,6 +136,11 @@ void op_dup(execution_state& state, instr_argument arg) noexcept
     state.stack.push_back(state.item(static_cast<size_t>(arg.number)));
 }
 
+void op_swap(execution_state& state, instr_argument arg) noexcept
+{
+    std::swap(state.item(0), state.item(static_cast<size_t>(arg.number)));
+}
+
 void op_return(execution_state& state, instr_argument) noexcept
 {
     state.run = false;
@@ -114,13 +155,19 @@ exec_fn_table op_table = []() noexcept
     exec_fn_table table{};
     table[OP_STOP] = op_stop;
     table[OP_ADD] = op_add;
+    table[OP_SUB] = op_sub;
+    table[OP_NOT] = op_not;
     table[OP_GAS] = op_gas;
     table[OP_POP] = op_pop;
+    table[OP_MLOAD] = op_mload;
     table[OP_MSTORE] = op_mstore;
+    table[OP_MSTORE8] = op_mstore8;
     for (size_t op = OP_PUSH1; op <= OP_PUSH32; ++op)
         table[op] = op_push_full;
     for (size_t op = OP_DUP1; op <= OP_DUP16; ++op)
         table[op] = op_dup;
+    for (size_t op = OP_SWAP1; op <= OP_SWAP16; ++op)
+        table[op] = op_swap;
     table[OP_RETURN] = op_return;
     return table;
 }
