@@ -46,7 +46,7 @@ bool check_memory(execution_state& state, const uint256& offset, const uint256& 
             return false;
         }
 
-        state.memory.resize(static_cast<size_t>(new_size));
+        state.memory.resize(static_cast<size_t>(w * 32));
     }
 
     return true;
@@ -113,6 +113,13 @@ void op_mstore8(execution_state& state, instr_argument) noexcept
     state.stack.pop_back();
 }
 
+void op_msize(execution_state& state, instr_argument) noexcept
+{
+    // TODO: Using temporary object does not work with push_back().
+    intx::uint256 size = state.memory.size();
+    state.stack.push_back(size);
+}
+
 
 void op_gas(execution_state& state, instr_argument) noexcept
 {
@@ -162,6 +169,7 @@ exec_fn_table op_table = []() noexcept
     table[OP_MLOAD] = op_mload;
     table[OP_MSTORE] = op_mstore;
     table[OP_MSTORE8] = op_mstore8;
+    table[OP_MSIZE] = op_msize;
     for (size_t op = OP_PUSH1; op <= OP_PUSH32; ++op)
         table[op] = op_push_full;
     for (size_t op = OP_DUP1; op <= OP_DUP16; ++op)
