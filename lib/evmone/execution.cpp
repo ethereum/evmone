@@ -95,6 +95,11 @@ void op_pop(execution_state& state, instr_argument) noexcept
     state.stack.pop_back();
 }
 
+void op_dup(execution_state& state, instr_argument arg) noexcept
+{
+    state.stack.push_back(state.item(static_cast<size_t>(arg.number)));
+}
+
 void op_return(execution_state& state, instr_argument) noexcept
 {
     state.run = false;
@@ -114,6 +119,8 @@ exec_fn_table op_table = []() noexcept
     table[OP_MSTORE] = op_mstore;
     for (size_t op = OP_PUSH1; op <= OP_PUSH32; ++op)
         table[op] = op_push_full;
+    for (size_t op = OP_DUP1; op <= OP_DUP16; ++op)
+        table[op] = op_dup;
     table[OP_RETURN] = op_return;
     return table;
 }

@@ -77,6 +77,8 @@ code_analysis analyze(const exec_fn_table& fns, const uint8_t* code, size_t code
             instr.arg.data = &data[0];
             i += push_size - 1;
         }
+        else if (c >= OP_DUP1 && c <= OP_DUP16)
+            instr.arg.number = c - OP_DUP1;
         else if (is_terminator(c))
             block = nullptr;
     }

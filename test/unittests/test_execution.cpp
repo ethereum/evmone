@@ -36,3 +36,20 @@ TEST(execution, add)
     EXPECT_EQ(r.output_data[31], 20);
     r.release(&r);
 }
+
+TEST(execution, dup)
+{
+    // 0 7 3 5
+    // 0 7 3 5 3 5
+    // 0 7 3 5 3 5 5 7
+    // 0 7 3 5 20
+    // 0 7 3 5 (20 0)
+    // 0 7 3 5 3 0
+    auto code = from_hex("6000600760036005818180850101018452602084f3");
+    auto r = evmone::execute(49, &code[0], code.size());
+    EXPECT_EQ(r.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(r.gas_left, 1);
+    EXPECT_EQ(r.output_size, 32);
+    EXPECT_EQ(r.output_data[31], 20);
+    r.release(&r);
+}
