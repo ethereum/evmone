@@ -56,8 +56,8 @@ TEST(analysis, push)
 
     ASSERT_EQ(analysis.instrs.size(), 3);
     ASSERT_EQ(analysis.args_storage.size(), 2);
-    EXPECT_EQ(analysis.instrs[0].arg, reinterpret_cast<std::ptrdiff_t>(&analysis.args_storage[0]));
-    EXPECT_EQ(analysis.instrs[1].arg, reinterpret_cast<std::ptrdiff_t>(&analysis.args_storage[1]));
+    EXPECT_EQ(analysis.instrs[0].arg.data, &analysis.args_storage[0][0]);
+    EXPECT_EQ(analysis.instrs[1].arg.data, &analysis.args_storage[1][0]);
     EXPECT_EQ(analysis.args_storage[0][31 - 7], 0x08);
     EXPECT_EQ(analysis.args_storage[1][1], 0xee);
 }

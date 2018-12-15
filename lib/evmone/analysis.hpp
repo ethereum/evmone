@@ -33,14 +33,20 @@ struct execution_state
     uint256& item(size_t index) noexcept { return stack[stack.size() - index - 1]; }
 };
 
-using exec_fn = void (*)(execution_state&, std::ptrdiff_t arg);
+union instr_argument
+{
+    int number = -1;  // TODO: Consider initializing with zeros.
+    const uint8_t* data;
+};
+
+using exec_fn = void (*)(execution_state&, instr_argument arg);
 
 using exec_fn_table = std::array<exec_fn, 256>;
 
 struct instr_info
 {
     exec_fn fn = nullptr;
-    std::ptrdiff_t arg = -1;
+    instr_argument arg;
     int block_index = -1;
 
     explicit constexpr instr_info(exec_fn fn) noexcept : fn{fn} {};

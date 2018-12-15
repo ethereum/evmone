@@ -63,6 +63,7 @@ code_analysis analyze(const exec_fn_table& fns, const uint8_t* code, size_t code
         // Skip PUSH data.
         if (c >= OP_PUSH1 && c <= OP_PUSH32)
         {
+            // OPT: bswap data here.
             ++i;
             auto push_size = size_t(c - OP_PUSH1 + 1);
             analysis.args_storage.emplace_back();
@@ -73,7 +74,7 @@ code_analysis analyze(const exec_fn_table& fns, const uint8_t* code, size_t code
                 b = 0;
             for (size_t j = 0; j < push_size && (i + j) < code_size; ++j)
                 data[leading_zeros + j] = code[i + j];
-            instr.arg = reinterpret_cast<std::ptrdiff_t>(&data[0]);
+            instr.arg.data = &data[0];
             i += push_size - 1;
         }
         else if (is_terminator(c))

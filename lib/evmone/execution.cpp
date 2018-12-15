@@ -53,18 +53,18 @@ bool check_memory(execution_state& state, const uint256& offset, const uint256& 
 }
 
 
-void op_stop(execution_state& state, std::ptrdiff_t) noexcept
+void op_stop(execution_state& state, instr_argument) noexcept
 {
     state.run = false;
 }
 
-void op_add(execution_state& state, std::ptrdiff_t) noexcept
+void op_add(execution_state& state, instr_argument) noexcept
 {
     state.item(1) += state.item(0);
     state.stack.pop_back();
 }
 
-void op_mstore(execution_state& state, std::ptrdiff_t) noexcept
+void op_mstore(execution_state& state, instr_argument) noexcept
 {
     auto index = state.item(0);
     auto x = state.item(1);
@@ -78,25 +78,24 @@ void op_mstore(execution_state& state, std::ptrdiff_t) noexcept
     state.stack.pop_back();
 }
 
-void op_gas(execution_state& state, std::ptrdiff_t) noexcept
+void op_gas(execution_state& state, instr_argument) noexcept
 {
     (void)state;
 }
 
-void op_push_full(execution_state& state, std::ptrdiff_t arg) noexcept
+void op_push_full(execution_state& state, instr_argument arg) noexcept
 {
     // OPT: For smaller pushes, use pointer data directly.
-    auto data = reinterpret_cast<const uint8_t*>(arg);
-    auto x = intx::be::uint256(data);
+    auto x = intx::be::uint256(arg.data);
     state.stack.push_back(x);
 }
 
-void op_pop(execution_state& state, std::ptrdiff_t) noexcept
+void op_pop(execution_state& state, instr_argument) noexcept
 {
     state.stack.pop_back();
 }
 
-void op_return(execution_state& state, std::ptrdiff_t) noexcept
+void op_return(execution_state& state, instr_argument) noexcept
 {
     state.run = false;
     state.output_offset = static_cast<size_t>(state.item(0));
