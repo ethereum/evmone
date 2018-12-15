@@ -53,8 +53,12 @@ void dump_analysis(const evmone::code_analysis& analysis)
 
         std::cout << "│ " << std::setw(9) << std::left << name << std::setw(4) << std::right
                   << metrics[c].gas_cost;
-        if (instr.extra_data_index >= 0)
-            std::cout << '\t' << to_hex(analysis.extra[size_t(instr.extra_data_index)].bytes, 32);
+
+        if (c >= OP_PUSH1 && c <= OP_PUSH32)
+        {
+            auto data = reinterpret_cast<const uint8_t*>(instr.arg);
+            std::cout << '\t' << to_hex(data, 32);
+        }
 
         std::cout << '\n';
     }

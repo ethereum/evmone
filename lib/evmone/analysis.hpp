@@ -7,6 +7,7 @@
 #include <intx/intx.hpp>
 #include <array>
 #include <cstdint>
+#include <deque>
 #include <vector>
 
 namespace evmone
@@ -35,14 +36,14 @@ struct execution_state
     uint256& item(size_t index) noexcept { return stack[stack.size() - index - 1]; }
 };
 
-using exec_fn = void (*)(execution_state&, const bytes32*);
+using exec_fn = void (*)(execution_state&, std::ptrdiff_t arg);
 
 using exec_fn_table = std::array<exec_fn, 256>;
 
 struct instr_info
 {
     exec_fn fn = nullptr;
-    int extra_data_index = -1;
+    std::ptrdiff_t arg = -1;
     int block_index = -1;
 
     explicit constexpr instr_info(exec_fn fn) noexcept : fn{fn} {};
@@ -60,7 +61,13 @@ struct code_analysis
 {
     std::vector<instr_info> instrs;
     std::vector<block_info> blocks;
-    std::vector<bytes32> extra;
+
+    /// Storage for arguments' extended data.
+    ///
+    /// The deque container is used because pointers to its elements are not
+    /// invalidated when the container grows.
+    std::deque<bytes32> args_storage;
+
     std::vector<std::pair<int, int>> jumpdest_map;
 
     int find_jumpdest(int offset) noexcept;
