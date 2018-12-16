@@ -39,6 +39,7 @@ code_analysis analyze(const exec_fn_table& fns, const uint8_t* code, size_t code
     int instr_index = 0;
     for (size_t i = 0; i < code_size; ++i, ++instr_index)
     {
+        // TODO: Loop in reverse order for easier GAS analysis.
         const auto c = code[i];
         auto& instr = analysis.instrs.emplace_back(fns[c]);
 
@@ -81,6 +82,8 @@ code_analysis analyze(const exec_fn_table& fns, const uint8_t* code, size_t code
             instr.arg.number = c - OP_DUP1;
         else if (c >= OP_SWAP1 && c <= OP_SWAP16)
             instr.arg.number = c - OP_SWAP1 + 1;
+        else if (c == OP_GAS)
+            instr.arg.number = static_cast<int>(block->gas_cost);
         else if (is_terminator(c))
             block = nullptr;
     }

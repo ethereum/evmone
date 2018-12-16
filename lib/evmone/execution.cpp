@@ -121,9 +121,11 @@ void op_msize(execution_state& state, instr_argument) noexcept
 }
 
 
-void op_gas(execution_state& state, instr_argument) noexcept
+void op_gas(execution_state& state, instr_argument arg) noexcept
 {
-    (void)state;
+    auto correction = state.current_block_cost - arg.number;
+    intx::uint256 gas = static_cast<uint64_t>(state.gas_left + correction);
+    state.stack.push_back(gas);
 }
 
 void op_push_full(execution_state& state, instr_argument arg) noexcept
@@ -214,6 +216,8 @@ evmc_result execute(int64_t gas, const uint8_t* code, size_t code_size) noexcept
                 state.status = EVMC_STACK_OVERFLOW;
                 break;
             }
+
+            state.current_block_cost = block.gas_cost;
         }
 
         // Advance the PC not to allow jump opcodes to overwrite it.

@@ -30,6 +30,12 @@ struct execution_state
     size_t output_offset = 0;
     size_t output_size = 0;
 
+    /// The gas cost of the current block.
+    ///
+    /// This is only needed to correctly calculate remaining gas for GAS instruction.
+    /// TODO: Maybe this should be precomputed in analysis.
+    int64_t current_block_cost = 0;
+
     uint256& item(size_t index) noexcept { return stack[stack.size() - index - 1]; }
 };
 
