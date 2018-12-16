@@ -144,3 +144,22 @@ TEST(execution, comparison)
     EXPECT_EQ(r.output_data[4], 0);
     r.release(&r);
 }
+
+TEST(execution, bitwise)
+{
+    std::string s;
+    s += "60aa60ff";      // aa ff
+    s += "818116600053";  // m[0] = aa & ff
+    s += "818117600153";  // m[1] = aa | ff
+    s += "818118600253";  // m[2] = aa ^ ff
+    s += "60036000f3";
+    auto code = from_hex(s.c_str());
+    auto r = evmone::execute(60, &code[0], code.size());
+    EXPECT_EQ(r.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(r.gas_left, 0);
+    ASSERT_EQ(r.output_size, 3);
+    EXPECT_EQ(r.output_data[0], 0xaa & 0xff);
+    EXPECT_EQ(r.output_data[1], 0xaa | 0xff);
+    EXPECT_EQ(r.output_data[2], 0xaa ^ 0xff);
+    r.release(&r);
+}
