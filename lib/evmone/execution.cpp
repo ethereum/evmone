@@ -100,6 +100,49 @@ void op_smod(execution_state& state, instr_argument) noexcept
     state.stack.pop_back();
 }
 
+void op_lt(execution_state& state, instr_argument) noexcept
+{
+    // OPT: Have single function implementing all comparisons.
+    state.item(1) = state.item(0) < state.item(1);
+    state.stack.pop_back();
+}
+
+void op_gt(execution_state& state, instr_argument) noexcept
+{
+    state.item(1) = state.item(1) < state.item(0);
+    state.stack.pop_back();
+}
+
+void op_slt(execution_state& state, instr_argument) noexcept
+{
+    // TODO: Move implementation to intx.
+    // OPT: Find better way, __int128 provides some hints.
+    auto x = state.item(0);
+    auto y = state.item(1);
+    auto x_neg = static_cast<bool>(x >> 255);
+    auto y_neg = static_cast<bool>(y >> 255);
+    state.item(1) = x_neg ? y_neg ? y < x : true :
+                            y_neg ? false : x < y;
+    state.stack.pop_back();
+}
+
+void op_sgt(execution_state& state, instr_argument) noexcept
+{
+    auto x = state.item(1);
+    auto y = state.item(0);
+    auto x_neg = static_cast<bool>(x >> 255);
+    auto y_neg = static_cast<bool>(y >> 255);
+    state.item(1) = x_neg ? y_neg ? y < x : true :
+                    y_neg ? false : x < y;
+    state.stack.pop_back();
+}
+
+void op_eq(execution_state& state, instr_argument) noexcept
+{
+    state.item(1) = state.item(0) == state.item(1);
+    state.stack.pop_back();
+}
+
 void op_iszero(execution_state& state, instr_argument) noexcept
 {
     state.item(0) = state.item(0) == 0;
@@ -205,6 +248,11 @@ exec_fn_table op_table = []() noexcept
     table[OP_SDIV] = op_sdiv;
     table[OP_MOD] = op_mod;
     table[OP_SMOD] = op_smod;
+    table[OP_LT] = op_lt;
+    table[OP_GT] = op_gt;
+    table[OP_SLT] = op_slt;
+    table[OP_SGT] = op_sgt;
+    table[OP_EQ] = op_eq;
     table[OP_ISZERO] = op_iszero;
     table[OP_NOT] = op_not;
     table[OP_GAS] = op_gas;
