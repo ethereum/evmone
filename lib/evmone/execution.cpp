@@ -64,10 +64,45 @@ void op_add(execution_state& state, instr_argument) noexcept
     state.stack.pop_back();
 }
 
+void op_mul(execution_state& state, instr_argument) noexcept
+{
+    state.item(1) *= state.item(0);
+    state.stack.pop_back();
+}
+
 void op_sub(execution_state& state, instr_argument) noexcept
 {
-    state.item(1) -= state.item(0);
+    state.item(1) = state.item(0) - state.item(1);
     state.stack.pop_back();
+}
+
+void op_div(execution_state& state, instr_argument) noexcept
+{
+    state.item(1) = state.item(0) / state.item(1);
+    state.stack.pop_back();
+}
+
+void op_sdiv(execution_state& state, instr_argument) noexcept
+{
+    state.item(1) = intx::sdivrem(state.item(0), state.item(1)).quot;
+    state.stack.pop_back();
+}
+
+void op_mod(execution_state& state, instr_argument) noexcept
+{
+    state.item(1) = state.item(0) % state.item(1);
+    state.stack.pop_back();
+}
+
+void op_smod(execution_state& state, instr_argument) noexcept
+{
+    state.item(1) = intx::sdivrem(state.item(0), state.item(1)).rem;
+    state.stack.pop_back();
+}
+
+void op_iszero(execution_state& state, instr_argument) noexcept
+{
+    state.item(0) = state.item(0) == 0;
 }
 
 void op_not(execution_state& state, instr_argument) noexcept
@@ -164,7 +199,13 @@ exec_fn_table op_table = []() noexcept
     exec_fn_table table{};
     table[OP_STOP] = op_stop;
     table[OP_ADD] = op_add;
+    table[OP_MUL] = op_mul;
     table[OP_SUB] = op_sub;
+    table[OP_DIV] = op_div;
+    table[OP_SDIV] = op_sdiv;
+    table[OP_MOD] = op_mod;
+    table[OP_SMOD] = op_smod;
+    table[OP_ISZERO] = op_iszero;
     table[OP_NOT] = op_not;
     table[OP_GAS] = op_gas;
     table[OP_POP] = op_pop;
