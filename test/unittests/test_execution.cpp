@@ -87,3 +87,14 @@ TEST(execution, msize)
     EXPECT_EQ(r.output_data[0], 0x40);
     r.release(&r);
 }
+
+TEST(execution, gas)
+{
+    auto code = from_hex("5a5a5a010160005360016000f3");
+    auto r = evmone::execute(40, &code[0], code.size());
+    EXPECT_EQ(r.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(r.gas_left, 13);
+    EXPECT_EQ(r.output_size, 1);
+    EXPECT_EQ(r.output_data[0], 38 + 36 + 34);
+    r.release(&r);
+}
