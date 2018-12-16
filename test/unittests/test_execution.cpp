@@ -121,3 +121,26 @@ TEST(execution, arith)
     EXPECT_EQ(r.output_data[0], 1);
     r.release(&r);
 }
+
+TEST(execution, comparison)
+{
+    std::string s;
+    s += "60006001808203";  // 0 1 -1
+    s += "818110600053";    // m[0] = -1 < 1
+    s += "818111600153";    // m[1] = -1 > 1
+    s += "818112600253";    // m[2] = -1 s< 1
+    s += "818113600353";    // m[3] = -1 s> 1
+    s += "818114600453";    // m[4] = -1 == 1
+    s += "60056000f3";
+    auto code = from_hex(s.c_str());
+    auto r = evmone::execute(100, &code[0], code.size());
+    EXPECT_EQ(r.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(r.gas_left, 1);
+    EXPECT_EQ(r.output_size, 5);
+    EXPECT_EQ(r.output_data[0], 0);
+    EXPECT_EQ(r.output_data[1], 1);
+    EXPECT_EQ(r.output_data[2], 1);
+    EXPECT_EQ(r.output_data[3], 0);
+    EXPECT_EQ(r.output_data[4], 0);
+    r.release(&r);
+}
