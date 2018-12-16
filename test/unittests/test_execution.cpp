@@ -98,3 +98,26 @@ TEST(execution, gas)
     EXPECT_EQ(r.output_data[0], 38 + 36 + 34);
     r.release(&r);
 }
+
+TEST(execution, arith)
+{
+    // x = (0 - 1) * 3
+    // y = 17 s/ x
+    // z = 17 s% x
+    // a = 17 * x + z
+    // iszero
+    std::string s;
+    s += "60116001600003600302";  // 17 -3
+    s += "808205";                // 17 -3 -5
+    s += "818307";                // 17 -3 -5 2
+    s += "910201";                // 17 17
+    s += "0315";                  // 1
+    s += "60005360016000f3";
+    auto code = from_hex(s.c_str());
+    auto r = evmone::execute(100, &code[0], code.size());
+    EXPECT_EQ(r.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(r.gas_left, 26);
+    EXPECT_EQ(r.output_size, 1);
+    EXPECT_EQ(r.output_data[0], 1);
+    r.release(&r);
+}
