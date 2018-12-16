@@ -148,6 +148,25 @@ void op_iszero(execution_state& state, instr_argument) noexcept
     state.item(0) = state.item(0) == 0;
 }
 
+void op_and(execution_state& state, instr_argument) noexcept
+{
+    // TODO: Add operator&= to intx.
+    state.item(1) = state.item(0) & state.item(1);
+    state.stack.pop_back();
+}
+
+void op_or(execution_state& state, instr_argument) noexcept
+{
+    state.item(1) = state.item(0) | state.item(1);
+    state.stack.pop_back();
+}
+
+void op_xor(execution_state& state, instr_argument) noexcept
+{
+    state.item(1) = state.item(0) ^ state.item(1);
+    state.stack.pop_back();
+}
+
 void op_not(execution_state& state, instr_argument) noexcept
 {
     state.item(0) = ~state.item(0);
@@ -254,6 +273,9 @@ exec_fn_table op_table = []() noexcept
     table[OP_SGT] = op_sgt;
     table[OP_EQ] = op_eq;
     table[OP_ISZERO] = op_iszero;
+    table[OP_AND] = op_and;
+    table[OP_OR] = op_or;
+    table[OP_XOR] = op_xor;
     table[OP_NOT] = op_not;
     table[OP_GAS] = op_gas;
     table[OP_POP] = op_pop;
