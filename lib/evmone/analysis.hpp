@@ -36,6 +36,8 @@ struct execution_state
     /// TODO: Maybe this should be precomputed in analysis.
     int64_t current_block_cost = 0;
 
+    struct code_analysis* analysis = nullptr;
+
     uint256& item(size_t index) noexcept { return stack[stack.size() - index - 1]; }
 };
 

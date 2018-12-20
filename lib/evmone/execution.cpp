@@ -121,8 +121,7 @@ void op_slt(execution_state& state, instr_argument) noexcept
     auto y = state.item(1);
     auto x_neg = static_cast<bool>(x >> 255);
     auto y_neg = static_cast<bool>(y >> 255);
-    state.item(1) = x_neg ? y_neg ? y < x : true :
-                            y_neg ? false : x < y;
+    state.item(1) = x_neg ? y_neg ? y < x : true : y_neg ? false : x < y;
     state.stack.pop_back();
 }
 
@@ -132,8 +131,7 @@ void op_sgt(execution_state& state, instr_argument) noexcept
     auto y = state.item(0);
     auto x_neg = static_cast<bool>(x >> 255);
     auto y_neg = static_cast<bool>(y >> 255);
-    state.item(1) = x_neg ? y_neg ? y < x : true :
-                    y_neg ? false : x < y;
+    state.item(1) = x_neg ? y_neg ? y < x : true : y_neg ? false : x < y;
     state.stack.pop_back();
 }
 
@@ -210,6 +208,29 @@ void op_mstore8(execution_state& state, instr_argument) noexcept
     state.stack.pop_back();
 }
 
+void op_jump(execution_state& state, instr_argument) noexcept
+{
+    auto dst = state.item(0);
+    int pc = -1;
+    if (std::numeric_limits<int>::max() < dst ||
+        (pc = state.analysis->find_jumpdest(static_cast<int>(dst))) < 0)
+    {
+        state.run = false;
+        state.status = EVMC_BAD_JUMP_DESTINATION;
+        return;
+    }
+
+    state.pc = static_cast<size_t>(pc);
+    state.stack.pop_back();
+}
+
+void op_pc(execution_state& state, instr_argument arg) noexcept
+{
+    // TODO: Using temporary object does not work with push_back().
+    intx::uint256 size = arg.number;
+    state.stack.push_back(size);
+}
+
 void op_msize(execution_state& state, instr_argument) noexcept
 {
     // TODO: Using temporary object does not work with push_back().
@@ -217,12 +238,16 @@ void op_msize(execution_state& state, instr_argument) noexcept
     state.stack.push_back(size);
 }
 
-
 void op_gas(execution_state& state, instr_argument arg) noexcept
 {
     auto correction = state.current_block_cost - arg.number;
     intx::uint256 gas = static_cast<uint64_t>(state.gas_left + correction);
     state.stack.push_back(gas);
+}
+
+void op_jumpdest(execution_state&, instr_argument) noexcept
+{
+    // OPT: We can skip JUMPDEST instruction in analysis.
 }
 
 void op_push_full(execution_state& state, instr_argument arg) noexcept
@@ -277,12 +302,15 @@ exec_fn_table op_table = []() noexcept
     table[OP_OR] = op_or;
     table[OP_XOR] = op_xor;
     table[OP_NOT] = op_not;
-    table[OP_GAS] = op_gas;
     table[OP_POP] = op_pop;
     table[OP_MLOAD] = op_mload;
     table[OP_MSTORE] = op_mstore;
     table[OP_MSTORE8] = op_mstore8;
+    table[OP_JUMP] = op_jump;
+    table[OP_PC] = op_pc;
     table[OP_MSIZE] = op_msize;
+    table[OP_GAS] = op_gas;
+    table[OP_JUMPDEST] = op_jumpdest;
     for (size_t op = OP_PUSH1; op <= OP_PUSH32; ++op)
         table[op] = op_push_full;
     for (size_t op = OP_DUP1; op <= OP_DUP16; ++op)
@@ -301,6 +329,7 @@ evmc_result execute(int64_t gas, const uint8_t* code, size_t code_size) noexcept
     auto analysis = analyze(op_table, code, code_size);
 
     execution_state state;
+    state.analysis = &analysis;
     state.gas_left = gas;
     while (state.run)
     {
@@ -310,7 +339,7 @@ evmc_result execute(int64_t gas, const uint8_t* code, size_t code_size) noexcept
             auto& block = analysis.blocks[static_cast<size_t>(instr.block_index)];
 
             state.gas_left -= block.gas_cost;
-            if (state.gas_left <= 0)
+            if (state.gas_left < 0)
             {
                 state.status = EVMC_OUT_OF_GAS;
                 break;
