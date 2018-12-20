@@ -163,3 +163,24 @@ TEST(execution, bitwise)
     EXPECT_EQ(r.output_data[2], 0xaa ^ 0xff);
     r.release(&r);
 }
+
+TEST(execution, jump)
+{
+    std::string s;
+    s += "60be600053";  // m[0] = be
+    s += "60fa";        // fa
+    s += "60055801";    // PC + 5
+    s += "56";          // JUMP
+    s += "5050";        // POP x2
+    s += "5b";          // JUMPDEST
+    s += "600153";      // m[1] = fa
+    s += "60026000f3";  // RETURN(0,2)
+    auto code = from_hex(s.c_str());
+    auto r = evmone::execute(44, &code[0], code.size());
+    EXPECT_EQ(r.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(r.gas_left, 0);
+    ASSERT_EQ(r.output_size, 2);
+    EXPECT_EQ(r.output_data[0], 0xbe);
+    EXPECT_EQ(r.output_data[1], 0xfa);
+    r.release(&r);
+}
