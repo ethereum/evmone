@@ -185,7 +185,6 @@ TEST(execution, jump)
     r.release(&r);
 }
 
-
 TEST(execution, jumpi)
 {
     std::string s;
@@ -198,5 +197,27 @@ TEST(execution, jumpi)
     EXPECT_EQ(r.gas_left, 0);
     ASSERT_EQ(r.output_size, 1);
     EXPECT_EQ(r.output_data[0], 0);
+    r.release(&r);
+}
+
+TEST(execution, byte)
+{
+    std::string s;
+    s += "63aabbccdd";  // aabbccdd
+    s += "8060001a";    // DUP 1 BYTE
+    s += "600053";      // m[0] = 00
+    s += "80601c1a";    // DUP 28 BYTE
+    s += "600253";      // m[2] = aa
+    s += "80601f1a";    // DUP 31 BYTE
+    s += "600453";      // m[4] = dd
+    s += "60056000f3";  // RETURN(0,5)
+    auto code = from_hex(s.c_str());
+    auto r = evmone::execute(57, &code[0], code.size());
+    EXPECT_EQ(r.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(r.gas_left, 0);
+    ASSERT_EQ(r.output_size, 5);
+    EXPECT_EQ(r.output_data[0], 0);
+    EXPECT_EQ(r.output_data[2], 0xaa);
+    EXPECT_EQ(r.output_data[4], 0xdd);
     r.release(&r);
 }

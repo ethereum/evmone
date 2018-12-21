@@ -170,6 +170,23 @@ void op_not(execution_state& state, instr_argument) noexcept
     state.item(0) = ~state.item(0);
 }
 
+void op_byte(execution_state& state, instr_argument) noexcept
+{
+    auto n = state.item(0);
+    auto& x = state.item(1);
+
+    if (31 < n)
+        x = 0;
+    else
+    {
+        auto sh = (31 - static_cast<unsigned>(n)) * 8;
+        auto y = x >> sh;
+        x = y & intx::uint256(0xff);  // TODO: Fix intx operator&.
+    }
+
+    state.stack.pop_back();
+}
+
 void op_mload(execution_state& state, instr_argument) noexcept
 {
     auto& index = state.item(0);
@@ -328,6 +345,7 @@ exec_fn_table op_table = []() noexcept
     table[OP_OR] = op_or;
     table[OP_XOR] = op_xor;
     table[OP_NOT] = op_not;
+    table[OP_BYTE] = op_byte;
     table[OP_POP] = op_pop;
     table[OP_MLOAD] = op_mload;
     table[OP_MSTORE] = op_mstore;
