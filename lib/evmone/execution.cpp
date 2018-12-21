@@ -31,7 +31,7 @@ bool check_memory(execution_state& state, const uint256& offset, const uint256& 
     const auto m = static_cast<int64_t>(state.memory.size());
 
     const auto new_size = o + s;
-    if (m < s)
+    if (m < new_size)
     {
         auto w = (new_size + 31) / 32;
         auto new_cost = 3 * w + w * w / 512;
@@ -224,6 +224,28 @@ void op_jump(execution_state& state, instr_argument) noexcept
     state.stack.pop_back();
 }
 
+void op_jumpi(execution_state& state, instr_argument) noexcept
+{
+    auto condition = state.item(1);
+    if (condition != 0)
+    {
+        // TODO: Call op_jump here.
+        auto dst = state.item(0);
+        int pc = -1;
+        if (std::numeric_limits<int>::max() < dst ||
+            (pc = state.analysis->find_jumpdest(static_cast<int>(dst))) < 0)
+        {
+            state.run = false;
+            state.status = EVMC_BAD_JUMP_DESTINATION;
+            return;
+        }
+        state.pc = static_cast<size_t>(pc);
+    }
+
+    state.stack.pop_back();
+    state.stack.pop_back();
+}
+
 void op_pc(execution_state& state, instr_argument arg) noexcept
 {
     // TODO: Using temporary object does not work with push_back().
@@ -274,11 +296,15 @@ void op_swap(execution_state& state, instr_argument arg) noexcept
 
 void op_return(execution_state& state, instr_argument) noexcept
 {
-    state.run = false;
-    state.output_offset = static_cast<size_t>(state.item(0));
-    state.output_size = static_cast<size_t>(state.item(1));
+    auto offset = state.item(0);
+    auto size = state.item(1);
 
-    // TODO: Check gas cost
+    if (!check_memory(state, offset, size))
+        return;
+
+    state.run = false;
+    state.output_offset = static_cast<size_t>(offset);
+    state.output_size = static_cast<size_t>(size);
 }
 
 exec_fn_table op_table = []() noexcept
@@ -307,6 +333,7 @@ exec_fn_table op_table = []() noexcept
     table[OP_MSTORE] = op_mstore;
     table[OP_MSTORE8] = op_mstore8;
     table[OP_JUMP] = op_jump;
+    table[OP_JUMPI] = op_jumpi;
     table[OP_PC] = op_pc;
     table[OP_MSIZE] = op_msize;
     table[OP_GAS] = op_gas;
