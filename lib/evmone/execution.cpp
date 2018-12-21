@@ -100,6 +100,32 @@ void op_smod(execution_state& state, instr_argument) noexcept
     state.stack.pop_back();
 }
 
+void op_addmod(execution_state& state, instr_argument) noexcept
+{
+    auto x = state.item(0);
+    auto y = state.item(1);
+    auto m = state.item(2);
+
+    auto r = (intx::uint512(x) + intx::uint512(y)) % intx::uint512(m);
+
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.item(0) = r.lo;
+}
+
+void op_mulmod(execution_state& state, instr_argument) noexcept
+{
+    auto x = state.item(0);
+    auto y = state.item(1);
+    auto m = state.item(2);
+
+    auto r = (intx::uint512(x) * intx::uint512(y)) % intx::uint512(m);
+
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.item(0) = r.lo;
+}
+
 void op_lt(execution_state& state, instr_argument) noexcept
 {
     // OPT: Have single function implementing all comparisons.
@@ -335,6 +361,8 @@ exec_fn_table op_table = []() noexcept
     table[OP_SDIV] = op_sdiv;
     table[OP_MOD] = op_mod;
     table[OP_SMOD] = op_smod;
+    table[OP_ADDMOD] = op_addmod;
+    table[OP_MULMOD] = op_mulmod;
     table[OP_LT] = op_lt;
     table[OP_GT] = op_gt;
     table[OP_SLT] = op_slt;

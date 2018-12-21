@@ -200,6 +200,7 @@ TEST(execution, jumpi)
     r.release(&r);
 }
 
+
 TEST(execution, byte)
 {
     std::string s;
@@ -219,5 +220,28 @@ TEST(execution, byte)
     EXPECT_EQ(r.output_data[0], 0);
     EXPECT_EQ(r.output_data[2], 0xaa);
     EXPECT_EQ(r.output_data[4], 0xdd);
+    r.release(&r);
+}
+
+TEST(execution, addmod_mulmod)
+{
+    std::string s;
+    s += "7fcdeb8272fc01d4d50a6ec165d2ea477af19b9b2c198459f59079583b97e88a66";
+    s += "7f52e7e7a03b86f534d2e338aa1bb05ba3539cb2f51304cdbce69ce2d422c456ca";
+    s += "7fe0f2f0cae05c220260e1724bdc66a0f83810bd1217bd105cb2da11e257c6cdf6";
+    s += "82828208";    // DUP DUP DUP ADDMOD
+    s += "600052";      // m[0..]
+    s += "82828209";    // DUP DUP DUP MULMOD
+    s += "602052";      // m[32..]
+    s += "60406000f3";  // RETURN(0,64)
+    auto code = from_hex(s.c_str());
+    auto r = evmone::execute(67, &code[0], code.size());
+    EXPECT_EQ(r.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(r.gas_left, 0);
+    ASSERT_EQ(r.output_size, 64);
+    auto a = from_hex("65ef55f81fe142622955e990252cb5209a11d4db113d842408fd9c7ae2a29a5a");
+    EXPECT_EQ(a, bytes(&r.output_data[0], 32));
+    auto p = from_hex("34e04890131a297202753cae4c72efd508962c9129aed8b08c8e87ab425b7258");
+    EXPECT_EQ(p, bytes(&r.output_data[32], 32));
     r.release(&r);
 }
