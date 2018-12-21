@@ -184,3 +184,19 @@ TEST(execution, jump)
     EXPECT_EQ(r.output_data[1], 0xfa);
     r.release(&r);
 }
+
+
+TEST(execution, jumpi)
+{
+    std::string s;
+    s += "5a600557";      // GAS 5 JUMPI
+    s += "00";            // STOP
+    s += "5b60016000f3";  // JUMPDEST RETURN(0,1)
+    auto code = from_hex(s.c_str());
+    auto r = evmone::execute(25, &code[0], code.size());
+    EXPECT_EQ(r.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(r.gas_left, 0);
+    ASSERT_EQ(r.output_size, 1);
+    EXPECT_EQ(r.output_data[0], 0);
+    r.release(&r);
+}
