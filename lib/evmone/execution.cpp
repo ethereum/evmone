@@ -126,6 +126,23 @@ void op_mulmod(execution_state& state, instr_argument) noexcept
     state.item(0) = r.lo;
 }
 
+void op_signextend(execution_state& state, instr_argument) noexcept
+{
+    auto ext = state.item(0);
+    state.stack.pop_back();
+    auto& x = state.item(0);
+
+    if (ext < 31)
+    {
+        auto sign_bit = static_cast<int>(ext) * 8 + 7;
+        auto sign_mask = intx::uint256{1} << sign_bit;
+        // TODO: Fix intx operator- overloading: X - 1 does not work.
+        auto value_mask = sign_mask - intx::uint256{1};
+        auto is_neg = (x & sign_mask) != 0;
+        x = is_neg ? x | ~value_mask : x & value_mask;
+    }
+}
+
 void op_lt(execution_state& state, instr_argument) noexcept
 {
     // OPT: Have single function implementing all comparisons.
@@ -363,6 +380,7 @@ exec_fn_table op_table = []() noexcept
     table[OP_SMOD] = op_smod;
     table[OP_ADDMOD] = op_addmod;
     table[OP_MULMOD] = op_mulmod;
+    table[OP_SIGNEXTEND] = op_signextend;
     table[OP_LT] = op_lt;
     table[OP_GT] = op_gt;
     table[OP_SLT] = op_slt;

@@ -245,3 +245,24 @@ TEST(execution, addmod_mulmod)
     EXPECT_EQ(p, bytes(&r.output_data[32], 32));
     r.release(&r);
 }
+
+TEST(execution, signextend)
+{
+    std::string s;
+    s += "62017ffe";    // 017ffe
+    s += "8060000b";    // DUP SIGNEXTEND(0)
+    s += "600052";      // m[0..]
+    s += "8060010b";    // DUP SIGNEXTEND(1)
+    s += "602052";      // m[32..]
+    s += "60406000f3";  // RETURN(0,64)
+    auto code = from_hex(s.c_str());
+    auto r = evmone::execute(49, &code[0], code.size());
+    EXPECT_EQ(r.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(r.gas_left, 0);
+    ASSERT_EQ(r.output_size, 64);
+    auto a = from_hex("fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe");
+    EXPECT_EQ(bytes(&r.output_data[0], 32), a);
+    auto b = from_hex("0000000000000000000000000000000000000000000000000000000000007ffe");
+    EXPECT_EQ(bytes(&r.output_data[32], 32), b);
+    r.release(&r);
+}
