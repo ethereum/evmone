@@ -266,3 +266,21 @@ TEST(execution, signextend)
     EXPECT_EQ(bytes(&r.output_data[32], 32), b);
     r.release(&r);
 }
+
+TEST(execution, exp)
+{
+    std::string s;
+    s += "612019";      // 0x2019
+    s += "6003";        // 3
+    s += "0a";          // EXP
+    s += "600052";      // m[0..]
+    s += "60206000f3";  // RETURN(0,32)
+    auto code = from_hex(s.c_str());
+    auto r = evmone::execute(131, &code[0], code.size());
+    EXPECT_EQ(r.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(r.gas_left, 0);
+    ASSERT_EQ(r.output_size, 32);
+    auto a = from_hex("263cf24662b24c371a647c1340022619306e431bf3a4298d4b5998a3f1c1aaa3");
+    EXPECT_EQ(bytes(&r.output_data[0], 32), a);
+    r.release(&r);
+}

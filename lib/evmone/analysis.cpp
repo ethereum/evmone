@@ -86,6 +86,8 @@ code_analysis analyze(const exec_fn_table& fns, const uint8_t* code, size_t code
             instr.arg.number = static_cast<int>(block->gas_cost);
         else if (c == OP_PC)
             instr.arg.number = static_cast<int>(i);
+        else if (c == OP_EXP)
+            instr.arg.number = 50; // TODO: Add pre Spurious Dragon cost.
         else if (is_terminator(c))
             block = nullptr;
     }
