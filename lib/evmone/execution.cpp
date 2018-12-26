@@ -126,6 +126,26 @@ void op_mulmod(execution_state& state, instr_argument) noexcept
     state.item(0) = r.lo;
 }
 
+void op_exp(execution_state& state, instr_argument arg) noexcept
+{
+    auto base = state.item(0);
+    auto& exponent = state.item(1);
+
+    auto exponent_significant_bytes = intx::count_significant_words<uint8_t>(exponent);
+
+    auto additional_cost = exponent_significant_bytes * arg.number;
+    state.gas_left -= additional_cost;
+    if (state.gas_left < 0)
+    {
+        state.run = false;
+        state.status = EVMC_OUT_OF_GAS;
+        return;
+    }
+
+    exponent = intx::exp(base, exponent);
+    state.stack.pop_back();
+}
+
 void op_signextend(execution_state& state, instr_argument) noexcept
 {
     auto ext = state.item(0);
@@ -380,6 +400,7 @@ exec_fn_table op_table = []() noexcept
     table[OP_SMOD] = op_smod;
     table[OP_ADDMOD] = op_addmod;
     table[OP_MULMOD] = op_mulmod;
+    table[OP_EXP] = op_exp;
     table[OP_SIGNEXTEND] = op_signextend;
     table[OP_LT] = op_lt;
     table[OP_GT] = op_gt;
