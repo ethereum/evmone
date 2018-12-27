@@ -276,3 +276,17 @@ TEST_F(execution, exp)
     auto a = from_hex("263cf24662b24c371a647c1340022619306e431bf3a4298d4b5998a3f1c1aaa3");
     EXPECT_EQ(bytes(&result.output_data[0], 32), a);
 }
+
+TEST_F(execution, calldataload)
+{
+    std::string s;
+    s += "600335";      // CALLDATALOAD(3)
+    s += "600052";      // m[0..]
+    s += "600a6000f3";  // RETURN(0,10)
+    execute(21, s, "0102030405");
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(result.gas_left, 0);
+    ASSERT_EQ(result.output_size, 10);
+    auto a = from_hex("04050000000000000000");
+    EXPECT_EQ(bytes(&result.output_data[0], 10), a);
+}
