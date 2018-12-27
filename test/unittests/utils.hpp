@@ -11,11 +11,11 @@
 
 using bytes = std::basic_string<uint8_t>;
 
-inline bytes from_hex(const char hex[]) noexcept
+inline bytes from_hex(std::string_view hex) noexcept
 {
     bytes bs;
     int b = 0;
-    for (size_t i = 0; hex[i] != 0; ++i)
+    for (size_t i = 0; i < hex.size(); ++i)
     {
         auto h = hex[i];
         int v = (h <= '9') ? h - '0' : h - 'a' + 10;
