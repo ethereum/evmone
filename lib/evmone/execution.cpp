@@ -259,6 +259,16 @@ void op_address(execution_state& state, instr_argument) noexcept
     state.stack.push_back(a);
 }
 
+void op_origin(execution_state& state, instr_argument) noexcept
+{
+    if (state.tx_context.block_timestamp == 0)
+        state.tx_context = state.host->host->get_tx_context(state.host);
+    uint8_t data[32] = {};
+    std::memcpy(&data[12], state.tx_context.tx_origin.bytes, sizeof(state.tx_context.tx_origin));
+    auto x = intx::be::uint256(data);
+    state.stack.push_back(x);
+}
+
 void op_caller(execution_state& state, instr_argument) noexcept
 {
     // TODO: Might be generalized using pointers to class member.
@@ -470,6 +480,58 @@ void op_jumpdest(execution_state&, instr_argument) noexcept
     // OPT: We can skip JUMPDEST instruction in analysis.
 }
 
+void op_gasprice(execution_state& state, instr_argument) noexcept
+{
+    if (state.tx_context.block_timestamp == 0)
+        state.tx_context = state.host->host->get_tx_context(state.host);
+    auto x = intx::be::uint256(state.tx_context.tx_gas_price.bytes);
+    state.stack.push_back(x);
+}
+
+void op_coinbase(execution_state& state, instr_argument) noexcept
+{
+    if (state.tx_context.block_timestamp == 0)
+        state.tx_context = state.host->host->get_tx_context(state.host);
+    uint8_t data[32] = {};
+    std::memcpy(
+        &data[12], state.tx_context.block_coinbase.bytes, sizeof(state.tx_context.block_coinbase));
+    auto x = intx::be::uint256(data);
+    state.stack.push_back(x);
+}
+
+void op_timestamp(execution_state& state, instr_argument) noexcept
+{
+    // TODO: Extract lazy tx context fetch.
+    if (state.tx_context.block_timestamp == 0)
+        state.tx_context = state.host->host->get_tx_context(state.host);
+    auto x = intx::uint256{static_cast<uint64_t>(state.tx_context.block_timestamp)};
+    state.stack.push_back(x);
+}
+
+void op_number(execution_state& state, instr_argument) noexcept
+{
+    if (state.tx_context.block_timestamp == 0)
+        state.tx_context = state.host->host->get_tx_context(state.host);
+    auto x = intx::uint256{static_cast<uint64_t>(state.tx_context.block_number)};
+    state.stack.push_back(x);
+}
+
+void op_difficulty(execution_state& state, instr_argument) noexcept
+{
+    if (state.tx_context.block_timestamp == 0)
+        state.tx_context = state.host->host->get_tx_context(state.host);
+    auto x = intx::be::uint256(state.tx_context.block_difficulty.bytes);
+    state.stack.push_back(x);
+}
+
+void op_gaslimit(execution_state& state, instr_argument) noexcept
+{
+    if (state.tx_context.block_timestamp == 0)
+        state.tx_context = state.host->host->get_tx_context(state.host);
+    auto x = intx::uint256{static_cast<uint64_t>(state.tx_context.block_gas_limit)};
+    state.stack.push_back(x);
+}
+
 void op_push_full(execution_state& state, instr_argument arg) noexcept
 {
     // OPT: For smaller pushes, use pointer data directly.
@@ -532,6 +594,7 @@ exec_fn_table op_table = []() noexcept
     table[OP_NOT] = op_not;
     table[OP_BYTE] = op_byte;
     table[OP_ADDRESS] = op_address;
+    table[OP_ORIGIN] = op_origin;
     table[OP_CALLER] = op_caller;
     table[OP_CALLVALUE] = op_callvalue;
     table[OP_CALLDATALOAD] = op_calldataload;
@@ -539,6 +602,12 @@ exec_fn_table op_table = []() noexcept
     table[OP_CALLDATACOPY] = op_calldatacopy;
     table[OP_CODESIZE] = op_codesize;
     table[OP_CODECOPY] = op_codecopy;
+    table[OP_GASPRICE] = op_gasprice;
+    table[OP_COINBASE] = op_coinbase;
+    table[OP_TIMESTAMP] = op_timestamp;
+    table[OP_NUMBER] = op_number;
+    table[OP_DIFFICULTY] = op_difficulty;
+    table[OP_GASLIMIT] = op_gaslimit;
     table[OP_POP] = op_pop;
     table[OP_MLOAD] = op_mload;
     table[OP_MSTORE] = op_mstore;

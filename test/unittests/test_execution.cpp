@@ -19,6 +19,8 @@ protected:
 
     std::unordered_map<evmc_bytes32, evmc_bytes32> storage;
 
+    evmc_tx_context tx_context = {};
+
     static evmc_host_interface interface;
 
     execution() noexcept : evmc_context{&interface} {}
@@ -64,7 +66,7 @@ evmc_host_interface execution::interface = {
     nullptr,
     nullptr,
     nullptr,
-    nullptr,
+    [](evmc_context* ctx) { return static_cast<execution*>(ctx)->tx_context; },
     nullptr,
     nullptr,
 };
@@ -403,4 +405,32 @@ TEST_F(execution, sstore_pop_stack)
     execute(100000, "60008060015560005360016000f3");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.output_data[0], 0);
+}
+
+TEST_F(execution, tx_context)
+{
+    tx_context.block_timestamp = 0xdd;
+    tx_context.block_coinbase.bytes[1] = 0xcc;
+    tx_context.block_number = 0x1100;
+    tx_context.block_difficulty.bytes[1] = 0xdd;
+    tx_context.block_gas_limit = 0x990000;
+    tx_context.tx_gas_price.bytes[2] = 0x66;
+    tx_context.tx_origin.bytes[2] = 0x55;
+
+    std::string s;
+    s += "4241173a17";        // TIMESTAMP COINBASE OR GASPRICE OR
+    s += "4317441745173217";  // NUMBER OR DIFFICULTY OR GASLIMIT OR ORIGIN OR
+    s += "600052";            // m[0..] =
+    s += "60206000f3";        // RETURN(0,32)
+    execute(47, s);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(result.gas_left, 0);
+    ASSERT_EQ(result.output_size, 32);
+    EXPECT_EQ(result.output_data[31], 0xdd);
+    EXPECT_EQ(result.output_data[30], 0x11);
+    EXPECT_EQ(result.output_data[29], 0x99);
+    EXPECT_EQ(result.output_data[14], 0x55);
+    EXPECT_EQ(result.output_data[13], 0xcc);
+    EXPECT_EQ(result.output_data[2], 0x66);
+    EXPECT_EQ(result.output_data[1], 0xdd);
 }
