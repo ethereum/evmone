@@ -386,6 +386,26 @@ void op_mstore8(execution_state& state, instr_argument) noexcept
     state.stack.pop_back();
 }
 
+void op_sload(execution_state& state, instr_argument) noexcept
+{
+    auto& x = state.item(0);
+    evmc_bytes32 key;
+    intx::be::store(key.bytes, x);
+    x = intx::be::uint256(
+        state.host->host->get_storage(state.host, &state.msg->destination, &key).bytes);
+}
+
+void op_sstore(execution_state& state, instr_argument) noexcept
+{
+    evmc_bytes32 key;
+    evmc_bytes32 value;
+    intx::be::store(key.bytes, state.item(0));
+    intx::be::store(value.bytes, state.item(1));
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.host->host->set_storage(state.host, &state.msg->destination, &key, &value);
+}
+
 void op_jump(execution_state& state, instr_argument) noexcept
 {
     auto dst = state.item(0);
@@ -523,6 +543,8 @@ exec_fn_table op_table = []() noexcept
     table[OP_MLOAD] = op_mload;
     table[OP_MSTORE] = op_mstore;
     table[OP_MSTORE8] = op_mstore8;
+    table[OP_SLOAD] = op_sload;
+    table[OP_SSTORE] = op_sstore;
     table[OP_JUMP] = op_jump;
     table[OP_JUMPI] = op_jumpi;
     table[OP_PC] = op_pc;

@@ -384,3 +384,23 @@ TEST_F(execution, code)
     auto a = from_hex({&s[4], 18});
     EXPECT_EQ(bytes(&result.output_data[0], 9), a);
 }
+
+TEST_F(execution, storage)
+{
+    std::string s;
+    s += "60ff60ee55";    // CODESIZE 2 0 CODECOPY
+    s += "60ee54600053";  // m[0] = ff
+    s += "60016000f3";    // RETURN(0,1)
+    execute(100000, s);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(result.gas_left, 99776);  // FIXME: Implement storage gas calculation.
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 0xff);
+}
+
+TEST_F(execution, sstore_pop_stack)
+{
+    execute(100000, "60008060015560005360016000f3");
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(result.output_data[0], 0);
+}
