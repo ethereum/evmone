@@ -6,12 +6,22 @@
 
 #include <evmone/execution.hpp>
 
+#include <evmc/helpers.hpp>
 #include <gtest/gtest.h>
+#include <map>
 
-class execution : public testing::Test
+extern evmc_host_interface interface;
+
+class execution : public testing::Test, public evmc_context
 {
 protected:
     evmc_result result = {};
+
+    std::unordered_map<evmc_bytes32, evmc_bytes32> storage;
+
+    static evmc_host_interface interface;
+
+    execution() noexcept : evmc_context{&interface} {}
 
     ~execution() noexcept override
     {
@@ -35,8 +45,28 @@ protected:
     void execute(const evmc_message& msg, std::string_view code_hex) noexcept
     {
         auto code = from_hex(code_hex.data());
-        result = evmone::execute(&msg, &code[0], code.size());
+        result = evmone::execute(this, &msg, &code[0], code.size());
     }
+};
+
+evmc_host_interface execution::interface = {
+    nullptr,
+    [](evmc_context* ctx, const evmc_address*, const evmc_bytes32* key) {
+        return static_cast<execution*>(ctx)->storage[*key];
+    },
+    [](evmc_context* ctx, const evmc_address*, const evmc_bytes32* key, const evmc_bytes32* value) {
+        static_cast<execution*>(ctx)->storage[*key] = *value;
+        return EVMC_STORAGE_MODIFIED;
+    },
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
 };
 
 TEST_F(execution, push_and_pop)
