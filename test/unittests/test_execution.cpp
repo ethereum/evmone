@@ -290,3 +290,16 @@ TEST_F(execution, calldataload)
     auto a = from_hex("04050000000000000000");
     EXPECT_EQ(bytes(&result.output_data[0], 10), a);
 }
+
+TEST_F(execution, calldatacopy)
+{
+    std::string s;
+    s += "366001600037";  // CALLDATASIZE 1 0 CALLDATACOPY
+    s += "600a6000f3";    // RETURN(0,10)
+    execute(20, s, "0102030405");
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(result.gas_left, 0);
+    ASSERT_EQ(result.output_size, 10);
+    auto a = from_hex("02030405000000000000");
+    EXPECT_EQ(bytes(&result.output_data[0], 10), a);
+}

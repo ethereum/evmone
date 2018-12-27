@@ -269,6 +269,34 @@ void op_calldataload(execution_state& state, instr_argument) noexcept
     }
 }
 
+void op_calldatasize(execution_state& state, instr_argument) noexcept
+{
+    auto s = intx::uint256{state.msg->input_size};
+    state.stack.push_back(s);
+}
+
+void op_calldatacopy(execution_state& state, instr_argument) noexcept
+{
+    auto mem_index = state.item(0);
+    auto input_index = state.item(1);
+    auto size = state.item(2);
+
+    if (!check_memory(state, mem_index, size))
+        return;
+
+    auto dst = static_cast<size_t>(mem_index);
+    auto src = state.msg->input_size < input_index ? state.msg->input_size :
+                                                     static_cast<size_t>(input_index);
+    auto s = static_cast<size_t>(size);
+    auto copy_size = std::min(s, src + state.msg->input_size);
+    std::memcpy(&state.memory[dst], &state.msg->input_data[src], copy_size);
+    std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
+
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.stack.pop_back();
+}
+
 void op_mload(execution_state& state, instr_argument) noexcept
 {
     auto& index = state.item(0);
@@ -433,6 +461,8 @@ exec_fn_table op_table = []() noexcept
     table[OP_NOT] = op_not;
     table[OP_BYTE] = op_byte;
     table[OP_CALLDATALOAD] = op_calldataload;
+    table[OP_CALLDATASIZE] = op_calldatasize;
+    table[OP_CALLDATACOPY] = op_calldatacopy;
     table[OP_POP] = op_pop;
     table[OP_MLOAD] = op_mload;
     table[OP_MSTORE] = op_mstore;
