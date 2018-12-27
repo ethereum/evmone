@@ -44,6 +44,8 @@ struct execution_state
 
     evmc_context* host = nullptr;
 
+    evmc_tx_context tx_context = {};
+
     uint256& item(size_t index) noexcept { return stack[stack.size() - index - 1]; }
 };
 
