@@ -542,7 +542,8 @@ exec_fn_table op_table = []() noexcept
 }  // namespace
 
 
-evmc_result execute(const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
+evmc_result execute(
+    evmc_context* ctx, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
 {
     auto analysis = analyze(op_table, code, code_size);
 
@@ -551,6 +552,7 @@ evmc_result execute(const evmc_message* msg, const uint8_t* code, size_t code_si
     state.msg = msg;
     state.code = code;
     state.code_size = code_size;
+    state.host = ctx;
     state.gas_left = msg->gas;
     while (state.run)
     {

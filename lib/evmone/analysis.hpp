@@ -42,6 +42,8 @@ struct execution_state
     const uint8_t* code = nullptr;
     size_t code_size = 0;
 
+    evmc_context* host = nullptr;
+
     uint256& item(size_t index) noexcept { return stack[stack.size() - index - 1]; }
 };
 
