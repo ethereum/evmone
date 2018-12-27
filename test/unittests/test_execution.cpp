@@ -21,12 +21,15 @@ protected:
     }
 
     /// Wrapper for evmone::execute. The result will be in the .result field.
-    void execute(int64_t gas, std::string_view code_hex) noexcept
+    void execute(int64_t gas, std::string_view code_hex, std::string_view input_hex = {}) noexcept
     {
         // TODO: Use string_view in from_hex()?
         auto code = from_hex(code_hex.data());
+        auto input = from_hex(input_hex.data());
         auto msg = evmc_message{};
         msg.gas = gas;
+        msg.input_data = input.data();
+        msg.input_size = input.size();
         result = evmone::execute(&msg, &code[0], code.size());
     }
 };
