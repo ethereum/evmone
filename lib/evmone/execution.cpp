@@ -436,13 +436,13 @@ exec_fn_table op_table = []() noexcept
 }  // namespace
 
 
-evmc_result execute(int64_t gas, const uint8_t* code, size_t code_size) noexcept
+evmc_result execute(const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
 {
     auto analysis = analyze(op_table, code, code_size);
 
     execution_state state;
     state.analysis = &analysis;
-    state.gas_left = gas;
+    state.gas_left = msg->gas;
     while (state.run)
     {
         auto& instr = analysis.instrs[state.pc];

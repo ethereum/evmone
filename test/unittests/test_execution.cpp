@@ -25,7 +25,9 @@ protected:
     {
         // TODO: Use string_view in from_hex()?
         auto code = from_hex(code_hex.data());
-        result = evmone::execute(gas, &code[0], code.size());
+        auto msg = evmc_message{};
+        msg.gas = gas;
+        result = evmone::execute(&msg, &code[0], code.size());
     }
 };
 
