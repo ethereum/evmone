@@ -341,3 +341,16 @@ TEST_F(execution, caller_callvalue)
     auto a = from_hex("0000ddee000000000000");
     EXPECT_EQ(bytes(&result.output_data[0], 10), a);
 }
+
+TEST_F(execution, code)
+{
+    std::string s;
+    s += "386002600039";  // CODESIZE 2 0 CODECOPY
+    s += "60096000f3";    // RETURN(0,9)
+    execute(20, s);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(result.gas_left, 0);
+    ASSERT_EQ(result.output_size, 9);
+    auto a = from_hex({&s[4], 18});
+    EXPECT_EQ(bytes(&result.output_data[0], 9), a);
+}
