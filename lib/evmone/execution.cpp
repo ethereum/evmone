@@ -250,6 +250,30 @@ void op_byte(execution_state& state, instr_argument) noexcept
     state.stack.pop_back();
 }
 
+void op_address(execution_state& state, instr_argument) noexcept
+{
+    // TODO: Might be generalized using pointers to class member.
+    uint8_t data[32] = {};
+    std::memcpy(&data[12], state.msg->destination.bytes, sizeof(state.msg->destination));
+    auto a = intx::be::uint256(data);
+    state.stack.push_back(a);
+}
+
+void op_caller(execution_state& state, instr_argument) noexcept
+{
+    // TODO: Might be generalized using pointers to class member.
+    uint8_t data[32] = {};
+    std::memcpy(&data[12], state.msg->sender.bytes, sizeof(state.msg->sender));
+    auto a = intx::be::uint256(data);
+    state.stack.push_back(a);
+}
+
+void op_callvalue(execution_state& state, instr_argument) noexcept
+{
+    auto a = intx::be::uint256(state.msg->value.bytes);
+    state.stack.push_back(a);
+}
+
 void op_calldataload(execution_state& state, instr_argument) noexcept
 {
     auto& index = state.item(0);
@@ -460,6 +484,9 @@ exec_fn_table op_table = []() noexcept
     table[OP_XOR] = op_xor;
     table[OP_NOT] = op_not;
     table[OP_BYTE] = op_byte;
+    table[OP_ADDRESS] = op_address;
+    table[OP_CALLER] = op_caller;
+    table[OP_CALLVALUE] = op_callvalue;
     table[OP_CALLDATALOAD] = op_calldataload;
     table[OP_CALLDATASIZE] = op_calldatasize;
     table[OP_CALLDATACOPY] = op_calldatacopy;

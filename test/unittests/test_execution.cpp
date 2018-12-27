@@ -23,13 +23,18 @@ protected:
     /// Wrapper for evmone::execute. The result will be in the .result field.
     void execute(int64_t gas, std::string_view code_hex, std::string_view input_hex = {}) noexcept
     {
-        // TODO: Use string_view in from_hex()?
-        auto code = from_hex(code_hex.data());
         auto input = from_hex(input_hex.data());
         auto msg = evmc_message{};
         msg.gas = gas;
         msg.input_data = input.data();
         msg.input_size = input.size();
+        execute(msg, code_hex);
+    }
+
+    /// Wrapper for evmone::execute. The result will be in the .result field.
+    void execute(const evmc_message& msg, std::string_view code_hex) noexcept
+    {
+        auto code = from_hex(code_hex.data());
         result = evmone::execute(&msg, &code[0], code.size());
     }
 };
@@ -301,5 +306,38 @@ TEST_F(execution, calldatacopy)
     EXPECT_EQ(result.gas_left, 0);
     ASSERT_EQ(result.output_size, 10);
     auto a = from_hex("02030405000000000000");
+    EXPECT_EQ(bytes(&result.output_data[0], 10), a);
+}
+
+TEST_F(execution, address)
+{
+    std::string s;
+    s += "30600052";    // ADDRESS MSTORE(0)
+    s += "600a600af3";  // RETURN(10,10)
+    evmc_message msg = {};
+    msg.gas = 17;
+    msg.destination.bytes[0] = 0xcc;
+    execute(msg, s);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(result.gas_left, 0);
+    ASSERT_EQ(result.output_size, 10);
+    auto a = from_hex("0000cc00000000000000");
+    EXPECT_EQ(bytes(&result.output_data[0], 10), a);
+}
+
+TEST_F(execution, caller_callvalue)
+{
+    std::string s;
+    s += "333401600052";  // CALLER CALLVALUE ADD MSTORE(0)
+    s += "600a600af3";    // RETURN(10,10)
+    evmc_message msg = {};
+    msg.gas = 22;
+    msg.sender.bytes[0] = 0xdd;
+    msg.value.bytes[13] = 0xee;
+    execute(msg, s);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(result.gas_left, 0);
+    ASSERT_EQ(result.output_size, 10);
+    auto a = from_hex("0000ddee000000000000");
     EXPECT_EQ(bytes(&result.output_data[0], 10), a);
 }
