@@ -38,6 +38,8 @@ struct execution_state
 
     struct code_analysis* analysis = nullptr;
 
+    const evmc_message* msg = nullptr;
+
     uint256& item(size_t index) noexcept { return stack[stack.size() - index - 1]; }
 };
 

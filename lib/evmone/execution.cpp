@@ -250,6 +250,25 @@ void op_byte(execution_state& state, instr_argument) noexcept
     state.stack.pop_back();
 }
 
+void op_calldataload(execution_state& state, instr_argument) noexcept
+{
+    auto& index = state.item(0);
+
+    if (state.msg->input_size < index)
+        index = 0;
+    else
+    {
+        const auto begin = static_cast<size_t>(index);
+        const auto end = std::min(begin + 32, state.msg->input_size);
+
+        uint8_t data[32] = {};
+        for (size_t i = 0; i < (end - begin); ++i)
+            data[i] = state.msg->input_data[begin + i];
+
+        index = intx::be::uint256(data);
+    }
+}
+
 void op_mload(execution_state& state, instr_argument) noexcept
 {
     auto& index = state.item(0);
@@ -413,6 +432,7 @@ exec_fn_table op_table = []() noexcept
     table[OP_XOR] = op_xor;
     table[OP_NOT] = op_not;
     table[OP_BYTE] = op_byte;
+    table[OP_CALLDATALOAD] = op_calldataload;
     table[OP_POP] = op_pop;
     table[OP_MLOAD] = op_mload;
     table[OP_MSTORE] = op_mstore;
@@ -442,6 +462,7 @@ evmc_result execute(const evmc_message* msg, const uint8_t* code, size_t code_si
 
     execution_state state;
     state.analysis = &analysis;
+    state.msg = msg;
     state.gas_left = msg->gas;
     while (state.run)
     {
