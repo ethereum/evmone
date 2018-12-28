@@ -60,7 +60,11 @@ evmc_host_interface execution::interface = {
         static_cast<execution*>(ctx)->storage[*key] = *value;
         return EVMC_STORAGE_MODIFIED;
     },
-    nullptr,
+    [](evmc_context*, const evmc_address*) {
+        evmc_uint256be balance = {};
+        balance.bytes[31] = 7;
+        return balance;
+    },
     nullptr,
     nullptr,
     nullptr,
@@ -433,4 +437,17 @@ TEST_F(execution, tx_context)
     EXPECT_EQ(result.output_data[13], 0xcc);
     EXPECT_EQ(result.output_data[2], 0x66);
     EXPECT_EQ(result.output_data[1], 0xdd);
+}
+
+TEST_F(execution, balance)
+{
+    std::string s;
+    s += "3031";        // ADDRESS BALANCE
+    s += "600053";      // m[0]
+    s += "60016000f3";  // RETURN(0,1)
+    execute(417, s);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(result.gas_left, 0);  // FIXME: Implement storage gas calculation.
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 7);
 }

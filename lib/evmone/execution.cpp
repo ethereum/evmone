@@ -259,6 +259,16 @@ void op_address(execution_state& state, instr_argument) noexcept
     state.stack.push_back(a);
 }
 
+void op_balance(execution_state& state, instr_argument) noexcept
+{
+    auto& x = state.item(0);
+    uint8_t data[32];
+    intx::be::store(data, x);
+    evmc_address addr;
+    std::memcpy(addr.bytes, &data[12], sizeof(addr));
+    x = intx::be::uint256(state.host->host->get_balance(state.host, &addr).bytes);
+}
+
 void op_origin(execution_state& state, instr_argument) noexcept
 {
     if (state.tx_context.block_timestamp == 0)
@@ -594,6 +604,7 @@ exec_fn_table op_table = []() noexcept
     table[OP_NOT] = op_not;
     table[OP_BYTE] = op_byte;
     table[OP_ADDRESS] = op_address;
+    table[OP_BALANCE] = op_balance;
     table[OP_ORIGIN] = op_origin;
     table[OP_CALLER] = op_caller;
     table[OP_CALLVALUE] = op_callvalue;
