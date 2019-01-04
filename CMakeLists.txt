@@ -28,6 +28,8 @@ add_subdirectory(intx)
 cable_set_build_type(DEFAULT Release CONFIGURATION_TYPES Debug Release)
 cable_configure_compiler(NO_PEDANTIC NO_CONVERSION_WARNINGS)
 
+set(include_dir ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
 add_subdirectory(evmc)
 add_subdirectory(lib)
 

@@ -644,9 +644,10 @@ exec_fn_table op_table = []() noexcept
 }  // namespace
 
 
-evmc_result execute(
-    evmc_context* ctx, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
+evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const evmc_message* msg,
+    const uint8_t* code, size_t code_size) noexcept
 {
+    (void)rev;  // TODO: Use revision for analysis.
     auto analysis = analyze(op_table, code, code_size);
 
     execution_state state;
