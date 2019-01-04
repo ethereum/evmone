@@ -4,7 +4,7 @@
 
 #include "utils.hpp"
 
-#include <evmone/execution.hpp>
+#include <evmone/evmone.h>
 
 #include <evmc/helpers.hpp>
 #include <gtest/gtest.h>
@@ -15,6 +15,8 @@ extern evmc_host_interface interface;
 class execution : public testing::Test, public evmc_context
 {
 protected:
+    evmc_instance* vm = nullptr;
+    evmc_revision rev = EVMC_BYZANTIUM;  // Use Byzantium by default.
     evmc_result result = {};
 
     std::unordered_map<evmc_bytes32, evmc_bytes32> storage;
@@ -23,7 +25,7 @@ protected:
 
     static evmc_host_interface interface;
 
-    execution() noexcept : evmc_context{&interface} {}
+    execution() noexcept : evmc_context{&interface}, vm{evmc_create_evmone()} {}
 
     ~execution() noexcept override
     {
@@ -47,7 +49,7 @@ protected:
     void execute(const evmc_message& msg, std::string_view code_hex) noexcept
     {
         auto code = from_hex(code_hex.data());
-        result = evmone::execute(this, &msg, &code[0], code.size());
+        result = vm->execute(vm, this, rev, &msg, &code[0], code.size());
     }
 };
 
