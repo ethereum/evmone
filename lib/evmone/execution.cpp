@@ -415,7 +415,7 @@ void op_sload(execution_state& state, instr_argument) noexcept
         state.host->host->get_storage(state.host, &state.msg->destination, &key).bytes);
 }
 
-void op_sstore(execution_state& state, instr_argument) noexcept
+void op_sstore(execution_state& state, instr_argument arg) noexcept
 {
     evmc_bytes32 key;
     evmc_bytes32 value;
@@ -423,7 +423,33 @@ void op_sstore(execution_state& state, instr_argument) noexcept
     intx::be::store(value.bytes, state.item(1));
     state.stack.pop_back();
     state.stack.pop_back();
-    state.host->host->set_storage(state.host, &state.msg->destination, &key, &value);
+    auto status = state.host->host->set_storage(state.host, &state.msg->destination, &key, &value);
+    auto rev = static_cast<evmc_revision>(arg.number);
+    int cost = 0;
+    switch (status)
+    {
+    case EVMC_STORAGE_UNCHANGED:
+        cost = rev >= EVMC_CONSTANTINOPLE ? 200 : 5000;
+        break;
+    case EVMC_STORAGE_MODIFIED:
+        cost = 5000;
+        break;
+    case EVMC_STORAGE_MODIFIED_AGAIN:
+        cost = rev >= EVMC_CONSTANTINOPLE ? 200 : 5000;
+        break;
+    case EVMC_STORAGE_ADDED:
+        cost = 20000;
+        break;
+    case EVMC_STORAGE_DELETED:
+        cost = 5000;
+        break;
+    }
+    state.gas_left -= cost;
+    if (state.gas_left < 0)
+    {
+        state.status = EVMC_OUT_OF_GAS;
+        state.run = false;
+    }
 }
 
 void op_jump(execution_state& state, instr_argument) noexcept
@@ -665,7 +691,7 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
     const uint8_t* code, size_t code_size) noexcept
 {
     (void)rev;  // TODO: Use revision for analysis.
-    auto analysis = analyze(op_table, code, code_size);
+    auto analysis = analyze(op_table, rev, code, code_size);
 
     execution_state state;
     state.analysis = &analysis;

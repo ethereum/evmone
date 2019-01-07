@@ -53,14 +53,34 @@ protected:
     }
 };
 
+
+inline bool is_zero(const evmc_bytes32& v) noexcept
+{
+    return v == evmc_bytes32{};
+}
+
 evmc_host_interface execution::interface = {
     nullptr,
     [](evmc_context* ctx, const evmc_address*, const evmc_bytes32* key) {
         return static_cast<execution*>(ctx)->storage[*key];
     },
     [](evmc_context* ctx, const evmc_address*, const evmc_bytes32* key, const evmc_bytes32* value) {
-        static_cast<execution*>(ctx)->storage[*key] = *value;
-        return EVMC_STORAGE_MODIFIED;
+        auto& storage = static_cast<execution*>(ctx)->storage[*key];
+
+        if (storage == *value)
+            return EVMC_STORAGE_UNCHANGED;
+
+        evmc_storage_status status = EVMC_STORAGE_MODIFIED;
+        if (is_zero(storage) && !is_zero(*value))
+            status = EVMC_STORAGE_ADDED;
+        else if (!is_zero(storage) && is_zero(*value))
+            status = EVMC_STORAGE_DELETED;
+        else if (!is_zero(storage))
+            status = EVMC_STORAGE_MODIFIED_AGAIN;
+
+        storage = *value;
+
+        return status;
     },
     [](evmc_context*, const evmc_address*) {
         evmc_uint256be balance = {};
@@ -401,7 +421,7 @@ TEST_F(execution, storage)
     s += "60016000f3";    // RETURN(0,1)
     execute(100000, s);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    EXPECT_EQ(result.gas_left, 99776);  // FIXME: Implement storage gas calculation.
+    EXPECT_EQ(result.gas_left, 99776 - 20000);
     ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 0xff);
 }

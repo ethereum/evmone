@@ -9,10 +9,12 @@
 
 #include <gtest/gtest.h>
 
+constexpr auto rev = EVMC_BYZANTIUM;
+
 TEST(analysis, example1)
 {
     auto code = from_hex("602a601e5359600055");
-    auto analysis = evmone::analyze(fake_fn_table, &code[0], code.size());
+    auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
 
     ASSERT_EQ(analysis.instrs.size(), 7);
 
@@ -33,7 +35,7 @@ TEST(analysis, example1)
 TEST(analysis, stack_up_and_down)
 {
     auto code = from_hex("81808080808080505050505050505050506000");
-    auto analysis = evmone::analyze(fake_fn_table, &code[0], code.size());
+    auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
 
     ASSERT_EQ(analysis.instrs.size(), 19);
     EXPECT_EQ(analysis.instrs[0].fn, fake_fn_table[OP_DUP2]);
@@ -51,7 +53,7 @@ TEST(analysis, stack_up_and_down)
 TEST(analysis, push)
 {
     auto code = from_hex("6708070605040302017f00ee");
-    auto analysis = evmone::analyze(fake_fn_table, &code[0], code.size());
+    auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
     dump_analysis(analysis);
 
     ASSERT_EQ(analysis.instrs.size(), 3);
@@ -65,7 +67,7 @@ TEST(analysis, push)
 TEST(analysis, jump1)
 {
     auto code = from_hex("6002600401565b600360005260206000f3600656");
-    auto analysis = evmone::analyze(fake_fn_table, &code[0], code.size());
+    auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
     dump_analysis(analysis);
 
     ASSERT_EQ(analysis.blocks.size(), 3);
@@ -78,7 +80,7 @@ TEST(analysis, jump1)
 TEST(analysis, empty)
 {
     bytes code;
-    auto analysis = evmone::analyze(fake_fn_table, &code[0], code.size());
+    auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
     dump_analysis(analysis);
 
     EXPECT_EQ(analysis.blocks.size(), 0);
@@ -88,7 +90,7 @@ TEST(analysis, empty)
 TEST(analysis, only_jumpdest)
 {
     auto code = from_hex("5b");
-    auto analysis = evmone::analyze(fake_fn_table, &code[0], code.size());
+    auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
     dump_analysis(analysis);
 
     ASSERT_EQ(analysis.blocks.size(), 1);

@@ -92,6 +92,7 @@ struct code_analysis
     int find_jumpdest(int offset) noexcept;
 };
 
-code_analysis analyze(const exec_fn_table& fns, const uint8_t* code, size_t code_size) noexcept;
+code_analysis analyze(
+    const exec_fn_table& fns, evmc_revision rev, const uint8_t* code, size_t code_size) noexcept;
 
 }  // namespace evmone

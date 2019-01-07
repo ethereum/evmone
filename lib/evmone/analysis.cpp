@@ -15,7 +15,7 @@ bool is_terminator(uint8_t c) noexcept
     return c == OP_JUMP || c == OP_JUMPI || c == OP_STOP || c == OP_RETURN || c == OP_REVERT ||
            c == OP_SELFDESTRUCT;
 }
-}
+}  // namespace
 
 int code_analysis::find_jumpdest(int offset) noexcept
 {
@@ -28,7 +28,8 @@ int code_analysis::find_jumpdest(int offset) noexcept
     return -1;
 }
 
-code_analysis analyze(const exec_fn_table& fns, const uint8_t* code, size_t code_size) noexcept
+code_analysis analyze(
+    const exec_fn_table& fns, evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
 {
     code_analysis analysis;
     analysis.instrs.reserve(code_size + 1);
@@ -87,7 +88,9 @@ code_analysis analyze(const exec_fn_table& fns, const uint8_t* code, size_t code
         else if (c == OP_PC)
             instr.arg.number = static_cast<int>(i);
         else if (c == OP_EXP)
-            instr.arg.number = 50; // TODO: Add pre Spurious Dragon cost.
+            instr.arg.number = 50;  // TODO: Add pre Spurious Dragon cost.
+        else if (c == OP_SSTORE)
+            instr.arg.number = rev;
         else if (is_terminator(c))
             block = nullptr;
     }
