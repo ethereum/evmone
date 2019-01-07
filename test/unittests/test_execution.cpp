@@ -453,3 +453,17 @@ TEST_F(execution, balance)
     ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 7);
 }
+
+TEST_F(execution, undefined)
+{
+    execute(1, "2a");
+    EXPECT_EQ(result.status_code, EVMC_UNDEFINED_INSTRUCTION);
+    EXPECT_EQ(result.gas_left, 0);
+}
+
+TEST_F(execution, invalid)
+{
+    execute(1, "fe");
+    EXPECT_EQ(result.status_code, EVMC_INVALID_INSTRUCTION);
+    EXPECT_EQ(result.gas_left, 0);
+}

@@ -564,6 +564,12 @@ void op_swap(execution_state& state, instr_argument arg) noexcept
     std::swap(state.item(0), state.item(static_cast<size_t>(arg.number)));
 }
 
+void op_invalid(execution_state& state, instr_argument) noexcept
+{
+    state.run = false;
+    state.status = EVMC_INVALID_INSTRUCTION;
+}
+
 void op_return(execution_state& state, instr_argument) noexcept
 {
     auto offset = state.item(0);
@@ -577,9 +583,19 @@ void op_return(execution_state& state, instr_argument) noexcept
     state.output_size = static_cast<size_t>(size);
 }
 
+void op_undefined(execution_state& state, instr_argument) noexcept
+{
+    state.run = false;
+    state.status = EVMC_UNDEFINED_INSTRUCTION;
+}
+
 exec_fn_table op_table = []() noexcept
 {
     exec_fn_table table{};
+
+    // First, mark all opcodes as undefined.
+    std::fill(table.begin(), table.end(), op_undefined);
+
     table[OP_STOP] = op_stop;
     table[OP_ADD] = op_add;
     table[OP_MUL] = op_mul;
@@ -637,6 +653,7 @@ exec_fn_table op_table = []() noexcept
         table[op] = op_dup;
     for (size_t op = OP_SWAP1; op <= OP_SWAP16; ++op)
         table[op] = op_swap;
+    table[OP_INVALID] = op_invalid;
     table[OP_RETURN] = op_return;
     return table;
 }
