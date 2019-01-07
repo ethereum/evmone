@@ -340,6 +340,23 @@ TEST_F(execution, exp)
     EXPECT_EQ(bytes(&result.output_data[0], 32), a);
 }
 
+TEST_F(execution, exp_pre_sd)
+{
+    rev = EVMC_TANGERINE_WHISTLE;
+    std::string s;
+    s += "62012019";    // 0x012019
+    s += "6003";        // 3
+    s += "0a";          // EXP
+    s += "600052";      // m[0..]
+    s += "60206000f3";  // RETURN(0,32)
+    execute(131 - 70, s);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(result.gas_left, 0);
+    ASSERT_EQ(result.output_size, 32);
+    auto a = from_hex("422ea3761c4f6517df7f102bb18b96abf4735099209ca21256a6b8ac4d1daaa3");
+    EXPECT_EQ(bytes(&result.output_data[0], 32), a);
+}
+
 TEST_F(execution, calldataload)
 {
     std::string s;

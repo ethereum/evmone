@@ -88,7 +88,7 @@ code_analysis analyze(
         else if (c == OP_PC)
             instr.arg.number = static_cast<int>(i);
         else if (c == OP_EXP)
-            instr.arg.number = 50;  // TODO: Add pre Spurious Dragon cost.
+            instr.arg.number = rev >= EVMC_SPURIOUS_DRAGON ? 50 : 10;
         else if (c == OP_SSTORE)
             instr.arg.number = rev;
         else if (is_terminator(c))
