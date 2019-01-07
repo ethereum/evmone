@@ -26,12 +26,14 @@ set(PROJECT_VERSION 0.1.0-dev)
 option(INTX_TESTING "Build intx with tests" OFF)
 add_subdirectory(intx)
 
+option(EVMC_TESTING "Build EVMC tests and test tools" ${EVMONE_TESTING})
+add_subdirectory(evmc)
+
 cable_set_build_type(DEFAULT Release CONFIGURATION_TYPES Debug Release)
 cable_configure_compiler(NO_PEDANTIC NO_CONVERSION_WARNINGS)
 
 set(include_dir ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-add_subdirectory(evmc)
 add_subdirectory(lib)
 
 if(EVMONE_TESTING)
