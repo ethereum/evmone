@@ -4,6 +4,7 @@
 
 cmake_minimum_required(VERSION 3.5)
 
+option(BUILD_SHARED_LIBS "Build evmone as a shared library" ON)
 option(EVMONE_TESTING "Build tests and test tools" OFF)
 
 include(cmake/cable/bootstrap.cmake)
