@@ -34,7 +34,7 @@ code_analysis analyze(
     code_analysis analysis;
     analysis.instrs.reserve(code_size + 1);
 
-    auto* instr_table = evmc_get_instruction_metrics_table(EVMC_BYZANTIUM);
+    auto* instr_table = evmc_get_instruction_metrics_table(rev);
 
     block_info* block = nullptr;
     int instr_index = 0;
