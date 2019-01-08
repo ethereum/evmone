@@ -18,6 +18,7 @@ protected:
     evmc_instance* vm = nullptr;
     evmc_revision rev = EVMC_BYZANTIUM;  // Use Byzantium by default.
     evmc_result result = {};
+    int64_t gas_used = 0;
 
     std::unordered_map<evmc_bytes32, evmc_bytes32> storage;
 
@@ -45,11 +46,21 @@ protected:
         execute(msg, code_hex);
     }
 
+    void execute(std::string_view code_hex, std::string_view input_hex = {}) noexcept
+    {
+        execute(std::numeric_limits<int64_t>::max(), code_hex, input_hex);
+    }
+
     /// Wrapper for evmone::execute. The result will be in the .result field.
     void execute(const evmc_message& msg, std::string_view code_hex) noexcept
     {
+        // Release previous result.
+        if (result.release)
+            result.release(&result);
+
         auto code = from_hex(code_hex.data());
         result = vm->execute(vm, this, rev, &msg, &code[0], code.size());
+        gas_used = msg.gas - result.gas_left;
     }
 };
 
