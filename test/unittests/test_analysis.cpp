@@ -97,3 +97,13 @@ TEST(analysis, only_jumpdest)
     ASSERT_EQ(analysis.jumpdest_map.size(), 1);
     EXPECT_EQ(analysis.jumpdest_map[0], std::pair(0, 0));
 }
+
+TEST(analysis, jumpi_at_the_end)
+{
+    auto code = from_hex("57");
+    auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
+    dump_analysis(analysis);
+
+    EXPECT_EQ(analysis.blocks.size(), 1);
+    EXPECT_EQ(analysis.instrs.back().fn, fake_fn_table[OP_STOP]);
+}

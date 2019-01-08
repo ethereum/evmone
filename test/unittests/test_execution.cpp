@@ -274,6 +274,13 @@ TEST_F(execution, jumpi)
     EXPECT_EQ(result.output_data[0], 0);
 }
 
+TEST_F(execution, jumpi_at_the_end)
+{
+    execute(1000, "5b6001600057");
+    EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+    EXPECT_EQ(gas_used, 1000);
+}
+
 
 TEST_F(execution, byte)
 {

@@ -96,7 +96,7 @@ code_analysis analyze(
     }
 
     // Not terminated block.
-    if (block)
+    if (block || (code_size > 0 && code[code_size - 1] == OP_JUMPI))
         analysis.instrs.emplace_back(fns[OP_STOP]);
 
     return analysis;
