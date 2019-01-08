@@ -78,52 +78,54 @@ void op_sub(execution_state& state, instr_argument) noexcept
 
 void op_div(execution_state& state, instr_argument) noexcept
 {
-    state.item(1) = state.item(0) / state.item(1);
+    auto& v = state.item(1);
+    v = v != 0 ? state.item(0) / v : 0;
     state.stack.pop_back();
 }
 
 void op_sdiv(execution_state& state, instr_argument) noexcept
 {
-    state.item(1) = intx::sdivrem(state.item(0), state.item(1)).quot;
+    auto& v = state.item(1);
+    v = v != 0 ? intx::sdivrem(state.item(0), v).quot : 0;
     state.stack.pop_back();
 }
 
 void op_mod(execution_state& state, instr_argument) noexcept
 {
-    state.item(1) = state.item(0) % state.item(1);
+    auto& v = state.item(1);
+    v = v != 0 ? state.item(0) % v : 0;
     state.stack.pop_back();
 }
 
 void op_smod(execution_state& state, instr_argument) noexcept
 {
-    state.item(1) = intx::sdivrem(state.item(0), state.item(1)).rem;
+    auto& v = state.item(1);
+    v = v != 0 ? intx::sdivrem(state.item(0), v).rem : 0;
     state.stack.pop_back();
 }
 
 void op_addmod(execution_state& state, instr_argument) noexcept
 {
+    using intx::uint512;
     auto x = state.item(0);
     auto y = state.item(1);
     auto m = state.item(2);
-
-    auto r = (intx::uint512(x) + intx::uint512(y)) % intx::uint512(m);
-
     state.stack.pop_back();
     state.stack.pop_back();
-    state.item(0) = r.lo;
+
+    state.item(0) = m != 0 ? ((uint512{x} + uint512{y}) % uint512{m}).lo : 0;
 }
 
 void op_mulmod(execution_state& state, instr_argument) noexcept
 {
+    using intx::uint512;
     auto x = state.item(0);
     auto y = state.item(1);
     auto m = state.item(2);
-
-    auto r = (intx::uint512(x) * intx::uint512(y)) % intx::uint512(m);
-
     state.stack.pop_back();
     state.stack.pop_back();
-    state.item(0) = r.lo;
+
+    state.item(0) = m != 0 ? ((uint512{x} * uint512{y}) % uint512{m}).lo : 0;
 }
 
 void op_exp(execution_state& state, instr_argument arg) noexcept

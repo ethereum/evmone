@@ -316,6 +316,20 @@ TEST_F(execution, addmod_mulmod)
     EXPECT_EQ(p, bytes(&result.output_data[32], 32));
 }
 
+TEST_F(execution, div_by_zero)
+{
+    rev = EVMC_CONSTANTINOPLE;
+    auto s = std::string{};
+    s += "60008060ff";  // 0 0 ff
+    s += "0405600055";  // s[0] = 0
+    execute(222, s);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(result.gas_left, 0);
+    auto it = storage.find({});
+    ASSERT_NE(it, storage.end());
+    EXPECT_EQ(it->second, evmc_bytes32{});
+}
+
 TEST_F(execution, signextend)
 {
     std::string s;
@@ -468,6 +482,15 @@ TEST_F(execution, sstore_pop_stack)
     execute(100000, "60008060015560005360016000f3");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.output_data[0], 0);
+}
+
+TEST_F(execution, sload_cost_pre_tw)
+{
+    rev = EVMC_HOMESTEAD;
+    execute(56, "60008054");
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(result.gas_left, 0);
+    EXPECT_NE(storage.find({}), storage.end());
 }
 
 TEST_F(execution, tx_context)
