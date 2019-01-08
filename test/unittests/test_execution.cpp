@@ -387,12 +387,21 @@ TEST_F(execution, calldatacopy)
     std::string s;
     s += "366001600037";  // CALLDATASIZE 1 0 CALLDATACOPY
     s += "600a6000f3";    // RETURN(0,10)
-    execute(20, s, "0102030405");
+    execute(s, "0102030405");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    EXPECT_EQ(result.gas_left, 0);
+    EXPECT_EQ(gas_used, 23);
     ASSERT_EQ(result.output_size, 10);
     auto a = from_hex("02030405000000000000");
     EXPECT_EQ(bytes(&result.output_data[0], 10), a);
+
+    execute(s);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(gas_used, 20);
+
+    execute("60ff66fffffffffffffa60003760ff6000f3");
+    EXPECT_EQ(gas_used, 66);
+    ASSERT_EQ(result.output_size, 0xff);
+    EXPECT_EQ(std::count(result.output_data, result.output_data + result.output_size, 0), 0xff);
 }
 
 TEST_F(execution, address)
