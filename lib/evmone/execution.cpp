@@ -657,6 +657,16 @@ void op_undefined(execution_state& state, instr_argument) noexcept
     state.status = EVMC_UNDEFINED_INSTRUCTION;
 }
 
+void op_selfdestruct(execution_state& state, instr_argument) noexcept
+{
+    uint8_t data[32];
+    intx::be::store(data, state.item(0));
+    evmc_address addr;
+    std::memcpy(addr.bytes, &data[12], sizeof(addr));
+    state.host->host->selfdestruct(state.host, &state.msg->destination, &addr);
+    state.run = false;
+}
+
 exec_fn_table op_table = []() noexcept
 {
     exec_fn_table table{};
@@ -725,6 +735,7 @@ exec_fn_table op_table = []() noexcept
         table[op] = op_log;
     table[OP_INVALID] = op_invalid;
     table[OP_RETURN] = op_return;
+    table[OP_SELFDESTRUCT] = op_selfdestruct;
     return table;
 }
 ();

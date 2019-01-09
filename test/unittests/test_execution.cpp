@@ -27,6 +27,8 @@ protected:
     bytes log_data;
     std::vector<evmc_bytes32> log_topics;
 
+    evmc_address selfdestruct_beneficiary = {};
+
     static evmc_host_interface interface;
 
     execution() noexcept : evmc_context{&interface}, vm{evmc_create_evmone()} {}
@@ -104,7 +106,9 @@ evmc_host_interface execution::interface = {
     nullptr,
     nullptr,
     nullptr,
-    nullptr,
+    [](evmc_context* ctx, const evmc_address*, const evmc_address* beneficiary) {
+        static_cast<execution*>(ctx)->selfdestruct_beneficiary = *beneficiary;
+    },
     nullptr,
     [](evmc_context* ctx) { return static_cast<execution*>(ctx)->tx_context; },
     nullptr,
@@ -582,4 +586,18 @@ TEST_F(execution, log3)
     EXPECT_EQ(log_topics[0].bytes[31], 4);
     EXPECT_EQ(log_topics[1].bytes[31], 3);
     EXPECT_EQ(log_topics[2].bytes[31], 2);
+}
+
+TEST_F(execution, selfdestruct)
+{
+    execute("6009ff");
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(gas_used, 5003);
+    EXPECT_EQ(selfdestruct_beneficiary.bytes[19], 9);
+
+    rev = EVMC_HOMESTEAD;
+    execute("6007ff");
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(gas_used, 3);
+    EXPECT_EQ(selfdestruct_beneficiary.bytes[19], 7);
 }
