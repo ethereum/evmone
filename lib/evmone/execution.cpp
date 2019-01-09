@@ -180,23 +180,21 @@ void op_gt(execution_state& state, instr_argument) noexcept
 
 void op_slt(execution_state& state, instr_argument) noexcept
 {
-    // TODO: Move implementation to intx.
-    // OPT: Find better way, __int128 provides some hints.
     auto x = state.item(0);
     auto y = state.item(1);
     auto x_neg = static_cast<bool>(x >> 255);
     auto y_neg = static_cast<bool>(y >> 255);
-    state.item(1) = x_neg ? y_neg ? y < x : true : y_neg ? false : x < y;
+    state.item(1) = (x_neg ^ y_neg) ? x_neg : x < y;
     state.stack.pop_back();
 }
 
 void op_sgt(execution_state& state, instr_argument) noexcept
 {
-    auto x = state.item(1);
-    auto y = state.item(0);
+    auto x = state.item(0);
+    auto y = state.item(1);
     auto x_neg = static_cast<bool>(x >> 255);
     auto y_neg = static_cast<bool>(y >> 255);
-    state.item(1) = x_neg ? y_neg ? y < x : true : y_neg ? false : x < y;
+    state.item(1) = (x_neg ^ y_neg) ? y_neg : y < x;
     state.stack.pop_back();
 }
 
