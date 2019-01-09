@@ -54,7 +54,6 @@ TEST(analysis, push)
 {
     auto code = from_hex("6708070605040302017f00ee");
     auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
-    dump_analysis(analysis);
 
     ASSERT_EQ(analysis.instrs.size(), 3);
     ASSERT_EQ(analysis.args_storage.size(), 2);
@@ -68,7 +67,6 @@ TEST(analysis, jump1)
 {
     auto code = from_hex("6002600401565b600360005260206000f3600656");
     auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
-    dump_analysis(analysis);
 
     ASSERT_EQ(analysis.blocks.size(), 3);
     ASSERT_EQ(analysis.jumpdest_map.size(), 1);
@@ -81,7 +79,6 @@ TEST(analysis, empty)
 {
     bytes code;
     auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
-    dump_analysis(analysis);
 
     EXPECT_EQ(analysis.blocks.size(), 0);
     EXPECT_EQ(analysis.instrs.size(), 0);
@@ -91,7 +88,6 @@ TEST(analysis, only_jumpdest)
 {
     auto code = from_hex("5b");
     auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
-    dump_analysis(analysis);
 
     ASSERT_EQ(analysis.blocks.size(), 1);
     ASSERT_EQ(analysis.jumpdest_map.size(), 1);
@@ -102,7 +98,6 @@ TEST(analysis, jumpi_at_the_end)
 {
     auto code = from_hex("57");
     auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
-    dump_analysis(analysis);
 
     EXPECT_EQ(analysis.blocks.size(), 1);
     EXPECT_EQ(analysis.instrs.back().fn, fake_fn_table[OP_STOP]);
