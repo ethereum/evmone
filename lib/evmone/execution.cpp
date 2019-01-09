@@ -368,7 +368,16 @@ void op_codecopy(execution_state& state, instr_argument) noexcept
     auto dst = static_cast<size_t>(mem_index);
     auto src = state.code_size < input_index ? state.code_size : static_cast<size_t>(input_index);
     auto s = static_cast<size_t>(size);
-    auto copy_size = std::min(s, src + state.code_size);
+    auto copy_size = std::min(s, state.code_size - src);
+
+    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
+    state.gas_left -= copy_cost;
+    if (state.gas_left < 0)
+    {
+        state.run = false;
+        state.status = EVMC_OUT_OF_GAS;
+    }
+
     std::memcpy(&state.memory[dst], &state.code[src], copy_size);
     std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
 
