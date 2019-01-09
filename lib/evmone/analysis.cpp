@@ -91,6 +91,8 @@ code_analysis analyze(
             instr.arg.number = rev >= EVMC_SPURIOUS_DRAGON ? 50 : 10;
         else if (c == OP_SSTORE)
             instr.arg.number = rev;
+        else if (c >= OP_LOG0 && c <= OP_LOG4)
+            instr.arg.number = c - OP_LOG0;
         else if (is_terminator(c))
             block = nullptr;
     }

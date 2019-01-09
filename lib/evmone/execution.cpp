@@ -601,6 +601,39 @@ void op_swap(execution_state& state, instr_argument arg) noexcept
     std::swap(state.item(0), state.item(static_cast<size_t>(arg.number)));
 }
 
+void op_log(execution_state& state, instr_argument arg) noexcept
+{
+    auto offset = state.item(0);
+    auto size = state.item(1);
+
+    if (!check_memory(state, offset, size))
+        return;
+
+    auto o = static_cast<size_t>(offset);
+    auto s = static_cast<size_t>(size);
+
+    auto cost = int64_t{8} * s;
+    state.gas_left -= cost;
+    if (state.gas_left < 0)
+    {
+        state.run = false;
+        state.status = EVMC_OUT_OF_GAS;
+    }
+
+    state.stack.pop_back();
+    state.stack.pop_back();
+
+    std::array<evmc_bytes32, 4> topics;
+    for (auto i = 0; i < arg.number; ++i)
+    {
+        intx::be::store(topics[i].bytes, state.item(0));
+        state.stack.pop_back();
+    }
+
+    state.host->host->emit_log(state.host, &state.msg->destination, &state.memory[o], s,
+        topics.data(), static_cast<size_t>(arg.number));
+}
+
 void op_invalid(execution_state& state, instr_argument) noexcept
 {
     state.run = false;
@@ -690,6 +723,8 @@ exec_fn_table op_table = []() noexcept
         table[op] = op_dup;
     for (size_t op = OP_SWAP1; op <= OP_SWAP16; ++op)
         table[op] = op_swap;
+    for (auto op = size_t{OP_LOG0}; op <= OP_LOG4; ++op)
+        table[op] = op_log;
     table[OP_INVALID] = op_invalid;
     table[OP_RETURN] = op_return;
     return table;

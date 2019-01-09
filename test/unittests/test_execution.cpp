@@ -24,6 +24,9 @@ protected:
 
     evmc_tx_context tx_context = {};
 
+    bytes log_data;
+    std::vector<evmc_bytes32> log_topics;
+
     static evmc_host_interface interface;
 
     execution() noexcept : evmc_context{&interface}, vm{evmc_create_evmone()} {}
@@ -105,7 +108,13 @@ evmc_host_interface execution::interface = {
     nullptr,
     [](evmc_context* ctx) { return static_cast<execution*>(ctx)->tx_context; },
     nullptr,
-    nullptr,
+    [](evmc_context* ctx, const evmc_address*, const uint8_t* data, size_t data_size,
+        const evmc_bytes32 topics[], size_t topics_count) {
+        auto& e = *static_cast<execution*>(ctx);
+        e.log_data.assign(data, data_size);
+        e.log_topics.reserve(topics_count);
+        std::copy_n(topics, topics_count, std::back_inserter(e.log_topics));
+    },
 };
 
 TEST_F(execution, push_and_pop)
@@ -553,4 +562,20 @@ TEST_F(execution, invalid)
     execute(1, "fe");
     EXPECT_EQ(result.status_code, EVMC_INVALID_INSTRUCTION);
     EXPECT_EQ(result.gas_left, 0);
+}
+
+TEST_F(execution, log3)
+{
+    std::string s;
+    s += "60016002600360046077600253600280a3";  // 1 2 3 4 m[2] = 0x77 2 2 LOG3
+    execute(s);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(gas_used, 1546);
+    ASSERT_EQ(log_data.size(), 2);
+    EXPECT_EQ(log_data[0], 0x77);
+    EXPECT_EQ(log_data[1], 0);
+    EXPECT_EQ(log_topics.size(), 3);
+    EXPECT_EQ(log_topics[0].bytes[31], 4);
+    EXPECT_EQ(log_topics[1].bytes[31], 3);
+    EXPECT_EQ(log_topics[2].bytes[31], 2);
 }
