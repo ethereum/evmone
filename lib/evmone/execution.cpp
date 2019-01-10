@@ -571,6 +571,23 @@ void op_gasprice(execution_state& state, instr_argument) noexcept
     state.stack.push_back(x);
 }
 
+void op_blockhash(execution_state& state, instr_argument) noexcept
+{
+    auto& number = state.item(0);
+
+    // Load transaction context.
+    if (state.tx_context.block_timestamp == 0)
+        state.tx_context = state.host->host->get_tx_context(state.host);
+
+    auto upper_bound = state.tx_context.block_number;
+    auto lower_bound = std::max(upper_bound - 256, decltype(upper_bound){0});
+    auto n = static_cast<int64_t>(number);
+    auto header = evmc_bytes32{};
+    if (number < upper_bound && n >= lower_bound)
+        header = state.host->host->get_block_hash(state.host, n);
+    number = intx::be::uint256(header.bytes);
+}
+
 void op_coinbase(execution_state& state, instr_argument) noexcept
 {
     if (state.tx_context.block_timestamp == 0)
@@ -747,6 +764,7 @@ exec_fn_table op_table = []() noexcept
     table[OP_CODESIZE] = op_codesize;
     table[OP_CODECOPY] = op_codecopy;
     table[OP_GASPRICE] = op_gasprice;
+    table[OP_BLOCKHASH] = op_blockhash;
     table[OP_COINBASE] = op_coinbase;
     table[OP_TIMESTAMP] = op_timestamp;
     table[OP_NUMBER] = op_number;

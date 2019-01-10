@@ -1,5 +1,5 @@
 // evmone: Fast Ethereum Virtual Machine implementation
-// Copyright 2018 Pawel Bylica.
+// Copyright 2019 Pawel Bylica.
 // Licensed under the Apache License, Version 2.0.
 
 #include "utils.hpp"
@@ -28,6 +28,8 @@ protected:
     std::vector<evmc_bytes32> log_topics;
 
     evmc_address selfdestruct_beneficiary = {};
+
+    evmc_bytes32 blockhash = {};
 
     static evmc_host_interface interface;
 
@@ -111,7 +113,7 @@ evmc_host_interface execution::interface = {
     },
     nullptr,
     [](evmc_context* ctx) { return static_cast<execution*>(ctx)->tx_context; },
-    nullptr,
+    [](evmc_context* ctx, int64_t) { return static_cast<execution*>(ctx)->blockhash; },
     [](evmc_context* ctx, const evmc_address*, const uint8_t* data, size_t data_size,
         const evmc_bytes32 topics[], size_t topics_count) {
         auto& e = *static_cast<execution*>(ctx);
@@ -608,5 +610,31 @@ TEST_F(execution, sha3)
     ASSERT_EQ(result.output_size, 32);
     auto hash = from_hex("aeffb38c06e111d84216396baefeb7fed397f303d5cb84a33f1e8b485c4a22da");
     EXPECT_EQ(bytes(&result.output_data[0], 32), hash);
+}
 
+TEST_F(execution, blockhash)
+{
+    blockhash.bytes[13] = 0x13;
+
+    tx_context.block_number = 0;
+    auto code = "60004060005260206000f3";
+    execute(code);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(gas_used, 38);
+    ASSERT_EQ(result.output_size, 32);
+    EXPECT_EQ(result.output_data[13], 0);
+
+    tx_context.block_number = 257;
+    execute(code);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(gas_used, 38);
+    ASSERT_EQ(result.output_size, 32);
+    EXPECT_EQ(result.output_data[13], 0);
+
+    tx_context.block_number = 256;
+    execute(code);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(gas_used, 38);
+    ASSERT_EQ(result.output_size, 32);
+    EXPECT_EQ(result.output_data[13], 0x13);
 }
