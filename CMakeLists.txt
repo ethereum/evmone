@@ -1,5 +1,5 @@
 # evmone: Ethereum Virtual Machine
-# Copyright 2018 Pawel Bylica.
+# Copyright 2019 Pawel Bylica.
 # Licensed under the Apache License, Version 2.0.
 
 cmake_minimum_required(VERSION 3.5)
@@ -16,12 +16,13 @@ include(GNUInstallDirs)
 
 cable_configure_toolchain(DEFAULT cxx17-pic)
 
-if(EVMONE_TESTING)
-    include(HunterConfig)
-endif()
+include(HunterConfig)
 
 project(evmone)
 set(PROJECT_VERSION 0.1.0-dev)
+
+hunter_add_package(ethash)
+find_package(ethash CONFIG REQUIRED)
 
 option(INTX_TESTING "Build intx with tests" OFF)
 add_subdirectory(intx)
