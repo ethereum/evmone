@@ -5,6 +5,7 @@
 #include "execution.hpp"
 #include "analysis.hpp"
 
+#include <ethash/keccak.hpp>
 #include <evmc/instructions.h>
 
 namespace evmone
@@ -250,6 +251,32 @@ void op_byte(execution_state& state, instr_argument) noexcept
     state.stack.pop_back();
 }
 
+void op_sha3(execution_state& state, instr_argument) noexcept
+{
+    auto index = state.item(0);
+    auto size = state.item(1);
+
+    if (!check_memory(state, index, size))
+        return;
+
+    auto i = static_cast<size_t>(index);
+    auto s = static_cast<size_t>(size);
+    auto w = (static_cast<int64_t>(s) + 31) / 32;
+    auto cost = w * 6;
+    state.gas_left -= cost;
+    if (state.gas_left < 0)
+    {
+        state.run = false;
+        state.status = EVMC_OUT_OF_GAS;
+        return;
+    }
+
+    auto h = ethash::keccak256(&state.memory[i], s);
+
+    state.stack.pop_back();
+    state.item(0) = intx::be::uint256(h.bytes);
+}
+
 void op_address(execution_state& state, instr_argument) noexcept
 {
     // TODO: Might be generalized using pointers to class member.
@@ -340,6 +367,7 @@ void op_calldatacopy(execution_state& state, instr_argument) noexcept
     {
         state.run = false;
         state.status = EVMC_OUT_OF_GAS;
+        return;
     }
 
     std::memcpy(&state.memory[dst], &state.msg->input_data[src], copy_size);
@@ -376,6 +404,7 @@ void op_codecopy(execution_state& state, instr_argument) noexcept
     {
         state.run = false;
         state.status = EVMC_OUT_OF_GAS;
+        return;
     }
 
     std::memcpy(&state.memory[dst], &state.code[src], copy_size);
@@ -706,6 +735,7 @@ exec_fn_table op_table = []() noexcept
     table[OP_XOR] = op_xor;
     table[OP_NOT] = op_not;
     table[OP_BYTE] = op_byte;
+    table[OP_SHA3] = op_sha3;
     table[OP_ADDRESS] = op_address;
     table[OP_BALANCE] = op_balance;
     table[OP_ORIGIN] = op_origin;

@@ -1,5 +1,5 @@
 # evmone: Fast Ethereum Virtual Machine implementation
-# Copyright 2018 Pawel Bylica.
+# Copyright 2019 Pawel Bylica.
 # Licensed under the Apache License, Version 2.0.
 
 add_library(evmone
@@ -10,5 +10,5 @@ add_library(evmone
     execution.cpp
     execution.hpp
 )
-target_link_libraries(evmone PUBLIC intx::intx PRIVATE evmc::instructions)
+target_link_libraries(evmone PUBLIC intx::intx PRIVATE evmc::instructions ethash::ethash)
 target_include_directories(evmone PUBLIC ${include_dir})

@@ -599,3 +599,14 @@ TEST_F(execution, selfdestruct)
     EXPECT_EQ(gas_used, 3);
     EXPECT_EQ(selfdestruct_beneficiary.bytes[19], 7);
 }
+
+TEST_F(execution, sha3)
+{
+    execute("6108006103ff2060005260206000f3");
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(gas_used, 738);
+    ASSERT_EQ(result.output_size, 32);
+    auto hash = from_hex("aeffb38c06e111d84216396baefeb7fed397f303d5cb84a33f1e8b485c4a22da");
+    EXPECT_EQ(bytes(&result.output_data[0], 32), hash);
+
+}
