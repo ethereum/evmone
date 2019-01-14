@@ -669,3 +669,19 @@ TEST_F(execution, extcode)
     EXPECT_EQ(result.output_data[3], 0);
     EXPECT_EQ(last_accessed_account.bytes[19], 0xfe);
 }
+
+TEST_F(execution, extcodehash)
+{
+    auto code = "60003f60005260206000f3";
+
+    rev = EVMC_BYZANTIUM;
+    execute(code);
+    EXPECT_EQ(result.status_code, EVMC_UNDEFINED_INSTRUCTION);
+
+    rev = EVMC_CONSTANTINOPLE;
+    execute(code);
+    EXPECT_EQ(gas_used, 418);
+    ASSERT_EQ(result.output_size, 32);
+    auto expected_hash = bytes(32, 0xee);
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size), expected_hash);
+}
