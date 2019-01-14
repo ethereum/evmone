@@ -571,6 +571,65 @@ void op_gasprice(execution_state& state, instr_argument) noexcept
     state.stack.push_back(x);
 }
 
+void op_extcodesize(execution_state& state, instr_argument) noexcept
+{
+    auto& x = state.item(0);
+    uint8_t data[32];
+    intx::be::store(data, x);
+    evmc_address addr;
+    std::memcpy(addr.bytes, &data[12], sizeof(addr));
+    x = state.host->host->get_code_size(state.host, &addr);
+}
+
+void op_extcodecopy(execution_state& state, instr_argument) noexcept
+{
+    auto addr_data = state.item(0);
+    auto mem_index = state.item(1);
+    auto input_index = state.item(2);
+    auto size = state.item(3);
+
+    if (!check_memory(state, mem_index, size))
+        return;
+
+    auto dst = static_cast<size_t>(mem_index);
+    auto src = state.code_size < input_index ? state.code_size : static_cast<size_t>(input_index);
+    auto s = static_cast<size_t>(size);
+
+    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
+    state.gas_left -= copy_cost;
+    if (state.gas_left < 0)
+    {
+        state.run = false;
+        state.status = EVMC_OUT_OF_GAS;
+        return;
+    }
+
+    uint8_t data[32];
+    intx::be::store(data, addr_data);
+    evmc_address addr;
+    std::memcpy(addr.bytes, &data[12], sizeof(addr));
+
+    auto num_bytes_copied =
+        state.host->host->copy_code(state.host, &addr, src, &state.memory[dst], s);
+
+    std::memset(&state.memory[dst + num_bytes_copied], 0, s - num_bytes_copied);
+
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.stack.pop_back();
+}
+
+void op_extcodehash(execution_state& state, instr_argument) noexcept
+{
+    auto& x = state.item(0);
+    uint8_t data[32];
+    intx::be::store(data, x);
+    evmc_address addr;
+    std::memcpy(addr.bytes, &data[12], sizeof(addr));
+    x = intx::be::uint256(state.host->host->get_code_hash(state.host, &addr).bytes);
+}
+
 void op_blockhash(execution_state& state, instr_argument) noexcept
 {
     auto& number = state.item(0);
@@ -763,6 +822,9 @@ exec_fn_table op_table = []() noexcept
     table[OP_CALLDATACOPY] = op_calldatacopy;
     table[OP_CODESIZE] = op_codesize;
     table[OP_CODECOPY] = op_codecopy;
+    table[OP_EXTCODESIZE] = op_extcodesize;
+    table[OP_EXTCODECOPY] = op_extcodecopy;
+    table[OP_EXTCODEHASH] = op_extcodehash;
     table[OP_GASPRICE] = op_gasprice;
     table[OP_BLOCKHASH] = op_blockhash;
     table[OP_COINBASE] = op_coinbase;

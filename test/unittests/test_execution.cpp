@@ -20,6 +20,8 @@ protected:
     evmc_result result = {};
     int64_t gas_used = 0;
 
+    evmc_address last_accessed_account = {};
+
     std::unordered_map<evmc_bytes32, evmc_bytes32> storage;
 
     evmc_tx_context tx_context = {};
@@ -30,6 +32,8 @@ protected:
     evmc_address selfdestruct_beneficiary = {};
 
     evmc_bytes32 blockhash = {};
+
+    bytes extcode = {};
 
     static evmc_host_interface interface;
 
@@ -105,9 +109,25 @@ evmc_host_interface execution::interface = {
         balance.bytes[31] = 7;
         return balance;
     },
-    nullptr,
-    nullptr,
-    nullptr,
+    [](evmc_context* ctx, const evmc_address* addr) {
+        auto& e = *static_cast<execution*>(ctx);
+        e.last_accessed_account = *addr;
+        return e.extcode.size();
+    },
+    [](evmc_context* ctx, const evmc_address* addr) {
+        auto& e = *static_cast<execution*>(ctx);
+        e.last_accessed_account = *addr;
+        auto hash = evmc_bytes32{};
+        std::fill(std::begin(hash.bytes), std::end(hash.bytes), 0xee);
+        return hash;
+    },
+    [](evmc_context* ctx, const evmc_address* addr, size_t code_offset, uint8_t* buffer_data,
+        size_t buffer_size) {
+        auto& e = *static_cast<execution*>(ctx);
+        e.last_accessed_account = *addr;
+        std::copy_n(&e.extcode[code_offset], buffer_size, buffer_data);
+        return buffer_size;
+    },
     [](evmc_context* ctx, const evmc_address*, const evmc_address* beneficiary) {
         static_cast<execution*>(ctx)->selfdestruct_beneficiary = *beneficiary;
     },
@@ -637,4 +657,21 @@ TEST_F(execution, blockhash)
     EXPECT_EQ(gas_used, 38);
     ASSERT_EQ(result.output_size, 32);
     EXPECT_EQ(result.output_data[13], 0x13);
+}
+
+TEST_F(execution, extcode)
+{
+    extcode = {'a', 'b', 'c', 'd'};
+
+    auto code = std::string{};
+    code += "6002600003803b60019003";  // S = EXTCODESIZE(-2) - 1
+    code += "90600080913c";            // EXTCODECOPY(-2, 0, 0, S)
+    code += "60046000f3";              // RETURN(0, 4)
+
+    execute(code);
+    EXPECT_EQ(gas_used, 1445);
+    ASSERT_EQ(result.output_size, 4);
+    EXPECT_EQ(bytes_view(result.output_data, 3), bytes_view(extcode.data(), 3));
+    EXPECT_EQ(result.output_data[3], 0);
+    EXPECT_EQ(last_accessed_account.bytes[19], 0xfe);
 }
