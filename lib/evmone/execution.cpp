@@ -765,6 +765,82 @@ void op_return(execution_state& state, instr_argument) noexcept
     state.output_size = static_cast<size_t>(size);
 }
 
+void op_delegatecall(execution_state& state, instr_argument arg) noexcept
+{
+    auto gas = state.item(0);
+
+    uint8_t data[32];
+    intx::be::store(data, state.item(1));
+    auto dst = evmc_address{};
+    std::memcpy(dst.bytes, &data[12], sizeof(dst));
+
+    auto input_offset = state.item(2);
+    auto input_size = state.item(3);
+    auto output_offset = state.item(4);
+    auto output_size = state.item(5);
+
+    if (gas >= std::numeric_limits<int64_t>::max())
+    {
+        state.run = false;
+        state.status = EVMC_OUT_OF_GAS;
+        return;
+    }
+
+    if (!check_memory(state, input_offset, input_size))
+        return;
+
+    if (!check_memory(state, output_offset, output_size))
+        return;
+
+
+    auto msg = evmc_message{};
+    msg.kind = EVMC_DELEGATECALL;
+    msg.gas = static_cast<int64_t>(gas);
+
+    // TODO: Only for TW+. For previous check g <= gas_left.
+    auto correction = state.current_block_cost - arg.number;
+    auto gas_left = state.gas_left + correction;
+    msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
+
+    if (msg.gas > state.gas_left)
+    {
+        state.run = false;
+        state.status = EVMC_OUT_OF_GAS;
+        return;
+    }
+
+    msg.destination = dst;
+    msg.sender = state.msg->sender;
+    msg.value = state.msg->value;
+    msg.input_data = &state.memory[size_t(input_offset)];
+    msg.input_size = size_t(input_size);
+
+    if (state.msg->depth >= 1024)
+    {
+        state.run = false;
+        state.status = EVMC_CALL_DEPTH_EXCEEDED;
+        return;
+    }
+
+    auto result = state.host->host->call(state.host, &msg);
+
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.stack.pop_back();
+
+    state.item(0) = result.status_code == EVMC_SUCCESS;
+
+    std::memcpy(&state.memory[size_t(output_offset)], result.output_data,
+        std::min(size_t(output_size), result.output_size));
+
+    auto gas_used = msg.gas - result.gas_left;
+    state.gas_left -= gas_used;
+
+    if (result.release)
+        result.release(&result);
+}
+
 void op_undefined(execution_state& state, instr_argument) noexcept
 {
     state.run = false;
@@ -854,8 +930,8 @@ exec_fn_table create_op_table_frontier() noexcept
         table[op] = op_swap;
     for (auto op = size_t{OP_LOG0}; op <= OP_LOG4; ++op)
         table[op] = op_log;
-    table[OP_INVALID] = op_invalid;
     table[OP_RETURN] = op_return;
+    table[OP_INVALID] = op_invalid;
     table[OP_SELFDESTRUCT] = op_selfdestruct;
     return table;
 }
@@ -863,6 +939,7 @@ exec_fn_table create_op_table_frontier() noexcept
 exec_fn_table create_op_table_homestead() noexcept
 {
     auto table = create_op_table_frontier();
+    table[OP_DELEGATECALL] = op_delegatecall;
     return table;
 }
 
@@ -879,7 +956,8 @@ exec_fn_table create_op_table_constantinople() noexcept
     return table;
 }
 
-const auto op_table_initialized = []() noexcept {
+const auto op_table_initialized = []() noexcept
+{
     op_table[EVMC_FRONTIER] = create_op_table_frontier();
     op_table[EVMC_HOMESTEAD] = create_op_table_homestead();
     op_table[EVMC_TANGERINE_WHISTLE] = create_op_table_homestead();
@@ -887,7 +965,8 @@ const auto op_table_initialized = []() noexcept {
     op_table[EVMC_BYZANTIUM] = create_op_table_byzantium();
     op_table[EVMC_CONSTANTINOPLE] = create_op_table_constantinople();
     return true;
-}();
+}
+();
 
 }  // namespace
 

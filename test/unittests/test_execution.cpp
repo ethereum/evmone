@@ -35,6 +35,9 @@ protected:
 
     bytes extcode = {};
 
+    evmc_message call_msg = {};
+    evmc_result call_result = {};
+
     static evmc_host_interface interface;
 
     execution() noexcept : evmc_context{&interface}, vm{evmc_create_evmone()} {}
@@ -125,7 +128,11 @@ evmc_host_interface execution::interface = {
     [](evmc_context* ctx, const evmc_address*, const evmc_address* beneficiary) {
         static_cast<execution*>(ctx)->selfdestruct_beneficiary = *beneficiary;
     },
-    nullptr,
+    [](evmc_context* ctx, const evmc_message* msg) {
+        auto& e = *static_cast<execution*>(ctx);
+        e.call_msg = *msg;
+        return e.call_result;
+    },
     [](evmc_context* ctx) { return static_cast<execution*>(ctx)->tx_context; },
     [](evmc_context* ctx, int64_t) { return static_cast<execution*>(ctx)->blockhash; },
     [](evmc_context* ctx, const evmc_address*, const uint8_t* data, size_t data_size,
@@ -684,4 +691,30 @@ TEST_F(execution, extcodehash)
     ASSERT_EQ(result.output_size, 32);
     auto expected_hash = bytes(32, 0xee);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size), expected_hash);
+}
+
+TEST_F(execution, delegatecall)
+{
+    auto code = std::string{};
+    code += "6001600003600052";              // m[0] = 0xffffff...
+    code += "600560046003600260016103e8f4";  // DELEGATECALL(1000, 0x01, ...)
+    code += "60086000f3";
+
+    auto call_output = bytes{0xa, 0xb, 0xc};
+    call_result.output_data = call_output.data();
+    call_result.output_size = call_output.size();
+    call_result.gas_left = 1;
+
+    execute(1700, code);
+
+    EXPECT_EQ(gas_used, 1690);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+
+    auto gas_left = 1700 - 736;
+    EXPECT_EQ(call_msg.gas, gas_left - gas_left / 64);
+    EXPECT_EQ(call_msg.input_size, 3);
+
+    ASSERT_EQ(result.output_size, 8);
+    auto output = bytes_view{result.output_data, result.output_size};
+    EXPECT_EQ(output, (bytes{0xff, 0xff, 0xff, 0xff, 0xa, 0xb, 0xc, 0xff}));
 }
