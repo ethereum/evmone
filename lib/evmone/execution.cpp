@@ -781,7 +781,10 @@ void op_selfdestruct(execution_state& state, instr_argument) noexcept
     state.run = false;
 }
 
-exec_fn_table op_table = []() noexcept
+constexpr auto num_revisions = int{EVMC_MAX_REVISION + 1};
+exec_fn_table op_table[num_revisions] = {};
+
+exec_fn_table create_op_table_frontier() noexcept
 {
     exec_fn_table table{};
 
@@ -824,7 +827,6 @@ exec_fn_table op_table = []() noexcept
     table[OP_CODECOPY] = op_codecopy;
     table[OP_EXTCODESIZE] = op_extcodesize;
     table[OP_EXTCODECOPY] = op_extcodecopy;
-    table[OP_EXTCODEHASH] = op_extcodehash;
     table[OP_GASPRICE] = op_gasprice;
     table[OP_BLOCKHASH] = op_blockhash;
     table[OP_COINBASE] = op_coinbase;
@@ -857,15 +859,43 @@ exec_fn_table op_table = []() noexcept
     table[OP_SELFDESTRUCT] = op_selfdestruct;
     return table;
 }
-();
+
+exec_fn_table create_op_table_homestead() noexcept
+{
+    auto table = create_op_table_frontier();
+    return table;
+}
+
+exec_fn_table create_op_table_byzantium() noexcept
+{
+    auto table = create_op_table_homestead();
+    return table;
+}
+
+exec_fn_table create_op_table_constantinople() noexcept
+{
+    auto table = create_op_table_byzantium();
+    table[OP_EXTCODEHASH] = op_extcodehash;
+    return table;
+}
+
+const auto op_table_initialized = []() noexcept {
+    op_table[EVMC_FRONTIER] = create_op_table_frontier();
+    op_table[EVMC_HOMESTEAD] = create_op_table_homestead();
+    op_table[EVMC_TANGERINE_WHISTLE] = create_op_table_homestead();
+    op_table[EVMC_SPURIOUS_DRAGON] = create_op_table_homestead();
+    op_table[EVMC_BYZANTIUM] = create_op_table_byzantium();
+    op_table[EVMC_CONSTANTINOPLE] = create_op_table_constantinople();
+    return true;
+}();
+
 }  // namespace
 
 
 evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const evmc_message* msg,
     const uint8_t* code, size_t code_size) noexcept
 {
-    (void)rev;  // TODO: Use revision for analysis.
-    auto analysis = analyze(op_table, rev, code, code_size);
+    auto analysis = analyze(op_table[rev], rev, code, code_size);
 
     execution_state state;
     state.analysis = &analysis;
