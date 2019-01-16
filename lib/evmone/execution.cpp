@@ -815,6 +815,7 @@ void op_delegatecall(execution_state& state, instr_argument arg) noexcept
     msg.input_data = &state.memory[size_t(input_offset)];
     msg.input_size = size_t(input_size);
 
+    // FIXME: Depth is not incremented.
     if (state.msg->depth >= 1024)
     {
         state.run = false;
@@ -836,9 +837,70 @@ void op_delegatecall(execution_state& state, instr_argument arg) noexcept
 
     auto gas_used = msg.gas - result.gas_left;
     state.gas_left -= gas_used;
+    // FIXME: We should check out-of-gas here.
 
     if (result.release)
         result.release(&result);
+}
+
+void op_create(execution_state& state, instr_argument arg) noexcept
+{
+    auto endowment = state.item(0);
+    auto init_code_offset = state.item(1);
+    auto init_code_size = state.item(2);
+
+    if (!check_memory(state, init_code_offset, init_code_size))
+        return;
+
+    state.stack.pop_back();
+    state.stack.pop_back();
+
+    state.item(0) = 0;
+
+    if (state.msg->depth >= 1024)
+        return;
+
+    if (endowment != 0)
+    {
+        auto balance = intx::be::uint256(
+            state.host->host->get_balance(state.host, &state.msg->destination).bytes);
+        if (balance < endowment)
+            return;
+    }
+
+    auto msg = evmc_message{};
+
+    // TODO: Only for TW+. For previous check g <= gas_left.
+    auto correction = state.current_block_cost - arg.number;
+    auto gas = state.gas_left + correction;
+    msg.gas = gas - gas / 64;
+
+    msg.kind = EVMC_CREATE;
+    msg.input_data = &state.memory[size_t(init_code_offset)];
+    msg.input_size = size_t(init_code_size);
+    msg.sender = state.msg->destination;
+    msg.depth = state.msg->depth + 1;
+    intx::be::store(msg.value.bytes, endowment);
+
+    auto result = state.host->host->call(state.host, &msg);
+    if (result.status_code == EVMC_SUCCESS)
+    {
+        uint8_t data[32] = {};
+        std::memcpy(&data[12], &result.create_address, sizeof(result.create_address));
+        state.item(0) = intx::be::uint256(data);
+    }
+
+    auto gas_used = msg.gas - result.gas_left;
+
+    if (result.release)
+        result.release(&result);
+
+    state.gas_left -= gas_used;
+    if (state.gas_left < 0)
+    {
+        state.run = false;
+        state.status = EVMC_OUT_OF_GAS;
+    }
 }
 
 void op_undefined(execution_state& state, instr_argument) noexcept
@@ -930,6 +992,7 @@ exec_fn_table create_op_table_frontier() noexcept
         table[op] = op_swap;
     for (auto op = size_t{OP_LOG0}; op <= OP_LOG4; ++op)
         table[op] = op_log;
+    table[OP_CREATE] = op_create;
     table[OP_RETURN] = op_return;
     table[OP_INVALID] = op_invalid;
     table[OP_SELFDESTRUCT] = op_selfdestruct;

@@ -33,6 +33,7 @@ protected:
 
     evmc_bytes32 blockhash = {};
 
+    intx::uint256 balance = {};
     bytes extcode = {};
 
     evmc_message call_msg = {};
@@ -101,10 +102,12 @@ evmc_host_interface execution::interface = {
 
         return status;
     },
-    [](evmc_context*, const evmc_address*) {
-        evmc_uint256be balance = {};
-        balance.bytes[31] = 7;
-        return balance;
+    [](evmc_context* ctx, const evmc_address* addr) {
+        auto& e = *static_cast<execution*>(ctx);
+        e.last_accessed_account = *addr;
+        evmc_uint256be b = {};
+        intx::be::store(b.bytes, e.balance);
+        return b;
     },
     [](evmc_context* ctx, const evmc_address* addr) {
         auto& e = *static_cast<execution*>(ctx);
@@ -572,9 +575,9 @@ TEST_F(execution, balance)
     s += "3031";        // ADDRESS BALANCE
     s += "600053";      // m[0]
     s += "60016000f3";  // RETURN(0,1)
+    balance = 7;
     execute(417, s);
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    EXPECT_EQ(result.gas_left, 0);  // FIXME: Implement storage gas calculation.
+    EXPECT_EQ(gas_used, 417);
     ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 7);
 }
@@ -717,4 +720,26 @@ TEST_F(execution, delegatecall)
     ASSERT_EQ(result.output_size, 8);
     auto output = bytes_view{result.output_data, result.output_size};
     EXPECT_EQ(output, (bytes{0xff, 0xff, 0xff, 0xff, 0xa, 0xb, 0xc, 0xff}));
+}
+
+TEST_F(execution, create)
+{
+    auto call_output = bytes{0xa, 0xb, 0xc};
+    call_result.output_data = call_output.data();
+    call_result.output_size = call_output.size();
+    call_result.gas_left = 1;
+
+    balance = 1;
+    call_result.create_address.bytes[10] = 0xcc;
+    call_result.gas_left = 200000;
+    execute(300000, "602060006001f0600155");
+
+    EXPECT_EQ(gas_used, 115816);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+
+    auto key = evmc_bytes32{};
+    key.bytes[31] = 1;
+    EXPECT_EQ(storage[key].bytes[22], 0xcc);
+
+    EXPECT_EQ(call_msg.input_size, 0x20);
 }

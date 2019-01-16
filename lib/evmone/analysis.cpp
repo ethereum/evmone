@@ -83,7 +83,8 @@ code_analysis analyze(
             instr.arg.number = c - OP_DUP1;
         else if (c >= OP_SWAP1 && c <= OP_SWAP16)
             instr.arg.number = c - OP_SWAP1 + 1;
-        else if (c == OP_GAS || c == OP_DELEGATECALL)
+        else if (c == OP_GAS || c == OP_DELEGATECALL || c == OP_CALL || c == OP_CALLCODE ||
+                 c == OP_STATICCALL || c == OP_CREATE || c == OP_CREATE2)
             instr.arg.number = static_cast<int>(block->gas_cost);
         else if (c == OP_PC)
             instr.arg.number = static_cast<int>(i);
