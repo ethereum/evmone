@@ -28,6 +28,25 @@ int code_analysis::find_jumpdest(int offset) noexcept
     return -1;
 }
 
+evmc_call_kind op2call_kind(uint8_t opcode) noexcept
+{
+    switch (opcode)
+    {
+    case OP_CREATE:
+        return EVMC_CREATE;
+    case OP_CALL:
+        return EVMC_CALL;
+    case OP_CALLCODE:
+        return EVMC_CALLCODE;
+    case OP_DELEGATECALL:
+        return EVMC_DELEGATECALL;
+    case OP_CREATE2:
+        return EVMC_CREATE2;
+    default:
+        return evmc_call_kind(-1);
+    }
+}
+
 code_analysis analyze(
     const exec_fn_table& fns, evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
 {
@@ -85,7 +104,11 @@ code_analysis analyze(
             instr.arg.number = c - OP_SWAP1 + 1;
         else if (c == OP_GAS || c == OP_DELEGATECALL || c == OP_CALL || c == OP_CALLCODE ||
                  c == OP_STATICCALL || c == OP_CREATE || c == OP_CREATE2)
+        {
             instr.arg.number = static_cast<int>(block->gas_cost);
+            // TODO: Does not make sense for OP_GAS.
+            instr.arg.call_kind = op2call_kind(c == OP_STATICCALL ? uint8_t{OP_CALL} : c);
+        }
         else if (c == OP_PC)
             instr.arg.number = static_cast<int>(i);
         else if (c == OP_EXP)

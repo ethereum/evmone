@@ -51,9 +51,17 @@ struct execution_state
 
 union instr_argument
 {
-    int number = -1;  // TODO: Consider initializing with zeros.
+    struct
+    {
+        int number = 0;
+        evmc_call_kind call_kind = EVMC_CALL;
+    };
     const uint8_t* data;
+
+    constexpr instr_argument() noexcept : number{}, call_kind{} {};
 };
+
+static_assert(sizeof(instr_argument) == sizeof(void*), "Incorrect size of instr_argument");
 
 using exec_fn = void (*)(execution_state&, instr_argument arg);
 
