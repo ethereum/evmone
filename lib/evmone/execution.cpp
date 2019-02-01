@@ -765,6 +765,127 @@ void op_return(execution_state& state, instr_argument) noexcept
     state.output_size = static_cast<size_t>(size);
 }
 
+void op_call(execution_state& state, instr_argument arg) noexcept
+{
+    auto gas = state.item(0);
+
+    uint8_t data[32];
+    intx::be::store(data, state.item(1));
+    auto dst = evmc_address{};
+    std::memcpy(dst.bytes, &data[12], sizeof(dst));
+
+    auto value = state.item(2);
+    auto input_offset = state.item(3);
+    auto input_size = state.item(4);
+    auto output_offset = state.item(5);
+    auto output_size = state.item(6);
+
+    if (gas >= std::numeric_limits<int64_t>::max())
+    {
+        state.run = false;
+        state.status = EVMC_OUT_OF_GAS;
+        return;
+    }
+
+    if (!check_memory(state, input_offset, input_size))
+        return;
+
+    if (!check_memory(state, output_offset, output_size))
+        return;
+
+
+    auto msg = evmc_message{};
+    msg.kind = arg.call_kind;
+    msg.gas = static_cast<int64_t>(gas);
+    intx::be::store(msg.value.bytes, value);
+
+    // TODO: Only for TW+. For previous check g <= gas_left.
+    auto correction = state.current_block_cost - arg.number;
+    auto gas_left = state.gas_left + correction;
+
+    auto cost = 0;
+    auto has_value = value != 0;
+    if (has_value)
+        cost += 9000;
+
+    auto rev = EVMC_BYZANTIUM;  // TODO: Support other revisions.
+    if (arg.call_kind == EVMC_CALL && (has_value || rev < EVMC_SPURIOUS_DRAGON))
+    {
+        if (!state.host->host->account_exists(state.host, &dst))
+            cost += 25000;
+    }
+
+    state.gas_left -= cost;
+    if (state.gas_left < 0)
+    {
+        state.run = false;
+        state.status = EVMC_OUT_OF_GAS;
+        return;
+    }
+
+    gas_left -= cost;
+    msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
+
+    if (msg.gas > gas_left)
+    {
+        // FIXME: Bug - must be compared against current gas left.
+        state.run = false;
+        state.status = EVMC_OUT_OF_GAS;
+        return;
+    }
+
+    msg.destination = dst;
+    msg.sender = state.msg->destination;
+    intx::be::store(msg.value.bytes, value);
+    msg.input_data = &state.memory[size_t(input_offset)];
+    msg.input_size = size_t(input_size);
+
+    msg.depth = state.msg->depth + 1;
+    if (msg.depth > 1024)
+    {
+        state.run = false;
+        state.status = EVMC_CALL_DEPTH_EXCEEDED;
+        return;
+    }
+
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.stack.pop_back();
+
+    if (has_value)
+    {
+        auto balance = state.host->host->get_balance(state.host, &state.msg->destination);
+        auto b = intx::be::uint256(balance.bytes);
+        if (b < value)
+        {
+            state.gas_left += 2300;  // Return unused stipend.
+            state.item(0) = 0;
+            return;
+        }
+
+        msg.gas += 2300;  // Add stipend.
+    }
+
+    auto result = state.host->host->call(state.host, &msg);
+
+
+    state.item(0) = result.status_code == EVMC_SUCCESS;
+
+    std::memcpy(&state.memory[size_t(output_offset)], result.output_data,
+        std::min(size_t(output_size), result.output_size));
+
+    auto gas_used = msg.gas - result.gas_left;
+
+    if (has_value)
+        gas_used -= 2300;
+
+    state.gas_left -= gas_used;
+
+    if (result.release)
+        result.release(&result);
+}
+
 void op_delegatecall(execution_state& state, instr_argument arg) noexcept
 {
     auto gas = state.item(0);
@@ -993,6 +1114,8 @@ exec_fn_table create_op_table_frontier() noexcept
     for (auto op = size_t{OP_LOG0}; op <= OP_LOG4; ++op)
         table[op] = op_log;
     table[OP_CREATE] = op_create;
+    table[OP_CALL] = op_call;
+    table[OP_CALLCODE] = op_call;
     table[OP_RETURN] = op_return;
     table[OP_INVALID] = op_invalid;
     table[OP_SELFDESTRUCT] = op_selfdestruct;

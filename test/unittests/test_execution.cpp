@@ -33,6 +33,7 @@ protected:
 
     evmc_bytes32 blockhash = {};
 
+    bool exists = false;
     intx::uint256 balance = {};
     bytes extcode = {};
 
@@ -80,7 +81,11 @@ protected:
 };
 
 evmc_host_interface execution::interface = {
-    nullptr,
+    [](evmc_context* ctx, const evmc_address* addr) {
+        auto& e = *static_cast<execution*>(ctx);
+        e.last_accessed_account = *addr;
+        return e.exists;
+    },
     [](evmc_context* ctx, const evmc_address*, const evmc_bytes32* key) {
         return static_cast<execution*>(ctx)->storage[*key];
     },
@@ -742,4 +747,65 @@ TEST_F(execution, create)
     EXPECT_EQ(storage[key].bytes[22], 0xcc);
 
     EXPECT_EQ(call_msg.input_size, 0x20);
+}
+
+TEST_F(execution, call_failing_with_value)
+{
+    auto code = "60ff600060ff6000600160aa618000f150";
+
+    call_msg.kind = EVMC_CREATE;
+
+    execute(40000, code);
+    EXPECT_EQ(gas_used, 32447);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(call_msg.kind, EVMC_CREATE);  // There was no call().
+
+    execute(0x8000, code);
+    EXPECT_EQ(gas_used, 0x8000);
+    EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+    EXPECT_EQ(call_msg.kind, EVMC_CREATE);  // There was no call().
+}
+
+TEST_F(execution, call_with_value)
+{
+    auto code = "60ff600060ff6000600160aa618000f150";
+
+    call_msg.kind = EVMC_CREATE;
+    exists = true;
+    balance = 1;
+    call_result.gas_left = 1;
+
+    execute(40000, code);
+    EXPECT_EQ(gas_used, 7447 + 32082);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(call_msg.kind, EVMC_CALL);
+    EXPECT_EQ(call_msg.depth, 1);
+    EXPECT_EQ(call_msg.gas, 32083);
+}
+
+TEST_F(execution, call_new_account_create)
+{
+    auto code = "6040600060406000600060aa611770f150";
+
+    call_result.gas_left = 1000;
+    execute(9000, code);
+    EXPECT_EQ(gas_used, 729 + 5000);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(call_msg.kind, EVMC_CALL);
+    EXPECT_EQ(call_msg.depth, 1);
+    EXPECT_EQ(call_msg.gas, 6000);
+}
+
+TEST_F(execution, callcode_new_account_create)
+{
+    auto code = "60008080806001600061c350f250";
+
+    balance = 1;
+    call_result.gas_left = 1;
+    execute(100000, code);
+    EXPECT_EQ(gas_used, 59722);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(call_msg.kind, EVMC_CALLCODE);
+    EXPECT_EQ(call_msg.depth, 1);
+    EXPECT_EQ(call_msg.gas, 52300);
 }
