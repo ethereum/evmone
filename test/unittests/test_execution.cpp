@@ -809,3 +809,16 @@ TEST_F(execution, callcode_new_account_create)
     EXPECT_EQ(call_msg.depth, 1);
     EXPECT_EQ(call_msg.gas, 52300);
 }
+
+TEST_F(execution, revert)
+{
+    std::string s;
+    s += "60ee8053";    // m[ee] == e
+    s += "600260edfd";  // REVERT(ee,1)
+    execute(s);
+    EXPECT_EQ(gas_used, 39);
+    EXPECT_EQ(result.status_code, EVMC_REVERT);
+    ASSERT_EQ(result.output_size, 2);
+    EXPECT_EQ(result.output_data[0], 0);
+    EXPECT_EQ(result.output_data[1], 0xee);
+}

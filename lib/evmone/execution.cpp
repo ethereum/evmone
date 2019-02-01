@@ -765,6 +765,20 @@ void op_return(execution_state& state, instr_argument) noexcept
     state.output_size = static_cast<size_t>(size);
 }
 
+void op_revert(execution_state& state, instr_argument) noexcept
+{
+    auto offset = state.item(0);
+    auto size = state.item(1);
+
+    if (!check_memory(state, offset, size))
+        return;
+
+    state.run = false;
+    state.status = EVMC_REVERT;
+    state.output_offset = static_cast<size_t>(offset);
+    state.output_size = static_cast<size_t>(size);
+}
+
 void op_call(execution_state& state, instr_argument arg) noexcept
 {
     auto gas = state.item(0);
@@ -1132,6 +1146,7 @@ exec_fn_table create_op_table_homestead() noexcept
 exec_fn_table create_op_table_byzantium() noexcept
 {
     auto table = create_op_table_homestead();
+    table[OP_REVERT] = op_revert;
     return table;
 }
 
