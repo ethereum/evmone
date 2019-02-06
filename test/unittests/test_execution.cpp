@@ -857,3 +857,29 @@ TEST_F(execution, returndatasize)
     ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 0);
 }
+
+TEST_F(execution, returndatacopy)
+{
+    uint8_t output[32] = {1, 2, 3, 4, 5, 6, 7};
+    call_result.output_size = std::size(output);
+    call_result.output_data = std::begin(output);
+
+    auto code = "600080808060aa60fff4506020600060003e60206000f3";
+    execute(code);
+    EXPECT_EQ(gas_used, 999);
+    ASSERT_EQ(result.output_size, 32);
+    EXPECT_EQ(result.output_data[0], 1);
+    EXPECT_EQ(result.output_data[1], 2);
+    EXPECT_EQ(result.output_data[2], 3);
+    EXPECT_EQ(result.output_data[6], 7);
+    EXPECT_EQ(result.output_data[7], 0);
+}
+
+TEST_F(execution, returndatacopy_empty)
+{
+    auto code = "600080808060aa60fff4600080803e60016000f3";
+    execute(code);
+    EXPECT_EQ(gas_used, 994);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 0);
+}

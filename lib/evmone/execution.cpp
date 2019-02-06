@@ -592,6 +592,7 @@ void op_extcodecopy(execution_state& state, instr_argument) noexcept
         return;
 
     auto dst = static_cast<size_t>(mem_index);
+    // FIXME: Bug, it should not use state.code_size;
     auto src = state.code_size < input_index ? state.code_size : static_cast<size_t>(input_index);
     auto s = static_cast<size_t>(size);
 
@@ -623,6 +624,49 @@ void op_extcodecopy(execution_state& state, instr_argument) noexcept
 void op_returndatasize(execution_state& state, instr_argument) noexcept
 {
     state.stack.emplace_back(state.return_data.size());
+}
+
+void op_returndatacopy(execution_state& state, instr_argument) noexcept
+{
+    auto mem_index = state.item(0);
+    auto input_index = state.item(1);
+    auto size = state.item(2);
+
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.stack.pop_back();
+
+    if (!check_memory(state, mem_index, size))
+        return;
+
+    auto dst = static_cast<size_t>(mem_index);
+    auto s = static_cast<size_t>(size);
+
+    if (state.return_data.size() < input_index)
+    {
+        state.run = false;
+        state.status = EVMC_INVALID_MEMORY_ACCESS;
+        return;
+    }
+    auto src = static_cast<size_t>(input_index);
+
+    if (src + s > state.return_data.size())
+    {
+        state.run = false;
+        state.status = EVMC_INVALID_MEMORY_ACCESS;
+        return;
+    }
+
+    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
+    state.gas_left -= copy_cost;
+    if (state.gas_left < 0)
+    {
+        state.run = false;
+        state.status = EVMC_OUT_OF_GAS;
+        return;
+    }
+
+    std::memcpy(&state.memory[dst], &state.return_data[src], s);
 }
 
 void op_extcodehash(execution_state& state, instr_argument) noexcept
@@ -1155,6 +1199,7 @@ exec_fn_table create_op_table_byzantium() noexcept
 {
     auto table = create_op_table_homestead();
     table[OP_RETURNDATASIZE] = op_returndatasize;
+    table[OP_RETURNDATACOPY] = op_returndatacopy;
     table[OP_REVERT] = op_revert;
     return table;
 }
