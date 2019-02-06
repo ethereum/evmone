@@ -1,5 +1,5 @@
 // evmone: Fast Ethereum Virtual Machine implementation
-// Copyright 2018 Pawel Bylica.
+// Copyright 2019 Pawel Bylica.
 // Licensed under the Apache License, Version 2.0.
 #pragma once
 
@@ -16,6 +16,8 @@ using uint256 = intx::uint256;
 
 using bytes32 = std::array<uint8_t, 32>;
 
+using bytes = std::basic_string<uint8_t>;
+
 struct execution_state
 {
     bool run = true;
@@ -25,7 +27,7 @@ struct execution_state
 
     std::vector<uint256> stack;
 
-    std::vector<uint8_t> memory;
+    std::vector<uint8_t> memory;  // TODO: Use bytes.
     int64_t memory_prev_cost = 0;
     size_t output_offset = 0;
     size_t output_size = 0;
@@ -37,7 +39,7 @@ struct execution_state
     int64_t current_block_cost = 0;
 
     struct code_analysis* analysis = nullptr;
-
+    bytes return_data;
     const evmc_message* msg = nullptr;
     const uint8_t* code = nullptr;
     size_t code_size = 0;
