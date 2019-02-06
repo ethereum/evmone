@@ -620,6 +620,11 @@ void op_extcodecopy(execution_state& state, instr_argument) noexcept
     state.stack.pop_back();
 }
 
+void op_returndatasize(execution_state& state, instr_argument) noexcept
+{
+    state.stack.emplace_back(state.return_data.size());
+}
+
 void op_extcodehash(execution_state& state, instr_argument) noexcept
 {
     auto& x = state.item(0);
@@ -882,6 +887,7 @@ void op_call(execution_state& state, instr_argument arg) noexcept
     }
 
     auto result = state.host->host->call(state.host, &msg);
+    state.return_data.assign(result.output_data, result.output_size);
 
 
     state.item(0) = result.status_code == EVMC_SUCCESS;
@@ -959,6 +965,7 @@ void op_delegatecall(execution_state& state, instr_argument arg) noexcept
     }
 
     auto result = state.host->host->call(state.host, &msg);
+    state.return_data.assign(result.output_data, result.output_size);
 
     state.stack.pop_back();
     state.stack.pop_back();
@@ -1018,6 +1025,7 @@ void op_create(execution_state& state, instr_argument arg) noexcept
     intx::be::store(msg.value.bytes, endowment);
 
     auto result = state.host->host->call(state.host, &msg);
+    state.return_data.assign(result.output_data, result.output_size);
     if (result.status_code == EVMC_SUCCESS)
     {
         uint8_t data[32] = {};
@@ -1146,6 +1154,7 @@ exec_fn_table create_op_table_homestead() noexcept
 exec_fn_table create_op_table_byzantium() noexcept
 {
     auto table = create_op_table_homestead();
+    table[OP_RETURNDATASIZE] = op_returndatasize;
     table[OP_REVERT] = op_revert;
     return table;
 }

@@ -822,3 +822,38 @@ TEST_F(execution, revert)
     EXPECT_EQ(result.output_data[0], 0);
     EXPECT_EQ(result.output_data[1], 0xee);
 }
+
+TEST_F(execution, returndatasize_before_call)
+{
+    execute("3d60005360016000f3");
+    EXPECT_EQ(gas_used, 17);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 0);
+}
+
+TEST_F(execution, returndatasize)
+{
+    uint8_t output[13];
+    call_result.output_size = std::size(output);
+    call_result.output_data = std::begin(output);
+
+    auto code = "60008080808080f43d60005360016000f3";
+    execute(code);
+    EXPECT_EQ(gas_used, 735);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], std::size(output));
+
+    call_result.output_size = 1;
+    call_result.status_code = EVMC_FAILURE;
+    execute(code);
+    EXPECT_EQ(gas_used, 735);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 1);
+
+    call_result.output_size = 0;
+    call_result.status_code = EVMC_INTERNAL_ERROR;
+    execute(code);
+    EXPECT_EQ(gas_used, 735);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 0);
+}
