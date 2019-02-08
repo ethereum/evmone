@@ -794,6 +794,18 @@ TEST_F(execution, call_with_value)
     EXPECT_EQ(call_msg.gas, 32083);
 }
 
+TEST_F(execution, call_with_value_depth_limit)
+{
+    exists = true;
+    msg.depth = 1024;
+    call_msg.kind = EVMC_CREATE2;
+    execute("60ff600060ff6000600160aa618000f150");
+    EXPECT_EQ(gas_used, 7447);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(call_msg.kind, EVMC_CREATE2);
+    EXPECT_EQ(call_msg.depth, 0);
+}
+
 TEST_F(execution, call_new_account_create)
 {
     auto code = "6040600060406000600060aa611770f150";
@@ -819,6 +831,45 @@ TEST_F(execution, callcode_new_account_create)
     EXPECT_EQ(call_msg.kind, EVMC_CALLCODE);
     EXPECT_EQ(call_msg.depth, 1);
     EXPECT_EQ(call_msg.gas, 52300);
+}
+
+TEST_F(execution, call_then_oog)
+{
+    // Performs a CALL then execution OOG in the same code block.
+    exists = true;
+    call_result.status_code = EVMC_FAILURE;
+    call_result.gas_left = 0;
+    execute(1000, "6040600060406000600060aa60fef180018001800150");
+    EXPECT_EQ(gas_used, 1000);
+    EXPECT_EQ(call_msg.gas, 254);
+    EXPECT_EQ(result.gas_left, 0);
+    EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+}
+
+TEST_F(execution, delegatecall_then_oog)
+{
+    // Performs a CALL then execution OOG in the same code block.
+    exists = true;
+    call_result.status_code = EVMC_FAILURE;
+    call_result.gas_left = 0;
+    execute(1000, "604060006040600060aa60fef4800180018001800150");
+    EXPECT_EQ(gas_used, 1000);
+    EXPECT_EQ(call_msg.gas, 254);
+    EXPECT_EQ(result.gas_left, 0);
+    EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+}
+
+TEST_F(execution, staticcall_then_oog)
+{
+    // Performs a CALL then execution OOG in the same code block.
+    exists = true;
+    call_result.status_code = EVMC_FAILURE;
+    call_result.gas_left = 0;
+    execute(1000, "604060006040600060aa60fefa800180018001800150");
+    EXPECT_EQ(gas_used, 1000);
+    EXPECT_EQ(call_msg.gas, 254);
+    EXPECT_EQ(result.gas_left, 0);
+    EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
 TEST_F(execution, revert)

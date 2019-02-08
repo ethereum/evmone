@@ -1,5 +1,5 @@
 // evmone: Fast Ethereum Virtual Machine implementation
-// Copyright 2018 Pawel Bylica.
+// Copyright 2019 Pawel Bylica.
 // Licensed under the Apache License, Version 2.0.
 
 #include "execution.hpp"
@@ -860,12 +860,13 @@ void op_call(execution_state& state, instr_argument arg) noexcept
     auto output_offset = state.item(5);
     auto output_size = state.item(6);
 
-    if (gas >= std::numeric_limits<int64_t>::max())
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.item(0) = 0;
 
     if (!check_memory(state, input_offset, input_size))
         return;
@@ -877,7 +878,6 @@ void op_call(execution_state& state, instr_argument arg) noexcept
     auto msg = evmc_message{};
     msg.kind = arg.call_kind;
     msg.flags = state.msg->flags;
-    msg.gas = static_cast<int64_t>(gas);
     intx::be::store(msg.value.bytes, value);
 
     // TODO: Only for TW+. For previous check g <= gas_left.
@@ -912,14 +912,26 @@ void op_call(execution_state& state, instr_argument arg) noexcept
         return;
     }
 
+    msg.gas = std::numeric_limits<int64_t>::max();
+    if (gas < msg.gas)
+        msg.gas = static_cast<int64_t>(gas);
+
     gas_left -= cost;
     msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
 
     if (msg.gas > gas_left)
     {
-        // FIXME: Bug - must be compared against current gas left.
         state.run = false;
         state.status = EVMC_OUT_OF_GAS;
+        return;
+    }
+
+    state.return_data.clear();
+
+    if (state.msg->depth >= 1024)
+    {
+        if (has_value)
+            state.gas_left += 2300;  // Return unused stipend.
         return;
     }
 
@@ -930,17 +942,6 @@ void op_call(execution_state& state, instr_argument arg) noexcept
     msg.input_size = size_t(input_size);
 
     msg.depth = state.msg->depth + 1;
-    if (msg.depth > 1024)
-    {
-        state.run = false;
-        state.status = EVMC_CALL_DEPTH_EXCEEDED;
-        return;
-    }
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
 
     if (has_value)
     {
@@ -949,7 +950,6 @@ void op_call(execution_state& state, instr_argument arg) noexcept
         if (b < value)
         {
             state.gas_left += 2300;  // Return unused stipend.
-            state.item(0) = 0;
             return;
         }
 
@@ -967,13 +967,19 @@ void op_call(execution_state& state, instr_argument arg) noexcept
 
     auto gas_used = msg.gas - result.gas_left;
 
+    if (result.release)
+        result.release(&result);
+
     if (has_value)
         gas_used -= 2300;
 
     state.gas_left -= gas_used;
-
-    if (result.release)
-        result.release(&result);
+    if (state.gas_left < 0)
+    {
+        state.run = false;
+        state.status = EVMC_OUT_OF_GAS;
+        return;
+    }
 }
 
 void op_delegatecall(execution_state& state, instr_argument arg) noexcept
@@ -990,12 +996,12 @@ void op_delegatecall(execution_state& state, instr_argument arg) noexcept
     auto output_offset = state.item(4);
     auto output_size = state.item(5);
 
-    if (gas >= std::numeric_limits<int64_t>::max())
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.item(0) = 0;
 
     if (!check_memory(state, input_offset, input_size))
         return;
@@ -1003,23 +1009,32 @@ void op_delegatecall(execution_state& state, instr_argument arg) noexcept
     if (!check_memory(state, output_offset, output_size))
         return;
 
-
     auto msg = evmc_message{};
     msg.kind = EVMC_DELEGATECALL;
-    msg.gas = static_cast<int64_t>(gas);
 
     // TODO: Only for TW+. For previous check g <= gas_left.
     auto correction = state.current_block_cost - arg.number;
     auto gas_left = state.gas_left + correction;
+
+    // TEST: Gas saturation for big gas values.
+    msg.gas = std::numeric_limits<int64_t>::max();
+    if (gas < msg.gas)
+        msg.gas = static_cast<int64_t>(gas);
+
     msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
 
-    if (msg.gas > state.gas_left)
+    if (msg.gas > gas_left)  // TEST: gas_left vs state.gas_left.
     {
+        // FIXME: This cannot happen.
         state.run = false;
         state.status = EVMC_OUT_OF_GAS;
         return;
     }
 
+    if (state.msg->depth >= 1024)
+        return;
+
+    msg.depth = state.msg->depth + 1;
     msg.flags = state.msg->flags;
     msg.destination = dst;
     msg.sender = state.msg->sender;
@@ -1027,21 +1042,8 @@ void op_delegatecall(execution_state& state, instr_argument arg) noexcept
     msg.input_data = &state.memory[size_t(input_offset)];
     msg.input_size = size_t(input_size);
 
-    // FIXME: Depth is not incremented.
-    if (state.msg->depth >= 1024)
-    {
-        state.run = false;
-        state.status = EVMC_CALL_DEPTH_EXCEEDED;
-        return;
-    }
-
     auto result = state.host->host->call(state.host, &msg);
     state.return_data.assign(result.output_data, result.output_size);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
 
     state.item(0) = result.status_code == EVMC_SUCCESS;
 
@@ -1049,11 +1051,17 @@ void op_delegatecall(execution_state& state, instr_argument arg) noexcept
         std::min(size_t(output_size), result.output_size));
 
     auto gas_used = msg.gas - result.gas_left;
-    state.gas_left -= gas_used;
-    // FIXME: We should check out-of-gas here.
 
     if (result.release)
         result.release(&result);
+
+    state.gas_left -= gas_used;
+    if (state.gas_left < 0)
+    {
+        state.run = false;
+        state.status = EVMC_OUT_OF_GAS;
+        return;
+    }
 }
 
 void op_staticcall(execution_state& state, instr_argument arg) noexcept
@@ -1070,12 +1078,12 @@ void op_staticcall(execution_state& state, instr_argument arg) noexcept
     auto output_offset = state.item(4);
     auto output_size = state.item(5);
 
-    if (gas >= std::numeric_limits<int64_t>::max())
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.item(0) = 0;
 
     if (!check_memory(state, input_offset, input_size))
         return;
@@ -1083,44 +1091,32 @@ void op_staticcall(execution_state& state, instr_argument arg) noexcept
     if (!check_memory(state, output_offset, output_size))
         return;
 
+    if (state.msg->depth >= 1024)
+        return;
 
     auto msg = evmc_message{};
     msg.kind = EVMC_CALL;
     msg.flags |= EVMC_STATIC;
-    msg.gas = static_cast<int64_t>(gas);
+
+    msg.depth = state.msg->depth + 1;
 
     // TODO: Only for TW+. For previous check g <= gas_left.
     auto correction = state.current_block_cost - arg.number;
     auto gas_left = state.gas_left + correction;
 
-    msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
+    msg.gas = std::numeric_limits<int64_t>::max();
+    if (gas < msg.gas)
+        msg.gas = static_cast<int64_t>(gas);
 
-    if (msg.gas > gas_left)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
+    msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
 
     msg.destination = dst;
     msg.sender = state.msg->destination;
     msg.input_data = &state.memory[size_t(input_offset)];
     msg.input_size = size_t(input_size);
 
-    msg.depth = state.msg->depth + 1;
-    if (msg.depth > 1024)
-    {
-        state.run = false;
-        state.status = EVMC_CALL_DEPTH_EXCEEDED;
-        return;
-    }
-
     auto result = state.host->host->call(state.host, &msg);
     state.return_data.assign(result.output_data, result.output_size);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
     state.item(0) = result.status_code == EVMC_SUCCESS;
 
     std::memcpy(&state.memory[size_t(output_offset)], result.output_data,
@@ -1128,10 +1124,16 @@ void op_staticcall(execution_state& state, instr_argument arg) noexcept
 
     auto gas_used = msg.gas - result.gas_left;
 
-    state.gas_left -= gas_used;
-
     if (result.release)
         result.release(&result);
+
+    state.gas_left -= gas_used;
+    if (state.gas_left < 0)
+    {
+        state.run = false;
+        state.status = EVMC_OUT_OF_GAS;
+        return;
+    }
 }
 
 void op_create(execution_state& state, instr_argument arg) noexcept
@@ -1148,13 +1150,14 @@ void op_create(execution_state& state, instr_argument arg) noexcept
     auto init_code_offset = state.item(1);
     auto init_code_size = state.item(2);
 
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.item(0) = 0;
+
     if (!check_memory(state, init_code_offset, init_code_size))
         return;
 
-    state.stack.pop_back();
-    state.stack.pop_back();
-
-    state.item(0) = 0;
+    state.return_data.clear();
 
     if (state.msg->depth >= 1024)
         return;
@@ -1198,6 +1201,7 @@ void op_create(execution_state& state, instr_argument arg) noexcept
     state.gas_left -= gas_used;
     if (state.gas_left < 0)
     {
+        // FIXME: This cannot happen.
         state.run = false;
         state.status = EVMC_OUT_OF_GAS;
     }
