@@ -1029,6 +1029,84 @@ void op_delegatecall(execution_state& state, instr_argument arg) noexcept
         result.release(&result);
 }
 
+void op_staticcall(execution_state& state, instr_argument arg) noexcept
+{
+    auto gas = state.item(0);
+
+    uint8_t data[32];
+    intx::be::store(data, state.item(1));
+    auto dst = evmc_address{};
+    std::memcpy(dst.bytes, &data[12], sizeof(dst));
+
+    auto input_offset = state.item(2);
+    auto input_size = state.item(3);
+    auto output_offset = state.item(4);
+    auto output_size = state.item(5);
+
+    if (gas >= std::numeric_limits<int64_t>::max())
+    {
+        state.run = false;
+        state.status = EVMC_OUT_OF_GAS;
+        return;
+    }
+
+    if (!check_memory(state, input_offset, input_size))
+        return;
+
+    if (!check_memory(state, output_offset, output_size))
+        return;
+
+
+    auto msg = evmc_message{};
+    msg.kind = EVMC_CALL;
+    msg.flags |= EVMC_STATIC;
+    msg.gas = static_cast<int64_t>(gas);
+
+    // TODO: Only for TW+. For previous check g <= gas_left.
+    auto correction = state.current_block_cost - arg.number;
+    auto gas_left = state.gas_left + correction;
+
+    msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
+
+    if (msg.gas > gas_left)
+    {
+        state.run = false;
+        state.status = EVMC_OUT_OF_GAS;
+        return;
+    }
+
+    msg.destination = dst;
+    msg.sender = state.msg->destination;
+    msg.input_data = &state.memory[size_t(input_offset)];
+    msg.input_size = size_t(input_size);
+
+    msg.depth = state.msg->depth + 1;
+    if (msg.depth > 1024)
+    {
+        state.run = false;
+        state.status = EVMC_CALL_DEPTH_EXCEEDED;
+        return;
+    }
+
+    auto result = state.host->host->call(state.host, &msg);
+    state.return_data.assign(result.output_data, result.output_size);
+
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.item(0) = result.status_code == EVMC_SUCCESS;
+
+    std::memcpy(&state.memory[size_t(output_offset)], result.output_data,
+                std::min(size_t(output_size), result.output_size));
+
+    auto gas_used = msg.gas - result.gas_left;
+
+    state.gas_left -= gas_used;
+
+    if (result.release)
+        result.release(&result);
+}
+
 void op_create(execution_state& state, instr_argument arg) noexcept
 {
     auto endowment = state.item(0);
@@ -1200,6 +1278,7 @@ exec_fn_table create_op_table_byzantium() noexcept
     auto table = create_op_table_homestead();
     table[OP_RETURNDATASIZE] = op_returndatasize;
     table[OP_RETURNDATACOPY] = op_returndatacopy;
+    table[OP_STATICCALL] = op_staticcall;
     table[OP_REVERT] = op_revert;
     return table;
 }
