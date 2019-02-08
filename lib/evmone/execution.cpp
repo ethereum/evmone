@@ -6,6 +6,7 @@
 #include "analysis.hpp"
 
 #include <ethash/keccak.hpp>
+#include <evmc/helpers.hpp>
 #include <evmc/instructions.h>
 
 namespace evmone
@@ -1123,7 +1124,7 @@ void op_staticcall(execution_state& state, instr_argument arg) noexcept
     state.item(0) = result.status_code == EVMC_SUCCESS;
 
     std::memcpy(&state.memory[size_t(output_offset)], result.output_data,
-                std::min(size_t(output_size), result.output_size));
+        std::min(size_t(output_size), result.output_size));
 
     auto gas_used = msg.gas - result.gas_left;
 
@@ -1222,6 +1223,25 @@ void op_selfdestruct(execution_state& state, instr_argument) noexcept
     intx::be::store(data, state.item(0));
     evmc_address addr;
     std::memcpy(addr.bytes, &data[12], sizeof(addr));
+
+    auto balance = state.host->host->get_balance(state.host, &state.msg->destination);
+    if (!is_zero(balance))
+    {
+        // After EIP150 hard fork charge additional cost of sending
+        // ethers to non-existing account.
+        bool exists = state.host->host->account_exists(state.host, &addr);
+        if (!exists)
+        {
+            state.gas_left -= 25000;
+            if (state.gas_left < 0)
+            {
+                state.run = false;
+                state.status = EVMC_OUT_OF_GAS;
+                return;
+            }
+        }
+    }
+
     state.host->host->selfdestruct(state.host, &state.msg->destination, &addr);
     state.run = false;
 }
