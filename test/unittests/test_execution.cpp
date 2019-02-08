@@ -75,12 +75,6 @@ protected:
     }
 };
 
-
-inline bool is_zero(const evmc_bytes32& v) noexcept
-{
-    return v == evmc_bytes32{};
-}
-
 evmc_host_interface execution::interface = {
     nullptr,
     [](evmc_context* ctx, const evmc_address*, const evmc_bytes32* key) {
