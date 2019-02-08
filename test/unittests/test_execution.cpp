@@ -17,6 +17,7 @@ class execution : public testing::Test, public evmc_context
 protected:
     evmc_instance* vm = nullptr;
     evmc_revision rev = EVMC_BYZANTIUM;  // Use Byzantium by default.
+    evmc_message msg = {};
     evmc_result result = {};
     int64_t gas_used = 0;
 
@@ -55,7 +56,6 @@ protected:
     void execute(int64_t gas, std::string_view code_hex, std::string_view input_hex = {}) noexcept
     {
         auto input = from_hex(input_hex.data());
-        auto msg = evmc_message{};
         msg.gas = gas;
         msg.input_data = input.data();
         msg.input_size = input.size();
@@ -725,6 +725,17 @@ TEST_F(execution, delegatecall)
     ASSERT_EQ(result.output_size, 8);
     auto output = bytes_view{result.output_data, result.output_size};
     EXPECT_EQ(output, (bytes{0xff, 0xff, 0xff, 0xff, 0xa, 0xb, 0xc, 0xff}));
+}
+
+TEST_F(execution, delegatecall_static)
+{
+    // Checks if DELEGATECALL forwards the "static" flag.
+    msg.flags = EVMC_STATIC;
+    execute("60008080808080f4");
+    EXPECT_EQ(call_msg.gas, 0);
+    EXPECT_EQ(call_msg.flags, EVMC_STATIC);
+    EXPECT_EQ(gas_used, 718);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
 }
 
 TEST_F(execution, create)

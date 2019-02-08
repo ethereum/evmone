@@ -464,6 +464,14 @@ void op_sload(execution_state& state, instr_argument) noexcept
 
 void op_sstore(execution_state& state, instr_argument arg) noexcept
 {
+    if (state.msg->flags & EVMC_STATIC)
+    {
+        // TODO: Implement static mode violation in analysis.
+        state.run = false;
+        state.status = EVMC_STATIC_MODE_VIOLATION;
+        return;
+    }
+
     evmc_bytes32 key;
     evmc_bytes32 value;
     intx::be::store(key.bytes, state.item(0));
@@ -764,6 +772,14 @@ void op_swap(execution_state& state, instr_argument arg) noexcept
 
 void op_log(execution_state& state, instr_argument arg) noexcept
 {
+    if (state.msg->flags & EVMC_STATIC)
+    {
+        // TODO: Implement static mode violation in analysis.
+        state.run = false;
+        state.status = EVMC_STATIC_MODE_VIOLATION;
+        return;
+    }
+
     auto offset = state.item(0);
     auto size = state.item(1);
 
@@ -859,6 +875,7 @@ void op_call(execution_state& state, instr_argument arg) noexcept
 
     auto msg = evmc_message{};
     msg.kind = arg.call_kind;
+    msg.flags = state.msg->flags;
     msg.gas = static_cast<int64_t>(gas);
     intx::be::store(msg.value.bytes, value);
 
@@ -869,7 +886,15 @@ void op_call(execution_state& state, instr_argument arg) noexcept
     auto cost = 0;
     auto has_value = value != 0;
     if (has_value)
+    {
+        if (arg.call_kind == EVMC_CALL && state.msg->flags & EVMC_STATIC)
+        {
+            state.run = false;
+            state.status = EVMC_STATIC_MODE_VIOLATION;
+            return;
+        }
         cost += 9000;
+    }
 
     auto rev = EVMC_BYZANTIUM;  // TODO: Support other revisions.
     if (arg.call_kind == EVMC_CALL && (has_value || rev < EVMC_SPURIOUS_DRAGON))
@@ -994,6 +1019,7 @@ void op_delegatecall(execution_state& state, instr_argument arg) noexcept
         return;
     }
 
+    msg.flags = state.msg->flags;
     msg.destination = dst;
     msg.sender = state.msg->sender;
     msg.value = state.msg->value;
@@ -1109,6 +1135,14 @@ void op_staticcall(execution_state& state, instr_argument arg) noexcept
 
 void op_create(execution_state& state, instr_argument arg) noexcept
 {
+    if (state.msg->flags & EVMC_STATIC)
+    {
+        // TODO: Implement static mode violation in analysis.
+        state.run = false;
+        state.status = EVMC_STATIC_MODE_VIOLATION;
+        return;
+    }
+
     auto endowment = state.item(0);
     auto init_code_offset = state.item(1);
     auto init_code_size = state.item(2);
@@ -1176,6 +1210,14 @@ void op_undefined(execution_state& state, instr_argument) noexcept
 
 void op_selfdestruct(execution_state& state, instr_argument) noexcept
 {
+    if (state.msg->flags & EVMC_STATIC)
+    {
+        // TODO: Implement static mode violation in analysis.
+        state.run = false;
+        state.status = EVMC_STATIC_MODE_VIOLATION;
+        return;
+    }
+
     uint8_t data[32];
     intx::be::store(data, state.item(0));
     evmc_address addr;
