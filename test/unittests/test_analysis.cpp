@@ -55,11 +55,11 @@ TEST(analysis, push)
     dump_analysis(analysis);
 
     ASSERT_EQ(analysis.instrs.size(), 3);
-    ASSERT_EQ(analysis.extra.size(), 2);
-    EXPECT_EQ(analysis.instrs[0].extra_data_index, 0);
-    EXPECT_EQ(analysis.instrs[1].extra_data_index, 1);
-    EXPECT_EQ(analysis.extra[0].bytes[31 - 7], 0x08);
-    EXPECT_EQ(analysis.extra[1].bytes[1], 0xee);
+    ASSERT_EQ(analysis.args_storage.size(), 2);
+    EXPECT_EQ(analysis.instrs[0].arg.data, &analysis.args_storage[0][0]);
+    EXPECT_EQ(analysis.instrs[1].arg.data, &analysis.args_storage[1][0]);
+    EXPECT_EQ(analysis.args_storage[0][31 - 7], 0x08);
+    EXPECT_EQ(analysis.args_storage[1][1], 0xee);
 }
 
 TEST(analysis, jump1)

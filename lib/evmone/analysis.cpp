@@ -63,17 +63,18 @@ code_analysis analyze(const exec_fn_table& fns, const uint8_t* code, size_t code
         // Skip PUSH data.
         if (c >= OP_PUSH1 && c <= OP_PUSH32)
         {
+            // OPT: bswap data here.
             ++i;
             auto push_size = size_t(c - OP_PUSH1 + 1);
-            analysis.extra.emplace_back();
-            auto& extra = analysis.extra.back();
+            analysis.args_storage.emplace_back();
+            auto& data = analysis.args_storage.back();
 
             auto leading_zeros = 32 - push_size;
-            for (auto& b : extra.bytes)
+            for (auto& b : data)
                 b = 0;
             for (size_t j = 0; j < push_size && (i + j) < code_size; ++j)
-                extra.bytes[leading_zeros + j] = code[i + j];
-            instr.extra_data_index = static_cast<int>(analysis.extra.size() - 1);
+                data[leading_zeros + j] = code[i + j];
+            instr.arg.data = &data[0];
             i += push_size - 1;
         }
         else if (is_terminator(c))
