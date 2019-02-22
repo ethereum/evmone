@@ -3,4 +3,4 @@
 	url = https://github.com/ethereum/evmc
 [submodule "intx"]
 	path = intx
-	url = ../intx
+	url = https://github.com/chfast/intx
