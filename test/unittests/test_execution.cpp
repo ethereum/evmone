@@ -945,3 +945,47 @@ TEST_F(execution, returndatacopy_empty)
     ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 0);
 }
+
+TEST_F(execution, shl)
+{
+    auto code = "600560011b6000526001601ff3";
+    rev = EVMC_CONSTANTINOPLE;
+    execute(code);
+    EXPECT_EQ(gas_used, 24);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 5 << 1);
+}
+
+TEST_F(execution, shr)
+{
+    auto code = "600560011c6000526001601ff3";
+    rev = EVMC_CONSTANTINOPLE;
+    execute(code);
+    EXPECT_EQ(gas_used, 24);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 5 >> 1);
+}
+
+TEST_F(execution, sar)
+{
+    auto code = "600160000360021d60005260016000f3";
+    rev = EVMC_CONSTANTINOPLE;
+    execute(code);
+    EXPECT_EQ(gas_used, 30);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 0xff);  // MSB of (-1 >> 2) == -1
+}
+
+TEST_F(execution, sar_01)
+{
+    auto code = "600060011d60005260016000f3";
+    rev = EVMC_CONSTANTINOPLE;
+    execute(code);
+    EXPECT_EQ(gas_used, 24);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 0);
+}

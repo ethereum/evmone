@@ -252,6 +252,39 @@ void op_byte(execution_state& state, instr_argument) noexcept
     state.stack.pop_back();
 }
 
+void op_shl(execution_state& state, instr_argument) noexcept
+{
+    // TODO: Use =<<.
+    state.item(1) = state.item(1) << state.item(0);
+    state.stack.pop_back();
+}
+
+void op_shr(execution_state& state, instr_argument) noexcept
+{
+    // TODO: Use =>>.
+    state.item(1) = state.item(1) >> state.item(0);
+    state.stack.pop_back();
+}
+
+void op_sar(execution_state& state, instr_argument arg) noexcept
+{
+    // TODO: Fix explicit conversion to bool in intx.
+    if ((state.item(1) & (intx::uint256{1} << 255)) == 0)
+        return op_shr(state, arg);
+
+    constexpr auto allones = ~uint256{};
+
+    if (state.item(0) >= 256)
+        state.item(1) = allones;
+    else
+    {
+        const auto shift = static_cast<unsigned>(state.item(0));
+        state.item(1) = (state.item(1) >> shift) | (allones << (256 - shift));
+    }
+
+    state.stack.pop_back();
+}
+
 void op_sha3(execution_state& state, instr_argument) noexcept
 {
     auto index = state.item(0);
@@ -1352,7 +1385,16 @@ exec_fn_table create_op_table_byzantium() noexcept
 exec_fn_table create_op_table_constantinople() noexcept
 {
     auto table = create_op_table_byzantium();
+    table[OP_SHL] = op_shl;
+    table[OP_SHR] = op_shr;
+    table[OP_SAR] = op_sar;
     table[OP_EXTCODEHASH] = op_extcodehash;
+    return table;
+}
+
+exec_fn_table create_op_table_petersburg() noexcept
+{
+    auto table = create_op_table_constantinople();
     return table;
 }
 
@@ -1364,6 +1406,7 @@ const auto op_table_initialized = []() noexcept
     op_table[EVMC_SPURIOUS_DRAGON] = create_op_table_homestead();
     op_table[EVMC_BYZANTIUM] = create_op_table_byzantium();
     op_table[EVMC_CONSTANTINOPLE] = create_op_table_constantinople();
+    op_table[EVMC_CONSTANTINOPLE2] = create_op_table_petersburg();
     return true;
 }
 ();
