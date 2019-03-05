@@ -10,5 +10,5 @@ add_library(evmone
     execution.cpp
     execution.hpp
 )
-target_link_libraries(evmone PUBLIC intx::intx PRIVATE evmc::instructions ethash::ethash)
+target_link_libraries(evmone PUBLIC evmc::evmc intx::intx PRIVATE evmc::instructions ethash::ethash)
 target_include_directories(evmone PUBLIC ${include_dir})
