@@ -7,15 +7,6 @@
 The C++ implementation of the Ethereum Virtual Machine  (EVM) focused on speed.
 Compatible with [EVMC].
 
-## Maintainers
-
-- Paweł Bylica [@chfast]
-
-## License
-
-Licensed under the [MIT License](LICENSE).
-
-
 ## Maintainer
 
 Paweł Bylica [@chfast]
