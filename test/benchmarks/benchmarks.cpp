@@ -60,11 +60,13 @@ void sha1_divs(State& state) noexcept
 
     abi_input.resize(abi_input.size() + input_size, 0);
 
-    auto gas_used = int64_t{0};
+    auto total_gas_used = int64_t{0};
+    auto iteration_gas_used = int64_t{0};
     for (auto _ : state)
-        gas_used += execute(sha1_divs_code, abi_input);
+        total_gas_used += iteration_gas_used = execute(sha1_divs_code, abi_input);
 
-    state.counters["gas"] = Counter(gas_used, Counter::kIsRate);
+    state.counters["gas_used"] = Counter(iteration_gas_used);
+    state.counters["gas_rate"] = Counter(total_gas_used, Counter::kIsRate);
 }
 BENCHMARK(sha1_divs)->Arg(0)->RangeMultiplier(4)->Range(1024, 262144)->Unit(kMicrosecond);
 
@@ -82,11 +84,13 @@ void sha1_shifts(State& state) noexcept
 
     abi_input.resize(abi_input.size() + input_size, 0);
 
-    auto gas_used = int64_t{0};
+    auto total_gas_used = int64_t{0};
+    auto iteration_gas_used = int64_t{0};
     for (auto _ : state)
-        gas_used += execute(sha1_shifts_code, abi_input);
+        total_gas_used += iteration_gas_used = execute(sha1_shifts_code, abi_input);
 
-    state.counters["gas"] = Counter(gas_used, Counter::kIsRate);
+    state.counters["gas_used"] = Counter(iteration_gas_used);
+    state.counters["gas_rate"] = Counter(total_gas_used, Counter::kIsRate);
 }
 BENCHMARK(sha1_shifts)->Arg(0)->RangeMultiplier(4)->Range(1024, 262144)->Unit(kMicrosecond);
 
