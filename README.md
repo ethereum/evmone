@@ -7,6 +7,23 @@
 The C++ implementation of the Ethereum Virtual Machine  (EVM) focused on speed.
 Compatible with [EVMC].
 
+## Usage
+
+To build EVMC module (shared library), test or benchmark.
+
+```bash
+git clone --recursive https://github.com/chfast/evmone
+cd evmone
+mkdir build
+cd build
+
+cmake .. -DEVMONE_TESTING=ON
+cmake --build . -- -j
+
+test/evmone-unittests
+test/evmone-bench
+```
+
 ## Maintainer
 
 Paweł Bylica [@chfast]
