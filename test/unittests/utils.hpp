@@ -3,11 +3,8 @@
 // Licensed under the Apache License, Version 2.0.
 #pragma once
 
-#include <evmc/instructions.h>
-#include <evmone/analysis.hpp>
-
-#include <gtest/gtest.h>
-#include <iostream>
+#include <cstdint>
+#include <string>
 
 using bytes = std::basic_string<uint8_t>;
 using bytes_view = std::basic_string_view<uint8_t>;
@@ -41,15 +38,3 @@ inline std::string to_hex(const uint8_t bytes[], size_t size)
     }
     return str;
 }
-
-
-const auto fake_fn_table = []() noexcept
-{
-    evmone::exec_fn_table fns;
-    for (size_t i = 0; i < fns.size(); ++i)
-        fns[i] = (evmone::exec_fn)i;
-    return fns;
-}
-();
-
-void dump_analysis(const evmone::code_analysis& analysis);

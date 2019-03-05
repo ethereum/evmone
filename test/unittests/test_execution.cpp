@@ -8,6 +8,7 @@
 
 #include <evmc/helpers.hpp>
 #include <gtest/gtest.h>
+#include <intx/intx.hpp>
 #include <map>
 
 extern evmc_host_interface interface;

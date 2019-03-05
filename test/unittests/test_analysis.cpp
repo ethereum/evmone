@@ -11,6 +11,16 @@
 
 constexpr auto rev = EVMC_BYZANTIUM;
 
+const auto fake_fn_table = []() noexcept
+{
+    evmone::exec_fn_table fns;
+    for (size_t i = 0; i < fns.size(); ++i)
+        fns[i] = (evmone::exec_fn)i;
+    return fns;
+}
+();
+
+
 TEST(analysis, example1)
 {
     auto code = from_hex("602a601e5359600055");
