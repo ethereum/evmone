@@ -3,7 +3,7 @@
 // Licensed under the Apache License, Version 2.0.
 #pragma once
 
-#include <evmc/evmc.h>
+#include <evmc/evmc.hpp>
 #include <intx/intx.hpp>
 #include <array>
 #include <cstdint>
@@ -17,6 +17,7 @@ using uint256 = intx::uint256;
 using bytes32 = std::array<uint8_t, 32>;
 
 using bytes = std::basic_string<uint8_t>;
+
 
 struct execution_state
 {
@@ -44,9 +45,7 @@ struct execution_state
     const uint8_t* code = nullptr;
     size_t code_size = 0;
 
-    evmc_context* host = nullptr;
-
-    evmc_tx_context tx_context = {};
+    evmc::host host = nullptr;
 
     uint256& item(size_t index) noexcept { return stack[stack.size() - index - 1]; }
 };
