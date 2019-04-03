@@ -741,12 +741,11 @@ TEST_F(execution, delegatecall_static)
 
 TEST_F(execution, create)
 {
+    balance = 1;
+
     auto call_output = bytes{0xa, 0xb, 0xc};
     call_result.output_data = call_output.data();
     call_result.output_size = call_output.size();
-    call_result.gas_left = 1;
-
-    balance = 1;
     call_result.create_address.bytes[10] = 0xcc;
     call_result.gas_left = 200000;
     execute(300000, "602060006001f0600155");
@@ -759,6 +758,32 @@ TEST_F(execution, create)
     EXPECT_EQ(storage[key].bytes[22], 0xcc);
 
     EXPECT_EQ(call_msg.input_size, 0x20);
+}
+
+TEST_F(execution, create2)
+{
+    rev = EVMC_CONSTANTINOPLE;
+    balance = 1;
+
+    auto call_output = bytes{0xa, 0xb, 0xc};
+    call_result.output_data = call_output.data();
+    call_result.output_size = call_output.size();
+    call_result.create_address.bytes[10] = 0xc2;
+    call_result.gas_left = 200000;
+    execute(300000, "605a604160006001f5600155");
+
+    EXPECT_EQ(gas_used, 115817);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+
+    EXPECT_EQ(call_msg.create2_salt.bytes[31], 0x5a);
+    EXPECT_EQ(call_msg.gas, 263775);
+    EXPECT_EQ(call_msg.kind, EVMC_CREATE2);
+
+    auto key = evmc_bytes32{};
+    key.bytes[31] = 1;
+    EXPECT_EQ(storage[key].bytes[22], 0xc2);
+
+    EXPECT_EQ(call_msg.input_size, 0x41);
 }
 
 TEST_F(execution, call_failing_with_value)

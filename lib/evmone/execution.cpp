@@ -1240,6 +1240,89 @@ void op_create(execution_state& state, instr_argument arg) noexcept
     }
 }
 
+void op_create2(execution_state& state, instr_argument arg) noexcept
+{
+    if (state.msg->flags & EVMC_STATIC)
+    {
+        // TODO: Implement static mode violation in analysis.
+        state.run = false;
+        state.status = EVMC_STATIC_MODE_VIOLATION;
+        return;
+    }
+
+    auto endowment = state.item(0);
+    auto init_code_offset = state.item(1);
+    auto init_code_size = state.item(2);
+    auto salt = state.item(3);
+
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.stack.pop_back();
+    state.item(0) = 0;
+
+    if (!check_memory(state, init_code_offset, init_code_size))
+        return;
+
+    auto salt_cost = ((int64_t(init_code_size) + 31) / 32) * 6;
+    state.gas_left -= salt_cost;
+    if (state.gas_left < 0)
+    {
+        state.run = false;
+        state.status = EVMC_OUT_OF_GAS;
+        return;
+    }
+
+    state.return_data.clear();
+
+    if (state.msg->depth >= 1024)
+        return;
+
+    if (endowment != 0)
+    {
+        auto balance = intx::be::uint256(
+            state.host->host->get_balance(state.host, &state.msg->destination).bytes);
+        if (balance < endowment)
+            return;
+    }
+
+    auto msg = evmc_message{};
+
+    // TODO: Only for TW+. For previous check g <= gas_left.
+    auto correction = state.current_block_cost - arg.number;
+    auto gas = state.gas_left + correction;
+    msg.gas = gas - gas / 64;
+
+    msg.kind = EVMC_CREATE2;
+    msg.input_data = &state.memory[size_t(init_code_offset)];
+    msg.input_size = size_t(init_code_size);
+    msg.sender = state.msg->destination;
+    msg.depth = state.msg->depth + 1;
+    intx::be::store(msg.create2_salt.bytes, salt);
+    intx::be::store(msg.value.bytes, endowment);
+
+    auto result = state.host->host->call(state.host, &msg);
+    state.return_data.assign(result.output_data, result.output_size);
+    if (result.status_code == EVMC_SUCCESS)
+    {
+        uint8_t data[32] = {};
+        std::memcpy(&data[12], &result.create_address, sizeof(result.create_address));
+        state.item(0) = intx::be::uint256(data);
+    }
+
+    auto gas_used = msg.gas - result.gas_left;
+
+    if (result.release)
+        result.release(&result);
+
+    state.gas_left -= gas_used;
+    if (state.gas_left < 0)
+    {
+        // FIXME: This cannot happen.
+        state.run = false;
+        state.status = EVMC_OUT_OF_GAS;
+    }
+}
+
 void op_undefined(execution_state& state, instr_argument) noexcept
 {
     state.run = false;
@@ -1389,6 +1472,7 @@ exec_fn_table create_op_table_constantinople() noexcept
     table[OP_SHR] = op_shr;
     table[OP_SAR] = op_sar;
     table[OP_EXTCODEHASH] = op_extcodehash;
+    table[OP_CREATE2] = op_create2;
     return table;
 }
 
