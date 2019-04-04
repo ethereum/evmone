@@ -11,6 +11,8 @@
 #include <intx/intx.hpp>
 #include <map>
 
+using namespace std::literals;
+
 extern evmc_host_interface interface;
 
 class execution : public testing::Test, public evmc_context
@@ -830,6 +832,17 @@ TEST_F(execution, call_with_value_depth_limit)
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(call_msg.kind, EVMC_CREATE2);
     EXPECT_EQ(call_msg.depth, 0);
+}
+
+TEST_F(execution, call_high_gas)
+{
+    rev = EVMC_HOMESTEAD;
+    exists = true;
+    for (auto call_opcode : {"f1", "f2", "f4"})
+    {
+        execute(5000, "6000600060006000600060aa61134c"s + call_opcode);
+        EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+    }
 }
 
 TEST_F(execution, call_new_account_create)

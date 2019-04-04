@@ -913,7 +913,6 @@ void op_call(execution_state& state, instr_argument arg) noexcept
     msg.flags = state.msg->flags;
     intx::be::store(msg.value.bytes, value);
 
-    // TODO: Only for TW+. For previous check g <= gas_left.
     auto correction = state.current_block_cost - arg.number;
     auto gas_left = state.gas_left + correction;
 
@@ -949,9 +948,10 @@ void op_call(execution_state& state, instr_argument arg) noexcept
         msg.gas = static_cast<int64_t>(gas);
 
     gas_left -= cost;
-    msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
 
-    if (msg.gas > gas_left)
+    if (state.rev >= EVMC_TANGERINE_WHISTLE)
+        msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
+    else if (msg.gas > gas_left)
     {
         state.run = false;
         state.status = EVMC_OUT_OF_GAS;
@@ -1044,7 +1044,6 @@ void op_delegatecall(execution_state& state, instr_argument arg) noexcept
     auto msg = evmc_message{};
     msg.kind = EVMC_DELEGATECALL;
 
-    // TODO: Only for TW+. For previous check g <= gas_left.
     auto correction = state.current_block_cost - arg.number;
     auto gas_left = state.gas_left + correction;
 
@@ -1053,11 +1052,10 @@ void op_delegatecall(execution_state& state, instr_argument arg) noexcept
     if (gas < msg.gas)
         msg.gas = static_cast<int64_t>(gas);
 
-    msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
-
-    if (msg.gas > gas_left)  // TEST: gas_left vs state.gas_left.
+    if (state.rev >= EVMC_TANGERINE_WHISTLE)
+        msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
+    else if (msg.gas > gas_left)  // TEST: gas_left vs state.gas_left.
     {
-        // FIXME: This cannot happen.
         state.run = false;
         state.status = EVMC_OUT_OF_GAS;
         return;
@@ -1132,7 +1130,6 @@ void op_staticcall(execution_state& state, instr_argument arg) noexcept
 
     msg.depth = state.msg->depth + 1;
 
-    // TODO: Only for TW+. For previous check g <= gas_left.
     auto correction = state.current_block_cost - arg.number;
     auto gas_left = state.gas_left + correction;
 
