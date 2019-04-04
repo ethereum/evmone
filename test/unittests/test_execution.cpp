@@ -550,6 +550,19 @@ TEST_F(execution, sload_cost_pre_tw)
     EXPECT_NE(storage.find({}), storage.end());
 }
 
+TEST_F(execution, sstore_cost)
+{
+    auto revs = {EVMC_BYZANTIUM, EVMC_CONSTANTINOPLE, EVMC_CONSTANTINOPLE2};
+    for (auto r : revs)
+    {
+        storage.clear();
+        rev = r;
+        execute("60018080805555");
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(gas_used, rev == EVMC_CONSTANTINOPLE ? 20212 : 25012);
+    }
+}
+
 TEST_F(execution, tx_context)
 {
     tx_context.block_timestamp = 0xdd;

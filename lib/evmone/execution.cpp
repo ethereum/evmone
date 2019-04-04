@@ -518,13 +518,13 @@ void op_sstore(execution_state& state, instr_argument arg) noexcept
     switch (status)
     {
     case EVMC_STORAGE_UNCHANGED:
-        cost = rev >= EVMC_CONSTANTINOPLE ? 200 : 5000;
+        cost = rev == EVMC_CONSTANTINOPLE ? 200 : 5000;
         break;
     case EVMC_STORAGE_MODIFIED:
         cost = 5000;
         break;
     case EVMC_STORAGE_MODIFIED_AGAIN:
-        cost = rev >= EVMC_CONSTANTINOPLE ? 200 : 5000;
+        cost = rev == EVMC_CONSTANTINOPLE ? 200 : 5000;
         break;
     case EVMC_STORAGE_ADDED:
         cost = 20000;
