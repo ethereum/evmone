@@ -622,6 +622,7 @@ TEST_F(execution, log3)
 
 TEST_F(execution, selfdestruct)
 {
+    rev = EVMC_SPURIOUS_DRAGON;
     execute("6009ff");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(gas_used, 5003);
@@ -632,6 +633,27 @@ TEST_F(execution, selfdestruct)
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(gas_used, 3);
     EXPECT_EQ(selfdestruct_beneficiary.bytes[19], 7);
+
+    rev = EVMC_TANGERINE_WHISTLE;
+    execute("6008ff");
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(gas_used, 30003);
+    EXPECT_EQ(selfdestruct_beneficiary.bytes[19], 8);
+}
+
+TEST_F(execution, selfdestruct_with_balance)
+{
+    balance = 1;
+
+    rev = EVMC_TANGERINE_WHISTLE;
+    execute("6000ff");
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(gas_used, 30003);
+
+    rev = EVMC_HOMESTEAD;
+    execute("6000ff");
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(gas_used, 3);
 }
 
 TEST_F(execution, sha3)

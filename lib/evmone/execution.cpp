@@ -1340,20 +1340,30 @@ void op_selfdestruct(execution_state& state, instr_argument) noexcept
     evmc_address addr;
     std::memcpy(addr.bytes, &data[12], sizeof(addr));
 
-    auto balance = state.host->host->get_balance(state.host, &state.msg->destination);
-    if (!is_zero(balance))
+    if (state.rev >= EVMC_TANGERINE_WHISTLE)
     {
-        // After EIP150 hard fork charge additional cost of sending
-        // ethers to non-existing account.
-        bool exists = state.host->host->account_exists(state.host, &addr);
-        if (!exists)
+        auto check_existance = true;
+
+        if (state.rev >= EVMC_SPURIOUS_DRAGON)
         {
-            state.gas_left -= 25000;
-            if (state.gas_left < 0)
+            auto balance = state.host->host->get_balance(state.host, &state.msg->destination);
+            check_existance = !is_zero(balance);
+        }
+
+        if (check_existance)
+        {
+            // After EIP150 hard fork charge additional cost of sending
+            // ethers to non-existing account.
+            bool exists = state.host->host->account_exists(state.host, &addr);
+            if (!exists)
             {
-                state.run = false;
-                state.status = EVMC_OUT_OF_GAS;
-                return;
+                state.gas_left -= 25000;
+                if (state.gas_left < 0)
+                {
+                    state.run = false;
+                    state.status = EVMC_OUT_OF_GAS;
+                    return;
+                }
             }
         }
     }
