@@ -1,0 +1,78 @@
+version: 2
+jobs:
+
+  lint:
+    docker:
+    - image: ethereum/cpp-build-env:11
+    steps:
+    - checkout
+    - run:
+        name: "Check code format"
+        command: |
+          clang-format --version
+          find include lib test -name '*.hpp' -o -name '*.cpp' -o -name '*.h' -o -name '*.c' | xargs clang-format -i
+          git diff --color --exit-code
+    - run:
+        name: "Run codespell"
+        command: |
+          codespell --quiet-level=4
+
+  build: &build
+    docker:
+      - image: ethereum/cpp-build-env:11
+    steps:
+      - checkout
+      - run:
+          name: "Update submodules"
+          command: git submodule update --init
+      - run:
+          name: "Environment"
+          command: |
+            CC=${CC:-cc}
+            CXX=${CXX:-cpp}
+            echo CC: $CC
+            echo CXX: $CXX
+            $CC --version
+            $CXX --version
+            cmake --version
+      - run:
+          name: "Configure"
+          working_directory: ~/build
+          command: cmake ../project -DCMAKE_INSTALL_PREFIX=~/install -DEVMONE_TESTING=ON $CMAKE_OPTIONS
+      - run:
+          name: "Build"
+          command: cmake --build ~/build
+      - run:
+          name: "Test"
+          command: cmake --build ~/build --target test -- ARGS="-j4 --schedule-random --output-on-failure"
+      - run:
+          name: "Install"
+          command: cmake --build ~/build --target install
+
+  build-gcc-min:
+    <<: *build
+    environment:
+      CC: gcc-7
+      CXX: g++-7
+
+  build-gcc-latest:
+    <<: *build
+    environment:
+      CC: gcc-8
+      CXX: g++-8
+
+  build-clang-latest:
+    <<: *build
+    environment:
+      CC: clang-8
+      CXX: clang++-8
+
+
+workflows:
+  version: 2
+  evmone:
+    jobs:
+      - lint
+      - build-gcc-min
+      - build-gcc-latest
+      - build-clang-latest
