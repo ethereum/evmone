@@ -6,8 +6,8 @@
 /// EVMC instance and entry point of evmone is defined here.
 /// The file name matches the evmone.h public header.
 
-#include <evmone/evmone.h>
 #include "execution.hpp"
+#include <evmone/evmone.h>
 
 extern "C" {
 evmc_instance* evmc_create_evmone() noexcept
