@@ -7,6 +7,7 @@
 #include <evmone/evmone.h>
 
 #include <evmc/helpers.hpp>
+#include <evmc/instructions.h>
 #include <gtest/gtest.h>
 #include <intx/intx.hpp>
 #include <map>
@@ -1061,4 +1062,41 @@ TEST_F(execution, sar_01)
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 0);
+}
+
+TEST_F(execution, undefined_instructions)
+{
+    // TODO: Add Istanbul support to evmone.
+    for (auto r = 0; r <= EVMC_CONSTANTINOPLE2; ++r)
+    {
+        auto rev = evmc_revision(r);
+        auto names = evmc_get_instruction_names_table(rev);
+        auto msg = evmc_message{};
+
+        for (uint8_t opcode = 0; opcode <= 0xfe; ++opcode)
+        {
+            if (names[opcode] != nullptr)
+                continue;
+
+            auto result = vm->execute(vm, this, rev, &msg, &opcode, sizeof(opcode));
+            EXPECT_EQ(result.status_code, EVMC_UNDEFINED_INSTRUCTION) << std::hex << opcode;
+            if (result.release)
+                result.release(&result);
+        }
+    }
+}
+
+TEST_F(execution, abort)
+{
+    // TODO: Add Istanbul support to evmone.
+    for (auto r = 0; r <= EVMC_CONSTANTINOPLE2; ++r)
+    {
+        auto rev = evmc_revision(r);
+        auto opcode = uint8_t{0xfe};
+        auto msg = evmc_message{};
+        auto result = vm->execute(vm, this, rev, &msg, &opcode, sizeof(opcode));
+        EXPECT_EQ(result.status_code, EVMC_INVALID_INSTRUCTION);
+        if (result.release)
+            result.release(&result);
+    }
 }
