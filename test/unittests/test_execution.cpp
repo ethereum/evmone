@@ -762,6 +762,18 @@ TEST_F(execution, create)
     EXPECT_EQ(call_msg.input_size, 0x20);
 }
 
+TEST_F(execution, create_gas)
+{
+    for (auto r : {EVMC_HOMESTEAD, EVMC_TANGERINE_WHISTLE})
+    {
+        rev = r;
+        execute(50000, "60008080f0");
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(gas_used, rev == EVMC_HOMESTEAD ? 50000 : 49719) << rev;
+        EXPECT_EQ(call_msg.gas, rev == EVMC_HOMESTEAD ? 17991 : 17710) << rev;
+    }
+}
+
 TEST_F(execution, create2)
 {
     rev = EVMC_CONSTANTINOPLE;

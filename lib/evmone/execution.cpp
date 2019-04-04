@@ -1201,10 +1201,10 @@ void op_create(execution_state& state, instr_argument arg) noexcept
 
     auto msg = evmc_message{};
 
-    // TODO: Only for TW+. For previous check g <= gas_left.
     auto correction = state.current_block_cost - arg.number;
-    auto gas = state.gas_left + correction;
-    msg.gas = gas - gas / 64;
+    msg.gas = state.gas_left + correction;
+    if (state.rev >= EVMC_TANGERINE_WHISTLE)
+        msg.gas = msg.gas - msg.gas / 64;
 
     msg.kind = EVMC_CREATE;
     msg.input_data = &state.memory[size_t(init_code_offset)];
