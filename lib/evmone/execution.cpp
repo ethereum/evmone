@@ -930,8 +930,7 @@ void op_call(execution_state& state, instr_argument arg) noexcept
         cost += 9000;
     }
 
-    auto rev = EVMC_BYZANTIUM;  // TODO: Support other revisions.
-    if (arg.call_kind == EVMC_CALL && (has_value || rev < EVMC_SPURIOUS_DRAGON))
+    if (arg.call_kind == EVMC_CALL && (has_value || state.rev < EVMC_SPURIOUS_DRAGON))
     {
         if (!state.host->host->account_exists(state.host, &dst))
             cost += 25000;
@@ -1510,6 +1509,7 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
     state.code_size = code_size;
     state.host = ctx;
     state.gas_left = msg->gas;
+    state.rev = rev;
     while (state.run)
     {
         auto& instr = analysis.instrs[state.pc];

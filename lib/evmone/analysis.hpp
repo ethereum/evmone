@@ -48,6 +48,8 @@ struct execution_state
 
     evmc_tx_context tx_context = {};
 
+    evmc_revision rev = {};
+
     uint256& item(size_t index) noexcept { return stack[stack.size() - index - 1]; }
 };
 
