@@ -1079,8 +1079,7 @@ TEST_F(execution, sar_01)
 
 TEST_F(execution, undefined_instructions)
 {
-    // TODO: Add Istanbul support to evmone.
-    for (auto r = 0; r <= EVMC_CONSTANTINOPLE2; ++r)
+    for (auto r = 0; r <= EVMC_MAX_REVISION; ++r)
     {
         auto rev = evmc_revision(r);
         auto names = evmc_get_instruction_names_table(rev);
@@ -1101,8 +1100,7 @@ TEST_F(execution, undefined_instructions)
 
 TEST_F(execution, abort)
 {
-    // TODO: Add Istanbul support to evmone.
-    for (auto r = 0; r <= EVMC_CONSTANTINOPLE2; ++r)
+    for (auto r = 0; r <= EVMC_MAX_REVISION; ++r)
     {
         auto rev = evmc_revision(r);
         auto opcode = uint8_t{0xfe};
