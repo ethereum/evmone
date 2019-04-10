@@ -9,6 +9,7 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <fstream>
 
 using namespace benchmark;
 
@@ -23,6 +24,57 @@ const auto blake2b_shifts_code = from_hex("608060405234801561001057600080fd5b506
 // clang-format on
 
 const auto vm = evmc_create_evmone();
+
+auto evm_code = from_hex("0000");
+auto calldata = from_hex("0000");
+auto expected = "0000";
+
+void parseargs(int argc, char** argv) noexcept
+{
+  using namespace std;
+  for (auto i = 0; i < argc; i++) {
+    printf("argv[%d] = %s\n", i, argv[i]);
+  }
+
+  std::ifstream inFile;
+  inFile.open(argv[1]); //open the input file
+
+  std::stringstream strStream;
+  strStream << inFile.rdbuf(); //read the file
+  std::string hexcode = strStream.str(); //str holds the content of the file
+
+  cout << "hex code length:" << hexcode.length() << endl;
+  evm_code = from_hex(hexcode);
+
+  calldata = from_hex(argv[2]);
+  cout << "calldata size:" << calldata.size() << endl;
+
+  expected = argv[3];
+  cout << "expected:" << expected << endl;
+}
+
+int64_t execute_code(bytes_view code, bytes_view input) noexcept
+{
+    using namespace std;
+    constexpr auto gas = std::numeric_limits<int64_t>::max();
+    auto msg = evmc_message{};
+    msg.gas = gas;
+    msg.input_data = input.data();
+    msg.input_size = input.size();
+    auto r = vm->execute(vm, nullptr, EVMC_CONSTANTINOPLE, &msg, code.data(), code.size());
+
+    const auto resulthex = to_hex(r.output_data, r.output_size);
+    if (resulthex != expected) {
+      cout << "ERROR!  got: " << resulthex << "  expected: " << expected << endl;
+      exit(1);
+    }
+
+    // FIXME: Fix evmc_release_result() helper.
+    if (r.release)
+        r.release(&r);
+
+    return gas - r.gas_left;
+}
 
 int64_t execute(bytes_view code, bytes_view input) noexcept
 {
@@ -128,6 +180,32 @@ BENCHMARK(blake2b_shifts)
     ->Unit(kMicrosecond);
 
 
+void bench_evm_code(State& state) noexcept
+{
+    using namespace std;
+    auto total_gas_used = int64_t{0};
+    auto iteration_gas_used = int64_t{0};
+    for (auto _ : state)
+        total_gas_used += iteration_gas_used = execute_code(evm_code, calldata);
+
+    state.counters["gas_used"] = Counter(iteration_gas_used);
+    state.counters["gas_rate"] = Counter(total_gas_used, Counter::kIsRate);
+}
+BENCHMARK(bench_evm_code)->Unit(kMicrosecond);
+
+
 }  // namespace
 
-BENCHMARK_MAIN();
+// BENCHMARK_MAIN();
+
+// copied from google/benchmark/include/benchmark/benchmark.h
+// this copy removes the line `if ReportUnrecognizedArguments(argc, argv)) return 1`
+// couldn't figure out another way to enable custom args
+#define BENCHMARK_MAIN_WITH_ARGS()                                               \
+  int main(int argc, char** argv) {                                     \
+    parseargs(argc, argv);                                              \
+    ::benchmark::Initialize(&argc, argv);                               \
+    ::benchmark::RunSpecifiedBenchmarks();                              \
+  }
+
+BENCHMARK_MAIN_WITH_ARGS();
