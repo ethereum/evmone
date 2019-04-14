@@ -35,7 +35,6 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
     const uint8_t* code, size_t code_size) noexcept
 {
     auto* instr_table = evmc_get_instruction_metrics_table(rev);
-    // bytes32 zero_bytes;
 
     execution_state state;
     state.msg = msg;
@@ -241,22 +240,10 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
     }
     blocks[code_size] = nullptr;
     labels[code_size] = &&op_stop_dest;
-    // op_stop_dest is a label. This is... of 'void' type?
-    // dereferencing op_stop_dest TWICE gets us to a void pointer*
-    // members of this array are of void pointer* type
-    // which are then referenced again to get to a label
-    // sooo. 1st dereference = memory location of label
-    // 2nd dereference = memory location of memory location of label
-    // referencing the 2nd dereference layer gives us the memory location of label
-    // referencing this reference gets us back to the label itself??
 
-    // label = position in the program counter we need to jump to
-    // dereference of label = position in memory where this label is stored
-    // 2nd dereference = memory location of memory where label location is stored
-    // goto op_stop_dest;
     check_block(state, blocks[state.pc]);
     goto *labels[state.pc];
-    // oh crud
+
     op_add_dest:
         op_add(state);
         check_block(state, blocks[state.pc]);
@@ -982,66 +969,6 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
     }
 
     return result;
-
-/*
-    while (state.run)
-    {
-        void* jumpdest = labels[state.pc];
-        goto foo;
-        goto *jumpdest;
-        foo:
-        auto& instr = blocks[state.pc]
-        if (instr.block_index >= 0)
-        {
-            auto& block = analysis.blocks[static_cast<size_t>(instr.block_index)];
-            state.gas_left -= block.gas_cost;
-            // we assume this statement is not triggered, to avoid
-            // pipeline stalls when the program is running
-            if (__builtin_expect(state.gas_left < 0, 0))
-            {
-                state.status = EVMC_OUT_OF_GAS;
-                break;
-            }
-            // (see above)
-            if (__builtin_expect(static_cast<int>(state.stack_ptr) < block.stack_req, 0))
-            {
-                state.status = EVMC_STACK_UNDERFLOW;
-                break;
-            }
-            // (see above)
-            if (__builtin_expect(static_cast<int>(state.stack_ptr) + block.stack_max > 1024, 0))
-            {
-                state.status = EVMC_STACK_OVERFLOW;
-                break;
-            }
-
-            state.current_block_cost = block.gas_cost;
-        }
-
-        // goto jumpdest;
-        // Advance the PC not to allow jump opcodes to overwrite it.
-        ++state.pc;
-        instr.fn(state, instr.arg);
-    }
-
-    evmc_result result{};
-    result.status_code = state.status;
-    if (state.status == EVMC_SUCCESS || state.status == EVMC_REVERT)
-        result.gas_left = state.gas_left;
-
-    if (state.output_size > 0)
-    {
-        result.output_size = state.output_size;
-        auto output_data = static_cast<uint8_t*>(std::malloc(result.output_size));
-        std::memcpy(output_data, &state.memory[state.output_offset], result.output_size);
-        result.output_data = output_data;
-        result.release = [](const evmc_result* result) noexcept
-        {
-            std::free(const_cast<uint8_t*>(result->output_data));
-        };
-    }
-
-    return result; */
 }
 
 }  // namespace evmone

@@ -352,7 +352,6 @@ inline void op_sha3(execution_state& state) noexcept
     state.gas_left -= cost;
     if (__builtin_expect(state.gas_left < 0, 0))
     {
-        state.run = false;
         state.status = EVMC_OUT_OF_GAS;
         return;
     }
@@ -460,8 +459,8 @@ inline void op_calldatacopy(execution_state& state) noexcept
     state.gas_left -= copy_cost;
     if (state.gas_left < 0)
     {
-        state.run = false;
         state.status = EVMC_OUT_OF_GAS;
+        state.pc = state.code_size;
         return;
     }
 
@@ -497,8 +496,8 @@ inline void op_codecopy(execution_state& state) noexcept
     state.gas_left -= copy_cost;
     if (state.gas_left < 0)
     {
-        state.run = false;
         state.status = EVMC_OUT_OF_GAS;
+        state.pc = state.code_size;
         return;
     }
 
@@ -584,7 +583,7 @@ inline void op_sstore(execution_state& state) noexcept
     if (__builtin_expect(state.gas_left < 0, 0))
     {
         state.status = EVMC_OUT_OF_GAS;
-        state.run = false;
+        state.pc = state.code_size;
     }
 }
 
@@ -686,8 +685,8 @@ inline void op_extcodecopy(execution_state& state) noexcept
     state.gas_left -= copy_cost;
     if (state.gas_left < 0)
     {
-        state.run = false;
         state.status = EVMC_OUT_OF_GAS;
+        state.pc = state.code_size;
         return;
     }
 
@@ -728,16 +727,16 @@ inline void op_returndatacopy(execution_state& state) noexcept
 
     if (state.return_data.size() < input_index)
     {
-        state.run = false;
         state.status = EVMC_INVALID_MEMORY_ACCESS;
+        state.pc = state.code_size;
         return;
     }
     auto src = static_cast<size_t>(input_index);
 
     if (src + s > state.return_data.size())
     {
-        state.run = false;
         state.status = EVMC_INVALID_MEMORY_ACCESS;
+        state.pc = state.code_size;
         return;
     }
 
@@ -745,8 +744,8 @@ inline void op_returndatacopy(execution_state& state) noexcept
     state.gas_left -= copy_cost;
     if (state.gas_left < 0)
     {
-        state.run = false;
         state.status = EVMC_OUT_OF_GAS;
+        state.pc = state.code_size;
         return;
     }
 
@@ -1279,8 +1278,8 @@ inline void op_log(execution_state& state, int number) noexcept
     if (state.msg->flags & EVMC_STATIC)
     {
         // TODO: Implement static mode violation in analysis.
-        state.run = false;
         state.status = EVMC_STATIC_MODE_VIOLATION;
+        state.pc = state.code_size;
         return;
     }
 
@@ -1297,8 +1296,8 @@ inline void op_log(execution_state& state, int number) noexcept
     state.gas_left -= cost;
     if (state.gas_left < 0)
     {
-        state.run = false;
         state.status = EVMC_OUT_OF_GAS;
+        state.pc = state.code_size;
     }
 
     state.stack_ptr -= 2;
@@ -1428,8 +1427,8 @@ inline void op_callbase(
     state.gas_left -= cost;
     if (state.gas_left < 0)
     {
-        state.run = false;
         state.status = EVMC_OUT_OF_GAS;
+        state.pc = state.code_size;
         return;
     }
 
@@ -1649,8 +1648,8 @@ inline void op_staticcall(execution_state& state, instruction_info& instruction_
     state.gas_left -= gas_used;
     if (state.gas_left < 0)
     {
-        state.run = false;
         state.status = EVMC_OUT_OF_GAS;
+        state.pc = state.code_size;
         return;
     }
 }
@@ -1713,8 +1712,8 @@ inline void op_create(execution_state& state, instruction_info& instruction_data
     if (state.gas_left < 0)
     {
         // FIXME: This cannot happen.
-        state.run = false;
         state.status = EVMC_OUT_OF_GAS;
+        state.pc = state.code_size;
     }
 }
 
@@ -1820,7 +1819,6 @@ inline void op_selfdestruct(execution_state& state) noexcept
                 state.gas_left -= 25000;
                 if (state.gas_left < 0)
                 {
-                    state.run = false;
                     state.status = EVMC_OUT_OF_GAS;
                     return;
                 }
@@ -1829,6 +1827,5 @@ inline void op_selfdestruct(execution_state& state) noexcept
     }
 
     state.host->host->selfdestruct(state.host, &state.msg->destination, &addr);
-    state.run = false;
 }
 }  // namespace evmone
