@@ -4,6 +4,7 @@
 
 #include "execution.hpp"
 #include "analysis.hpp"
+#include "opcodes.hpp"
 
 #include <ethash/keccak.hpp>
 #include <evmc/helpers.hpp>
@@ -13,1538 +14,1002 @@ namespace evmone
 {
 namespace
 {
-bool check_memory(execution_state& state, const uint256& offset, const uint256& size) noexcept
+bool is_terminator(uint8_t c) noexcept
 {
-    if (size == 0)
-        return true;
-
-    constexpr auto limit = uint32_t(-1);
-
-    if (limit < offset || limit < size)  // TODO: Revert order of args in <.
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return false;
-    }
-
-    const auto o = static_cast<int64_t>(offset);
-    const auto s = static_cast<int64_t>(size);
-
-    const auto m = static_cast<int64_t>(state.memory.size());
-
-    const auto new_size = o + s;
-    if (m < new_size)
-    {
-        auto w = (new_size + 31) / 32;
-        auto new_cost = 3 * w + w * w / 512;
-        auto cost = new_cost - state.memory_prev_cost;
-        state.memory_prev_cost = new_cost;
-
-        state.gas_left -= cost;
-        if (state.gas_left < 0)
-        {
-            state.run = false;
-            state.status = EVMC_OUT_OF_GAS;
-            return false;
-        }
-
-        state.memory.resize(static_cast<size_t>(w * 32));
-    }
-
-    return true;
-}
-
-
-void op_stop(execution_state& state, instr_argument) noexcept
-{
-    state.run = false;
-}
-
-void op_add(execution_state& state, instr_argument) noexcept
-{
-    state.item(1) += state.item(0);
-    state.stack.pop_back();
-}
-
-void op_mul(execution_state& state, instr_argument) noexcept
-{
-    state.item(1) *= state.item(0);
-    state.stack.pop_back();
-}
-
-void op_sub(execution_state& state, instr_argument) noexcept
-{
-    state.item(1) = state.item(0) - state.item(1);
-    state.stack.pop_back();
-}
-
-void op_div(execution_state& state, instr_argument) noexcept
-{
-    auto& v = state.item(1);
-    v = v != 0 ? state.item(0) / v : 0;
-    state.stack.pop_back();
-}
-
-void op_sdiv(execution_state& state, instr_argument) noexcept
-{
-    auto& v = state.item(1);
-    v = v != 0 ? intx::sdivrem(state.item(0), v).quot : 0;
-    state.stack.pop_back();
-}
-
-void op_mod(execution_state& state, instr_argument) noexcept
-{
-    auto& v = state.item(1);
-    v = v != 0 ? state.item(0) % v : 0;
-    state.stack.pop_back();
-}
-
-void op_smod(execution_state& state, instr_argument) noexcept
-{
-    auto& v = state.item(1);
-    v = v != 0 ? intx::sdivrem(state.item(0), v).rem : 0;
-    state.stack.pop_back();
-}
-
-void op_addmod(execution_state& state, instr_argument) noexcept
-{
-    using intx::uint512;
-    auto x = state.item(0);
-    auto y = state.item(1);
-    auto m = state.item(2);
-    state.stack.pop_back();
-    state.stack.pop_back();
-
-    state.item(0) = m != 0 ? ((uint512{x} + uint512{y}) % uint512{m}).lo : 0;
-}
-
-void op_mulmod(execution_state& state, instr_argument) noexcept
-{
-    using intx::uint512;
-    auto x = state.item(0);
-    auto y = state.item(1);
-    auto m = state.item(2);
-    state.stack.pop_back();
-    state.stack.pop_back();
-
-    state.item(0) = m != 0 ? ((uint512{x} * uint512{y}) % uint512{m}).lo : 0;
-}
-
-void op_exp(execution_state& state, instr_argument arg) noexcept
-{
-    auto base = state.item(0);
-    auto& exponent = state.item(1);
-
-    auto exponent_significant_bytes = intx::count_significant_words<uint8_t>(exponent);
-
-    auto additional_cost = exponent_significant_bytes * arg.number;
-    state.gas_left -= additional_cost;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
-
-    exponent = intx::exp(base, exponent);
-    state.stack.pop_back();
-}
-
-void op_signextend(execution_state& state, instr_argument) noexcept
-{
-    auto ext = state.item(0);
-    state.stack.pop_back();
-    auto& x = state.item(0);
-
-    if (ext < 31)
-    {
-        auto sign_bit = static_cast<int>(ext) * 8 + 7;
-        auto sign_mask = intx::uint256{1} << sign_bit;
-        // TODO: Fix intx operator- overloading: X - 1 does not work.
-        auto value_mask = sign_mask - intx::uint256{1};
-        auto is_neg = (x & sign_mask) != 0;
-        x = is_neg ? x | ~value_mask : x & value_mask;
-    }
-}
-
-void op_lt(execution_state& state, instr_argument) noexcept
-{
-    // OPT: Have single function implementing all comparisons.
-    state.item(1) = state.item(0) < state.item(1);
-    state.stack.pop_back();
-}
-
-void op_gt(execution_state& state, instr_argument) noexcept
-{
-    state.item(1) = state.item(1) < state.item(0);
-    state.stack.pop_back();
-}
-
-void op_slt(execution_state& state, instr_argument) noexcept
-{
-    auto x = state.item(0);
-    auto y = state.item(1);
-    auto x_neg = static_cast<bool>(x >> 255);
-    auto y_neg = static_cast<bool>(y >> 255);
-    state.item(1) = (x_neg ^ y_neg) ? x_neg : x < y;
-    state.stack.pop_back();
-}
-
-void op_sgt(execution_state& state, instr_argument) noexcept
-{
-    auto x = state.item(0);
-    auto y = state.item(1);
-    auto x_neg = static_cast<bool>(x >> 255);
-    auto y_neg = static_cast<bool>(y >> 255);
-    state.item(1) = (x_neg ^ y_neg) ? y_neg : y < x;
-    state.stack.pop_back();
-}
-
-void op_eq(execution_state& state, instr_argument) noexcept
-{
-    state.item(1) = state.item(0) == state.item(1);
-    state.stack.pop_back();
-}
-
-void op_iszero(execution_state& state, instr_argument) noexcept
-{
-    state.item(0) = state.item(0) == 0;
-}
-
-void op_and(execution_state& state, instr_argument) noexcept
-{
-    // TODO: Add operator&= to intx.
-    state.item(1) = state.item(0) & state.item(1);
-    state.stack.pop_back();
-}
-
-void op_or(execution_state& state, instr_argument) noexcept
-{
-    state.item(1) = state.item(0) | state.item(1);
-    state.stack.pop_back();
-}
-
-void op_xor(execution_state& state, instr_argument) noexcept
-{
-    state.item(1) = state.item(0) ^ state.item(1);
-    state.stack.pop_back();
-}
-
-void op_not(execution_state& state, instr_argument) noexcept
-{
-    state.item(0) = ~state.item(0);
-}
-
-void op_byte(execution_state& state, instr_argument) noexcept
-{
-    auto n = state.item(0);
-    auto& x = state.item(1);
-
-    if (31 < n)
-        x = 0;
-    else
-    {
-        auto sh = (31 - static_cast<unsigned>(n)) * 8;
-        auto y = x >> sh;
-        x = y & intx::uint256(0xff);  // TODO: Fix intx operator&.
-    }
-
-    state.stack.pop_back();
-}
-
-void op_shl(execution_state& state, instr_argument) noexcept
-{
-    // TODO: Use =<<.
-    state.item(1) = state.item(1) << state.item(0);
-    state.stack.pop_back();
-}
-
-void op_shr(execution_state& state, instr_argument) noexcept
-{
-    // TODO: Use =>>.
-    state.item(1) = state.item(1) >> state.item(0);
-    state.stack.pop_back();
-}
-
-void op_sar(execution_state& state, instr_argument arg) noexcept
-{
-    // TODO: Fix explicit conversion to bool in intx.
-    if ((state.item(1) & (intx::uint256{1} << 255)) == 0)
-        return op_shr(state, arg);
-
-    constexpr auto allones = ~uint256{};
-
-    if (state.item(0) >= 256)
-        state.item(1) = allones;
-    else
-    {
-        const auto shift = static_cast<unsigned>(state.item(0));
-        state.item(1) = (state.item(1) >> shift) | (allones << (256 - shift));
-    }
-
-    state.stack.pop_back();
-}
-
-void op_sha3(execution_state& state, instr_argument) noexcept
-{
-    auto index = state.item(0);
-    auto size = state.item(1);
-
-    if (!check_memory(state, index, size))
-        return;
-
-    auto i = static_cast<size_t>(index);
-    auto s = static_cast<size_t>(size);
-    auto w = (static_cast<int64_t>(s) + 31) / 32;
-    auto cost = w * 6;
-    state.gas_left -= cost;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
-
-    auto h = ethash::keccak256(&state.memory[i], s);
-
-    state.stack.pop_back();
-    state.item(0) = intx::be::uint256(h.bytes);
-}
-
-void op_address(execution_state& state, instr_argument) noexcept
-{
-    // TODO: Might be generalized using pointers to class member.
-    uint8_t data[32] = {};
-    std::memcpy(&data[12], state.msg->destination.bytes, sizeof(state.msg->destination));
-    auto a = intx::be::uint256(data);
-    state.stack.push_back(a);
-}
-
-void op_balance(execution_state& state, instr_argument) noexcept
-{
-    auto& x = state.item(0);
-    uint8_t data[32];
-    intx::be::store(data, x);
-    evmc_address addr;
-    std::memcpy(addr.bytes, &data[12], sizeof(addr));
-    x = intx::be::uint256(state.host->host->get_balance(state.host, &addr).bytes);
-}
-
-void op_origin(execution_state& state, instr_argument) noexcept
-{
-    if (state.tx_context.block_timestamp == 0)
-        state.tx_context = state.host->host->get_tx_context(state.host);
-    uint8_t data[32] = {};
-    std::memcpy(&data[12], state.tx_context.tx_origin.bytes, sizeof(state.tx_context.tx_origin));
-    auto x = intx::be::uint256(data);
-    state.stack.push_back(x);
-}
-
-void op_caller(execution_state& state, instr_argument) noexcept
-{
-    // TODO: Might be generalized using pointers to class member.
-    uint8_t data[32] = {};
-    std::memcpy(&data[12], state.msg->sender.bytes, sizeof(state.msg->sender));
-    auto a = intx::be::uint256(data);
-    state.stack.push_back(a);
-}
-
-void op_callvalue(execution_state& state, instr_argument) noexcept
-{
-    auto a = intx::be::uint256(state.msg->value.bytes);
-    state.stack.push_back(a);
-}
-
-void op_calldataload(execution_state& state, instr_argument) noexcept
-{
-    auto& index = state.item(0);
-
-    if (state.msg->input_size < index)
-        index = 0;
-    else
-    {
-        const auto begin = static_cast<size_t>(index);
-        const auto end = std::min(begin + 32, state.msg->input_size);
-
-        uint8_t data[32] = {};
-        for (size_t i = 0; i < (end - begin); ++i)
-            data[i] = state.msg->input_data[begin + i];
-
-        index = intx::be::uint256(data);
-    }
-}
-
-void op_calldatasize(execution_state& state, instr_argument) noexcept
-{
-    auto s = intx::uint256{state.msg->input_size};
-    state.stack.push_back(s);
-}
-
-void op_calldatacopy(execution_state& state, instr_argument) noexcept
-{
-    auto mem_index = state.item(0);
-    auto input_index = state.item(1);
-    auto size = state.item(2);
-
-    if (!check_memory(state, mem_index, size))
-        return;
-
-    auto dst = static_cast<size_t>(mem_index);
-    auto src = state.msg->input_size < input_index ? state.msg->input_size :
-                                                     static_cast<size_t>(input_index);
-    auto s = static_cast<size_t>(size);
-    auto copy_size = std::min(s, state.msg->input_size - src);
-
-    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
-    state.gas_left -= copy_cost;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
-
-    std::memcpy(&state.memory[dst], &state.msg->input_data[src], copy_size);
-    std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-}
-
-void op_codesize(execution_state& state, instr_argument) noexcept
-{
-    auto s = intx::uint256{state.code_size};
-    state.stack.push_back(s);
-}
-
-void op_codecopy(execution_state& state, instr_argument) noexcept
-{
-    auto mem_index = state.item(0);
-    auto input_index = state.item(1);
-    auto size = state.item(2);
-
-    if (!check_memory(state, mem_index, size))
-        return;
-
-    auto dst = static_cast<size_t>(mem_index);
-    auto src = state.code_size < input_index ? state.code_size : static_cast<size_t>(input_index);
-    auto s = static_cast<size_t>(size);
-    auto copy_size = std::min(s, state.code_size - src);
-
-    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
-    state.gas_left -= copy_cost;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
-
-    std::memcpy(&state.memory[dst], &state.code[src], copy_size);
-    std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-}
-
-void op_mload(execution_state& state, instr_argument) noexcept
-{
-    auto& index = state.item(0);
-
-    if (!check_memory(state, index, 32))
-        return;
-
-    index = intx::be::uint256(&state.memory[static_cast<size_t>(index)]);
-}
-
-void op_mstore(execution_state& state, instr_argument) noexcept
-{
-    auto index = state.item(0);
-    auto x = state.item(1);
-
-    if (!check_memory(state, index, 32))
-        return;
-
-    intx::be::store(&state.memory[static_cast<size_t>(index)], x);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-}
-
-void op_mstore8(execution_state& state, instr_argument) noexcept
-{
-    auto index = state.item(0);
-    auto x = state.item(1);
-
-    if (!check_memory(state, index, 1))
-        return;
-
-    state.memory[static_cast<size_t>(index)] = static_cast<uint8_t>(x);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-}
-
-void op_sload(execution_state& state, instr_argument) noexcept
-{
-    auto& x = state.item(0);
-    evmc_bytes32 key;
-    intx::be::store(key.bytes, x);
-    x = intx::be::uint256(
-        state.host->host->get_storage(state.host, &state.msg->destination, &key).bytes);
-}
-
-void op_sstore(execution_state& state, instr_argument arg) noexcept
-{
-    if (state.msg->flags & EVMC_STATIC)
-    {
-        // TODO: Implement static mode violation in analysis.
-        state.run = false;
-        state.status = EVMC_STATIC_MODE_VIOLATION;
-        return;
-    }
-
-    evmc_bytes32 key;
-    evmc_bytes32 value;
-    intx::be::store(key.bytes, state.item(0));
-    intx::be::store(value.bytes, state.item(1));
-    state.stack.pop_back();
-    state.stack.pop_back();
-    auto status = state.host->host->set_storage(state.host, &state.msg->destination, &key, &value);
-    auto rev = static_cast<evmc_revision>(arg.number);
-    int cost = 0;
-    switch (status)
-    {
-    case EVMC_STORAGE_UNCHANGED:
-        cost = rev == EVMC_CONSTANTINOPLE ? 200 : 5000;
-        break;
-    case EVMC_STORAGE_MODIFIED:
-        cost = 5000;
-        break;
-    case EVMC_STORAGE_MODIFIED_AGAIN:
-        cost = rev == EVMC_CONSTANTINOPLE ? 200 : 5000;
-        break;
-    case EVMC_STORAGE_ADDED:
-        cost = 20000;
-        break;
-    case EVMC_STORAGE_DELETED:
-        cost = 5000;
-        break;
-    }
-    state.gas_left -= cost;
-    if (state.gas_left < 0)
-    {
-        state.status = EVMC_OUT_OF_GAS;
-        state.run = false;
-    }
-}
-
-void op_jump(execution_state& state, instr_argument) noexcept
-{
-    auto dst = state.item(0);
-    int pc = -1;
-    if (std::numeric_limits<int>::max() < dst ||
-        (pc = state.analysis->find_jumpdest(static_cast<int>(dst))) < 0)
-    {
-        state.run = false;
-        state.status = EVMC_BAD_JUMP_DESTINATION;
-        return;
-    }
-
-    state.pc = static_cast<size_t>(pc);
-    state.stack.pop_back();
-}
-
-void op_jumpi(execution_state& state, instr_argument) noexcept
-{
-    auto condition = state.item(1);
-    if (condition != 0)
-    {
-        // TODO: Call op_jump here.
-        auto dst = state.item(0);
-        int pc = -1;
-        if (std::numeric_limits<int>::max() < dst ||
-            (pc = state.analysis->find_jumpdest(static_cast<int>(dst))) < 0)
-        {
-            state.run = false;
-            state.status = EVMC_BAD_JUMP_DESTINATION;
-            return;
-        }
-        state.pc = static_cast<size_t>(pc);
-    }
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-}
-
-void op_pc(execution_state& state, instr_argument arg) noexcept
-{
-    // TODO: Using temporary object does not work with push_back().
-    intx::uint256 size = arg.number;
-    state.stack.push_back(size);
-}
-
-void op_msize(execution_state& state, instr_argument) noexcept
-{
-    // TODO: Using temporary object does not work with push_back().
-    intx::uint256 size = state.memory.size();
-    state.stack.push_back(size);
-}
-
-void op_gas(execution_state& state, instr_argument arg) noexcept
-{
-    auto correction = state.current_block_cost - arg.number;
-    intx::uint256 gas = static_cast<uint64_t>(state.gas_left + correction);
-    state.stack.push_back(gas);
-}
-
-void op_jumpdest(execution_state&, instr_argument) noexcept
-{
-    // OPT: We can skip JUMPDEST instruction in analysis.
-}
-
-void op_gasprice(execution_state& state, instr_argument) noexcept
-{
-    if (state.tx_context.block_timestamp == 0)
-        state.tx_context = state.host->host->get_tx_context(state.host);
-    auto x = intx::be::uint256(state.tx_context.tx_gas_price.bytes);
-    state.stack.push_back(x);
-}
-
-void op_extcodesize(execution_state& state, instr_argument) noexcept
-{
-    auto& x = state.item(0);
-    uint8_t data[32];
-    intx::be::store(data, x);
-    evmc_address addr;
-    std::memcpy(addr.bytes, &data[12], sizeof(addr));
-    x = state.host->host->get_code_size(state.host, &addr);
-}
-
-void op_extcodecopy(execution_state& state, instr_argument) noexcept
-{
-    auto addr_data = state.item(0);
-    auto mem_index = state.item(1);
-    auto input_index = state.item(2);
-    auto size = state.item(3);
-
-    if (!check_memory(state, mem_index, size))
-        return;
-
-    auto dst = static_cast<size_t>(mem_index);
-    // FIXME: Bug, it should not use state.code_size;
-    auto src = state.code_size < input_index ? state.code_size : static_cast<size_t>(input_index);
-    auto s = static_cast<size_t>(size);
-
-    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
-    state.gas_left -= copy_cost;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
-
-    uint8_t data[32];
-    intx::be::store(data, addr_data);
-    evmc_address addr;
-    std::memcpy(addr.bytes, &data[12], sizeof(addr));
-
-    auto num_bytes_copied =
-        state.host->host->copy_code(state.host, &addr, src, &state.memory[dst], s);
-
-    std::memset(&state.memory[dst + num_bytes_copied], 0, s - num_bytes_copied);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-}
-
-void op_returndatasize(execution_state& state, instr_argument) noexcept
-{
-    state.stack.emplace_back(state.return_data.size());
-}
-
-void op_returndatacopy(execution_state& state, instr_argument) noexcept
-{
-    auto mem_index = state.item(0);
-    auto input_index = state.item(1);
-    auto size = state.item(2);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-
-    if (!check_memory(state, mem_index, size))
-        return;
-
-    auto dst = static_cast<size_t>(mem_index);
-    auto s = static_cast<size_t>(size);
-
-    if (state.return_data.size() < input_index)
-    {
-        state.run = false;
-        state.status = EVMC_INVALID_MEMORY_ACCESS;
-        return;
-    }
-    auto src = static_cast<size_t>(input_index);
-
-    if (src + s > state.return_data.size())
-    {
-        state.run = false;
-        state.status = EVMC_INVALID_MEMORY_ACCESS;
-        return;
-    }
-
-    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
-    state.gas_left -= copy_cost;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
-
-    std::memcpy(&state.memory[dst], &state.return_data[src], s);
-}
-
-void op_extcodehash(execution_state& state, instr_argument) noexcept
-{
-    auto& x = state.item(0);
-    uint8_t data[32];
-    intx::be::store(data, x);
-    evmc_address addr;
-    std::memcpy(addr.bytes, &data[12], sizeof(addr));
-    x = intx::be::uint256(state.host->host->get_code_hash(state.host, &addr).bytes);
-}
-
-void op_blockhash(execution_state& state, instr_argument) noexcept
-{
-    auto& number = state.item(0);
-
-    // Load transaction context.
-    if (state.tx_context.block_timestamp == 0)
-        state.tx_context = state.host->host->get_tx_context(state.host);
-
-    auto upper_bound = state.tx_context.block_number;
-    auto lower_bound = std::max(upper_bound - 256, decltype(upper_bound){0});
-    auto n = static_cast<int64_t>(number);
-    auto header = evmc_bytes32{};
-    if (number < upper_bound && n >= lower_bound)
-        header = state.host->host->get_block_hash(state.host, n);
-    number = intx::be::uint256(header.bytes);
-}
-
-void op_coinbase(execution_state& state, instr_argument) noexcept
-{
-    if (state.tx_context.block_timestamp == 0)
-        state.tx_context = state.host->host->get_tx_context(state.host);
-    uint8_t data[32] = {};
-    std::memcpy(
-        &data[12], state.tx_context.block_coinbase.bytes, sizeof(state.tx_context.block_coinbase));
-    auto x = intx::be::uint256(data);
-    state.stack.push_back(x);
-}
-
-void op_timestamp(execution_state& state, instr_argument) noexcept
-{
-    // TODO: Extract lazy tx context fetch.
-    if (state.tx_context.block_timestamp == 0)
-        state.tx_context = state.host->host->get_tx_context(state.host);
-    auto x = intx::uint256{static_cast<uint64_t>(state.tx_context.block_timestamp)};
-    state.stack.push_back(x);
-}
-
-void op_number(execution_state& state, instr_argument) noexcept
-{
-    if (state.tx_context.block_timestamp == 0)
-        state.tx_context = state.host->host->get_tx_context(state.host);
-    auto x = intx::uint256{static_cast<uint64_t>(state.tx_context.block_number)};
-    state.stack.push_back(x);
-}
-
-void op_difficulty(execution_state& state, instr_argument) noexcept
-{
-    if (state.tx_context.block_timestamp == 0)
-        state.tx_context = state.host->host->get_tx_context(state.host);
-    auto x = intx::be::uint256(state.tx_context.block_difficulty.bytes);
-    state.stack.push_back(x);
-}
-
-void op_gaslimit(execution_state& state, instr_argument) noexcept
-{
-    if (state.tx_context.block_timestamp == 0)
-        state.tx_context = state.host->host->get_tx_context(state.host);
-    auto x = intx::uint256{static_cast<uint64_t>(state.tx_context.block_gas_limit)};
-    state.stack.push_back(x);
-}
-
-void op_push_full(execution_state& state, instr_argument arg) noexcept
-{
-    // OPT: For smaller pushes, use pointer data directly.
-    auto x = intx::be::uint256(arg.data);
-    state.stack.push_back(x);
-}
-
-void op_pop(execution_state& state, instr_argument) noexcept
-{
-    state.stack.pop_back();
-}
-
-void op_dup(execution_state& state, instr_argument arg) noexcept
-{
-    state.stack.push_back(state.item(static_cast<size_t>(arg.number)));
-}
-
-void op_swap(execution_state& state, instr_argument arg) noexcept
-{
-    std::swap(state.item(0), state.item(static_cast<size_t>(arg.number)));
-}
-
-void op_log(execution_state& state, instr_argument arg) noexcept
-{
-    if (state.msg->flags & EVMC_STATIC)
-    {
-        // TODO: Implement static mode violation in analysis.
-        state.run = false;
-        state.status = EVMC_STATIC_MODE_VIOLATION;
-        return;
-    }
-
-    auto offset = state.item(0);
-    auto size = state.item(1);
-
-    if (!check_memory(state, offset, size))
-        return;
-
-    auto o = static_cast<size_t>(offset);
-    auto s = static_cast<size_t>(size);
-
-    auto cost = int64_t{8} * s;
-    state.gas_left -= cost;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-    }
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-
-    std::array<evmc_bytes32, 4> topics;
-    for (auto i = 0; i < arg.number; ++i)
-    {
-        intx::be::store(topics[i].bytes, state.item(0));
-        state.stack.pop_back();
-    }
-
-    state.host->host->emit_log(state.host, &state.msg->destination, &state.memory[o], s,
-        topics.data(), static_cast<size_t>(arg.number));
-}
-
-void op_invalid(execution_state& state, instr_argument) noexcept
-{
-    state.run = false;
-    state.status = EVMC_INVALID_INSTRUCTION;
-}
-
-void op_return(execution_state& state, instr_argument) noexcept
-{
-    auto offset = state.item(0);
-    auto size = state.item(1);
-
-    if (!check_memory(state, offset, size))
-        return;
-
-    state.run = false;
-    state.output_offset = static_cast<size_t>(offset);
-    state.output_size = static_cast<size_t>(size);
-}
-
-void op_revert(execution_state& state, instr_argument) noexcept
-{
-    auto offset = state.item(0);
-    auto size = state.item(1);
-
-    if (!check_memory(state, offset, size))
-        return;
-
-    state.run = false;
-    state.status = EVMC_REVERT;
-    state.output_offset = static_cast<size_t>(offset);
-    state.output_size = static_cast<size_t>(size);
-}
-
-void op_call(execution_state& state, instr_argument arg) noexcept
-{
-    auto gas = state.item(0);
-
-    uint8_t data[32];
-    intx::be::store(data, state.item(1));
-    auto dst = evmc_address{};
-    std::memcpy(dst.bytes, &data[12], sizeof(dst));
-
-    auto value = state.item(2);
-    auto input_offset = state.item(3);
-    auto input_size = state.item(4);
-    auto output_offset = state.item(5);
-    auto output_size = state.item(6);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.item(0) = 0;
-
-    if (!check_memory(state, input_offset, input_size))
-        return;
-
-    if (!check_memory(state, output_offset, output_size))
-        return;
-
-
-    auto msg = evmc_message{};
-    msg.kind = arg.call_kind;
-    msg.flags = state.msg->flags;
-    intx::be::store(msg.value.bytes, value);
-
-    auto correction = state.current_block_cost - arg.number;
-    auto gas_left = state.gas_left + correction;
-
-    auto cost = 0;
-    auto has_value = value != 0;
-    if (has_value)
-    {
-        if (arg.call_kind == EVMC_CALL && state.msg->flags & EVMC_STATIC)
-        {
-            state.run = false;
-            state.status = EVMC_STATIC_MODE_VIOLATION;
-            return;
-        }
-        cost += 9000;
-    }
-
-    if (arg.call_kind == EVMC_CALL && (has_value || state.rev < EVMC_SPURIOUS_DRAGON))
-    {
-        if (!state.host->host->account_exists(state.host, &dst))
-            cost += 25000;
-    }
-
-    state.gas_left -= cost;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
-
-    msg.gas = std::numeric_limits<int64_t>::max();
-    if (gas < msg.gas)
-        msg.gas = static_cast<int64_t>(gas);
-
-    gas_left -= cost;
-
-    if (state.rev >= EVMC_TANGERINE_WHISTLE)
-        msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
-    else if (msg.gas > gas_left)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
-
-    state.return_data.clear();
-
-    if (state.msg->depth >= 1024)
-    {
-        if (has_value)
-            state.gas_left += 2300;  // Return unused stipend.
-        return;
-    }
-
-    msg.destination = dst;
-    msg.sender = state.msg->destination;
-    intx::be::store(msg.value.bytes, value);
-    msg.input_data = &state.memory[size_t(input_offset)];
-    msg.input_size = size_t(input_size);
-
-    msg.depth = state.msg->depth + 1;
-
-    if (has_value)
-    {
-        auto balance = state.host->host->get_balance(state.host, &state.msg->destination);
-        auto b = intx::be::uint256(balance.bytes);
-        if (b < value)
-        {
-            state.gas_left += 2300;  // Return unused stipend.
-            return;
-        }
-
-        msg.gas += 2300;  // Add stipend.
-    }
-
-    auto result = state.host->host->call(state.host, &msg);
-    state.return_data.assign(result.output_data, result.output_size);
-
-
-    state.item(0) = result.status_code == EVMC_SUCCESS;
-
-    std::memcpy(&state.memory[size_t(output_offset)], result.output_data,
-        std::min(size_t(output_size), result.output_size));
-
-    auto gas_used = msg.gas - result.gas_left;
-
-    if (result.release)
-        result.release(&result);
-
-    if (has_value)
-        gas_used -= 2300;
-
-    state.gas_left -= gas_used;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
-}
-
-void op_delegatecall(execution_state& state, instr_argument arg) noexcept
-{
-    auto gas = state.item(0);
-
-    uint8_t data[32];
-    intx::be::store(data, state.item(1));
-    auto dst = evmc_address{};
-    std::memcpy(dst.bytes, &data[12], sizeof(dst));
-
-    auto input_offset = state.item(2);
-    auto input_size = state.item(3);
-    auto output_offset = state.item(4);
-    auto output_size = state.item(5);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.item(0) = 0;
-
-    if (!check_memory(state, input_offset, input_size))
-        return;
-
-    if (!check_memory(state, output_offset, output_size))
-        return;
-
-    auto msg = evmc_message{};
-    msg.kind = EVMC_DELEGATECALL;
-
-    auto correction = state.current_block_cost - arg.number;
-    auto gas_left = state.gas_left + correction;
-
-    // TEST: Gas saturation for big gas values.
-    msg.gas = std::numeric_limits<int64_t>::max();
-    if (gas < msg.gas)
-        msg.gas = static_cast<int64_t>(gas);
-
-    if (state.rev >= EVMC_TANGERINE_WHISTLE)
-        msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
-    else if (msg.gas > gas_left)  // TEST: gas_left vs state.gas_left.
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
-
-    if (state.msg->depth >= 1024)
-        return;
-
-    msg.depth = state.msg->depth + 1;
-    msg.flags = state.msg->flags;
-    msg.destination = dst;
-    msg.sender = state.msg->sender;
-    msg.value = state.msg->value;
-    msg.input_data = &state.memory[size_t(input_offset)];
-    msg.input_size = size_t(input_size);
-
-    auto result = state.host->host->call(state.host, &msg);
-    state.return_data.assign(result.output_data, result.output_size);
-
-    state.item(0) = result.status_code == EVMC_SUCCESS;
-
-    std::memcpy(&state.memory[size_t(output_offset)], result.output_data,
-        std::min(size_t(output_size), result.output_size));
-
-    auto gas_used = msg.gas - result.gas_left;
-
-    if (result.release)
-        result.release(&result);
-
-    state.gas_left -= gas_used;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
-}
-
-void op_staticcall(execution_state& state, instr_argument arg) noexcept
-{
-    auto gas = state.item(0);
-
-    uint8_t data[32];
-    intx::be::store(data, state.item(1));
-    auto dst = evmc_address{};
-    std::memcpy(dst.bytes, &data[12], sizeof(dst));
-
-    auto input_offset = state.item(2);
-    auto input_size = state.item(3);
-    auto output_offset = state.item(4);
-    auto output_size = state.item(5);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.item(0) = 0;
-
-    if (!check_memory(state, input_offset, input_size))
-        return;
-
-    if (!check_memory(state, output_offset, output_size))
-        return;
-
-    if (state.msg->depth >= 1024)
-        return;
-
-    auto msg = evmc_message{};
-    msg.kind = EVMC_CALL;
-    msg.flags |= EVMC_STATIC;
-
-    msg.depth = state.msg->depth + 1;
-
-    auto correction = state.current_block_cost - arg.number;
-    auto gas_left = state.gas_left + correction;
-
-    msg.gas = std::numeric_limits<int64_t>::max();
-    if (gas < msg.gas)
-        msg.gas = static_cast<int64_t>(gas);
-
-    msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
-
-    msg.destination = dst;
-    msg.sender = state.msg->destination;
-    msg.input_data = &state.memory[size_t(input_offset)];
-    msg.input_size = size_t(input_size);
-
-    auto result = state.host->host->call(state.host, &msg);
-    state.return_data.assign(result.output_data, result.output_size);
-    state.item(0) = result.status_code == EVMC_SUCCESS;
-
-    std::memcpy(&state.memory[size_t(output_offset)], result.output_data,
-        std::min(size_t(output_size), result.output_size));
-
-    auto gas_used = msg.gas - result.gas_left;
-
-    if (result.release)
-        result.release(&result);
-
-    state.gas_left -= gas_used;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
-}
-
-void op_create(execution_state& state, instr_argument arg) noexcept
-{
-    if (state.msg->flags & EVMC_STATIC)
-    {
-        // TODO: Implement static mode violation in analysis.
-        state.run = false;
-        state.status = EVMC_STATIC_MODE_VIOLATION;
-        return;
-    }
-
-    auto endowment = state.item(0);
-    auto init_code_offset = state.item(1);
-    auto init_code_size = state.item(2);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.item(0) = 0;
-
-    if (!check_memory(state, init_code_offset, init_code_size))
-        return;
-
-    state.return_data.clear();
-
-    if (state.msg->depth >= 1024)
-        return;
-
-    if (endowment != 0)
-    {
-        auto balance = intx::be::uint256(
-            state.host->host->get_balance(state.host, &state.msg->destination).bytes);
-        if (balance < endowment)
-            return;
-    }
-
-    auto msg = evmc_message{};
-
-    auto correction = state.current_block_cost - arg.number;
-    msg.gas = state.gas_left + correction;
-    if (state.rev >= EVMC_TANGERINE_WHISTLE)
-        msg.gas = msg.gas - msg.gas / 64;
-
-    msg.kind = EVMC_CREATE;
-    msg.input_data = &state.memory[size_t(init_code_offset)];
-    msg.input_size = size_t(init_code_size);
-    msg.sender = state.msg->destination;
-    msg.depth = state.msg->depth + 1;
-    intx::be::store(msg.value.bytes, endowment);
-
-    auto result = state.host->host->call(state.host, &msg);
-    state.return_data.assign(result.output_data, result.output_size);
-    if (result.status_code == EVMC_SUCCESS)
-    {
-        uint8_t data[32] = {};
-        std::memcpy(&data[12], &result.create_address, sizeof(result.create_address));
-        state.item(0) = intx::be::uint256(data);
-    }
-
-    auto gas_used = msg.gas - result.gas_left;
-
-    if (result.release)
-        result.release(&result);
-
-    state.gas_left -= gas_used;
-    if (state.gas_left < 0)
-    {
-        // FIXME: This cannot happen.
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-    }
-}
-
-void op_create2(execution_state& state, instr_argument arg) noexcept
-{
-    if (state.msg->flags & EVMC_STATIC)
-    {
-        // TODO: Implement static mode violation in analysis.
-        state.run = false;
-        state.status = EVMC_STATIC_MODE_VIOLATION;
-        return;
-    }
-
-    auto endowment = state.item(0);
-    auto init_code_offset = state.item(1);
-    auto init_code_size = state.item(2);
-    auto salt = state.item(3);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.item(0) = 0;
-
-    if (!check_memory(state, init_code_offset, init_code_size))
-        return;
-
-    auto salt_cost = ((int64_t(init_code_size) + 31) / 32) * 6;
-    state.gas_left -= salt_cost;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
-
-    state.return_data.clear();
-
-    if (state.msg->depth >= 1024)
-        return;
-
-    if (endowment != 0)
-    {
-        auto balance = intx::be::uint256(
-            state.host->host->get_balance(state.host, &state.msg->destination).bytes);
-        if (balance < endowment)
-            return;
-    }
-
-    auto msg = evmc_message{};
-
-    // TODO: Only for TW+. For previous check g <= gas_left.
-    auto correction = state.current_block_cost - arg.number;
-    auto gas = state.gas_left + correction;
-    msg.gas = gas - gas / 64;
-
-    msg.kind = EVMC_CREATE2;
-    msg.input_data = &state.memory[size_t(init_code_offset)];
-    msg.input_size = size_t(init_code_size);
-    msg.sender = state.msg->destination;
-    msg.depth = state.msg->depth + 1;
-    intx::be::store(msg.create2_salt.bytes, salt);
-    intx::be::store(msg.value.bytes, endowment);
-
-    auto result = state.host->host->call(state.host, &msg);
-    state.return_data.assign(result.output_data, result.output_size);
-    if (result.status_code == EVMC_SUCCESS)
-    {
-        uint8_t data[32] = {};
-        std::memcpy(&data[12], &result.create_address, sizeof(result.create_address));
-        state.item(0) = intx::be::uint256(data);
-    }
-
-    auto gas_used = msg.gas - result.gas_left;
-
-    if (result.release)
-        result.release(&result);
-
-    state.gas_left -= gas_used;
-    if (state.gas_left < 0)
-    {
-        // FIXME: This cannot happen.
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-    }
-}
-
-void op_undefined(execution_state& state, instr_argument) noexcept
-{
-    state.run = false;
-    state.status = EVMC_UNDEFINED_INSTRUCTION;
-}
-
-void op_selfdestruct(execution_state& state, instr_argument) noexcept
-{
-    if (state.msg->flags & EVMC_STATIC)
-    {
-        // TODO: Implement static mode violation in analysis.
-        state.run = false;
-        state.status = EVMC_STATIC_MODE_VIOLATION;
-        return;
-    }
-
-    uint8_t data[32];
-    intx::be::store(data, state.item(0));
-    evmc_address addr;
-    std::memcpy(addr.bytes, &data[12], sizeof(addr));
-
-    if (state.rev >= EVMC_TANGERINE_WHISTLE)
-    {
-        auto check_existance = true;
-
-        if (state.rev >= EVMC_SPURIOUS_DRAGON)
-        {
-            auto balance = state.host->host->get_balance(state.host, &state.msg->destination);
-            check_existance = !is_zero(balance);
-        }
-
-        if (check_existance)
-        {
-            // After EIP150 hard fork charge additional cost of sending
-            // ethers to non-existing account.
-            bool exists = state.host->host->account_exists(state.host, &addr);
-            if (!exists)
-            {
-                state.gas_left -= 25000;
-                if (state.gas_left < 0)
-                {
-                    state.run = false;
-                    state.status = EVMC_OUT_OF_GAS;
-                    return;
-                }
-            }
-        }
-    }
-
-    state.host->host->selfdestruct(state.host, &state.msg->destination, &addr);
-    state.run = false;
-}
-
-constexpr auto num_revisions = int{EVMC_MAX_REVISION + 1};
-exec_fn_table op_table[num_revisions] = {};
-
-exec_fn_table create_op_table_frontier() noexcept
-{
-    exec_fn_table table{};
-
-    // First, mark all opcodes as undefined.
-    std::fill(table.begin(), table.end(), op_undefined);
-
-    table[OP_STOP] = op_stop;
-    table[OP_ADD] = op_add;
-    table[OP_MUL] = op_mul;
-    table[OP_SUB] = op_sub;
-    table[OP_DIV] = op_div;
-    table[OP_SDIV] = op_sdiv;
-    table[OP_MOD] = op_mod;
-    table[OP_SMOD] = op_smod;
-    table[OP_ADDMOD] = op_addmod;
-    table[OP_MULMOD] = op_mulmod;
-    table[OP_EXP] = op_exp;
-    table[OP_SIGNEXTEND] = op_signextend;
-    table[OP_LT] = op_lt;
-    table[OP_GT] = op_gt;
-    table[OP_SLT] = op_slt;
-    table[OP_SGT] = op_sgt;
-    table[OP_EQ] = op_eq;
-    table[OP_ISZERO] = op_iszero;
-    table[OP_AND] = op_and;
-    table[OP_OR] = op_or;
-    table[OP_XOR] = op_xor;
-    table[OP_NOT] = op_not;
-    table[OP_BYTE] = op_byte;
-    table[OP_SHA3] = op_sha3;
-    table[OP_ADDRESS] = op_address;
-    table[OP_BALANCE] = op_balance;
-    table[OP_ORIGIN] = op_origin;
-    table[OP_CALLER] = op_caller;
-    table[OP_CALLVALUE] = op_callvalue;
-    table[OP_CALLDATALOAD] = op_calldataload;
-    table[OP_CALLDATASIZE] = op_calldatasize;
-    table[OP_CALLDATACOPY] = op_calldatacopy;
-    table[OP_CODESIZE] = op_codesize;
-    table[OP_CODECOPY] = op_codecopy;
-    table[OP_EXTCODESIZE] = op_extcodesize;
-    table[OP_EXTCODECOPY] = op_extcodecopy;
-    table[OP_GASPRICE] = op_gasprice;
-    table[OP_BLOCKHASH] = op_blockhash;
-    table[OP_COINBASE] = op_coinbase;
-    table[OP_TIMESTAMP] = op_timestamp;
-    table[OP_NUMBER] = op_number;
-    table[OP_DIFFICULTY] = op_difficulty;
-    table[OP_GASLIMIT] = op_gaslimit;
-    table[OP_POP] = op_pop;
-    table[OP_MLOAD] = op_mload;
-    table[OP_MSTORE] = op_mstore;
-    table[OP_MSTORE8] = op_mstore8;
-    table[OP_SLOAD] = op_sload;
-    table[OP_SSTORE] = op_sstore;
-    table[OP_JUMP] = op_jump;
-    table[OP_JUMPI] = op_jumpi;
-    table[OP_PC] = op_pc;
-    table[OP_MSIZE] = op_msize;
-    table[OP_GAS] = op_gas;
-    table[OP_JUMPDEST] = op_jumpdest;
-    for (size_t op = OP_PUSH1; op <= OP_PUSH32; ++op)
-        table[op] = op_push_full;
-    for (size_t op = OP_DUP1; op <= OP_DUP16; ++op)
-        table[op] = op_dup;
-    for (size_t op = OP_SWAP1; op <= OP_SWAP16; ++op)
-        table[op] = op_swap;
-    for (auto op = size_t{OP_LOG0}; op <= OP_LOG4; ++op)
-        table[op] = op_log;
-    table[OP_CREATE] = op_create;
-    table[OP_CALL] = op_call;
-    table[OP_CALLCODE] = op_call;
-    table[OP_RETURN] = op_return;
-    table[OP_INVALID] = op_invalid;
-    table[OP_SELFDESTRUCT] = op_selfdestruct;
-    return table;
-}
-
-exec_fn_table create_op_table_homestead() noexcept
-{
-    auto table = create_op_table_frontier();
-    table[OP_DELEGATECALL] = op_delegatecall;
-    return table;
-}
-
-exec_fn_table create_op_table_byzantium() noexcept
-{
-    auto table = create_op_table_homestead();
-    table[OP_RETURNDATASIZE] = op_returndatasize;
-    table[OP_RETURNDATACOPY] = op_returndatacopy;
-    table[OP_STATICCALL] = op_staticcall;
-    table[OP_REVERT] = op_revert;
-    return table;
-}
-
-exec_fn_table create_op_table_constantinople() noexcept
-{
-    auto table = create_op_table_byzantium();
-    table[OP_SHL] = op_shl;
-    table[OP_SHR] = op_shr;
-    table[OP_SAR] = op_sar;
-    table[OP_EXTCODEHASH] = op_extcodehash;
-    table[OP_CREATE2] = op_create2;
-    return table;
-}
-
-exec_fn_table create_op_table_petersburg() noexcept
-{
-    auto table = create_op_table_constantinople();
-    return table;
-}
-
-exec_fn_table create_op_table_istanbul() noexcept
-{
-    auto table = create_op_table_petersburg();
-    return table;
+    return c == OP_JUMP || c == OP_JUMPI || c == OP_STOP || c == OP_RETURN || c == OP_REVERT ||
+        c == OP_SELFDESTRUCT;
 }
 
-const auto op_table_initialized = []() noexcept
+bytes32 init_zero_bytes() noexcept
 {
-    op_table[EVMC_FRONTIER] = create_op_table_frontier();
-    op_table[EVMC_HOMESTEAD] = create_op_table_homestead();
-    op_table[EVMC_TANGERINE_WHISTLE] = create_op_table_homestead();
-    op_table[EVMC_SPURIOUS_DRAGON] = create_op_table_homestead();
-    op_table[EVMC_BYZANTIUM] = create_op_table_byzantium();
-    op_table[EVMC_CONSTANTINOPLE] = create_op_table_constantinople();
-    op_table[EVMC_CONSTANTINOPLE2] = create_op_table_petersburg();
-    op_table[EVMC_ISTANBUL] = create_op_table_istanbul();
-    return true;
+    bytes32 data;
+    for (auto& b : data)
+        b = 0;
+    return data;
 }
-();
+static const bytes32 zero_bytes = init_zero_bytes();
 
 }  // namespace
-
 
 evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const evmc_message* msg,
     const uint8_t* code, size_t code_size) noexcept
 {
-    auto analysis = analyze(op_table[rev], rev, code, code_size);
+    auto* instr_table = evmc_get_instruction_metrics_table(rev);
+    // bytes32 zero_bytes;
 
     execution_state state;
-    state.analysis = &analysis;
     state.msg = msg;
     state.code = code;
     state.code_size = code_size;
     state.host = ctx;
     state.gas_left = msg->gas;
     state.rev = rev;
+    state.exp_cost = rev >= EVMC_SPURIOUS_DRAGON ? 50 : 10;
+    state.storage_repeated_cost = rev == EVMC_CONSTANTINOPLE ? 200 : 5000;
+    state.max_code_size = 0xffffffff; // TODO FIX THIS
+    void* jump_table[259] = {
+        /* 0x00 */ &&op_stop_dest,
+        /* 0x01 */ &&op_add_dest,
+        /* 0x02 */ &&op_mul_dest,
+        /* 0x03 */ &&op_sub_dest,
+        /* 0x04 */ &&op_div_dest,
+        /* 0x05 */ &&op_sdiv_dest,
+        /* 0x06 */ &&op_mod_dest,
+        /* 0x07 */ &&op_smod_dest,
+        /* 0x08 */ &&op_addmod_dest,
+        /* 0x09 */ &&op_mulmod_dest,
+        /* 0x0a */ &&op_exp_dest,
+        /* 0x0b */ &&op_signextend_dest,
+        /* 0x0c */ &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest,
+        /* 0x10 */ &&op_lt_dest,
+        /* 0x11 */ &&op_gt_dest,
+        /* 0x12 */ &&op_slt_dest,
+        /* 0x13 */ &&op_sgt_dest,
+        /* 0x14 */ &&op_eq_dest,
+        /* 0x15 */ &&op_iszero_dest,
+        /* 0x16 */ &&op_and_dest,
+        /* 0x17 */ &&op_or_dest,
+        /* 0x18 */ &&op_xor_dest,
+        /* 0x19 */ &&op_not_dest,
+        /* 0x1a */ &&op_byte_dest,
+        /* 0x1b */ &&op_shl_dest,
+        /* 0x1c */ &&op_shr_dest,
+        /* 0x1d */ &&op_sar_dest,
+        /* 0x1e */ &&op_undefined_dest,
+        /* 0x1f */ &&op_undefined_dest,
+        /* 0x20 */ &&op_sha3_dest,
+        /* 0x21 */ &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest,
+        /* 0x30 */ &&op_address_dest,
+        /* 0x31 */ &&op_balance_dest,
+        /* 0x32 */ &&op_origin_dest,
+        /* 0x33 */ &&op_caller_dest,
+        /* 0x34 */ &&op_callvalue_dest,
+        /* 0x35 */ &&op_calldataload_dest,
+        /* 0x36 */ &&op_calldatasize_dest,
+        /* 0x37 */ &&op_calldatacopy_dest,
+        /* 0x38 */ &&op_codesize_dest,
+        /* 0x39 */ &&op_codecopy_dest,
+        /* 0x3a */ &&op_gasprice_dest,
+        /* 0x3b */ &&op_extcodesize_dest,
+        /* 0x3c */ &&op_extcodecopy_dest,
+        /* 0x3d */ &&op_returndatasize_dest,
+        /* 0x3e */ &&op_returndatacopy_dest,
+        /* 0x3f */ &&op_extcodehash_dest,
+        /* 0x40 */ &&op_blockhash_dest,
+        /* 0x41 */ &&op_coinbase_dest,
+        /* 0x42 */ &&op_timestamp_dest,
+        /* 0x43 */ &&op_number_dest,
+        /* 0x44 */ &&op_difficulty_dest,
+        /* 0x45 */ &&op_gaslimit_dest,
+        /* 0x46 */ &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest,
+        /* 0x50 */ &&op_pop_dest,
+        /* 0x51 */ &&op_mload_dest,
+        /* 0x52 */ &&op_mstore_dest,
+        /* 0x53 */ &&op_mstore8_dest,
+        /* 0x54 */ &&op_sload_dest,
+        /* 0x55 */ &&op_sstore_dest,
+        /* 0x56 */ &&op_jump_dest,
+        /* 0x57 */ &&op_jumpi_dest,
+        /* 0x58 */ &&op_pc_dest,
+        /* 0x59 */ &&op_msize_dest,
+        /* 0x5a */ &&op_gas_dest,
+        /* 0x5b */ &&op_jumpdest_dest,
+        /* 0x5c */ &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest,
+        /* 0x60 */ &&op_push1_dest, &&op_push2_dest, &&op_push3_dest, &&op_push4_dest, &&op_push5_dest, &&op_push6_dest, &&op_push7_dest, &&op_push8_dest, &&op_push9_dest, &&op_push10_dest, &&op_push11_dest, &&op_push12_dest, &&op_push13_dest, &&op_push14_dest, &&op_push15_dest, &&op_push16_dest, &&op_push17_dest, &&op_push18_dest, &&op_push19_dest, &&op_push20_dest, &&op_push21_dest, &&op_push22_dest, &&op_push23_dest, &&op_push24_dest, &&op_push25_dest, &&op_push26_dest, &&op_push27_dest, &&op_push28_dest, &&op_push29_dest, &&op_push30_dest, &&op_push31_dest, &&op_push32_dest,
+        /* 0x80 */ &&op_dup1_dest, &&op_dup2_dest, &&op_dup3_dest, &&op_dup4_dest, &&op_dup5_dest, &&op_dup6_dest, &&op_dup7_dest, &&op_dup8_dest, &&op_dup9_dest, &&op_dup10_dest, &&op_dup11_dest, &&op_dup12_dest, &&op_dup13_dest, &&op_dup14_dest, &&op_dup15_dest, &&op_dup16_dest,
+        /* 0x90 */ &&op_swap1_dest, &&op_swap2_dest, &&op_swap3_dest, &&op_swap4_dest, &&op_swap5_dest, &&op_swap6_dest, &&op_swap7_dest, &&op_swap8_dest, &&op_swap9_dest, &&op_swap10_dest, &&op_swap11_dest, &&op_swap12_dest, &&op_swap13_dest, &&op_swap14_dest, &&op_swap15_dest, &&op_swap16_dest,
+        /* 0xa0 */ &&op_log0_dest, &&op_log1_dest, &&op_log2_dest, &&op_log3_dest, &&op_log4_dest,
+        /* 0xa5 */ &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest,
+        /* 0xb5 */ &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest,
+        /* 0xc5 */ &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest,
+        /* 0xd5 */ &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest,
+        /* 0xe5 */ &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest,
+        /* 0xf0 */ &&op_create_dest,
+        /* 0xf1 */ &&op_call_dest,
+        /* 0xf2 */ &&op_callcode_dest,
+        /* 0xf3 */ &&op_return_dest,
+        /* 0xf4 */ &&op_delegatecall_dest,
+        /* 0xf5 */ &&op_create2_dest,
+        /* 0xf6 */ &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest, &&op_undefined_dest,
+        /* 0xfa */ &&op_staticcall_dest,
+        /* 0xfb */ &&op_undefined_dest,
+        /* 0xfc */ &&op_undefined_dest,
+        /* 0xfd */ &&op_revert_dest,
+        /* 0xfe */ &&op_invalid_dest,
+        /* 0xff */ &&op_selfdestruct_dest,
+    };
+
+    switch (rev) {
+        case EVMC_FRONTIER: {
+            jump_table[OP_DELEGATECALL] = &&op_undefined_dest;
+            [[fallthrough]];
+        }
+        case EVMC_TANGERINE_WHISTLE:
+        case EVMC_SPURIOUS_DRAGON:
+        case EVMC_HOMESTEAD: {
+            jump_table[OP_RETURNDATASIZE] = &&op_undefined_dest;
+            jump_table[OP_RETURNDATACOPY] = &&op_undefined_dest;
+            jump_table[OP_STATICCALL] = &&op_undefined_dest;
+            jump_table[OP_REVERT] = &&op_undefined_dest;
+            [[fallthrough]];
+        };
+        case EVMC_BYZANTIUM: {
+            jump_table[OP_SHL] = &&op_undefined_dest;
+            jump_table[OP_SHR] = &&op_undefined_dest;
+            jump_table[OP_SAR] = &&op_undefined_dest;
+            jump_table[OP_EXTCODEHASH] = &&op_undefined_dest;
+            jump_table[OP_CREATE2] = &&op_undefined_dest;
+            [[fallthrough]];
+        };
+        case EVMC_CONSTANTINOPLE:
+            [[fallthrough]]
+        case EVMC_CONSTANTINOPLE2:
+            [[fallthrough]]
+        case EVMC_ISTANBUL:
+            break;
+    };
+    if (state.msg->flags & EVMC_STATIC)
+    {
+        jump_table[OP_SSTORE] = &&op_staticviolation_dest;
+        jump_table[OP_LOG0] = &&op_staticviolation_dest;
+        jump_table[OP_LOG1] = &&op_staticviolation_dest;
+        jump_table[OP_LOG2] = &&op_staticviolation_dest;
+        jump_table[OP_LOG3] = &&op_staticviolation_dest;
+        jump_table[OP_LOG4] = &&op_staticviolation_dest;
+        jump_table[OP_CREATE] = &&op_staticviolation_dest;
+        jump_table[OP_CREATE2] = &&op_staticviolation_dest;
+        jump_table[OP_SELFDESTRUCT] = &&op_staticviolation_dest;
+    }
+    void* labels[code_size + 1];
+    block_info* blocks[code_size + 1];
+    instruction_info* instruction_data[code_size];
+    code_analysis_alt analysis_alt;
+
+    block_info* block = nullptr;
+
+    /* so, apparently this is valid...
+    size_t test_label = *static_cast<size_t*>(&&op_stop_dest);
+    goto *&test_label;
+    */
+    for (size_t i = 0; i < code_size; ++i)
+    {
+        uint8_t c = code[i];
+        labels[i] = jump_table[c];
+        if (!block || (c == OP_JUMPDEST)) {
+            block = &analysis_alt.blocks.emplace_back();
+            blocks[i] = block;
+        } else {
+            blocks[i] = nullptr;
+        }
+        auto metrics = instr_table[c];
+        block->gas_cost += metrics.gas_cost;
+        auto stack_req = metrics.num_stack_arguments - block->stack_diff;
+        block->stack_diff += (metrics.num_stack_returned_items - metrics.num_stack_arguments);
+        block->stack_req = std::max(block->stack_req, stack_req);
+        block->stack_max = std::max(block->stack_max, block->stack_diff);
+        if (c >= OP_PUSH1 && c <= OP_PUSH32)
+        {
+            ++i;
+            size_t push_size = size_t(c - OP_PUSH1 + 1);
+            size_t leading_zeroes = size_t(32 - push_size);
+            analysis_alt.instruction_data.emplace_back();
+            instruction_info& instruction = analysis_alt.instruction_data.back();
+            memcpy(&instruction.push_data[0], &zero_bytes, 32);
+            memcpy(&instruction.push_data[leading_zeroes], code + i, push_size);
+            instruction_data[i - 1] = &instruction;
+            i += push_size - 1;
+        }
+        else if (c == OP_GAS || c == OP_DELEGATECALL || c == OP_CALL || c == OP_CALLCODE ||
+                 c == OP_STATICCALL || c == OP_CREATE || c == OP_CREATE2)
+        {
+            // instruction_info* instruction = &analysis_alt.instruction_data.emplace_back();
+            // instruction->gas_data = block->gas_cost;
+            analysis_alt.instruction_data.emplace_back();
+            instruction_info& instruction = analysis_alt.instruction_data.back();
+            instruction.gas_data = block->gas_cost;
+            instruction_data[i] = &instruction;
+        }
+        else if (is_terminator(c))
+        {
+            instruction_data[i] = nullptr;
+            block = nullptr;
+        }
+        else
+        {
+            instruction_data[i] = nullptr;
+        }
+    }
+    blocks[code_size] = nullptr;
+    labels[code_size] = &&op_stop_dest;
+    // op_stop_dest is a label. This is... of 'void' type?
+    // dereferencing op_stop_dest TWICE gets us to a void pointer*
+    // members of this array are of void pointer* type
+    // which are then referenced again to get to a label
+    // sooo. 1st dereference = memory location of label
+    // 2nd dereference = memory location of memory location of label
+    // referencing the 2nd dereference layer gives us the memory location of label
+    // referencing this reference gets us back to the label itself??
+
+    // label = position in the program counter we need to jump to
+    // dereference of label = position in memory where this label is stored
+    // 2nd dereference = memory location of memory where label location is stored
+    // goto op_stop_dest;
+    check_block(state, blocks[state.pc]);
+    goto *labels[state.pc];
+    // oh crud
+    op_add_dest:
+        op_add(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_mul_dest:
+        op_mul(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_sub_dest:
+        op_sub(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_div_dest:
+        op_div(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_sdiv_dest:
+        op_sdiv(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_mod_dest:
+        op_mod(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_smod_dest:
+        op_smod(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_addmod_dest:
+        op_addmod(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_mulmod_dest:
+        op_mulmod(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_exp_dest:
+        op_exp(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_signextend_dest:
+        op_signextend(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_lt_dest:
+        op_lt(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_gt_dest:
+        op_gt(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_slt_dest:
+        op_slt(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_sgt_dest:
+        op_sgt(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_eq_dest:
+        op_eq(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_iszero_dest:
+        op_iszero(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_and_dest:
+        op_and(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_or_dest:
+        op_or(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_xor_dest:
+        op_xor(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_not_dest:
+        op_not(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_byte_dest:
+        op_byte(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_shl_dest:
+        op_shl(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_shr_dest:
+        op_shr(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_sar_dest:
+        op_sar(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_sha3_dest:
+        op_sha3(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_address_dest:
+        op_address(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_balance_dest:
+        op_balance(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_origin_dest:
+        op_origin(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_caller_dest:
+        op_caller(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_callvalue_dest:
+        op_callvalue(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_calldataload_dest:
+        op_calldataload(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_calldatasize_dest:
+        op_calldatasize(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_calldatacopy_dest:
+        op_calldatacopy(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_codesize_dest:
+        op_codesize(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_codecopy_dest:
+        op_codecopy(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_gasprice_dest:
+        op_gasprice(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_extcodesize_dest:
+        op_extcodesize(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_extcodecopy_dest:
+        op_extcodecopy(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_returndatasize_dest:
+        op_returndatasize(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_returndatacopy_dest:
+        op_returndatacopy(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_extcodehash_dest:
+        op_extcodehash(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_blockhash_dest:
+        op_blockhash(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_coinbase_dest:
+        op_coinbase(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_timestamp_dest:
+        op_timestamp(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_number_dest:
+        op_number(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_difficulty_dest:
+        op_difficulty(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_gaslimit_dest:
+        op_gaslimit(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_pop_dest:
+        op_pop(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+        
+    op_mload_dest:
+        op_mload(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_mstore_dest:
+        op_mstore(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_mstore8_dest:
+        op_mstore8(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_sload_dest:
+        op_sload(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_sstore_dest:
+        op_sstore(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_jump_dest:
+        op_jump(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_jumpi_dest:
+        op_jumpi(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_pc_dest:
+        op_pc(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_msize_dest:
+        op_msize(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_gas_dest:
+        op_gas(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_jumpdest_dest:
+        op_jumpdest(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    /**
+     * push
+    **/
+    op_push1_dest:
+        op_push1(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_push2_dest:
+        op_push2(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_push3_dest:
+        op_push3(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+    
+    op_push4_dest:
+        op_push4(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+    
+    op_push5_dest:
+        op_push5(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+    
+    op_push6_dest:
+        op_push6(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+    
+    op_push7_dest:
+        op_push7(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+    
+    op_push8_dest:
+        op_push8(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+    
+    op_push9_dest:
+        op_push9(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+    
+    op_push10_dest:
+        op_push10(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_push11_dest:
+        op_push11(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_push12_dest:
+        op_push12(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_push13_dest:
+        op_push13(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_push14_dest:
+        op_push14(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_push15_dest:
+        op_push15(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_push16_dest:
+        op_push16(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_push17_dest:
+        op_push17(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_push18_dest:
+        op_push18(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_push19_dest:
+        op_push19(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_push20_dest:
+        op_push20(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_push21_dest:
+        op_push21(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_push22_dest:
+        op_push22(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_push23_dest:
+        op_push23(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_push24_dest:
+        op_push24(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_push25_dest:
+        op_push25(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_push26_dest:
+        op_push26(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_push27_dest:
+        op_push27(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_push28_dest:
+        op_push28(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_push29_dest:
+        op_push29(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_push30_dest:
+        op_push30(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_push31_dest:
+        op_push31(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_push32_dest:
+        op_push32(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    /**
+     * dup
+    **/
+    op_dup1_dest:
+        op_dup1(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_dup2_dest:
+        op_dup2(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_dup3_dest:
+        op_dup3(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+    
+    op_dup4_dest:
+        op_dup4(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+    
+    op_dup5_dest:
+        op_dup5(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+    
+    op_dup6_dest:
+        op_dup6(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+    
+    op_dup7_dest:
+        op_dup7(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+    
+    op_dup8_dest:
+        op_dup8(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+    
+    op_dup9_dest:
+        op_dup9(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+    
+    op_dup10_dest:
+        op_dup10(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_dup11_dest:
+        op_dup11(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_dup12_dest:
+        op_dup12(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_dup13_dest:
+        op_dup13(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_dup14_dest:
+        op_dup14(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_dup15_dest:
+        op_dup15(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_dup16_dest:
+        op_dup16(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    /**
+     * swap
+    **/
+    op_swap1_dest:
+        op_swap1(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_swap2_dest:
+        op_swap2(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_swap3_dest:
+        op_swap3(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+    
+    op_swap4_dest:
+        op_swap4(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+    
+    op_swap5_dest:
+        op_swap5(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+    
+    op_swap6_dest:
+        op_swap6(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+    
+    op_swap7_dest:
+        op_swap7(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+    
+    op_swap8_dest:
+        op_swap8(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+    
+    op_swap9_dest:
+        op_swap9(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+    
+    op_swap10_dest:
+        op_swap10(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_swap11_dest:
+        op_swap11(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_swap12_dest:
+        op_swap12(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_swap13_dest:
+        op_swap13(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_swap14_dest:
+        op_swap14(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_swap15_dest:
+        op_swap15(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_swap16_dest:
+        op_swap16(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_log0_dest:
+        op_log0(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_log1_dest:
+        op_log1(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+  
+    op_log2_dest:
+        op_log2(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_log3_dest:
+        op_log3(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_log4_dest:
+        op_log4(state);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_create_dest:
+        op_create(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_call_dest:
+        op_call(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_callcode_dest:
+        op_call(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_return_dest:
+        op_return(state);
+        goto *labels[state.pc];
+
+    op_delegatecall_dest:
+        op_delegatecall(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_create2_dest:
+        op_create2(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_staticcall_dest:
+        op_staticcall(state, *instruction_data[state.pc]);
+        check_block(state, blocks[state.pc]);
+        goto *labels[state.pc];
+
+    op_revert_dest:
+        op_revert(state);
+        goto *labels[state.pc];
+
+    op_invalid_dest:
+        state.status = EVMC_INVALID_INSTRUCTION;
+        goto op_stop_dest;
+
+    op_selfdestruct_dest:
+        op_selfdestruct(state);
+        goto *labels[state.pc];
+
+    op_undefined_dest:
+        state.status = EVMC_UNDEFINED_INSTRUCTION;
+        goto op_stop_dest;
+    op_staticviolation_dest:
+        state.status = EVMC_STATIC_MODE_VIOLATION;
+    op_stop_dest:
+
+    evmc_result result{};
+    result.status_code = state.status;
+    if (state.status == EVMC_SUCCESS || state.status == EVMC_REVERT)
+        result.gas_left = state.gas_left;
+
+    if (state.output_size > 0)
+    {
+        result.output_size = state.output_size;
+        auto output_data = static_cast<uint8_t*>(std::malloc(result.output_size));
+        std::memcpy(output_data, &state.memory[state.output_offset], result.output_size);
+        result.output_data = output_data;
+        result.release = [](const evmc_result* result) noexcept
+        {
+            std::free(const_cast<uint8_t*>(result->output_data));
+        };
+    }
+
+    return result;
+
+/*
     while (state.run)
     {
-        auto& instr = analysis.instrs[state.pc];
+        void* jumpdest = labels[state.pc];
+        goto foo;
+        goto *jumpdest;
+        foo:
+        auto& instr = blocks[state.pc]
         if (instr.block_index >= 0)
         {
             auto& block = analysis.blocks[static_cast<size_t>(instr.block_index)];
-
             state.gas_left -= block.gas_cost;
-            if (state.gas_left < 0)
+            // we assume this statement is not triggered, to avoid
+            // pipeline stalls when the program is running
+            if (__builtin_expect(state.gas_left < 0, 0))
             {
                 state.status = EVMC_OUT_OF_GAS;
                 break;
             }
-
-            if (static_cast<int>(state.stack.size()) < block.stack_req)
+            // (see above)
+            if (__builtin_expect(static_cast<int>(state.stack_ptr) < block.stack_req, 0))
             {
                 state.status = EVMC_STACK_UNDERFLOW;
                 break;
             }
-
-            if (static_cast<int>(state.stack.size()) + block.stack_max > 1024)
+            // (see above)
+            if (__builtin_expect(static_cast<int>(state.stack_ptr) + block.stack_max > 1024, 0))
             {
                 state.status = EVMC_STACK_OVERFLOW;
                 break;
@@ -1553,9 +1018,9 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
             state.current_block_cost = block.gas_cost;
         }
 
+        // goto jumpdest;
         // Advance the PC not to allow jump opcodes to overwrite it.
         ++state.pc;
-
         instr.fn(state, instr.arg);
     }
 
@@ -1576,7 +1041,7 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
         };
     }
 
-    return result;
+    return result; */
 }
 
 }  // namespace evmone

@@ -156,6 +156,22 @@ evmc_host_interface execution::interface = {
     },
 };
 
+
+TEST_F(execution, stop)
+{
+    execute(6, "600150");
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(result.gas_left, 1);
+}
+
+TEST_F(execution, push_and_pop_basic)
+{
+    execute(6, "600150");
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(result.gas_left, 1);
+}
+
+
 TEST_F(execution, push_and_pop)
 {
     execute(11, "610102506801020304050607080950");
@@ -332,7 +348,6 @@ TEST_F(execution, jumpi_at_the_end)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
     EXPECT_EQ(gas_used, 1000);
 }
-
 
 TEST_F(execution, byte)
 {

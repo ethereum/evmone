@@ -6,6 +6,9 @@
 
 #include <evmc/instructions.h>
 
+#include <stdio.h>
+#include <iostream>
+
 namespace evmone
 {
 namespace
@@ -47,11 +50,70 @@ evmc_call_kind op2call_kind(uint8_t opcode) noexcept
     }
 }
 
+/*
+code_analysis_alt analyze_alt(
+    void* jump_table,
+    void* labels,
+    block_info* instr_info,
+    bytes32* storage_info,
+    evmc_revision rev,
+    const uint8_t* code,
+    const size_t code_size) noexcept
+{
+    bytes32 zero_bytes;
+    for (auto& b : zero_bytes)
+        b = 0;
+
+    code_analysis_alt analysis;
+    block_info* block;
+    auto* instr_table = evmc_get_instruction_metrics_table(rev);
+    for (size_t i = 0; i < code_size; ++i)
+    {
+        uint8_t c = code[i];
+        void* label = (int *)labels + i;
+        void* jump_table_entry = (int *)jump_table + i;
+        label = &jump_table_entry;
+
+        block_info* instr = &instr_info[i];
+        bytes32* storage_info = &storage_info[i];
+
+        if(!block || (c == OP_JUMPDEST)) {
+            block = &analysis.blocks.emplace_back();
+            instr = block;
+        } else {
+            instr = nullptr;
+        }
+        auto metrics = instr_table[c];
+        block->gas_cost += metrics.gas_cost;
+        auto stack_req = metrics.num_stack_arguments - block->stack_diff;
+        block->stack_diff += (metrics.num_stack_returned_items - metrics.num_stack_arguments);
+        block->stack_req = std::max(block->stack_req, stack_req);
+        block->stack_max = std::max(block->stack_max, block->stack_diff);
+
+        if (c >= OP_PUSH1 && c <= OP_PUSH32)
+        {
+            size_t push_size = size_t(c - OP_PUSH1 + 1);
+            size_t leading_zeroes = size_t(32 - push_size);
+            bytes32* storage_dest = &analysis.storage.emplace_back();
+
+            memcpy(storage_dest, &zero_bytes, leading_zeroes);
+            memcpy(storage_dest + leading_zeroes, &code[c + 1], push_size);
+            storage_info = storage_dest;
+        } else {
+            storage_info = nullptr;
+        }
+        // label = &(jump_table + c);
+        // labels[i] = jump_table[c];
+    }
+    return analysis;
+}
+*/
+
 code_analysis analyze(
     const exec_fn_table& fns, evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
 {
     code_analysis analysis;
-    analysis.instrs.reserve(code_size + 1);
+    analysis.instrs.reserve(code_size + 100 + sizeof(struct instr_info));
 
     auto* instr_table = evmc_get_instruction_metrics_table(rev);
 
@@ -61,8 +123,9 @@ code_analysis analyze(
     {
         // TODO: Loop in reverse order for easier GAS analysis.
         const auto c = code[i];
-        auto& instr = analysis.instrs.emplace_back(fns[c]);
-
+        auto& instr = analysis.instrs[i];
+        instr.fn = fns[c];
+        instr.block_index = -1;
         const bool jumpdest = c == OP_JUMPDEST;
         if (!block || jumpdest)
         {
@@ -98,10 +161,6 @@ code_analysis analyze(
             instr.arg.data = &data[0];
             i += push_size - 1;
         }
-        else if (c >= OP_DUP1 && c <= OP_DUP16)
-            instr.arg.number = c - OP_DUP1;
-        else if (c >= OP_SWAP1 && c <= OP_SWAP16)
-            instr.arg.number = c - OP_SWAP1 + 1;
         else if (c == OP_GAS || c == OP_DELEGATECALL || c == OP_CALL || c == OP_CALLCODE ||
                  c == OP_STATICCALL || c == OP_CREATE || c == OP_CREATE2)
         {
@@ -115,15 +174,13 @@ code_analysis analyze(
             instr.arg.number = rev >= EVMC_SPURIOUS_DRAGON ? 50 : 10;
         else if (c == OP_SSTORE)
             instr.arg.number = rev;
-        else if (c >= OP_LOG0 && c <= OP_LOG4)
-            instr.arg.number = c - OP_LOG0;
         else if (is_terminator(c))
             block = nullptr;
     }
 
     // Not terminated block.
     if (block || (code_size > 0 && code[code_size - 1] == OP_JUMPI))
-        analysis.instrs.emplace_back(fns[OP_STOP]);
+        analysis.instrs[code_size].fn = fns[OP_STOP];
 
     return analysis;
 }

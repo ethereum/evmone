@@ -25,7 +25,10 @@ struct execution_state
     int64_t gas_left = 0;
     evmc_status_code status = EVMC_SUCCESS;
 
-    std::vector<uint256> stack;
+    // hmm
+    uint256 stack[1024];
+    size_t stack_ptr = 0;
+    // std::vector<uint256> stack;
 
     std::vector<uint8_t> memory;  // TODO: Use bytes.
     int64_t memory_prev_cost = 0;
@@ -43,14 +46,16 @@ struct execution_state
     const evmc_message* msg = nullptr;
     const uint8_t* code = nullptr;
     size_t code_size = 0;
-
+    size_t max_code_size = 0;
+    int64_t exp_cost = 0;
+    int64_t storage_repeated_cost = 0;
     evmc_context* host = nullptr;
 
     evmc_tx_context tx_context = {};
 
     evmc_revision rev = {};
 
-    uint256& item(size_t index) noexcept { return stack[stack.size() - index - 1]; }
+    // uint256& item(size_t index) noexcept { return stack[stack.size() - index - 1]; }
 };
 
 union instr_argument
@@ -70,6 +75,7 @@ static_assert(sizeof(instr_argument) == sizeof(void*), "Incorrect size of instr_
 using exec_fn = void (*)(execution_state&, instr_argument arg);
 
 using exec_fn_table = std::array<exec_fn, 256>;
+
 
 struct instr_info
 {
@@ -106,5 +112,27 @@ struct code_analysis
 
 code_analysis analyze(
     const exec_fn_table& fns, evmc_revision rev, const uint8_t* code, size_t code_size) noexcept;
+
+union instruction_info
+{
+    std::array<uint8_t, 32> push_data;
+    int64_t gas_data;
+};
+
+struct code_analysis_alt
+{
+    std::deque<instruction_info> instruction_data;
+    std::deque<block_info> blocks;
+};
+
+// code_analysis_alt analyze_alt(
+//     void* jump_table,
+//     void* labels,
+//     block_info* instr_info,
+//     bytes32* storage_info,
+//     evmc_revision rev,
+//     const uint8_t* code,
+//     const size_t code_size
+// ) noexcept;
 
 }  // namespace evmone
