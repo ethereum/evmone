@@ -42,13 +42,14 @@ int64_t execute(bytes_view code, bytes_view input) noexcept
     return gas - r.gas_left;
 }
 
-void empty(State& state) noexcept
-{
-    for (auto _ : state)
-        execute(empty_code, {});
-}
-BENCHMARK(empty);
+// void empty(State& state) noexcept
+// {
+//     for (auto _ : state)
+//         execute(empty_code, {});
+// }
+// BENCHMARK(empty);
 
+/*
 void sha1_divs(State& state) noexcept
 {
     const auto input_size = static_cast<size_t>(state.range(0));
@@ -128,6 +129,7 @@ BENCHMARK(blake2b_shifts)
     ->Arg(8415)
     ->Arg(64 * 1024)
     ->Unit(kMicrosecond);
+*/
 
 void weierstrudel(State& state) noexcept
 {

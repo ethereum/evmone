@@ -10,6 +10,33 @@
 #include <evmc/helpers.hpp>
 #include <evmc/instructions.h>
 
+#include <iostream>
+
+#define COMPUTE_MEMORY_COST() \
+    const auto new_size = offset + size; \
+    auto w = ((state.msize < new_size ? new_size : state.msize) + 31) >> 5; \
+    state.msize = w << 5; \
+    auto new_cost = 3 * w + (w * w >> 9); \
+    auto cost = new_cost - state.memory_prev_cost; \
+    state.memory_prev_cost = new_cost;
+
+#define CHECK_MEMORY(offset, size) \
+    const auto o = static_cast<int64_t>(offset); \
+    const auto s = static_cast<int64_t>(size); \
+    const auto new_size = o + s; \
+    auto w = ((state.msize < new_size ? new_size : state.msize) + 31) >> 5; \
+    state.msize = w << 5; \
+    auto new_cost = 3 * w + (w * w >> 9); \
+    auto cost = new_cost - state.memory_prev_cost; \
+    state.memory_prev_cost = new_cost; \
+    state.gas_left -= cost; \
+    if (__builtin_expect(state.gas_left < 0, 0)) \
+    { \
+        state.status = EVMC_OUT_OF_GAS; \
+        state.pc = state.code_size; \
+    }
+
+
 namespace evmone
 {
 inline void check_block(execution_state& state, block_info* block) noexcept
@@ -36,65 +63,54 @@ inline void check_block(execution_state& state, block_info* block) noexcept
     }
 }
 
+inline uint64_t compute_memory_cost(execution_state& state, const int64_t& offset, const int64_t& size) noexcept
+{
+    const auto new_size = offset + size;
+    auto w = ((state.msize < new_size ? new_size : state.msize) + 31) >> 5;
+    state.msize = w << 5;
+    auto new_cost = 3 * w + (w * w >> 9);
+    auto cost = new_cost - state.memory_prev_cost;
+    state.memory_prev_cost = new_cost;
+    return cost;
+}
+
 inline bool check_memory(execution_state& state, const uint256& offset, const uint256& size) noexcept
 {
-    if (size == 0)
-        return true;
-
-    constexpr auto limit = uint32_t(-1);
-
-    if (limit < offset || limit < size)  // TODO: Revert order of args in <.
-    {
-        state.pc = state.code_size;
-        state.status = EVMC_OUT_OF_GAS;
-        return false;
-    }
-
     const auto o = static_cast<int64_t>(offset);
     const auto s = static_cast<int64_t>(size);
-
-    const auto m = static_cast<int64_t>(state.memory.size());
-
     const auto new_size = o + s;
+    auto w = ((state.msize < new_size ? new_size : state.msize) + 31) >> 5;
+    state.msize = w << 5;
+    auto new_cost = 3 * w + (w * w >> 9);
+    auto cost = new_cost - state.memory_prev_cost;
 
-    if (m < new_size)
+    state.memory_prev_cost = new_cost;
+    state.gas_left -= cost;
+    if (__builtin_expect(state.gas_left < 0, 0))
     {
-        auto w = (new_size + 31) >> 5;
-        auto new_cost = 3 * w + (w * w >> 9);
-        auto cost = new_cost - state.memory_prev_cost;
-        state.memory_prev_cost = new_cost;
-
-        state.gas_left -= cost;
-        if (state.gas_left < 0)
-        {
-            state.status = EVMC_OUT_OF_GAS;
-            state.pc = state.code_size;
-            return false;
-        }
-
-        state.memory.resize(static_cast<size_t>(w << 5));
+        state.status = EVMC_OUT_OF_GAS;
+        state.pc = state.code_size;
+        return false;
     }
+    // }
     return true;
 }
 
 
 inline void op_add(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack[state.stack_ptr - 1] += state.stack[state.stack_ptr];
     state.stack_ptr--;
 }
 
 inline void op_mul(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack[state.stack_ptr - 1] *= state.stack[state.stack_ptr];
     state.stack_ptr--;
 }
 
 inline void op_sub(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack[state.stack_ptr - 1] =
         state.stack[state.stack_ptr] - state.stack[state.stack_ptr - 1];
     state.stack_ptr--;
@@ -102,7 +118,6 @@ inline void op_sub(execution_state& state) noexcept
 
 inline void op_div(execution_state& state) noexcept
 {
-    state.pc++;
     auto& v = state.stack[state.stack_ptr - 1];
     v = v != 0 ? state.stack[state.stack_ptr] / v : 0;
     state.stack_ptr--;
@@ -110,7 +125,6 @@ inline void op_div(execution_state& state) noexcept
 
 inline void op_sdiv(execution_state& state) noexcept
 {
-    state.pc++;
     auto& v = state.stack[state.stack_ptr - 1];
     v = v != 0 ? intx::sdivrem(state.stack[state.stack_ptr], v).quot : 0;
     state.stack_ptr--;
@@ -118,7 +132,6 @@ inline void op_sdiv(execution_state& state) noexcept
 
 inline void op_mod(execution_state& state) noexcept
 {
-    state.pc++;
     auto& v = state.stack[state.stack_ptr - 1];
     v = v != 0 ? state.stack[state.stack_ptr] % v : 0;
     state.stack_ptr--;
@@ -126,7 +139,6 @@ inline void op_mod(execution_state& state) noexcept
 
 inline void op_smod(execution_state& state) noexcept
 {
-    state.pc++;
     auto& v = state.stack[state.stack_ptr - 1];
     v = v != 0 ? intx::sdivrem(state.stack[state.stack_ptr], v).rem : 0;
     state.stack_ptr--;
@@ -134,7 +146,6 @@ inline void op_smod(execution_state& state) noexcept
 
 inline void op_addmod(execution_state& state) noexcept
 {
-    state.pc++;
     using intx::uint512;
     auto x = state.stack[state.stack_ptr];
     auto y = state.stack[state.stack_ptr - 1];
@@ -146,7 +157,6 @@ inline void op_addmod(execution_state& state) noexcept
 
 inline void op_mulmod(execution_state& state) noexcept
 {
-    state.pc++;
     using intx::uint512;
     auto x = state.stack[state.stack_ptr];
     auto y = state.stack[state.stack_ptr - 1];
@@ -158,7 +168,6 @@ inline void op_mulmod(execution_state& state) noexcept
 
 inline void op_exp(execution_state& state) noexcept
 {
-    state.pc++;
     auto base = state.stack[state.stack_ptr];
     auto& exponent = state.stack[state.stack_ptr - 1];
 
@@ -178,7 +187,6 @@ inline void op_exp(execution_state& state) noexcept
 
 inline void op_signextend(execution_state& state) noexcept
 {
-    state.pc++;
     auto ext = state.stack[state.stack_ptr];
     auto& x = state.stack[state.stack_ptr - 1];
     state.stack_ptr--;
@@ -197,7 +205,6 @@ inline void op_signextend(execution_state& state) noexcept
 
 inline void op_lt(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack[state.stack_ptr - 1] =
         state.stack[state.stack_ptr] < state.stack[state.stack_ptr - 1];
     state.stack_ptr--;
@@ -205,7 +212,6 @@ inline void op_lt(execution_state& state) noexcept
 
 inline void op_gt(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack[state.stack_ptr - 1] =
         state.stack[state.stack_ptr - 1] < state.stack[state.stack_ptr];
     state.stack_ptr--;
@@ -213,7 +219,6 @@ inline void op_gt(execution_state& state) noexcept
 
 inline void op_slt(execution_state& state) noexcept
 {
-    state.pc++;
     auto x = state.stack[state.stack_ptr];
     auto y = state.stack[state.stack_ptr - 1];
     auto x_neg = static_cast<bool>(x >> 255);
@@ -225,7 +230,6 @@ inline void op_slt(execution_state& state) noexcept
 
 inline void op_sgt(execution_state& state) noexcept
 {
-    state.pc++;
     auto x = state.stack[state.stack_ptr];
     auto y = state.stack[state.stack_ptr - 1];
     auto x_neg = static_cast<bool>(x >> 255);
@@ -237,7 +241,6 @@ inline void op_sgt(execution_state& state) noexcept
 
 inline void op_eq(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack[state.stack_ptr - 1] =
         state.stack[state.stack_ptr] == state.stack[state.stack_ptr - 1];
     state.stack_ptr--;
@@ -245,13 +248,11 @@ inline void op_eq(execution_state& state) noexcept
 
 inline void op_iszero(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack[state.stack_ptr] = state.stack[state.stack_ptr] == 0;
 }
 
 inline void op_and(execution_state& state) noexcept
 {
-    state.pc++;
     // TODO: Add operator&= to intx.
     state.stack[state.stack_ptr - 1] =
         state.stack[state.stack_ptr] & state.stack[state.stack_ptr - 1];
@@ -260,7 +261,6 @@ inline void op_and(execution_state& state) noexcept
 
 inline void op_or(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack[state.stack_ptr - 1] =
         state.stack[state.stack_ptr] | state.stack[state.stack_ptr - 1];
     state.stack_ptr--;
@@ -268,7 +268,6 @@ inline void op_or(execution_state& state) noexcept
 
 inline void op_xor(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack[state.stack_ptr - 1] =
         state.stack[state.stack_ptr] ^ state.stack[state.stack_ptr - 1];
     state.stack_ptr--;
@@ -276,13 +275,11 @@ inline void op_xor(execution_state& state) noexcept
 
 inline void op_not(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack[state.stack_ptr] = ~state.stack[state.stack_ptr];
 }
 
 inline void op_byte(execution_state& state) noexcept
 {
-    state.pc++;
     auto n = state.stack[state.stack_ptr];
     auto& x = state.stack[state.stack_ptr - 1];
     // TODO: I think we can remove branch here?
@@ -299,7 +296,6 @@ inline void op_byte(execution_state& state) noexcept
 
 inline void op_shl(execution_state& state) noexcept
 {
-    state.pc++;
     // TODO: Use =<<.
     state.stack[state.stack_ptr - 1] =
         state.stack[state.stack_ptr - 1] << state.stack[state.stack_ptr];
@@ -308,7 +304,6 @@ inline void op_shl(execution_state& state) noexcept
 
 inline void op_shr(execution_state& state) noexcept
 {
-    state.pc++;
     // TODO: Use =>>.
     state.stack[state.stack_ptr - 1] =
         state.stack[state.stack_ptr - 1] >> state.stack[state.stack_ptr];
@@ -317,7 +312,6 @@ inline void op_shr(execution_state& state) noexcept
 
 inline void op_sar(execution_state& state) noexcept
 {
-    state.pc++;
     // TODO: Fix explicit conversion to bool in intx.
     if ((state.stack[state.stack_ptr - 1] & (intx::uint256{1} << 255)) == 0)
         return op_shr(state);
@@ -338,17 +332,16 @@ inline void op_sar(execution_state& state) noexcept
 
 inline void op_sha3(execution_state& state) noexcept
 {
-    state.pc++;
     auto index = state.stack[state.stack_ptr];
     auto size = state.stack[state.stack_ptr - 1];
 
-    if (!check_memory(state, index, size))
-        return;
+    // if (__builtin_expect(!check_memory(state, index, size), 0))
+    //     return;
 
     auto i = static_cast<size_t>(index);
     auto s = static_cast<size_t>(size);
     auto w = (static_cast<int64_t>(s) + 31) / 32;
-    auto cost = w * 6;
+    auto cost = w * 6 + compute_memory_cost(state, i, s);
     state.gas_left -= cost;
     if (__builtin_expect(state.gas_left < 0, 0))
     {
@@ -364,7 +357,6 @@ inline void op_sha3(execution_state& state) noexcept
 
 inline void op_address(execution_state& state) noexcept
 {
-    state.pc++;
     // TODO: Might be generalized using pointers to class member.
     uint8_t data[32] = {};
     std::memcpy(&data[12], state.msg->destination.bytes, sizeof(state.msg->destination));
@@ -374,7 +366,6 @@ inline void op_address(execution_state& state) noexcept
 
 inline void op_balance(execution_state& state) noexcept
 {
-    state.pc++;
     auto& x = state.stack[state.stack_ptr];
     uint8_t data[32];
     intx::be::store(data, x);
@@ -385,7 +376,6 @@ inline void op_balance(execution_state& state) noexcept
 
 inline void op_origin(execution_state& state) noexcept
 {
-    state.pc++;
     if (__builtin_expect(state.tx_context.block_timestamp == 0, 0))
         state.tx_context = state.host->host->get_tx_context(state.host);
     uint8_t data[32] = {};
@@ -396,7 +386,6 @@ inline void op_origin(execution_state& state) noexcept
 
 inline void op_caller(execution_state& state) noexcept
 {
-    state.pc++;
     // TODO: Might be generalized using pointers to class member.
     uint8_t data[32] = {};
     std::memcpy(&data[12], state.msg->sender.bytes, sizeof(state.msg->sender));
@@ -406,14 +395,12 @@ inline void op_caller(execution_state& state) noexcept
 
 inline void op_callvalue(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(state.msg->value.bytes);  // .push_back(a);
 }
 
 inline void op_calldataload(execution_state& state) noexcept
 {
-    state.pc++;
     auto& index = state.stack[state.stack_ptr];
 
     if (state.msg->input_size < index)
@@ -433,20 +420,15 @@ inline void op_calldataload(execution_state& state) noexcept
 
 inline void op_calldatasize(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::uint256{state.msg->input_size};
 }
 
 inline void op_calldatacopy(execution_state& state) noexcept
 {
-    state.pc++;
     auto mem_index = state.stack[state.stack_ptr];
     auto input_index = state.stack[state.stack_ptr - 1];
     auto size = state.stack[state.stack_ptr - 2];
-
-    if (!check_memory(state, mem_index, size))
-        return;
 
     auto dst = static_cast<size_t>(mem_index);
     // TODO: std::min
@@ -455,7 +437,7 @@ inline void op_calldatacopy(execution_state& state) noexcept
     auto s = static_cast<size_t>(size);
     auto copy_size = std::min(s, state.msg->input_size - src);
 
-    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
+    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3 + compute_memory_cost(state, (int64_t)mem_index, (int64_t)size);
     state.gas_left -= copy_cost;
     if (state.gas_left < 0)
     {
@@ -472,27 +454,23 @@ inline void op_calldatacopy(execution_state& state) noexcept
 
 inline void op_codesize(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::uint256{state.code_size};
 }
 
 inline void op_codecopy(execution_state& state) noexcept
 {
-    state.pc++;
     auto mem_index = state.stack[state.stack_ptr];
     auto input_index = state.stack[state.stack_ptr - 1];
     auto size = state.stack[state.stack_ptr - 2];
-
-    if (!check_memory(state, mem_index, size))
-        return;
+    
 
     auto dst = static_cast<size_t>(mem_index);
     auto src = state.code_size < input_index ? state.code_size : static_cast<size_t>(input_index);
     auto s = static_cast<size_t>(size);
     auto copy_size = std::min(s, state.code_size - src);
 
-    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
+    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3 + compute_memory_cost(state, (int64_t)mem_index, (int64_t)size);
     state.gas_left -= copy_cost;
     if (state.gas_left < 0)
     {
@@ -501,43 +479,42 @@ inline void op_codecopy(execution_state& state) noexcept
         return;
     }
 
-    std::memcpy(&state.memory[dst], &state.code[src], copy_size);
-    std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
+    std::memcpy(state.memory + dst, &state.code[src], copy_size);
+    std::memset(state.memory + dst + copy_size, 0, s - copy_size);
 
     state.stack_ptr -= 3;
 }
 
 inline void op_mload(execution_state& state) noexcept
 {
-    state.pc++;
     auto& index = state.stack[state.stack_ptr];
 
-    if (!check_memory(state, index, 32))
-        return;
+    CHECK_MEMORY(index, 32)
+    // if (__builtin_expect(!check_memory(state, index, 32), 0))
+    //     return;
 
     index = intx::be::uint256(&state.memory[static_cast<size_t>(index)]);
 }
 
 inline void op_mstore(execution_state& state) noexcept
 {
-    state.pc++;
     auto index = state.stack[state.stack_ptr];
     auto x = state.stack[state.stack_ptr - 1];
 
-    if (!check_memory(state, index, 32))
-        return;
-    intx::be::store(&state.memory[static_cast<size_t>(index)], x);
+    CHECK_MEMORY(index, 32)
+
+    intx::be::store(state.memory + static_cast<size_t>(index), x);
     state.stack_ptr -= 2;
 }
 
 inline void op_mstore8(execution_state& state) noexcept
 {
-    state.pc++;
     auto index = state.stack[state.stack_ptr];
     auto x = state.stack[state.stack_ptr - 1];
 
-    if (!check_memory(state, index, 1))
-        return;
+    CHECK_MEMORY(index, 1);
+    // if (__builtin_expect(!check_memory(state, index, 1), 0))
+    //     return;
     state.memory[static_cast<size_t>(index)] = static_cast<uint8_t>(x);
 
     state.stack_ptr -= 2;
@@ -545,7 +522,6 @@ inline void op_mstore8(execution_state& state) noexcept
 
 inline void op_sload(execution_state& state) noexcept
 {
-    state.pc++;
     auto& x = state.stack[state.stack_ptr];
     evmc_bytes32 key;
     intx::be::store(key.bytes, x);
@@ -555,7 +531,6 @@ inline void op_sload(execution_state& state) noexcept
 
 inline void op_sstore(execution_state& state) noexcept
 {
-    state.pc++;
     evmc_bytes32 key;
     evmc_bytes32 value;
     intx::be::store(key.bytes, state.stack[state.stack_ptr]);
@@ -622,32 +597,27 @@ inline void op_pc(execution_state& state) noexcept
 {
     state.stack_ptr++;
     state.stack[state.stack_ptr] = static_cast<int>(state.pc);
-    state.pc++;
 }
 
 inline void op_msize(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack_ptr++;
-    state.stack[state.stack_ptr] = state.memory.size();
+    state.stack[state.stack_ptr] = state.msize;
 }
 
-inline void op_gas(execution_state& state, instruction_info& data) noexcept
+inline void op_gas(execution_state& state, const instruction_info& data) noexcept
 {
-    state.pc++;
     state.stack_ptr++;
     state.stack[state.stack_ptr] =
         static_cast<uint64_t>(state.gas_left + state.current_block_cost - data.gas_data);
 }
 
-inline void op_jumpdest(execution_state& state) noexcept
+inline void op_jumpdest(execution_state&) noexcept
 {
-    state.pc++;
 }
 
 inline void op_gasprice(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack_ptr++;
     if (state.tx_context.block_timestamp == 0)
         state.tx_context = state.host->host->get_tx_context(state.host);
@@ -656,7 +626,6 @@ inline void op_gasprice(execution_state& state) noexcept
 
 inline void op_extcodesize(execution_state& state) noexcept
 {
-    state.pc++;
     auto& x = state.stack[state.stack_ptr];
     uint8_t data[32];
     intx::be::store(data, x);
@@ -667,21 +636,17 @@ inline void op_extcodesize(execution_state& state) noexcept
 
 inline void op_extcodecopy(execution_state& state) noexcept
 {
-    state.pc++;
     auto addr_data = state.stack[state.stack_ptr];
     auto mem_index = state.stack[state.stack_ptr - 1];
     auto input_index = state.stack[state.stack_ptr - 2];
     auto size = state.stack[state.stack_ptr - 3];
 
-    if (!check_memory(state, mem_index, size))
-        return;
-
     auto dst = static_cast<size_t>(mem_index);
 
-    auto src = std::min(static_cast<size_t>(input_index), state.max_code_size);
+    auto src = std::min(static_cast<size_t>(input_index), std::numeric_limits<size_t>::max());
     auto s = static_cast<size_t>(size);
 
-    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
+    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3 + compute_memory_cost(state, (int64_t)mem_index, (int64_t)size);
     state.gas_left -= copy_cost;
     if (state.gas_left < 0)
     {
@@ -705,22 +670,17 @@ inline void op_extcodecopy(execution_state& state) noexcept
 
 inline void op_returndatasize(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = state.return_data.size();
 }
 
 inline void op_returndatacopy(execution_state& state) noexcept
 {
-    state.pc++;
     auto mem_index = state.stack[state.stack_ptr];
     auto input_index = state.stack[state.stack_ptr - 1];
     auto size = state.stack[state.stack_ptr - 2];
 
     state.stack_ptr -= 3;
-
-    if (!check_memory(state, mem_index, size))
-        return;
 
     auto dst = static_cast<size_t>(mem_index);
     auto s = static_cast<size_t>(size);
@@ -740,7 +700,7 @@ inline void op_returndatacopy(execution_state& state) noexcept
         return;
     }
 
-    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
+    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3 + compute_memory_cost(state, (int64_t)mem_index, (int64_t)size);
     state.gas_left -= copy_cost;
     if (state.gas_left < 0)
     {
@@ -754,7 +714,6 @@ inline void op_returndatacopy(execution_state& state) noexcept
 
 inline void op_extcodehash(execution_state& state) noexcept
 {
-    state.pc++;
     auto& x = state.stack[state.stack_ptr];
     uint8_t data[32];
     intx::be::store(data, x);
@@ -765,7 +724,6 @@ inline void op_extcodehash(execution_state& state) noexcept
 
 inline void op_blockhash(execution_state& state) noexcept
 {
-    state.pc++;
     auto& number = state.stack[state.stack_ptr];
 
     // Load transaction context.
@@ -783,7 +741,6 @@ inline void op_blockhash(execution_state& state) noexcept
 
 inline void op_coinbase(execution_state& state) noexcept
 {
-    state.pc++;
     if (state.tx_context.block_timestamp == 0)
         state.tx_context = state.host->host->get_tx_context(state.host);
     uint8_t data[32] = {};
@@ -795,7 +752,6 @@ inline void op_coinbase(execution_state& state) noexcept
 
 inline void op_timestamp(execution_state& state) noexcept
 {
-    state.pc++;
     // TODO: Extract lazy tx context fetch.
     if (state.tx_context.block_timestamp == 0)
         state.tx_context = state.host->host->get_tx_context(state.host);
@@ -806,7 +762,6 @@ inline void op_timestamp(execution_state& state) noexcept
 
 inline void op_number(execution_state& state) noexcept
 {
-    state.pc++;
     if (state.tx_context.block_timestamp == 0)
         state.tx_context = state.host->host->get_tx_context(state.host);
     state.stack_ptr++;
@@ -816,7 +771,6 @@ inline void op_number(execution_state& state) noexcept
 
 inline void op_difficulty(execution_state& state) noexcept
 {
-    state.pc++;
     if (state.tx_context.block_timestamp == 0)
         state.tx_context = state.host->host->get_tx_context(state.host);
     state.stack_ptr++;
@@ -825,7 +779,6 @@ inline void op_difficulty(execution_state& state) noexcept
 
 inline void op_gaslimit(execution_state& state) noexcept
 {
-    state.pc++;
     if (state.tx_context.block_timestamp == 0)
         state.tx_context = state.host->host->get_tx_context(state.host);
     state.stack_ptr++;
@@ -833,224 +786,224 @@ inline void op_gaslimit(execution_state& state) noexcept
         intx::uint256{static_cast<uint64_t>(state.tx_context.block_gas_limit)};
 }
 
-inline void op_push1(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push1(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 2;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push2(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push2(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 3;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push3(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push3(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 4;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push4(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push4(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 5;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push5(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push5(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 6;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push6(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push6(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 7;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push7(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push7(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 8;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push8(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push8(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 9;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push9(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push9(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 10;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push10(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push10(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 11;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push11(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push11(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 12;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push12(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push12(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 13;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push13(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push13(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 14;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push14(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push14(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 15;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push15(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push15(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 16;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push16(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push16(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 17;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push17(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push17(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 18;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push18(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push18(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 19;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push19(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push19(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 20;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push20(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push20(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 21;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push21(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push21(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 22;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push22(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push22(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 23;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push23(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push23(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 24;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push24(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push24(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 25;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push25(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push25(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 26;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push26(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push26(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 27;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push27(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push27(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 28;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push28(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push28(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 29;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push29(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push29(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 30;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push30(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push30(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 31;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push31(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push31(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 32;
     state.stack_ptr++;
     state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
 }
 
-inline void op_push32(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_push32(execution_state& state, const instruction_info& instruction_data) noexcept
 {
     state.pc += 33;
     state.stack_ptr++;
@@ -1059,222 +1012,188 @@ inline void op_push32(execution_state& state, instruction_info& instruction_data
 
 inline void op_pop(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack_ptr--;
 }
 
 inline void op_dup1(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr];
     state.stack_ptr++;
 }
 
 inline void op_dup2(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 1];
     state.stack_ptr++;
 }
 
 inline void op_dup3(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 2];
     state.stack_ptr++;
 }
 
 inline void op_dup4(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 3];
     state.stack_ptr++;
 }
 
 inline void op_dup5(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 4];
     state.stack_ptr++;
 }
 
 inline void op_dup6(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 5];
     state.stack_ptr++;
 }
 
 inline void op_dup7(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 6];
     state.stack_ptr++;
 }
 
 inline void op_dup8(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 7];
     state.stack_ptr++;
 }
 
 inline void op_dup9(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 8];
     state.stack_ptr++;
 }
 
 inline void op_dup10(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 9];
     state.stack_ptr++;
 }
 
 inline void op_dup11(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 10];
     state.stack_ptr++;
 }
 
 inline void op_dup12(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 11];
     state.stack_ptr++;
 }
 
 inline void op_dup13(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 12];
     state.stack_ptr++;
 }
 
 inline void op_dup14(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 13];
     state.stack_ptr++;
 }
 
 inline void op_dup15(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 14];
     state.stack_ptr++;
 }
 
 inline void op_dup16(execution_state& state) noexcept
 {
-    state.pc++;
     state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 15];
     state.stack_ptr++;
 }
 
 inline void op_swap1(execution_state& state) noexcept
 {
-    state.pc++;
     std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 1]);
 }
 
 inline void op_swap2(execution_state& state) noexcept
 {
-    state.pc++;
     std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 2]);
 }
 
 inline void op_swap3(execution_state& state) noexcept
 {
-    state.pc++;
     std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 3]);
 }
 
 inline void op_swap4(execution_state& state) noexcept
 {
-    state.pc++;
     std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 4]);
 }
 
 inline void op_swap5(execution_state& state) noexcept
 {
-    state.pc++;
     std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 5]);
 }
 
 inline void op_swap6(execution_state& state) noexcept
 {
-    state.pc++;
     std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 6]);
 }
 
 inline void op_swap7(execution_state& state) noexcept
 {
-    state.pc++;
     std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 7]);
 }
 
 inline void op_swap8(execution_state& state) noexcept
 {
-    state.pc++;
     std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 8]);
 }
 
 inline void op_swap9(execution_state& state) noexcept
 {
-    state.pc++;
     std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 9]);
 }
 
 inline void op_swap10(execution_state& state) noexcept
 {
-    state.pc++;
     std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 10]);
 }
 
 inline void op_swap11(execution_state& state) noexcept
 {
-    state.pc++;
     std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 11]);
 }
 
 inline void op_swap12(execution_state& state) noexcept
 {
-    state.pc++;
     std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 12]);
 }
 
 inline void op_swap13(execution_state& state) noexcept
 {
-    state.pc++;
     std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 13]);
 }
 
 inline void op_swap14(execution_state& state) noexcept
 {
-    state.pc++;
     std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 14]);
 }
 
 inline void op_swap15(execution_state& state) noexcept
 {
-    state.pc++;
     std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 15]);
 }
 
 inline void op_swap16(execution_state& state) noexcept
 {
-    state.pc++;
     std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 16]);
 }
 
 
 inline void op_log(execution_state& state, int number) noexcept
 {
-    state.pc++;
     if (state.msg->flags & EVMC_STATIC)
     {
         // TODO: Implement static mode violation in analysis.
@@ -1286,13 +1205,10 @@ inline void op_log(execution_state& state, int number) noexcept
     auto offset = state.stack[state.stack_ptr];
     auto size = state.stack[state.stack_ptr - 1];
 
-    if (!check_memory(state, offset, size))
-        return;
-
     auto o = static_cast<size_t>(offset);
     auto s = static_cast<size_t>(size);
 
-    auto cost = int64_t{8} * s;
+    auto cost = int64_t{8} * s + compute_memory_cost(state, (int64_t)offset, (int64_t)size);;
     state.gas_left -= cost;
     if (state.gas_left < 0)
     {
@@ -1315,31 +1231,26 @@ inline void op_log(execution_state& state, int number) noexcept
 
 inline void op_log0(execution_state& state) noexcept
 {
-    state.pc++;
     op_log(state, 0);
 }
 
 inline void op_log1(execution_state& state) noexcept
 {
-    state.pc++;
     op_log(state, 1);
 }
 
 inline void op_log2(execution_state& state) noexcept
 {
-    state.pc++;
     op_log(state, 2);
 }
 
 inline void op_log3(execution_state& state) noexcept
 {
-    state.pc++;
     op_log(state, 3);
 }
 
 inline void op_log4(execution_state& state) noexcept
 {
-    state.pc++;
     op_log(state, 4);
 }
 
@@ -1349,31 +1260,26 @@ inline void op_return(execution_state& state) noexcept
     auto offset = state.stack[state.stack_ptr];
     auto size = state.stack[state.stack_ptr - 1];
 
-    if (!check_memory(state, offset, size))
-        return;
     state.output_offset = static_cast<size_t>(offset);
     state.output_size = static_cast<size_t>(size);
     state.status = EVMC_SUCCESS;
+    CHECK_MEMORY(offset, size);
 }
 
 inline void op_revert(execution_state& state) noexcept
 {
-    state.pc++;
     auto offset = state.stack[state.stack_ptr];
     auto size = state.stack[state.stack_ptr - 1];
-
-    if (!check_memory(state, offset, size))
-        return;
 
     state.status = EVMC_REVERT;
     state.output_offset = static_cast<size_t>(offset);
     state.output_size = static_cast<size_t>(size);
+    CHECK_MEMORY(offset, size);
 }
 
 inline void op_callbase(
-    execution_state& state, instruction_info& instruction_data, evmc_call_kind call_kind) noexcept
+    execution_state& state, const instruction_info& instruction_data, evmc_call_kind call_kind) noexcept
 {
-    state.pc++;
     auto gas = state.stack[state.stack_ptr];
 
     uint8_t data[32];
@@ -1503,15 +1409,18 @@ inline void op_callbase(
     }
 }
 
-inline void op_call(execution_state& state, instruction_info& data) noexcept
+inline void op_call(execution_state& state, const instruction_info& data) noexcept
 {
-    state.pc++;
     op_callbase(state, data, EVMC_CALL);
 }
 
-inline void op_delegatecall(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_callcode(execution_state& state, const instruction_info& data) noexcept
 {
-    state.pc++;
+    op_callbase(state, data, EVMC_CALLCODE);
+}
+
+inline void op_delegatecall(execution_state& state, const instruction_info& instruction_data) noexcept
+{
     auto gas = state.stack[state.stack_ptr];
 
     uint8_t data[32];
@@ -1586,9 +1495,8 @@ inline void op_delegatecall(execution_state& state, instruction_info& instructio
     }
 }
 
-inline void op_staticcall(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_staticcall(execution_state& state, const instruction_info& instruction_data) noexcept
 {
-    state.pc++;
     auto gas = state.stack[state.stack_ptr];
 
     uint8_t data[32];
@@ -1654,9 +1562,8 @@ inline void op_staticcall(execution_state& state, instruction_info& instruction_
     }
 }
 
-inline void op_create(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_create(execution_state& state, const instruction_info& instruction_data) noexcept
 {
-    state.pc++;
     auto endowment = state.stack[state.stack_ptr];
     auto init_code_offset = state.stack[state.stack_ptr - 1];
     auto init_code_size = state.stack[state.stack_ptr - 2];
@@ -1717,9 +1624,8 @@ inline void op_create(execution_state& state, instruction_info& instruction_data
     }
 }
 
-inline void op_create2(execution_state& state, instruction_info& instruction_data) noexcept
+inline void op_create2(execution_state& state, const instruction_info& instruction_data) noexcept
 {
-    state.pc++;
     auto endowment = state.stack[state.stack_ptr];
     auto init_code_offset = state.stack[state.stack_ptr - 1];
     auto init_code_size = state.stack[state.stack_ptr - 2];

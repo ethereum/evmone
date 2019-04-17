@@ -156,7 +156,6 @@ evmc_host_interface execution::interface = {
     },
 };
 
-
 TEST_F(execution, stop)
 {
     execute(6, "600150");
@@ -237,6 +236,7 @@ TEST_F(execution, msize)
     EXPECT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 0x40);
 }
+
 
 TEST_F(execution, gas)
 {
@@ -1059,6 +1059,7 @@ TEST_F(execution, shl)
     EXPECT_EQ(result.output_data[0], 5 << 1);
 }
 
+
 TEST_F(execution, shr)
 {
     auto code = "600560011c6000526001601ff3";
@@ -1069,6 +1070,7 @@ TEST_F(execution, shr)
     ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 5 >> 1);
 }
+
 
 TEST_F(execution, sar)
 {
