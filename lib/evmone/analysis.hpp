@@ -42,8 +42,6 @@ struct execution_state
     uint256 stack[1024];
 
     size_t code_size = 0;
-
-
     size_t output_offset = 0;
     size_t output_size = 0;
     evmc_status_code status = EVMC_SUCCESS;
@@ -62,69 +60,11 @@ struct execution_state
     int64_t storage_repeated_cost = 0;
     int64_t max_potential_memory;
     evmc_context* host = nullptr;
-
     evmc_tx_context tx_context = {};
 
     evmc_revision rev = {};
-
-    // execution_state(size_t max_memory) noexcept {
-    //     this->max_potential_memory = max_memory;
-    //     this->memory = (uint8_t*)calloc(max_memory, sizeof(uint8_t));
-    // };
-    // ~execution_state() noexcept {
-    //     free(memory);
-    // }
-
-    // uint256& item(size_t index) noexcept { return stack[stack.size() - index - 1]; }
 };
 
-union instr_argument
-{
-    struct
-    {
-        int number = 0;
-        evmc_call_kind call_kind = EVMC_CALL;
-    };
-    const uint8_t* data;
-
-    constexpr instr_argument() noexcept : number{}, call_kind{} {};
-};
-
-static_assert(sizeof(instr_argument) == sizeof(void*), "Incorrect size of instr_argument");
-
-using exec_fn = void (*)(execution_state&, instr_argument arg);
-
-using exec_fn_table = std::array<exec_fn, 256>;
-
-
-struct instr_info
-{
-    exec_fn fn = nullptr;
-    instr_argument arg;
-    int block_index = -1;
-
-    explicit constexpr instr_info(exec_fn fn) noexcept : fn{fn} {};
-};
-
-
-struct code_analysis
-{
-    std::vector<instr_info> instrs;
-    std::vector<block_info> blocks;
-
-    /// Storage for arguments' extended data.
-    ///
-    /// The deque container is used because pointers to its elements are not
-    /// invalidated when the container grows.
-    std::deque<bytes32> args_storage;
-
-    std::vector<std::pair<int, int>> jumpdest_map;
-
-    int find_jumpdest(int offset) noexcept;
-};
-
-code_analysis analyze(
-    const exec_fn_table& fns, evmc_revision rev, const uint8_t* code, size_t code_size) noexcept;
 
 union instruction_info
 {
@@ -132,23 +72,12 @@ union instruction_info
     int64_t gas_data;
 };
 
-struct code_analysis_alt
+struct code_analysis
 {
     std::deque<instruction_info> instruction_data;
     std::deque<block_info> blocks;
 };
 
-code_analysis_alt analyze_alt(const void** labels, const block_info** blocks,
+code_analysis analyze(const void** labels, const block_info** blocks,
     const instruction_info** instruction_data, evmc_revision rev, const size_t code_size, const uint8_t* code, const void** jump_table) noexcept;
-
-// code_analysis_alt analyze_alt(
-//     void* jump_table,
-//     void* labels,
-//     block_info* instr_info,
-//     bytes32* storage_info,
-//     evmc_revision rev,
-//     const uint8_t* code,
-//     const size_t code_size
-// ) noexcept;
-
 }  // namespace evmone
