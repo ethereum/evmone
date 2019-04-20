@@ -13,6 +13,8 @@
 
 #include <iostream>
 
+// TODO: GAS ACCOUNTING PER BASIC BLOCK
+
 #define COMPUTE_MEMORY_COST() \
     const auto new_size = offset + size; \
     auto w = ((state.msize < new_size ? new_size : state.msize) + 31) >> 5; \

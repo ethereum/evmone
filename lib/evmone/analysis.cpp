@@ -9,6 +9,10 @@
 #include <stdio.h>
 #include <iostream>
 
+// TODO: PACKED MEMORY IN ANALYSIS
+// TODO: USE PTR TO REFERENCE NEXT INSTRUCTION
+// TODO: USE PTR TO REFERENCE STACK
+
 namespace evmone
 {
 namespace
@@ -38,6 +42,8 @@ code_analysis analyze(const void** labels, const block_info** blocks,
 
     block_info* block = nullptr;
     code_analysis analysis;
+    analysis.blocks.reserve(code_size + 1);
+    analysis.instruction_data.reserve(code_size + 1);
     for (size_t i = 0; i < code_size; ++i)
     {
         uint8_t c = code[i];

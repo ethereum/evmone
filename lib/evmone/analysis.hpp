@@ -74,8 +74,8 @@ union instruction_info
 
 struct code_analysis
 {
-    std::deque<instruction_info> instruction_data;
-    std::deque<block_info> blocks;
+    std::vector<instruction_info> instruction_data;
+    std::vector<block_info> blocks;
 };
 
 code_analysis analyze(const void** labels, const block_info** blocks,
