@@ -1,5 +1,7 @@
 #pragma once
 
+#include "constants.hpp"
+
 #include <math.h>
 #include <memory.h>
 #include <stdint.h>
@@ -17,8 +19,6 @@ namespace evmone
             size_t max_memory;
             size_t stashed_free_memory;
         };
-
-        const size_t BASE_MEMORY_POOL_SIZE = 0x4000000; // 64 MB
 
         namespace
         {

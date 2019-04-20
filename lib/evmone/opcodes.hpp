@@ -15,58 +15,35 @@
 
 // TODO: GAS ACCOUNTING PER BASIC BLOCK
 
-#define COMPUTE_MEMORY_COST() \
-    const auto new_size = offset + size; \
+#define COMPUTE_MEMORY_COST()                                               \
+    const auto new_size = offset + size;                                    \
     auto w = ((state.msize < new_size ? new_size : state.msize) + 31) >> 5; \
-    state.msize = w << 5; \
-    auto new_cost = 3 * w + (w * w >> 9); \
-    auto cost = new_cost - state.memory_prev_cost; \
+    state.msize = w << 5;                                                   \
+    auto new_cost = 3 * w + (w * w >> 9);                                   \
+    auto cost = new_cost - state.memory_prev_cost;                          \
     state.memory_prev_cost = new_cost;
 
-#define CHECK_MEMORY(offset, size) \
-    const auto o = static_cast<int64_t>(offset); \
-    const auto s = static_cast<int64_t>(size); \
-    const auto new_size = o + s; \
+#define CHECK_MEMORY(offset, size)                                          \
+    const auto o = static_cast<int64_t>(offset);                            \
+    const auto s = static_cast<int64_t>(size);                              \
+    const auto new_size = o + s;                                            \
     auto w = ((state.msize < new_size ? new_size : state.msize) + 31) >> 5; \
-    state.msize = w << 5; \
-    auto new_cost = 3 * w + (w * w >> 9); \
-    auto cost = new_cost - state.memory_prev_cost; \
-    state.memory_prev_cost = new_cost; \
-    state.gas_left -= cost; \
-    if (__builtin_expect(state.gas_left < 0, 0)) \
-    { \
-        state.status = EVMC_OUT_OF_GAS; \
-        state.pc = state.code_size; \
+    state.msize = w << 5;                                                   \
+    auto new_cost = 3 * w + (w * w >> 9);                                   \
+    auto cost = new_cost - state.memory_prev_cost;                          \
+    state.memory_prev_cost = new_cost;                                      \
+    state.gas_left -= cost;                                                 \
+    if (__builtin_expect(state.gas_left < 0, 0))                            \
+    {                                                                       \
+        state.status = EVMC_OUT_OF_GAS;                                     \
+        state.next_instruction = state.stop_instruction;                    \
     }
 
 
 namespace evmone
 {
-inline void check_block(execution_state& state, block_info* block) noexcept
-{
-    if (block != nullptr)
-    {
-        state.gas_left -= block->gas_cost;
-        if (__builtin_expect(state.gas_left < 0, 0))
-        {
-            state.status = EVMC_OUT_OF_GAS;
-            state.pc = state.code_size;
-        }
-        else if (__builtin_expect(static_cast<int>(state.stack_ptr) < block->stack_req, 0))
-        {
-            state.status = EVMC_STACK_UNDERFLOW;
-            state.pc = state.code_size;
-        }
-        else if (__builtin_expect(static_cast<int>(state.stack_ptr) + block->stack_max > 1024, 0))
-        {
-            state.status = EVMC_STACK_OVERFLOW;
-            state.pc = state.code_size;
-        }
-        state.current_block_cost = block->gas_cost;
-    }
-}
-
-inline uint64_t compute_memory_cost(execution_state& state, const int64_t& offset, const int64_t& size) noexcept
+inline uint64_t compute_memory_cost(
+    execution_state& state, const int64_t& offset, const int64_t& size) noexcept
 {
     const auto new_size = offset + size;
     auto w = ((state.msize < new_size ? new_size : state.msize) + 31) >> 5;
@@ -77,7 +54,8 @@ inline uint64_t compute_memory_cost(execution_state& state, const int64_t& offse
     return cost;
 }
 
-inline bool check_memory(execution_state& state, const uint256& offset, const uint256& size) noexcept
+inline bool check_memory(
+    execution_state& state, const uint256& offset, const uint256& size) noexcept
 {
     const auto o = static_cast<int64_t>(offset);
     const auto s = static_cast<int64_t>(size);
@@ -92,87 +70,85 @@ inline bool check_memory(execution_state& state, const uint256& offset, const ui
     if (__builtin_expect(state.gas_left < 0, 0))
     {
         state.status = EVMC_OUT_OF_GAS;
-        state.pc = state.code_size;
+        state.next_instruction = state.stop_instruction;
         return false;
     }
-    // }
     return true;
 }
 
 
 inline void op_add(execution_state& state) noexcept
 {
-    state.stack[state.stack_ptr - 1] += state.stack[state.stack_ptr];
     state.stack_ptr--;
+    *state.stack_ptr += *(state.stack_ptr + 1);
 }
 
 inline void op_mul(execution_state& state) noexcept
 {
-    state.stack[state.stack_ptr - 1] *= state.stack[state.stack_ptr];
+    *(state.stack_ptr - 1) *= *state.stack_ptr;
     state.stack_ptr--;
 }
 
 inline void op_sub(execution_state& state) noexcept
 {
-    state.stack[state.stack_ptr - 1] =
-        state.stack[state.stack_ptr] - state.stack[state.stack_ptr - 1];
     state.stack_ptr--;
+    *state.stack_ptr = *(state.stack_ptr + 1) - *state.stack_ptr;
 }
 
 inline void op_div(execution_state& state) noexcept
 {
-    auto& v = state.stack[state.stack_ptr - 1];
-    v = v != 0 ? state.stack[state.stack_ptr] / v : 0;
+    auto& v = *(state.stack_ptr - 1);
+    v = v != 0 ? *state.stack_ptr / v : 0;
     state.stack_ptr--;
 }
 
 inline void op_sdiv(execution_state& state) noexcept
 {
-    auto& v = state.stack[state.stack_ptr - 1];
-    v = v != 0 ? intx::sdivrem(state.stack[state.stack_ptr], v).quot : 0;
+    auto& v = *(state.stack_ptr - 1);
+    v = v != 0 ? intx::sdivrem(*state.stack_ptr, v).quot : 0;
     state.stack_ptr--;
 }
 
 inline void op_mod(execution_state& state) noexcept
 {
-    auto& v = state.stack[state.stack_ptr - 1];
-    v = v != 0 ? state.stack[state.stack_ptr] % v : 0;
+    auto& v = *(state.stack_ptr - 1);
+    v = v != 0 ? *state.stack_ptr % v : 0;
     state.stack_ptr--;
 }
 
 inline void op_smod(execution_state& state) noexcept
 {
-    auto& v = state.stack[state.stack_ptr - 1];
-    v = v != 0 ? intx::sdivrem(state.stack[state.stack_ptr], v).rem : 0;
+    auto& v = *(state.stack_ptr - 1);
+    v = v != 0 ? intx::sdivrem(*state.stack_ptr, v).rem : 0;
     state.stack_ptr--;
 }
 
 inline void op_addmod(execution_state& state) noexcept
 {
     using intx::uint512;
-    auto x = state.stack[state.stack_ptr];
-    auto y = state.stack[state.stack_ptr - 1];
-    auto m = state.stack[state.stack_ptr - 2];
+    auto x = *state.stack_ptr;
+    auto y = *(state.stack_ptr - 1);
+    auto m = *(state.stack_ptr - 2);
 
     state.stack_ptr -= 2;
-    state.stack[state.stack_ptr] = m != 0 ? ((uint512{x} + uint512{y}) % uint512{m}).lo : 0;
+    *state.stack_ptr = m != 0 ? ((uint512{x} + uint512{y}) % uint512{m}).lo : 0;
 }
 
 inline void op_mulmod(execution_state& state) noexcept
 {
     using intx::uint512;
-    auto x = state.stack[state.stack_ptr];
-    auto y = state.stack[state.stack_ptr - 1];
-    auto m = state.stack[state.stack_ptr - 2];
+    auto x = *state.stack_ptr;
+    auto y = *(state.stack_ptr - 1);
+    auto m = *(state.stack_ptr - 2);
 
     state.stack_ptr -= 2;
-    state.stack[state.stack_ptr] = m != 0 ? ((uint512{x} * uint512{y}) % uint512{m}).lo : 0;
+    *state.stack_ptr = m != 0 ? ((uint512{x} * uint512{y}) % uint512{m}).lo : 0;
 }
 
 inline void op_exp(execution_state& state) noexcept
 {
-    auto base = state.stack[state.stack_ptr];
-    auto& exponent = state.stack[state.stack_ptr - 1];
+    auto base = *state.stack_ptr;
+    auto& exponent = *(state.stack_ptr - 1);
 
     auto exponent_significant_bytes = intx::count_significant_words<uint8_t>(exponent);
 
@@ -181,7 +157,7 @@ inline void op_exp(execution_state& state) noexcept
     if (__builtin_expect(state.gas_left < 0, 0))
     {
         state.status = EVMC_OUT_OF_GAS;
-        state.pc = state.code_size;
+        state.next_instruction = state.stop_instruction;
     }
 
     exponent = intx::exp(base, exponent);
@@ -190,8 +166,8 @@ inline void op_exp(execution_state& state) noexcept
 
 inline void op_signextend(execution_state& state) noexcept
 {
-    auto ext = state.stack[state.stack_ptr];
-    auto& x = state.stack[state.stack_ptr - 1];
+    auto ext = *state.stack_ptr;
+    auto& x = *(state.stack_ptr - 1);
     state.stack_ptr--;
 
     // TODO: remove conditional branch
@@ -208,84 +184,76 @@ inline void op_signextend(execution_state& state) noexcept
 
 inline void op_lt(execution_state& state) noexcept
 {
-    state.stack[state.stack_ptr - 1] =
-        state.stack[state.stack_ptr] < state.stack[state.stack_ptr - 1];
+    *(state.stack_ptr - 1) = *state.stack_ptr < *(state.stack_ptr - 1);
     state.stack_ptr--;
 }
 
 inline void op_gt(execution_state& state) noexcept
 {
-    state.stack[state.stack_ptr - 1] =
-        state.stack[state.stack_ptr - 1] < state.stack[state.stack_ptr];
+    *(state.stack_ptr - 1) = *(state.stack_ptr - 1) < *state.stack_ptr;
     state.stack_ptr--;
 }
 
 inline void op_slt(execution_state& state) noexcept
 {
-    auto x = state.stack[state.stack_ptr];
-    auto y = state.stack[state.stack_ptr - 1];
+    auto x = *state.stack_ptr;
+    auto y = *(state.stack_ptr - 1);
     auto x_neg = static_cast<bool>(x >> 255);
     auto y_neg = static_cast<bool>(y >> 255);
-    state.stack[state.stack_ptr - 1] = (x_neg ^ y_neg) ? x_neg : x < y;
+    *(state.stack_ptr - 1) = (x_neg ^ y_neg) ? x_neg : x < y;
     state.stack_ptr--;
-    // state.stack[state.stack_ptr] = (x_neg ^ y_neg) || (x < y);
 }
 
 inline void op_sgt(execution_state& state) noexcept
 {
-    auto x = state.stack[state.stack_ptr];
-    auto y = state.stack[state.stack_ptr - 1];
+    auto x = *state.stack_ptr;
+    auto y = *(state.stack_ptr - 1);
     auto x_neg = static_cast<bool>(x >> 255);
     auto y_neg = static_cast<bool>(y >> 255);
-    state.stack[state.stack_ptr - 1] = (x_neg ^ y_neg) ? y_neg : y < x;
+    *(state.stack_ptr - 1) = (x_neg ^ y_neg) ? y_neg : y < x;
     state.stack_ptr--;
-    // state.stack[state.stack_ptr] = (x_neg ^ y_neg) || (y < x);
 }
 
 inline void op_eq(execution_state& state) noexcept
 {
-    state.stack[state.stack_ptr - 1] =
-        state.stack[state.stack_ptr] == state.stack[state.stack_ptr - 1];
+    *(state.stack_ptr - 1) = *state.stack_ptr == *(state.stack_ptr - 1);
     state.stack_ptr--;
 }
 
 inline void op_iszero(execution_state& state) noexcept
 {
-    state.stack[state.stack_ptr] = state.stack[state.stack_ptr] == 0;
+    *state.stack_ptr = *state.stack_ptr == 0;
 }
 
 inline void op_and(execution_state& state) noexcept
 {
     // TODO: Add operator&= to intx.
-    state.stack[state.stack_ptr - 1] =
-        state.stack[state.stack_ptr] & state.stack[state.stack_ptr - 1];
+    *(state.stack_ptr - 1) = *state.stack_ptr & *(state.stack_ptr - 1);
     state.stack_ptr--;
 }
 
 inline void op_or(execution_state& state) noexcept
 {
-    state.stack[state.stack_ptr - 1] =
-        state.stack[state.stack_ptr] | state.stack[state.stack_ptr - 1];
+    *(state.stack_ptr - 1) = *state.stack_ptr | *(state.stack_ptr - 1);
     state.stack_ptr--;
 }
 
 inline void op_xor(execution_state& state) noexcept
 {
-    state.stack[state.stack_ptr - 1] =
-        state.stack[state.stack_ptr] ^ state.stack[state.stack_ptr - 1];
+    *(state.stack_ptr - 1) = *state.stack_ptr ^ *(state.stack_ptr - 1);
     state.stack_ptr--;
 }
 
 inline void op_not(execution_state& state) noexcept
 {
-    state.stack[state.stack_ptr] = ~state.stack[state.stack_ptr];
+    *state.stack_ptr = ~*state.stack_ptr;
 }
 
 inline void op_byte(execution_state& state) noexcept
 {
-    auto n = state.stack[state.stack_ptr];
-    auto& x = state.stack[state.stack_ptr - 1];
-    // TODO: I think we can remove branch here?
+    auto n = *state.stack_ptr;
+    auto& x = *(state.stack_ptr - 1);
+    // TODO: I think branch can be removed? sh will overflow and set x to 0
     // if (31 < n)
     //     x = 0;
     // else
@@ -293,41 +261,37 @@ inline void op_byte(execution_state& state) noexcept
     auto sh = (31 - static_cast<unsigned>(n)) << 3;
     auto y = x >> sh;
     x = y & intx::uint256(0xff);  // TODO: Fix intx operator&.
-    // }
     state.stack_ptr--;
 }
 
 inline void op_shl(execution_state& state) noexcept
 {
     // TODO: Use =<<.
-    state.stack[state.stack_ptr - 1] =
-        state.stack[state.stack_ptr - 1] << state.stack[state.stack_ptr];
+    *(state.stack_ptr - 1) = *(state.stack_ptr - 1) << *state.stack_ptr;
     state.stack_ptr--;
 }
 
 inline void op_shr(execution_state& state) noexcept
 {
     // TODO: Use =>>.
-    state.stack[state.stack_ptr - 1] =
-        state.stack[state.stack_ptr - 1] >> state.stack[state.stack_ptr];
+    *(state.stack_ptr - 1) = *(state.stack_ptr - 1) >> *state.stack_ptr;
     state.stack_ptr--;
 }
 
 inline void op_sar(execution_state& state) noexcept
 {
     // TODO: Fix explicit conversion to bool in intx.
-    if ((state.stack[state.stack_ptr - 1] & (intx::uint256{1} << 255)) == 0)
+    if ((*(state.stack_ptr - 1) & (intx::uint256{1} << 255)) == 0)
         return op_shr(state);
 
     constexpr auto allones = ~uint256{};
 
-    if (state.stack[state.stack_ptr] >= 256)
-        state.stack[state.stack_ptr - 1] = allones;
+    if (*state.stack_ptr >= 256)
+        *(state.stack_ptr - 1) = allones;
     else
     {
-        const auto shift = static_cast<unsigned>(state.stack[state.stack_ptr]);
-        state.stack[state.stack_ptr - 1] =
-            (state.stack[state.stack_ptr - 1] >> shift) | (allones << (256 - shift));
+        const auto shift = static_cast<unsigned>(*state.stack_ptr);
+        *(state.stack_ptr - 1) = (*(state.stack_ptr - 1) >> shift) | (allones << (256 - shift));
     }
 
     state.stack_ptr--;
@@ -335,11 +299,8 @@ inline void op_sar(execution_state& state) noexcept
 
 inline void op_sha3(execution_state& state) noexcept
 {
-    auto index = state.stack[state.stack_ptr];
-    auto size = state.stack[state.stack_ptr - 1];
-
-    // if (__builtin_expect(!check_memory(state, index, size), 0))
-    //     return;
+    auto index = *state.stack_ptr;
+    auto size = *(state.stack_ptr - 1);
 
     auto i = static_cast<size_t>(index);
     auto s = static_cast<size_t>(size);
@@ -355,7 +316,7 @@ inline void op_sha3(execution_state& state) noexcept
     auto h = ethash::keccak256(&state.memory[i], s);
 
     state.stack_ptr--;
-    state.stack[state.stack_ptr] = intx::be::uint256(h.bytes);
+    *state.stack_ptr = intx::be::uint256(h.bytes);
 }
 
 inline void op_address(execution_state& state) noexcept
@@ -364,12 +325,12 @@ inline void op_address(execution_state& state) noexcept
     uint8_t data[32] = {};
     std::memcpy(&data[12], state.msg->destination.bytes, sizeof(state.msg->destination));
     state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(data);
+    *state.stack_ptr = intx::be::uint256(data);
 }
 
 inline void op_balance(execution_state& state) noexcept
 {
-    auto& x = state.stack[state.stack_ptr];
+    auto& x = *state.stack_ptr;
     uint8_t data[32];
     intx::be::store(data, x);
     evmc_address addr;
@@ -384,7 +345,7 @@ inline void op_origin(execution_state& state) noexcept
     uint8_t data[32] = {};
     std::memcpy(&data[12], state.tx_context.tx_origin.bytes, sizeof(state.tx_context.tx_origin));
     state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(data);
+    *state.stack_ptr = intx::be::uint256(data);
 }
 
 inline void op_caller(execution_state& state) noexcept
@@ -393,18 +354,18 @@ inline void op_caller(execution_state& state) noexcept
     uint8_t data[32] = {};
     std::memcpy(&data[12], state.msg->sender.bytes, sizeof(state.msg->sender));
     state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(data);
+    *state.stack_ptr = intx::be::uint256(data);
 }
 
 inline void op_callvalue(execution_state& state) noexcept
 {
     state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(state.msg->value.bytes);  // .push_back(a);
+    *state.stack_ptr = intx::be::uint256(state.msg->value.bytes);  // .push_back(a);
 }
 
 inline void op_calldataload(execution_state& state) noexcept
 {
-    auto& index = state.stack[state.stack_ptr];
+    auto& index = *state.stack_ptr;
 
     if (state.msg->input_size < index)
         index = 0;
@@ -424,14 +385,14 @@ inline void op_calldataload(execution_state& state) noexcept
 inline void op_calldatasize(execution_state& state) noexcept
 {
     state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::uint256{state.msg->input_size};
+    *state.stack_ptr = intx::uint256{state.msg->input_size};
 }
 
 inline void op_calldatacopy(execution_state& state) noexcept
 {
-    auto mem_index = state.stack[state.stack_ptr];
-    auto input_index = state.stack[state.stack_ptr - 1];
-    auto size = state.stack[state.stack_ptr - 2];
+    auto mem_index = *state.stack_ptr;
+    auto input_index = *(state.stack_ptr - 1);
+    auto size = *(state.stack_ptr - 2);
 
     auto dst = static_cast<size_t>(mem_index);
     // TODO: std::min
@@ -440,12 +401,13 @@ inline void op_calldatacopy(execution_state& state) noexcept
     auto s = static_cast<size_t>(size);
     auto copy_size = std::min(s, state.msg->input_size - src);
 
-    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3 + compute_memory_cost(state, (int64_t)mem_index, (int64_t)size);
+    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3 +
+                     compute_memory_cost(state, (int64_t)mem_index, (int64_t)size);
     state.gas_left -= copy_cost;
     if (state.gas_left < 0)
     {
         state.status = EVMC_OUT_OF_GAS;
-        state.pc = state.code_size;
+        state.next_instruction = state.stop_instruction;
         return;
     }
 
@@ -458,27 +420,28 @@ inline void op_calldatacopy(execution_state& state) noexcept
 inline void op_codesize(execution_state& state) noexcept
 {
     state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::uint256{state.code_size};
+    *state.stack_ptr = intx::uint256{state.code_size};
 }
 
 inline void op_codecopy(execution_state& state) noexcept
 {
-    auto mem_index = state.stack[state.stack_ptr];
-    auto input_index = state.stack[state.stack_ptr - 1];
-    auto size = state.stack[state.stack_ptr - 2];
-    
+    auto mem_index = *state.stack_ptr;
+    auto input_index = *(state.stack_ptr - 1);
+    auto size = *(state.stack_ptr - 2);
+
 
     auto dst = static_cast<size_t>(mem_index);
     auto src = state.code_size < input_index ? state.code_size : static_cast<size_t>(input_index);
     auto s = static_cast<size_t>(size);
     auto copy_size = std::min(s, state.code_size - src);
 
-    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3 + compute_memory_cost(state, (int64_t)mem_index, (int64_t)size);
+    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3 +
+                     compute_memory_cost(state, (int64_t)mem_index, (int64_t)size);
     state.gas_left -= copy_cost;
     if (state.gas_left < 0)
     {
         state.status = EVMC_OUT_OF_GAS;
-        state.pc = state.code_size;
+        state.next_instruction = state.stop_instruction;
         return;
     }
 
@@ -490,34 +453,28 @@ inline void op_codecopy(execution_state& state) noexcept
 
 inline void op_mload(execution_state& state) noexcept
 {
-    auto& index = state.stack[state.stack_ptr];
-
+    auto& index = *state.stack_ptr;
     CHECK_MEMORY(index, 32)
-    // if (__builtin_expect(!check_memory(state, index, 32), 0))
-    //     return;
 
     index = intx::be::uint256(&state.memory[static_cast<size_t>(index)]);
 }
 
 inline void op_mstore(execution_state& state) noexcept
 {
-    auto index = state.stack[state.stack_ptr];
-    auto x = state.stack[state.stack_ptr - 1];
+    auto index = *state.stack_ptr;
+    auto x = *(state.stack_ptr - 1);
 
     CHECK_MEMORY(index, 32)
-
     intx::be::store(state.memory + (static_cast<size_t>(index)), x);
     state.stack_ptr -= 2;
 }
 
 inline void op_mstore8(execution_state& state) noexcept
 {
-    auto index = state.stack[state.stack_ptr];
-    auto x = state.stack[state.stack_ptr - 1];
+    auto index = *state.stack_ptr;
+    auto x = *(state.stack_ptr - 1);
 
     CHECK_MEMORY(index, 1);
-    // if (__builtin_expect(!check_memory(state, index, 1), 0))
-    //     return;
     state.memory[static_cast<size_t>(index)] = static_cast<uint8_t>(x);
 
     state.stack_ptr -= 2;
@@ -525,7 +482,7 @@ inline void op_mstore8(execution_state& state) noexcept
 
 inline void op_sload(execution_state& state) noexcept
 {
-    auto& x = state.stack[state.stack_ptr];
+    auto& x = *state.stack_ptr;
     evmc_bytes32 key;
     intx::be::store(key.bytes, x);
     x = intx::be::uint256(
@@ -536,8 +493,8 @@ inline void op_sstore(execution_state& state) noexcept
 {
     evmc_bytes32 key;
     evmc_bytes32 value;
-    intx::be::store(key.bytes, state.stack[state.stack_ptr]);
-    intx::be::store(value.bytes, state.stack[state.stack_ptr - 1]);
+    intx::be::store(key.bytes, *state.stack_ptr);
+    intx::be::store(value.bytes, *(state.stack_ptr - 1));
     state.stack_ptr -= 2;
     auto status = state.host->host->set_storage(state.host, &state.msg->destination, &key, &value);
     int cost = 0;
@@ -561,37 +518,36 @@ inline void op_sstore(execution_state& state) noexcept
     if (__builtin_expect(state.gas_left < 0, 0))
     {
         state.status = EVMC_OUT_OF_GAS;
-        state.pc = state.code_size;
+        state.next_instruction = state.stop_instruction;
     }
 }
 
-inline void op_jump(execution_state& state) noexcept
+inline void op_jump(execution_state& state, instruction** jumpdest_map) noexcept
 {
     // TODO: get least significant word of stack variable
-    state.pc = std::min(state.code_size, static_cast<size_t>(state.stack[state.stack_ptr]));
-    if (__builtin_expect(state.code[state.pc] != OP_JUMPDEST, 0))
+    auto pc = std::min(state.code_size, static_cast<size_t>(*state.stack_ptr));
+    state.next_instruction = jumpdest_map[pc];
+
+    if (__builtin_expect(state.next_instruction + 1 == nullptr, 0))
     {
         state.status = EVMC_BAD_JUMP_DESTINATION;
-        state.pc = state.code_size;
+        state.next_instruction = state.stop_instruction;
     }
     state.stack_ptr--;
 }
 
-inline void op_jumpi(execution_state& state) noexcept
+inline void op_jumpi(execution_state& state, instruction** jumpdest_map) noexcept
 {
-    if (state.stack[state.stack_ptr - 1] != 0)
+    if (*(state.stack_ptr - 1) != 0)
     {
         // TODO: make code_size a power of 2 and use a logical AND to mask a jump destination
-        state.pc = std::min(state.code_size, static_cast<size_t>(state.stack[state.stack_ptr]));
-        if (__builtin_expect((state.code[state.pc] != OP_JUMPDEST), 0))
+        size_t pc = std::min(state.code_size, static_cast<size_t>(*state.stack_ptr));
+        state.next_instruction = jumpdest_map[pc];
+        if (__builtin_expect((state.next_instruction + 1 == nullptr), 0))
         {
             state.status = EVMC_BAD_JUMP_DESTINATION;
-            state.pc = state.code_size;
+            state.next_instruction = state.stop_instruction;
         }
-    }
-    else
-    {
-        state.pc++;
     }
     state.stack_ptr -= 2;
 }
@@ -599,37 +555,35 @@ inline void op_jumpi(execution_state& state) noexcept
 inline void op_pc(execution_state& state) noexcept
 {
     state.stack_ptr++;
-    state.stack[state.stack_ptr] = static_cast<int>(state.pc);
+    *state.stack_ptr = static_cast<int>(state.next_instruction->instruction_data.number);
 }
 
 inline void op_msize(execution_state& state) noexcept
 {
     state.stack_ptr++;
-    state.stack[state.stack_ptr] = state.msize;
+    *state.stack_ptr = state.msize;
 }
 
 inline void op_gas(execution_state& state, const instruction_info& data) noexcept
 {
     state.stack_ptr++;
-    state.stack[state.stack_ptr] =
-        static_cast<uint64_t>(state.gas_left + state.current_block_cost - data.gas_data);
+    *state.stack_ptr =
+        static_cast<uint64_t>(state.gas_left + state.current_block_cost - data.number);
 }
 
-inline void op_jumpdest(execution_state&) noexcept
-{
-}
+inline void op_jumpdest(execution_state&) noexcept {}
 
 inline void op_gasprice(execution_state& state) noexcept
 {
     state.stack_ptr++;
     if (state.tx_context.block_timestamp == 0)
         state.tx_context = state.host->host->get_tx_context(state.host);
-    state.stack[state.stack_ptr] = intx::be::uint256(state.tx_context.tx_gas_price.bytes);
+    *state.stack_ptr = intx::be::uint256(state.tx_context.tx_gas_price.bytes);
 }
 
 inline void op_extcodesize(execution_state& state) noexcept
 {
-    auto& x = state.stack[state.stack_ptr];
+    auto& x = *state.stack_ptr;
     uint8_t data[32];
     intx::be::store(data, x);
     evmc_address addr;
@@ -639,22 +593,23 @@ inline void op_extcodesize(execution_state& state) noexcept
 
 inline void op_extcodecopy(execution_state& state) noexcept
 {
-    auto addr_data = state.stack[state.stack_ptr];
-    auto mem_index = state.stack[state.stack_ptr - 1];
-    auto input_index = state.stack[state.stack_ptr - 2];
-    auto size = state.stack[state.stack_ptr - 3];
+    auto addr_data = *state.stack_ptr;
+    auto mem_index = *(state.stack_ptr - 1);
+    auto input_index = *(state.stack_ptr - 2);
+    auto size = *(state.stack_ptr - 3);
 
     auto dst = static_cast<size_t>(mem_index);
 
     auto src = std::min(static_cast<size_t>(input_index), std::numeric_limits<size_t>::max());
     auto s = static_cast<size_t>(size);
 
-    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3 + compute_memory_cost(state, (int64_t)mem_index, (int64_t)size);
+    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3 +
+                     compute_memory_cost(state, (int64_t)mem_index, (int64_t)size);
     state.gas_left -= copy_cost;
     if (state.gas_left < 0)
     {
         state.status = EVMC_OUT_OF_GAS;
-        state.pc = state.code_size;
+        state.next_instruction = state.stop_instruction;
         return;
     }
 
@@ -674,14 +629,14 @@ inline void op_extcodecopy(execution_state& state) noexcept
 inline void op_returndatasize(execution_state& state) noexcept
 {
     state.stack_ptr++;
-    state.stack[state.stack_ptr] = state.return_data.size();
+    *state.stack_ptr = state.return_data.size();
 }
 
 inline void op_returndatacopy(execution_state& state) noexcept
 {
-    auto mem_index = state.stack[state.stack_ptr];
-    auto input_index = state.stack[state.stack_ptr - 1];
-    auto size = state.stack[state.stack_ptr - 2];
+    auto mem_index = *state.stack_ptr;
+    auto input_index = *(state.stack_ptr - 1);
+    auto size = *(state.stack_ptr - 2);
 
     state.stack_ptr -= 3;
 
@@ -691,7 +646,7 @@ inline void op_returndatacopy(execution_state& state) noexcept
     if (state.return_data.size() < input_index)
     {
         state.status = EVMC_INVALID_MEMORY_ACCESS;
-        state.pc = state.code_size;
+        state.next_instruction = state.stop_instruction;
         return;
     }
     auto src = static_cast<size_t>(input_index);
@@ -699,16 +654,17 @@ inline void op_returndatacopy(execution_state& state) noexcept
     if (src + s > state.return_data.size())
     {
         state.status = EVMC_INVALID_MEMORY_ACCESS;
-        state.pc = state.code_size;
+        state.next_instruction = state.stop_instruction;
         return;
     }
 
-    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3 + compute_memory_cost(state, (int64_t)mem_index, (int64_t)size);
+    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3 +
+                     compute_memory_cost(state, (int64_t)mem_index, (int64_t)size);
     state.gas_left -= copy_cost;
     if (state.gas_left < 0)
     {
         state.status = EVMC_OUT_OF_GAS;
-        state.pc = state.code_size;
+        state.next_instruction = state.stop_instruction;
         return;
     }
 
@@ -717,7 +673,7 @@ inline void op_returndatacopy(execution_state& state) noexcept
 
 inline void op_extcodehash(execution_state& state) noexcept
 {
-    auto& x = state.stack[state.stack_ptr];
+    auto& x = *state.stack_ptr;
     uint8_t data[32];
     intx::be::store(data, x);
     evmc_address addr;
@@ -727,7 +683,7 @@ inline void op_extcodehash(execution_state& state) noexcept
 
 inline void op_blockhash(execution_state& state) noexcept
 {
-    auto& number = state.stack[state.stack_ptr];
+    auto& number = *state.stack_ptr;
 
     // Load transaction context.
     if (state.tx_context.block_timestamp == 0)
@@ -750,7 +706,7 @@ inline void op_coinbase(execution_state& state) noexcept
     std::memcpy(
         &data[12], state.tx_context.block_coinbase.bytes, sizeof(state.tx_context.block_coinbase));
     state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(data);
+    *state.stack_ptr = intx::be::uint256(data);
 }
 
 inline void op_timestamp(execution_state& state) noexcept
@@ -759,8 +715,7 @@ inline void op_timestamp(execution_state& state) noexcept
     if (state.tx_context.block_timestamp == 0)
         state.tx_context = state.host->host->get_tx_context(state.host);
     state.stack_ptr++;
-    state.stack[state.stack_ptr] =
-        intx::uint256{static_cast<uint64_t>(state.tx_context.block_timestamp)};
+    *state.stack_ptr = intx::uint256{static_cast<uint64_t>(state.tx_context.block_timestamp)};
 }
 
 inline void op_number(execution_state& state) noexcept
@@ -768,8 +723,7 @@ inline void op_number(execution_state& state) noexcept
     if (state.tx_context.block_timestamp == 0)
         state.tx_context = state.host->host->get_tx_context(state.host);
     state.stack_ptr++;
-    state.stack[state.stack_ptr] =
-        intx::uint256{static_cast<uint64_t>(state.tx_context.block_number)};
+    *state.stack_ptr = intx::uint256{static_cast<uint64_t>(state.tx_context.block_number)};
 }
 
 inline void op_difficulty(execution_state& state) noexcept
@@ -777,7 +731,7 @@ inline void op_difficulty(execution_state& state) noexcept
     if (state.tx_context.block_timestamp == 0)
         state.tx_context = state.host->host->get_tx_context(state.host);
     state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(state.tx_context.block_difficulty.bytes);
+    *state.stack_ptr = intx::be::uint256(state.tx_context.block_difficulty.bytes);
 }
 
 inline void op_gaslimit(execution_state& state) noexcept
@@ -785,232 +739,13 @@ inline void op_gaslimit(execution_state& state) noexcept
     if (state.tx_context.block_timestamp == 0)
         state.tx_context = state.host->host->get_tx_context(state.host);
     state.stack_ptr++;
-    state.stack[state.stack_ptr] =
-        intx::uint256{static_cast<uint64_t>(state.tx_context.block_gas_limit)};
+    *state.stack_ptr = intx::uint256{static_cast<uint64_t>(state.tx_context.block_gas_limit)};
 }
 
-inline void op_push1(execution_state& state, const instruction_info& instruction_data) noexcept
+inline void op_push(execution_state& state) noexcept
 {
-    state.pc += 2;
     state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push2(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 3;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push3(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 4;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push4(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 5;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push5(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 6;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push6(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 7;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push7(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 8;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push8(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 9;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push9(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 10;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push10(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 11;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push11(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 12;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push12(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 13;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push13(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 14;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push14(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 15;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push15(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 16;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push16(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 17;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push17(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 18;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push18(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 19;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push19(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 20;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push20(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 21;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push21(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 22;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push22(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 23;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push23(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 24;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push24(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 25;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push25(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 26;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push26(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 27;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push27(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 28;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push28(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 29;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push29(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 30;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push30(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 31;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push31(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 32;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
-}
-
-inline void op_push32(execution_state& state, const instruction_info& instruction_data) noexcept
-{
-    state.pc += 33;
-    state.stack_ptr++;
-    state.stack[state.stack_ptr] = intx::be::uint256(&instruction_data.push_data[0]);
+    *state.stack_ptr = intx::be::uint256(&state.next_instruction->instruction_data.push_data[0]);
 }
 
 inline void op_pop(execution_state& state) noexcept
@@ -1020,178 +755,178 @@ inline void op_pop(execution_state& state) noexcept
 
 inline void op_dup1(execution_state& state) noexcept
 {
-    state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr];
+    *(state.stack_ptr + 1) = *state.stack_ptr;
     state.stack_ptr++;
 }
 
 inline void op_dup2(execution_state& state) noexcept
 {
-    state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 1];
+    *(state.stack_ptr + 1) = *(state.stack_ptr - 1);
     state.stack_ptr++;
 }
 
 inline void op_dup3(execution_state& state) noexcept
 {
-    state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 2];
+    *(state.stack_ptr + 1) = *(state.stack_ptr - 2);
     state.stack_ptr++;
 }
 
 inline void op_dup4(execution_state& state) noexcept
 {
-    state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 3];
+    *(state.stack_ptr + 1) = *(state.stack_ptr - 3);
     state.stack_ptr++;
 }
 
 inline void op_dup5(execution_state& state) noexcept
 {
-    state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 4];
+    *(state.stack_ptr + 1) = *(state.stack_ptr - 4);
     state.stack_ptr++;
 }
 
 inline void op_dup6(execution_state& state) noexcept
 {
-    state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 5];
+    *(state.stack_ptr + 1) = *(state.stack_ptr - 5);
     state.stack_ptr++;
 }
 
 inline void op_dup7(execution_state& state) noexcept
 {
-    state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 6];
+    *(state.stack_ptr + 1) = *(state.stack_ptr - 6);
     state.stack_ptr++;
 }
 
 inline void op_dup8(execution_state& state) noexcept
 {
-    state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 7];
+    *(state.stack_ptr + 1) = *(state.stack_ptr - 7);
     state.stack_ptr++;
 }
 
 inline void op_dup9(execution_state& state) noexcept
 {
-    state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 8];
+    *(state.stack_ptr + 1) = *(state.stack_ptr - 8);
     state.stack_ptr++;
 }
 
 inline void op_dup10(execution_state& state) noexcept
 {
-    state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 9];
+    *(state.stack_ptr + 1) = *(state.stack_ptr - 9);
     state.stack_ptr++;
 }
 
 inline void op_dup11(execution_state& state) noexcept
 {
-    state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 10];
+    *(state.stack_ptr + 1) = *(state.stack_ptr - 10);
     state.stack_ptr++;
 }
 
 inline void op_dup12(execution_state& state) noexcept
 {
-    state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 11];
+    *(state.stack_ptr + 1) = *(state.stack_ptr - 11);
     state.stack_ptr++;
 }
 
 inline void op_dup13(execution_state& state) noexcept
 {
-    state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 12];
+    *(state.stack_ptr + 1) = *(state.stack_ptr - 12);
     state.stack_ptr++;
 }
 
 inline void op_dup14(execution_state& state) noexcept
 {
-    state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 13];
+    *(state.stack_ptr + 1) = *(state.stack_ptr - 13);
     state.stack_ptr++;
 }
 
 inline void op_dup15(execution_state& state) noexcept
 {
-    state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 14];
+    *(state.stack_ptr + 1) = *(state.stack_ptr - 14);
     state.stack_ptr++;
 }
 
 inline void op_dup16(execution_state& state) noexcept
 {
-    state.stack[state.stack_ptr + 1] = state.stack[state.stack_ptr - 15];
+    *(state.stack_ptr + 1) = *(state.stack_ptr - 15);
     state.stack_ptr++;
 }
 
 inline void op_swap1(execution_state& state) noexcept
 {
-    std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 1]);
+    std::swap(*state.stack_ptr, *(state.stack_ptr - 1));
 }
 
 inline void op_swap2(execution_state& state) noexcept
 {
-    std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 2]);
+    std::swap(*state.stack_ptr, *(state.stack_ptr - 2));
 }
 
 inline void op_swap3(execution_state& state) noexcept
 {
-    std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 3]);
+    std::swap(*state.stack_ptr, *(state.stack_ptr - 3));
 }
 
 inline void op_swap4(execution_state& state) noexcept
 {
-    std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 4]);
+    std::swap(*state.stack_ptr, *(state.stack_ptr - 4));
 }
 
 inline void op_swap5(execution_state& state) noexcept
 {
-    std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 5]);
+    std::swap(*state.stack_ptr, *(state.stack_ptr - 5));
 }
 
 inline void op_swap6(execution_state& state) noexcept
 {
-    std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 6]);
+    std::swap(*state.stack_ptr, *(state.stack_ptr - 6));
 }
 
 inline void op_swap7(execution_state& state) noexcept
 {
-    std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 7]);
+    std::swap(*state.stack_ptr, *(state.stack_ptr - 7));
 }
 
 inline void op_swap8(execution_state& state) noexcept
 {
-    std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 8]);
+    std::swap(*state.stack_ptr, *(state.stack_ptr - 8));
 }
 
 inline void op_swap9(execution_state& state) noexcept
 {
-    std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 9]);
+    std::swap(*state.stack_ptr, *(state.stack_ptr - 9));
 }
 
 inline void op_swap10(execution_state& state) noexcept
 {
-    std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 10]);
+    std::swap(*state.stack_ptr, *(state.stack_ptr - 10));
 }
 
 inline void op_swap11(execution_state& state) noexcept
 {
-    std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 11]);
+    std::swap(*state.stack_ptr, *(state.stack_ptr - 11));
 }
 
 inline void op_swap12(execution_state& state) noexcept
 {
-    std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 12]);
+    std::swap(*state.stack_ptr, *(state.stack_ptr - 12));
 }
 
 inline void op_swap13(execution_state& state) noexcept
 {
-    std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 13]);
+    std::swap(*state.stack_ptr, *(state.stack_ptr - 13));
 }
 
 inline void op_swap14(execution_state& state) noexcept
 {
-    std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 14]);
+    std::swap(*state.stack_ptr, *(state.stack_ptr - 14));
 }
 
 inline void op_swap15(execution_state& state) noexcept
 {
-    std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 15]);
+    std::swap(*state.stack_ptr, *(state.stack_ptr - 15));
 }
 
 inline void op_swap16(execution_state& state) noexcept
 {
-    std::swap(state.stack[state.stack_ptr], state.stack[state.stack_ptr - 16]);
+    std::swap(*state.stack_ptr, *(state.stack_ptr - 16));
 }
 
 
@@ -1201,22 +936,23 @@ inline void op_log(execution_state& state, int number) noexcept
     {
         // TODO: Implement static mode violation in analysis.
         state.status = EVMC_STATIC_MODE_VIOLATION;
-        state.pc = state.code_size;
+        state.next_instruction = state.stop_instruction;
         return;
     }
 
-    auto offset = state.stack[state.stack_ptr];
-    auto size = state.stack[state.stack_ptr - 1];
+    auto offset = *state.stack_ptr;
+    auto size = *(state.stack_ptr - 1);
 
     auto o = static_cast<size_t>(offset);
     auto s = static_cast<size_t>(size);
 
-    auto cost = int64_t{8} * s + compute_memory_cost(state, (int64_t)offset, (int64_t)size);;
+    auto cost = int64_t{8} * s + compute_memory_cost(state, (int64_t)offset, (int64_t)size);
+
     state.gas_left -= cost;
     if (state.gas_left < 0)
     {
         state.status = EVMC_OUT_OF_GAS;
-        state.pc = state.code_size;
+        state.next_instruction = state.stop_instruction;
     }
 
     state.stack_ptr -= 2;
@@ -1224,7 +960,7 @@ inline void op_log(execution_state& state, int number) noexcept
     std::array<evmc_bytes32, 4> topics;
     for (auto i = 0; i < number; ++i)
     {
-        intx::be::store(topics[i].bytes, state.stack[state.stack_ptr]);
+        intx::be::store(topics[i].bytes, *state.stack_ptr);
         state.stack_ptr--;
     }
 
@@ -1259,9 +995,9 @@ inline void op_log4(execution_state& state) noexcept
 
 inline void op_return(execution_state& state) noexcept
 {
-    state.pc = state.code_size;
-    auto offset = state.stack[state.stack_ptr];
-    auto size = state.stack[state.stack_ptr - 1];
+    state.next_instruction = state.stop_instruction;
+    auto offset = *state.stack_ptr;
+    auto size = *(state.stack_ptr - 1);
 
     state.output_offset = static_cast<size_t>(offset);
     state.output_size = static_cast<size_t>(size);
@@ -1271,8 +1007,8 @@ inline void op_return(execution_state& state) noexcept
 
 inline void op_revert(execution_state& state) noexcept
 {
-    auto offset = state.stack[state.stack_ptr];
-    auto size = state.stack[state.stack_ptr - 1];
+    auto offset = *state.stack_ptr;
+    auto size = *(state.stack_ptr - 1);
 
     state.status = EVMC_REVERT;
     state.output_offset = static_cast<size_t>(offset);
@@ -1280,24 +1016,24 @@ inline void op_revert(execution_state& state) noexcept
     CHECK_MEMORY(offset, size);
 }
 
-inline void op_callbase(
-    execution_state& state, const instruction_info& instruction_data, evmc_call_kind call_kind) noexcept
+inline void op_callbase(execution_state& state, const instruction_info& instruction_data,
+    evmc_call_kind call_kind) noexcept
 {
-    auto gas = state.stack[state.stack_ptr];
+    auto gas = *state.stack_ptr;
 
     uint8_t data[32];
-    intx::be::store(data, state.stack[state.stack_ptr - 1]);
+    intx::be::store(data, *(state.stack_ptr - 1));
     auto dst = evmc_address{};
     std::memcpy(dst.bytes, &data[12], sizeof(dst));
 
-    auto value = state.stack[state.stack_ptr - 2];
-    auto input_offset = state.stack[state.stack_ptr - 3];  // state.stack[state.stack_ptr - 3];
-    auto input_size = state.stack[state.stack_ptr - 4];
-    auto output_offset = state.stack[state.stack_ptr - 5];
-    auto output_size = state.stack[state.stack_ptr - 6];
+    auto value = *(state.stack_ptr - 2);
+    auto input_offset = *(state.stack_ptr - 3);  // *(state.stack_ptr - 3);
+    auto input_size = *(state.stack_ptr - 4);
+    auto output_offset = *(state.stack_ptr - 5);
+    auto output_size = *(state.stack_ptr - 6);
 
     state.stack_ptr -= 6;
-    state.stack[state.stack_ptr] = 0;
+    *state.stack_ptr = 0;
 
     if (!check_memory(state, input_offset, input_size))
         return;
@@ -1311,7 +1047,7 @@ inline void op_callbase(
     msg.flags = state.msg->flags;
     intx::be::store(msg.value.bytes, value);
 
-    auto correction = state.current_block_cost - instruction_data.gas_data;
+    auto correction = state.current_block_cost - instruction_data.number;
     auto gas_left = state.gas_left + correction;
 
     auto cost = 0;
@@ -1321,7 +1057,7 @@ inline void op_callbase(
         if (call_kind == EVMC_CALL && state.msg->flags & EVMC_STATIC)
         {
             state.status = EVMC_STATIC_MODE_VIOLATION;
-            state.pc = state.code_size;
+            state.next_instruction = state.stop_instruction;
             return;
         }
         cost += 9000;
@@ -1337,7 +1073,7 @@ inline void op_callbase(
     if (state.gas_left < 0)
     {
         state.status = EVMC_OUT_OF_GAS;
-        state.pc = state.code_size;
+        state.next_instruction = state.stop_instruction;
         return;
     }
 
@@ -1352,7 +1088,7 @@ inline void op_callbase(
     else if (msg.gas > gas_left)
     {
         state.status = EVMC_OUT_OF_GAS;
-        state.pc = state.code_size;
+        state.next_instruction = state.stop_instruction;
         return;
     }
 
@@ -1392,7 +1128,7 @@ inline void op_callbase(
     state.return_data.assign(result.output_data, result.output_size);
 
 
-    state.stack[state.stack_ptr] = result.status_code == EVMC_SUCCESS;
+    *state.stack_ptr = result.status_code == EVMC_SUCCESS;
 
     std::memcpy(&state.memory[size_t(output_offset)], result.output_data,
         std::min(size_t(output_size), result.output_size));
@@ -1409,7 +1145,7 @@ inline void op_callbase(
     if (state.gas_left < 0)
     {
         state.status = EVMC_OUT_OF_GAS;
-        state.pc = state.code_size;
+        state.next_instruction = state.stop_instruction;
         return;
     }
 }
@@ -1424,22 +1160,23 @@ inline void op_callcode(execution_state& state, const instruction_info& data) no
     op_callbase(state, data, EVMC_CALLCODE);
 }
 
-inline void op_delegatecall(execution_state& state, const instruction_info& instruction_data) noexcept
+inline void op_delegatecall(
+    execution_state& state, const instruction_info& instruction_data) noexcept
 {
-    auto gas = state.stack[state.stack_ptr];
+    auto gas = *state.stack_ptr;
 
     uint8_t data[32];
-    intx::be::store(data, state.stack[state.stack_ptr - 1]);
+    intx::be::store(data, *(state.stack_ptr - 1));
     auto dst = evmc_address{};
     std::memcpy(dst.bytes, &data[12], sizeof(dst));
 
-    auto input_offset = state.stack[state.stack_ptr - 2];
-    auto input_size = state.stack[state.stack_ptr - 3];
-    auto output_offset = state.stack[state.stack_ptr - 4];
-    auto output_size = state.stack[state.stack_ptr - 5];
+    auto input_offset = *(state.stack_ptr - 2);
+    auto input_size = *(state.stack_ptr - 3);
+    auto output_offset = *(state.stack_ptr - 4);
+    auto output_size = *(state.stack_ptr - 5);
 
     state.stack_ptr -= 5;
-    state.stack[state.stack_ptr] = 0;
+    *state.stack_ptr = 0;
 
     if (!check_memory(state, input_offset, input_size))
         return;
@@ -1450,7 +1187,7 @@ inline void op_delegatecall(execution_state& state, const instruction_info& inst
     auto msg = evmc_message{};
     msg.kind = EVMC_DELEGATECALL;
 
-    auto correction = state.current_block_cost - instruction_data.gas_data;
+    auto correction = state.current_block_cost - instruction_data.number;
     auto gas_left = state.gas_left + correction;
 
     // TEST: Gas saturation for big gas values.
@@ -1463,7 +1200,7 @@ inline void op_delegatecall(execution_state& state, const instruction_info& inst
     else if (msg.gas > gas_left)  // TEST: gas_left vs state.gas_left.
     {
         state.status = EVMC_OUT_OF_GAS;
-        state.pc = state.code_size;
+        state.next_instruction = state.stop_instruction;
         return;
     }
 
@@ -1484,7 +1221,7 @@ inline void op_delegatecall(execution_state& state, const instruction_info& inst
 
     state.return_data.assign(result.output_data, result.output_size);
 
-    state.stack[state.stack_ptr] = result.status_code == EVMC_SUCCESS;
+    *state.stack_ptr = result.status_code == EVMC_SUCCESS;
 
     std::memcpy(&state.memory[size_t(output_offset)], result.output_data,
         std::min(size_t(output_size), result.output_size));
@@ -1498,27 +1235,27 @@ inline void op_delegatecall(execution_state& state, const instruction_info& inst
     if (state.gas_left < 0)
     {
         state.status = EVMC_OUT_OF_GAS;
-        state.pc = state.code_size;
+        state.next_instruction = state.stop_instruction;
         return;
     }
 }
 
 inline void op_staticcall(execution_state& state, const instruction_info& instruction_data) noexcept
 {
-    auto gas = state.stack[state.stack_ptr];
+    auto gas = *state.stack_ptr;
 
     uint8_t data[32];
-    intx::be::store(data, state.stack[state.stack_ptr - 1]);
+    intx::be::store(data, *(state.stack_ptr - 1));
     auto dst = evmc_address{};
     std::memcpy(dst.bytes, &data[12], sizeof(dst));
 
-    auto input_offset = state.stack[state.stack_ptr - 2];
-    auto input_size = state.stack[state.stack_ptr - 3];
-    auto output_offset = state.stack[state.stack_ptr - 4];
-    auto output_size = state.stack[state.stack_ptr - 5];
+    auto input_offset = *(state.stack_ptr - 2);
+    auto input_size = *(state.stack_ptr - 3);
+    auto output_offset = *(state.stack_ptr - 4);
+    auto output_size = *(state.stack_ptr - 5);
 
     state.stack_ptr -= 5;
-    state.stack[state.stack_ptr] = 0;
+    *state.stack_ptr = 0;
 
     if (!check_memory(state, input_offset, input_size))
         return;
@@ -1535,7 +1272,7 @@ inline void op_staticcall(execution_state& state, const instruction_info& instru
 
     msg.depth = state.msg->depth + 1;
 
-    auto correction = state.current_block_cost - instruction_data.gas_data;
+    auto correction = state.current_block_cost - instruction_data.number;
     auto gas_left = state.gas_left + correction;
 
     msg.gas = std::numeric_limits<int64_t>::max();
@@ -1554,7 +1291,7 @@ inline void op_staticcall(execution_state& state, const instruction_info& instru
     evmone::memory::restore_free_memory();
 
     state.return_data.assign(result.output_data, result.output_size);
-    state.stack[state.stack_ptr] = result.status_code == EVMC_SUCCESS;
+    *state.stack_ptr = result.status_code == EVMC_SUCCESS;
 
     std::memcpy(&state.memory[size_t(output_offset)], result.output_data,
         std::min(size_t(output_size), result.output_size));
@@ -1568,19 +1305,19 @@ inline void op_staticcall(execution_state& state, const instruction_info& instru
     if (state.gas_left < 0)
     {
         state.status = EVMC_OUT_OF_GAS;
-        state.pc = state.code_size;
+        state.next_instruction = state.stop_instruction;
         return;
     }
 }
 
 inline void op_create(execution_state& state, const instruction_info& instruction_data) noexcept
 {
-    auto endowment = state.stack[state.stack_ptr];
-    auto init_code_offset = state.stack[state.stack_ptr - 1];
-    auto init_code_size = state.stack[state.stack_ptr - 2];
+    auto endowment = *state.stack_ptr;
+    auto init_code_offset = *(state.stack_ptr - 1);
+    auto init_code_size = *(state.stack_ptr - 2);
 
     state.stack_ptr -= 2;
-    state.stack[state.stack_ptr] = 0;
+    *state.stack_ptr = 0;
 
     if (!check_memory(state, init_code_offset, init_code_size))
         return;
@@ -1600,7 +1337,7 @@ inline void op_create(execution_state& state, const instruction_info& instructio
 
     auto msg = evmc_message{};
 
-    auto correction = state.current_block_cost - instruction_data.gas_data;
+    auto correction = state.current_block_cost - instruction_data.number;
     msg.gas = state.gas_left + correction;
     if (state.rev >= EVMC_TANGERINE_WHISTLE)
         msg.gas = msg.gas - msg.gas / 64;
@@ -1621,7 +1358,7 @@ inline void op_create(execution_state& state, const instruction_info& instructio
     {
         uint8_t data[32] = {};
         std::memcpy(&data[12], &result.create_address, sizeof(result.create_address));
-        state.stack[state.stack_ptr] = intx::be::uint256(&data[0]);
+        *state.stack_ptr = intx::be::uint256(&data[0]);
     }
 
     auto gas_used = msg.gas - result.gas_left;
@@ -1634,19 +1371,19 @@ inline void op_create(execution_state& state, const instruction_info& instructio
     {
         // FIXME: This cannot happen.
         state.status = EVMC_OUT_OF_GAS;
-        state.pc = state.code_size;
+        state.next_instruction = state.stop_instruction;
     }
 }
 
 inline void op_create2(execution_state& state, const instruction_info& instruction_data) noexcept
 {
-    auto endowment = state.stack[state.stack_ptr];
-    auto init_code_offset = state.stack[state.stack_ptr - 1];
-    auto init_code_size = state.stack[state.stack_ptr - 2];
-    auto salt = state.stack[state.stack_ptr - 3];
+    auto endowment = *state.stack_ptr;
+    auto init_code_offset = *(state.stack_ptr - 1);
+    auto init_code_size = *(state.stack_ptr - 2);
+    auto salt = *(state.stack_ptr - 3);
 
     state.stack_ptr -= 3;
-    state.stack[state.stack_ptr] = 0;
+    *state.stack_ptr = 0;
 
     if (!check_memory(state, init_code_offset, init_code_size))
         return;
@@ -1656,7 +1393,7 @@ inline void op_create2(execution_state& state, const instruction_info& instructi
     if (state.gas_left < 0)
     {
         state.status = EVMC_OUT_OF_GAS;
-        state.pc = state.code_size;
+        state.next_instruction = state.stop_instruction;
         return;
     }
 
@@ -1676,7 +1413,7 @@ inline void op_create2(execution_state& state, const instruction_info& instructi
     auto msg = evmc_message{};
 
     // TODO: Only for TW+. For previous check g <= gas_left.
-    auto correction = state.current_block_cost - instruction_data.gas_data;
+    auto correction = state.current_block_cost - instruction_data.number;
     auto gas = state.gas_left + correction;
     msg.gas = gas - gas / 64;
 
@@ -1697,7 +1434,7 @@ inline void op_create2(execution_state& state, const instruction_info& instructi
     {
         uint8_t data[32] = {};
         std::memcpy(&data[12], &result.create_address, sizeof(result.create_address));
-        state.stack[state.stack_ptr] = intx::be::uint256(&data[0]);
+        *state.stack_ptr = intx::be::uint256(&data[0]);
     }
 
     auto gas_used = msg.gas - result.gas_left;
@@ -1710,15 +1447,15 @@ inline void op_create2(execution_state& state, const instruction_info& instructi
     {
         // FIXME: This cannot happen.
         state.status = EVMC_OUT_OF_GAS;
-        state.pc = state.code_size;
+        state.next_instruction = state.stop_instruction;
     }
 }
 
 inline void op_selfdestruct(execution_state& state) noexcept
 {
-    state.pc = state.code_size;
+    state.next_instruction = state.stop_instruction;
     uint8_t data[32];
-    intx::be::store(data, state.stack[state.stack_ptr]);
+    intx::be::store(data, *state.stack_ptr);
     evmc_address addr;
     std::memcpy(addr.bytes, &data[12], sizeof(addr));
 
