@@ -13,7 +13,6 @@
 #include <evmc/instructions.h>
 
 #include <math.h>
-#include <iostream>
 
 
 #define UPDATE_MEMORY()                                \
@@ -25,8 +24,9 @@
         state.gas_left -= cost;                        \
     }
 
-// this macro is called to dispatch to the subsequent instruction in our transaction.
-// The aspiration is that the CPU can figure out what we're up to, and avoid a pipeline stall...
+// this macro is called to dispatch to the relevant subroutine required to interpret the next
+// instruction Given the lack of conditional branching, the aspiration is that the CPU can figure
+// out what we're up to, and avoid a pipeline stall...
 #define DISPATCH() goto**(void**)++state.next_instruction;
 
 #define CHECK_BLOCK()                                                                           \
@@ -60,8 +60,6 @@ namespace evmone
 {
 namespace
 {
-}  // namespace
-
 const void** interpret(
     instruction* instructions, instruction** jumpdest_map, execution_state& state) noexcept
 {
@@ -581,7 +579,8 @@ const void** interpret(
         /* 0x200 */ &&op_staticviolation_dest,
     };
 
-    // If we haven't computed our jump labels yet, return our jump tables
+    // If we haven't computed our jump labels yet, return our jump tables.
+    // Bit of an ugly hack to get a pointer to jump_tables that we can work with
     if (instructions == nullptr)
     {
         return jump_tables;
@@ -595,7 +594,7 @@ const void** interpret(
     }
 
     // hon hon hon
-    goto**(void**)state.next_instruction;
+    goto **(void**)state.next_instruction;
 
 op_add_dest:
     CHECK_BLOCK();
@@ -1158,72 +1157,95 @@ op_stop_dest_no_check:
     return nullptr;
 }
 
+static void* istanbul[JUMP_TABLE_SIZE] = {nullptr};
 void** create_op_table_istanbul() noexcept
 {
-    static execution_state dummy_state = execution_state();
-    const void** table = interpret(nullptr, nullptr, dummy_state);
-    static void* istanbul[JUMP_TABLE_SIZE];
-    memcpy(&istanbul, table, sizeof(void*) * JUMP_TABLE_SIZE);
+    // We want to create tables of the labels inside evmone::interpret, that we can reference
+    // when constructing the program flow in evmone::analyze.
+    // However, the labels are scoped inside evmone::interpret, so we need to be a bit creative...
+    static int dummy_variable = 0;
+    static void* dont_try_this_at_home = static_cast<void*>(&dummy_variable);
+    if (istanbul[0] == nullptr)
+    {
+        const void** table =
+            interpret(nullptr, nullptr, *static_cast<execution_state*>(dont_try_this_at_home));
+        memcpy(&istanbul, table, sizeof(void*) * JUMP_TABLE_SIZE);
+    }
     return istanbul;
 }
 
+static void* petersburg[JUMP_TABLE_SIZE] = {nullptr};
 void** create_op_table_petersburg() noexcept
 {
-    void** table = create_op_table_istanbul();
-    static void* petersburg[JUMP_TABLE_SIZE];
-    memcpy(&petersburg, table, sizeof(void*) * JUMP_TABLE_SIZE);
+    if (petersburg[0] == nullptr)
+    {
+        void** table = create_op_table_istanbul();
+        memcpy(&petersburg, table, sizeof(void*) * JUMP_TABLE_SIZE);
+    }
     return petersburg;
 }
 
+static void* constantinople[JUMP_TABLE_SIZE] = {nullptr};
 void** create_op_table_constantinople() noexcept
 {
-    void** table = create_op_table_petersburg();
-    static void* constantinople[JUMP_TABLE_SIZE];
-    memcpy(&constantinople, table, sizeof(void*) * JUMP_TABLE_SIZE);
+    if (constantinople[0] == nullptr)
+    {
+        void** table = create_op_table_petersburg();
+        memcpy(&constantinople, table, sizeof(void*) * JUMP_TABLE_SIZE);
+    }
     return constantinople;
 }
 
+static void* byzantium[JUMP_TABLE_SIZE] = {nullptr};
 void** create_op_table_byzantium() noexcept
 {
-    void** table = create_op_table_constantinople();
-    static void* byzantium[JUMP_TABLE_SIZE];
-    memcpy(&byzantium, table, sizeof(void*) * JUMP_TABLE_SIZE);
-    byzantium[OP_SHL] = byzantium[UNDEFINED_INDEX];
-    byzantium[OP_SHR] = byzantium[UNDEFINED_INDEX];
-    byzantium[OP_SAR] = byzantium[UNDEFINED_INDEX];
-    byzantium[OP_EXTCODEHASH] = byzantium[UNDEFINED_INDEX];
-    byzantium[OP_CREATE2] = byzantium[UNDEFINED_INDEX];
-    byzantium[JUMP_TABLE_CHECK_BOUNDARY + OP_SHL] = byzantium[UNDEFINED_INDEX];
-    byzantium[JUMP_TABLE_CHECK_BOUNDARY + OP_SHR] = byzantium[UNDEFINED_INDEX];
-    byzantium[JUMP_TABLE_CHECK_BOUNDARY + OP_SAR] = byzantium[UNDEFINED_INDEX];
-    byzantium[JUMP_TABLE_CHECK_BOUNDARY + OP_EXTCODEHASH] = byzantium[UNDEFINED_INDEX];
-    byzantium[JUMP_TABLE_CHECK_BOUNDARY + OP_CREATE2] = byzantium[UNDEFINED_INDEX];
+    if (byzantium[0] == nullptr)
+    {
+        void** table = create_op_table_constantinople();
+        memcpy(&byzantium, table, sizeof(void*) * JUMP_TABLE_SIZE);
+        byzantium[OP_SHL] = byzantium[UNDEFINED_INDEX];
+        byzantium[OP_SHR] = byzantium[UNDEFINED_INDEX];
+        byzantium[OP_SAR] = byzantium[UNDEFINED_INDEX];
+        byzantium[OP_EXTCODEHASH] = byzantium[UNDEFINED_INDEX];
+        byzantium[OP_CREATE2] = byzantium[UNDEFINED_INDEX];
+        byzantium[JUMP_TABLE_CHECK_BOUNDARY + OP_SHL] = byzantium[UNDEFINED_INDEX];
+        byzantium[JUMP_TABLE_CHECK_BOUNDARY + OP_SHR] = byzantium[UNDEFINED_INDEX];
+        byzantium[JUMP_TABLE_CHECK_BOUNDARY + OP_SAR] = byzantium[UNDEFINED_INDEX];
+        byzantium[JUMP_TABLE_CHECK_BOUNDARY + OP_EXTCODEHASH] = byzantium[UNDEFINED_INDEX];
+        byzantium[JUMP_TABLE_CHECK_BOUNDARY + OP_CREATE2] = byzantium[UNDEFINED_INDEX];
+    }
     return byzantium;
 }
 
 void** create_op_table_homestead() noexcept
 {
-    void** table = create_op_table_byzantium();
-    static void* homestead[JUMP_TABLE_SIZE];
-    memcpy(&homestead, table, sizeof(void*) * JUMP_TABLE_SIZE);
-    homestead[OP_RETURNDATASIZE] = homestead[UNDEFINED_INDEX];
-    homestead[OP_RETURNDATACOPY] = homestead[UNDEFINED_INDEX];
-    homestead[OP_STATICCALL] = homestead[UNDEFINED_INDEX];
-    homestead[OP_REVERT] = homestead[UNDEFINED_INDEX];
-    homestead[JUMP_TABLE_CHECK_BOUNDARY + OP_RETURNDATASIZE] = homestead[UNDEFINED_INDEX];
-    homestead[JUMP_TABLE_CHECK_BOUNDARY + OP_RETURNDATACOPY] = homestead[UNDEFINED_INDEX];
-    homestead[JUMP_TABLE_CHECK_BOUNDARY + OP_STATICCALL] = homestead[UNDEFINED_INDEX];
-    homestead[JUMP_TABLE_CHECK_BOUNDARY + OP_REVERT] = homestead[UNDEFINED_INDEX];
+    static void* homestead[JUMP_TABLE_SIZE] = {nullptr};
+    if (homestead[0] == nullptr)
+    {
+        void** table = create_op_table_byzantium();
+        memcpy(&homestead, table, sizeof(void*) * JUMP_TABLE_SIZE);
+        homestead[OP_RETURNDATASIZE] = homestead[UNDEFINED_INDEX];
+        homestead[OP_RETURNDATACOPY] = homestead[UNDEFINED_INDEX];
+        homestead[OP_STATICCALL] = homestead[UNDEFINED_INDEX];
+        homestead[OP_REVERT] = homestead[UNDEFINED_INDEX];
+        homestead[JUMP_TABLE_CHECK_BOUNDARY + OP_RETURNDATASIZE] = homestead[UNDEFINED_INDEX];
+        homestead[JUMP_TABLE_CHECK_BOUNDARY + OP_RETURNDATACOPY] = homestead[UNDEFINED_INDEX];
+        homestead[JUMP_TABLE_CHECK_BOUNDARY + OP_STATICCALL] = homestead[UNDEFINED_INDEX];
+        homestead[JUMP_TABLE_CHECK_BOUNDARY + OP_REVERT] = homestead[UNDEFINED_INDEX];
+    }
     return homestead;
 }
 
 void** create_op_table_frontier() noexcept
 {
-    void** table = create_op_table_homestead();
-    static void* frontier[JUMP_TABLE_SIZE];
-    memcpy(&frontier, table, sizeof(void*) * JUMP_TABLE_SIZE);
-    frontier[OP_DELEGATECALL] = frontier[UNDEFINED_INDEX];
-    frontier[JUMP_TABLE_CHECK_BOUNDARY + OP_DELEGATECALL] = frontier[UNDEFINED_INDEX];
+    static void* frontier[JUMP_TABLE_SIZE] = {nullptr};
+    if (frontier[0] == nullptr)
+    {
+        void** table = create_op_table_homestead();
+        memcpy(&frontier, table, sizeof(void*) * JUMP_TABLE_SIZE);
+        frontier[OP_DELEGATECALL] = frontier[UNDEFINED_INDEX];
+        frontier[JUMP_TABLE_CHECK_BOUNDARY + OP_DELEGATECALL] = frontier[UNDEFINED_INDEX];
+    }
     return frontier;
 }
 
@@ -1290,22 +1312,22 @@ const auto op_table_initialized = []() noexcept
 }
 ();
 
+}  // namespace
 
 evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const evmc_message* msg,
     const uint8_t* code, size_t code_size) noexcept
 {
     // If this is a static call, fish out a different jump table that will trigger an error
-    // for non-static methods
+    // for non-static opcodes
     auto jump_table_index = msg->flags & EVMC_STATIC ? rev + num_revisions : rev;
-    const void* temp_table[JUMP_TABLE_SIZE];
-    memcpy(temp_table, op_table[jump_table_index], sizeof(void*) * JUMP_TABLE_SIZE);
+
+    execution_state state;
     // Compute the maximum amount of memory this transaction can potentially consume.
     // This currently tops out at ~8MB, which is low enough to just allocate and zero out,
-    // instead of dealing with memory paging overheads
-    execution_state state;
+    // removing the overheas of memory paging
     state.tx_context = ctx->host->get_tx_context(ctx);
     std::tie(state.memory, state.max_potential_memory) =
-        evmone::memory::get_tx_memory_ptr(std::min(msg->gas, state.tx_context.block_gas_limit));
+        memory::get_tx_memory_ptr(std::min(msg->gas, state.tx_context.block_gas_limit));
 
     state.msg = msg;
     state.code = code;
@@ -1318,10 +1340,15 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
     state.msize = 0;
     state.stack_ptr = &state.stack[0];
 
+    // Create a sparse array of instruction pointers, that we can use to map from
+    // program counter -> instruction member for a JUMPDEST opcode.
+    // This gives us an O(1) lookup when processing 'jump' and 'jumpi' opcodes
     instruction* jumpdest_map[code_size + 2] = {nullptr};
+
+    // Create array of instruction members, this is where we'll place our program data
     instruction instructions[code_size + 2];
 
-    analyze(instructions, jumpdest_map, rev, code_size, code, temp_table);
+    analyze(instructions, jumpdest_map, rev, code_size, code, op_table[jump_table_index]);
 
     state.stop_instruction = &instructions[code_size];
     state.next_instruction = &instructions[0];
@@ -1347,7 +1374,9 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
             std::free(const_cast<uint8_t*>(result->output_data));
         };
     }
-    evmone::memory::clean_up(state.msize);
+
+    // before we exit, free up the memory this transaction used
+    memory::clean_up(state.msize);
     return result;
 }
 }  // namespace evmone

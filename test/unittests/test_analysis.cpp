@@ -5,6 +5,7 @@
 #include "utils.hpp"
 
 #include <evmc/instructions.h>
+#include <evmone/execution.hpp>
 #include <evmone/analysis.hpp>
 
 #include <gtest/gtest.h>

@@ -7,18 +7,10 @@
 
 #include <evmc/instructions.h>
 
-#include <stdio.h>
-#include <iostream>
-
-// TODO: PACKED MEMORY IN ANALYSIS
-// TODO: USE PTR TO REFERENCE NEXT INSTRUCTION
-// TODO: USE PTR TO REFERENCE STACK
-
 namespace evmone
 {
 namespace
 {
-
 bytes32 init_zero_bytes() noexcept
 {
     bytes32 data;
@@ -26,12 +18,11 @@ bytes32 init_zero_bytes() noexcept
         b = 0;
     return data;
 }
-
+static const bytes32 zero_bytes = init_zero_bytes();
 }  // namespace
 
-static const bytes32 zero_bytes = init_zero_bytes();
-
-void analyze(instruction* instructions, instruction** jumpdest_map, evmc_revision rev, const size_t code_size, const uint8_t* code, const void** jump_table) noexcept
+void analyze(instruction* instructions, instruction** jumpdest_map, evmc_revision rev,
+    const size_t code_size, const uint8_t* code, const void** jump_table) noexcept
 {
     auto* instr_table = evmc_get_instruction_metrics_table(rev);
     int stack_diff = 0;
@@ -60,121 +51,123 @@ void analyze(instruction* instructions, instruction** jumpdest_map, evmc_revisio
         block->stack_max = std::max(block->stack_max, stack_diff);
         switch (c)
         {
-            case OP_GAS:
-            case OP_CREATE:
-            case OP_CALL:
-            case OP_CALLCODE:
-            case OP_DELEGATECALL:
-            case OP_CREATE2:
-            case OP_STATICCALL:
-            {
-                instr.instruction_data.number = block->gas_cost;
-                break;
-            }
-            case OP_PUSH1:
-            case OP_PUSH2:
-            case OP_PUSH3:
-            case OP_PUSH4:
-            case OP_PUSH5:
-            case OP_PUSH6:
-            case OP_PUSH7:
-            case OP_PUSH8:
-            case OP_PUSH9:
-            case OP_PUSH10:
-            case OP_PUSH11:
-            case OP_PUSH12:
-            case OP_PUSH13:
-            case OP_PUSH14:
-            case OP_PUSH15:
-            case OP_PUSH16:
-            case OP_PUSH17:
-            case OP_PUSH18:
-            case OP_PUSH19:
-            case OP_PUSH20:
-            case OP_PUSH21:
-            case OP_PUSH22:
-            case OP_PUSH23:
-            case OP_PUSH24:
-            case OP_PUSH25:
-            case OP_PUSH26:
-            case OP_PUSH27:
-            case OP_PUSH28:
-            case OP_PUSH29:
-            case OP_PUSH30:
-            case OP_PUSH31:
-            case OP_PUSH32:
-            {
-                size_t push_size = static_cast<size_t>(c - OP_PUSH1 + 1);
-                size_t leading_zeroes = size_t(32 - push_size);
-                memcpy(&instr.instruction_data.push_data[0], &evmone::zero_bytes, 32);
-                memcpy(&instr.instruction_data.push_data[leading_zeroes], code + i + 1, push_size);
-                i += push_size;
-                break;
-            }
-            // TODO: what's slower, the additional lookup or fetching more code for separate subroutines?
-            /*
-            case OP_DUP1:
-            case OP_DUP2:
-            case OP_DUP3:
-            case OP_DUP4:
-            case OP_DUP5:
-            case OP_DUP6:
-            case OP_DUP7:
-            case OP_DUP8:
-            case OP_DUP9:
-            case OP_DUP10:
-            case OP_DUP11:
-            case OP_DUP12:
-            case OP_DUP13:
-            case OP_DUP14:
-            case OP_DUP15:
-            case OP_DUP16:
-            {
-                instr.instruction_data.number = c - OP_DUP1;
-                break;
-            }
-            case OP_SWAP1:
-            case OP_SWAP2:
-            case OP_SWAP3:
-            case OP_SWAP4:
-            case OP_SWAP5:
-            case OP_SWAP6:
-            case OP_SWAP7:
-            case OP_SWAP8:
-            case OP_SWAP9:
-            case OP_SWAP10:
-            case OP_SWAP11:
-            case OP_SWAP12:
-            case OP_SWAP13:
-            case OP_SWAP14:
-            case OP_SWAP15:
-            case OP_SWAP16:
-            {
-                instr.instruction_data.number = c - OP_SWAP1 + 1;
-                break;
-            }
-            */
-            case OP_PC:
-            {
-                instr.instruction_data.number = static_cast<int64_t>(i);
-                break;
-            }
-            case OP_STOP:
-            case OP_JUMP:
-            case OP_JUMPI:
-            case OP_RETURN:
-            case OP_REVERT:
-            case OP_SELFDESTRUCT:
-            {
-                block = nullptr;
-                break;
-            }
-            case OP_JUMPDEST:
-            {
-                // point to the instruction before the instruction we want to jump to, as main loop will increase the pointer prior to jumping
-                jumpdest_map[i] = &instructions[instr_index - 1];
-                break;
-            }
+        case OP_GAS:
+        case OP_CREATE:
+        case OP_CALL:
+        case OP_CALLCODE:
+        case OP_DELEGATECALL:
+        case OP_CREATE2:
+        case OP_STATICCALL:
+        {
+            instr.instruction_data.number = block->gas_cost;
+            break;
+        }
+        case OP_PUSH1:
+        case OP_PUSH2:
+        case OP_PUSH3:
+        case OP_PUSH4:
+        case OP_PUSH5:
+        case OP_PUSH6:
+        case OP_PUSH7:
+        case OP_PUSH8:
+        case OP_PUSH9:
+        case OP_PUSH10:
+        case OP_PUSH11:
+        case OP_PUSH12:
+        case OP_PUSH13:
+        case OP_PUSH14:
+        case OP_PUSH15:
+        case OP_PUSH16:
+        case OP_PUSH17:
+        case OP_PUSH18:
+        case OP_PUSH19:
+        case OP_PUSH20:
+        case OP_PUSH21:
+        case OP_PUSH22:
+        case OP_PUSH23:
+        case OP_PUSH24:
+        case OP_PUSH25:
+        case OP_PUSH26:
+        case OP_PUSH27:
+        case OP_PUSH28:
+        case OP_PUSH29:
+        case OP_PUSH30:
+        case OP_PUSH31:
+        case OP_PUSH32:
+        {
+            size_t push_size = static_cast<size_t>(c - OP_PUSH1 + 1);
+            size_t leading_zeroes = size_t(32 - push_size);
+            memcpy(&instr.instruction_data.push_data[0], &evmone::zero_bytes, 32);
+            memcpy(&instr.instruction_data.push_data[leading_zeroes], code + i + 1, push_size);
+            i += push_size;
+            break;
+        }
+        // TODO: what's slower, the additional lookup or fetching more code for separate
+        // subroutines?
+        /*
+        case OP_DUP1:
+        case OP_DUP2:
+        case OP_DUP3:
+        case OP_DUP4:
+        case OP_DUP5:
+        case OP_DUP6:
+        case OP_DUP7:
+        case OP_DUP8:
+        case OP_DUP9:
+        case OP_DUP10:
+        case OP_DUP11:
+        case OP_DUP12:
+        case OP_DUP13:
+        case OP_DUP14:
+        case OP_DUP15:
+        case OP_DUP16:
+        {
+            instr.instruction_data.number = c - OP_DUP1;
+            break;
+        }
+        case OP_SWAP1:
+        case OP_SWAP2:
+        case OP_SWAP3:
+        case OP_SWAP4:
+        case OP_SWAP5:
+        case OP_SWAP6:
+        case OP_SWAP7:
+        case OP_SWAP8:
+        case OP_SWAP9:
+        case OP_SWAP10:
+        case OP_SWAP11:
+        case OP_SWAP12:
+        case OP_SWAP13:
+        case OP_SWAP14:
+        case OP_SWAP15:
+        case OP_SWAP16:
+        {
+            instr.instruction_data.number = c - OP_SWAP1 + 1;
+            break;
+        }
+        */
+        case OP_PC:
+        {
+            instr.instruction_data.number = static_cast<int64_t>(i);
+            break;
+        }
+        case OP_STOP:
+        case OP_JUMP:
+        case OP_JUMPI:
+        case OP_RETURN:
+        case OP_REVERT:
+        case OP_SELFDESTRUCT:
+        {
+            block = nullptr;
+            break;
+        }
+        case OP_JUMPDEST:
+        {
+            // point to the instruction before the instruction we want to jump to, as main loop will
+            // increase the pointer prior to jumping
+            jumpdest_map[i] = &instructions[instr_index - 1];
+            break;
+        }
         }
     }
     instructions[instr_index].opcode_dest = jump_table[0];

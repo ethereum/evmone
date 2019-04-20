@@ -11,8 +11,6 @@
 #include <evmc/helpers.hpp>
 #include <evmc/instructions.h>
 
-#include <iostream>
-
 // TODO: GAS ACCOUNTING PER BASIC BLOCK
 
 #define COMPUTE_MEMORY_COST()                                               \
@@ -41,6 +39,8 @@
 
 
 namespace evmone
+{
+namespace
 {
 inline uint64_t compute_memory_cost(
     execution_state& state, const int64_t& offset, const int64_t& size) noexcept
@@ -75,7 +75,7 @@ inline bool check_memory(
     }
     return true;
 }
-
+}  // namespace
 
 inline void op_add(execution_state& state) noexcept
 {
@@ -525,7 +525,7 @@ inline void op_sstore(execution_state& state) noexcept
 inline void op_jump(execution_state& state, instruction** jumpdest_map) noexcept
 {
     // TODO: get least significant word of stack variable
-    auto pc = std::min(state.code_size, static_cast<size_t>(*state.stack_ptr));
+    size_t pc = std::min(state.code_size, static_cast<size_t>(*state.stack_ptr));
     state.next_instruction = jumpdest_map[pc];
 
     if (__builtin_expect(state.next_instruction + 1 == nullptr, 0))
@@ -540,7 +540,7 @@ inline void op_jumpi(execution_state& state, instruction** jumpdest_map) noexcep
 {
     if (*(state.stack_ptr - 1) != 0)
     {
-        // TODO: make code_size a power of 2 and use a logical AND to mask a jump destination
+        // TODO: make instruction array size a power of 2 and use a logical AND to mask jump destination
         size_t pc = std::min(state.code_size, static_cast<size_t>(*state.stack_ptr));
         state.next_instruction = jumpdest_map[pc];
         if (__builtin_expect((state.next_instruction + 1 == nullptr), 0))
@@ -1122,9 +1122,9 @@ inline void op_callbase(execution_state& state, const instruction_info& instruct
         msg.gas += 2300;  // Add stipend.
     }
 
-    evmone::memory::stash_free_memory(state.msize);
+    memory::stash_free_memory(state.msize);
     auto result = state.host->host->call(state.host, &msg);
-    evmone::memory::restore_free_memory();
+    memory::restore_free_memory();
     state.return_data.assign(result.output_data, result.output_size);
 
 
@@ -1215,9 +1215,9 @@ inline void op_delegatecall(
     msg.input_data = &state.memory[size_t(input_offset)];
     msg.input_size = size_t(input_size);
 
-    evmone::memory::stash_free_memory(state.msize);
+    memory::stash_free_memory(state.msize);
     auto result = state.host->host->call(state.host, &msg);
-    evmone::memory::restore_free_memory();
+    memory::restore_free_memory();
 
     state.return_data.assign(result.output_data, result.output_size);
 
@@ -1286,9 +1286,9 @@ inline void op_staticcall(execution_state& state, const instruction_info& instru
     msg.input_data = &state.memory[size_t(input_offset)];
     msg.input_size = size_t(input_size);
 
-    evmone::memory::stash_free_memory(state.msize);
+    memory::stash_free_memory(state.msize);
     auto result = state.host->host->call(state.host, &msg);
-    evmone::memory::restore_free_memory();
+    memory::restore_free_memory();
 
     state.return_data.assign(result.output_data, result.output_size);
     *state.stack_ptr = result.status_code == EVMC_SUCCESS;
@@ -1349,9 +1349,9 @@ inline void op_create(execution_state& state, const instruction_info& instructio
     msg.depth = state.msg->depth + 1;
     intx::be::store(msg.value.bytes, endowment);
 
-    evmone::memory::stash_free_memory(state.msize);
+    memory::stash_free_memory(state.msize);
     auto result = state.host->host->call(state.host, &msg);
-    evmone::memory::restore_free_memory();
+    memory::restore_free_memory();
 
     state.return_data.assign(result.output_data, result.output_size);
     if (result.status_code == EVMC_SUCCESS)
@@ -1425,9 +1425,9 @@ inline void op_create2(execution_state& state, const instruction_info& instructi
     intx::be::store(msg.create2_salt.bytes, salt);
     intx::be::store(msg.value.bytes, endowment);
 
-    evmone::memory::stash_free_memory(state.msize);
+    memory::stash_free_memory(state.msize);
     auto result = state.host->host->call(state.host, &msg);
-    evmone::memory::restore_free_memory();
+    memory::restore_free_memory();
 
     state.return_data.assign(result.output_data, result.output_size);
     if (result.status_code == EVMC_SUCCESS)
@@ -1486,8 +1486,8 @@ inline void op_selfdestruct(execution_state& state) noexcept
         }
     }
 
-    evmone::memory::stash_free_memory(state.msize);
+    memory::stash_free_memory(state.msize);
     state.host->host->selfdestruct(state.host, &state.msg->destination, &addr);
-    evmone::memory::restore_free_memory();
+    memory::restore_free_memory();
 }
 }  // namespace evmone
