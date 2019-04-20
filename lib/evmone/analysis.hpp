@@ -49,6 +49,7 @@ struct execution_state
     int64_t msize = 0;
     int64_t memory_prev_cost = 0;
     uint8_t* memory;
+    size_t max_potential_memory;
 
     uint256 stack[1024];
 
@@ -69,7 +70,6 @@ struct execution_state
     const uint8_t* code = nullptr;
     int64_t exp_cost = 0;
     int64_t storage_repeated_cost = 0;
-    int64_t max_potential_memory;
     evmc_context* host = nullptr;
     evmc_tx_context tx_context = {};
 

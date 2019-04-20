@@ -16,30 +16,43 @@
 #include <iostream>
 
 
+#define UPDATE_MEMORY()                                \
+    {                                                  \
+        auto w = state.msize >> 5;                     \
+        auto new_cost = 3 * w + (w * w >> 9);          \
+        auto cost = new_cost - state.memory_prev_cost; \
+        state.memory_prev_cost = new_cost;             \
+        state.gas_left -= cost;                        \
+    }
+
 // this macro is called to dispatch to the subsequent instruction in our transaction.
 // The aspiration is that the CPU can figure out what we're up to, and avoid a pipeline stall...
 #define DISPATCH() goto**(void**)++state.next_instruction;
 
-#define CHECK_BLOCK()                                                                         \
-    {                                                                                         \
-        auto block = state.next_instruction->block_data;                                      \
-        state.gas_left -= block.gas_cost;                                                     \
-        if (__builtin_expect(state.gas_left < 0, 0))                                          \
-        {                                                                                     \
-            state.status = EVMC_OUT_OF_GAS;                                                   \
-            goto op_stop_dest;                                                                \
-        }                                                                                     \
-        else if (__builtin_expect(state.stack_ptr - block.stack_req < &state.stack[0], 0))    \
-        {                                                                                     \
-            state.status = EVMC_STACK_UNDERFLOW;                                              \
-            goto op_stop_dest;                                                                \
-        }                                                                                     \
-        else if (__builtin_expect(state.stack_ptr + block.stack_max > &state.stack[1023], 0)) \
-        {                                                                                     \
-            state.status = EVMC_STACK_OVERFLOW;                                               \
-            goto op_stop_dest;                                                                \
-        }                                                                                     \
-        state.current_block_cost = block.gas_cost;                                            \
+#define CHECK_BLOCK()                                                                           \
+    {                                                                                           \
+        auto block = state.next_instruction->block_data;                                        \
+        state.gas_left -= block.gas_cost;                                                       \
+        if (__builtin_expect((state.gas_left < 0) ||                                            \
+                                 (state.stack_ptr - block.stack_req < &state.stack[0] ||        \
+                                     (state.stack_ptr + block.stack_max > &state.stack[1023])), \
+                0))                                                                             \
+        {                                                                                       \
+            if (state.gas_left < 0)                                                             \
+            {                                                                                   \
+                state.status = EVMC_OUT_OF_GAS;                                                 \
+            }                                                                                   \
+            else if (state.stack_ptr - block.stack_req < &state.stack[0])                       \
+            {                                                                                   \
+                state.status = EVMC_STACK_UNDERFLOW;                                            \
+            }                                                                                   \
+            else if (state.stack_ptr + block.stack_max > &state.stack[1023])                    \
+            {                                                                                   \
+                state.status = EVMC_STACK_OVERFLOW;                                             \
+            }                                                                                   \
+            goto op_stop_dest;                                                                  \
+        }                                                                                       \
+        state.current_block_cost = block.gas_cost;                                              \
     }
 
 
