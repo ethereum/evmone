@@ -7,8 +7,6 @@
 #include <intx/intx.hpp>
 #include <array>
 #include <cstdint>
-#include <deque>
-#include <vector>
 #include <evmc/helpers.hpp>
 #include <evmc/instructions.h>
 
@@ -49,7 +47,6 @@ struct execution_state
     int64_t msize = 0;
     int64_t memory_prev_cost = 0;
     uint8_t* memory;
-    size_t max_potential_memory;
 
     uint256 stack[1024];
 

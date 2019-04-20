@@ -13,7 +13,7 @@
 #include <evmc/instructions.h>
 
 #include <math.h>
-
+#include <iostream>
 
 #define UPDATE_MEMORY()                                \
     {                                                  \
@@ -21,11 +21,11 @@
         auto new_cost = 3 * w + (w * w >> 9);          \
         auto cost = new_cost - state.memory_prev_cost; \
         state.memory_prev_cost = new_cost;             \
-        state.gas_left -= cost;                        \
+        state.gas_left -= (cost + block.gas_cost);     \
     }
 
 // this macro is called to dispatch to the relevant subroutine required to interpret the next
-// instruction Given the lack of conditional branching, the aspiration is that the CPU can figure
+// instruction. Given the lack of conditional branching, the aspiration is that the CPU can figure
 // out what we're up to, and avoid a pipeline stall...
 #define DISPATCH() goto**(void**)++state.next_instruction;
 
@@ -594,7 +594,7 @@ const void** interpret(
     }
 
     // hon hon hon
-    goto **(void**)state.next_instruction;
+    goto**(void**)state.next_instruction;
 
 op_add_dest:
     CHECK_BLOCK();
@@ -1326,7 +1326,7 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
     // This currently tops out at ~8MB, which is low enough to just allocate and zero out,
     // removing the overheas of memory paging
     state.tx_context = ctx->host->get_tx_context(ctx);
-    std::tie(state.memory, state.max_potential_memory) =
+    state.memory =
         memory::get_tx_memory_ptr(std::min(msg->gas, state.tx_context.block_gas_limit));
 
     state.msg = msg;

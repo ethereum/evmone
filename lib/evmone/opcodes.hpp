@@ -11,16 +11,6 @@
 #include <evmc/helpers.hpp>
 #include <evmc/instructions.h>
 
-// TODO: GAS ACCOUNTING PER BASIC BLOCK
-
-#define COMPUTE_MEMORY_COST()                                               \
-    const auto new_size = offset + size;                                    \
-    auto w = ((state.msize < new_size ? new_size : state.msize) + 31) >> 5; \
-    state.msize = w << 5;                                                   \
-    auto new_cost = 3 * w + (w * w >> 9);                                   \
-    auto cost = new_cost - state.memory_prev_cost;                          \
-    state.memory_prev_cost = new_cost;
-
 #define CHECK_MEMORY(offset, size)                                          \
     const auto o = static_cast<int64_t>(offset);                            \
     const auto s = static_cast<int64_t>(size);                              \
@@ -540,7 +530,8 @@ inline void op_jumpi(execution_state& state, instruction** jumpdest_map) noexcep
 {
     if (*(state.stack_ptr - 1) != 0)
     {
-        // TODO: make instruction array size a power of 2 and use a logical AND to mask jump destination
+        // TODO: make instruction array size a power of 2 and use a logical AND to mask jump
+        // destination
         size_t pc = std::min(state.code_size, static_cast<size_t>(*state.stack_ptr));
         state.next_instruction = jumpdest_map[pc];
         if (__builtin_expect((state.next_instruction + 1 == nullptr), 0))

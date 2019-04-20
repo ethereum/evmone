@@ -15,8 +15,8 @@ TEST(memory, validate_allocation)
 {
     size_t gas = 8000000; // 8 million gas
     uint8_t* first;
-    size_t max_size;
-    std::tie(first, max_size) = evmone::memory::get_tx_memory_ptr(gas);
+    size_t max_size = 0xffff;
+    first = evmone::memory::get_tx_memory_ptr(gas);
     evmone::memory::memory_page current_memory_page = evmone::memory::get_current_memory_page();
     first[max_size - 1] = 0xff;
     EXPECT_EQ(current_memory_page.allocated_memory, 0);
