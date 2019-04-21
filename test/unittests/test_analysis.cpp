@@ -5,6 +5,7 @@
 #include "utils.hpp"
 
 #include <evmc/instructions.h>
+#include <evmone/constants.hpp>
 #include <evmone/execution.hpp>
 #include <evmone/analysis.hpp>
 
@@ -12,117 +13,141 @@
 
 constexpr auto rev = EVMC_BYZANTIUM;
 
-// TODO: put htis all back in
-// const auto fake_fn_table = []() noexcept
-// {
-//     evmone::exec_fn_table fns;
-//     for (size_t i = 0; i < fns.size(); ++i)
-//         fns[i] = (evmone::exec_fn)i;
-//     return fns;
-// }
-// ();
+int DELTA = evmone::JUMP_TABLE_CHECK_BOUNDARY;
 
 
-/*
+const void** fake_fn_table = []() noexcept
+{
+    static int fake_values[evmone::JUMP_TABLE_SIZE] = { 0 };
+    static const void* fake_labels[evmone::JUMP_TABLE_SIZE];
+    for (size_t i = 0; i < evmone::JUMP_TABLE_SIZE; i++)
+    {
+        fake_labels[i] = static_cast<const void*>(&fake_values[i]);
+    }
+    return &fake_labels[0];
+}
+();
+
+
+
 TEST(analysis, push_and_pop)
 {
     auto code = from_hex("610102506801020304050607080950");
-    auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
+    evmone::instruction* jumpdest_map[code.size() + 2] = { nullptr };
+    evmone::instruction analysis[code.size() + 2];
+    evmone::analyze(analysis, jumpdest_map, fake_fn_table, rev, &code[0], code.size());
 
-    EXPECT_EQ(analysis.instrs[0].fn, fake_fn_table[OP_PUSH2]);
-    EXPECT_EQ(analysis.instrs[3].fn, fake_fn_table[OP_POP]);
-    EXPECT_EQ(analysis.instrs[4].fn, fake_fn_table[OP_PUSH9]);
-    EXPECT_EQ(analysis.instrs[14].fn, fake_fn_table[OP_POP]);
+    EXPECT_EQ(analysis[0].opcode_dest, fake_fn_table[OP_PUSH2]);
+    EXPECT_EQ(analysis[1].opcode_dest, fake_fn_table[OP_POP + DELTA]);
+    EXPECT_EQ(analysis[2].opcode_dest, fake_fn_table[OP_PUSH9 + DELTA]);
+    EXPECT_EQ(analysis[3].opcode_dest, fake_fn_table[OP_POP + DELTA]);
 }
+
 
 TEST(analysis, example1)
 {
     auto code = from_hex("602a601e5359600055");
-    auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
+    evmone::instruction* jumpdest_map[code.size() + 2] = { nullptr };
+    evmone::instruction analysis[code.size() + 2];
+    evmone::analyze(analysis, jumpdest_map, fake_fn_table, rev, &code[0], code.size());
 
-    // ASSERT_EQ(analysis.instrs.size(), 7);
+    EXPECT_EQ(analysis[0].opcode_dest, fake_fn_table[OP_PUSH1]);
+    EXPECT_EQ(analysis[1].opcode_dest, fake_fn_table[DELTA + OP_PUSH1]);
+    EXPECT_EQ(analysis[2].opcode_dest, fake_fn_table[DELTA + OP_MSTORE8]);
+    EXPECT_EQ(analysis[3].opcode_dest, fake_fn_table[DELTA + OP_MSIZE]);
+    EXPECT_EQ(analysis[4].opcode_dest, fake_fn_table[DELTA + OP_PUSH1]);
+    EXPECT_EQ(analysis[5].opcode_dest, fake_fn_table[DELTA + OP_SSTORE]);
 
-    EXPECT_EQ(analysis.instrs[0].fn, fake_fn_table[OP_PUSH1]);
-    EXPECT_EQ(analysis.instrs[2].fn, fake_fn_table[OP_PUSH1]);
-    EXPECT_EQ(analysis.instrs[4].fn, fake_fn_table[OP_MSTORE8]);
-    EXPECT_EQ(analysis.instrs[5].fn, fake_fn_table[OP_MSIZE]);
-    EXPECT_EQ(analysis.instrs[6].fn, fake_fn_table[OP_PUSH1]);
-    EXPECT_EQ(analysis.instrs[8].fn, fake_fn_table[OP_SSTORE]);
-
-    ASSERT_EQ(analysis.blocks.size(), 1);
-    EXPECT_EQ(analysis.blocks[0].gas_cost, 14);
-    EXPECT_EQ(analysis.blocks[0].stack_req, 0);
-    EXPECT_EQ(analysis.blocks[0].stack_max, 2);
-    EXPECT_EQ(analysis.blocks[0].stack_diff, 0);
+    EXPECT_EQ(analysis[0].block_data.gas_cost, 14);
+    EXPECT_EQ(analysis[0].block_data.stack_req, 0);
+    EXPECT_EQ(analysis[0].block_data.stack_max, 2);
 }
 
 TEST(analysis, stack_up_and_down)
 {
     auto code = from_hex("81808080808080505050505050505050506000");
-    auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
+    evmone::instruction* jumpdest_map[code.size() + 2] = { nullptr };
+    evmone::instruction analysis[code.size() + 2];
+    evmone::analyze(analysis, jumpdest_map,  fake_fn_table, rev, &code[0], code.size());
 
-    // ASSERT_EQ(analysis.instrs.size(), 19);
-    EXPECT_EQ(analysis.instrs[0].fn, fake_fn_table[OP_DUP2]);
-    EXPECT_EQ(analysis.instrs[1].fn, fake_fn_table[OP_DUP1]);
-    EXPECT_EQ(analysis.instrs[7].fn, fake_fn_table[OP_POP]);
-    EXPECT_EQ(analysis.instrs[17].fn, fake_fn_table[OP_PUSH1]);
+    EXPECT_EQ(analysis[0].opcode_dest, fake_fn_table[OP_DUP2]);
+    EXPECT_EQ(analysis[1].opcode_dest, fake_fn_table[DELTA + OP_DUP1]);
+    EXPECT_EQ(analysis[7].opcode_dest, fake_fn_table[DELTA + OP_POP]);
+    EXPECT_EQ(analysis[17].opcode_dest, fake_fn_table[DELTA + OP_PUSH1]);
 
-    ASSERT_EQ(analysis.blocks.size(), 1);
-    EXPECT_EQ(analysis.blocks[0].gas_cost, 7 * 3 + 10 * 2 + 3);
-    EXPECT_EQ(analysis.blocks[0].stack_req, 3);
-    EXPECT_EQ(analysis.blocks[0].stack_max, 7);
-    EXPECT_EQ(analysis.blocks[0].stack_diff, -2);
+    EXPECT_EQ(analysis[0].block_data.gas_cost, 7 * 3 + 10 * 2 + 3);
+    EXPECT_EQ(analysis[0].block_data.stack_req, 3);
+    EXPECT_EQ(analysis[0].block_data.stack_max, 7);
 }
 
 TEST(analysis, push)
 {
     auto code = from_hex("6708070605040302017f00ee");
-    auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
+    evmone::instruction* jumpdest_map[code.size() + 2] = { nullptr };
+    evmone::instruction analysis[code.size() + 2];
+    evmone::analyze(analysis, jumpdest_map,  fake_fn_table, rev, &code[0], code.size());
 
-    // ASSERT_EQ(analysis.instrs.size(), 3);
-    ASSERT_EQ(analysis.args_storage.size(), 2);
-    EXPECT_EQ(analysis.instrs[0].arg.data, &analysis.args_storage[0][0]);
-    EXPECT_EQ(analysis.instrs[9].arg.data, &analysis.args_storage[1][0]);
-    EXPECT_EQ(analysis.args_storage[0][31 - 7], 0x08);
-    EXPECT_EQ(analysis.args_storage[1][1], 0xee);
+    for(size_t i = 0; i < 24; i++)
+    {
+        EXPECT_EQ(analysis[0].instruction_data.push_data[i], 0x00);
+    }
+    EXPECT_EQ(analysis[0].instruction_data.push_data[24], 0x08);
+    EXPECT_EQ(analysis[0].instruction_data.push_data[25], 0x07);
+    EXPECT_EQ(analysis[0].instruction_data.push_data[26], 0x06);
+    EXPECT_EQ(analysis[0].instruction_data.push_data[27], 0x05);
+    EXPECT_EQ(analysis[0].instruction_data.push_data[28], 0x04);
+    EXPECT_EQ(analysis[0].instruction_data.push_data[29], 0x03);
+    EXPECT_EQ(analysis[0].instruction_data.push_data[30], 0x02);
+    EXPECT_EQ(analysis[0].instruction_data.push_data[31], 0x01);
+    EXPECT_EQ(analysis[1].instruction_data.push_data[0], 0x00);
+    EXPECT_EQ(analysis[1].instruction_data.push_data[1], 0xee);
 }
+
 
 TEST(analysis, jump1)
 {
     auto code = from_hex("6002600401565b600360005260206000f3600656");
-    auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
-
-    ASSERT_EQ(analysis.blocks.size(), 3);
-    ASSERT_EQ(analysis.jumpdest_map.size(), 1);
-    EXPECT_EQ(analysis.jumpdest_map[0], std::pair(6, 4));
-    EXPECT_EQ(analysis.find_jumpdest(6), 4);
-    EXPECT_EQ(analysis.find_jumpdest(0), -1);
+    evmone::instruction* jumpdest_map[code.size() + 2] = { nullptr };
+    evmone::instruction analysis[code.size() + 2];
+    evmone::analyze(analysis, jumpdest_map,  fake_fn_table, rev, &code[0], code.size());
+    EXPECT_EQ(jumpdest_map[6], &analysis[4 - 1]); // points to the instruction preceeding jumpdest
 }
 
 TEST(analysis, empty)
 {
     bytes code;
-    auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
+    evmone::instruction* jumpdest_map[code.size() + 2] = { nullptr };
+    evmone::instruction analysis[code.size() + 2];
+    evmone::analyze(analysis, jumpdest_map,  fake_fn_table, rev, &code[0], code.size());
 
-    EXPECT_EQ(analysis.blocks.size(), 0);
-    // EXPECT_EQ(analysis.instrs.size(), 0);
+    EXPECT_EQ(analysis[0].opcode_dest, fake_fn_table[OP_STOP]);
+    EXPECT_EQ(analysis[1].opcode_dest, fake_fn_table[OP_STOP]);
 }
+
 
 TEST(analysis, only_jumpdest)
 {
     auto code = from_hex("5b");
-    auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
+    evmone::instruction* jumpdest_map[code.size() + 2] = { nullptr };
+    evmone::instruction analysis[code.size() + 2];
+    evmone::analyze(analysis, jumpdest_map,  fake_fn_table, rev, &code[0], code.size());
 
-    ASSERT_EQ(analysis.blocks.size(), 1);
-    ASSERT_EQ(analysis.jumpdest_map.size(), 1);
-    EXPECT_EQ(analysis.jumpdest_map[0], std::pair(0, 0));
+    evmone::instruction* expected = &analysis[0];
+    EXPECT_EQ(jumpdest_map[0], expected - 1); // points to the instruction preceeding jumpdest
+    EXPECT_EQ(analysis[0].opcode_dest, fake_fn_table[OP_JUMPDEST]);
+    EXPECT_EQ(analysis[1].opcode_dest, fake_fn_table[OP_STOP]);
+    EXPECT_EQ(analysis[2].opcode_dest, fake_fn_table[OP_STOP]);
 }
-*/
-// TEST(analysis, jumpi_at_the_end)
-// {
-//     auto code = from_hex("57");
-//     auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
 
-//     EXPECT_EQ(analysis.blocks.size(), 1);
-//     EXPECT_EQ(analysis.instrs.back().fn, fake_fn_table[OP_STOP]);
-// }
+
+TEST(analysis, jumpi_at_the_end)
+{
+    auto code = from_hex("57");
+    evmone::instruction* jumpdest_map[code.size() + 2] = { nullptr };
+    evmone::instruction analysis[code.size() + 2];
+    evmone::analyze(analysis, jumpdest_map,  fake_fn_table, rev, &code[0], code.size());
+
+    EXPECT_EQ(analysis[0].opcode_dest, fake_fn_table[OP_JUMPI]);
+    EXPECT_EQ(analysis[1].opcode_dest, fake_fn_table[OP_STOP]);
+    EXPECT_EQ(analysis[2].opcode_dest, fake_fn_table[OP_STOP]);
+}

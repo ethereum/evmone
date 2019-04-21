@@ -27,34 +27,36 @@
 // this macro is called to dispatch to the relevant subroutine required to interpret the next
 // instruction. Given the lack of conditional branching, the aspiration is that the CPU can figure
 // out what we're up to, and avoid a pipeline stall...
-#define DISPATCH() goto**(void**)++state.next_instruction;
+#define DISPATCH() goto **(void**)++state.next_instruction; 
+// __builtin_prefetch(state.next_instruction + 2, 0);  // TODO - test if this has an effect
 
-#define CHECK_BLOCK()                                                                           \
-    {                                                                                           \
-        auto block = state.next_instruction->block_data;                                        \
-        state.gas_left -= block.gas_cost;                                                       \
-        if (__builtin_expect((state.gas_left < 0) ||                                            \
-                                 (state.stack_ptr - block.stack_req < &state.stack[0] ||        \
-                                     (state.stack_ptr + block.stack_max > &state.stack[1023])), \
-                0))                                                                             \
-        {                                                                                       \
-            if (state.gas_left < 0)                                                             \
-            {                                                                                   \
-                state.status = EVMC_OUT_OF_GAS;                                                 \
-            }                                                                                   \
-            else if (state.stack_ptr - block.stack_req < &state.stack[0])                       \
-            {                                                                                   \
-                state.status = EVMC_STACK_UNDERFLOW;                                            \
-            }                                                                                   \
-            else if (state.stack_ptr + block.stack_max > &state.stack[1023])                    \
-            {                                                                                   \
-                state.status = EVMC_STACK_OVERFLOW;                                             \
-            }                                                                                   \
-            goto op_stop_dest;                                                                  \
-        }                                                                                       \
-        state.current_block_cost = block.gas_cost;                                              \
+
+#define CHECK_BLOCK()                                                                     \
+    {                                                                                     \
+        auto block = state.next_instruction->block_data;                                  \
+        state.gas_left -= block.gas_cost;                                                 \
+        if (__builtin_expect(                                                             \
+                (state.gas_left < 0) ||                                                   \
+                    (state.stack_ptr - block.stack_req < state.first_stack_position ||    \
+                        (state.stack_ptr + block.stack_max > state.last_stack_position)), \
+                0))                                                                       \
+        {                                                                                 \
+            if (state.gas_left < 0)                                                       \
+            {                                                                             \
+                state.status = EVMC_OUT_OF_GAS;                                           \
+            }                                                                             \
+            else if (state.stack_ptr - block.stack_req < state.first_stack_position)      \
+            {                                                                             \
+                state.status = EVMC_STACK_UNDERFLOW;                                      \
+            }                                                                             \
+            else if (state.stack_ptr + block.stack_max > state.last_stack_position)       \
+            {                                                                             \
+                state.status = EVMC_STACK_OVERFLOW;                                       \
+            }                                                                             \
+            goto op_stop_dest;                                                            \
+        }                                                                                 \
+        state.current_block_cost = block.gas_cost;                                        \
     }
-
 
 namespace evmone
 {
@@ -601,301 +603,361 @@ op_add_dest:
 op_add_dest_no_check:
     op_add(state);
     DISPATCH();
+
 op_mul_dest:
     CHECK_BLOCK();
 op_mul_dest_no_check:
     op_mul(state);
     DISPATCH();
+
 op_sub_dest:
     CHECK_BLOCK();
 op_sub_dest_no_check:
     op_sub(state);
     DISPATCH();
+
 op_div_dest:
     CHECK_BLOCK();
 op_div_dest_no_check:
     op_div(state);
     DISPATCH();
+
 op_sdiv_dest:
     CHECK_BLOCK();
 op_sdiv_dest_no_check:
     op_sdiv(state);
     DISPATCH();
+
 op_mod_dest:
     CHECK_BLOCK();
 op_mod_dest_no_check:
     op_mod(state);
     DISPATCH();
+
 op_smod_dest:
     CHECK_BLOCK();
 op_smod_dest_no_check:
     op_smod(state);
     DISPATCH();
+
 op_addmod_dest:
     CHECK_BLOCK();
 op_addmod_dest_no_check:
     op_addmod(state);
     DISPATCH();
+
 op_mulmod_dest:
     CHECK_BLOCK();
 op_mulmod_dest_no_check:
     op_mulmod(state);
     DISPATCH();
+
 op_exp_dest:
     CHECK_BLOCK();
 op_exp_dest_no_check:
     op_exp(state);
     DISPATCH();
+
 op_signextend_dest:
     CHECK_BLOCK();
 op_signextend_dest_no_check:
     op_signextend(state);
     DISPATCH();
+
 op_lt_dest:
     CHECK_BLOCK();
 op_lt_dest_no_check:
     op_lt(state);
     DISPATCH();
+
 op_gt_dest:
     CHECK_BLOCK();
 op_gt_dest_no_check:
     op_gt(state);
     DISPATCH();
+
 op_slt_dest:
     CHECK_BLOCK();
 op_slt_dest_no_check:
     op_slt(state);
     DISPATCH();
+
 op_sgt_dest:
     CHECK_BLOCK();
 op_sgt_dest_no_check:
     op_sgt(state);
     DISPATCH();
+
 op_eq_dest:
     CHECK_BLOCK();
 op_eq_dest_no_check:
     op_eq(state);
     DISPATCH();
+
 op_iszero_dest:
     CHECK_BLOCK();
 op_iszero_dest_no_check:
     op_iszero(state);
     DISPATCH();
+
 op_and_dest:
     CHECK_BLOCK();
 op_and_dest_no_check:
     op_and(state);
     DISPATCH();
+
 op_or_dest:
     CHECK_BLOCK();
 op_or_dest_no_check:
     op_or(state);
     DISPATCH();
+
 op_xor_dest:
     CHECK_BLOCK();
 op_xor_dest_no_check:
     op_xor(state);
     DISPATCH();
+
 op_not_dest:
     CHECK_BLOCK();
 op_not_dest_no_check:
     op_not(state);
     DISPATCH();
+
 op_byte_dest:
     CHECK_BLOCK();
 op_byte_dest_no_check:
     op_byte(state);
     DISPATCH();
+
 op_shl_dest:
     CHECK_BLOCK();
 op_shl_dest_no_check:
     op_shl(state);
     DISPATCH();
+
 op_shr_dest:
     CHECK_BLOCK();
 op_shr_dest_no_check:
     op_shr(state);
     DISPATCH();
+
 op_sar_dest:
     CHECK_BLOCK();
 op_sar_dest_no_check:
     op_sar(state);
     DISPATCH();
+
 op_sha3_dest:
     CHECK_BLOCK();
 op_sha3_dest_no_check:
     op_sha3(state);
     DISPATCH();
+
 op_address_dest:
     CHECK_BLOCK();
 op_address_dest_no_check:
     op_address(state);
     DISPATCH();
+
 op_balance_dest:
     CHECK_BLOCK();
 op_balance_dest_no_check:
     op_balance(state);
     DISPATCH();
+
 op_origin_dest:
     CHECK_BLOCK();
 op_origin_dest_no_check:
     op_origin(state);
     DISPATCH();
+
 op_caller_dest:
     CHECK_BLOCK();
 op_caller_dest_no_check:
     op_caller(state);
     DISPATCH();
+
 op_callvalue_dest:
     CHECK_BLOCK();
 op_callvalue_dest_no_check:
     op_callvalue(state);
     DISPATCH();
+
 op_calldataload_dest:
     CHECK_BLOCK();
 op_calldataload_dest_no_check:
     op_calldataload(state);
     DISPATCH();
+
 op_calldatasize_dest:
     CHECK_BLOCK();
 op_calldatasize_dest_no_check:
     op_calldatasize(state);
     DISPATCH();
+
 op_calldatacopy_dest:
     CHECK_BLOCK();
 op_calldatacopy_dest_no_check:
     op_calldatacopy(state);
     DISPATCH();
+
 op_codesize_dest:
     CHECK_BLOCK();
 op_codesize_dest_no_check:
     op_codesize(state);
     DISPATCH();
+
 op_codecopy_dest:
     CHECK_BLOCK();
 op_codecopy_dest_no_check:
     op_codecopy(state);
     DISPATCH();
+
 op_gasprice_dest:
     CHECK_BLOCK();
 op_gasprice_dest_no_check:
     op_gasprice(state);
     DISPATCH();
+
 op_extcodesize_dest:
     CHECK_BLOCK();
 op_extcodesize_dest_no_check:
     op_extcodesize(state);
     DISPATCH();
+
 op_extcodecopy_dest:
     CHECK_BLOCK();
 op_extcodecopy_dest_no_check:
     op_extcodecopy(state);
     DISPATCH();
+
 op_returndatasize_dest:
     CHECK_BLOCK();
 op_returndatasize_dest_no_check:
     op_returndatasize(state);
     DISPATCH();
+
 op_returndatacopy_dest:
     CHECK_BLOCK();
 op_returndatacopy_dest_no_check:
     op_returndatacopy(state);
     DISPATCH();
+
 op_extcodehash_dest:
     CHECK_BLOCK();
 op_extcodehash_dest_no_check:
     op_extcodehash(state);
     DISPATCH();
+
 op_blockhash_dest:
     CHECK_BLOCK();
 op_blockhash_dest_no_check:
     op_blockhash(state);
     DISPATCH();
+
 op_coinbase_dest:
     CHECK_BLOCK();
 op_coinbase_dest_no_check:
     op_coinbase(state);
     DISPATCH();
+
 op_timestamp_dest:
     CHECK_BLOCK();
 op_timestamp_dest_no_check:
     op_timestamp(state);
     DISPATCH();
+
 op_number_dest:
     CHECK_BLOCK();
 op_number_dest_no_check:
     op_number(state);
     DISPATCH();
+
 op_difficulty_dest:
     CHECK_BLOCK();
 op_difficulty_dest_no_check:
     op_difficulty(state);
     DISPATCH();
+
 op_gaslimit_dest:
     CHECK_BLOCK();
 op_gaslimit_dest_no_check:
     op_gaslimit(state);
     DISPATCH();
+
 op_pop_dest:
     CHECK_BLOCK();
 op_pop_dest_no_check:
     op_pop(state);
     DISPATCH();
+
 op_mload_dest:
     CHECK_BLOCK();
 op_mload_dest_no_check:
     op_mload(state);
     DISPATCH();
+
 op_mstore_dest:
     CHECK_BLOCK();
 op_mstore_dest_no_check:
     op_mstore(state);
     DISPATCH();
+
 op_mstore8_dest:
     CHECK_BLOCK();
 op_mstore8_dest_no_check:
     op_mstore8(state);
     DISPATCH();
+
 op_sload_dest:
     CHECK_BLOCK();
 op_sload_dest_no_check:
     op_sload(state);
     DISPATCH();
+
 op_sstore_dest:
     CHECK_BLOCK();
 op_sstore_dest_no_check:
     op_sstore(state);
     DISPATCH();
+
 op_jump_dest:
     CHECK_BLOCK();
 op_jump_dest_no_check:
     op_jump(state, jumpdest_map);
     DISPATCH();
+
 op_jumpi_dest:
     CHECK_BLOCK();
 op_jumpi_dest_no_check:
     op_jumpi(state, jumpdest_map);
     DISPATCH();
+
 op_pc_dest:
     CHECK_BLOCK();
 op_pc_dest_no_check:
     op_pc(state);
     DISPATCH();
+
 op_msize_dest:
     CHECK_BLOCK();
 op_msize_dest_no_check:
     op_msize(state);
     DISPATCH();
+
 op_gas_dest:
     CHECK_BLOCK();
 op_gas_dest_no_check:
     op_gas(state, state.next_instruction->instruction_data);
     DISPATCH();
+
 op_jumpdest_dest:
     CHECK_BLOCK();
 op_jumpdest_dest_no_check:
     op_jumpdest(state);
     DISPATCH();
+
 
 /**
  * push
@@ -906,6 +968,7 @@ op_push_dest_no_check:
     op_push(state);
     DISPATCH();
 
+
 /**
  * dup
  **/
@@ -914,82 +977,98 @@ op_dup1_dest:
 op_dup1_dest_no_check:
     op_dup1(state);
     DISPATCH();
+
 op_dup2_dest:
     CHECK_BLOCK();
 op_dup2_dest_no_check:
     op_dup2(state);
     DISPATCH();
+
 op_dup3_dest:
     CHECK_BLOCK();
 op_dup3_dest_no_check:
     op_dup3(state);
     DISPATCH();
+
 op_dup4_dest:
     CHECK_BLOCK();
 op_dup4_dest_no_check:
     op_dup4(state);
     DISPATCH();
+
 op_dup5_dest:
     CHECK_BLOCK();
 op_dup5_dest_no_check:
     op_dup5(state);
     DISPATCH();
+
 op_dup6_dest:
     CHECK_BLOCK();
 op_dup6_dest_no_check:
     op_dup6(state);
     DISPATCH();
+
 op_dup7_dest:
     CHECK_BLOCK();
 op_dup7_dest_no_check:
     op_dup7(state);
     DISPATCH();
+
 op_dup8_dest:
     CHECK_BLOCK();
 op_dup8_dest_no_check:
     op_dup8(state);
     DISPATCH();
+
 op_dup9_dest:
     CHECK_BLOCK();
 op_dup9_dest_no_check:
     op_dup9(state);
     DISPATCH();
+
 op_dup10_dest:
     CHECK_BLOCK();
 op_dup10_dest_no_check:
     op_dup10(state);
     DISPATCH();
+
 op_dup11_dest:
     CHECK_BLOCK();
 op_dup11_dest_no_check:
     op_dup11(state);
     DISPATCH();
+
 op_dup12_dest:
     CHECK_BLOCK();
 op_dup12_dest_no_check:
     op_dup12(state);
     DISPATCH();
 
+
 op_dup13_dest:
     CHECK_BLOCK();
 op_dup13_dest_no_check:
     op_dup13(state);
     DISPATCH();
+
 op_dup14_dest:
     CHECK_BLOCK();
 op_dup14_dest_no_check:
     op_dup14(state);
     DISPATCH();
+
 op_dup15_dest:
     CHECK_BLOCK();
 op_dup15_dest_no_check:
     op_dup15(state);
     DISPATCH();
+
 op_dup16_dest:
     CHECK_BLOCK();
 op_dup16_dest_no_check:
     op_dup16(state);
     DISPATCH();
+
 
 /**
  * swap
@@ -999,121 +1078,145 @@ op_swap1_dest:
 op_swap1_dest_no_check:
     op_swap1(state);
     DISPATCH();
+
 op_swap2_dest:
     CHECK_BLOCK();
 op_swap2_dest_no_check:
     op_swap2(state);
     DISPATCH();
+
 op_swap3_dest:
     CHECK_BLOCK();
 op_swap3_dest_no_check:
     op_swap3(state);
     DISPATCH();
+
 op_swap4_dest:
     CHECK_BLOCK();
 op_swap4_dest_no_check:
     op_swap4(state);
     DISPATCH();
+
 op_swap5_dest:
     CHECK_BLOCK();
 op_swap5_dest_no_check:
     op_swap5(state);
     DISPATCH();
+
 op_swap6_dest:
     CHECK_BLOCK();
 op_swap6_dest_no_check:
     op_swap6(state);
     DISPATCH();
+
 op_swap7_dest:
     CHECK_BLOCK();
 op_swap7_dest_no_check:
     op_swap7(state);
     DISPATCH();
+
 op_swap8_dest:
     CHECK_BLOCK();
 op_swap8_dest_no_check:
     op_swap8(state);
     DISPATCH();
+
 op_swap9_dest:
     CHECK_BLOCK();
 op_swap9_dest_no_check:
     op_swap9(state);
     DISPATCH();
+
 op_swap10_dest:
     CHECK_BLOCK();
 op_swap10_dest_no_check:
     op_swap10(state);
     DISPATCH();
+
 op_swap11_dest:
     CHECK_BLOCK();
 op_swap11_dest_no_check:
     op_swap11(state);
     DISPATCH();
+
 op_swap12_dest:
     CHECK_BLOCK();
 op_swap12_dest_no_check:
     op_swap12(state);
     DISPATCH();
+
 op_swap13_dest:
     CHECK_BLOCK();
 op_swap13_dest_no_check:
     op_swap13(state);
     DISPATCH();
+
 op_swap14_dest:
     CHECK_BLOCK();
 op_swap14_dest_no_check:
     op_swap14(state);
     DISPATCH();
+
 op_swap15_dest:
     CHECK_BLOCK();
 op_swap15_dest_no_check:
     op_swap15(state);
     DISPATCH();
+
 op_swap16_dest:
     CHECK_BLOCK();
 op_swap16_dest_no_check:
     op_swap16(state);
     DISPATCH();
+
 op_log0_dest:
     CHECK_BLOCK();
 op_log0_dest_no_check:
     op_log0(state);
     DISPATCH();
+
 op_log1_dest:
     CHECK_BLOCK();
 op_log1_dest_no_check:
     op_log1(state);
     DISPATCH();
+
 op_log2_dest:
     CHECK_BLOCK();
 op_log2_dest_no_check:
     op_log2(state);
     DISPATCH();
+
 op_log3_dest:
     CHECK_BLOCK();
 op_log3_dest_no_check:
     op_log3(state);
     DISPATCH();
+
 op_log4_dest:
     CHECK_BLOCK();
 op_log4_dest_no_check:
     op_log4(state);
     DISPATCH();
+
 op_create_dest:
     CHECK_BLOCK();
 op_create_dest_no_check:
     op_create(state, state.next_instruction->instruction_data);
     DISPATCH();
+
 op_call_dest:
     CHECK_BLOCK();
 op_call_dest_no_check:
     op_call(state, state.next_instruction->instruction_data);
     DISPATCH();
+
 op_callcode_dest:
     CHECK_BLOCK();
 op_callcode_dest_no_check:
     op_callcode(state, state.next_instruction->instruction_data);
     DISPATCH();
+
 op_return_dest:
     CHECK_BLOCK();
 op_return_dest_no_check:
@@ -1124,16 +1227,19 @@ op_delegatecall_dest:
 op_delegatecall_dest_no_check:
     op_delegatecall(state, state.next_instruction->instruction_data);
     DISPATCH();
+
 op_create2_dest:
     CHECK_BLOCK();
 op_create2_dest_no_check:
     op_create2(state, state.next_instruction->instruction_data);
     DISPATCH();
+
 op_staticcall_dest:
     CHECK_BLOCK();
 op_staticcall_dest_no_check:
     op_staticcall(state, state.next_instruction->instruction_data);
     DISPATCH();
+
 op_revert_dest:
 op_revert_dest_no_check:
     op_revert(state);
@@ -1294,15 +1400,11 @@ const auto op_table_initialized = []() noexcept
 
     memcpy(&op_table[num_revisions + EVMC_FRONTIER], frontier, sizeof(void*) * JUMP_TABLE_SIZE);
     memcpy(&op_table[num_revisions + EVMC_HOMESTEAD], homestead, sizeof(void*) * JUMP_TABLE_SIZE);
-    memcpy(&op_table[num_revisions + EVMC_TANGERINE_WHISTLE], homestead,
-        sizeof(void*) * JUMP_TABLE_SIZE);
-    memcpy(&op_table[num_revisions + EVMC_SPURIOUS_DRAGON], homestead,
-        sizeof(void*) * JUMP_TABLE_SIZE);
+    memcpy(&op_table[num_revisions + EVMC_TANGERINE_WHISTLE], homestead, sizeof(void*) * JUMP_TABLE_SIZE);
+    memcpy(&op_table[num_revisions + EVMC_SPURIOUS_DRAGON], homestead, sizeof(void*) * JUMP_TABLE_SIZE);
     memcpy(&op_table[num_revisions + EVMC_BYZANTIUM], byzantium, sizeof(void*) * JUMP_TABLE_SIZE);
-    memcpy(&op_table[num_revisions + EVMC_CONSTANTINOPLE], constantinople,
-        sizeof(void*) * JUMP_TABLE_SIZE);
-    memcpy(&op_table[num_revisions + EVMC_CONSTANTINOPLE2], petersburg,
-        sizeof(void*) * JUMP_TABLE_SIZE);
+    memcpy(&op_table[num_revisions + EVMC_CONSTANTINOPLE], constantinople, sizeof(void*) * JUMP_TABLE_SIZE);
+    memcpy(&op_table[num_revisions + EVMC_CONSTANTINOPLE2], petersburg, sizeof(void*) * JUMP_TABLE_SIZE);
     memcpy(&op_table[num_revisions + EVMC_ISTANBUL], istanbul, sizeof(void*) * JUMP_TABLE_SIZE);
     for (size_t i = 0; i < num_revisions; i++)
     {
@@ -1313,6 +1415,11 @@ const auto op_table_initialized = []() noexcept
 ();
 
 }  // namespace
+
+const void** get_table(evmc_revision rev)
+{
+    return op_table[rev];
+}
 
 evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const evmc_message* msg,
     const uint8_t* code, size_t code_size) noexcept
@@ -1339,16 +1446,17 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
     state.storage_repeated_cost = rev == EVMC_CONSTANTINOPLE ? 200 : 5000;
     state.msize = 0;
     state.stack_ptr = &state.stack[0];
-
+    state.first_stack_position = &state.stack[0];
+    state.last_stack_position = &state.stack[1023];
     // Create a sparse array of instruction pointers, that we can use to map from
     // program counter -> instruction member for a JUMPDEST opcode.
     // This gives us an O(1) lookup when processing 'jump' and 'jumpi' opcodes
-    instruction* jumpdest_map[code_size + 2] = {nullptr};
+    instruction* jumpdest_map[code_size + 2] = { nullptr };
 
     // Create array of instruction members, this is where we'll place our program data
     instruction instructions[code_size + 2];
 
-    analyze(instructions, jumpdest_map, rev, code_size, code, op_table[jump_table_index]);
+    analyze(instructions, jumpdest_map, op_table[jump_table_index], rev, code, code_size);
 
     state.stop_instruction = &instructions[code_size];
     state.next_instruction = &instructions[0];

@@ -244,7 +244,7 @@ void sha1_divs(State& state) noexcept
     state.counters["gas_used"] = Counter(iteration_gas_used);
     state.counters["gas_rate"] = Counter(total_gas_used, Counter::kIsRate);
 }
-BENCHMARK(sha1_divs)->Arg(0)->Arg(1351)->Arg(2737)->Arg(5311)->Arg(64 * 1024)->Unit(kMicrosecond);
+BENCHMARK(sha1_divs)->Arg(0)->Arg(1351)->Arg(2737)->Arg(5311)->Arg(64 * 1024)->Unit(kMicrosecond)->Repetitions(10)->ReportAggregatesOnly();
 
 
 void sha1_shifts(State& state) noexcept
@@ -270,7 +270,7 @@ void sha1_shifts(State& state) noexcept
     state.counters["gas_used"] = Counter(iteration_gas_used);
     state.counters["gas_rate"] = Counter(total_gas_used, Counter::kIsRate);
 }
-BENCHMARK(sha1_shifts)->Arg(0)->Arg(1351)->Arg(2737)->Arg(5311)->Arg(64 * 1024)->Unit(kMicrosecond);
+BENCHMARK(sha1_shifts)->Arg(0)->Arg(1351)->Arg(2737)->Arg(5311)->Arg(64 * 1024)->Unit(kMicrosecond)->Repetitions(10)->ReportAggregatesOnly();
 
 
 void blake2b_shifts(State& state) noexcept
@@ -306,7 +306,7 @@ BENCHMARK(blake2b_shifts)
     ->Arg(5610)
     ->Arg(8415)
     ->Arg(64 * 1024)
-    ->Unit(kMicrosecond);
+    ->Unit(kMicrosecond)->Repetitions(10)->ReportAggregatesOnly();
 
 
 
@@ -346,18 +346,10 @@ BENCHMARK(weierstrudel)
     ->Arg(1)
     ->Arg(2)
     ->Arg(3)
-    ->Arg(4)
-    ->Arg(5)
-    ->Arg(6)
-    ->Arg(7)
     ->Arg(8)
     ->Arg(9)
-    ->Arg(10)
-    ->Arg(11)
-    ->Arg(12)
-    ->Arg(13)
     ->Arg(14)
-    ->Unit(kMicrosecond);
+    ->Unit(kMicrosecond)->Repetitions(10)->ReportAggregatesOnly();
 
 }  // namespace
 

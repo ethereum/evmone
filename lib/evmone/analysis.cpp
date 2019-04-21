@@ -21,8 +21,8 @@ bytes32 init_zero_bytes() noexcept
 static const bytes32 zero_bytes = init_zero_bytes();
 }  // namespace
 
-void analyze(instruction* instructions, instruction** jumpdest_map, evmc_revision rev,
-    const size_t code_size, const uint8_t* code, const void** jump_table) noexcept
+void analyze(instruction* instructions, instruction** jumpdest_map, const void** jump_table, evmc_revision rev,
+     const uint8_t* code, const size_t code_size) noexcept
 {
     auto* instr_table = evmc_get_instruction_metrics_table(rev);
     int stack_diff = 0;

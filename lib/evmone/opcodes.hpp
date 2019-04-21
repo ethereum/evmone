@@ -21,11 +21,7 @@
     auto cost = new_cost - state.memory_prev_cost;                          \
     state.memory_prev_cost = new_cost;                                      \
     state.gas_left -= cost;                                                 \
-    if (__builtin_expect(state.gas_left < 0, 0))                            \
-    {                                                                       \
-        state.status = EVMC_OUT_OF_GAS;                                     \
-        state.next_instruction = state.stop_instruction;                    \
-    }
+
 
 
 namespace evmone
@@ -444,8 +440,13 @@ inline void op_codecopy(execution_state& state) noexcept
 inline void op_mload(execution_state& state) noexcept
 {
     auto& index = *state.stack_ptr;
-    CHECK_MEMORY(index, 32)
-
+    CHECK_MEMORY(index, 32);
+    if (__builtin_expect(state.gas_left < 0, 0))
+    {
+        state.status = EVMC_OUT_OF_GAS;
+        state.next_instruction = state.stop_instruction;
+        return;
+    }
     index = intx::be::uint256(&state.memory[static_cast<size_t>(index)]);
 }
 
@@ -454,7 +455,13 @@ inline void op_mstore(execution_state& state) noexcept
     auto index = *state.stack_ptr;
     auto x = *(state.stack_ptr - 1);
 
-    CHECK_MEMORY(index, 32)
+    CHECK_MEMORY(index, 32);
+    if (__builtin_expect(state.gas_left < 0, 0))
+    {
+        state.status = EVMC_OUT_OF_GAS;
+        state.next_instruction = state.stop_instruction;
+        return;
+    }
     intx::be::store(state.memory + (static_cast<size_t>(index)), x);
     state.stack_ptr -= 2;
 }
@@ -465,6 +472,12 @@ inline void op_mstore8(execution_state& state) noexcept
     auto x = *(state.stack_ptr - 1);
 
     CHECK_MEMORY(index, 1);
+    if (__builtin_expect(state.gas_left < 0, 0))
+    {
+        state.status = EVMC_OUT_OF_GAS;
+        state.next_instruction = state.stop_instruction;
+        return;
+    }
     state.memory[static_cast<size_t>(index)] = static_cast<uint8_t>(x);
 
     state.stack_ptr -= 2;
@@ -994,6 +1007,11 @@ inline void op_return(execution_state& state) noexcept
     state.output_size = static_cast<size_t>(size);
     state.status = EVMC_SUCCESS;
     CHECK_MEMORY(offset, size);
+    if (__builtin_expect(state.gas_left < 0, 0))
+    {
+        state.status = EVMC_OUT_OF_GAS;
+        state.next_instruction = state.stop_instruction;
+    }
 }
 
 inline void op_revert(execution_state& state) noexcept
@@ -1005,6 +1023,11 @@ inline void op_revert(execution_state& state) noexcept
     state.output_offset = static_cast<size_t>(offset);
     state.output_size = static_cast<size_t>(size);
     CHECK_MEMORY(offset, size);
+    if (__builtin_expect(state.gas_left < 0, 0))
+    {
+        state.status = EVMC_OUT_OF_GAS;
+        state.next_instruction = state.stop_instruction;
+    }
 }
 
 inline void op_callbase(execution_state& state, const instruction_info& instruction_data,

@@ -156,6 +156,7 @@ evmc_host_interface execution::interface = {
     },
 };
 
+
 TEST_F(execution, stop)
 {
     execute(6, "600150");
@@ -1128,4 +1129,3 @@ TEST_F(execution, abort)
             result.release(&result);
     }
 }
-

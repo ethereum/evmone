@@ -47,6 +47,8 @@ struct execution_state
     int64_t msize = 0;
     int64_t memory_prev_cost = 0;
     uint8_t* memory;
+    uint256* first_stack_position; // used to check for stack depth errors
+    uint256* last_stack_position;  // used to check for stack depth errors
 
     uint256 stack[1024];
 
@@ -73,6 +75,6 @@ struct execution_state
     evmc_revision rev = {};
 };
 
-void analyze(instruction* instructions, instruction** jumpdest_map, evmc_revision rev, const size_t code_size, const uint8_t* code, const void** jump_table) noexcept;
+void analyze(instruction* instructions, instruction** jumpdest_map, const void** jump_table, evmc_revision rev, const uint8_t* code, const size_t code_size) noexcept;
 
 }  // namespace evmone
