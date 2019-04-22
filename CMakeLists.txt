@@ -4,10 +4,6 @@
 
 cmake_minimum_required(VERSION 3.5)
 
-# SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg -g -save-temps -ffinite-math-only -finline-functions -O3")
-# SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pg -g -save-temps -ffinite-math-only -finline-functions -O3")
-# SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pg -g -save-temps -ffinite-math-only -finline-functions -O3")
-
 option(BUILD_SHARED_LIBS "Build evmone as a shared library" ON)
 option(EVMONE_TESTING "Build tests and test tools" OFF)
 
