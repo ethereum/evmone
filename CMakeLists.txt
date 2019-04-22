@@ -25,6 +25,7 @@ hunter_add_package(ethash)
 find_package(ethash CONFIG REQUIRED)
 
 option(INTX_TESTING "Build intx with tests" OFF)
+option(INTX_BENCHMARKING "Build intx with benchmarking" OFF)
 add_subdirectory(intx)
 
 option(EVMC_TESTING "Build EVMC tests and test tools" ${EVMONE_TESTING})
