@@ -1507,8 +1507,7 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
             std::free(const_cast<uint8_t*>(result->output_data));
         };
     }
-    // free the stack
-    // std::free(stack);
+
     // before we exit, free up the memory this transaction used
     memory::clean_up(state.msize);
     return result;
