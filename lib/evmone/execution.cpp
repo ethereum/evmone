@@ -592,8 +592,8 @@ const void** interpret(
         state.next_instruction = state.stop_instruction;
     }
 
-    // hon hon hon
-    goto**(void**)state.next_instruction;
+    // begin direct threaded interpretation!
+    goto **(void**)state.next_instruction;
 
 op_add_dest:
     CHECK_BLOCK();
@@ -946,7 +946,7 @@ op_msize_dest_no_check:
 op_gas_dest:
     CHECK_BLOCK();
 op_gas_dest_no_check:
-    op_gas(state, state.next_instruction->instruction_data);
+    op_gas(state);
     DISPATCH();
 
 op_jumpdest_dest:
@@ -1199,19 +1199,19 @@ op_log4_dest_no_check:
 op_create_dest:
     CHECK_BLOCK();
 op_create_dest_no_check:
-    op_create(state, state.next_instruction->instruction_data);
+    op_create(state);
     DISPATCH();
 
 op_call_dest:
     CHECK_BLOCK();
 op_call_dest_no_check:
-    op_call(state, state.next_instruction->instruction_data);
+    op_call(state);
     DISPATCH();
 
 op_callcode_dest:
     CHECK_BLOCK();
 op_callcode_dest_no_check:
-    op_callcode(state, state.next_instruction->instruction_data);
+    op_callcode(state);
     DISPATCH();
 
 op_return_dest:
@@ -1222,19 +1222,19 @@ op_return_dest_no_check:
 op_delegatecall_dest:
     CHECK_BLOCK();
 op_delegatecall_dest_no_check:
-    op_delegatecall(state, state.next_instruction->instruction_data);
+    op_delegatecall(state);
     DISPATCH();
 
 op_create2_dest:
     CHECK_BLOCK();
 op_create2_dest_no_check:
-    op_create2(state, state.next_instruction->instruction_data);
+    op_create2(state);
     DISPATCH();
 
 op_staticcall_dest:
     CHECK_BLOCK();
 op_staticcall_dest_no_check:
-    op_staticcall(state, state.next_instruction->instruction_data);
+    op_staticcall(state);
     DISPATCH();
 
 op_revert_dest:

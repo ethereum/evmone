@@ -568,11 +568,11 @@ inline void op_msize(execution_state& state) noexcept
     *state.stack_ptr = state.msize;
 }
 
-inline void op_gas(execution_state& state, const instruction_info& data) noexcept
+inline void op_gas(execution_state& state) noexcept
 {
     state.stack_ptr++;
     *state.stack_ptr =
-        static_cast<uint64_t>(state.gas_left + state.current_block_cost - data.number);
+        static_cast<uint64_t>(state.gas_left + state.current_block_cost - state.next_instruction->instruction_data.number);
 }
 
 inline void op_jumpdest(execution_state&) noexcept {}
@@ -1030,9 +1030,9 @@ inline void op_revert(execution_state& state) noexcept
     }
 }
 
-inline void op_callbase(execution_state& state, const instruction_info& instruction_data,
-    evmc_call_kind call_kind) noexcept
+inline void op_callbase(execution_state& state, evmc_call_kind call_kind) noexcept
 {
+    instruction_info& instruction_data = state.next_instruction->instruction_data;
     auto gas = *state.stack_ptr;
 
     uint8_t data[32];
@@ -1164,19 +1164,19 @@ inline void op_callbase(execution_state& state, const instruction_info& instruct
     }
 }
 
-inline void op_call(execution_state& state, const instruction_info& data) noexcept
+inline void op_call(execution_state& state) noexcept
 {
-    op_callbase(state, data, EVMC_CALL);
+    op_callbase(state, EVMC_CALL);
 }
 
-inline void op_callcode(execution_state& state, const instruction_info& data) noexcept
+inline void op_callcode(execution_state& state) noexcept
 {
-    op_callbase(state, data, EVMC_CALLCODE);
+    op_callbase(state, EVMC_CALLCODE);
 }
 
-inline void op_delegatecall(
-    execution_state& state, const instruction_info& instruction_data) noexcept
+inline void op_delegatecall(execution_state& state) noexcept
 {
+    instruction_info& instruction_data = state.next_instruction->instruction_data;
     auto gas = *state.stack_ptr;
 
     uint8_t data[32];
@@ -1254,8 +1254,9 @@ inline void op_delegatecall(
     }
 }
 
-inline void op_staticcall(execution_state& state, const instruction_info& instruction_data) noexcept
+inline void op_staticcall(execution_state& state) noexcept
 {
+    instruction_info& instruction_data = state.next_instruction->instruction_data;
     auto gas = *state.stack_ptr;
 
     uint8_t data[32];
@@ -1324,8 +1325,9 @@ inline void op_staticcall(execution_state& state, const instruction_info& instru
     }
 }
 
-inline void op_create(execution_state& state, const instruction_info& instruction_data) noexcept
+inline void op_create(execution_state& state) noexcept
 {
+    instruction_info& instruction_data = state.next_instruction->instruction_data;
     auto endowment = *state.stack_ptr;
     auto init_code_offset = *(state.stack_ptr - 1);
     auto init_code_size = *(state.stack_ptr - 2);
@@ -1389,8 +1391,9 @@ inline void op_create(execution_state& state, const instruction_info& instructio
     }
 }
 
-inline void op_create2(execution_state& state, const instruction_info& instruction_data) noexcept
+inline void op_create2(execution_state& state) noexcept
 {
+    instruction_info& instruction_data = state.next_instruction->instruction_data;
     auto endowment = *state.stack_ptr;
     auto init_code_offset = *(state.stack_ptr - 1);
     auto init_code_size = *(state.stack_ptr - 2);
