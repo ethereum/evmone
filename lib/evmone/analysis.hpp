@@ -19,6 +19,9 @@ using bytes32 = std::array<uint8_t, 32>;
 using bytes = std::basic_string<uint8_t>;
 
 
+// Auxiliary information required to process an instruction.
+// We either need 32 bytes (for push data), or a 64-bit int, but never both.
+// Can use a union to save some space in our array
 union instruction_info
 {
     std::array<uint8_t, 32> push_data;
@@ -27,16 +30,19 @@ union instruction_info
 
 struct block_info
 {
-    int64_t gas_cost = 0;
-    int stack_req = 0;
-    int stack_max = 0;
+    int64_t gas_cost;
+    int stack_req;
+    int stack_max;
 };
 
+// Instruction holds the data required to execute an opcode.
+// Padded in size to fit a cache line. Our program execution is defined by
+// an array of these instructions, that we execute in order (barring jump and jumpi opcodes).
 struct instruction
 {
-    const void* opcode_dest;
-    block_info block_data;
-    instruction_info instruction_data;
+    const void* opcode_dest; // pointer to a label that we can directly use 'goto' on
+    block_info block_data;   // contains basic block data (if any)
+    instruction_info instruction_data; // auxiliary information for this opcode (push data etc)
 } __attribute__ ((aligned (64))); // I think gcc will do this already, but just to be sure...
 
 struct execution_state
@@ -50,7 +56,12 @@ struct execution_state
     uint256* first_stack_position; // used to check for stack depth errors
     uint256* last_stack_position;  // used to check for stack depth errors
 
-    uint256 stack[1024];
+    // This is a bit hacky. We want the fake stack to be allocated on the real stack,
+    // but we don't want to call the default constructor of uint256 for every entry
+    // (this was adding a few hundred microseconds to the 'empty' benchmark).
+    // It is not possible to access stack elements that have not been written to,
+    // so we might as well save some time and leave this array initialized with garbage
+    char stack[1024 * sizeof(uint256)];
 
     instruction* stop_instruction;
     size_t code_size = 0;
@@ -73,6 +84,8 @@ struct execution_state
     evmc_tx_context tx_context = {};
 
     evmc_revision rev = {};
+
+    execution_state() {}
 };
 
 void analyze(instruction* instructions, instruction** jumpdest_map, const void** jump_table, evmc_revision rev, const uint8_t* code, const size_t code_size) noexcept;

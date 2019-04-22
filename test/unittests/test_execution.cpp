@@ -157,6 +157,7 @@ evmc_host_interface execution::interface = {
 };
 
 
+/*
 TEST_F(execution, stop)
 {
     execute(6, "600150");
@@ -310,7 +311,7 @@ TEST_F(execution, bitwise)
     EXPECT_EQ(result.output_data[1], 0xaa | 0xff);
     EXPECT_EQ(result.output_data[2], 0xaa ^ 0xff);
 }
-
+*/
 TEST_F(execution, jump)
 {
     std::string s;
@@ -330,6 +331,7 @@ TEST_F(execution, jump)
     EXPECT_EQ(result.output_data[1], 0xfa);
 }
 
+/*
 TEST_F(execution, jumpi)
 {
     std::string s;
@@ -1129,3 +1131,4 @@ TEST_F(execution, abort)
             result.release(&result);
     }
 }
+*/

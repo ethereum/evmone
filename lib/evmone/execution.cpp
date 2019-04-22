@@ -12,9 +12,6 @@
 #include <evmc/helpers.hpp>
 #include <evmc/instructions.h>
 
-#include <math.h>
-#include <iostream>
-
 #define UPDATE_MEMORY()                                \
     {                                                  \
         auto w = state.msize >> 5;                     \
@@ -1429,10 +1426,17 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
     auto jump_table_index = msg->flags & EVMC_STATIC ? rev + num_revisions : rev;
 
     execution_state state;
-    // Compute the maximum amount of memory this transaction can potentially consume.
-    // This currently tops out at ~8MB, which is low enough to just allocate and zero out,
-    // removing the overheas of memory paging
+    // uint256* stack = static_cast<uint256*>(malloc(1024 * sizeof(uint256)));
+    // Next: get a pointer to a block of allocated memory. This memory block has a size that
+    // is at least as large as the maximum memory index that can be accessed by this
+    // transaction, without triggering an out of gas error. In addition, this memory
+    // is zeroed out.
+
+    // To do this, we need the block gas limit (msg->gas can be problematic for situations
+    // where gas = -1)
     state.tx_context = ctx->host->get_tx_context(ctx);
+
+    // Next, get a pointer to the memory.
     state.memory =
         memory::get_tx_memory_ptr(std::min(msg->gas, state.tx_context.block_gas_limit));
 
@@ -1445,22 +1449,44 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
     state.exp_cost = rev >= EVMC_SPURIOUS_DRAGON ? 50 : 10;
     state.storage_repeated_cost = rev == EVMC_CONSTANTINOPLE ? 200 : 5000;
     state.msize = 0;
-    state.stack_ptr = &state.stack[0];
-    state.first_stack_position = &state.stack[0];
-    state.last_stack_position = &state.stack[1023];
+
+    // Instead of manipulating the size of the stack when the program is running, we
+    // use a constant-size stack, and perform our operations relative to a pointer to the
+    // head of the stack (i.e. we just move the pointer around, instead of changing the stack size)
+    state.stack_ptr = (uint256*)(&state.stack[0]);
+
+    // To check for stack overflow/underflow errors, we explicitly store the start and end of
+    // the stack in variables.
+    // This brings the number of frequently used variables inside (state) to 8.
+    // i.e. everything fits neatly into a cache line
+    state.first_stack_position = (uint256*)(&state.stack[0]);
+    state.last_stack_position = (uint256*)(&state.stack[1023 * sizeof(uint256)]);
+
     // Create a sparse array of instruction pointers, that we can use to map from
     // program counter -> instruction member for a JUMPDEST opcode.
     // This gives us an O(1) lookup when processing 'jump' and 'jumpi' opcodes
+    // TODO: use evmone::memory to get a block of null pointers,
+    // instead of having to zero out all of this memory per tx
     instruction* jumpdest_map[code_size + 2] = { nullptr };
 
-    // Create array of instruction members, this is where we'll place our program data
+    // Create array of instruction structs, this is where we'll place our program data.
     instruction instructions[code_size + 2];
 
+    // Fill instructions and jumpdest_map
     analyze(instructions, jumpdest_map, op_table[jump_table_index], rev, code, code_size);
 
-    state.stop_instruction = &instructions[code_size];
+    // state.next_instruction is a pointer to an 'instruction' member. The first
+    // member of 'instruction' is a label that corresponds to the jump destination for
+    // the opcode we need to execute.
+    // i.e. we can use state.next_instruction as a 'label' for our direct threaded interpreter,
+    // as well as a pointer to the data required to execute the given opcode (e.g. push data)
     state.next_instruction = &instructions[0];
 
+    // Cache the label that we jump to, to stop execution.
+    // We set state.next_instruction to state.stop_instruction when we enter an error state
+    state.stop_instruction = &instructions[code_size];
+
+    // Interpret our evm program!
     interpret(instructions, jumpdest_map, state);
 
     evmc_result result{};
@@ -1469,7 +1495,6 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
 
     if (state.status == EVMC_SUCCESS || state.status == EVMC_REVERT)
         result.gas_left = state.gas_left;
-
 
     if (state.output_size > 0)
     {
@@ -1482,7 +1507,8 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
             std::free(const_cast<uint8_t*>(result->output_data));
         };
     }
-
+    // free the stack
+    // std::free(stack);
     // before we exit, free up the memory this transaction used
     memory::clean_up(state.msize);
     return result;

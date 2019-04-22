@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <evmone/constants.hpp>
 #include <evmone/memory.hpp>
 
 #include <iostream>
