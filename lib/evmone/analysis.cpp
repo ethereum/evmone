@@ -219,7 +219,7 @@ void analyze(instruction* instructions, instruction** jumpdest_map, const void**
             * We could write a special case for jump opcodes (so DISPATCH doesn't increase the ptr),
             * but I figured that if the access pattern into state.next_instruction was uniform,
             * the CPU would have an easier time of predicting the branch we're jumping to.
-            * This is, however, 100% superstition, I have no idea how to measure pipeline stalls during eecution
+            * This is, however, 100% superstition, I have no idea how to measure pipeline stalls during execution
             **/
             jumpdest_map[i] = &instructions[instr_index - 1];
 
