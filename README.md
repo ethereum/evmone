@@ -4,8 +4,10 @@
 
 > Fast Ethereum Virtual Machine implementation
 
-The C++ implementation of the Ethereum Virtual Machine  (EVM) focused on speed.
+The C++ implementation of the Ethereum Virtual Machine (EVM) focused on speed.
 Compatible with [EVMC].
+
+Uses [intx] as a bignumber library and [ethash] for the special `SHA3` opcode.
 
 ## Usage
 
@@ -36,3 +38,5 @@ Licensed under the [Apache License, Version 2.0].
 [@chfast]: https://github.com/chfast
 [Apache License, Version 2.0]: LICENSE
 [EVMC]: https://github.com/ethereum/evmc
+[intx]: https://github.com/chfast/intx
+[ethash]: https://github.com/chfast/ethash
