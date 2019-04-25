@@ -32,7 +32,7 @@ option(INTX_TESTING "Build intx with tests" OFF)
 option(INTX_BENCHMARKING "Build intx with benchmarking" OFF)
 add_subdirectory(intx)
 
-option(EVMC_TESTING "Build EVMC tests and test tools" ${EVMONE_TESTING})
+option(EVMC_TEST_TOOLS "Build EVMC test tools" ${EVMONE_TESTING})
 add_subdirectory(evmc)
 
 cable_set_build_type(DEFAULT Release CONFIGURATION_TYPES Debug Release)
