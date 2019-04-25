@@ -59,7 +59,7 @@ protected:
     /// Wrapper for evmone::execute. The result will be in the .result field.
     void execute(int64_t gas, std::string_view code_hex, std::string_view input_hex = {}) noexcept
     {
-        auto input = from_hex(input_hex.data());
+        auto input = from_hex(input_hex);
         msg.gas = gas;
         msg.input_data = input.data();
         msg.input_size = input.size();
