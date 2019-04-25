@@ -1502,7 +1502,7 @@ const auto op_table_initialized = []() noexcept
     op_table[EVMC_SPURIOUS_DRAGON] = create_op_table_homestead();
     op_table[EVMC_BYZANTIUM] = create_op_table_byzantium();
     op_table[EVMC_CONSTANTINOPLE] = create_op_table_constantinople();
-    op_table[EVMC_CONSTANTINOPLE2] = create_op_table_petersburg();
+    op_table[EVMC_PETERSBURG] = create_op_table_petersburg();
     op_table[EVMC_ISTANBUL] = create_op_table_istanbul();
     return true;
 }

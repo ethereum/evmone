@@ -552,7 +552,7 @@ TEST_F(execution, sload_cost_pre_tw)
 
 TEST_F(execution, sstore_cost)
 {
-    auto revs = {EVMC_BYZANTIUM, EVMC_CONSTANTINOPLE, EVMC_CONSTANTINOPLE2};
+    auto revs = {EVMC_BYZANTIUM, EVMC_CONSTANTINOPLE, EVMC_PETERSBURG};
     for (auto r : revs)
     {
         storage.clear();
