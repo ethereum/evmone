@@ -70,11 +70,13 @@ jobs:
       CC: gcc-8
       CXX: g++-8
 
-  clang-latest:
+  clang-latest-ubsan:
     <<: *build
     environment:
       CC: clang-8
       CXX: clang++-8
+      CMAKE_OPTIONS: -DSANITIZE=undefined,implicit-conversion,nullability
+      UBSAN_OPTIONS: halt_on_error=1
 
 
   macos-asan:
@@ -97,5 +99,5 @@ workflows:
       - lint
       - gcc-min
       - gcc-latest
-      - clang-latest
+      - clang-latest-ubsan
       - macos-asan
