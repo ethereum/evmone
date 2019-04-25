@@ -1,4 +1,38 @@
-version: 2
+version: 2.1
+
+commands:
+  build_and_test:
+    description: "Build & Test"
+    steps:
+      - run:
+          name: "Environment"
+          command: |
+            CC=${CC:-cc}
+            CXX=${CXX:-cpp}
+            echo CC: $CC
+            echo CXX: $CXX
+            $CC --version
+            $CXX --version
+            cmake --version
+      - checkout
+      - run:
+          name: "Update submodules"
+          command: git submodule update --init --recursive
+      - run:
+          name: "Configure"
+          working_directory: ~/build
+          command: cmake ../project -DCMAKE_INSTALL_PREFIX=~/install -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DEVMONE_TESTING=ON $CMAKE_OPTIONS
+      - run:
+          name: "Build"
+          command: cmake --build ~/build -- -j4
+      - run:
+          name: "Test"
+          working_directory: ~/build
+          command: ctest -R ${TESTS_FILTER:-'.*'} -j4 --schedule-random --output-on-failure
+      - run:
+          name: "Install"
+          command: cmake --build ~/build --target install
+
 jobs:
 
   lint:
@@ -21,58 +55,47 @@ jobs:
     docker:
       - image: ethereum/cpp-build-env:11
     steps:
-      - checkout
-      - run:
-          name: "Update submodules"
-          command: git submodule update --init --recursive
-      - run:
-          name: "Environment"
-          command: |
-            CC=${CC:-cc}
-            CXX=${CXX:-cpp}
-            echo CC: $CC
-            echo CXX: $CXX
-            $CC --version
-            $CXX --version
-            cmake --version
-      - run:
-          name: "Configure"
-          working_directory: ~/build
-          command: cmake ../project -DCMAKE_INSTALL_PREFIX=~/install -DEVMONE_TESTING=ON $CMAKE_OPTIONS
-      - run:
-          name: "Build"
-          command: cmake --build ~/build
-      - run:
-          name: "Test"
-          command: cmake --build ~/build --target test -- ARGS="-j4 --schedule-random --output-on-failure"
-      - run:
-          name: "Install"
-          command: cmake --build ~/build --target install
+      - build_and_test
 
-  build-gcc-min:
+
+  gcc-min:
     <<: *build
     environment:
       CC: gcc-7
       CXX: g++-7
 
-  build-gcc-latest:
+  gcc-latest:
     <<: *build
     environment:
       CC: gcc-8
       CXX: g++-8
 
-  build-clang-latest:
+  clang-latest:
     <<: *build
     environment:
       CC: clang-8
       CXX: clang++-8
 
 
+  macos-asan:
+    macos:
+      xcode: 10.2.0
+    environment:
+      BUILD_TYPE: RelWithDebInfo
+      CMAKE_OPTIONS: -DSANITIZE=address
+      TESTS_FILTER: unittests
+    steps:
+      - run:
+          name: "Install System Dependencies"
+          command: HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake
+      - build_and_test
+
 workflows:
   version: 2
   evmone:
     jobs:
       - lint
-      - build-gcc-min
-      - build-gcc-latest
-      - build-clang-latest
+      - gcc-min
+      - gcc-latest
+      - clang-latest
+      - macos-asan
