@@ -10,7 +10,7 @@
 #include <evmc/instructions.h>
 #include <gtest/gtest.h>
 #include <intx/intx.hpp>
-#include <map>
+#include <unordered_map>
 
 using namespace std::literals;
 
