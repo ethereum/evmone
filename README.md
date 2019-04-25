@@ -40,3 +40,6 @@ Licensed under the [Apache License, Version 2.0].
 [EVMC]: https://github.com/ethereum/evmc
 [intx]: https://github.com/chfast/intx
 [ethash]: https://github.com/chfast/ethash
+[standard readme]: https://github.com/RichardLitt/standard-readme
+
+[readme style standard badge]: https://img.shields.io/badge/readme%20style-standard-brightgreen.svg?style=flat-square
