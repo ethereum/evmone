@@ -24,7 +24,7 @@ jobs:
       - checkout
       - run:
           name: "Update submodules"
-          command: git submodule update --init
+          command: git submodule update --init --recursive
       - run:
           name: "Environment"
           command: |
