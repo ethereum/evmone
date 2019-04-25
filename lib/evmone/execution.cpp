@@ -404,6 +404,7 @@ void op_calldatacopy(execution_state& state, instr_argument) noexcept
         return;
     }
 
+    // FIXME: Make sure data pointers are not null, add test cases.
     std::memcpy(&state.memory[dst], &state.msg->input_data[src], copy_size);
     std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
 
@@ -994,8 +995,11 @@ void op_call(execution_state& state, instr_argument arg) noexcept
 
     state.item(0) = result.status_code == EVMC_SUCCESS;
 
-    std::memcpy(&state.memory[size_t(output_offset)], result.output_data,
-        std::min(size_t(output_size), result.output_size));
+    if (result.output_data)
+    {
+        std::memcpy(&state.memory[size_t(output_offset)], result.output_data,
+            std::min(size_t(output_size), result.output_size));
+    }
 
     auto gas_used = msg.gas - result.gas_left;
 
@@ -1077,8 +1081,11 @@ void op_delegatecall(execution_state& state, instr_argument arg) noexcept
 
     state.item(0) = result.status_code == EVMC_SUCCESS;
 
-    std::memcpy(&state.memory[size_t(output_offset)], result.output_data,
-        std::min(size_t(output_size), result.output_size));
+    if (result.output_data)
+    {
+        std::memcpy(&state.memory[size_t(output_offset)], result.output_data,
+            std::min(size_t(output_size), result.output_size));
+    }
 
     auto gas_used = msg.gas - result.gas_left;
 
@@ -1148,8 +1155,11 @@ void op_staticcall(execution_state& state, instr_argument arg) noexcept
     state.return_data.assign(result.output_data, result.output_size);
     state.item(0) = result.status_code == EVMC_SUCCESS;
 
-    std::memcpy(&state.memory[size_t(output_offset)], result.output_data,
-        std::min(size_t(output_size), result.output_size));
+    if (result.output_data)
+    {
+        std::memcpy(&state.memory[size_t(output_offset)], result.output_data,
+            std::min(size_t(output_size), result.output_size));
+    }
 
     auto gas_used = msg.gas - result.gas_left;
 
