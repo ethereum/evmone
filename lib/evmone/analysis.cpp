@@ -9,17 +9,6 @@
 
 namespace evmone
 {
-namespace
-{
-bytes32 init_zero_bytes() noexcept
-{
-    bytes32 data;
-    for (auto& b : data)
-        b = 0;
-    return data;
-}
-static const bytes32 zero_bytes = init_zero_bytes();
-}  // namespace
 
 void analyze(instruction* instructions, instruction** jumpdest_map, const void** jump_table, evmc_revision rev,
      const uint8_t* code, const size_t code_size) noexcept
@@ -121,9 +110,7 @@ void analyze(instruction* instructions, instruction** jumpdest_map, const void**
         {
             size_t push_size = static_cast<size_t>(c - OP_PUSH1 + 1);
             size_t leading_zeroes = static_cast<size_t>(32 - push_size);
-            memcpy(&instructions[instr_index].instruction_data.push_data[0], &evmone::zero_bytes, 32);
             size_t copy_size = std::min(push_size, code_size - i - 1);
-            memcpy(&instructions[instr_index].instruction_data.push_data[leading_zeroes], code + i + 1, push_size);
             uint64_t swap_buffer[4] = { 0, 0, 0, 0 };
             memcpy((uint8_t*)(&swap_buffer) + leading_zeroes, code + i + 1, copy_size);
             uint64_t* push_data = (uint64_t*)(instructions[instr_index].instruction_data.push_data.begin());
