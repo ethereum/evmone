@@ -9,6 +9,20 @@
 #include <evmc/helpers.hpp>
 #include <evmc/instructions.h>
 
+#include <cstdio>
+#include <cstdlib>
+
+#ifdef NDEBUG
+#define UNTESTED(condition) (condition)
+#else
+static bool report_tested(const char* condition, const char* file, int line) noexcept
+{
+    std::fprintf(stderr, "%s:%d: Test condition hit: %s\n", file, line, condition);
+    std::abort();
+}
+#define UNTESTED(condition) ((condition) ? report_tested(#condition, __FILE__, __LINE__) : false)
+#endif
+
 namespace evmone
 {
 namespace
@@ -20,7 +34,7 @@ bool check_memory(execution_state& state, const uint256& offset, const uint256& 
 
     constexpr auto limit = uint32_t(-1);
 
-    if (limit < offset || limit < size)  // TODO: Revert order of args in <.
+    if (UNTESTED(limit < offset) || UNTESTED(limit < size))  // TODO: Revert order of args in <.
     {
         state.run = false;
         state.status = EVMC_OUT_OF_GAS;
@@ -41,7 +55,7 @@ bool check_memory(execution_state& state, const uint256& offset, const uint256& 
         state.memory_prev_cost = new_cost;
 
         state.gas_left -= cost;
-        if (state.gas_left < 0)
+        if (UNTESTED(state.gas_left < 0))
         {
             state.run = false;
             state.status = EVMC_OUT_OF_GAS;
@@ -139,7 +153,7 @@ void op_exp(execution_state& state, instr_argument arg) noexcept
 
     auto additional_cost = exponent_significant_bytes * arg.number;
     state.gas_left -= additional_cost;
-    if (state.gas_left < 0)
+    if (UNTESTED(state.gas_left < 0))
     {
         state.run = false;
         state.status = EVMC_OUT_OF_GAS;
@@ -156,6 +170,7 @@ void op_signextend(execution_state& state, instr_argument) noexcept
     state.stack.pop_back();
     auto& x = state.item(0);
 
+    (void)UNTESTED(ext >= 31);
     if (ext < 31)
     {
         auto sign_bit = static_cast<int>(ext) * 8 + 7;
