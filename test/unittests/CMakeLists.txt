@@ -8,6 +8,7 @@ find_package(GTest CONFIG REQUIRED)
 add_executable(evmone-unittests
     test_analysis.cpp
     test_execution.cpp
+    test_memory.cpp
     utils.cpp
     utils.hpp
 )

@@ -4,1563 +4,1510 @@
 
 #include "execution.hpp"
 #include "analysis.hpp"
+#include "constants.hpp"
+#include "memory.hpp"
+#include "opcodes.hpp"
 
 #include <ethash/keccak.hpp>
 #include <evmc/helpers.hpp>
 #include <evmc/instructions.h>
 
+
+// this macro is called to dispatch to the relevant subroutine required to interpret the next
+// instruction. Given the lack of conditional branching, the aspiration is that the CPU can figure
+// out what we're up to, and avoid a pipeline stall...
+#define DISPATCH() goto **(void**)++state.next_instruction; 
+// __builtin_prefetch(state.next_instruction + 2, 0);  // TODO - test if this has an effect
+
+
+#define CHECK_BLOCK()                                                                     \
+    {                                                                                     \
+        auto block = state.next_instruction->block_data;                                  \
+        state.gas_left -= block.gas_cost;                                                 \
+        if (__builtin_expect(                                                             \
+                (state.gas_left < 0) ||                                                   \
+                    (state.stack_ptr - block.stack_req < state.first_stack_position ||    \
+                        (state.stack_ptr + block.stack_max > state.last_stack_position)), \
+                0))                                                                       \
+        {                                                                                 \
+            if (state.gas_left < 0)                                                       \
+            {                                                                             \
+                state.status = EVMC_OUT_OF_GAS;                                           \
+            }                                                                             \
+            else if (state.stack_ptr - block.stack_req < state.first_stack_position)      \
+            {                                                                             \
+                state.status = EVMC_STACK_UNDERFLOW;                                      \
+            }                                                                             \
+            else if (state.stack_ptr + block.stack_max > state.last_stack_position)       \
+            {                                                                             \
+                state.status = EVMC_STACK_OVERFLOW;                                       \
+            }                                                                             \
+            goto op_stop_dest;                                                            \
+        }                                                                                 \
+        state.current_block_cost = block.gas_cost;                                        \
+    }
+
 namespace evmone
 {
 namespace
 {
-bool check_memory(execution_state& state, const uint256& offset, const uint256& size) noexcept
+size_t count_zeroes(size_t x) noexcept
 {
-    if (size == 0)
-        return true;
-
-    constexpr auto limit = uint32_t(-1);
-
-    if (limit < offset || limit < size)  // TODO: Revert order of args in <.
+    if (sizeof(size_t) == 8)
     {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return false;
+        return __builtin_clzll(x);
     }
-
-    const auto o = static_cast<int64_t>(offset);
-    const auto s = static_cast<int64_t>(size);
-
-    const auto m = static_cast<int64_t>(state.memory.size());
-
-    const auto new_size = o + s;
-    if (m < new_size)
+    else if (sizeof(size_t) == 4)
     {
-        auto w = (new_size + 31) / 32;
-        auto new_cost = 3 * w + w * w / 512;
-        auto cost = new_cost - state.memory_prev_cost;
-        state.memory_prev_cost = new_cost;
-
-        state.gas_left -= cost;
-        if (state.gas_left < 0)
-        {
-            state.run = false;
-            state.status = EVMC_OUT_OF_GAS;
-            return false;
-        }
-
-        state.memory.resize(static_cast<size_t>(w * 32));
+        return __builtin_clzl(x);
     }
-
-    return true;
-}
-
-
-void op_stop(execution_state& state, instr_argument) noexcept
-{
-    state.run = false;
-}
-
-void op_add(execution_state& state, instr_argument) noexcept
-{
-    state.item(1) += state.item(0);
-    state.stack.pop_back();
-}
-
-void op_mul(execution_state& state, instr_argument) noexcept
-{
-    state.item(1) *= state.item(0);
-    state.stack.pop_back();
-}
-
-void op_sub(execution_state& state, instr_argument) noexcept
-{
-    state.item(1) = state.item(0) - state.item(1);
-    state.stack.pop_back();
-}
-
-void op_div(execution_state& state, instr_argument) noexcept
-{
-    auto& v = state.item(1);
-    v = v != 0 ? state.item(0) / v : 0;
-    state.stack.pop_back();
-}
-
-void op_sdiv(execution_state& state, instr_argument) noexcept
-{
-    auto& v = state.item(1);
-    v = v != 0 ? intx::sdivrem(state.item(0), v).quot : 0;
-    state.stack.pop_back();
-}
-
-void op_mod(execution_state& state, instr_argument) noexcept
-{
-    auto& v = state.item(1);
-    v = v != 0 ? state.item(0) % v : 0;
-    state.stack.pop_back();
-}
-
-void op_smod(execution_state& state, instr_argument) noexcept
-{
-    auto& v = state.item(1);
-    v = v != 0 ? intx::sdivrem(state.item(0), v).rem : 0;
-    state.stack.pop_back();
-}
-
-void op_addmod(execution_state& state, instr_argument) noexcept
-{
-    using intx::uint512;
-    auto x = state.item(0);
-    auto y = state.item(1);
-    auto m = state.item(2);
-    state.stack.pop_back();
-    state.stack.pop_back();
-
-    state.item(0) = m != 0 ? ((uint512{x} + uint512{y}) % uint512{m}).lo : 0;
-}
-
-void op_mulmod(execution_state& state, instr_argument) noexcept
-{
-    using intx::uint512;
-    auto x = state.item(0);
-    auto y = state.item(1);
-    auto m = state.item(2);
-    state.stack.pop_back();
-    state.stack.pop_back();
-
-    state.item(0) = m != 0 ? ((uint512{x} * uint512{y}) % uint512{m}).lo : 0;
-}
-
-void op_exp(execution_state& state, instr_argument arg) noexcept
-{
-    auto base = state.item(0);
-    auto& exponent = state.item(1);
-
-    auto exponent_significant_bytes = intx::count_significant_words<uint8_t>(exponent);
-
-    auto additional_cost = exponent_significant_bytes * arg.number;
-    state.gas_left -= additional_cost;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
-
-    exponent = intx::exp(base, exponent);
-    state.stack.pop_back();
-}
-
-void op_signextend(execution_state& state, instr_argument) noexcept
-{
-    auto ext = state.item(0);
-    state.stack.pop_back();
-    auto& x = state.item(0);
-
-    if (ext < 31)
-    {
-        auto sign_bit = static_cast<int>(ext) * 8 + 7;
-        auto sign_mask = intx::uint256{1} << sign_bit;
-        // TODO: Fix intx operator- overloading: X - 1 does not work.
-        auto value_mask = sign_mask - intx::uint256{1};
-        auto is_neg = (x & sign_mask) != 0;
-        x = is_neg ? x | ~value_mask : x & value_mask;
-    }
-}
-
-void op_lt(execution_state& state, instr_argument) noexcept
-{
-    // OPT: Have single function implementing all comparisons.
-    state.item(1) = state.item(0) < state.item(1);
-    state.stack.pop_back();
-}
-
-void op_gt(execution_state& state, instr_argument) noexcept
-{
-    state.item(1) = state.item(1) < state.item(0);
-    state.stack.pop_back();
-}
-
-void op_slt(execution_state& state, instr_argument) noexcept
-{
-    auto x = state.item(0);
-    auto y = state.item(1);
-    auto x_neg = static_cast<bool>(x >> 255);
-    auto y_neg = static_cast<bool>(y >> 255);
-    state.item(1) = (x_neg ^ y_neg) ? x_neg : x < y;
-    state.stack.pop_back();
-}
-
-void op_sgt(execution_state& state, instr_argument) noexcept
-{
-    auto x = state.item(0);
-    auto y = state.item(1);
-    auto x_neg = static_cast<bool>(x >> 255);
-    auto y_neg = static_cast<bool>(y >> 255);
-    state.item(1) = (x_neg ^ y_neg) ? y_neg : y < x;
-    state.stack.pop_back();
-}
-
-void op_eq(execution_state& state, instr_argument) noexcept
-{
-    state.item(1) = state.item(0) == state.item(1);
-    state.stack.pop_back();
-}
-
-void op_iszero(execution_state& state, instr_argument) noexcept
-{
-    state.item(0) = state.item(0) == 0;
-}
-
-void op_and(execution_state& state, instr_argument) noexcept
-{
-    // TODO: Add operator&= to intx.
-    state.item(1) = state.item(0) & state.item(1);
-    state.stack.pop_back();
-}
-
-void op_or(execution_state& state, instr_argument) noexcept
-{
-    state.item(1) = state.item(0) | state.item(1);
-    state.stack.pop_back();
-}
-
-void op_xor(execution_state& state, instr_argument) noexcept
-{
-    state.item(1) = state.item(0) ^ state.item(1);
-    state.stack.pop_back();
-}
-
-void op_not(execution_state& state, instr_argument) noexcept
-{
-    state.item(0) = ~state.item(0);
-}
-
-void op_byte(execution_state& state, instr_argument) noexcept
-{
-    auto n = state.item(0);
-    auto& x = state.item(1);
-
-    if (31 < n)
-        x = 0;
     else
     {
-        auto sh = (31 - static_cast<unsigned>(n)) * 8;
-        auto y = x >> sh;
-        x = y & intx::uint256(0xff);  // TODO: Fix intx operator&.
+        return __builtin_clz(x);
     }
-
-    state.stack.pop_back();
 }
 
-void op_shl(execution_state& state, instr_argument) noexcept
+const void** interpret(
+    instruction* instructions, instruction** jumpdest_map, execution_state& state) noexcept
 {
-    // TODO: Use =<<.
-    state.item(1) = state.item(1) << state.item(0);
-    state.stack.pop_back();
-}
+    static const void* jump_tables[JUMP_TABLE_SIZE] = {
+        /* 0x00 */ &&op_stop_dest,
+        /* 0x01 */ &&op_add_dest,
+        /* 0x02 */ &&op_mul_dest,
+        /* 0x03 */ &&op_sub_dest,
+        /* 0x04 */ &&op_div_dest,
+        /* 0x05 */ &&op_sdiv_dest,
+        /* 0x06 */ &&op_mod_dest,
+        /* 0x07 */ &&op_smod_dest,
+        /* 0x08 */ &&op_addmod_dest,
+        /* 0x09 */ &&op_mulmod_dest,
+        /* 0x0a */ &&op_exp_dest,
+        /* 0x0b */ &&op_signextend_dest,
+        /* 0x0c */ &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        /* 0x10 */ &&op_lt_dest,
+        /* 0x11 */ &&op_gt_dest,
+        /* 0x12 */ &&op_slt_dest,
+        /* 0x13 */ &&op_sgt_dest,
+        /* 0x14 */ &&op_eq_dest,
+        /* 0x15 */ &&op_iszero_dest,
+        /* 0x16 */ &&op_and_dest,
+        /* 0x17 */ &&op_or_dest,
+        /* 0x18 */ &&op_xor_dest,
+        /* 0x19 */ &&op_not_dest,
+        /* 0x1a */ &&op_byte_dest,
+        /* 0x1b */ &&op_shl_dest,
+        /* 0x1c */ &&op_shr_dest,
+        /* 0x1d */ &&op_sar_dest,
+        /* 0x1e */ &&op_undefined_dest,
+        /* 0x1f */ &&op_undefined_dest,
+        /* 0x20 */ &&op_sha3_dest,
+        /* 0x21 */ &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        /* 0x30 */ &&op_address_dest,
+        /* 0x31 */ &&op_balance_dest,
+        /* 0x32 */ &&op_origin_dest,
+        /* 0x33 */ &&op_caller_dest,
+        /* 0x34 */ &&op_callvalue_dest,
+        /* 0x35 */ &&op_calldataload_dest,
+        /* 0x36 */ &&op_calldatasize_dest,
+        /* 0x37 */ &&op_calldatacopy_dest,
+        /* 0x38 */ &&op_codesize_dest,
+        /* 0x39 */ &&op_codecopy_dest,
+        /* 0x3a */ &&op_gasprice_dest,
+        /* 0x3b */ &&op_extcodesize_dest,
+        /* 0x3c */ &&op_extcodecopy_dest,
+        /* 0x3d */ &&op_returndatasize_dest,
+        /* 0x3e */ &&op_returndatacopy_dest,
+        /* 0x3f */ &&op_extcodehash_dest,
+        /* 0x40 */ &&op_blockhash_dest,
+        /* 0x41 */ &&op_coinbase_dest,
+        /* 0x42 */ &&op_timestamp_dest,
+        /* 0x43 */ &&op_number_dest,
+        /* 0x44 */ &&op_difficulty_dest,
+        /* 0x45 */ &&op_gaslimit_dest,
+        /* 0x46 */ &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        /* 0x50 */ &&op_pop_dest,
+        /* 0x51 */ &&op_mload_dest,
+        /* 0x52 */ &&op_mstore_dest,
+        /* 0x53 */ &&op_mstore8_dest,
+        /* 0x54 */ &&op_sload_dest,
+        /* 0x55 */ &&op_sstore_dest,
+        /* 0x56 */ &&op_jump_dest,
+        /* 0x57 */ &&op_jumpi_dest,
+        /* 0x58 */ &&op_pc_dest,
+        /* 0x59 */ &&op_msize_dest,
+        /* 0x5a */ &&op_gas_dest,
+        /* 0x5b */ &&op_jumpdest_dest,
+        /* 0x5c */ &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        /* 0x60 */ &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        &&op_push_dest,
+        /* 0x80 */ &&op_dup1_dest,
+        &&op_dup2_dest,
+        &&op_dup3_dest,
+        &&op_dup4_dest,
+        &&op_dup5_dest,
+        &&op_dup6_dest,
+        &&op_dup7_dest,
+        &&op_dup8_dest,
+        &&op_dup9_dest,
+        &&op_dup10_dest,
+        &&op_dup11_dest,
+        &&op_dup12_dest,
+        &&op_dup13_dest,
+        &&op_dup14_dest,
+        &&op_dup15_dest,
+        &&op_dup16_dest,
+        /* 0x90 */ &&op_swap1_dest,
+        &&op_swap2_dest,
+        &&op_swap3_dest,
+        &&op_swap4_dest,
+        &&op_swap5_dest,
+        &&op_swap6_dest,
+        &&op_swap7_dest,
+        &&op_swap8_dest,
+        &&op_swap9_dest,
+        &&op_swap10_dest,
+        &&op_swap11_dest,
+        &&op_swap12_dest,
+        &&op_swap13_dest,
+        &&op_swap14_dest,
+        &&op_swap15_dest,
+        &&op_swap16_dest,
+        /* 0xa0 */ &&op_log0_dest,
+        &&op_log1_dest,
+        &&op_log2_dest,
+        &&op_log3_dest,
+        &&op_log4_dest,
+        /* 0xa5 */ &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        /* 0xb5 */ &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        /* 0xc5 */ &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        /* 0xd5 */ &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        /* 0xe5 */ &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        /* 0xf0 */ &&op_create_dest,
+        /* 0xf1 */ &&op_call_dest,
+        /* 0xf2 */ &&op_callcode_dest,
+        /* 0xf3 */ &&op_return_dest,
+        /* 0xf4 */ &&op_delegatecall_dest,
+        /* 0xf5 */ &&op_create2_dest,
+        /* 0xf6 */ &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        &&op_undefined_dest,
+        /* 0xfa */ &&op_staticcall_dest,
+        /* 0xfb */ &&op_undefined_dest,
+        /* 0xfc */ &&op_undefined_dest,
+        /* 0xfd */ &&op_revert_dest,
+        /* 0xfe */ &&op_invalid_dest,
+        /* 0xff */ &&op_selfdestruct_dest,
+        /* 0x100 */ &&op_stop_dest_no_check,
+        /* 0x101 */ &&op_add_dest_no_check,
+        /* 0x102 */ &&op_mul_dest_no_check,
+        /* 0x103 */ &&op_sub_dest_no_check,
+        /* 0x104 */ &&op_div_dest_no_check,
+        /* 0x105 */ &&op_sdiv_dest_no_check,
+        /* 0x106 */ &&op_mod_dest_no_check,
+        /* 0x107 */ &&op_smod_dest_no_check,
+        /* 0x108 */ &&op_addmod_dest_no_check,
+        /* 0x109 */ &&op_mulmod_dest_no_check,
+        /* 0x10a */ &&op_exp_dest_no_check,
+        /* 0x10b */ &&op_signextend_dest_no_check,
+        /* 0x10c */ &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        /* 0x110 */ &&op_lt_dest_no_check,
+        /* 0x111 */ &&op_gt_dest_no_check,
+        /* 0x112 */ &&op_slt_dest_no_check,
+        /* 0x113 */ &&op_sgt_dest_no_check,
+        /* 0x114 */ &&op_eq_dest_no_check,
+        /* 0x115 */ &&op_iszero_dest_no_check,
+        /* 0x116 */ &&op_and_dest_no_check,
+        /* 0x117 */ &&op_or_dest_no_check,
+        /* 0x118 */ &&op_xor_dest_no_check,
+        /* 0x119 */ &&op_not_dest_no_check,
+        /* 0x11a */ &&op_byte_dest_no_check,
+        /* 0x11b */ &&op_shl_dest_no_check,
+        /* 0x11c */ &&op_shr_dest_no_check,
+        /* 0x11d */ &&op_sar_dest_no_check,
+        /* 0x11e */ &&op_undefined_dest_no_check,
+        /* 0x11f */ &&op_undefined_dest_no_check,
+        /* 0x120 */ &&op_sha3_dest_no_check,
+        /* 0x121 */ &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        /* 0x130 */ &&op_address_dest_no_check,
+        /* 0x131 */ &&op_balance_dest_no_check,
+        /* 0x132 */ &&op_origin_dest_no_check,
+        /* 0x133 */ &&op_caller_dest_no_check,
+        /* 0x134 */ &&op_callvalue_dest_no_check,
+        /* 0x135 */ &&op_calldataload_dest_no_check,
+        /* 0x136 */ &&op_calldatasize_dest_no_check,
+        /* 0x137 */ &&op_calldatacopy_dest_no_check,
+        /* 0x138 */ &&op_codesize_dest_no_check,
+        /* 0x139 */ &&op_codecopy_dest_no_check,
+        /* 0x13a */ &&op_gasprice_dest_no_check,
+        /* 0x13b */ &&op_extcodesize_dest_no_check,
+        /* 0x13c */ &&op_extcodecopy_dest_no_check,
+        /* 0x13d */ &&op_returndatasize_dest_no_check,
+        /* 0x13e */ &&op_returndatacopy_dest_no_check,
+        /* 0x13f */ &&op_extcodehash_dest_no_check,
+        /* 0x140 */ &&op_blockhash_dest_no_check,
+        /* 0x141 */ &&op_coinbase_dest_no_check,
+        /* 0x142 */ &&op_timestamp_dest_no_check,
+        /* 0x143 */ &&op_number_dest_no_check,
+        /* 0x144 */ &&op_difficulty_dest_no_check,
+        /* 0x145 */ &&op_gaslimit_dest_no_check,
+        /* 0x146 */ &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        /* 0x150 */ &&op_pop_dest_no_check,
+        /* 0x151 */ &&op_mload_dest_no_check,
+        /* 0x152 */ &&op_mstore_dest_no_check,
+        /* 0x153 */ &&op_mstore8_dest_no_check,
+        /* 0x154 */ &&op_sload_dest_no_check,
+        /* 0x155 */ &&op_sstore_dest_no_check,
+        /* 0x156 */ &&op_jump_dest_no_check,
+        /* 0x157 */ &&op_jumpi_dest_no_check,
+        /* 0x158 */ &&op_pc_dest_no_check,
+        /* 0x159 */ &&op_msize_dest_no_check,
+        /* 0x15a */ &&op_gas_dest_no_check,
+        /* 0x15b */ &&op_jumpdest_dest_no_check,
+        /* 0x15c */ &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        /* 0x160 */ &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        &&op_push_dest_no_check,
+        /* 0x180 */ &&op_dup1_dest_no_check,
+        &&op_dup2_dest_no_check,
+        &&op_dup3_dest_no_check,
+        &&op_dup4_dest_no_check,
+        &&op_dup5_dest_no_check,
+        &&op_dup6_dest_no_check,
+        &&op_dup7_dest_no_check,
+        &&op_dup8_dest_no_check,
+        &&op_dup9_dest_no_check,
+        &&op_dup10_dest_no_check,
+        &&op_dup11_dest_no_check,
+        &&op_dup12_dest_no_check,
+        &&op_dup13_dest_no_check,
+        &&op_dup14_dest_no_check,
+        &&op_dup15_dest_no_check,
+        &&op_dup16_dest_no_check,
+        /* 0x190 */ &&op_swap1_dest_no_check,
+        &&op_swap2_dest_no_check,
+        &&op_swap3_dest_no_check,
+        &&op_swap4_dest_no_check,
+        &&op_swap5_dest_no_check,
+        &&op_swap6_dest_no_check,
+        &&op_swap7_dest_no_check,
+        &&op_swap8_dest_no_check,
+        &&op_swap9_dest_no_check,
+        &&op_swap10_dest_no_check,
+        &&op_swap11_dest_no_check,
+        &&op_swap12_dest_no_check,
+        &&op_swap13_dest_no_check,
+        &&op_swap14_dest_no_check,
+        &&op_swap15_dest_no_check,
+        &&op_swap16_dest_no_check,
+        /* 0x1a0 */ &&op_log0_dest_no_check,
+        &&op_log1_dest_no_check,
+        &&op_log2_dest_no_check,
+        &&op_log3_dest_no_check,
+        &&op_log4_dest_no_check,
+        /* 0x1a5 */ &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        /* 0x1b5 */ &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        /* 0x1c5 */ &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        /* 0x1d5 */ &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        /* 0x1e5 */ &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        /* 0x1f0 */ &&op_create_dest_no_check,
+        /* 0x1f1 */ &&op_call_dest_no_check,
+        /* 0x1f2 */ &&op_callcode_dest_no_check,
+        /* 0x1f3 */ &&op_return_dest_no_check,
+        /* 0x1f4 */ &&op_delegatecall_dest_no_check,
+        /* 0x1f5 */ &&op_create2_dest_no_check,
+        /* 0x1f6 */ &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        &&op_undefined_dest_no_check,
+        /* 0x1fa */ &&op_staticcall_dest_no_check,
+        /* 0x1fb */ &&op_undefined_dest_no_check,
+        /* 0x1fc */ &&op_undefined_dest_no_check,
+        /* 0x1fd */ &&op_revert_dest_no_check,
+        /* 0x1fe */ &&op_invalid_dest_no_check,
+        /* 0x1ff */ &&op_selfdestruct_dest_no_check,
+        /* 0x200 */ &&op_staticviolation_dest,
+    };
 
-void op_shr(execution_state& state, instr_argument) noexcept
-{
-    // TODO: Use =>>.
-    state.item(1) = state.item(1) >> state.item(0);
-    state.stack.pop_back();
-}
-
-void op_sar(execution_state& state, instr_argument arg) noexcept
-{
-    // TODO: Fix explicit conversion to bool in intx.
-    if ((state.item(1) & (intx::uint256{1} << 255)) == 0)
-        return op_shr(state, arg);
-
-    constexpr auto allones = ~uint256{};
-
-    if (state.item(0) >= 256)
-        state.item(1) = allones;
-    else
+    // If we haven't computed our jump labels yet, return our jump tables.
+    // Bit of an ugly hack to get a pointer to jump_tables that we can work with
+    if (instructions == nullptr)
     {
-        const auto shift = static_cast<unsigned>(state.item(0));
-        state.item(1) = (state.item(1) >> shift) | (allones << (256 - shift));
-    }
+        return jump_tables;
+    };
 
-    state.stack.pop_back();
-}
-
-void op_sha3(execution_state& state, instr_argument) noexcept
-{
-    auto index = state.item(0);
-    auto size = state.item(1);
-
-    if (!check_memory(state, index, size))
-        return;
-
-    auto i = static_cast<size_t>(index);
-    auto s = static_cast<size_t>(size);
-    auto w = (static_cast<int64_t>(s) + 31) / 32;
-    auto cost = w * 6;
-    state.gas_left -= cost;
-    if (state.gas_left < 0)
+    // This really shouldn't happen, but in case we cannot allocate enough memory, throw an error
+    if (state.memory == nullptr)
     {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
+        state.status = EVMC_REJECTED;
+        state.next_instruction = state.stop_instruction;
     }
 
-    auto h = ethash::keccak256(&state.memory[i], s);
-
-    state.stack.pop_back();
-    state.item(0) = intx::be::uint256(h.bytes);
-}
-
-void op_address(execution_state& state, instr_argument) noexcept
-{
-    // TODO: Might be generalized using pointers to class member.
-    uint8_t data[32] = {};
-    std::memcpy(&data[12], state.msg->destination.bytes, sizeof(state.msg->destination));
-    auto a = intx::be::uint256(data);
-    state.stack.push_back(a);
-}
-
-void op_balance(execution_state& state, instr_argument) noexcept
-{
-    auto& x = state.item(0);
-    uint8_t data[32];
-    intx::be::store(data, x);
-    evmc_address addr;
-    std::memcpy(addr.bytes, &data[12], sizeof(addr));
-    x = intx::be::uint256(state.host->host->get_balance(state.host, &addr).bytes);
-}
-
-void op_origin(execution_state& state, instr_argument) noexcept
-{
-    if (state.tx_context.block_timestamp == 0)
-        state.tx_context = state.host->host->get_tx_context(state.host);
-    uint8_t data[32] = {};
-    std::memcpy(&data[12], state.tx_context.tx_origin.bytes, sizeof(state.tx_context.tx_origin));
-    auto x = intx::be::uint256(data);
-    state.stack.push_back(x);
-}
-
-void op_caller(execution_state& state, instr_argument) noexcept
-{
-    // TODO: Might be generalized using pointers to class member.
-    uint8_t data[32] = {};
-    std::memcpy(&data[12], state.msg->sender.bytes, sizeof(state.msg->sender));
-    auto a = intx::be::uint256(data);
-    state.stack.push_back(a);
-}
-
-void op_callvalue(execution_state& state, instr_argument) noexcept
-{
-    auto a = intx::be::uint256(state.msg->value.bytes);
-    state.stack.push_back(a);
-}
-
-void op_calldataload(execution_state& state, instr_argument) noexcept
-{
-    auto& index = state.item(0);
-
-    if (state.msg->input_size < index)
-        index = 0;
-    else
-    {
-        const auto begin = static_cast<size_t>(index);
-        const auto end = std::min(begin + 32, state.msg->input_size);
-
-        uint8_t data[32] = {};
-        for (size_t i = 0; i < (end - begin); ++i)
-            data[i] = state.msg->input_data[begin + i];
-
-        index = intx::be::uint256(data);
-    }
-}
-
-void op_calldatasize(execution_state& state, instr_argument) noexcept
-{
-    auto s = intx::uint256{state.msg->input_size};
-    state.stack.push_back(s);
-}
-
-void op_calldatacopy(execution_state& state, instr_argument) noexcept
-{
-    auto mem_index = state.item(0);
-    auto input_index = state.item(1);
-    auto size = state.item(2);
-
-    if (!check_memory(state, mem_index, size))
-        return;
-
-    auto dst = static_cast<size_t>(mem_index);
-    auto src = state.msg->input_size < input_index ? state.msg->input_size :
-                                                     static_cast<size_t>(input_index);
-    auto s = static_cast<size_t>(size);
-    auto copy_size = std::min(s, state.msg->input_size - src);
-
-    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
-    state.gas_left -= copy_cost;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
-
-    std::memcpy(&state.memory[dst], &state.msg->input_data[src], copy_size);
-    std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-}
-
-void op_codesize(execution_state& state, instr_argument) noexcept
-{
-    auto s = intx::uint256{state.code_size};
-    state.stack.push_back(s);
-}
-
-void op_codecopy(execution_state& state, instr_argument) noexcept
-{
-    auto mem_index = state.item(0);
-    auto input_index = state.item(1);
-    auto size = state.item(2);
-
-    if (!check_memory(state, mem_index, size))
-        return;
-
-    auto dst = static_cast<size_t>(mem_index);
-    auto src = state.code_size < input_index ? state.code_size : static_cast<size_t>(input_index);
-    auto s = static_cast<size_t>(size);
-    auto copy_size = std::min(s, state.code_size - src);
-
-    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
-    state.gas_left -= copy_cost;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
-
-    std::memcpy(&state.memory[dst], &state.code[src], copy_size);
-    std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-}
-
-void op_mload(execution_state& state, instr_argument) noexcept
-{
-    auto& index = state.item(0);
-
-    if (!check_memory(state, index, 32))
-        return;
-
-    index = intx::be::uint256(&state.memory[static_cast<size_t>(index)]);
-}
-
-void op_mstore(execution_state& state, instr_argument) noexcept
-{
-    auto index = state.item(0);
-    auto x = state.item(1);
-
-    if (!check_memory(state, index, 32))
-        return;
-
-    intx::be::store(&state.memory[static_cast<size_t>(index)], x);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-}
-
-void op_mstore8(execution_state& state, instr_argument) noexcept
-{
-    auto index = state.item(0);
-    auto x = state.item(1);
-
-    if (!check_memory(state, index, 1))
-        return;
-
-    state.memory[static_cast<size_t>(index)] = static_cast<uint8_t>(x);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-}
-
-void op_sload(execution_state& state, instr_argument) noexcept
-{
-    auto& x = state.item(0);
-    evmc_bytes32 key;
-    intx::be::store(key.bytes, x);
-    x = intx::be::uint256(
-        state.host->host->get_storage(state.host, &state.msg->destination, &key).bytes);
-}
-
-void op_sstore(execution_state& state, instr_argument arg) noexcept
-{
-    if (state.msg->flags & EVMC_STATIC)
-    {
-        // TODO: Implement static mode violation in analysis.
-        state.run = false;
-        state.status = EVMC_STATIC_MODE_VIOLATION;
-        return;
-    }
-
-    evmc_bytes32 key;
-    evmc_bytes32 value;
-    intx::be::store(key.bytes, state.item(0));
-    intx::be::store(value.bytes, state.item(1));
-    state.stack.pop_back();
-    state.stack.pop_back();
-    auto status = state.host->host->set_storage(state.host, &state.msg->destination, &key, &value);
-    auto rev = static_cast<evmc_revision>(arg.number);
-    int cost = 0;
-    switch (status)
-    {
-    case EVMC_STORAGE_UNCHANGED:
-        cost = rev == EVMC_CONSTANTINOPLE ? 200 : 5000;
-        break;
-    case EVMC_STORAGE_MODIFIED:
-        cost = 5000;
-        break;
-    case EVMC_STORAGE_MODIFIED_AGAIN:
-        cost = rev == EVMC_CONSTANTINOPLE ? 200 : 5000;
-        break;
-    case EVMC_STORAGE_ADDED:
-        cost = 20000;
-        break;
-    case EVMC_STORAGE_DELETED:
-        cost = 5000;
-        break;
-    }
-    state.gas_left -= cost;
-    if (state.gas_left < 0)
-    {
-        state.status = EVMC_OUT_OF_GAS;
-        state.run = false;
-    }
-}
-
-void op_jump(execution_state& state, instr_argument) noexcept
-{
-    auto dst = state.item(0);
-    int pc = -1;
-    if (std::numeric_limits<int>::max() < dst ||
-        (pc = state.analysis->find_jumpdest(static_cast<int>(dst))) < 0)
-    {
-        state.run = false;
-        state.status = EVMC_BAD_JUMP_DESTINATION;
-        return;
-    }
-
-    state.pc = static_cast<size_t>(pc);
-    state.stack.pop_back();
-}
-
-void op_jumpi(execution_state& state, instr_argument) noexcept
-{
-    auto condition = state.item(1);
-    if (condition != 0)
-    {
-        // TODO: Call op_jump here.
-        auto dst = state.item(0);
-        int pc = -1;
-        if (std::numeric_limits<int>::max() < dst ||
-            (pc = state.analysis->find_jumpdest(static_cast<int>(dst))) < 0)
-        {
-            state.run = false;
-            state.status = EVMC_BAD_JUMP_DESTINATION;
-            return;
-        }
-        state.pc = static_cast<size_t>(pc);
-    }
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-}
-
-void op_pc(execution_state& state, instr_argument arg) noexcept
-{
-    // TODO: Using temporary object does not work with push_back().
-    intx::uint256 size = arg.number;
-    state.stack.push_back(size);
-}
-
-void op_msize(execution_state& state, instr_argument) noexcept
-{
-    // TODO: Using temporary object does not work with push_back().
-    intx::uint256 size = state.memory.size();
-    state.stack.push_back(size);
-}
-
-void op_gas(execution_state& state, instr_argument arg) noexcept
-{
-    auto correction = state.current_block_cost - arg.number;
-    intx::uint256 gas = static_cast<uint64_t>(state.gas_left + correction);
-    state.stack.push_back(gas);
-}
-
-void op_jumpdest(execution_state&, instr_argument) noexcept
-{
-    // OPT: We can skip JUMPDEST instruction in analysis.
-}
-
-void op_gasprice(execution_state& state, instr_argument) noexcept
-{
-    if (state.tx_context.block_timestamp == 0)
-        state.tx_context = state.host->host->get_tx_context(state.host);
-    auto x = intx::be::uint256(state.tx_context.tx_gas_price.bytes);
-    state.stack.push_back(x);
-}
-
-void op_extcodesize(execution_state& state, instr_argument) noexcept
-{
-    auto& x = state.item(0);
-    uint8_t data[32];
-    intx::be::store(data, x);
-    evmc_address addr;
-    std::memcpy(addr.bytes, &data[12], sizeof(addr));
-    x = state.host->host->get_code_size(state.host, &addr);
-}
-
-void op_extcodecopy(execution_state& state, instr_argument) noexcept
-{
-    auto addr_data = state.item(0);
-    auto mem_index = state.item(1);
-    auto input_index = state.item(2);
-    auto size = state.item(3);
-
-    if (!check_memory(state, mem_index, size))
-        return;
-
-    auto dst = static_cast<size_t>(mem_index);
-    // FIXME: Bug, it should not use state.code_size;
-    auto src = state.code_size < input_index ? state.code_size : static_cast<size_t>(input_index);
-    auto s = static_cast<size_t>(size);
-
-    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
-    state.gas_left -= copy_cost;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
-
-    uint8_t data[32];
-    intx::be::store(data, addr_data);
-    evmc_address addr;
-    std::memcpy(addr.bytes, &data[12], sizeof(addr));
-
-    auto num_bytes_copied =
-        state.host->host->copy_code(state.host, &addr, src, &state.memory[dst], s);
-
-    std::memset(&state.memory[dst + num_bytes_copied], 0, s - num_bytes_copied);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-}
-
-void op_returndatasize(execution_state& state, instr_argument) noexcept
-{
-    state.stack.emplace_back(state.return_data.size());
-}
-
-void op_returndatacopy(execution_state& state, instr_argument) noexcept
-{
-    auto mem_index = state.item(0);
-    auto input_index = state.item(1);
-    auto size = state.item(2);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-
-    if (!check_memory(state, mem_index, size))
-        return;
-
-    auto dst = static_cast<size_t>(mem_index);
-    auto s = static_cast<size_t>(size);
-
-    if (state.return_data.size() < input_index)
-    {
-        state.run = false;
-        state.status = EVMC_INVALID_MEMORY_ACCESS;
-        return;
-    }
-    auto src = static_cast<size_t>(input_index);
-
-    if (src + s > state.return_data.size())
-    {
-        state.run = false;
-        state.status = EVMC_INVALID_MEMORY_ACCESS;
-        return;
-    }
-
-    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
-    state.gas_left -= copy_cost;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
-
-    std::memcpy(&state.memory[dst], &state.return_data[src], s);
-}
-
-void op_extcodehash(execution_state& state, instr_argument) noexcept
-{
-    auto& x = state.item(0);
-    uint8_t data[32];
-    intx::be::store(data, x);
-    evmc_address addr;
-    std::memcpy(addr.bytes, &data[12], sizeof(addr));
-    x = intx::be::uint256(state.host->host->get_code_hash(state.host, &addr).bytes);
-}
-
-void op_blockhash(execution_state& state, instr_argument) noexcept
-{
-    auto& number = state.item(0);
-
-    // Load transaction context.
-    if (state.tx_context.block_timestamp == 0)
-        state.tx_context = state.host->host->get_tx_context(state.host);
-
-    auto upper_bound = state.tx_context.block_number;
-    auto lower_bound = std::max(upper_bound - 256, decltype(upper_bound){0});
-    auto n = static_cast<int64_t>(number);
-    auto header = evmc_bytes32{};
-    if (number < upper_bound && n >= lower_bound)
-        header = state.host->host->get_block_hash(state.host, n);
-    number = intx::be::uint256(header.bytes);
-}
-
-void op_coinbase(execution_state& state, instr_argument) noexcept
-{
-    if (state.tx_context.block_timestamp == 0)
-        state.tx_context = state.host->host->get_tx_context(state.host);
-    uint8_t data[32] = {};
-    std::memcpy(
-        &data[12], state.tx_context.block_coinbase.bytes, sizeof(state.tx_context.block_coinbase));
-    auto x = intx::be::uint256(data);
-    state.stack.push_back(x);
-}
-
-void op_timestamp(execution_state& state, instr_argument) noexcept
-{
-    // TODO: Extract lazy tx context fetch.
-    if (state.tx_context.block_timestamp == 0)
-        state.tx_context = state.host->host->get_tx_context(state.host);
-    auto x = intx::uint256{static_cast<uint64_t>(state.tx_context.block_timestamp)};
-    state.stack.push_back(x);
-}
-
-void op_number(execution_state& state, instr_argument) noexcept
-{
-    if (state.tx_context.block_timestamp == 0)
-        state.tx_context = state.host->host->get_tx_context(state.host);
-    auto x = intx::uint256{static_cast<uint64_t>(state.tx_context.block_number)};
-    state.stack.push_back(x);
-}
-
-void op_difficulty(execution_state& state, instr_argument) noexcept
-{
-    if (state.tx_context.block_timestamp == 0)
-        state.tx_context = state.host->host->get_tx_context(state.host);
-    auto x = intx::be::uint256(state.tx_context.block_difficulty.bytes);
-    state.stack.push_back(x);
-}
-
-void op_gaslimit(execution_state& state, instr_argument) noexcept
-{
-    if (state.tx_context.block_timestamp == 0)
-        state.tx_context = state.host->host->get_tx_context(state.host);
-    auto x = intx::uint256{static_cast<uint64_t>(state.tx_context.block_gas_limit)};
-    state.stack.push_back(x);
-}
-
-void op_push_full(execution_state& state, instr_argument arg) noexcept
-{
-    // OPT: For smaller pushes, use pointer data directly.
-    auto x = intx::be::uint256(arg.data);
-    state.stack.push_back(x);
-}
-
-void op_pop(execution_state& state, instr_argument) noexcept
-{
-    state.stack.pop_back();
-}
-
-void op_dup(execution_state& state, instr_argument arg) noexcept
-{
-    state.stack.push_back(state.item(static_cast<size_t>(arg.number)));
-}
-
-void op_swap(execution_state& state, instr_argument arg) noexcept
-{
-    std::swap(state.item(0), state.item(static_cast<size_t>(arg.number)));
-}
-
-void op_log(execution_state& state, instr_argument arg) noexcept
-{
-    if (state.msg->flags & EVMC_STATIC)
-    {
-        // TODO: Implement static mode violation in analysis.
-        state.run = false;
-        state.status = EVMC_STATIC_MODE_VIOLATION;
-        return;
-    }
-
-    auto offset = state.item(0);
-    auto size = state.item(1);
-
-    if (!check_memory(state, offset, size))
-        return;
-
-    auto o = static_cast<size_t>(offset);
-    auto s = static_cast<size_t>(size);
-
-    auto cost = int64_t{8} * s;
-    state.gas_left -= cost;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-    }
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-
-    std::array<evmc_bytes32, 4> topics;
-    for (auto i = 0; i < arg.number; ++i)
-    {
-        intx::be::store(topics[i].bytes, state.item(0));
-        state.stack.pop_back();
-    }
-
-    state.host->host->emit_log(state.host, &state.msg->destination, &state.memory[o], s,
-        topics.data(), static_cast<size_t>(arg.number));
-}
-
-void op_invalid(execution_state& state, instr_argument) noexcept
-{
-    state.run = false;
+    // begin direct threaded interpretation!
+    goto **(void**)state.next_instruction;
+
+op_add_dest:
+    CHECK_BLOCK();
+op_add_dest_no_check:
+    op_add(state);
+    DISPATCH();
+
+op_mul_dest:
+    CHECK_BLOCK();
+op_mul_dest_no_check:
+    op_mul(state);
+    DISPATCH();
+
+op_sub_dest:
+    CHECK_BLOCK();
+op_sub_dest_no_check:
+    op_sub(state);
+    DISPATCH();
+
+op_div_dest:
+    CHECK_BLOCK();
+op_div_dest_no_check:
+    op_div(state);
+    DISPATCH();
+
+op_sdiv_dest:
+    CHECK_BLOCK();
+op_sdiv_dest_no_check:
+    op_sdiv(state);
+    DISPATCH();
+
+op_mod_dest:
+    CHECK_BLOCK();
+op_mod_dest_no_check:
+    op_mod(state);
+    DISPATCH();
+
+op_smod_dest:
+    CHECK_BLOCK();
+op_smod_dest_no_check:
+    op_smod(state);
+    DISPATCH();
+
+op_addmod_dest:
+    CHECK_BLOCK();
+op_addmod_dest_no_check:
+    op_addmod(state);
+    DISPATCH();
+
+op_mulmod_dest:
+    CHECK_BLOCK();
+op_mulmod_dest_no_check:
+    op_mulmod(state);
+    DISPATCH();
+
+op_exp_dest:
+    CHECK_BLOCK();
+op_exp_dest_no_check:
+    op_exp(state);
+    DISPATCH();
+
+op_signextend_dest:
+    CHECK_BLOCK();
+op_signextend_dest_no_check:
+    op_signextend(state);
+    DISPATCH();
+
+op_lt_dest:
+    CHECK_BLOCK();
+op_lt_dest_no_check:
+    op_lt(state);
+    DISPATCH();
+
+op_gt_dest:
+    CHECK_BLOCK();
+op_gt_dest_no_check:
+    op_gt(state);
+    DISPATCH();
+
+op_slt_dest:
+    CHECK_BLOCK();
+op_slt_dest_no_check:
+    op_slt(state);
+    DISPATCH();
+
+op_sgt_dest:
+    CHECK_BLOCK();
+op_sgt_dest_no_check:
+    op_sgt(state);
+    DISPATCH();
+
+op_eq_dest:
+    CHECK_BLOCK();
+op_eq_dest_no_check:
+    op_eq(state);
+    DISPATCH();
+
+op_iszero_dest:
+    CHECK_BLOCK();
+op_iszero_dest_no_check:
+    op_iszero(state);
+    DISPATCH();
+
+op_and_dest:
+    CHECK_BLOCK();
+op_and_dest_no_check:
+    op_and(state);
+    DISPATCH();
+
+op_or_dest:
+    CHECK_BLOCK();
+op_or_dest_no_check:
+    op_or(state);
+    DISPATCH();
+
+op_xor_dest:
+    CHECK_BLOCK();
+op_xor_dest_no_check:
+    op_xor(state);
+    DISPATCH();
+
+op_not_dest:
+    CHECK_BLOCK();
+op_not_dest_no_check:
+    op_not(state);
+    DISPATCH();
+
+op_byte_dest:
+    CHECK_BLOCK();
+op_byte_dest_no_check:
+    op_byte(state);
+    DISPATCH();
+
+op_shl_dest:
+    CHECK_BLOCK();
+op_shl_dest_no_check:
+    op_shl(state);
+    DISPATCH();
+
+op_shr_dest:
+    CHECK_BLOCK();
+op_shr_dest_no_check:
+    op_shr(state);
+    DISPATCH();
+
+op_sar_dest:
+    CHECK_BLOCK();
+op_sar_dest_no_check:
+    op_sar(state);
+    DISPATCH();
+
+op_sha3_dest:
+    CHECK_BLOCK();
+op_sha3_dest_no_check:
+    op_sha3(state);
+    DISPATCH();
+
+op_address_dest:
+    CHECK_BLOCK();
+op_address_dest_no_check:
+    op_address(state);
+    DISPATCH();
+
+op_balance_dest:
+    CHECK_BLOCK();
+op_balance_dest_no_check:
+    op_balance(state);
+    DISPATCH();
+
+op_origin_dest:
+    CHECK_BLOCK();
+op_origin_dest_no_check:
+    op_origin(state);
+    DISPATCH();
+
+op_caller_dest:
+    CHECK_BLOCK();
+op_caller_dest_no_check:
+    op_caller(state);
+    DISPATCH();
+
+op_callvalue_dest:
+    CHECK_BLOCK();
+op_callvalue_dest_no_check:
+    op_callvalue(state);
+    DISPATCH();
+
+op_calldataload_dest:
+    CHECK_BLOCK();
+op_calldataload_dest_no_check:
+    op_calldataload(state);
+    DISPATCH();
+
+op_calldatasize_dest:
+    CHECK_BLOCK();
+op_calldatasize_dest_no_check:
+    op_calldatasize(state);
+    DISPATCH();
+
+op_calldatacopy_dest:
+    CHECK_BLOCK();
+op_calldatacopy_dest_no_check:
+    op_calldatacopy(state);
+    DISPATCH();
+
+op_codesize_dest:
+    CHECK_BLOCK();
+op_codesize_dest_no_check:
+    op_codesize(state);
+    DISPATCH();
+
+op_codecopy_dest:
+    CHECK_BLOCK();
+op_codecopy_dest_no_check:
+    op_codecopy(state);
+    DISPATCH();
+
+op_gasprice_dest:
+    CHECK_BLOCK();
+op_gasprice_dest_no_check:
+    op_gasprice(state);
+    DISPATCH();
+
+op_extcodesize_dest:
+    CHECK_BLOCK();
+op_extcodesize_dest_no_check:
+    op_extcodesize(state);
+    DISPATCH();
+
+op_extcodecopy_dest:
+    CHECK_BLOCK();
+op_extcodecopy_dest_no_check:
+    op_extcodecopy(state);
+    DISPATCH();
+
+op_returndatasize_dest:
+    CHECK_BLOCK();
+op_returndatasize_dest_no_check:
+    op_returndatasize(state);
+    DISPATCH();
+
+op_returndatacopy_dest:
+    CHECK_BLOCK();
+op_returndatacopy_dest_no_check:
+    op_returndatacopy(state);
+    DISPATCH();
+
+op_extcodehash_dest:
+    CHECK_BLOCK();
+op_extcodehash_dest_no_check:
+    op_extcodehash(state);
+    DISPATCH();
+
+op_blockhash_dest:
+    CHECK_BLOCK();
+op_blockhash_dest_no_check:
+    op_blockhash(state);
+    DISPATCH();
+
+op_coinbase_dest:
+    CHECK_BLOCK();
+op_coinbase_dest_no_check:
+    op_coinbase(state);
+    DISPATCH();
+
+op_timestamp_dest:
+    CHECK_BLOCK();
+op_timestamp_dest_no_check:
+    op_timestamp(state);
+    DISPATCH();
+
+op_number_dest:
+    CHECK_BLOCK();
+op_number_dest_no_check:
+    op_number(state);
+    DISPATCH();
+
+op_difficulty_dest:
+    CHECK_BLOCK();
+op_difficulty_dest_no_check:
+    op_difficulty(state);
+    DISPATCH();
+
+op_gaslimit_dest:
+    CHECK_BLOCK();
+op_gaslimit_dest_no_check:
+    op_gaslimit(state);
+    DISPATCH();
+
+op_pop_dest:
+    CHECK_BLOCK();
+op_pop_dest_no_check:
+    op_pop(state);
+    DISPATCH();
+
+op_mload_dest:
+    CHECK_BLOCK();
+op_mload_dest_no_check:
+    op_mload(state);
+    DISPATCH();
+
+op_mstore_dest:
+    CHECK_BLOCK();
+op_mstore_dest_no_check:
+    op_mstore(state);
+    DISPATCH();
+
+op_mstore8_dest:
+    CHECK_BLOCK();
+op_mstore8_dest_no_check:
+    op_mstore8(state);
+    DISPATCH();
+
+op_sload_dest:
+    CHECK_BLOCK();
+op_sload_dest_no_check:
+    op_sload(state);
+    DISPATCH();
+
+op_sstore_dest:
+    CHECK_BLOCK();
+op_sstore_dest_no_check:
+    op_sstore(state);
+    DISPATCH();
+
+op_jump_dest:
+    CHECK_BLOCK();
+op_jump_dest_no_check:
+    op_jump(state, jumpdest_map);
+    DISPATCH();
+
+op_jumpi_dest:
+    CHECK_BLOCK();
+op_jumpi_dest_no_check:
+    op_jumpi(state, jumpdest_map);
+    DISPATCH();
+
+op_pc_dest:
+    CHECK_BLOCK();
+op_pc_dest_no_check:
+    op_pc(state);
+    DISPATCH();
+
+op_msize_dest:
+    CHECK_BLOCK();
+op_msize_dest_no_check:
+    op_msize(state);
+    DISPATCH();
+
+op_gas_dest:
+    CHECK_BLOCK();
+op_gas_dest_no_check:
+    op_gas(state);
+    DISPATCH();
+
+op_jumpdest_dest:
+    CHECK_BLOCK();
+op_jumpdest_dest_no_check:
+    op_jumpdest(state);
+    DISPATCH();
+
+
+/**
+ * push
+ **/
+op_push_dest:
+    CHECK_BLOCK();
+op_push_dest_no_check:
+    op_push(state);
+    DISPATCH();
+
+
+/**
+ * dup
+ **/
+op_dup1_dest:
+    CHECK_BLOCK();
+op_dup1_dest_no_check:
+    op_dup1(state);
+    DISPATCH();
+
+op_dup2_dest:
+    CHECK_BLOCK();
+op_dup2_dest_no_check:
+    op_dup2(state);
+    DISPATCH();
+
+op_dup3_dest:
+    CHECK_BLOCK();
+op_dup3_dest_no_check:
+    op_dup3(state);
+    DISPATCH();
+
+op_dup4_dest:
+    CHECK_BLOCK();
+op_dup4_dest_no_check:
+    op_dup4(state);
+    DISPATCH();
+
+op_dup5_dest:
+    CHECK_BLOCK();
+op_dup5_dest_no_check:
+    op_dup5(state);
+    DISPATCH();
+
+op_dup6_dest:
+    CHECK_BLOCK();
+op_dup6_dest_no_check:
+    op_dup6(state);
+    DISPATCH();
+
+op_dup7_dest:
+    CHECK_BLOCK();
+op_dup7_dest_no_check:
+    op_dup7(state);
+    DISPATCH();
+
+op_dup8_dest:
+    CHECK_BLOCK();
+op_dup8_dest_no_check:
+    op_dup8(state);
+    DISPATCH();
+
+op_dup9_dest:
+    CHECK_BLOCK();
+op_dup9_dest_no_check:
+    op_dup9(state);
+    DISPATCH();
+
+op_dup10_dest:
+    CHECK_BLOCK();
+op_dup10_dest_no_check:
+    op_dup10(state);
+    DISPATCH();
+
+op_dup11_dest:
+    CHECK_BLOCK();
+op_dup11_dest_no_check:
+    op_dup11(state);
+    DISPATCH();
+
+op_dup12_dest:
+    CHECK_BLOCK();
+op_dup12_dest_no_check:
+    op_dup12(state);
+    DISPATCH();
+
+
+op_dup13_dest:
+    CHECK_BLOCK();
+op_dup13_dest_no_check:
+    op_dup13(state);
+    DISPATCH();
+
+op_dup14_dest:
+    CHECK_BLOCK();
+op_dup14_dest_no_check:
+    op_dup14(state);
+    DISPATCH();
+
+op_dup15_dest:
+    CHECK_BLOCK();
+op_dup15_dest_no_check:
+    op_dup15(state);
+    DISPATCH();
+
+op_dup16_dest:
+    CHECK_BLOCK();
+op_dup16_dest_no_check:
+    op_dup16(state);
+    DISPATCH();
+
+
+/**
+ * swap
+ **/
+op_swap1_dest:
+    CHECK_BLOCK();
+op_swap1_dest_no_check:
+    op_swap1(state);
+    DISPATCH();
+
+op_swap2_dest:
+    CHECK_BLOCK();
+op_swap2_dest_no_check:
+    op_swap2(state);
+    DISPATCH();
+
+op_swap3_dest:
+    CHECK_BLOCK();
+op_swap3_dest_no_check:
+    op_swap3(state);
+    DISPATCH();
+
+op_swap4_dest:
+    CHECK_BLOCK();
+op_swap4_dest_no_check:
+    op_swap4(state);
+    DISPATCH();
+
+op_swap5_dest:
+    CHECK_BLOCK();
+op_swap5_dest_no_check:
+    op_swap5(state);
+    DISPATCH();
+
+op_swap6_dest:
+    CHECK_BLOCK();
+op_swap6_dest_no_check:
+    op_swap6(state);
+    DISPATCH();
+
+op_swap7_dest:
+    CHECK_BLOCK();
+op_swap7_dest_no_check:
+    op_swap7(state);
+    DISPATCH();
+
+op_swap8_dest:
+    CHECK_BLOCK();
+op_swap8_dest_no_check:
+    op_swap8(state);
+    DISPATCH();
+
+op_swap9_dest:
+    CHECK_BLOCK();
+op_swap9_dest_no_check:
+    op_swap9(state);
+    DISPATCH();
+
+op_swap10_dest:
+    CHECK_BLOCK();
+op_swap10_dest_no_check:
+    op_swap10(state);
+    DISPATCH();
+
+op_swap11_dest:
+    CHECK_BLOCK();
+op_swap11_dest_no_check:
+    op_swap11(state);
+    DISPATCH();
+
+op_swap12_dest:
+    CHECK_BLOCK();
+op_swap12_dest_no_check:
+    op_swap12(state);
+    DISPATCH();
+
+op_swap13_dest:
+    CHECK_BLOCK();
+op_swap13_dest_no_check:
+    op_swap13(state);
+    DISPATCH();
+
+op_swap14_dest:
+    CHECK_BLOCK();
+op_swap14_dest_no_check:
+    op_swap14(state);
+    DISPATCH();
+
+op_swap15_dest:
+    CHECK_BLOCK();
+op_swap15_dest_no_check:
+    op_swap15(state);
+    DISPATCH();
+
+op_swap16_dest:
+    CHECK_BLOCK();
+op_swap16_dest_no_check:
+    op_swap16(state);
+    DISPATCH();
+
+op_log0_dest:
+    CHECK_BLOCK();
+op_log0_dest_no_check:
+    op_log0(state);
+    DISPATCH();
+
+op_log1_dest:
+    CHECK_BLOCK();
+op_log1_dest_no_check:
+    op_log1(state);
+    DISPATCH();
+
+op_log2_dest:
+    CHECK_BLOCK();
+op_log2_dest_no_check:
+    op_log2(state);
+    DISPATCH();
+
+op_log3_dest:
+    CHECK_BLOCK();
+op_log3_dest_no_check:
+    op_log3(state);
+    DISPATCH();
+
+op_log4_dest:
+    CHECK_BLOCK();
+op_log4_dest_no_check:
+    op_log4(state);
+    DISPATCH();
+
+op_create_dest:
+    CHECK_BLOCK();
+op_create_dest_no_check:
+    op_create(state);
+    DISPATCH();
+
+op_call_dest:
+    CHECK_BLOCK();
+op_call_dest_no_check:
+    op_call(state);
+    DISPATCH();
+
+op_callcode_dest:
+    CHECK_BLOCK();
+op_callcode_dest_no_check:
+    op_callcode(state);
+    DISPATCH();
+
+op_return_dest:
+    CHECK_BLOCK();
+op_return_dest_no_check:
+    op_return(state);
+    goto op_stop_dest;
+op_delegatecall_dest:
+    CHECK_BLOCK();
+op_delegatecall_dest_no_check:
+    op_delegatecall(state);
+    DISPATCH();
+
+op_create2_dest:
+    CHECK_BLOCK();
+op_create2_dest_no_check:
+    op_create2(state);
+    DISPATCH();
+
+op_staticcall_dest:
+    CHECK_BLOCK();
+op_staticcall_dest_no_check:
+    op_staticcall(state);
+    DISPATCH();
+
+op_revert_dest:
+op_revert_dest_no_check:
+    op_revert(state);
+    goto op_stop_dest;
+op_invalid_dest:
+op_invalid_dest_no_check:
     state.status = EVMC_INVALID_INSTRUCTION;
-}
-
-void op_return(execution_state& state, instr_argument) noexcept
-{
-    auto offset = state.item(0);
-    auto size = state.item(1);
-
-    if (!check_memory(state, offset, size))
-        return;
-
-    state.run = false;
-    state.output_offset = static_cast<size_t>(offset);
-    state.output_size = static_cast<size_t>(size);
-}
-
-void op_revert(execution_state& state, instr_argument) noexcept
-{
-    auto offset = state.item(0);
-    auto size = state.item(1);
-
-    if (!check_memory(state, offset, size))
-        return;
-
-    state.run = false;
-    state.status = EVMC_REVERT;
-    state.output_offset = static_cast<size_t>(offset);
-    state.output_size = static_cast<size_t>(size);
-}
-
-void op_call(execution_state& state, instr_argument arg) noexcept
-{
-    auto gas = state.item(0);
-
-    uint8_t data[32];
-    intx::be::store(data, state.item(1));
-    auto dst = evmc_address{};
-    std::memcpy(dst.bytes, &data[12], sizeof(dst));
-
-    auto value = state.item(2);
-    auto input_offset = state.item(3);
-    auto input_size = state.item(4);
-    auto output_offset = state.item(5);
-    auto output_size = state.item(6);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.item(0) = 0;
-
-    if (!check_memory(state, input_offset, input_size))
-        return;
-
-    if (!check_memory(state, output_offset, output_size))
-        return;
-
-
-    auto msg = evmc_message{};
-    msg.kind = arg.call_kind;
-    msg.flags = state.msg->flags;
-    intx::be::store(msg.value.bytes, value);
-
-    auto correction = state.current_block_cost - arg.number;
-    auto gas_left = state.gas_left + correction;
-
-    auto cost = 0;
-    auto has_value = value != 0;
-    if (has_value)
-    {
-        if (arg.call_kind == EVMC_CALL && state.msg->flags & EVMC_STATIC)
-        {
-            state.run = false;
-            state.status = EVMC_STATIC_MODE_VIOLATION;
-            return;
-        }
-        cost += 9000;
-    }
-
-    if (arg.call_kind == EVMC_CALL && (has_value || state.rev < EVMC_SPURIOUS_DRAGON))
-    {
-        if (!state.host->host->account_exists(state.host, &dst))
-            cost += 25000;
-    }
-
-    state.gas_left -= cost;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
-
-    msg.gas = std::numeric_limits<int64_t>::max();
-    if (gas < msg.gas)
-        msg.gas = static_cast<int64_t>(gas);
-
-    gas_left -= cost;
-
-    if (state.rev >= EVMC_TANGERINE_WHISTLE)
-        msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
-    else if (msg.gas > gas_left)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
-
-    state.return_data.clear();
-
-    if (state.msg->depth >= 1024)
-    {
-        if (has_value)
-            state.gas_left += 2300;  // Return unused stipend.
-        return;
-    }
-
-    msg.destination = dst;
-    msg.sender = state.msg->destination;
-    intx::be::store(msg.value.bytes, value);
-    msg.input_data = &state.memory[size_t(input_offset)];
-    msg.input_size = size_t(input_size);
-
-    msg.depth = state.msg->depth + 1;
-
-    if (has_value)
-    {
-        auto balance = state.host->host->get_balance(state.host, &state.msg->destination);
-        auto b = intx::be::uint256(balance.bytes);
-        if (b < value)
-        {
-            state.gas_left += 2300;  // Return unused stipend.
-            return;
-        }
-
-        msg.gas += 2300;  // Add stipend.
-    }
-
-    auto result = state.host->host->call(state.host, &msg);
-    state.return_data.assign(result.output_data, result.output_size);
-
-
-    state.item(0) = result.status_code == EVMC_SUCCESS;
-
-    std::memcpy(&state.memory[size_t(output_offset)], result.output_data,
-        std::min(size_t(output_size), result.output_size));
-
-    auto gas_used = msg.gas - result.gas_left;
-
-    if (result.release)
-        result.release(&result);
-
-    if (has_value)
-        gas_used -= 2300;
-
-    state.gas_left -= gas_used;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
-}
-
-void op_delegatecall(execution_state& state, instr_argument arg) noexcept
-{
-    auto gas = state.item(0);
-
-    uint8_t data[32];
-    intx::be::store(data, state.item(1));
-    auto dst = evmc_address{};
-    std::memcpy(dst.bytes, &data[12], sizeof(dst));
-
-    auto input_offset = state.item(2);
-    auto input_size = state.item(3);
-    auto output_offset = state.item(4);
-    auto output_size = state.item(5);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.item(0) = 0;
-
-    if (!check_memory(state, input_offset, input_size))
-        return;
-
-    if (!check_memory(state, output_offset, output_size))
-        return;
-
-    auto msg = evmc_message{};
-    msg.kind = EVMC_DELEGATECALL;
-
-    auto correction = state.current_block_cost - arg.number;
-    auto gas_left = state.gas_left + correction;
-
-    // TEST: Gas saturation for big gas values.
-    msg.gas = std::numeric_limits<int64_t>::max();
-    if (gas < msg.gas)
-        msg.gas = static_cast<int64_t>(gas);
-
-    if (state.rev >= EVMC_TANGERINE_WHISTLE)
-        msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
-    else if (msg.gas > gas_left)  // TEST: gas_left vs state.gas_left.
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
-
-    if (state.msg->depth >= 1024)
-        return;
-
-    msg.depth = state.msg->depth + 1;
-    msg.flags = state.msg->flags;
-    msg.destination = dst;
-    msg.sender = state.msg->sender;
-    msg.value = state.msg->value;
-    msg.input_data = &state.memory[size_t(input_offset)];
-    msg.input_size = size_t(input_size);
-
-    auto result = state.host->host->call(state.host, &msg);
-    state.return_data.assign(result.output_data, result.output_size);
-
-    state.item(0) = result.status_code == EVMC_SUCCESS;
-
-    std::memcpy(&state.memory[size_t(output_offset)], result.output_data,
-        std::min(size_t(output_size), result.output_size));
-
-    auto gas_used = msg.gas - result.gas_left;
-
-    if (result.release)
-        result.release(&result);
-
-    state.gas_left -= gas_used;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
-}
-
-void op_staticcall(execution_state& state, instr_argument arg) noexcept
-{
-    auto gas = state.item(0);
-
-    uint8_t data[32];
-    intx::be::store(data, state.item(1));
-    auto dst = evmc_address{};
-    std::memcpy(dst.bytes, &data[12], sizeof(dst));
-
-    auto input_offset = state.item(2);
-    auto input_size = state.item(3);
-    auto output_offset = state.item(4);
-    auto output_size = state.item(5);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.item(0) = 0;
-
-    if (!check_memory(state, input_offset, input_size))
-        return;
-
-    if (!check_memory(state, output_offset, output_size))
-        return;
-
-    if (state.msg->depth >= 1024)
-        return;
-
-    auto msg = evmc_message{};
-    msg.kind = EVMC_CALL;
-    msg.flags |= EVMC_STATIC;
-
-    msg.depth = state.msg->depth + 1;
-
-    auto correction = state.current_block_cost - arg.number;
-    auto gas_left = state.gas_left + correction;
-
-    msg.gas = std::numeric_limits<int64_t>::max();
-    if (gas < msg.gas)
-        msg.gas = static_cast<int64_t>(gas);
-
-    msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
-
-    msg.destination = dst;
-    msg.sender = state.msg->destination;
-    msg.input_data = &state.memory[size_t(input_offset)];
-    msg.input_size = size_t(input_size);
-
-    auto result = state.host->host->call(state.host, &msg);
-    state.return_data.assign(result.output_data, result.output_size);
-    state.item(0) = result.status_code == EVMC_SUCCESS;
-
-    std::memcpy(&state.memory[size_t(output_offset)], result.output_data,
-        std::min(size_t(output_size), result.output_size));
-
-    auto gas_used = msg.gas - result.gas_left;
-
-    if (result.release)
-        result.release(&result);
-
-    state.gas_left -= gas_used;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
-}
-
-void op_create(execution_state& state, instr_argument arg) noexcept
-{
-    if (state.msg->flags & EVMC_STATIC)
-    {
-        // TODO: Implement static mode violation in analysis.
-        state.run = false;
-        state.status = EVMC_STATIC_MODE_VIOLATION;
-        return;
-    }
-
-    auto endowment = state.item(0);
-    auto init_code_offset = state.item(1);
-    auto init_code_size = state.item(2);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.item(0) = 0;
-
-    if (!check_memory(state, init_code_offset, init_code_size))
-        return;
-
-    state.return_data.clear();
-
-    if (state.msg->depth >= 1024)
-        return;
-
-    if (endowment != 0)
-    {
-        auto balance = intx::be::uint256(
-            state.host->host->get_balance(state.host, &state.msg->destination).bytes);
-        if (balance < endowment)
-            return;
-    }
-
-    auto msg = evmc_message{};
-
-    auto correction = state.current_block_cost - arg.number;
-    msg.gas = state.gas_left + correction;
-    if (state.rev >= EVMC_TANGERINE_WHISTLE)
-        msg.gas = msg.gas - msg.gas / 64;
-
-    msg.kind = EVMC_CREATE;
-    msg.input_data = &state.memory[size_t(init_code_offset)];
-    msg.input_size = size_t(init_code_size);
-    msg.sender = state.msg->destination;
-    msg.depth = state.msg->depth + 1;
-    intx::be::store(msg.value.bytes, endowment);
-
-    auto result = state.host->host->call(state.host, &msg);
-    state.return_data.assign(result.output_data, result.output_size);
-    if (result.status_code == EVMC_SUCCESS)
-    {
-        uint8_t data[32] = {};
-        std::memcpy(&data[12], &result.create_address, sizeof(result.create_address));
-        state.item(0) = intx::be::uint256(data);
-    }
-
-    auto gas_used = msg.gas - result.gas_left;
-
-    if (result.release)
-        result.release(&result);
-
-    state.gas_left -= gas_used;
-    if (state.gas_left < 0)
-    {
-        // FIXME: This cannot happen.
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-    }
-}
-
-void op_create2(execution_state& state, instr_argument arg) noexcept
-{
-    if (state.msg->flags & EVMC_STATIC)
-    {
-        // TODO: Implement static mode violation in analysis.
-        state.run = false;
-        state.status = EVMC_STATIC_MODE_VIOLATION;
-        return;
-    }
-
-    auto endowment = state.item(0);
-    auto init_code_offset = state.item(1);
-    auto init_code_size = state.item(2);
-    auto salt = state.item(3);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.item(0) = 0;
-
-    if (!check_memory(state, init_code_offset, init_code_size))
-        return;
-
-    auto salt_cost = ((int64_t(init_code_size) + 31) / 32) * 6;
-    state.gas_left -= salt_cost;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
-
-    state.return_data.clear();
-
-    if (state.msg->depth >= 1024)
-        return;
-
-    if (endowment != 0)
-    {
-        auto balance = intx::be::uint256(
-            state.host->host->get_balance(state.host, &state.msg->destination).bytes);
-        if (balance < endowment)
-            return;
-    }
-
-    auto msg = evmc_message{};
-
-    // TODO: Only for TW+. For previous check g <= gas_left.
-    auto correction = state.current_block_cost - arg.number;
-    auto gas = state.gas_left + correction;
-    msg.gas = gas - gas / 64;
-
-    msg.kind = EVMC_CREATE2;
-    msg.input_data = &state.memory[size_t(init_code_offset)];
-    msg.input_size = size_t(init_code_size);
-    msg.sender = state.msg->destination;
-    msg.depth = state.msg->depth + 1;
-    intx::be::store(msg.create2_salt.bytes, salt);
-    intx::be::store(msg.value.bytes, endowment);
-
-    auto result = state.host->host->call(state.host, &msg);
-    state.return_data.assign(result.output_data, result.output_size);
-    if (result.status_code == EVMC_SUCCESS)
-    {
-        uint8_t data[32] = {};
-        std::memcpy(&data[12], &result.create_address, sizeof(result.create_address));
-        state.item(0) = intx::be::uint256(data);
-    }
-
-    auto gas_used = msg.gas - result.gas_left;
-
-    if (result.release)
-        result.release(&result);
-
-    state.gas_left -= gas_used;
-    if (state.gas_left < 0)
-    {
-        // FIXME: This cannot happen.
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-    }
-}
-
-void op_undefined(execution_state& state, instr_argument) noexcept
-{
-    state.run = false;
+    goto op_stop_dest;
+op_selfdestruct_dest:
+op_selfdestruct_dest_no_check:
+    op_selfdestruct(state);
+    goto op_stop_dest;
+op_undefined_dest:
+op_undefined_dest_no_check:
     state.status = EVMC_UNDEFINED_INSTRUCTION;
+    goto op_stop_dest;
+op_staticviolation_dest:
+    state.status = EVMC_STATIC_MODE_VIOLATION;
+op_stop_dest:
+op_stop_dest_no_check:
+    return nullptr;
 }
 
-void op_selfdestruct(execution_state& state, instr_argument) noexcept
+static void* istanbul[JUMP_TABLE_SIZE] = {nullptr};
+void** create_op_table_istanbul() noexcept
 {
-    if (state.msg->flags & EVMC_STATIC)
+    // We want to create tables of the labels inside evmone::interpret, that we can reference
+    // when constructing the program flow in evmone::analyze.
+    // However, the labels are scoped inside evmone::interpret, so we need to be a bit creative...
+    static int dummy_variable = 0;
+    static void* dont_try_this_at_home = static_cast<void*>(&dummy_variable);
+    if (istanbul[0] == nullptr)
     {
-        // TODO: Implement static mode violation in analysis.
-        state.run = false;
-        state.status = EVMC_STATIC_MODE_VIOLATION;
-        return;
+        const void** table =
+            interpret(nullptr, nullptr, *static_cast<execution_state*>(dont_try_this_at_home));
+        memcpy(&istanbul, table, sizeof(void*) * JUMP_TABLE_SIZE);
     }
+    return istanbul;
+}
 
-    uint8_t data[32];
-    intx::be::store(data, state.item(0));
-    evmc_address addr;
-    std::memcpy(addr.bytes, &data[12], sizeof(addr));
-
-    if (state.rev >= EVMC_TANGERINE_WHISTLE)
+static void* petersburg[JUMP_TABLE_SIZE] = {nullptr};
+void** create_op_table_petersburg() noexcept
+{
+    if (petersburg[0] == nullptr)
     {
-        auto check_existance = true;
-
-        if (state.rev >= EVMC_SPURIOUS_DRAGON)
-        {
-            auto balance = state.host->host->get_balance(state.host, &state.msg->destination);
-            check_existance = !is_zero(balance);
-        }
-
-        if (check_existance)
-        {
-            // After EIP150 hard fork charge additional cost of sending
-            // ethers to non-existing account.
-            bool exists = state.host->host->account_exists(state.host, &addr);
-            if (!exists)
-            {
-                state.gas_left -= 25000;
-                if (state.gas_left < 0)
-                {
-                    state.run = false;
-                    state.status = EVMC_OUT_OF_GAS;
-                    return;
-                }
-            }
-        }
+        void** table = create_op_table_istanbul();
+        memcpy(&petersburg, table, sizeof(void*) * JUMP_TABLE_SIZE);
     }
+    return petersburg;
+}
 
-    state.host->host->selfdestruct(state.host, &state.msg->destination, &addr);
-    state.run = false;
+static void* constantinople[JUMP_TABLE_SIZE] = {nullptr};
+void** create_op_table_constantinople() noexcept
+{
+    if (constantinople[0] == nullptr)
+    {
+        void** table = create_op_table_petersburg();
+        memcpy(&constantinople, table, sizeof(void*) * JUMP_TABLE_SIZE);
+    }
+    return constantinople;
+}
+
+static void* byzantium[JUMP_TABLE_SIZE] = {nullptr};
+void** create_op_table_byzantium() noexcept
+{
+    if (byzantium[0] == nullptr)
+    {
+        void** table = create_op_table_constantinople();
+        memcpy(&byzantium, table, sizeof(void*) * JUMP_TABLE_SIZE);
+        byzantium[OP_SHL] = byzantium[UNDEFINED_INDEX];
+        byzantium[OP_SHR] = byzantium[UNDEFINED_INDEX];
+        byzantium[OP_SAR] = byzantium[UNDEFINED_INDEX];
+        byzantium[OP_EXTCODEHASH] = byzantium[UNDEFINED_INDEX];
+        byzantium[OP_CREATE2] = byzantium[UNDEFINED_INDEX];
+        byzantium[JUMP_TABLE_CHECK_BOUNDARY + OP_SHL] = byzantium[UNDEFINED_INDEX];
+        byzantium[JUMP_TABLE_CHECK_BOUNDARY + OP_SHR] = byzantium[UNDEFINED_INDEX];
+        byzantium[JUMP_TABLE_CHECK_BOUNDARY + OP_SAR] = byzantium[UNDEFINED_INDEX];
+        byzantium[JUMP_TABLE_CHECK_BOUNDARY + OP_EXTCODEHASH] = byzantium[UNDEFINED_INDEX];
+        byzantium[JUMP_TABLE_CHECK_BOUNDARY + OP_CREATE2] = byzantium[UNDEFINED_INDEX];
+    }
+    return byzantium;
+}
+
+void** create_op_table_homestead() noexcept
+{
+    static void* homestead[JUMP_TABLE_SIZE] = {nullptr};
+    if (homestead[0] == nullptr)
+    {
+        void** table = create_op_table_byzantium();
+        memcpy(&homestead, table, sizeof(void*) * JUMP_TABLE_SIZE);
+        homestead[OP_RETURNDATASIZE] = homestead[UNDEFINED_INDEX];
+        homestead[OP_RETURNDATACOPY] = homestead[UNDEFINED_INDEX];
+        homestead[OP_STATICCALL] = homestead[UNDEFINED_INDEX];
+        homestead[OP_REVERT] = homestead[UNDEFINED_INDEX];
+        homestead[JUMP_TABLE_CHECK_BOUNDARY + OP_RETURNDATASIZE] = homestead[UNDEFINED_INDEX];
+        homestead[JUMP_TABLE_CHECK_BOUNDARY + OP_RETURNDATACOPY] = homestead[UNDEFINED_INDEX];
+        homestead[JUMP_TABLE_CHECK_BOUNDARY + OP_STATICCALL] = homestead[UNDEFINED_INDEX];
+        homestead[JUMP_TABLE_CHECK_BOUNDARY + OP_REVERT] = homestead[UNDEFINED_INDEX];
+    }
+    return homestead;
+}
+
+void** create_op_table_frontier() noexcept
+{
+    static void* frontier[JUMP_TABLE_SIZE] = {nullptr};
+    if (frontier[0] == nullptr)
+    {
+        void** table = create_op_table_homestead();
+        memcpy(&frontier, table, sizeof(void*) * JUMP_TABLE_SIZE);
+        frontier[OP_DELEGATECALL] = frontier[UNDEFINED_INDEX];
+        frontier[JUMP_TABLE_CHECK_BOUNDARY + OP_DELEGATECALL] = frontier[UNDEFINED_INDEX];
+    }
+    return frontier;
+}
+
+void add_static_violations(const void** table) noexcept
+{
+    table[OP_SSTORE] = table[STATIC_VIOLATION_INDEX];
+    table[OP_LOG0] = table[STATIC_VIOLATION_INDEX];
+    table[OP_LOG1] = table[STATIC_VIOLATION_INDEX];
+    table[OP_LOG2] = table[STATIC_VIOLATION_INDEX];
+    table[OP_LOG3] = table[STATIC_VIOLATION_INDEX];
+    table[OP_LOG4] = table[STATIC_VIOLATION_INDEX];
+    table[OP_CREATE] = table[STATIC_VIOLATION_INDEX];
+    table[OP_CREATE2] = table[STATIC_VIOLATION_INDEX];
+    table[OP_SELFDESTRUCT] = table[STATIC_VIOLATION_INDEX];
+    table[JUMP_TABLE_CHECK_BOUNDARY + OP_SSTORE] = table[STATIC_VIOLATION_INDEX];
+    table[JUMP_TABLE_CHECK_BOUNDARY + OP_LOG0] = table[STATIC_VIOLATION_INDEX];
+    table[JUMP_TABLE_CHECK_BOUNDARY + OP_LOG1] = table[STATIC_VIOLATION_INDEX];
+    table[JUMP_TABLE_CHECK_BOUNDARY + OP_LOG2] = table[STATIC_VIOLATION_INDEX];
+    table[JUMP_TABLE_CHECK_BOUNDARY + OP_LOG3] = table[STATIC_VIOLATION_INDEX];
+    table[JUMP_TABLE_CHECK_BOUNDARY + OP_LOG4] = table[STATIC_VIOLATION_INDEX];
+    table[JUMP_TABLE_CHECK_BOUNDARY + OP_CREATE] = table[STATIC_VIOLATION_INDEX];
+    table[JUMP_TABLE_CHECK_BOUNDARY + OP_CREATE2] = table[STATIC_VIOLATION_INDEX];
+    table[JUMP_TABLE_CHECK_BOUNDARY + OP_SELFDESTRUCT] = table[STATIC_VIOLATION_INDEX];
 }
 
 constexpr auto num_revisions = int{EVMC_MAX_REVISION + 1};
-exec_fn_table op_table[num_revisions] = {};
-
-exec_fn_table create_op_table_frontier() noexcept
-{
-    exec_fn_table table{};
-
-    // First, mark all opcodes as undefined.
-    std::fill(table.begin(), table.end(), op_undefined);
-
-    table[OP_STOP] = op_stop;
-    table[OP_ADD] = op_add;
-    table[OP_MUL] = op_mul;
-    table[OP_SUB] = op_sub;
-    table[OP_DIV] = op_div;
-    table[OP_SDIV] = op_sdiv;
-    table[OP_MOD] = op_mod;
-    table[OP_SMOD] = op_smod;
-    table[OP_ADDMOD] = op_addmod;
-    table[OP_MULMOD] = op_mulmod;
-    table[OP_EXP] = op_exp;
-    table[OP_SIGNEXTEND] = op_signextend;
-    table[OP_LT] = op_lt;
-    table[OP_GT] = op_gt;
-    table[OP_SLT] = op_slt;
-    table[OP_SGT] = op_sgt;
-    table[OP_EQ] = op_eq;
-    table[OP_ISZERO] = op_iszero;
-    table[OP_AND] = op_and;
-    table[OP_OR] = op_or;
-    table[OP_XOR] = op_xor;
-    table[OP_NOT] = op_not;
-    table[OP_BYTE] = op_byte;
-    table[OP_SHA3] = op_sha3;
-    table[OP_ADDRESS] = op_address;
-    table[OP_BALANCE] = op_balance;
-    table[OP_ORIGIN] = op_origin;
-    table[OP_CALLER] = op_caller;
-    table[OP_CALLVALUE] = op_callvalue;
-    table[OP_CALLDATALOAD] = op_calldataload;
-    table[OP_CALLDATASIZE] = op_calldatasize;
-    table[OP_CALLDATACOPY] = op_calldatacopy;
-    table[OP_CODESIZE] = op_codesize;
-    table[OP_CODECOPY] = op_codecopy;
-    table[OP_EXTCODESIZE] = op_extcodesize;
-    table[OP_EXTCODECOPY] = op_extcodecopy;
-    table[OP_GASPRICE] = op_gasprice;
-    table[OP_BLOCKHASH] = op_blockhash;
-    table[OP_COINBASE] = op_coinbase;
-    table[OP_TIMESTAMP] = op_timestamp;
-    table[OP_NUMBER] = op_number;
-    table[OP_DIFFICULTY] = op_difficulty;
-    table[OP_GASLIMIT] = op_gaslimit;
-    table[OP_POP] = op_pop;
-    table[OP_MLOAD] = op_mload;
-    table[OP_MSTORE] = op_mstore;
-    table[OP_MSTORE8] = op_mstore8;
-    table[OP_SLOAD] = op_sload;
-    table[OP_SSTORE] = op_sstore;
-    table[OP_JUMP] = op_jump;
-    table[OP_JUMPI] = op_jumpi;
-    table[OP_PC] = op_pc;
-    table[OP_MSIZE] = op_msize;
-    table[OP_GAS] = op_gas;
-    table[OP_JUMPDEST] = op_jumpdest;
-    for (size_t op = OP_PUSH1; op <= OP_PUSH32; ++op)
-        table[op] = op_push_full;
-    for (size_t op = OP_DUP1; op <= OP_DUP16; ++op)
-        table[op] = op_dup;
-    for (size_t op = OP_SWAP1; op <= OP_SWAP16; ++op)
-        table[op] = op_swap;
-    for (auto op = size_t{OP_LOG0}; op <= OP_LOG4; ++op)
-        table[op] = op_log;
-    table[OP_CREATE] = op_create;
-    table[OP_CALL] = op_call;
-    table[OP_CALLCODE] = op_call;
-    table[OP_RETURN] = op_return;
-    table[OP_INVALID] = op_invalid;
-    table[OP_SELFDESTRUCT] = op_selfdestruct;
-    return table;
-}
-
-exec_fn_table create_op_table_homestead() noexcept
-{
-    auto table = create_op_table_frontier();
-    table[OP_DELEGATECALL] = op_delegatecall;
-    return table;
-}
-
-exec_fn_table create_op_table_byzantium() noexcept
-{
-    auto table = create_op_table_homestead();
-    table[OP_RETURNDATASIZE] = op_returndatasize;
-    table[OP_RETURNDATACOPY] = op_returndatacopy;
-    table[OP_STATICCALL] = op_staticcall;
-    table[OP_REVERT] = op_revert;
-    return table;
-}
-
-exec_fn_table create_op_table_constantinople() noexcept
-{
-    auto table = create_op_table_byzantium();
-    table[OP_SHL] = op_shl;
-    table[OP_SHR] = op_shr;
-    table[OP_SAR] = op_sar;
-    table[OP_EXTCODEHASH] = op_extcodehash;
-    table[OP_CREATE2] = op_create2;
-    return table;
-}
-
-exec_fn_table create_op_table_petersburg() noexcept
-{
-    auto table = create_op_table_constantinople();
-    return table;
-}
-
-exec_fn_table create_op_table_istanbul() noexcept
-{
-    auto table = create_op_table_petersburg();
-    return table;
-}
+static const void* op_table[num_revisions * 2][JUMP_TABLE_SIZE] = {};
 
 const auto op_table_initialized = []() noexcept
 {
-    op_table[EVMC_FRONTIER] = create_op_table_frontier();
-    op_table[EVMC_HOMESTEAD] = create_op_table_homestead();
-    op_table[EVMC_TANGERINE_WHISTLE] = create_op_table_homestead();
-    op_table[EVMC_SPURIOUS_DRAGON] = create_op_table_homestead();
-    op_table[EVMC_BYZANTIUM] = create_op_table_byzantium();
-    op_table[EVMC_CONSTANTINOPLE] = create_op_table_constantinople();
-    op_table[EVMC_PETERSBURG] = create_op_table_petersburg();
-    op_table[EVMC_ISTANBUL] = create_op_table_istanbul();
+    void** frontier = create_op_table_frontier();
+    void** homestead = create_op_table_homestead();
+    void** byzantium = create_op_table_byzantium();
+    void** constantinople = create_op_table_constantinople();
+    void** petersburg = create_op_table_petersburg();
+    void** istanbul = create_op_table_istanbul();
+
+    memcpy(&op_table[EVMC_FRONTIER], frontier, sizeof(void*) * JUMP_TABLE_SIZE);
+    memcpy(&op_table[EVMC_HOMESTEAD], homestead, sizeof(void*) * JUMP_TABLE_SIZE);
+    memcpy(&op_table[EVMC_TANGERINE_WHISTLE], homestead, sizeof(void*) * JUMP_TABLE_SIZE);
+    memcpy(&op_table[EVMC_SPURIOUS_DRAGON], homestead, sizeof(void*) * JUMP_TABLE_SIZE);
+    memcpy(&op_table[EVMC_BYZANTIUM], byzantium, sizeof(void*) * JUMP_TABLE_SIZE);
+    memcpy(&op_table[EVMC_CONSTANTINOPLE], constantinople, sizeof(void*) * JUMP_TABLE_SIZE);
+    memcpy(&op_table[EVMC_CONSTANTINOPLE2], petersburg, sizeof(void*) * JUMP_TABLE_SIZE);
+    memcpy(&op_table[EVMC_ISTANBUL], istanbul, sizeof(void*) * JUMP_TABLE_SIZE);
+
+    memcpy(&op_table[num_revisions + EVMC_FRONTIER], frontier, sizeof(void*) * JUMP_TABLE_SIZE);
+    memcpy(&op_table[num_revisions + EVMC_HOMESTEAD], homestead, sizeof(void*) * JUMP_TABLE_SIZE);
+    memcpy(&op_table[num_revisions + EVMC_TANGERINE_WHISTLE], homestead, sizeof(void*) * JUMP_TABLE_SIZE);
+    memcpy(&op_table[num_revisions + EVMC_SPURIOUS_DRAGON], homestead, sizeof(void*) * JUMP_TABLE_SIZE);
+    memcpy(&op_table[num_revisions + EVMC_BYZANTIUM], byzantium, sizeof(void*) * JUMP_TABLE_SIZE);
+    memcpy(&op_table[num_revisions + EVMC_CONSTANTINOPLE], constantinople, sizeof(void*) * JUMP_TABLE_SIZE);
+    memcpy(&op_table[num_revisions + EVMC_CONSTANTINOPLE2], petersburg, sizeof(void*) * JUMP_TABLE_SIZE);
+    memcpy(&op_table[num_revisions + EVMC_ISTANBUL], istanbul, sizeof(void*) * JUMP_TABLE_SIZE);
+    for (size_t i = 0; i < num_revisions; i++)
+    {
+        add_static_violations(op_table[num_revisions + i]);
+    }
     return true;
 }
 ();
 
 }  // namespace
 
+const void** get_table(evmc_revision rev)
+{
+    return op_table[rev];
+}
 
 evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const evmc_message* msg,
     const uint8_t* code, size_t code_size) noexcept
 {
-    auto analysis = analyze(op_table[rev], rev, code, code_size);
+    // If this is a static call, fish out a different jump table that will trigger an error
+    // for non-static opcodes
+    auto jump_table_index = msg->flags & EVMC_STATIC ? rev + num_revisions : rev;
 
     execution_state state;
-    state.analysis = &analysis;
+    // uint256* stack = static_cast<uint256*>(malloc(1024 * sizeof(uint256)));
+    // Next: get a pointer to a block of allocated memory. This memory block has a size that
+    // is at least as large as the maximum memory index that can be accessed by this
+    // transaction, without triggering an out of gas error. In addition, this memory
+    // is zeroed out.
+
+    // To do this, we need the block gas limit (msg->gas can be problematic for situations
+    // where gas = -1)
+    state.tx_context = ctx->host->get_tx_context(ctx);
+
+    // Next, get a pointer to the memory.
+    state.memory =
+        memory::get_tx_memory_ptr(std::min(msg->gas, state.tx_context.block_gas_limit));
+
     state.msg = msg;
     state.code = code;
     state.code_size = code_size;
     state.host = ctx;
     state.gas_left = msg->gas;
     state.rev = rev;
-    while (state.run)
-    {
-        auto& instr = analysis.instrs[state.pc];
-        if (instr.block_index >= 0)
-        {
-            auto& block = analysis.blocks[static_cast<size_t>(instr.block_index)];
+    state.exp_cost = rev >= EVMC_SPURIOUS_DRAGON ? 50 : 10;
+    state.storage_repeated_cost = rev == EVMC_CONSTANTINOPLE ? 200 : 5000;
+    state.msize = 0;
 
-            state.gas_left -= block.gas_cost;
-            if (state.gas_left < 0)
-            {
-                state.status = EVMC_OUT_OF_GAS;
-                break;
-            }
+    // Instead of manipulating the size of the stack when the program is running, we
+    // use a constant-size stack, and perform our operations relative to a pointer to the
+    // head of the stack (i.e. we just move the pointer around, instead of changing the stack size)
+    state.stack_ptr = (uint256*)(&state.stack[0]);
 
-            if (static_cast<int>(state.stack.size()) < block.stack_req)
-            {
-                state.status = EVMC_STACK_UNDERFLOW;
-                break;
-            }
+    // To check for stack overflow/underflow errors, we explicitly store the start and end of
+    // the stack in variables.
+    // This brings the number of frequently used variables inside (state) to 8.
+    // i.e. everything fits neatly into a cache line
+    state.first_stack_position = (uint256*)(&state.stack[0]);
+    state.last_stack_position = (uint256*)(&state.stack[1023 * sizeof(uint256)]);
 
-            if (static_cast<int>(state.stack.size()) + block.stack_max > 1024)
-            {
-                state.status = EVMC_STACK_OVERFLOW;
-                break;
-            }
+    // Create a sparse array of instruction pointers, that we can use to map from
+    // program counter -> instruction member for a JUMPDEST opcode.
+    // This gives us an O(1) lookup when processing 'jump' and 'jumpi' opcodes
+    // TODO: use evmone::memory to get a block of null pointers,
+    // instead of having to zero out all of this memory per tx
+    instruction* jumpdest_map[code_size + 2] = { nullptr };
 
-            state.current_block_cost = block.gas_cost;
-        }
+    // Create array of instruction structs, this is where we'll place our program data.
+    // We want the size of this array to be equal the greater of:
+    // a: code_size + 2 extra elements (used to store 'invalid' instructions)
+    // b: code_size rounded up to the nearest power of 2, minus 1
+    // Option b is so that we can 'pin' the program counter with a logical AND against a mask,
+    // which is useful when performing jump and jumpi opcodes, as we can safely
+    // index a member of 'instructions' before validating whether the jump destination is valid
+    state.code_size_mask = ((~static_cast<size_t>(0)) >> count_zeroes(code_size));
+    instruction instructions[std::max(state.code_size_mask, code_size + 2)];
 
-        // Advance the PC not to allow jump opcodes to overwrite it.
-        ++state.pc;
+    // Fill instructions and jumpdest_map
+    analyze(instructions, jumpdest_map, op_table[jump_table_index], rev, code, code_size);
 
-        instr.fn(state, instr.arg);
-    }
+    // state.next_instruction is a pointer to an 'instruction' member. The first
+    // member of 'instruction' is a label that corresponds to the jump destination for
+    // the opcode we need to execute.
+    // i.e. we can use state.next_instruction as a 'label' for our direct threaded interpreter,
+    // as well as a pointer to the data required to execute the given opcode (e.g. push data)
+    state.next_instruction = &instructions[0];
+
+    // Cache the label that we jump to, to stop execution.
+    // We set state.next_instruction to state.stop_instruction when we enter an error state
+    state.stop_instruction = &instructions[code_size];
+
+    // Interpret our evm program!
+    interpret(instructions, jumpdest_map, state);
 
     evmc_result result{};
+
     result.status_code = state.status;
+
     if (state.status == EVMC_SUCCESS || state.status == EVMC_REVERT)
         result.gas_left = state.gas_left;
 
@@ -1576,7 +1523,8 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
         };
     }
 
+    // before we exit, free up the memory this transaction used
+    memory::clean_up(state.msize);
     return result;
 }
-
 }  // namespace evmone

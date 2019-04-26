@@ -4,6 +4,9 @@
 
 add_library(evmone
     ${include_dir}/evmone/evmone.h
+    constants.hpp
+    memory.cpp
+    memory.hpp
     analysis.cpp
     analysis.hpp
     evmone.cpp

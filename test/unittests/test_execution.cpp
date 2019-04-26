@@ -156,6 +156,22 @@ evmc_host_interface execution::interface = {
     },
 };
 
+
+TEST_F(execution, stop)
+{
+    execute(6, "600150");
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(result.gas_left, 1);
+}
+
+TEST_F(execution, push_and_pop_basic)
+{
+    execute(6, "600150");
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(result.gas_left, 1);
+}
+
+
 TEST_F(execution, push_and_pop)
 {
     execute(11, "610102506801020304050607080950");
@@ -221,6 +237,7 @@ TEST_F(execution, msize)
     EXPECT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 0x40);
 }
+
 
 TEST_F(execution, gas)
 {
@@ -332,7 +349,6 @@ TEST_F(execution, jumpi_at_the_end)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
     EXPECT_EQ(gas_used, 1000);
 }
-
 
 TEST_F(execution, byte)
 {
@@ -552,7 +568,7 @@ TEST_F(execution, sload_cost_pre_tw)
 
 TEST_F(execution, sstore_cost)
 {
-    auto revs = {EVMC_BYZANTIUM, EVMC_CONSTANTINOPLE, EVMC_PETERSBURG};
+    auto revs = {EVMC_BYZANTIUM, EVMC_CONSTANTINOPLE, EVMC_CONSTANTINOPLE2};
     for (auto r : revs)
     {
         storage.clear();
@@ -1044,6 +1060,7 @@ TEST_F(execution, shl)
     EXPECT_EQ(result.output_data[0], 5 << 1);
 }
 
+
 TEST_F(execution, shr)
 {
     auto code = "600560011c6000526001601ff3";
@@ -1054,6 +1071,7 @@ TEST_F(execution, shr)
     ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 5 >> 1);
 }
+
 
 TEST_F(execution, sar)
 {

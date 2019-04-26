@@ -1,0 +1,10 @@
+objdump -drwCS -Mintel ./libevmone.so > some_file_name.txt
+
+# valgrind/callgrind
+valgrind --tool=callgrind ./test/evmone-bench
+
+# create .dot file from callgrind output 
+gprof2dot --format=callgrind --output=out.dot ./callgrind.out.23668(replace with .out filename)
+
+# create .png from .dot file
+dot -Tpng out.dot -o graph.png

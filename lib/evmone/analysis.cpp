@@ -3,129 +3,255 @@
 // Licensed under the Apache License, Version 2.0.
 
 #include "analysis.hpp"
+#include "constants.hpp"
 
 #include <evmc/instructions.h>
 
 namespace evmone
 {
-namespace
-{
-bool is_terminator(uint8_t c) noexcept
-{
-    return c == OP_JUMP || c == OP_JUMPI || c == OP_STOP || c == OP_RETURN || c == OP_REVERT ||
-           c == OP_SELFDESTRUCT;
-}
-}  // namespace
 
-int code_analysis::find_jumpdest(int offset) noexcept
+void analyze(instruction* instructions, instruction** jumpdest_map, const void** jump_table, evmc_revision rev,
+     const uint8_t* code, const size_t code_size) noexcept
 {
-    // TODO: Replace with lower_bound().
-    for (const auto& d : jumpdest_map)
-    {
-        if (d.first == offset)
-            return d.second;
-    }
-    return -1;
-}
-
-evmc_call_kind op2call_kind(uint8_t opcode) noexcept
-{
-    switch (opcode)
-    {
-    case OP_CREATE:
-        return EVMC_CREATE;
-    case OP_CALL:
-        return EVMC_CALL;
-    case OP_CALLCODE:
-        return EVMC_CALLCODE;
-    case OP_DELEGATECALL:
-        return EVMC_DELEGATECALL;
-    case OP_CREATE2:
-        return EVMC_CREATE2;
-    default:
-        return evmc_call_kind(-1);
-    }
-}
-
-code_analysis analyze(
-    const exec_fn_table& fns, evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
-{
-    code_analysis analysis;
-    analysis.instrs.reserve(code_size + 1);
-
     auto* instr_table = evmc_get_instruction_metrics_table(rev);
 
-    block_info* block = nullptr;
-    int instr_index = 0;
+    // temp variable to track the stack difference within the current basic block
+    int stack_diff = 0;
+
+    // when we map program opcode -> jump label, we apply an offset if
+    // the opcode is NOT an entry point into a basic block.
+    // i.e. first 256 entries in jump table = jump destinations that will perform
+    // validation logic on the given basic block.
+    // the subsequent 256 entries in jump table = jump destinations that skip this
+    // (this removes a conditional branch that is normally required for every opcode)
+    // (even better, this was a branch that was non trivial to predict)
+    // The variable 'delta' represents this offset.
+    // The first entry will always be entry into a basic block, so initialize to 0
+    int delta = 0;
+
+    // temporary variable to cache whether the NEXT entry will be a basic block. Default to 'no'
+    int next_delta = JUMP_TABLE_CHECK_BOUNDARY;
+
+    // pointer to the current basic block we're working on
+    block_info* block = &instructions[0].block_data;
+    // initialize our new block (we don't initialize instructions to default values to save some time)
+    block->gas_cost = 0;
+    block->stack_req = 0;
+    block->stack_max = 0;
+
+    // instr_index indexes entries to instructions.
+    // i is the program counter index.
+    // we don't use i to index instructions, because some program opcodes (i.e. PUSH) use more
+    // than 1 byte of bytecode data. Therefore, using i would create a sparse array, where there
+    // would be groups of 'empty' entries in 'instructions'. Which would (probably?) increase the number of cache misses
+    size_t instr_index = 0;
     for (size_t i = 0; i < code_size; ++i, ++instr_index)
     {
-        // TODO: Loop in reverse order for easier GAS analysis.
-        const auto c = code[i];
-        auto& instr = analysis.instrs.emplace_back(fns[c]);
+        // get the current opcode
+        uint8_t c = code[i];
 
-        const bool jumpdest = c == OP_JUMPDEST;
-        if (!block || jumpdest)
-        {
-            // Create new block.
-            block = &analysis.blocks.emplace_back();
-            instr.block_index = static_cast<int>(analysis.blocks.size() - 1);
-
-            if (jumpdest)
-                analysis.jumpdest_map.emplace_back(static_cast<int>(i), instr_index);
-        }
-
+        // get the metrics for the current 
         auto metrics = instr_table[c];
+
+        // update the current block's stack and gas metrics
         block->gas_cost += metrics.gas_cost;
-        auto stack_req = metrics.num_stack_arguments - block->stack_diff;
-        block->stack_diff += (metrics.num_stack_returned_items - metrics.num_stack_arguments);
+        auto stack_req = metrics.num_stack_arguments - stack_diff;
+        stack_diff += (metrics.num_stack_returned_items - metrics.num_stack_arguments);
         block->stack_req = std::max(block->stack_req, stack_req);
-        block->stack_max = std::max(block->stack_max, block->stack_diff);
+        block->stack_max = std::max(block->stack_max, stack_diff);
 
-        // Skip PUSH data.
-        if (c >= OP_PUSH1 && c <= OP_PUSH32)
+        // Maybe the compiler can do something clever with this, if we frame it as a giant switch statement...
+        switch (c)
         {
-            // OPT: bswap data here.
-            ++i;
-            auto push_size = size_t(c - OP_PUSH1 + 1);
-            analysis.args_storage.emplace_back();
-            auto& data = analysis.args_storage.back();
+        case OP_GAS:
+        case OP_CREATE:
+        case OP_CALL:
+        case OP_CALLCODE:
+        case OP_DELEGATECALL:
+        case OP_CREATE2:
+        case OP_STATICCALL:
+        {
+            instructions[instr_index].instruction_data.number = block->gas_cost;
+            next_delta = JUMP_TABLE_CHECK_BOUNDARY;
+            break;
+        }
+        case OP_PUSH1:
+        case OP_PUSH2:
+        case OP_PUSH3:
+        case OP_PUSH4:
+        case OP_PUSH5:
+        case OP_PUSH6:
+        case OP_PUSH7:
+        case OP_PUSH8:
+        case OP_PUSH9:
+        case OP_PUSH10:
+        case OP_PUSH11:
+        case OP_PUSH12:
+        case OP_PUSH13:
+        case OP_PUSH14:
+        case OP_PUSH15:
+        case OP_PUSH16:
+        case OP_PUSH17:
+        case OP_PUSH18:
+        case OP_PUSH19:
+        case OP_PUSH20:
+        case OP_PUSH21:
+        case OP_PUSH22:
+        case OP_PUSH23:
+        case OP_PUSH24:
+        case OP_PUSH25:
+        case OP_PUSH26:
+        case OP_PUSH27:
+        case OP_PUSH28:
+        case OP_PUSH29:
+        case OP_PUSH30:
+        case OP_PUSH31:
+        case OP_PUSH32:
+        {
+            size_t push_size = static_cast<size_t>(c - OP_PUSH1 + 1);
+            size_t leading_zeroes = static_cast<size_t>(32 - push_size);
+            size_t copy_size = std::min(push_size, code_size - i - 1);
+            uint64_t swap_buffer[4] = { 0, 0, 0, 0 };
+            memcpy((uint8_t*)(&swap_buffer) + leading_zeroes, code + i + 1, copy_size);
+            uint64_t* push_data = (uint64_t*)(instructions[instr_index].instruction_data.push_data.begin());
+            push_data[3] = __builtin_bswap64(swap_buffer[0]);
+            push_data[2] = __builtin_bswap64(swap_buffer[1]);
+            push_data[1] = __builtin_bswap64(swap_buffer[2]);
+            push_data[0] = __builtin_bswap64(swap_buffer[3]);
+            i += push_size;
+            next_delta = JUMP_TABLE_CHECK_BOUNDARY;
+            break;
+        }
+        /**
+        * TODO: figure out which is faster
+        * Option 1: have singleton 'dup' and 'swap' opcodes, and use instruction_data to
+        *           identify the stack indices to dup/swap
+        * Option 2: have explicit 'dup' and 'swap' opcodes for each variant (e.g. dup1, ..., dup16)
+        *
+        * Option 1 requires an additional lookup into instruction_data per opcode execution,
+        * Option 2 requires fetching more code, so there's a reduced chance that the required code
+        *          is in the CPU cache (I think?).
+        *          In addition, the CPU has more branches to predict when jumping to each opcode,
+        *          but the rationale is that the program flow is simple enough
+        *          for the CPU to predict ~100% of the time
+        *          (N.B. how in the blazes can this be tested?)
+        * I honestly have no idea which is faster, both benchmarks overlap each other.
+        **/
+        /*
+        case OP_DUP1:
+        case OP_DUP2:
+        case OP_DUP3:
+        case OP_DUP4:
+        case OP_DUP5:
+        case OP_DUP6:
+        case OP_DUP7:
+        case OP_DUP8:
+        case OP_DUP9:
+        case OP_DUP10:
+        case OP_DUP11:
+        case OP_DUP12:
+        case OP_DUP13:
+        case OP_DUP14:
+        case OP_DUP15:
+        case OP_DUP16:
+        {
+            instr.instruction_data.number = c - OP_DUP1;
+            break;
+        }
+        case OP_SWAP1:
+        case OP_SWAP2:
+        case OP_SWAP3:
+        case OP_SWAP4:
+        case OP_SWAP5:
+        case OP_SWAP6:
+        case OP_SWAP7:
+        case OP_SWAP8:
+        case OP_SWAP9:
+        case OP_SWAP10:
+        case OP_SWAP11:
+        case OP_SWAP12:
+        case OP_SWAP13:
+        case OP_SWAP14:
+        case OP_SWAP15:
+        case OP_SWAP16:
+        {
+            instr.instruction_data.number = c - OP_SWAP1 + 1;
+            break;
+        }
+        */
+        case OP_PC:
+        {
+            instructions[instr_index].instruction_data.number = static_cast<int64_t>(i);
+            next_delta = JUMP_TABLE_CHECK_BOUNDARY;
+            break;
+        }
+        case OP_STOP:
+        case OP_JUMP:
+        case OP_JUMPI:
+        case OP_RETURN:
+        case OP_REVERT:
+        case OP_SELFDESTRUCT:
+        {
+            block = &instructions[instr_index + 1].block_data;
+            block->gas_cost = 0;
+            block->stack_max = 0;
+            block->stack_req = 0;
+            stack_diff = 0;
+            next_delta = 0;
+            break;
+        }
+        case OP_JUMPDEST:
+        {
+            /**
+            * If this is a jump destination, we want to log it inside jumpdest_map.
+            * This gives us an O(1) mapping from program counter -> relevant instruction.
+            * This comes at the expense of using a sparse array,
+            * so we use a lot of memory for this map (~200kb for a 24kb program),
+            * and entries are less likely to be cached.
+            * N.B. we actually map the program counter to the instruction that PRECEEDS
+            * the actual instruction we want to jump to. This is because our
+            * DISPATCH macro will increase state.next_instruction before jumping
+            * We could write a special case for jump opcodes (so DISPATCH doesn't increase the ptr),
+            * but I figured that if the access pattern into state.next_instruction was uniform,
+            * the CPU would have an easier time of predicting the branch we're jumping to.
+            * This is, however, 100% superstition, I have no idea how to measure pipeline stalls during execution
+            **/
+            jumpdest_map[i] = &instructions[instr_index - 1];
 
-            auto leading_zeros = 32 - push_size;
-            for (auto& b : data)
-                b = 0;
-            for (size_t j = 0; j < push_size && (i + j) < code_size; ++j)
-                data[leading_zeros + j] = code[i + j];
-            instr.arg.data = &data[0];
-            i += push_size - 1;
+            // we added this opcodes gas cost into the current basic block, undo that
+            // TODO: cache this? Current code is a bit of a cludge to remove a conditional branch
+            block->gas_cost -= metrics.gas_cost;
+
+            // and point to the a new basic block
+            block = &instructions[instr_index].block_data;
+    
+            // update the new basic block's gas cost with the cost of OP_JUMPDEST
+            block->gas_cost = metrics.gas_cost;
+            block->stack_max = 0;
+            block->stack_req = 0;
+            stack_diff = 0;
+            delta = 0;
+            next_delta = JUMP_TABLE_CHECK_BOUNDARY;
+            break;
         }
-        else if (c >= OP_DUP1 && c <= OP_DUP16)
-            instr.arg.number = c - OP_DUP1;
-        else if (c >= OP_SWAP1 && c <= OP_SWAP16)
-            instr.arg.number = c - OP_SWAP1 + 1;
-        else if (c == OP_GAS || c == OP_DELEGATECALL || c == OP_CALL || c == OP_CALLCODE ||
-                 c == OP_STATICCALL || c == OP_CREATE || c == OP_CREATE2)
+        default:
         {
-            instr.arg.number = static_cast<int>(block->gas_cost);
-            // TODO: Does not make sense for OP_GAS.
-            instr.arg.call_kind = op2call_kind(c == OP_STATICCALL ? uint8_t{OP_CALL} : c);
+            next_delta = JUMP_TABLE_CHECK_BOUNDARY;
+            break;
         }
-        else if (c == OP_PC)
-            instr.arg.number = static_cast<int>(i);
-        else if (c == OP_EXP)
-            instr.arg.number = rev >= EVMC_SPURIOUS_DRAGON ? 50 : 10;
-        else if (c == OP_SSTORE)
-            instr.arg.number = rev;
-        else if (c >= OP_LOG0 && c <= OP_LOG4)
-            instr.arg.number = c - OP_LOG0;
-        else if (is_terminator(c))
-            block = nullptr;
+        }
+
+        instructions[instr_index].opcode_dest = jump_table[c + delta];
+        delta = next_delta;
+        next_delta = 0;
     }
 
-    // Not terminated block.
-    if (block || (code_size > 0 && code[code_size - 1] == OP_JUMPI))
-        analysis.instrs.emplace_back(fns[OP_STOP]);
-
-    return analysis;
+    // We want to add an OP_STOP opcode to the end of our program, so that we always terminate
+    instructions[instr_index].opcode_dest = jump_table[0];
+    
+    // For good measure, put an OP_STOP opcode in the two penultimate entries.
+    // We will set state.next_instruction to code_size when we enter an error state
+    instructions[code_size].opcode_dest = jump_table[0];
+    instructions[code_size + 1].opcode_dest = jump_table[0];
 }
-
 }  // namespace evmone
