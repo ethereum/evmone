@@ -120,9 +120,17 @@ void analyze(instruction* instructions, instruction** jumpdest_map, const void**
         case OP_PUSH32:
         {
             size_t push_size = static_cast<size_t>(c - OP_PUSH1 + 1);
-            size_t leading_zeroes = size_t(32 - push_size);
+            size_t leading_zeroes = static_cast<size_t>(32 - push_size);
             memcpy(&instructions[instr_index].instruction_data.push_data[0], &evmone::zero_bytes, 32);
+            size_t copy_size = std::min(push_size, code_size - i - 1);
             memcpy(&instructions[instr_index].instruction_data.push_data[leading_zeroes], code + i + 1, push_size);
+            uint64_t swap_buffer[4] = { 0, 0, 0, 0 };
+            memcpy((uint8_t*)(&swap_buffer) + leading_zeroes, code + i + 1, copy_size);
+            uint64_t* push_data = (uint64_t*)(instructions[instr_index].instruction_data.push_data.begin());
+            push_data[3] = __builtin_bswap64(swap_buffer[0]);
+            push_data[2] = __builtin_bswap64(swap_buffer[1]);
+            push_data[1] = __builtin_bswap64(swap_buffer[2]);
+            push_data[0] = __builtin_bswap64(swap_buffer[3]);
             i += push_size;
             next_delta = JUMP_TABLE_CHECK_BOUNDARY;
             break;

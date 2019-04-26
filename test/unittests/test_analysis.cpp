@@ -83,26 +83,21 @@ TEST(analysis, stack_up_and_down)
 TEST(analysis, push)
 {
     auto code = from_hex("6708070605040302017f00ee");
-    evmone::instruction* jumpdest_map[code.size() + 2] = { nullptr };
+    evmone::instruction* jumpdest_map[code.size() + 2] = {nullptr};
     evmone::instruction analysis[code.size() + 2];
-    evmone::analyze(analysis, jumpdest_map,  fake_fn_table, rev, &code[0], code.size());
+    evmone::analyze(analysis, jumpdest_map, fake_fn_table, rev, &code[0], code.size());
+    intx::uint256 result = *(intx::uint256*)(analysis[0].instruction_data.push_data.begin());
+    intx::uint256 result_b = *(intx::uint256*)(analysis[1].instruction_data.push_data.begin());
 
-    for(size_t i = 0; i < 24; i++)
-    {
-        EXPECT_EQ(analysis[0].instruction_data.push_data[i], 0x00);
-    }
-    EXPECT_EQ(analysis[0].instruction_data.push_data[24], 0x08);
-    EXPECT_EQ(analysis[0].instruction_data.push_data[25], 0x07);
-    EXPECT_EQ(analysis[0].instruction_data.push_data[26], 0x06);
-    EXPECT_EQ(analysis[0].instruction_data.push_data[27], 0x05);
-    EXPECT_EQ(analysis[0].instruction_data.push_data[28], 0x04);
-    EXPECT_EQ(analysis[0].instruction_data.push_data[29], 0x03);
-    EXPECT_EQ(analysis[0].instruction_data.push_data[30], 0x02);
-    EXPECT_EQ(analysis[0].instruction_data.push_data[31], 0x01);
-    EXPECT_EQ(analysis[1].instruction_data.push_data[0], 0x00);
-    EXPECT_EQ(analysis[1].instruction_data.push_data[1], 0xee);
+    EXPECT_EQ(result.hi.lo, 0);
+    EXPECT_EQ(result.lo.hi, 0);
+    EXPECT_EQ(result.lo.lo, 0x0807060504030201);
+
+    EXPECT_EQ(result_b.hi.hi, 0x00ee000000000000);
+    EXPECT_EQ(result_b.hi.lo, 0);
+    EXPECT_EQ(result_b.lo.hi, 0);
+    EXPECT_EQ(result_b.lo.lo, 0);
 }
-
 
 TEST(analysis, jump1)
 {

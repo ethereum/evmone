@@ -23,6 +23,7 @@ namespace
 
 extern evmc_host_interface interface;
 
+int num_repetitions = 10;
 // FIXME: Allow running with empty code.
 // clang-format off
 const auto empty_code = from_hex("00");
@@ -244,7 +245,7 @@ void sha1_divs(State& state) noexcept
     state.counters["gas_used"] = Counter(iteration_gas_used);
     state.counters["gas_rate"] = Counter(total_gas_used, Counter::kIsRate);
 }
-BENCHMARK(sha1_divs)->Arg(0)->Arg(1351)->Arg(2737)->Arg(5311)->Arg(64 * 1024)->Unit(kMicrosecond)->Repetitions(10)->ReportAggregatesOnly();
+BENCHMARK(sha1_divs)->Arg(0)->Arg(1351)->Arg(2737)->Arg(5311)->Arg(64 * 1024)->Unit(kMicrosecond)->Repetitions(num_repetitions)->ReportAggregatesOnly();
 
 
 void sha1_shifts(State& state) noexcept
@@ -270,7 +271,7 @@ void sha1_shifts(State& state) noexcept
     state.counters["gas_used"] = Counter(iteration_gas_used);
     state.counters["gas_rate"] = Counter(total_gas_used, Counter::kIsRate);
 }
-BENCHMARK(sha1_shifts)->Arg(0)->Arg(1351)->Arg(2737)->Arg(5311)->Arg(64 * 1024)->Unit(kMicrosecond)->Repetitions(10)->ReportAggregatesOnly();
+BENCHMARK(sha1_shifts)->Arg(0)->Arg(1351)->Arg(2737)->Arg(5311)->Arg(64 * 1024)->Unit(kMicrosecond)->Repetitions(num_repetitions)->ReportAggregatesOnly();
 
 
 void blake2b_shifts(State& state) noexcept
@@ -306,7 +307,7 @@ BENCHMARK(blake2b_shifts)
     ->Arg(5610)
     ->Arg(8415)
     ->Arg(64 * 1024)
-    ->Unit(kMicrosecond)->Repetitions(10)->ReportAggregatesOnly();
+    ->Unit(kMicrosecond)->Repetitions(num_repetitions)->ReportAggregatesOnly();
 
 
 
@@ -349,7 +350,7 @@ BENCHMARK(weierstrudel)
     ->Arg(8)
     ->Arg(9)
     ->Arg(14)
-    ->Unit(kMicrosecond)->Repetitions(10)->ReportAggregatesOnly();
+    ->Unit(kMicrosecond)->Repetitions(num_repetitions)->ReportAggregatesOnly();
 
 }  // namespace
 

@@ -749,7 +749,7 @@ inline void op_gaslimit(execution_state& state) noexcept
 inline void op_push(execution_state& state) noexcept
 {
     state.stack_ptr++;
-    *state.stack_ptr = intx::be::uint256(&state.next_instruction->instruction_data.push_data[0]);
+    *state.stack_ptr = *(uint256*)(&state.next_instruction->instruction_data.push_data[0]);
 }
 
 inline void op_pop(execution_state& state) noexcept
