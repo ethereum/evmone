@@ -58,11 +58,15 @@ struct execution_state
 
     // This is a bit hacky. We want the fake stack to be allocated on the real stack,
     // but we don't want to call the default constructor of uint256 for every entry
-    // (this was adding a few hundred microseconds to the 'empty' benchmark).
-    // It is not possible to access stack elements that have not been written to,
-    // so we might as well save some time and leave this array initialized with garbage
+    // (this was adding a few hundred microseconds to the 'empty' benchmark,
+    //  and we only read stack values after we write to them).
+    // It is not possible to access stack elements that have not been written to (without entering an error state),
+    // so we might as well save some time and leave this array initialized with garbage.
+    // But to do that, we need to instantiate an array of uint256's without calling the default constructor.
+    // To do THAT, this pretends to be a char array, when in reality it is used to store uint256's
     char stack[1024 * sizeof(uint256)];
 
+    size_t code_size_mask;
     instruction* stop_instruction;
     size_t code_size = 0;
     size_t output_offset = 0;

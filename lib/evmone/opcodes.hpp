@@ -527,11 +527,11 @@ inline void op_sstore(execution_state& state) noexcept
 
 inline void op_jump(execution_state& state, instruction** jumpdest_map) noexcept
 {
-    // TODO: get least significant word of stack variable
-    size_t pc = std::min(state.code_size, static_cast<size_t>(*state.stack_ptr));
-    state.next_instruction = jumpdest_map[pc];
-
-    if (__builtin_expect(state.next_instruction + 1 == nullptr, 0))
+    size_t pc = *(size_t*)state.stack_ptr;
+    // fish out our next instruction, using code_size_mask to keep the index within array bounds
+    state.next_instruction = jumpdest_map[pc & state.code_size_mask];
+    // validate this is a legitimate jump destination
+    if (__builtin_expect((state.next_instruction + 1 == nullptr) || (pc >= state.code_size), 0))
     {
         state.status = EVMC_BAD_JUMP_DESTINATION;
         state.next_instruction = state.stop_instruction;
@@ -543,11 +543,11 @@ inline void op_jumpi(execution_state& state, instruction** jumpdest_map) noexcep
 {
     if (*(state.stack_ptr - 1) != 0)
     {
-        // TODO: make instruction array size a power of 2 and use a logical AND to mask jump
-        // destination
-        size_t pc = std::min(state.code_size, static_cast<size_t>(*state.stack_ptr));
-        state.next_instruction = jumpdest_map[pc];
-        if (__builtin_expect((state.next_instruction + 1 == nullptr), 0))
+        size_t pc = *(size_t*)state.stack_ptr;
+        // fish out our next instruction, using code_size_mask to keep the index within array bounds
+        state.next_instruction = jumpdest_map[pc & state.code_size_mask];
+        // validate this is a legitimate jump destination
+        if (__builtin_expect((state.next_instruction + 1 == nullptr) || (pc >= state.code_size), 0))
         {
             state.status = EVMC_BAD_JUMP_DESTINATION;
             state.next_instruction = state.stop_instruction;

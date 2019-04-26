@@ -12,14 +12,6 @@
 #include <evmc/helpers.hpp>
 #include <evmc/instructions.h>
 
-#define UPDATE_MEMORY()                                \
-    {                                                  \
-        auto w = state.msize >> 5;                     \
-        auto new_cost = 3 * w + (w * w >> 9);          \
-        auto cost = new_cost - state.memory_prev_cost; \
-        state.memory_prev_cost = new_cost;             \
-        state.gas_left -= (cost + block.gas_cost);     \
-    }
 
 // this macro is called to dispatch to the relevant subroutine required to interpret the next
 // instruction. Given the lack of conditional branching, the aspiration is that the CPU can figure
@@ -59,6 +51,22 @@ namespace evmone
 {
 namespace
 {
+size_t count_zeroes(size_t x) noexcept
+{
+    if (sizeof(size_t) == 8)
+    {
+        return __builtin_clzll(x);
+    }
+    else if (sizeof(size_t) == 4)
+    {
+        return __builtin_clzl(x);
+    }
+    else
+    {
+        return __builtin_clz(x);
+    }
+}
+
 const void** interpret(
     instruction* instructions, instruction** jumpdest_map, execution_state& state) noexcept
 {
@@ -1470,7 +1478,14 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
     instruction* jumpdest_map[code_size + 2] = { nullptr };
 
     // Create array of instruction structs, this is where we'll place our program data.
-    instruction instructions[code_size + 2];
+    // We want the size of this array to be equal the greater of:
+    // a: code_size + 2 extra elements (used to store 'invalid' instructions)
+    // b: code_size rounded up to the nearest power of 2, minus 1
+    // Option b is so that we can 'pin' the program counter with a logical AND against a mask,
+    // which is useful when performing jump and jumpi opcodes, as we can safely
+    // index a member of 'instructions' before validating whether the jump destination is valid
+    state.code_size_mask = ((~static_cast<size_t>(0)) >> count_zeroes(code_size));
+    instruction instructions[std::max(state.code_size_mask, code_size + 2)];
 
     // Fill instructions and jumpdest_map
     analyze(instructions, jumpdest_map, op_table[jump_table_index], rev, code, code_size);
