@@ -10,7 +10,7 @@
 #include <evmc/instructions.h>
 #include <gtest/gtest.h>
 #include <intx/intx.hpp>
-#include <map>
+#include <unordered_map>
 
 using namespace std::literals;
 
@@ -59,7 +59,7 @@ protected:
     /// Wrapper for evmone::execute. The result will be in the .result field.
     void execute(int64_t gas, std::string_view code_hex, std::string_view input_hex = {}) noexcept
     {
-        auto input = from_hex(input_hex.data());
+        auto input = from_hex(input_hex);
         msg.gas = gas;
         msg.input_data = input.data();
         msg.input_size = input.size();
@@ -568,7 +568,7 @@ TEST_F(execution, sload_cost_pre_tw)
 
 TEST_F(execution, sstore_cost)
 {
-    auto revs = {EVMC_BYZANTIUM, EVMC_CONSTANTINOPLE, EVMC_CONSTANTINOPLE2};
+    auto revs = {EVMC_BYZANTIUM, EVMC_CONSTANTINOPLE, EVMC_PETERSBURG};
     for (auto r : revs)
     {
         storage.clear();

@@ -4,6 +4,10 @@
 
 cmake_minimum_required(VERSION 3.5)
 
+if (NOT EXISTS ${CMAKE_SOURCE_DIR}/evmc/.git OR NOT EXISTS ${CMAKE_SOURCE_DIR}/intx/.git)
+    message(FATAL_ERROR "Git submodules not initialized, execute:\n  git submodule update --init")
+endif()
+
 option(BUILD_SHARED_LIBS "Build evmone as a shared library" ON)
 option(EVMONE_TESTING "Build tests and test tools" OFF)
 
@@ -25,9 +29,10 @@ hunter_add_package(ethash)
 find_package(ethash CONFIG REQUIRED)
 
 option(INTX_TESTING "Build intx with tests" OFF)
+option(INTX_BENCHMARKING "Build intx with benchmarking" OFF)
 add_subdirectory(intx)
 
-option(EVMC_TESTING "Build EVMC tests and test tools" ${EVMONE_TESTING})
+option(EVMC_TEST_TOOLS "Build EVMC test tools" ${EVMONE_TESTING})
 add_subdirectory(evmc)
 
 cable_set_build_type(DEFAULT Release CONFIGURATION_TYPES Debug Release)
