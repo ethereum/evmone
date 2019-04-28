@@ -404,9 +404,11 @@ void op_calldatacopy(execution_state& state, instr_argument) noexcept
         return;
     }
 
-    // FIXME: Make sure data pointers are not null, add test cases.
-    std::memcpy(&state.memory[dst], &state.msg->input_data[src], copy_size);
-    std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
+    if (copy_size > 0)
+        std::memcpy(&state.memory[dst], &state.msg->input_data[src], copy_size);
+
+    if (s - copy_size > 0)
+        std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
 
     state.stack.pop_back();
     state.stack.pop_back();
@@ -709,7 +711,8 @@ void op_returndatacopy(execution_state& state, instr_argument) noexcept
         return;
     }
 
-    std::memcpy(&state.memory[dst], &state.return_data[src], s);
+    if (s > 0)
+        std::memcpy(&state.memory[dst], &state.return_data[src], s);
 }
 
 void op_extcodehash(execution_state& state, instr_argument) noexcept
@@ -971,8 +974,12 @@ void op_call(execution_state& state, instr_argument arg) noexcept
     msg.destination = dst;
     msg.sender = state.msg->destination;
     intx::be::store(msg.value.bytes, value);
-    msg.input_data = &state.memory[size_t(input_offset)];
-    msg.input_size = size_t(input_size);
+
+    if (size_t(input_size) > 0)
+    {
+        msg.input_data = &state.memory[size_t(input_offset)];
+        msg.input_size = size_t(input_size);
+    }
 
     msg.depth = state.msg->depth + 1;
 
@@ -1073,19 +1080,20 @@ void op_delegatecall(execution_state& state, instr_argument arg) noexcept
     msg.destination = dst;
     msg.sender = state.msg->sender;
     msg.value = state.msg->value;
-    msg.input_data = &state.memory[size_t(input_offset)];
-    msg.input_size = size_t(input_size);
+
+    if (size_t(input_size) > 0)
+    {
+        msg.input_data = &state.memory[size_t(input_offset)];
+        msg.input_size = size_t(input_size);
+    }
 
     auto result = state.host->host->call(state.host, &msg);
     state.return_data.assign(result.output_data, result.output_size);
 
     state.item(0) = result.status_code == EVMC_SUCCESS;
 
-    if (result.output_data)
-    {
-        std::memcpy(&state.memory[size_t(output_offset)], result.output_data,
-            std::min(size_t(output_size), result.output_size));
-    }
+    if (const auto copy_size = std::min(size_t(output_size), result.output_size); copy_size > 0)
+        std::memcpy(&state.memory[size_t(output_offset)], result.output_data, copy_size);
 
     auto gas_used = msg.gas - result.gas_left;
 
@@ -1148,8 +1156,12 @@ void op_staticcall(execution_state& state, instr_argument arg) noexcept
 
     msg.destination = dst;
     msg.sender = state.msg->destination;
-    msg.input_data = &state.memory[size_t(input_offset)];
-    msg.input_size = size_t(input_size);
+
+    if (size_t(input_size) > 0)
+    {
+        msg.input_data = &state.memory[size_t(input_offset)];
+        msg.input_size = size_t(input_size);
+    }
 
     auto result = state.host->host->call(state.host, &msg);
     state.return_data.assign(result.output_data, result.output_size);
@@ -1217,8 +1229,13 @@ void op_create(execution_state& state, instr_argument arg) noexcept
         msg.gas = msg.gas - msg.gas / 64;
 
     msg.kind = EVMC_CREATE;
-    msg.input_data = &state.memory[size_t(init_code_offset)];
-    msg.input_size = size_t(init_code_size);
+
+    if (size_t(init_code_size) > 0)
+    {
+        msg.input_data = &state.memory[size_t(init_code_offset)];
+        msg.input_size = size_t(init_code_size);
+    }
+
     msg.sender = state.msg->destination;
     msg.depth = state.msg->depth + 1;
     intx::be::store(msg.value.bytes, endowment);
