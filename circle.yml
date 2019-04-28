@@ -1,5 +1,10 @@
 version: 2.1
 
+executors:
+  linux:
+    docker:
+      - image: ethereum/cpp-build-env:11
+
 commands:
   build_and_test:
     description: "Build & Test"
@@ -51,33 +56,39 @@ jobs:
         command: |
           codespell --quiet-level=4
 
-  build: &build
-    docker:
-      - image: ethereum/cpp-build-env:11
-    steps:
-      - build_and_test
-
-
   gcc-min:
-    <<: *build
+    executor: linux
     environment:
       CC: gcc-7
       CXX: g++-7
+    steps:
+      - build_and_test
 
-  gcc-latest:
-    <<: *build
+  gcc-latest-coverage:
+    executor: linux
     environment:
+      BUILD_TYPE: Debug
       CC: gcc-8
       CXX: g++-8
+      GCOV: gcov-8
+      CMAKE_OPTIONS: -DCOVERAGE=ON
+      TESTS_FILTER: unittests
+    steps:
+      - build_and_test
+      - run:
+          name: "Upload coverage data"
+          command: |
+            codecov --required --gcov-exec "$GCOV" --gcov-root ~/build
 
   clang-latest-ubsan:
-    <<: *build
+    executor: linux
     environment:
       CC: clang-8
       CXX: clang++-8
       CMAKE_OPTIONS: -DSANITIZE=undefined,implicit-conversion,nullability
       UBSAN_OPTIONS: halt_on_error=1
-
+    steps:
+      - build_and_test
 
   macos-asan:
     macos:
@@ -98,6 +109,6 @@ workflows:
     jobs:
       - lint
       - gcc-min
-      - gcc-latest
+      - gcc-latest-coverage
       - clang-latest-ubsan
       - macos-asan
