@@ -109,6 +109,7 @@ void op_sdiv(execution_state& state, instr_argument) noexcept
 void op_mod(execution_state& state, instr_argument) noexcept
 {
     auto& v = state.item(1);
+    (void)UNTESTED(v != 0);
     v = v != 0 ? state.item(0) % v : 0;
     state.stack.pop_back();
 }
