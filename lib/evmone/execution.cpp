@@ -256,7 +256,7 @@ void op_byte(execution_state& state, instr_argument) noexcept
     auto n = state.item(0);
     auto& x = state.item(1);
 
-    if (31 < n)
+    if (UNTESTED(31 < n))
         x = 0;
     else
     {
@@ -290,7 +290,7 @@ void op_sar(execution_state& state, instr_argument arg) noexcept
 
     constexpr auto allones = ~uint256{};
 
-    if (state.item(0) >= 256)
+    if (UNTESTED(state.item(0) >= 256))
         state.item(1) = allones;
     else
     {
@@ -306,7 +306,7 @@ void op_sha3(execution_state& state, instr_argument) noexcept
     auto index = state.item(0);
     auto size = state.item(1);
 
-    if (!check_memory(state, index, size))
+    if (UNTESTED(!check_memory(state, index, size)))
         return;
 
     auto i = static_cast<size_t>(index);
@@ -314,7 +314,7 @@ void op_sha3(execution_state& state, instr_argument) noexcept
     auto w = (static_cast<int64_t>(s) + 31) / 32;
     auto cost = w * 6;
     state.gas_left -= cost;
-    if (state.gas_left < 0)
+    if (UNTESTED(state.gas_left < 0))
     {
         state.run = false;
         state.status = EVMC_OUT_OF_GAS;
@@ -348,7 +348,7 @@ void op_balance(execution_state& state, instr_argument) noexcept
 
 void op_origin(execution_state& state, instr_argument) noexcept
 {
-    if (state.tx_context.block_timestamp == 0)
+    if (UNTESTED(state.tx_context.block_timestamp == 0))
         state.tx_context = state.host->host->get_tx_context(state.host);
     uint8_t data[32] = {};
     std::memcpy(&data[12], state.tx_context.tx_origin.bytes, sizeof(state.tx_context.tx_origin));
@@ -375,7 +375,7 @@ void op_calldataload(execution_state& state, instr_argument) noexcept
 {
     auto& index = state.item(0);
 
-    if (state.msg->input_size < index)
+    if (UNTESTED(state.msg->input_size < index))
         index = 0;
     else
     {
