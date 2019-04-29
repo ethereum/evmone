@@ -389,6 +389,16 @@ TEST_F(execution, div_by_zero)
     EXPECT_EQ(it->second, evmc_bytes32{});
 }
 
+TEST_F(execution, mod_by_zero)
+{
+    execute("60008060ff0607600055");
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(gas_used, 5022);
+    auto it = storage.find({});
+    ASSERT_NE(it, storage.end());
+    EXPECT_EQ(it->second, evmc_bytes32{});
+}
+
 TEST_F(execution, signextend)
 {
     std::string s;
