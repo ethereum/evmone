@@ -412,6 +412,15 @@ TEST_F(execution, mod_by_zero)
     EXPECT_EQ(it->second, evmc_bytes32{});
 }
 
+TEST_F(execution, addmod_mulmod_by_zero)
+{
+    execute("6000358080808008091560005260206000f3");
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(gas_used, 52);
+    ASSERT_EQ(result.output_size, 32);
+    EXPECT_EQ(result.output_data[31], 1);
+}
+
 TEST_F(execution, signextend)
 {
     std::string s;
