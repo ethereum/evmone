@@ -375,6 +375,19 @@ TEST_F(execution, addmod_mulmod)
     EXPECT_EQ(p, bytes(&result.output_data[32], 32));
 }
 
+TEST_F(execution, divmod)
+{
+    // Div and mod the -1 by the input and return.
+    execute("600035600160000381810460005281810660205260406000f3", "0d");
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(gas_used, 61);
+    ASSERT_EQ(result.output_size, 64);
+    auto a = from_hex("0000000000000000000000000000000000000000000000000000000000000013");
+    EXPECT_EQ(a, bytes(&result.output_data[0], 32));
+    auto p = from_hex("08ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+    EXPECT_EQ(p, bytes(&result.output_data[32], 32));
+}
+
 TEST_F(execution, div_by_zero)
 {
     rev = EVMC_CONSTANTINOPLE;
