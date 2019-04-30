@@ -6,12 +6,13 @@
 #define EVMONE_H
 
 #include <evmc/evmc.h>
+#include <evmc/utils.h>
 
 #if __cplusplus
 extern "C" {
 #endif
 
-evmc_instance* evmc_create_evmone() noexcept;
+EVMC_EXPORT struct evmc_instance* evmc_create_evmone(void) EVMC_NOEXCEPT;
 
 #if __cplusplus
 }

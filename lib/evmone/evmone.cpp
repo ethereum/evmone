@@ -10,7 +10,7 @@
 #include <evmone/evmone.h>
 
 extern "C" {
-evmc_instance* evmc_create_evmone() noexcept
+EVMC_EXPORT evmc_instance* evmc_create_evmone() noexcept
 {
     static constexpr auto destroy = [](evmc_instance*) noexcept {};
     static constexpr auto get_capabilities = [](evmc_instance*) noexcept
