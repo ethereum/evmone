@@ -58,8 +58,8 @@ union instr_argument
 {
     struct
     {
-        int number = 0;
-        evmc_call_kind call_kind = EVMC_CALL;
+        int number;
+        evmc_call_kind call_kind;
     };
     const uint8_t* data;
 
