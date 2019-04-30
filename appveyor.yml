@@ -1,0 +1,35 @@
+version: "{build}"
+image: Visual Studio 2017
+branches:
+  only:
+  - master
+  - /release\/.*/
+  - appveyor
+  - hunter
+configuration:
+  - Release
+environment:
+  matrix:
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      GENERATOR: "Visual Studio 15 2017 Win64"
+
+cache:
+  - C:\.hunter\_Base\Cache -> cmake\Hunter\init.cmake
+
+install:
+  - git submodule update --init --recursive
+
+before_build:
+- ps: |
+    if (!(test-path build)) { mkdir build }
+    cd build
+    cmake --version
+    cmake -DEVMONE_TESTING=ON -Wno-dev -G "$env:GENERATOR" .. -DCMAKE_INSTALL_PREFIX=C:\install
+
+build_script:
+- ps: |
+    cmake --build . --config $env:CONFIGURATION
+
+after_build:
+- ps: |
+    ctest -C $env:CONFIGURATION -j4 --output-on-failure --schedule-random
