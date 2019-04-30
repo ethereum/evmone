@@ -85,7 +85,9 @@ jobs:
     environment:
       CC: clang-8
       CXX: clang++-8
-      CMAKE_OPTIONS: -DSANITIZE=undefined,implicit-conversion,nullability
+      # Also set visibility to default, because UBSan from clang-8 has issues
+      # with comparing pointers to functions. The problem is solved in clang-9.
+      CMAKE_OPTIONS: -DSANITIZE=undefined,implicit-conversion,nullability -DCMAKE_CXX_FLAGS=-fvisibility=default
       UBSAN_OPTIONS: halt_on_error=1
     steps:
       - build_and_test

@@ -37,6 +37,10 @@ add_subdirectory(evmc)
 
 cable_set_build_type(DEFAULT Release CONFIGURATION_TYPES Debug Release)
 cable_configure_compiler(NO_PEDANTIC NO_CONVERSION_WARNINGS)
+if(CABLE_COMPILER_GNULIKE)
+    # Prepend to CXX flags to allow overriding.
+    set(CMAKE_CXX_FLAGS "-fvisibility=hidden ${CMAKE_CXX_FLAGS}")
+endif()
 
 set(include_dir ${CMAKE_CURRENT_SOURCE_DIR}/include)
 

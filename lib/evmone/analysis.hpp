@@ -4,6 +4,7 @@
 #pragma once
 
 #include <evmc/evmc.h>
+#include <evmc/utils.h>
 #include <intx/intx.hpp>
 #include <array>
 #include <cstdint>
@@ -101,10 +102,11 @@ struct code_analysis
 
     std::vector<std::pair<int, int>> jumpdest_map;
 
-    int find_jumpdest(int offset) noexcept;
+    // TODO: Exported for unit tests. Rework unit tests?
+    EVMC_EXPORT int find_jumpdest(int offset) noexcept;
 };
 
-code_analysis analyze(
+EVMC_EXPORT code_analysis analyze(
     const exec_fn_table& fns, evmc_revision rev, const uint8_t* code, size_t code_size) noexcept;
 
 }  // namespace evmone
