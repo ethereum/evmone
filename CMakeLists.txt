@@ -20,7 +20,7 @@ include(GNUInstallDirs)
 
 cable_configure_toolchain(DEFAULT cxx17-pic)
 
-include(HunterConfig)
+include(Hunter/init)
 
 project(evmone)
 set(PROJECT_VERSION 0.1.0-dev)
