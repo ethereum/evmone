@@ -40,6 +40,9 @@ cable_configure_compiler(NO_PEDANTIC NO_CONVERSION_WARNINGS)
 if(CABLE_COMPILER_GNULIKE)
     # Prepend to CXX flags to allow overriding.
     set(CMAKE_CXX_FLAGS "-fvisibility=hidden ${CMAKE_CXX_FLAGS}")
+elseif(MSVC)
+    # TODO: Temporary disable MSVC warning.
+    add_compile_options(/wd4201 /wd4458 /wd4244)
 endif()
 
 set(include_dir ${CMAKE_CURRENT_SOURCE_DIR}/include)
