@@ -456,6 +456,18 @@ TEST_F(execution, exp)
     EXPECT_EQ(bytes(&result.output_data[0], 32), a);
 }
 
+TEST_F(execution, exp_oog)
+{
+    auto code = "6001600003800a";
+    execute(1622, code);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(result.gas_left, 0);
+
+    execute(1621, code);
+    EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+    EXPECT_EQ(result.gas_left, 0);
+}
+
 TEST_F(execution, exp_pre_sd)
 {
     rev = EVMC_TANGERINE_WHISTLE;
