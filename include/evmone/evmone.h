@@ -7,8 +7,14 @@
 
 #include <evmc/evmc.h>
 
+#if __cplusplus
 extern "C" {
+#endif
+
 evmc_instance* evmc_create_evmone() noexcept;
+
+#if __cplusplus
 }
+#endif
 
 #endif  // EVMONE_H
