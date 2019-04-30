@@ -1,18 +1,19 @@
 # Cable: CMake Bootstrap Library.
-# Copyright 2018 Pawel Bylica.
-# Licensed under the Apache License, Version 2.0. See the LICENSE file.
+# Copyright 2019 Pawel Bylica.
+# Licensed under the Apache License, Version 2.0.
 
 if(cable_build_info_included)
     return()
 endif()
 set(cable_build_info_included TRUE)
 
+include(GNUInstallDirs)
 
 set(cable_buildinfo_template_dir ${CMAKE_CURRENT_LIST_DIR}/buildinfo)
 
 function(cable_add_buildinfo_library)
 
-    cmake_parse_arguments("" "" PROJECT_NAME "" ${ARGN})
+    cmake_parse_arguments("" "" PROJECT_NAME;EXPORT "" ${ARGN})
 
     if(NOT _PROJECT_NAME)
         message(FATAL_ERROR "The PROJECT_NAME argument missing")
@@ -85,4 +86,13 @@ function(cable_add_buildinfo_library)
         LIBRARY_OUTPUT_DIRECTORY ${output_dir}
         ARCHIVE_OUTPUT_DIRECTORY ${output_dir}
     )
+
+    if(_EXPORT)
+        install(TARGETS ${name} EXPORT ${_EXPORT}
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        )
+    endif()
+
 endfunction()
