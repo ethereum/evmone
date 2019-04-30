@@ -440,6 +440,25 @@ TEST_F(execution, signextend)
     EXPECT_EQ(bytes(&result.output_data[32], 32), b);
 }
 
+TEST_F(execution, signextend_31)
+{
+    rev = EVMC_CONSTANTINOPLE;
+
+    execute("61010160000360081c601e0b60005260206000f3");
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(gas_used, 38);
+    ASSERT_EQ(result.output_size, 32);
+    auto a = from_hex("fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe");
+    EXPECT_EQ(bytes(&result.output_data[0], 32), a);
+
+    execute("61010160000360081c601f0b60005260206000f3");
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(gas_used, 38);
+    ASSERT_EQ(result.output_size, 32);
+    a = from_hex("00fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe");
+    EXPECT_EQ(bytes(&result.output_data[0], 32), a);
+}
+
 TEST_F(execution, exp)
 {
     std::string s;
