@@ -12,3 +12,9 @@ add_library(evmone
 )
 target_link_libraries(evmone PUBLIC evmc::evmc intx::intx PRIVATE evmc::instructions ethash::ethash)
 target_include_directories(evmone PUBLIC ${include_dir})
+set_target_properties(
+    evmone PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}
+)

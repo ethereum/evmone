@@ -22,8 +22,8 @@ cd build
 cmake .. -DEVMONE_TESTING=ON
 cmake --build . -- -j
 
-test/evmone-unittests
-test/evmone-bench
+bin/evmone-unittests
+bin/evmone-bench
 ```
 
 ## Maintainer
