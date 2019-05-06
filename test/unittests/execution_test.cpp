@@ -15,11 +15,14 @@
 // Helpers for bytecode.
 #define _(x) x
 #define PUSH(x) "60" #x
+#define DUP() "80"
 #define RETURN(size) PUSH(size) PUSH(00) "f3"
 #define MSTORE(index) PUSH(index) "52"
 
 /// Return top stack item.
 #define RETTOP() MSTORE(00) RETURN(20)
+
+#define _6x(x) x x x x x x
 
 using namespace std::literals;
 
@@ -1204,5 +1207,20 @@ TEST_F(execution, abort)
         EXPECT_EQ(result.status_code, EVMC_INVALID_INSTRUCTION);
         if (result.release)
             result.release(&result);
+    }
+}
+
+TEST_F(execution, staticmode)
+{
+    auto code_prefix = std::string{PUSH(01) _6x(DUP())};
+
+    rev = EVMC_CONSTANTINOPLE;
+    for (auto op : {OP_SSTORE, OP_LOG0, OP_LOG1, OP_LOG2, OP_LOG3, OP_LOG4, OP_CALL, OP_CREATE,
+             OP_CREATE2, OP_SELFDESTRUCT})
+    {
+        msg.flags |= EVMC_STATIC;
+        execute(code_prefix + hex(op));
+        EXPECT_EQ(result.status_code, EVMC_STATIC_MODE_VIOLATION) << hex(op);
+        EXPECT_EQ(result.gas_left, 0);
     }
 }
