@@ -11,6 +11,16 @@
 #include <test/utils/utils.hpp>
 #include <unordered_map>
 
+
+// Helpers for bytecode.
+#define _(x) x
+#define PUSH(x) "60" #x
+#define RETURN(size) PUSH(size) PUSH(00) "f3"
+#define MSTORE(index) PUSH(index) "52"
+
+/// Return top stack item.
+#define RETTOP() MSTORE(00) RETURN(20)
+
 using namespace std::literals;
 
 extern evmc_host_interface interface;
@@ -191,6 +201,29 @@ TEST_F(execution, dup)
     EXPECT_EQ(result.gas_left, 1);
     EXPECT_EQ(result.output_size, 32);
     EXPECT_EQ(result.output_data[31], 20);
+}
+
+TEST_F(execution, dup_all_1)
+{
+    execute(PUSH(01) _("808182838485868788898a8b8c8d8e8f") _("01010101010101010101010101010101")
+            RETTOP());
+
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(result.output_data[31], 17);
+}
+
+TEST_F(execution, dup_stack_overflow)
+{
+    auto code = std::string{PUSH(01) _("808182838485868788898a8b8c8d8e8f")};
+    for (int i = 0; i < (1024 - 17); ++i)
+        code += "8f";
+
+    execute(code);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+
+    execute(code + "8f");
+    EXPECT_EQ(result.status_code, EVMC_STACK_OVERFLOW);
+    EXPECT_EQ(result.gas_left, 0);
 }
 
 TEST_F(execution, sub_and_swap)
