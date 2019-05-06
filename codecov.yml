@@ -4,4 +4,4 @@ ignore:
   - "test/benchmarks/*"
   - "test/fuzzer/*"
   - "test/integration/*"
-  - "test/utils/*"
+  - "test/utils/dump.*"
