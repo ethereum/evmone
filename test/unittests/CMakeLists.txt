@@ -6,8 +6,8 @@ hunter_add_package(GTest)
 find_package(GTest CONFIG REQUIRED)
 
 add_executable(evmone-unittests
-    test_analysis.cpp
-    test_execution.cpp
+    analysis_test.cpp
+    execution_test.cpp
 )
 
 target_link_libraries(evmone-unittests PRIVATE evmone testutils GTest::gtest GTest::main)
