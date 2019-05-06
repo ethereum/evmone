@@ -21,7 +21,7 @@ EVMC_EXPORT evmc_instance* evmc_create_evmone() noexcept
     static auto instance = evmc_instance{
         EVMC_ABI_VERSION,
         "evmone",
-        "0.1.0-alpha.0",
+        "0.1.0-dev",
         destroy,
         evmone::execute,
         get_capabilities,
