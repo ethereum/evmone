@@ -2,14 +2,13 @@
 // Copyright 2019 The evmone Authors.
 // Licensed under the Apache License, Version 2.0.
 
-#include "utils.hpp"
-
 #include <evmone/evmone.h>
 
 #include <evmc/helpers.hpp>
 #include <evmc/instructions.h>
 #include <gtest/gtest.h>
 #include <intx/intx.hpp>
+#include <test/utils/utils.hpp>
 #include <unordered_map>
 
 using namespace std::literals;

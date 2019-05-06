@@ -5,11 +5,10 @@
 #include <evmone/evmone.h>
 
 #include <benchmark/benchmark.h>
+#include <test/utils/utils.hpp>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
-
-#include "../unittests/utils.hpp"
 
 using namespace benchmark;
 

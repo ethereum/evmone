@@ -2,12 +2,10 @@
 // Copyright 2018-2019 The evmone Authors.
 // Licensed under the Apache License, Version 2.0.
 
-#include "utils.hpp"
-
 #include <evmc/instructions.h>
 #include <evmone/analysis.hpp>
-
 #include <gtest/gtest.h>
+#include <test/utils/utils.hpp>
 
 constexpr auto rev = EVMC_BYZANTIUM;
 
