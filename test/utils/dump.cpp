@@ -57,7 +57,7 @@ void dump_analysis(const evmone::code_analysis& analysis)
                   << metrics[c].gas_cost;
 
         if (c >= OP_PUSH1 && c <= OP_PUSH32)
-            std::cout << '\t' << to_hex(instr.arg.data, 32);
+            std::cout << '\t' << to_hex({instr.arg.data, 32});
 
         std::cout << '\n';
     }

@@ -10,4 +10,4 @@ using bytes = std::basic_string<uint8_t>;
 using bytes_view = std::basic_string_view<uint8_t>;
 
 bytes from_hex(std::string_view hex);
-std::string to_hex(const uint8_t bytes[], size_t size);
+std::string to_hex(bytes_view bytes);

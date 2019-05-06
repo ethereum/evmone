@@ -24,15 +24,15 @@ bytes from_hex(std::string_view hex)
     return bs;
 }
 
-std::string to_hex(const uint8_t bytes[], size_t size)
+std::string to_hex(bytes_view bytes)
 {
     static const auto hex_chars = "0123456789abcdef";
     std::string str;
-    str.reserve(size * 2);
-    for (size_t i = 0; i < size; ++i)
+    str.reserve(bytes.size() * 2);
+    for (auto b : bytes)
     {
-        str.push_back(hex_chars[bytes[i] >> 4]);
-        str.push_back(hex_chars[bytes[i] & 0xf]);
+        str.push_back(hex_chars[b >> 4]);
+        str.push_back(hex_chars[b & 0xf]);
     }
     return str;
 }
