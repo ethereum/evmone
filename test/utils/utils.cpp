@@ -9,12 +9,23 @@
 
 bytes from_hex(std::string_view hex)
 {
+    if (hex.length() % 2 == 1)
+        throw std::length_error{"the length of the input is odd"};
+
     bytes bs;
     int b = 0;
     for (size_t i = 0; i < hex.size(); ++i)
     {
         auto h = hex[i];
-        int v = (h <= '9') ? h - '0' : h - 'a' + 10;
+        int v;
+        if (h >= '0' && h <= '9')
+            v = h - '0';
+        else if (h >= 'a' && h <= 'f')
+            v = h - 'a' + 10;
+        else if (h >= 'A' && h <= 'F')
+            v = h - 'A' + 10;
+        else
+            throw std::out_of_range{"not a hex digit"};
 
         if (i % 2 == 0)
             b = v << 4;

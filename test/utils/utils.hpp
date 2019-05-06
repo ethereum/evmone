@@ -4,6 +4,7 @@
 #pragma once
 
 #include <cstdint>
+#include <stdexcept>
 #include <string>
 
 using bytes = std::basic_string<uint8_t>;
