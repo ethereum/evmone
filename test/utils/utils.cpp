@@ -37,13 +37,9 @@ bytes from_hex(std::string_view hex)
 
 std::string to_hex(bytes_view bytes)
 {
-    static const auto hex_chars = "0123456789abcdef";
     std::string str;
     str.reserve(bytes.size() * 2);
     for (auto b : bytes)
-    {
-        str.push_back(hex_chars[b >> 4]);
-        str.push_back(hex_chars[b & 0xf]);
-    }
+        str += hex(b);
     return str;
 }
