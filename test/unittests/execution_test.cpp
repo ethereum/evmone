@@ -60,7 +60,7 @@ protected:
     intx::uint256 balance = {};
     bytes extcode = {};
 
-    evmc_message call_msg = {};
+    evmc_message call_msg = {};  ///< Recorded call message.
     evmc_result call_result = {};
 
     static evmc_host_interface interface;
@@ -991,6 +991,23 @@ TEST_F(execution, call_with_value_depth_limit)
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(call_msg.kind, EVMC_CREATE2);
     EXPECT_EQ(call_msg.depth, 0);
+}
+
+TEST_F(execution, call_depth_limit)
+{
+    rev = EVMC_CONSTANTINOPLE;
+    msg.depth = 1024;
+    auto opcodes = {OP_CALL, OP_CALLCODE, OP_DELEGATECALL, OP_STATICCALL, OP_CREATE, OP_CREATE2};
+    auto code = PUSH(00) _6x(DUP());
+    auto mark = 0xffe;
+
+    for (auto op : opcodes)
+    {
+        call_msg.depth = mark;
+        execute(code + hex(op));
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(call_msg.depth, mark);
+    }
 }
 
 TEST_F(execution, call_high_gas)
