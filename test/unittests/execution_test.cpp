@@ -15,6 +15,7 @@
 
 // Helpers for bytecode.
 #define _(x) x
+#define SHA3(index, size) PUSH(size) PUSH(index) "20"
 #define MSTORE8(index) PUSH(index) "53"
 #define PUSH(x) "60" #x
 #define DUP() "80"
@@ -25,6 +26,7 @@
 /// Return top stack item.
 #define RETTOP() MSTORE(00) RETURN(20)
 
+#define _2x(x) x x
 #define _4x(x) x x x x
 #define _6x(x) x x x x x x
 
@@ -1242,6 +1244,42 @@ TEST_F(execution, mstore8_memory_cost)
     execute(12, code);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     execute(11, code);
+    EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+}
+
+TEST_F(execution, sha3_memory_cost)
+{
+    auto code = SHA3(00, 01);
+    execute(45, code);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    execute(44, code);
+    EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+}
+
+TEST_F(execution, calldatacopy_memory_cost)
+{
+    auto code = PUSH(01) PUSH(00) PUSH(00) "37";
+    execute(18, code);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    execute(17, code);
+    EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+}
+
+TEST_F(execution, codecopy_memory_cost)
+{
+    auto code = PUSH(01) PUSH(00) PUSH(00) "39";
+    execute(18, code);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    execute(17, code);
+    EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+}
+
+TEST_F(execution, extcodecopy_memory_cost)
+{
+    auto code = PUSH(01) PUSH(00) _2x(DUP()) "3c";
+    execute(718, code);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    execute(717, code);
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
