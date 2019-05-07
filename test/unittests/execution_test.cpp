@@ -16,6 +16,7 @@
 #define _(x) x
 #define PUSH(x) "60" #x
 #define DUP() "80"
+#define CALLDATALOAD(index) PUSH(index) "35"
 #define RETURN(size) PUSH(size) PUSH(00) "f3"
 #define MSTORE(index) PUSH(index) "52"
 
@@ -551,6 +552,13 @@ TEST_F(execution, calldataload)
     ASSERT_EQ(result.output_size, 10);
     auto a = from_hex("04050000000000000000");
     EXPECT_EQ(bytes(&result.output_data[0], 10), a);
+}
+
+TEST_F(execution, calldataload_outofrange)
+{
+    execute(CALLDATALOAD(01) RETTOP());
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(std::count(result.output_data, result.output_data + result.output_size, 0), 32);
 }
 
 TEST_F(execution, calldatacopy)
