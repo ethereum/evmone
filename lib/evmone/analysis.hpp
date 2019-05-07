@@ -3,7 +3,7 @@
 // Licensed under the Apache License, Version 2.0.
 #pragma once
 
-#include <evmc/evmc.h>
+#include <evmc/evmc.hpp>
 #include <evmc/utils.h>
 #include <intx/intx.hpp>
 #include <array>
@@ -45,9 +45,7 @@ struct execution_state
     const uint8_t* code = nullptr;
     size_t code_size = 0;
 
-    evmc_context* host = nullptr;
-
-    evmc_tx_context tx_context = {};
+    evmc::HostContext host{nullptr};
 
     evmc_revision rev = {};
 
