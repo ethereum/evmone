@@ -9,6 +9,7 @@
 #include <gtest/gtest.h>
 #include <intx/intx.hpp>
 #include <test/utils/utils.hpp>
+#include <algorithm>
 #include <unordered_map>
 
 
@@ -23,6 +24,7 @@
 /// Return top stack item.
 #define RETTOP() MSTORE(00) RETURN(20)
 
+#define _4x(x) x x x x
 #define _6x(x) x x x x x x
 
 using namespace std::literals;
@@ -1230,5 +1232,108 @@ TEST_F(execution, staticmode)
         execute(code_prefix + hex(op));
         EXPECT_EQ(result.status_code, EVMC_STATIC_MODE_VIOLATION) << hex(op);
         EXPECT_EQ(result.gas_left, 0);
+    }
+}
+
+struct memory_access_opcode
+{
+    evmc_opcode opcode;
+    int memory_index_arg;
+    int memory_size_arg;
+};
+
+struct memory_access_params
+{
+    uint64_t index;
+    uint64_t size;
+};
+
+memory_access_opcode memory_access_opcodes[] = {
+    {OP_SHA3, 0, 1},
+    {OP_CALLDATACOPY, 0, 2},
+    {OP_CODECOPY, 0, 2},
+    {OP_MLOAD, 0, -1},
+    {OP_MSTORE, 0, -1},
+    {OP_MSTORE8, 0, -1},
+    {OP_EXTCODECOPY, 1, 3},
+    {OP_RETURNDATACOPY, 0, 2},
+    {OP_LOG0, 0, 1},
+    {OP_LOG1, 0, 1},
+    {OP_LOG2, 0, 1},
+    {OP_LOG3, 0, 1},
+    {OP_LOG4, 0, 1},
+    {OP_RETURN, 0, 1},
+    {OP_REVERT, 0, 1},
+    {OP_CALL, 3, 4},
+    {OP_CALL, 5, 6},
+    {OP_CALLCODE, 3, 4},
+    {OP_CALLCODE, 5, 6},
+    {OP_DELEGATECALL, 2, 3},
+    {OP_DELEGATECALL, 4, 5},
+    {OP_STATICCALL, 2, 3},
+    {OP_STATICCALL, 4, 5},
+    {OP_CREATE, 1, 2},
+    {OP_CREATE2, 1, 2},
+};
+
+memory_access_params memory_access_test_cases[] = {
+    {0, 0x100000000},
+    {0x100000000, 0},
+    {0x100000000, 1},
+    {0x100000000, 0x100000000},
+};
+
+TEST_F(execution, memory_access)
+{
+    rev = EVMC_CONSTANTINOPLE;
+    auto metrics = evmc_get_instruction_metrics_table(rev);
+
+    for (auto& p : memory_access_test_cases)
+    {
+        auto ss = std::ostringstream{};
+        ss << std::hex << std::setw(10) << std::setfill('0') << p.size;
+        const auto push_size = "64" + ss.str();
+        ss.str({});
+        ss << std::hex << std::setw(10) << std::setfill('0') << p.index;
+        const auto push_index = "64" + ss.str();
+
+        for (auto& t : memory_access_opcodes)
+        {
+            const int num_args = metrics[t.opcode].num_stack_arguments;
+            auto h = std::max(num_args, t.memory_size_arg + 1);
+            auto code = std::string{};
+
+            if (t.memory_size_arg >= 0)
+            {
+                while (--h != t.memory_size_arg)
+                    code += PUSH(00);
+
+                code += push_size;
+            }
+            else if (p.index == 0 || p.size == 0)
+                continue;  // Skip opcodes not having SIZE argument.
+
+            while (--h != t.memory_index_arg)
+                code += PUSH(00);
+
+            code += push_index;
+
+            while (h-- != 0)
+                code += PUSH(00);
+
+            code += hex(t.opcode);
+
+            execute(code);
+            if (p.size == 0)
+            {
+                EXPECT_EQ(result.status_code, (t.opcode == OP_REVERT) ? EVMC_REVERT : EVMC_SUCCESS);
+                EXPECT_NE(result.gas_left, 0);
+            }
+            else
+            {
+                EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+                EXPECT_EQ(result.gas_left, 0);
+            }
+        }
     }
 }
