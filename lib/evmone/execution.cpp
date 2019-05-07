@@ -20,7 +20,7 @@ bool check_memory(execution_state& state, const uint256& offset, const uint256& 
 
     constexpr auto limit = uint32_t(-1);
 
-    if (limit < offset || limit < size)  // TODO: Revert order of args in <.
+    if (offset > limit || size > limit)
     {
         state.run = false;
         state.status = EVMC_OUT_OF_GAS;
@@ -160,8 +160,7 @@ void op_signextend(execution_state& state, instr_argument) noexcept
     {
         auto sign_bit = static_cast<int>(ext) * 8 + 7;
         auto sign_mask = intx::uint256{1} << sign_bit;
-        // TODO: Fix intx operator- overloading: X - 1 does not work.
-        auto value_mask = sign_mask - intx::uint256{1};
+        auto value_mask = sign_mask - 1;
         auto is_neg = (x & sign_mask) != 0;
         x = is_neg ? x | ~value_mask : x & value_mask;
     }
@@ -246,7 +245,7 @@ void op_byte(execution_state& state, instr_argument) noexcept
     {
         auto sh = (31 - static_cast<unsigned>(n)) * 8;
         auto y = x >> sh;
-        x = y & intx::uint256(0xff);  // TODO: Fix intx operator&.
+        x = y & 0xff;
     }
 
     state.stack.pop_back();
@@ -584,16 +583,12 @@ void op_jumpi(execution_state& state, instr_argument) noexcept
 
 void op_pc(execution_state& state, instr_argument arg) noexcept
 {
-    // TODO: Using temporary object does not work with push_back().
-    intx::uint256 size = arg.number;
-    state.stack.push_back(size);
+    state.stack.emplace_back(arg.number);
 }
 
 void op_msize(execution_state& state, instr_argument) noexcept
 {
-    // TODO: Using temporary object does not work with push_back().
-    intx::uint256 size = state.memory.size();
-    state.stack.push_back(size);
+    state.stack.emplace_back(state.memory.size());
 }
 
 void op_gas(execution_state& state, instr_argument arg) noexcept
@@ -1310,7 +1305,6 @@ void op_create2(execution_state& state, instr_argument arg) noexcept
 
     auto msg = evmc_message{};
 
-    // TODO: Only for TW+. For previous check g <= gas_left.
     auto correction = state.current_block_cost - arg.number;
     auto gas = state.gas_left + correction;
     msg.gas = gas - gas / 64;
