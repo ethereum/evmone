@@ -15,6 +15,7 @@
 
 // Helpers for bytecode.
 #define _(x) x
+#define MSTORE8(index) PUSH(index) "53"
 #define PUSH(x) "60" #x
 #define DUP() "80"
 #define CALLDATALOAD(index) PUSH(index) "35"
@@ -1233,6 +1234,15 @@ TEST_F(execution, staticmode)
         EXPECT_EQ(result.status_code, EVMC_STATIC_MODE_VIOLATION) << hex(op);
         EXPECT_EQ(result.gas_left, 0);
     }
+}
+
+TEST_F(execution, mstore8_memory_cost)
+{
+    auto code = PUSH(00) MSTORE8(00);
+    execute(12, code);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    execute(11, code);
+    EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
 struct memory_access_opcode
