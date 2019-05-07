@@ -12,7 +12,15 @@
 The C++ implementation of the Ethereum Virtual Machine (EVM) focused on speed.
 Compatible with [EVMC].
 
-Uses [intx] as a bignumber library and [ethash] for the special `SHA3` opcode.
+#### Characteristic of evmone
+
+1. The "indirect" subroutine threading is the dispatch method - 
+   a table with pointers to subroutines is prepared during the analysis of the bytecode.
+2. The gas cost and stack requirements of block of instructions is precomputed 
+   and applied once per block during execution.
+3. The [intx] library is used to provide 256-bit integer precision.
+4. The [ethash] library is used to provide Keccak hash function implementation
+   needed for the special `SHA3` instruction.
 
 ## Usage
 
