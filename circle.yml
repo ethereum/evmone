@@ -89,6 +89,8 @@ jobs:
       # with comparing pointers to functions. The problem is solved in clang-9.
       CMAKE_OPTIONS: -DSANITIZE=undefined,implicit-conversion,nullability -DCMAKE_CXX_FLAGS=-fvisibility=default
       UBSAN_OPTIONS: halt_on_error=1
+      # TODO: There is unresolved __ubsan_vptr_type_cache in evmone.so
+      TESTS_FILTER: unittests
     steps:
       - build_and_test
 
