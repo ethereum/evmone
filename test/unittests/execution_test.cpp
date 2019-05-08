@@ -374,7 +374,6 @@ TEST_F(execution, jumpi_at_the_end)
     EXPECT_EQ(gas_used, 1000);
 }
 
-
 TEST_F(execution, byte)
 {
     std::string s;
@@ -385,14 +384,17 @@ TEST_F(execution, byte)
     s += "600253";      // m[2] = aa
     s += "80601f1a";    // DUP 31 BYTE
     s += "600453";      // m[4] = dd
-    s += "60056000f3";  // RETURN(0,5)
-    execute(57, s);
+    s += "8060201a";    // DUP 32 BYTE
+    s += "600653";      // m[6] = 00
+    s += "60076000f3";  // RETURN(0,7)
+    execute(72, s);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 0);
-    ASSERT_EQ(result.output_size, 5);
+    ASSERT_EQ(result.output_size, 7);
     EXPECT_EQ(result.output_data[0], 0);
     EXPECT_EQ(result.output_data[2], 0xaa);
     EXPECT_EQ(result.output_data[4], 0xdd);
+    EXPECT_EQ(result.output_data[6], 0);
 }
 
 TEST_F(execution, addmod_mulmod)

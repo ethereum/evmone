@@ -239,7 +239,7 @@ void op_byte(execution_state& state, instr_argument) noexcept
     auto n = state.item(0);
     auto& x = state.item(1);
 
-    if (31 < n)
+    if (n > 31)
         x = 0;
     else
     {
