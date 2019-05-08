@@ -1137,16 +1137,56 @@ TEST_F(execution, call_depth_limit)
 {
     rev = EVMC_CONSTANTINOPLE;
     msg.depth = 1024;
-    auto opcodes = {OP_CALL, OP_CALLCODE, OP_DELEGATECALL, OP_STATICCALL, OP_CREATE, OP_CREATE2};
+
     auto code = PUSH(00) _6x(DUP());
     auto mark = 0xffe;
 
-    for (auto op : opcodes)
+    for (auto op : {OP_CALL, OP_CALLCODE, OP_DELEGATECALL, OP_STATICCALL, OP_CREATE, OP_CREATE2})
     {
         call_msg.depth = mark;
         execute(code + hex(op));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         EXPECT_EQ(call_msg.depth, mark);
+    }
+}
+
+TEST_F(execution, call_output)
+{
+    static bool result_is_correct = false;
+    static uint8_t output[] = {0xa, 0xb};
+
+    balance = 1;
+    exists = true;
+    call_result.output_data = output;
+    call_result.output_size = sizeof(output);
+    call_result.release = [](const evmc_result* result) {
+        result_is_correct = result->output_size == sizeof(output) && result->output_data == output;
+    };
+
+    auto code_prefix_output_1 = PUSH(01) _6x(DUP()) "677fffffffffffffff";
+    auto code_prefix_output_0 = PUSH(00) _6x(DUP()) "677fffffffffffffff";
+    auto code_suffix = RETURN(03);
+
+    for (auto op : {OP_CALL, OP_CALLCODE, OP_DELEGATECALL, OP_STATICCALL})
+    {
+        result_is_correct = false;
+        execute(code_prefix_output_1 + hex(op) + code_suffix);
+        EXPECT_TRUE(result_is_correct);
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        ASSERT_EQ(result.output_size, 3);
+        EXPECT_EQ(result.output_data[0], 0);
+        EXPECT_EQ(result.output_data[1], 0xa);
+        EXPECT_EQ(result.output_data[2], 0);
+
+
+        result_is_correct = false;
+        execute(code_prefix_output_0 + hex(op) + code_suffix);
+        EXPECT_TRUE(result_is_correct);
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        ASSERT_EQ(result.output_size, 3);
+        EXPECT_EQ(result.output_data[0], 0);
+        EXPECT_EQ(result.output_data[1], 0);
+        EXPECT_EQ(result.output_data[2], 0);
     }
 }
 

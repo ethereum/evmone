@@ -975,11 +975,8 @@ void op_call(execution_state& state, instr_argument arg) noexcept
 
     state.item(0) = result.status_code == EVMC_SUCCESS;
 
-    if (result.output_data)
-    {
-        std::memcpy(&state.memory[size_t(output_offset)], result.output_data,
-            std::min(size_t(output_size), result.output_size));
-    }
+    if (auto copy_size = std::min(size_t(output_size), result.output_size); copy_size > 0)
+        std::memcpy(&state.memory[size_t(output_offset)], result.output_data, copy_size);
 
     auto gas_used = msg.gas - result.gas_left;
 
@@ -1134,11 +1131,8 @@ void op_staticcall(execution_state& state, instr_argument arg) noexcept
     state.return_data.assign(result.output_data, result.output_size);
     state.item(0) = result.status_code == EVMC_SUCCESS;
 
-    if (result.output_data)
-    {
-        std::memcpy(&state.memory[size_t(output_offset)], result.output_data,
-            std::min(size_t(output_size), result.output_size));
-    }
+    if (auto copy_size = std::min(size_t(output_size), result.output_size); copy_size > 0)
+        std::memcpy(&state.memory[size_t(output_offset)], result.output_data, copy_size);
 
     auto gas_used = msg.gas - result.gas_left;
 
