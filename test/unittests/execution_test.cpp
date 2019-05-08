@@ -10,14 +10,18 @@
 #include <intx/intx.hpp>
 #include <test/utils/utils.hpp>
 #include <algorithm>
+#include <numeric>
 #include <unordered_map>
 
 
 // Helpers for bytecode.
 #define _(x) x
+#define ISZERO() "15"
+#define NOT(x) PUSH(x) "19"
 #define SHA3(index, size) PUSH(size) PUSH(index) "20"
 #define MSTORE8(index) PUSH(index) "53"
 #define PUSH(x) "60" #x
+#define PUSH2(x) "61" #x
 #define DUP() "80"
 #define CALLDATALOAD(index) PUSH(index) "35"
 #define RETURN(size) PUSH(size) PUSH(00) "f3"
@@ -1205,6 +1209,22 @@ TEST_F(execution, sar_01)
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 0);
+}
+
+TEST_F(execution, shift_overflow)
+{
+    rev = EVMC_CONSTANTINOPLE;
+    auto code_prefix = NOT(00) PUSH2(0100);
+    auto code_suffix = RETTOP();
+
+    for (auto op : {OP_SHL, OP_SHR, OP_SAR})
+    {
+        execute(code_prefix + hex(op) + code_suffix);
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        ASSERT_EQ(result.output_size, 32);
+        auto a = std::accumulate(result.output_data, result.output_data + result.output_size, 0);
+        EXPECT_EQ(a, op == OP_SAR ? 32 * 0xff : 0);
+    }
 }
 
 TEST_F(execution, undefined_instructions)
