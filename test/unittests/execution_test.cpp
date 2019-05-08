@@ -757,6 +757,7 @@ TEST_F(execution, invalid)
 
 TEST_F(execution, log3)
 {
+    // TODO: Extend the test to all LOGs.
     std::string s;
     s += "60016002600360046077600253600280a3";  // 1 2 3 4 m[2] = 0x77 2 2 LOG3
     execute(s);
@@ -769,6 +770,21 @@ TEST_F(execution, log3)
     EXPECT_EQ(log_topics[0].bytes[31], 4);
     EXPECT_EQ(log_topics[1].bytes[31], 3);
     EXPECT_EQ(log_topics[2].bytes[31], 2);
+}
+
+TEST_F(execution, log_data_cost)
+{
+    for (auto op : {OP_LOG0, OP_LOG1, OP_LOG2, OP_LOG3, OP_LOG4})
+    {
+        auto num_topics = op - OP_LOG0;
+        auto code = PUSH(00) _4x(DUP()) PUSH(01) PUSH(00) + hex(op);
+        auto cost = 407 + num_topics * 375;
+        execute(cost, code);
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+
+        execute(cost - 1, code);
+        EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+    }
 }
 
 TEST_F(execution, selfdestruct)
