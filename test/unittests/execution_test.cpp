@@ -26,6 +26,7 @@
 #define CALLDATALOAD(index) PUSH(index) "35"
 #define RETURN(size) PUSH(size) PUSH(00) "f3"
 #define MSTORE(index) PUSH(index) "52"
+#define SSTORE(index) PUSH(index) "55"
 
 /// Return top stack item.
 #define RETTOP() MSTORE(00) RETURN(20)
@@ -50,6 +51,7 @@ protected:
     evmc_address last_accessed_account = {};
 
     std::unordered_map<evmc_bytes32, evmc_bytes32> storage;
+    bool storage_cold = true;
 
     evmc_tx_context tx_context = {};
 
@@ -116,21 +118,21 @@ evmc_host_interface execution::interface = {
         return static_cast<execution*>(ctx)->storage[*key];
     },
     [](evmc_context* ctx, const evmc_address*, const evmc_bytes32* key, const evmc_bytes32* value) {
-        auto& storage = static_cast<execution*>(ctx)->storage[*key];
+        auto& old = static_cast<execution*>(ctx)->storage[*key];
 
-        if (storage == *value)
-            return EVMC_STORAGE_UNCHANGED;
-
-        evmc_storage_status status = EVMC_STORAGE_MODIFIED;
-        if (is_zero(storage) && !is_zero(*value))
+        evmc_storage_status status;
+        if (old == *value)
+            status = EVMC_STORAGE_UNCHANGED;
+        else if (is_zero(old))
             status = EVMC_STORAGE_ADDED;
-        else if (!is_zero(storage) && is_zero(*value))
+        else if (is_zero(*value))
             status = EVMC_STORAGE_DELETED;
-        else if (!is_zero(storage))
+        else if (static_cast<execution*>(ctx)->storage_cold)
+            status = EVMC_STORAGE_MODIFIED;
+        else
             status = EVMC_STORAGE_MODIFIED_AGAIN;
 
-        storage = *value;
-
+        old = *value;
         return status;
     },
     [](evmc_context* ctx, const evmc_address* addr) {
@@ -689,12 +691,68 @@ TEST_F(execution, sload_cost_pre_tw)
 
 TEST_F(execution, sstore_cost)
 {
+    auto v1 = evmc_bytes32{};
+    v1.bytes[31] = 1;
+
     auto revs = {EVMC_BYZANTIUM, EVMC_CONSTANTINOPLE, EVMC_PETERSBURG};
     for (auto r : revs)
     {
-        storage.clear();
         rev = r;
-        execute("60018080805555");
+        storage_cold = true;
+
+        // Added:
+        storage.clear();
+        execute(20006, PUSH(01) SSTORE(01));
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        storage.clear();
+        execute(20005, PUSH(01) SSTORE(01));
+        EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+
+        // Deleted:
+        storage.clear();
+        storage[v1] = v1;
+        execute(5006, PUSH(00) SSTORE(01));
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        storage[v1] = v1;
+        execute(5005, PUSH(00) SSTORE(01));
+        EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+
+        // Modified:
+        storage.clear();
+        storage[v1] = v1;
+        execute(5006, PUSH(02) SSTORE(01));
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        storage[v1] = v1;
+        execute(5005, PUSH(02) SSTORE(01));
+        EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+
+        // Unchanged:
+        storage.clear();
+        storage[v1] = v1;
+        execute(PUSH(01) SSTORE(01));
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(gas_used, rev == EVMC_CONSTANTINOPLE ? 206 : 5006);
+        execute(205, PUSH(01) SSTORE(01));
+        EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+
+        // Added & unchanged:
+        storage.clear();
+        execute(PUSH(01) SSTORE(01) PUSH(01) SSTORE(01));
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(gas_used, rev == EVMC_CONSTANTINOPLE ? 20212 : 25012);
+
+        storage_cold = false;
+
+        // Modified again:
+        storage.clear();
+        storage[v1] = v1;
+        execute(PUSH(02) SSTORE(01));
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(gas_used, rev == EVMC_CONSTANTINOPLE ? 206 : 5006);
+
+        // Added & modified again:
+        storage.clear();
+        execute(PUSH(01) SSTORE(01) PUSH(02) SSTORE(01));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         EXPECT_EQ(gas_used, rev == EVMC_CONSTANTINOPLE ? 20212 : 25012);
     }
