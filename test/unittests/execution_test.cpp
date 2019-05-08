@@ -1007,6 +1007,28 @@ TEST_F(execution, create2)
     EXPECT_EQ(call_msg.input_size, 0x41);
 }
 
+TEST_F(execution, create2_salt_cost)
+{
+    rev = EVMC_CONSTANTINOPLE;
+    auto code = "600060208180f5";
+
+    call_msg.kind = EVMC_CALL;
+    call_msg.depth = -1;
+    execute(32021, code);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(result.gas_left, 0);
+    EXPECT_EQ(call_msg.kind, EVMC_CREATE2);
+    EXPECT_EQ(call_msg.depth, 1);
+
+    call_msg.kind = EVMC_CALL;
+    call_msg.depth = -1;
+    execute(32021 - 1, code);
+    EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+    EXPECT_EQ(result.gas_left, 0);
+    EXPECT_EQ(call_msg.kind, EVMC_CALL);
+    EXPECT_EQ(call_msg.depth, -1);
+}
+
 TEST_F(execution, call_failing_with_value)
 {
     auto code = "60ff600060ff6000600160aa618000f150";
