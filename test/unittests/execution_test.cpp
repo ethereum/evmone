@@ -1301,6 +1301,33 @@ TEST_F(execution, returndatacopy_empty)
     EXPECT_EQ(result.output_data[0], 0);
 }
 
+TEST_F(execution, returndatacopy_cost)
+{
+    auto output = uint8_t{};
+    call_result.output_data = &output;
+    call_result.output_size = sizeof(output);
+    auto code = "60008080808080fa6001600060003e";
+    execute(736, code);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    execute(735, code);
+    EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+}
+
+TEST_F(execution, returndatacopy_outofrange)
+{
+    auto output = uint8_t{};
+    call_result.output_data = &output;
+    call_result.output_size = sizeof(output);
+    execute(735, "60008080808080fa6002600060003e");
+    EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
+
+    execute(735, "60008080808080fa6001600160003e");
+    EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
+
+    execute(735, "60008080808080fa6000600260003e");
+    EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
+}
+
 TEST_F(execution, shl)
 {
     auto code = "600560011b6000526001601ff3";
