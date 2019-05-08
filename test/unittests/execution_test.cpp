@@ -392,9 +392,14 @@ TEST_F(execution, bad_jumpdest)
 {
     tx_context.block_number = 1;
     tx_context.block_gas_limit = 0;
+    tx_context.block_timestamp = 0x80000000;
     for (auto op : {OP_JUMP, OP_JUMPI})
     {
         execute("4345" + hex(op));
+        EXPECT_EQ(result.status_code, EVMC_BAD_JUMP_DESTINATION);
+        EXPECT_EQ(result.gas_left, 0);
+
+        execute("4342" + hex(op));
         EXPECT_EQ(result.status_code, EVMC_BAD_JUMP_DESTINATION);
         EXPECT_EQ(result.gas_left, 0);
     }
