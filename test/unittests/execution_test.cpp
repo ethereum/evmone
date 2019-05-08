@@ -1443,8 +1443,7 @@ TEST_F(execution, undefined_instructions)
 
             auto result = vm->execute(vm, this, rev, &msg, &opcode, sizeof(opcode));
             EXPECT_EQ(result.status_code, EVMC_UNDEFINED_INSTRUCTION) << std::hex << opcode;
-            if (result.release)
-                result.release(&result);
+            EXPECT_FALSE(result.release);
         }
     }
 }
@@ -1458,8 +1457,7 @@ TEST_F(execution, abort)
         auto msg = evmc_message{};
         auto result = vm->execute(vm, this, rev, &msg, &opcode, sizeof(opcode));
         EXPECT_EQ(result.status_code, EVMC_INVALID_INSTRUCTION);
-        if (result.release)
-            result.release(&result);
+        EXPECT_FALSE(result.release);
     }
 }
 
