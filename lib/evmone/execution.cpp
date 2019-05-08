@@ -1206,15 +1206,7 @@ void op_create(execution_state& state, instr_argument arg) noexcept
         state.item(0) = intx::be::uint256(data);
     }
 
-    auto gas_used = msg.gas - result.gas_left;
-
-    state.gas_left -= gas_used;
-    if (state.gas_left < 0)
-    {
-        // FIXME: This cannot happen.
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-    }
+    state.gas_left -= msg.gas - result.gas_left;
 }
 
 void op_create2(execution_state& state, instr_argument arg) noexcept
@@ -1284,15 +1276,7 @@ void op_create2(execution_state& state, instr_argument arg) noexcept
         state.item(0) = intx::be::uint256(data);
     }
 
-    auto gas_used = msg.gas - result.gas_left;
-
-    state.gas_left -= gas_used;
-    if (state.gas_left < 0)
-    {
-        // FIXME: This cannot happen.
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-    }
+    state.gas_left -= msg.gas - result.gas_left;
 }
 
 void op_undefined(execution_state& state, instr_argument) noexcept
