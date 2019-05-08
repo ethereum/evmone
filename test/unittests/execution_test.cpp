@@ -32,6 +32,7 @@
 #define RETTOP() MSTORE(00) RETURN(20)
 
 #define _2x(x) x x
+#define _3x(x) x x x
 #define _4x(x) x x x x
 #define _6x(x) x x x x x x
 
@@ -1090,6 +1091,34 @@ TEST_F(execution, create2_salt_cost)
     EXPECT_EQ(result.gas_left, 0);
     EXPECT_EQ(call_msg.kind, EVMC_CALL);
     EXPECT_EQ(call_msg.depth, -1);
+}
+
+TEST_F(execution, create_balance_too_low)
+{
+    rev = EVMC_CONSTANTINOPLE;
+    balance = 1;
+    call_msg.kind = EVMC_CALL;
+    for (auto op : {OP_CREATE, OP_CREATE2})
+    {
+        execute(PUSH(02) _3x(DUP()) + hex(op) + RETTOP());
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(std::count(result.output_data, result.output_data + result.output_size, 0), 32);
+        EXPECT_EQ(call_msg.kind, EVMC_CALL);
+    }
+}
+
+TEST_F(execution, create_failure)
+{
+    rev = EVMC_CONSTANTINOPLE;
+    for (auto op : {OP_CREATE, OP_CREATE2})
+    {
+        call_msg.kind = EVMC_CALL;
+        call_result.status_code = EVMC_FAILURE;
+        execute(PUSH(00) _3x(DUP()) + hex(op) + RETTOP());
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(std::count(result.output_data, result.output_data + result.output_size, 0), 32);
+        EXPECT_EQ(call_msg.kind, op == OP_CREATE ? EVMC_CREATE : EVMC_CREATE2);
+    }
 }
 
 TEST_F(execution, call_failing_with_value)

@@ -1260,8 +1260,11 @@ void op_create2(execution_state& state, instr_argument arg) noexcept
     msg.gas = gas - gas / 64;
 
     msg.kind = EVMC_CREATE2;
-    msg.input_data = &state.memory[size_t(init_code_offset)];
-    msg.input_size = size_t(init_code_size);
+    if (size_t(init_code_size) > 0)
+    {
+        msg.input_data = &state.memory[size_t(init_code_offset)];
+        msg.input_size = size_t(init_code_size);
+    }
     msg.sender = state.msg->destination;
     msg.depth = state.msg->depth + 1;
     intx::be::store(msg.create2_salt.bytes, salt);
