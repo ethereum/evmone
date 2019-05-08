@@ -800,7 +800,7 @@ void op_log(execution_state& state, instr_argument arg) noexcept
     auto o = static_cast<size_t>(offset);
     auto s = static_cast<size_t>(size);
 
-    auto cost = int64_t{8} * s;
+    auto cost = int64_t(s) * 8;
     state.gas_left -= cost;
     if (state.gas_left < 0)
     {
