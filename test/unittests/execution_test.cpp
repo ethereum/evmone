@@ -810,17 +810,35 @@ TEST_F(execution, selfdestruct)
 
 TEST_F(execution, selfdestruct_with_balance)
 {
+    auto code = "6000ff";
     balance = 1;
+    exists = false;
 
     rev = EVMC_TANGERINE_WHISTLE;
-    execute("6000ff");
+    execute(30003, code);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    EXPECT_EQ(gas_used, 30003);
+    EXPECT_EQ(result.gas_left, 0);
+
+    execute(30002, code);
+    EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+    EXPECT_EQ(result.gas_left, 0);
 
     rev = EVMC_HOMESTEAD;
-    execute("6000ff");
+    execute(3, code);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    EXPECT_EQ(gas_used, 3);
+    EXPECT_EQ(result.gas_left, 0);
+
+    exists = true;
+
+    rev = EVMC_TANGERINE_WHISTLE;
+    execute(5003, code);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(result.gas_left, 0);
+
+    rev = EVMC_HOMESTEAD;
+    execute(3, code);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(result.gas_left, 0);
 }
 
 TEST_F(execution, sha3)
