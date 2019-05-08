@@ -371,11 +371,31 @@ TEST_F(execution, jumpi)
     EXPECT_EQ(result.output_data[0], 0);
 }
 
+TEST_F(execution, jumpi_else)
+{
+    execute(15, "418057");  // COINBASE DUP JUMPI (STOP)
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(result.gas_left, 0);
+    EXPECT_EQ(result.output_size, 0);
+}
+
 TEST_F(execution, jumpi_at_the_end)
 {
     execute(1000, "5b6001600057");
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
     EXPECT_EQ(gas_used, 1000);
+}
+
+TEST_F(execution, bad_jumpdest)
+{
+    tx_context.block_number = 1;
+    tx_context.block_gas_limit = 0;
+    for (auto op : {OP_JUMP, OP_JUMPI})
+    {
+        execute("4345" + hex(op));
+        EXPECT_EQ(result.status_code, EVMC_BAD_JUMP_DESTINATION);
+        EXPECT_EQ(result.gas_left, 0);
+    }
 }
 
 TEST_F(execution, byte)
