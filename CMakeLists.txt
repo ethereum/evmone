@@ -22,7 +22,7 @@ cable_configure_toolchain(DEFAULT cxx17-pic)
 
 include(Hunter/init)
 
-project(evmone)
+project(evmone LANGUAGES CXX)
 set(PROJECT_VERSION 0.1.0-dev)
 
 hunter_add_package(ethash)
