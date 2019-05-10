@@ -67,7 +67,31 @@ macro(cable_configure_compiler)
             # Allow unknown pragmas, we don't want to wrap them with #ifdefs.
             add_compile_options(-Wno-unknown-pragmas)
 
+            # Stack protection.
+            check_cxx_compiler_flag(-fstack-protector fstack-protector)
+            if(fstack-protector)
+                # The compiler supports stack protection options.
+                if(cable_NO_STACK_PROTECTION)
+                    # Stack protection explicitly disabled.
+                    # Add "no" flag, because in some configuration the compiler has it enabled by default.
+                    add_compile_options(-fno-stack-protector)
+                else()
+                    # Try enabling the "strong" variant.
+                    cable_add_cxx_compiler_flag_if_supported(-fstack-protector-strong have_stack_protector_strong_support)
+                    if(NOT have_stack_protector_strong_support)
+                        # Fallback to standard variant of "strong" not available.
+                        add_compile_options(-fstack-protector)
+                    endif()
+                endif()
+            endif()
+
+            cable_add_cxx_compiler_flag_if_supported(-Wimplicit-fallthrough)
+
         elseif(MSVC)
+
+            # Get rid of default warning level.
+            string(REPLACE " /W3" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+            string(REPLACE " /W3" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 
             # Enable basing warnings set and treat them as errors.
             add_compile_options(/W4 /WX)
@@ -77,24 +101,18 @@ macro(cable_configure_compiler)
 
         endif()
 
-        check_cxx_compiler_flag(-fstack-protector fstack-protector)
-        if(fstack-protector)
-            # The compiler supports stack protection options.
-            if(cable_NO_STACK_PROTECTION)
-                # Stack protection explicitly disabled.
-                # Add "no" flag, because in some configuration the compiler has it enabled by default.
-                add_compile_options(-fno-stack-protector)
+        # Option for arch=native.
+        option(NATIVE "Build for native CPU" OFF)
+        if(NATIVE)
+            if(MSVC)
+                add_compile_options(-arch:AVX)
             else()
-                # Try enabling the "strong" variant.
-                cable_add_cxx_compiler_flag_if_supported(-fstack-protector-strong have_stack_protector_strong_support)
-                if(NOT have_stack_protector_strong_support)
-                    # Fallback to standard variant of "strong" not available.
-                    add_compile_options(-fstack-protector)
-                endif()
+                add_compile_options(-mtune=native -march=native)
             endif()
+        elseif(NOT MSVC)
+            # Tune for currently most common CPUs.
+            cable_add_cxx_compiler_flag_if_supported(-mtune=generic)
         endif()
-
-        cable_add_cxx_compiler_flag_if_supported(-Wimplicit-fallthrough)
 
         # Sanitizers support.
         set(SANITIZE OFF CACHE STRING "Build with the specified sanitizer")

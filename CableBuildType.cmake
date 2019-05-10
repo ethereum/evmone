@@ -10,8 +10,8 @@ set(cable_build_type_included TRUE)
 macro(cable_set_build_type)
     if(NOT PROJECT_IS_NESTED)
         # Do this configuration only in the top project.
-        if(NOT PROJECT_SOURCE_DIR)
-            message(FATAL_ERROR "cable_set_build_type() can be used only after project()")
+        if(PROJECT_SOURCE_DIR)
+            message(FATAL_ERROR "cable_set_build_type() can be used before project()")
         endif()
 
         cmake_parse_arguments(build_type "" DEFAULT CONFIGURATION_TYPES ${ARGN})
