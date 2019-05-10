@@ -11,25 +11,21 @@ configuration:
 environment:
   matrix:
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      GENERATOR: "Visual Studio 15 2017 Win64"
+      GENERATOR: "Ninja"
 
 cache:
   - C:\.hunter\_Base\Cache -> cmake\Hunter\init.cmake
 
 install:
+  - cmake --version
   - git submodule update --init --recursive
 
 before_build:
-- ps: |
-    if (!(test-path build)) { mkdir build }
-    cd build
-    cmake --version
-    cmake -DEVMONE_TESTING=ON -Wno-dev -G "$env:GENERATOR" .. -DCMAKE_INSTALL_PREFIX=C:\install
+  - call "%ProgramFiles(x86)%\Microsoft Visual Studio\2017\Community\Common7\Tools\vsdevcmd" -arch=amd64
+  - cmake -S . -B build -DEVMONE_TESTING=ON -DNATIVE=ON -Wno-dev -G "%GENERATOR%" -DCMAKE_INSTALL_PREFIX=C:\install
 
 build_script:
-- ps: |
-    cmake --build . --config $env:CONFIGURATION
+  - cmake --build build --target install
 
 after_build:
-- ps: |
-    ctest -C $env:CONFIGURATION -j4 --output-on-failure --schedule-random
+  - cd build && ctest -j4 --output-on-failure --schedule-random
