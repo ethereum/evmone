@@ -6,6 +6,7 @@
 
 #include <benchmark/benchmark.h>
 #include <test/utils/utils.hpp>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -23,6 +24,30 @@ const auto blake2b_shifts_code = from_hex("608060405234801561001057600080fd5b506
 // clang-format on
 
 const auto vm = evmc_create_evmone();
+
+bytes external_code;
+bytes external_input;
+std::string expected_output_hex;
+
+bool parseargs(int argc, char** argv)
+{
+    if (argc != 4)
+        return false;
+
+    std::ifstream file{argv[1]};
+    std::string code_hex{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
+
+    std::cout << "hex code length: " << code_hex.length() << std::endl;
+    external_code = from_hex(code_hex);
+
+    external_input = from_hex(argv[2]);
+    std::cout << "input size: " << external_input.size() << std::endl;
+
+    expected_output_hex = argv[3];
+    std::cout << "expected output: " << expected_output_hex << std::endl;
+
+    return true;
+}
 
 int64_t execute(bytes_view code, bytes_view input) noexcept
 {
@@ -128,6 +153,49 @@ BENCHMARK(blake2b_shifts)
     ->Unit(kMicrosecond);
 
 
+void external_evm_code(State& state) noexcept
+{
+    constexpr auto gas = std::numeric_limits<int64_t>::max();
+    auto msg = evmc_message{};
+    msg.gas = gas;
+    msg.input_data = external_input.data();
+    msg.input_size = external_input.size();
+    auto r = vm->execute(
+        vm, nullptr, EVMC_CONSTANTINOPLE, &msg, external_code.data(), external_code.size());
+
+    const auto output_hex = to_hex({r.output_data, r.output_size});
+    bool output_match = output_hex == expected_output_hex;
+    if (r.release)
+        r.release(&r);
+
+    if (!output_match)
+    {
+        static auto error = "got: " + output_hex + "  expected: " + expected_output_hex;
+        state.SkipWithError(error.c_str());
+        return;
+    }
+
+    auto total_gas_used = int64_t{0};
+    auto iteration_gas_used = int64_t{0};
+
+    for (auto _ : state)
+        total_gas_used += iteration_gas_used = execute(external_code, external_input);
+
+    state.counters["gas_used"] = Counter(iteration_gas_used);
+    state.counters["gas_rate"] = Counter(total_gas_used, Counter::kIsRate);
+}
+
 }  // namespace
 
-BENCHMARK_MAIN();
+int main(int argc, char** argv)
+{
+    Initialize(&argc, argv);
+
+    if (parseargs(argc, argv))
+        RegisterBenchmark("external_evm_code", external_evm_code)->Unit(kMicrosecond);
+    else if (ReportUnrecognizedArguments(argc, argv))
+        return 1;
+
+    RunSpecifiedBenchmarks();
+    return 0;
+}
