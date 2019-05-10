@@ -19,6 +19,7 @@ include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 
 cable_configure_toolchain(DEFAULT cxx17-pic)
+cable_set_build_type(DEFAULT Release CONFIGURATION_TYPES Release Debug)
 
 include(Hunter/init)
 
@@ -35,7 +36,6 @@ add_subdirectory(intx)
 option(EVMC_TEST_TOOLS "Build EVMC test tools" ${EVMONE_TESTING})
 add_subdirectory(evmc)
 
-cable_set_build_type(DEFAULT Release CONFIGURATION_TYPES Debug Release)
 cable_configure_compiler(NO_PEDANTIC NO_CONVERSION_WARNINGS)
 if(CABLE_COMPILER_GNULIKE)
     # Prepend to CXX flags to allow overriding.
