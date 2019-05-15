@@ -2,6 +2,9 @@
 # Copyright 2019 Pawel Bylica.
 # Licensed under the Apache License, Version 2.0.
 
+hunter_add_package(intx)
+find_package(intx CONFIG REQUIRED)
+
 add_library(evmone
     ${include_dir}/evmone/evmone.h
     analysis.cpp
