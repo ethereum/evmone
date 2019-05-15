@@ -212,20 +212,19 @@ void op_iszero(execution_state& state, instr_argument) noexcept
 
 void op_and(execution_state& state, instr_argument) noexcept
 {
-    // TODO: Add operator&= to intx.
-    state.item(1) = state.item(0) & state.item(1);
+    state.item(1) &= state.item(0);
     state.stack.pop_back();
 }
 
 void op_or(execution_state& state, instr_argument) noexcept
 {
-    state.item(1) = state.item(0) | state.item(1);
+    state.item(1) |= state.item(0);
     state.stack.pop_back();
 }
 
 void op_xor(execution_state& state, instr_argument) noexcept
 {
-    state.item(1) = state.item(0) ^ state.item(1);
+    state.item(1) ^= state.item(0);
     state.stack.pop_back();
 }
 
@@ -253,21 +252,18 @@ void op_byte(execution_state& state, instr_argument) noexcept
 
 void op_shl(execution_state& state, instr_argument) noexcept
 {
-    // TODO: Use =<<.
-    state.item(1) = state.item(1) << state.item(0);
+    state.item(1) <<= state.item(0);
     state.stack.pop_back();
 }
 
 void op_shr(execution_state& state, instr_argument) noexcept
 {
-    // TODO: Use =>>.
-    state.item(1) = state.item(1) >> state.item(0);
+    state.item(1) >>= state.item(0);
     state.stack.pop_back();
 }
 
 void op_sar(execution_state& state, instr_argument arg) noexcept
 {
-    // TODO: Fix explicit conversion to bool in intx.
     if ((state.item(1) & (intx::uint256{1} << 255)) == 0)
         return op_shr(state, arg);
 
