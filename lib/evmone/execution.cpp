@@ -137,7 +137,7 @@ void op_exp(execution_state& state, instr_argument arg) noexcept
 
     auto exponent_significant_bytes = intx::count_significant_words<uint8_t>(exponent);
 
-    auto additional_cost = exponent_significant_bytes * arg.number;
+    auto additional_cost = exponent_significant_bytes * arg.p.number;
     state.gas_left -= additional_cost;
     if (state.gas_left < 0)
     {
@@ -508,7 +508,7 @@ void op_sstore(execution_state& state, instr_argument arg) noexcept
     state.stack.pop_back();
     state.stack.pop_back();
     auto status = state.host.set_storage(state.msg->destination, key, value);
-    auto rev = static_cast<evmc_revision>(arg.number);
+    auto rev = static_cast<evmc_revision>(arg.p.number);
     int cost = 0;
     switch (status)
     {
@@ -576,7 +576,7 @@ void op_jumpi(execution_state& state, instr_argument) noexcept
 
 void op_pc(execution_state& state, instr_argument arg) noexcept
 {
-    state.stack.emplace_back(arg.number);
+    state.stack.emplace_back(arg.p.number);
 }
 
 void op_msize(execution_state& state, instr_argument) noexcept
@@ -586,7 +586,7 @@ void op_msize(execution_state& state, instr_argument) noexcept
 
 void op_gas(execution_state& state, instr_argument arg) noexcept
 {
-    auto correction = state.current_block_cost - arg.number;
+    auto correction = state.current_block_cost - arg.p.number;
     intx::uint256 gas = static_cast<uint64_t>(state.gas_left + correction);
     state.stack.push_back(gas);
 }
@@ -769,12 +769,12 @@ void op_pop(execution_state& state, instr_argument) noexcept
 
 void op_dup(execution_state& state, instr_argument arg) noexcept
 {
-    state.stack.push_back(state.item(static_cast<size_t>(arg.number)));
+    state.stack.push_back(state.item(static_cast<size_t>(arg.p.number)));
 }
 
 void op_swap(execution_state& state, instr_argument arg) noexcept
 {
-    std::swap(state.item(0), state.item(static_cast<size_t>(arg.number)));
+    std::swap(state.item(0), state.item(static_cast<size_t>(arg.p.number)));
 }
 
 void op_log(execution_state& state, instr_argument arg) noexcept
@@ -808,14 +808,14 @@ void op_log(execution_state& state, instr_argument arg) noexcept
     state.stack.pop_back();
 
     std::array<evmc_bytes32, 4> topics;
-    for (auto i = 0; i < arg.number; ++i)
+    for (auto i = 0; i < arg.p.number; ++i)
     {
         intx::be::store(topics[i].bytes, state.item(0));
         state.stack.pop_back();
     }
 
     state.host.emit_log(state.msg->destination, &state.memory[o], s, topics.data(),
-        static_cast<size_t>(arg.number));
+        static_cast<size_t>(arg.p.number));
 }
 
 void op_invalid(execution_state& state, instr_argument) noexcept
@@ -882,18 +882,18 @@ void op_call(execution_state& state, instr_argument arg) noexcept
 
 
     auto msg = evmc_message{};
-    msg.kind = arg.call_kind;
+    msg.kind = arg.p.call_kind;
     msg.flags = state.msg->flags;
     intx::be::store(msg.value.bytes, value);
 
-    auto correction = state.current_block_cost - arg.number;
+    auto correction = state.current_block_cost - arg.p.number;
     auto gas_left = state.gas_left + correction;
 
     auto cost = 0;
     auto has_value = value != 0;
     if (has_value)
     {
-        if (arg.call_kind == EVMC_CALL && state.msg->flags & EVMC_STATIC)
+        if (arg.p.call_kind == EVMC_CALL && state.msg->flags & EVMC_STATIC)
         {
             state.run = false;
             state.status = EVMC_STATIC_MODE_VIOLATION;
@@ -902,7 +902,7 @@ void op_call(execution_state& state, instr_argument arg) noexcept
         cost += 9000;
     }
 
-    if (arg.call_kind == EVMC_CALL && (has_value || state.rev < EVMC_SPURIOUS_DRAGON))
+    if (arg.p.call_kind == EVMC_CALL && (has_value || state.rev < EVMC_SPURIOUS_DRAGON))
     {
         if (!state.host.account_exists(dst))
             cost += 25000;
@@ -1018,7 +1018,7 @@ void op_delegatecall(execution_state& state, instr_argument arg) noexcept
     auto msg = evmc_message{};
     msg.kind = EVMC_DELEGATECALL;
 
-    auto correction = state.current_block_cost - arg.number;
+    auto correction = state.current_block_cost - arg.p.number;
     auto gas_left = state.gas_left + correction;
 
     // TEST: Gas saturation for big gas values.
@@ -1105,7 +1105,7 @@ void op_staticcall(execution_state& state, instr_argument arg) noexcept
 
     msg.depth = state.msg->depth + 1;
 
-    auto correction = state.current_block_cost - arg.number;
+    auto correction = state.current_block_cost - arg.p.number;
     auto gas_left = state.gas_left + correction;
 
     msg.gas = std::numeric_limits<int64_t>::max();
@@ -1176,7 +1176,7 @@ void op_create(execution_state& state, instr_argument arg) noexcept
 
     auto msg = evmc_message{};
 
-    auto correction = state.current_block_cost - arg.number;
+    auto correction = state.current_block_cost - arg.p.number;
     msg.gas = state.gas_left + correction;
     if (state.rev >= EVMC_TANGERINE_WHISTLE)
         msg.gas = msg.gas - msg.gas / 64;
@@ -1251,7 +1251,7 @@ void op_create2(execution_state& state, instr_argument arg) noexcept
 
     auto msg = evmc_message{};
 
-    auto correction = state.current_block_cost - arg.number;
+    auto correction = state.current_block_cost - arg.p.number;
     auto gas = state.gas_left + correction;
     msg.gas = gas - gas / 64;
 

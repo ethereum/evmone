@@ -54,14 +54,12 @@ struct execution_state
 
 union instr_argument
 {
-    struct
+    struct p  // A pair of fields.
     {
         int number;
         evmc_call_kind call_kind;
-    };
+    } p;
     const uint8_t* data;
-
-    constexpr instr_argument() noexcept : number{}, call_kind{} {};
 };
 
 static_assert(sizeof(instr_argument) == sizeof(void*), "Incorrect size of instr_argument");
@@ -76,7 +74,7 @@ struct instr_info
     instr_argument arg;
     int block_index = -1;
 
-    explicit constexpr instr_info(exec_fn fn) noexcept : fn{fn} {};
+    explicit constexpr instr_info(exec_fn fn) noexcept : fn{fn}, arg{} {};
 };
 
 struct block_info
