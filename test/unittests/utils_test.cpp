@@ -30,3 +30,11 @@ TEST(utils, from_hex_invalid_encoding)
 {
     EXPECT_THROW(from_hex({"\0\0", 2}), std::out_of_range);
 }
+
+TEST(utils, hex_byte)
+{
+    auto b = uint8_t{};
+    EXPECT_EQ(hex(b), "00");
+    b = 0xaa;
+    EXPECT_EQ(hex(b), "aa");
+}
