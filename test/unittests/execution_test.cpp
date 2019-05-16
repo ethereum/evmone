@@ -97,15 +97,15 @@ protected:
     }
 
     /// Wrapper for evmone::execute. The result will be in the .result field.
-    void execute(const evmc_message& msg, std::string_view code_hex) noexcept
+    void execute(const evmc_message& m, std::string_view code_hex) noexcept
     {
         // Release previous result.
         if (result.release)
             result.release(&result);
 
         auto code = from_hex(code_hex.data());
-        result = vm->execute(vm, this, rev, &msg, &code[0], code.size());
-        gas_used = msg.gas - result.gas_left;
+        result = vm->execute(vm, this, rev, &m, &code[0], code.size());
+        gas_used = m.gas - result.gas_left;
     }
 };
 
@@ -165,9 +165,9 @@ evmc_host_interface execution::interface = {
     [](evmc_context* ctx, const evmc_address*, const evmc_address* beneficiary) {
         static_cast<execution*>(ctx)->selfdestruct_beneficiary = *beneficiary;
     },
-    [](evmc_context* ctx, const evmc_message* msg) {
+    [](evmc_context* ctx, const evmc_message* m) {
         auto& e = *static_cast<execution*>(ctx);
-        e.call_msg = *msg;
+        e.call_msg = *m;
         return e.call_result;
     },
     [](evmc_context* ctx) { return static_cast<execution*>(ctx)->tx_context; },
@@ -627,10 +627,8 @@ TEST_F(execution, address)
     std::string s;
     s += "30600052";    // ADDRESS MSTORE(0)
     s += "600a600af3";  // RETURN(10,10)
-    evmc_message msg = {};
-    msg.gas = 17;
     msg.destination.bytes[0] = 0xcc;
-    execute(msg, s);
+    execute(17, s);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 0);
     ASSERT_EQ(result.output_size, 10);
@@ -643,11 +641,9 @@ TEST_F(execution, caller_callvalue)
     std::string s;
     s += "333401600052";  // CALLER CALLVALUE ADD MSTORE(0)
     s += "600a600af3";    // RETURN(10,10)
-    evmc_message msg = {};
-    msg.gas = 22;
     msg.sender.bytes[0] = 0xdd;
     msg.value.bytes[13] = 0xee;
-    execute(msg, s);
+    execute(22, s);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 0);
     ASSERT_EQ(result.output_size, 10);
@@ -1193,8 +1189,8 @@ TEST_F(execution, call_output)
     exists = true;
     call_result.output_data = output;
     call_result.output_size = sizeof(output);
-    call_result.release = [](const evmc_result* result) {
-        result_is_correct = result->output_size == sizeof(output) && result->output_data == output;
+    call_result.release = [](const evmc_result* r) {
+        result_is_correct = r->output_size == sizeof(output) && r->output_data == output;
     };
 
     auto code_prefix_output_1 = PUSH(01) _6x(DUP()) "677fffffffffffffff";
@@ -1464,20 +1460,20 @@ TEST_F(execution, shift_overflow)
 
 TEST_F(execution, undefined_instructions)
 {
-    for (auto r = 0; r <= EVMC_MAX_REVISION; ++r)
+    for (auto i = 0; i <= EVMC_MAX_REVISION; ++i)
     {
-        auto rev = evmc_revision(r);
-        auto names = evmc_get_instruction_names_table(rev);
-        auto msg = evmc_message{};
+        auto r = evmc_revision(i);
+        auto names = evmc_get_instruction_names_table(r);
+        auto m = evmc_message{};
 
         for (uint8_t opcode = 0; opcode <= 0xfe; ++opcode)
         {
             if (names[opcode] != nullptr)
                 continue;
 
-            auto result = vm->execute(vm, this, rev, &msg, &opcode, sizeof(opcode));
-            EXPECT_EQ(result.status_code, EVMC_UNDEFINED_INSTRUCTION) << std::hex << opcode;
-            EXPECT_FALSE(result.release);
+            auto res = vm->execute(vm, this, r, &m, &opcode, sizeof(opcode));
+            EXPECT_EQ(res.status_code, EVMC_UNDEFINED_INSTRUCTION) << hex(opcode);
+            EXPECT_FALSE(res.release);
         }
     }
 }
@@ -1486,12 +1482,11 @@ TEST_F(execution, abort)
 {
     for (auto r = 0; r <= EVMC_MAX_REVISION; ++r)
     {
-        auto rev = evmc_revision(r);
         auto opcode = uint8_t{0xfe};
-        auto msg = evmc_message{};
-        auto result = vm->execute(vm, this, rev, &msg, &opcode, sizeof(opcode));
-        EXPECT_EQ(result.status_code, EVMC_INVALID_INSTRUCTION);
-        EXPECT_FALSE(result.release);
+        auto m = evmc_message{};
+        auto res = vm->execute(vm, this, evmc_revision(r), &m, &opcode, sizeof(opcode));
+        EXPECT_EQ(res.status_code, EVMC_INVALID_INSTRUCTION);
+        EXPECT_FALSE(res.release);
     }
 }
 
