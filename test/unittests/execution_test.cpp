@@ -152,7 +152,7 @@ evmc_host_interface execution::interface = {
         auto& e = *static_cast<execution*>(ctx);
         e.last_accessed_account = *addr;
         auto hash = evmc_bytes32{};
-        std::fill(std::begin(hash.bytes), std::end(hash.bytes), 0xee);
+        std::fill(std::begin(hash.bytes), std::end(hash.bytes), uint8_t{0xee});
         return hash;
     },
     [](evmc_context* ctx, const evmc_address* addr, size_t code_offset, uint8_t* buffer_data,
