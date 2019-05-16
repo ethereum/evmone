@@ -67,6 +67,22 @@ jobs:
         command: |
           codespell --quiet-level=4
 
+  release-linux:
+    executor: linux
+    environment:
+      BUILD_TYPE: Release
+      CC: clang-8
+      CXX: clang++-8
+    steps:
+      - build_and_test
+      - run:
+          name: "Package"
+          command: cmake --build ~/build --target package
+      - persist_to_workspace:
+          root: ~/install
+          paths:
+            - lib/libevmone.so
+
   gcc-min:
     executor: linux
     environment:
@@ -123,6 +139,7 @@ workflows:
   evmone:
     jobs:
       - lint
+      - release-linux
       - gcc-min
       - gcc-latest-coverage
       - clang-latest-ubsan
