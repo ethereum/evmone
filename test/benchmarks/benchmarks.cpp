@@ -90,8 +90,8 @@ void sha1_divs(State& state) noexcept
     for (auto _ : state)
         total_gas_used += iteration_gas_used = execute(sha1_divs_code, abi_input);
 
-    state.counters["gas_used"] = Counter(iteration_gas_used);
-    state.counters["gas_rate"] = Counter(total_gas_used, Counter::kIsRate);
+    state.counters["gas_used"] = Counter(static_cast<double>(iteration_gas_used));
+    state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
 }
 BENCHMARK(sha1_divs)->Arg(0)->Arg(1351)->Arg(2737)->Arg(5311)->Arg(64 * 1024)->Unit(kMicrosecond);
 
@@ -114,8 +114,8 @@ void sha1_shifts(State& state) noexcept
     for (auto _ : state)
         total_gas_used += iteration_gas_used = execute(sha1_shifts_code, abi_input);
 
-    state.counters["gas_used"] = Counter(iteration_gas_used);
-    state.counters["gas_rate"] = Counter(total_gas_used, Counter::kIsRate);
+    state.counters["gas_used"] = Counter(static_cast<double>(iteration_gas_used));
+    state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
 }
 BENCHMARK(sha1_shifts)->Arg(0)->Arg(1351)->Arg(2737)->Arg(5311)->Arg(64 * 1024)->Unit(kMicrosecond);
 
@@ -141,8 +141,8 @@ void blake2b_shifts(State& state) noexcept
     for (auto _ : state)
         total_gas_used += iteration_gas_used = execute(blake2b_shifts_code, abi_input);
 
-    state.counters["gas_used"] = Counter(iteration_gas_used);
-    state.counters["gas_rate"] = Counter(total_gas_used, Counter::kIsRate);
+    state.counters["gas_used"] = Counter(static_cast<double>(iteration_gas_used));
+    state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
 }
 BENCHMARK(blake2b_shifts)
     ->Arg(0)
@@ -181,8 +181,8 @@ void external_evm_code(State& state) noexcept
     for (auto _ : state)
         total_gas_used += iteration_gas_used = execute(external_code, external_input);
 
-    state.counters["gas_used"] = Counter(iteration_gas_used);
-    state.counters["gas_rate"] = Counter(total_gas_used, Counter::kIsRate);
+    state.counters["gas_used"] = Counter(static_cast<double>(iteration_gas_used));
+    state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
 }
 
 }  // namespace

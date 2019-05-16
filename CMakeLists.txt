@@ -38,7 +38,7 @@ if(CABLE_COMPILER_GNULIKE)
     set(CMAKE_CXX_FLAGS "-fvisibility=hidden ${CMAKE_CXX_FLAGS}")
 elseif(MSVC)
     # TODO: Temporary disable MSVC warning.
-    add_compile_options(/wd4458 /wd4244)
+    add_compile_options(/wd4458)
 endif()
 
 set(include_dir ${CMAKE_CURRENT_SOURCE_DIR}/include)
