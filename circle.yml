@@ -4,6 +4,9 @@ executors:
   linux:
     docker:
       - image: ethereum/cpp-build-env:11
+  macos:
+    macos:
+      xcode: 10.2.1
 
 commands:
   build_and_test:
@@ -48,6 +51,16 @@ commands:
       - run:
           name: "Install"
           command: cmake --build ~/build --target install
+  package:
+    description: "Make package"
+    steps:
+      - run:
+          name: "Package"
+          command: cmake --build ~/build --target package
+      - persist_to_workspace:
+          root: ~/install
+          paths:
+            - lib/*evmone.*
 
 jobs:
 
@@ -75,13 +88,18 @@ jobs:
       CXX: clang++-8
     steps:
       - build_and_test
+      - package
+
+  release-macos:
+    executor: macos
+    environment:
+      BUILD_TYPE: Release
+    steps:
       - run:
-          name: "Package"
-          command: cmake --build ~/build --target package
-      - persist_to_workspace:
-          root: ~/install
-          paths:
-            - lib/libevmone.so
+          name: "Install System Dependencies"
+          command: HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake
+      - build_and_test
+      - package
 
   gcc-min:
     executor: linux
@@ -122,8 +140,7 @@ jobs:
       - build_and_test
 
   macos-asan:
-    macos:
-      xcode: 10.2.0
+    executor: macos
     environment:
       BUILD_TYPE: RelWithDebInfo
       CMAKE_OPTIONS: -DSANITIZE=address
@@ -140,6 +157,7 @@ workflows:
     jobs:
       - lint
       - release-linux
+      - release-macos
       - gcc-min
       - gcc-latest-coverage
       - clang-latest-ubsan
