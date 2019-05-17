@@ -99,24 +99,24 @@ code_analysis analyze(
             i += push_size - 1;
         }
         else if (c >= OP_DUP1 && c <= OP_DUP16)
-            instr.arg.number = c - OP_DUP1;
+            instr.arg.p.number = c - OP_DUP1;
         else if (c >= OP_SWAP1 && c <= OP_SWAP16)
-            instr.arg.number = c - OP_SWAP1 + 1;
+            instr.arg.p.number = c - OP_SWAP1 + 1;
         else if (c == OP_GAS || c == OP_DELEGATECALL || c == OP_CALL || c == OP_CALLCODE ||
                  c == OP_STATICCALL || c == OP_CREATE || c == OP_CREATE2)
         {
-            instr.arg.number = static_cast<int>(block->gas_cost);
+            instr.arg.p.number = static_cast<int>(block->gas_cost);
             // TODO: Does not make sense for OP_GAS.
-            instr.arg.call_kind = op2call_kind(c == OP_STATICCALL ? uint8_t{OP_CALL} : c);
+            instr.arg.p.call_kind = op2call_kind(c == OP_STATICCALL ? uint8_t{OP_CALL} : c);
         }
         else if (c == OP_PC)
-            instr.arg.number = static_cast<int>(i);
+            instr.arg.p.number = static_cast<int>(i);
         else if (c == OP_EXP)
-            instr.arg.number = rev >= EVMC_SPURIOUS_DRAGON ? 50 : 10;
+            instr.arg.p.number = rev >= EVMC_SPURIOUS_DRAGON ? 50 : 10;
         else if (c == OP_SSTORE)
-            instr.arg.number = rev;
+            instr.arg.p.number = rev;
         else if (c >= OP_LOG0 && c <= OP_LOG4)
-            instr.arg.number = c - OP_LOG0;
+            instr.arg.p.number = c - OP_LOG0;
         else if (is_terminator(c))
             block = nullptr;
     }
