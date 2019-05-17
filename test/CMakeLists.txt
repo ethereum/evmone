@@ -7,7 +7,7 @@ include(GoogleTest)
 set(evmone_private_include_dir ${PROJECT_SOURCE_DIR}/lib)
 
 add_subdirectory(utils)
-add_subdirectory(benchmarks)
+add_subdirectory(bench)
 add_subdirectory(unittests)
 
 set_target_properties(
