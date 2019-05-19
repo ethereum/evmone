@@ -8,33 +8,10 @@
 #include <evmc/instructions.h>
 #include <gtest/gtest.h>
 #include <intx/intx.hpp>
-#include <test/utils/utils.hpp>
+#include <test/utils/bytecode.hpp>
 #include <algorithm>
 #include <numeric>
 #include <unordered_map>
-
-
-// Helpers for bytecode.
-#define _(x) x
-#define ISZERO() "15"
-#define NOT(x) PUSH(x) "19"
-#define SHA3(index, size) PUSH(size) PUSH(index) "20"
-#define MSTORE8(index) PUSH(index) "53"
-#define PUSH(x) "60" #x
-#define PUSH2(x) "61" #x
-#define DUP() "80"
-#define CALLDATALOAD(index) PUSH(index) "35"
-#define RETURN(size) PUSH(size) PUSH(00) "f3"
-#define MSTORE(index) PUSH(index) "52"
-#define SSTORE(index) PUSH(index) "55"
-
-/// Return top stack item.
-#define RETTOP() MSTORE(00) RETURN(20)
-
-#define _2x(x) x x
-#define _3x(x) x x x
-#define _4x(x) x x x x
-#define _6x(x) x x x x x x
 
 using namespace std::literals;
 
@@ -82,13 +59,24 @@ protected:
     }
 
     /// Wrapper for evmone::execute. The result will be in the .result field.
-    void execute(int64_t gas, std::string_view code_hex, std::string_view input_hex = {}) noexcept
+    void execute(int64_t gas, bytes_view code, std::string_view input_hex = {}) noexcept
     {
         auto input = from_hex(input_hex);
         msg.gas = gas;
         msg.input_data = input.data();
         msg.input_size = input.size();
-        execute(msg, code_hex);
+        execute(msg, code);
+    }
+
+    /// Wrapper for evmone::execute. The result will be in the .result field.
+    void execute(int64_t gas, std::string_view code_hex, std::string_view input_hex = {}) noexcept
+    {
+        execute(gas, from_hex(code_hex), input_hex);
+    }
+
+    void execute(bytes_view code, std::string_view input_hex = {}) noexcept
+    {
+        execute(std::numeric_limits<int64_t>::max(), code, input_hex);
     }
 
     void execute(std::string_view code_hex, std::string_view input_hex = {}) noexcept
@@ -97,13 +85,12 @@ protected:
     }
 
     /// Wrapper for evmone::execute. The result will be in the .result field.
-    void execute(const evmc_message& m, std::string_view code_hex) noexcept
+    void execute(const evmc_message& m, bytes_view code) noexcept
     {
         // Release previous result.
         if (result.release)
             result.release(&result);
 
-        auto code = from_hex(code_hex.data());
         result = vm->execute(vm, this, rev, &m, &code[0], code.size());
         gas_used = m.gas - result.gas_left;
     }
@@ -183,14 +170,15 @@ evmc_host_interface execution::interface = {
 
 TEST_F(execution, push_and_pop)
 {
-    execute(11, "610102506801020304050607080950");
+    auto code = push("0102") + OP_POP + push("010203040506070809") + OP_POP;
+    execute(11, code);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 1);
 }
 
 TEST_F(execution, stack_underflow)
 {
-    execute(13, "61010250680102030405060708095050");
+    execute(13, push("01") + OP_POP + push("01") + OP_POP + OP_POP);
     EXPECT_EQ(result.status_code, EVMC_STACK_UNDERFLOW);
     EXPECT_EQ(result.gas_left, 0);
 }
@@ -221,8 +209,8 @@ TEST_F(execution, dup)
 
 TEST_F(execution, dup_all_1)
 {
-    execute(PUSH(01) _("808182838485868788898a8b8c8d8e8f") _("01010101010101010101010101010101")
-            RETTOP());
+    execute(push(1) + "808182838485868788898a8b8c8d8e8f" + "01010101010101010101010101010101" +
+            ret_top());
 
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.output_data[31], 17);
@@ -230,7 +218,7 @@ TEST_F(execution, dup_all_1)
 
 TEST_F(execution, dup_stack_overflow)
 {
-    auto code = std::string{PUSH(01) _("808182838485868788898a8b8c8d8e8f")};
+    auto code = push(1) + "808182838485868788898a8b8c8d8e8f";
     for (int i = 0; i < (1024 - 17); ++i)
         code += "8f";
 
@@ -376,7 +364,7 @@ TEST_F(execution, jumpi)
 
 TEST_F(execution, jumpi_else)
 {
-    execute(15, "418057");  // COINBASE DUP JUMPI (STOP)
+    execute(15, dup1(OP_COINBASE) + OP_JUMPI);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 0);
     EXPECT_EQ(result.output_size, 0);
@@ -595,7 +583,7 @@ TEST_F(execution, calldataload)
 
 TEST_F(execution, calldataload_outofrange)
 {
-    execute(CALLDATALOAD(01) RETTOP());
+    execute(calldataload(1) + ret_top());
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(std::count(result.output_data, result.output_data + result.output_size, 0), 32);
 }
@@ -704,42 +692,42 @@ TEST_F(execution, sstore_cost)
 
         // Added:
         storage.clear();
-        execute(20006, PUSH(01) SSTORE(01));
+        execute(20006, sstore(1, push(1)));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         storage.clear();
-        execute(20005, PUSH(01) SSTORE(01));
+        execute(20005, sstore(1, push(1)));
         EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 
         // Deleted:
         storage.clear();
         storage[v1] = v1;
-        execute(5006, PUSH(00) SSTORE(01));
+        execute(5006, sstore(1, push(0)));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         storage[v1] = v1;
-        execute(5005, PUSH(00) SSTORE(01));
+        execute(5005, sstore(1, push(0)));
         EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 
         // Modified:
         storage.clear();
         storage[v1] = v1;
-        execute(5006, PUSH(02) SSTORE(01));
+        execute(5006, sstore(1, push(2)));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         storage[v1] = v1;
-        execute(5005, PUSH(02) SSTORE(01));
+        execute(5005, sstore(1, push(2)));
         EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 
         // Unchanged:
         storage.clear();
         storage[v1] = v1;
-        execute(PUSH(01) SSTORE(01));
+        execute(sstore(1, push(1)));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         EXPECT_EQ(gas_used, rev == EVMC_CONSTANTINOPLE ? 206 : 5006);
-        execute(205, PUSH(01) SSTORE(01));
+        execute(205, sstore(1, push(1)));
         EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 
         // Added & unchanged:
         storage.clear();
-        execute(PUSH(01) SSTORE(01) PUSH(01) SSTORE(01));
+        execute(sstore(1, push(1)) + sstore(1, push(1)));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         EXPECT_EQ(gas_used, rev == EVMC_CONSTANTINOPLE ? 20212 : 25012);
 
@@ -748,13 +736,13 @@ TEST_F(execution, sstore_cost)
         // Modified again:
         storage.clear();
         storage[v1] = v1;
-        execute(PUSH(02) SSTORE(01));
+        execute(sstore(1, push(2)));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         EXPECT_EQ(gas_used, rev == EVMC_CONSTANTINOPLE ? 206 : 5006);
 
         // Added & modified again:
         storage.clear();
-        execute(PUSH(01) SSTORE(01) PUSH(02) SSTORE(01));
+        execute(sstore(1, push(1)) + sstore(1, push(2)));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         EXPECT_EQ(gas_used, rev == EVMC_CONSTANTINOPLE ? 20212 : 25012);
     }
@@ -837,7 +825,7 @@ TEST_F(execution, log_data_cost)
     for (auto op : {OP_LOG0, OP_LOG1, OP_LOG2, OP_LOG3, OP_LOG4})
     {
         auto num_topics = op - OP_LOG0;
-        auto code = PUSH(00) _4x(DUP()) PUSH(01) PUSH(00) + hex(op);
+        auto code = push(0) + (4 * OP_DUP1) + push(1) + push(0) + op;
         auto cost = 407 + num_topics * 375;
         execute(cost, code);
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
@@ -1096,7 +1084,7 @@ TEST_F(execution, create_balance_too_low)
     call_msg.kind = EVMC_CALL;
     for (auto op : {OP_CREATE, OP_CREATE2})
     {
-        execute(PUSH(02) _3x(DUP()) + hex(op) + RETTOP());
+        execute(push(2) + (3 * OP_DUP1) + hex(op) + ret_top());
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         EXPECT_EQ(std::count(result.output_data, result.output_data + result.output_size, 0), 32);
         EXPECT_EQ(call_msg.kind, EVMC_CALL);
@@ -1110,7 +1098,7 @@ TEST_F(execution, create_failure)
     {
         call_msg.kind = EVMC_CALL;
         call_result.status_code = EVMC_FAILURE;
-        execute(PUSH(00) _3x(DUP()) + hex(op) + RETTOP());
+        execute(push(0) + (3 * OP_DUP1) + op + ret_top());
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         EXPECT_EQ(std::count(result.output_data, result.output_data + result.output_size, 0), 32);
         EXPECT_EQ(call_msg.kind, op == OP_CREATE ? EVMC_CREATE : EVMC_CREATE2);
@@ -1168,7 +1156,7 @@ TEST_F(execution, call_depth_limit)
     rev = EVMC_CONSTANTINOPLE;
     msg.depth = 1024;
 
-    auto code = PUSH(00) _6x(DUP());
+    auto code = push(0) + 6 * OP_DUP1;
     auto mark = 0xffe;
 
     for (auto op : {OP_CALL, OP_CALLCODE, OP_DELEGATECALL, OP_STATICCALL, OP_CREATE, OP_CREATE2})
@@ -1193,9 +1181,9 @@ TEST_F(execution, call_output)
         result_is_correct = r->output_size == sizeof(output) && r->output_data == output;
     };
 
-    auto code_prefix_output_1 = PUSH(01) _6x(DUP()) "677fffffffffffffff";
-    auto code_prefix_output_0 = PUSH(00) _6x(DUP()) "677fffffffffffffff";
-    auto code_suffix = RETURN(03);
+    auto code_prefix_output_1 = push(1) + 6 * OP_DUP1 + push("7fffffffffffffff");
+    auto code_prefix_output_0 = push(0) + 6 * OP_DUP1 + push("7fffffffffffffff");
+    auto code_suffix = ret(0, 3);
 
     for (auto op : {OP_CALL, OP_CALLCODE, OP_DELEGATECALL, OP_STATICCALL})
     {
@@ -1445,12 +1433,9 @@ TEST_F(execution, sar_01)
 TEST_F(execution, shift_overflow)
 {
     rev = EVMC_CONSTANTINOPLE;
-    auto code_prefix = NOT(00) PUSH2(0100);
-    auto code_suffix = RETTOP();
-
     for (auto op : {OP_SHL, OP_SHR, OP_SAR})
     {
-        execute(code_prefix + hex(op) + code_suffix);
+        execute(not_(0) + 0x100 + op + ret_top());
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         ASSERT_EQ(result.output_size, 32);
         auto a = std::accumulate(result.output_data, result.output_data + result.output_size, 0);
@@ -1492,7 +1477,7 @@ TEST_F(execution, abort)
 
 TEST_F(execution, staticmode)
 {
-    auto code_prefix = std::string{PUSH(01) _6x(DUP())};
+    auto code_prefix = 1 + 6 * OP_DUP1;
 
     rev = EVMC_CONSTANTINOPLE;
     for (auto op : {OP_SSTORE, OP_LOG0, OP_LOG1, OP_LOG2, OP_LOG3, OP_LOG4, OP_CALL, OP_CREATE,
@@ -1507,7 +1492,7 @@ TEST_F(execution, staticmode)
 
 TEST_F(execution, mstore8_memory_cost)
 {
-    auto code = PUSH(00) MSTORE8(00);
+    auto code = push(0) + mstore8(0);
     execute(12, code);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     execute(11, code);
@@ -1516,16 +1501,15 @@ TEST_F(execution, mstore8_memory_cost)
 
 TEST_F(execution, sha3_memory_cost)
 {
-    auto code = SHA3(00, 01);
-    execute(45, code);
+    execute(45, sha3(0, 1));
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    execute(44, code);
+    execute(44, sha3(0, 1));
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
 TEST_F(execution, calldatacopy_memory_cost)
 {
-    auto code = PUSH(01) PUSH(00) PUSH(00) "37";
+    auto code = push(1) + push(0) + push(0) + OP_CALLDATACOPY;
     execute(18, code);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     execute(17, code);
@@ -1534,7 +1518,7 @@ TEST_F(execution, calldatacopy_memory_cost)
 
 TEST_F(execution, codecopy_memory_cost)
 {
-    auto code = PUSH(01) PUSH(00) PUSH(00) "39";
+    auto code = push(1) + push(0) + push(0) + OP_CODECOPY;
     execute(18, code);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     execute(17, code);
@@ -1543,7 +1527,7 @@ TEST_F(execution, codecopy_memory_cost)
 
 TEST_F(execution, extcodecopy_memory_cost)
 {
-    auto code = PUSH(01) PUSH(00) _2x(DUP()) "3c";
+    auto code = push(1) + push(0) + 2 * OP_DUP1 + OP_EXTCODECOPY;
     execute(718, code);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     execute(717, code);
@@ -1616,12 +1600,12 @@ TEST_F(execution, memory_access)
         {
             const int num_args = metrics[t.opcode].num_stack_arguments;
             auto h = std::max(num_args, t.memory_size_arg + 1);
-            auto code = std::string{};
+            auto code = bytecode{};
 
             if (t.memory_size_arg >= 0)
             {
                 while (--h != t.memory_size_arg)
-                    code += PUSH(00);
+                    code += push(0);
 
                 code += push_size;
             }
@@ -1629,14 +1613,14 @@ TEST_F(execution, memory_access)
                 continue;  // Skip opcodes not having SIZE argument.
 
             while (--h != t.memory_index_arg)
-                code += PUSH(00);
+                code += push(0);
 
             code += push_index;
 
             while (h-- != 0)
-                code += PUSH(00);
+                code += push(0);
 
-            code += hex(t.opcode);
+            code += bytecode{t.opcode};
 
             execute(code);
             if (p.size == 0)
