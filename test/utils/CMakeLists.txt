@@ -3,6 +3,7 @@
 # Licensed under the Apache License, Version 2.0.
 
 add_library(testutils STATIC
+    bytecode.hpp
     dump.cpp
     utils.cpp
     utils.hpp
