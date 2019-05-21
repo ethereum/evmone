@@ -2,6 +2,7 @@
 // Copyright 2019 The evmone Authors.
 // Licensed under the Apache License, Version 2.0.
 
+#include <evmc/evmc.hpp>
 #include <evmone/evmone.h>
 
 #include <benchmark/benchmark.h>
@@ -20,7 +21,7 @@ extern const bytes blake2b_shifts_code;
 
 namespace
 {
-const auto vm = evmc_create_evmone();
+auto vm = evmc::vm{evmc_create_evmone()};
 
 bytes external_code;
 bytes external_input;
@@ -53,12 +54,8 @@ int64_t execute(bytes_view code, bytes_view input) noexcept
     msg.gas = gas;
     msg.input_data = input.data();
     msg.input_size = input.size();
-    auto r = vm->execute(vm, nullptr, EVMC_CONSTANTINOPLE, &msg, code.data(), code.size());
-
-    // FIXME: Fix evmc_release_result() helper.
-    if (r.release)
-        r.release(&r);
-
+    auto null_ctx = evmc_context{};
+    auto r = vm.execute(null_ctx, EVMC_CONSTANTINOPLE, msg, code.data(), code.size());
     return gas - r.gas_left;
 }
 
@@ -157,15 +154,12 @@ void external_evm_code(State& state) noexcept
     msg.gas = gas;
     msg.input_data = external_input.data();
     msg.input_size = external_input.size();
-    auto r = vm->execute(
-        vm, nullptr, EVMC_CONSTANTINOPLE, &msg, external_code.data(), external_code.size());
+    auto null_ctx = evmc_context{};
+    auto r =
+        vm.execute(null_ctx, EVMC_CONSTANTINOPLE, msg, external_code.data(), external_code.size());
 
     const auto output_hex = to_hex({r.output_data, r.output_size});
-    bool output_match = output_hex == expected_output_hex;
-    if (r.release)
-        r.release(&r);
-
-    if (!output_match)
+    if (output_hex != expected_output_hex)
     {
         static auto error = "got: " + output_hex + "  expected: " + expected_output_hex;
         state.SkipWithError(error.c_str());
