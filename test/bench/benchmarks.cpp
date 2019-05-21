@@ -28,26 +28,6 @@ bytes external_code;
 bytes external_input;
 std::string expected_output_hex;
 
-bool parseargs(int argc, char** argv)
-{
-    if (argc != 4)
-        return false;
-
-    std::ifstream file{argv[1]};
-    std::string code_hex{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
-
-    std::cout << "hex code length: " << code_hex.length() << std::endl;
-    external_code = from_hex(code_hex);
-
-    external_input = from_hex(argv[2]);
-    std::cout << "input size: " << external_input.size() << std::endl;
-
-    expected_output_hex = argv[3];
-    std::cout << "expected output: " << expected_output_hex << std::endl;
-
-    return true;
-}
-
 inline evmc::result execute(bytes_view code, bytes_view input) noexcept
 {
     auto msg = evmc_message{};
@@ -156,6 +136,26 @@ void external_evm_code(State& state) noexcept
     }
 
     execute(state, external_code, external_input);
+}
+
+bool parseargs(int argc, char** argv)
+{
+    if (argc != 4)
+        return false;
+
+    std::ifstream file{argv[1]};
+    std::string code_hex{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
+
+    std::cout << "hex code length: " << code_hex.length() << std::endl;
+    external_code = from_hex(code_hex);
+
+    external_input = from_hex(argv[2]);
+    std::cout << "input size: " << external_input.size() << std::endl;
+
+    expected_output_hex = argv[3];
+    std::cout << "expected output: " << expected_output_hex << std::endl;
+
+    return true;
 }
 
 }  // namespace
