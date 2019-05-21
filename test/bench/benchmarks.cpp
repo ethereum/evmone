@@ -21,6 +21,7 @@ extern const bytes blake2b_shifts_code;
 
 namespace
 {
+constexpr auto gas_limit = std::numeric_limits<int64_t>::max();
 auto vm = evmc::vm{evmc_create_evmone()};
 
 bytes external_code;
@@ -49,14 +50,13 @@ bool parseargs(int argc, char** argv)
 
 int64_t execute(bytes_view code, bytes_view input) noexcept
 {
-    constexpr auto gas = std::numeric_limits<int64_t>::max();
     auto msg = evmc_message{};
-    msg.gas = gas;
+    msg.gas = gas_limit;
     msg.input_data = input.data();
     msg.input_size = input.size();
     auto null_ctx = evmc_context{};
     auto r = vm.execute(null_ctx, EVMC_CONSTANTINOPLE, msg, code.data(), code.size());
-    return gas - r.gas_left;
+    return gas_limit - r.gas_left;
 }
 
 void empty(State& state) noexcept
@@ -149,9 +149,8 @@ BENCHMARK(blake2b_shifts)
 
 void external_evm_code(State& state) noexcept
 {
-    constexpr auto gas = std::numeric_limits<int64_t>::max();
     auto msg = evmc_message{};
-    msg.gas = gas;
+    msg.gas = gas_limit;
     msg.input_data = external_input.data();
     msg.input_size = external_input.size();
     auto null_ctx = evmc_context{};
