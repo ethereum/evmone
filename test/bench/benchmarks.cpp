@@ -48,15 +48,14 @@ bool parseargs(int argc, char** argv)
     return true;
 }
 
-int64_t execute(bytes_view code, bytes_view input) noexcept
+evmc::result execute(bytes_view code, bytes_view input) noexcept
 {
     auto msg = evmc_message{};
     msg.gas = gas_limit;
     msg.input_data = input.data();
     msg.input_size = input.size();
     auto null_ctx = evmc_context{};
-    auto r = vm.execute(null_ctx, EVMC_CONSTANTINOPLE, msg, code.data(), code.size());
-    return gas_limit - r.gas_left;
+    return vm.execute(null_ctx, EVMC_CONSTANTINOPLE, msg, code.data(), code.size());
 }
 
 void empty(State& state) noexcept
@@ -82,7 +81,11 @@ void sha1_divs(State& state) noexcept
     auto total_gas_used = int64_t{0};
     auto iteration_gas_used = int64_t{0};
     for (auto _ : state)
-        total_gas_used += iteration_gas_used = execute(sha1_divs_code, abi_input);
+    {
+        auto r = execute(sha1_divs_code, abi_input);
+        iteration_gas_used = gas_limit - r.gas_left;
+        total_gas_used += iteration_gas_used;
+    }
 
     state.counters["gas_used"] = Counter(static_cast<double>(iteration_gas_used));
     state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
@@ -106,7 +109,11 @@ void sha1_shifts(State& state) noexcept
     auto total_gas_used = int64_t{0};
     auto iteration_gas_used = int64_t{0};
     for (auto _ : state)
-        total_gas_used += iteration_gas_used = execute(sha1_shifts_code, abi_input);
+    {
+        auto r = execute(sha1_shifts_code, abi_input);
+        iteration_gas_used = gas_limit - r.gas_left;
+        total_gas_used += iteration_gas_used;
+    }
 
     state.counters["gas_used"] = Counter(static_cast<double>(iteration_gas_used));
     state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
@@ -133,7 +140,11 @@ void blake2b_shifts(State& state) noexcept
     auto total_gas_used = int64_t{0};
     auto iteration_gas_used = int64_t{0};
     for (auto _ : state)
-        total_gas_used += iteration_gas_used = execute(blake2b_shifts_code, abi_input);
+    {
+        auto r = execute(blake2b_shifts_code, abi_input);
+        iteration_gas_used = gas_limit - r.gas_left;
+        total_gas_used += iteration_gas_used;
+    }
 
     state.counters["gas_used"] = Counter(static_cast<double>(iteration_gas_used));
     state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
@@ -149,27 +160,26 @@ BENCHMARK(blake2b_shifts)
 
 void external_evm_code(State& state) noexcept
 {
-    auto msg = evmc_message{};
-    msg.gas = gas_limit;
-    msg.input_data = external_input.data();
-    msg.input_size = external_input.size();
-    auto null_ctx = evmc_context{};
-    auto r =
-        vm.execute(null_ctx, EVMC_CONSTANTINOPLE, msg, external_code.data(), external_code.size());
-
-    const auto output_hex = to_hex({r.output_data, r.output_size});
-    if (output_hex != expected_output_hex)
     {
-        static auto error = "got: " + output_hex + "  expected: " + expected_output_hex;
-        state.SkipWithError(error.c_str());
-        return;
+        auto r = execute(external_code, external_input);
+        const auto output_hex = to_hex({r.output_data, r.output_size});
+        if (output_hex != expected_output_hex)
+        {
+            static auto error = "got: " + output_hex + "  expected: " + expected_output_hex;
+            state.SkipWithError(error.c_str());
+            return;
+        }
     }
 
     auto total_gas_used = int64_t{0};
     auto iteration_gas_used = int64_t{0};
 
     for (auto _ : state)
-        total_gas_used += iteration_gas_used = execute(external_code, external_input);
+    {
+        auto r = execute(external_code, external_input);
+        iteration_gas_used = gas_limit - r.gas_left;
+        total_gas_used += iteration_gas_used;
+    }
 
     state.counters["gas_used"] = Counter(static_cast<double>(iteration_gas_used));
     state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
