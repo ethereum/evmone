@@ -48,7 +48,7 @@ bool parseargs(int argc, char** argv)
     return true;
 }
 
-evmc::result execute(bytes_view code, bytes_view input) noexcept
+inline evmc::result execute(bytes_view code, bytes_view input) noexcept
 {
     auto msg = evmc_message{};
     msg.gas = gas_limit;
@@ -56,6 +56,20 @@ evmc::result execute(bytes_view code, bytes_view input) noexcept
     msg.input_size = input.size();
     auto null_ctx = evmc_context{};
     return vm.execute(null_ctx, EVMC_CONSTANTINOPLE, msg, code.data(), code.size());
+}
+
+void execute(State& state, bytes_view code, bytes_view input) noexcept
+{
+    auto total_gas_used = int64_t{0};
+    auto iteration_gas_used = int64_t{0};
+    for (auto _ : state)
+    {
+        auto r = execute(code, input);
+        iteration_gas_used = gas_limit - r.gas_left;
+        total_gas_used += iteration_gas_used;
+    }
+    state.counters["gas_used"] = Counter(static_cast<double>(iteration_gas_used));
+    state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
 }
 
 void empty(State& state) noexcept
@@ -78,17 +92,7 @@ void sha1_divs(State& state) noexcept
 
     abi_input.resize(abi_input.size() + input_size, 0);
 
-    auto total_gas_used = int64_t{0};
-    auto iteration_gas_used = int64_t{0};
-    for (auto _ : state)
-    {
-        auto r = execute(sha1_divs_code, abi_input);
-        iteration_gas_used = gas_limit - r.gas_left;
-        total_gas_used += iteration_gas_used;
-    }
-
-    state.counters["gas_used"] = Counter(static_cast<double>(iteration_gas_used));
-    state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
+    execute(state, sha1_divs_code, abi_input);
 }
 BENCHMARK(sha1_divs)->Arg(0)->Arg(1351)->Arg(2737)->Arg(5311)->Arg(64 * 1024)->Unit(kMicrosecond);
 
@@ -106,17 +110,7 @@ void sha1_shifts(State& state) noexcept
 
     abi_input.resize(abi_input.size() + input_size, 0);
 
-    auto total_gas_used = int64_t{0};
-    auto iteration_gas_used = int64_t{0};
-    for (auto _ : state)
-    {
-        auto r = execute(sha1_shifts_code, abi_input);
-        iteration_gas_used = gas_limit - r.gas_left;
-        total_gas_used += iteration_gas_used;
-    }
-
-    state.counters["gas_used"] = Counter(static_cast<double>(iteration_gas_used));
-    state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
+    execute(state, sha1_shifts_code, abi_input);
 }
 BENCHMARK(sha1_shifts)->Arg(0)->Arg(1351)->Arg(2737)->Arg(5311)->Arg(64 * 1024)->Unit(kMicrosecond);
 
@@ -137,17 +131,7 @@ void blake2b_shifts(State& state) noexcept
 
     abi_input.resize(abi_input.size() + input_size, 0);
 
-    auto total_gas_used = int64_t{0};
-    auto iteration_gas_used = int64_t{0};
-    for (auto _ : state)
-    {
-        auto r = execute(blake2b_shifts_code, abi_input);
-        iteration_gas_used = gas_limit - r.gas_left;
-        total_gas_used += iteration_gas_used;
-    }
-
-    state.counters["gas_used"] = Counter(static_cast<double>(iteration_gas_used));
-    state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
+    execute(state, blake2b_shifts_code, abi_input);
 }
 BENCHMARK(blake2b_shifts)
     ->Arg(0)
@@ -171,18 +155,7 @@ void external_evm_code(State& state) noexcept
         }
     }
 
-    auto total_gas_used = int64_t{0};
-    auto iteration_gas_used = int64_t{0};
-
-    for (auto _ : state)
-    {
-        auto r = execute(external_code, external_input);
-        iteration_gas_used = gas_limit - r.gas_left;
-        total_gas_used += iteration_gas_used;
-    }
-
-    state.counters["gas_used"] = Counter(static_cast<double>(iteration_gas_used));
-    state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
+    execute(state, external_code, external_input);
 }
 
 }  // namespace
