@@ -121,8 +121,8 @@ code_analysis analyze(
             block = nullptr;
     }
 
-    // Not terminated block.
-    if (block || (code_size > 0 && code[code_size - 1] == OP_JUMPI))
+    // Not terminated block or empty code.
+    if (block || code_size == 0 || code[code_size - 1] == OP_JUMPI)
         analysis.instrs.emplace_back(fns[OP_STOP]);
 
     return analysis;

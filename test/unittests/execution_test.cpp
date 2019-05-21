@@ -168,6 +168,13 @@ evmc_host_interface execution::interface = {
     },
 };
 
+TEST_F(execution, empty)
+{
+    execute(0, "");
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(result.gas_left, 0);
+}
+
 TEST_F(execution, push_and_pop)
 {
     auto code = push("0102") + OP_POP + push("010203040506070809") + OP_POP;

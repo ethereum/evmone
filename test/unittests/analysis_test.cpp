@@ -89,7 +89,8 @@ TEST(analysis, empty)
     auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
 
     EXPECT_EQ(analysis.blocks.size(), 0);
-    EXPECT_EQ(analysis.instrs.size(), 0);
+    EXPECT_EQ(analysis.instrs.size(), 1);
+    EXPECT_EQ(analysis.instrs.back().fn, fake_fn_table[OP_STOP]);
 }
 
 TEST(analysis, only_jumpdest)
