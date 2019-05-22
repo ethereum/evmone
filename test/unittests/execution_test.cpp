@@ -168,6 +168,13 @@ evmc_host_interface execution::interface = {
     },
 };
 
+TEST_F(execution, empty)
+{
+    execute(0, "");
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(result.gas_left, 0);
+}
+
 TEST_F(execution, push_and_pop)
 {
     auto code = push("0102") + OP_POP + push("010203040506070809") + OP_POP;
@@ -1532,6 +1539,21 @@ TEST_F(execution, extcodecopy_memory_cost)
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     execute(717, code);
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+}
+
+TEST_F(execution, extcodecopy_nonzero_index)
+{
+    auto index = 15;
+    extcode.assign(16, 0x00);
+    extcode[index] = 0xc0;
+    auto code = push(2) + push(index) + push(0) + push(0xa) + OP_EXTCODECOPY + ret(0, 2);
+    EXPECT_EQ(code.length() + 1, index);
+    execute(code);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 2);
+    EXPECT_EQ(result.output_data[0], 0xc0);
+    EXPECT_EQ(result.output_data[1], 0);
+    EXPECT_EQ(last_accessed_account.bytes[19], 0xa);
 }
 
 struct memory_access_opcode
