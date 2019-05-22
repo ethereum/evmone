@@ -5,3 +5,4 @@ ignore:
   - "test/fuzzer/*"
   - "test/integration/*"
   - "test/utils/dump.*"
+  - "test/*"

@@ -140,10 +140,6 @@ jobs:
       TESTS_FILTER: unittests
     steps:
       - build_and_test
-      - run:
-          name: "Upload coverage data"
-          command: |
-            codecov --required --gcov-exec "$GCOV" --gcov-root ~/build
 
   clang-latest-ubsan:
     executor: linux
