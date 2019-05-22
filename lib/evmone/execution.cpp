@@ -13,6 +13,8 @@ namespace evmone
 {
 namespace
 {
+constexpr auto max_buffer_size = std::numeric_limits<uint32_t>::max();
+
 bool check_memory(execution_state& state, const uint256& offset, const uint256& size) noexcept
 {
     if (size == 0)
@@ -623,8 +625,7 @@ void op_extcodecopy(execution_state& state, instr_argument) noexcept
         return;
 
     auto dst = static_cast<size_t>(mem_index);
-    // FIXME: Bug, it should not use state.code_size;
-    auto src = state.code_size < input_index ? state.code_size : static_cast<size_t>(input_index);
+    auto src = max_buffer_size < input_index ? max_buffer_size : static_cast<size_t>(input_index);
     auto s = static_cast<size_t>(size);
 
     auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
