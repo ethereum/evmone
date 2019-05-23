@@ -1555,6 +1555,13 @@ TEST_F(execution, calldatacopy_memory_cost)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
+TEST_F(execution, codecopy_empty)
+{
+    execute(push(0) + 2 * OP_DUP1 + OP_CODECOPY + OP_MSIZE + ret_top());
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(std::count(result.output_data, result.output_data + result.output_size, 0), 32);
+}
+
 TEST_F(execution, codecopy_memory_cost)
 {
     auto code = push(1) + push(0) + push(0) + OP_CODECOPY;

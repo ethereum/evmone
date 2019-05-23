@@ -439,8 +439,12 @@ void op_codecopy(execution_state& state, instr_argument) noexcept
         return;
     }
 
-    std::memcpy(&state.memory[dst], &state.code[src], copy_size);
-    std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
+    // TODO: Add unit tests for each combination of conditions.
+    if (copy_size > 0)
+        std::memcpy(&state.memory[dst], &state.code[src], copy_size);
+
+    if (s - copy_size > 0)
+        std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
 
     state.stack.pop_back();
     state.stack.pop_back();
