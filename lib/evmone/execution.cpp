@@ -909,8 +909,8 @@ void op_call(execution_state& state, instr_argument arg) noexcept
             cost += 25000;
     }
 
-    state.gas_left -= cost;
-    if (state.gas_left < 0)
+    gas_left -= cost;
+    if (gas_left < 0)
     {
         state.run = false;
         state.status = EVMC_OUT_OF_GAS;
@@ -920,8 +920,6 @@ void op_call(execution_state& state, instr_argument arg) noexcept
     msg.gas = std::numeric_limits<int64_t>::max();
     if (gas < msg.gas)
         msg.gas = static_cast<int64_t>(gas);
-
-    gas_left -= cost;
 
     if (state.rev >= EVMC_TANGERINE_WHISTLE)
         msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
@@ -934,6 +932,7 @@ void op_call(execution_state& state, instr_argument arg) noexcept
 
     state.return_data.clear();
 
+    state.gas_left -= cost;
     if (state.msg->depth >= 1024)
     {
         if (has_value)

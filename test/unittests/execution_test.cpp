@@ -1292,6 +1292,18 @@ TEST_F(execution, staticcall_then_oog)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
+TEST_F(execution, call_with_value_low_gas)
+{
+    exists = true;
+    for (auto call_op : {OP_CALL, OP_CALLCODE})
+    {
+        auto code = 4 * push(0) + push(1) + 2 * push(0) + call_op + OP_POP;
+        execute(9721, code);
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(result.gas_left, 2300 - 2);
+    }
+}
+
 TEST_F(execution, revert)
 {
     std::string s;
