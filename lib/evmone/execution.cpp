@@ -302,7 +302,7 @@ void op_sha3(execution_state& state, instr_argument) noexcept
         return;
     }
 
-    auto h = ethash::keccak256(&state.memory[i], s);
+    auto h = ethash::keccak256(state.memory.data() + i, s);
 
     state.stack.pop_back();
     state.item(0) = intx::be::uint256(h.bytes);
@@ -439,8 +439,12 @@ void op_codecopy(execution_state& state, instr_argument) noexcept
         return;
     }
 
-    std::memcpy(&state.memory[dst], &state.code[src], copy_size);
-    std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
+    // TODO: Add unit tests for each combination of conditions.
+    if (copy_size > 0)
+        std::memcpy(&state.memory[dst], &state.code[src], copy_size);
+
+    if (s - copy_size > 0)
+        std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
 
     state.stack.pop_back();
     state.stack.pop_back();
@@ -642,9 +646,9 @@ void op_extcodecopy(execution_state& state, instr_argument) noexcept
     evmc_address addr;
     std::memcpy(addr.bytes, &data[12], sizeof(addr));
 
-    auto num_bytes_copied = state.host.copy_code(addr, src, &state.memory[dst], s);
-
-    std::memset(&state.memory[dst + num_bytes_copied], 0, s - num_bytes_copied);
+    auto num_bytes_copied = state.host.copy_code(addr, src, state.memory.data() + dst, s);
+    if (s - num_bytes_copied > 0)
+        std::memset(&state.memory[dst + num_bytes_copied], 0, s - num_bytes_copied);
 
     state.stack.pop_back();
     state.stack.pop_back();
@@ -815,8 +819,9 @@ void op_log(execution_state& state, instr_argument arg) noexcept
         state.stack.pop_back();
     }
 
-    state.host.emit_log(state.msg->destination, &state.memory[o], s, topics.data(),
-        static_cast<size_t>(arg.p.number));
+    auto data = s != 0 ? &state.memory[o] : nullptr;
+    state.host.emit_log(
+        state.msg->destination, data, s, topics.data(), static_cast<size_t>(arg.p.number));
 }
 
 void op_invalid(execution_state& state, instr_argument) noexcept
@@ -909,8 +914,8 @@ void op_call(execution_state& state, instr_argument arg) noexcept
             cost += 25000;
     }
 
-    state.gas_left -= cost;
-    if (state.gas_left < 0)
+    gas_left -= cost;
+    if (gas_left < 0)
     {
         state.run = false;
         state.status = EVMC_OUT_OF_GAS;
@@ -920,8 +925,6 @@ void op_call(execution_state& state, instr_argument arg) noexcept
     msg.gas = std::numeric_limits<int64_t>::max();
     if (gas < msg.gas)
         msg.gas = static_cast<int64_t>(gas);
-
-    gas_left -= cost;
 
     if (state.rev >= EVMC_TANGERINE_WHISTLE)
         msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
@@ -934,6 +937,7 @@ void op_call(execution_state& state, instr_argument arg) noexcept
 
     state.return_data.clear();
 
+    state.gas_left -= cost;
     if (state.msg->depth >= 1024)
     {
         if (has_value)

@@ -163,6 +163,7 @@ evmc_host_interface execution::interface = {
         const evmc_bytes32 topics[], size_t topics_count) {
         auto& e = *static_cast<execution*>(ctx);
         e.log_data.assign(data, data_size);
+        e.log_topics.clear();
         e.log_topics.reserve(topics_count);
         std::copy_n(topics, topics_count, std::back_inserter(e.log_topics));
     },
@@ -827,6 +828,16 @@ TEST_F(execution, log3)
     EXPECT_EQ(log_topics[2].bytes[31], 2);
 }
 
+TEST_F(execution, log0_empty)
+{
+    log_data.resize(1);
+    log_topics.resize(1);
+    auto code = push(0) + OP_DUP1 + OP_LOG0;
+    execute(code);
+    EXPECT_EQ(log_topics.size(), 0);
+    EXPECT_EQ(log_data.size(), 0);
+}
+
 TEST_F(execution, log_data_cost)
 {
     for (auto op : {OP_LOG0, OP_LOG1, OP_LOG2, OP_LOG3, OP_LOG4})
@@ -904,6 +915,15 @@ TEST_F(execution, sha3)
     ASSERT_EQ(result.output_size, 32);
     auto hash = from_hex("aeffb38c06e111d84216396baefeb7fed397f303d5cb84a33f1e8b485c4a22da");
     EXPECT_EQ(bytes(&result.output_data[0], 32), hash);
+}
+
+TEST_F(execution, sha3_empty)
+{
+    auto code = push(0) + OP_DUP1 + OP_SHA3 + ret_top();
+    execute(code);
+    ASSERT_EQ(result.output_size, 32);
+    auto keccak256_empty = "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
+    EXPECT_EQ(to_hex({result.output_data, result.output_size}), keccak256_empty);
 }
 
 TEST_F(execution, blockhash)
@@ -1292,6 +1312,18 @@ TEST_F(execution, staticcall_then_oog)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
+TEST_F(execution, call_with_value_low_gas)
+{
+    exists = true;
+    for (auto call_op : {OP_CALL, OP_CALLCODE})
+    {
+        auto code = 4 * push(0) + push(1) + 2 * push(0) + call_op + OP_POP;
+        execute(9721, code);
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(result.gas_left, 2300 - 2);
+    }
+}
+
 TEST_F(execution, revert)
 {
     std::string s;
@@ -1521,6 +1553,20 @@ TEST_F(execution, calldatacopy_memory_cost)
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     execute(17, code);
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+}
+
+TEST_F(execution, codecopy_empty)
+{
+    execute(push(0) + 2 * OP_DUP1 + OP_CODECOPY + OP_MSIZE + ret_top());
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(std::count(result.output_data, result.output_data + result.output_size, 0), 32);
+}
+
+TEST_F(execution, extcodecopy_empty)
+{
+    execute(push(0) + 3 * OP_DUP1 + OP_EXTCODECOPY + OP_MSIZE + ret_top());
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(std::count(result.output_data, result.output_data + result.output_size, 0), 32);
 }
 
 TEST_F(execution, codecopy_memory_cost)
