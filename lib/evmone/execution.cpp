@@ -646,9 +646,9 @@ void op_extcodecopy(execution_state& state, instr_argument) noexcept
     evmc_address addr;
     std::memcpy(addr.bytes, &data[12], sizeof(addr));
 
-    auto num_bytes_copied = state.host.copy_code(addr, src, &state.memory[dst], s);
-
-    std::memset(&state.memory[dst + num_bytes_copied], 0, s - num_bytes_copied);
+    auto num_bytes_copied = state.host.copy_code(addr, src, state.memory.data() + dst, s);
+    if (s - num_bytes_copied > 0)
+        std::memset(&state.memory[dst + num_bytes_copied], 0, s - num_bytes_copied);
 
     state.stack.pop_back();
     state.stack.pop_back();
