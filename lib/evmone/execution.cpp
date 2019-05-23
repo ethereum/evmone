@@ -815,8 +815,9 @@ void op_log(execution_state& state, instr_argument arg) noexcept
         state.stack.pop_back();
     }
 
-    state.host.emit_log(state.msg->destination, &state.memory[o], s, topics.data(),
-        static_cast<size_t>(arg.p.number));
+    auto data = s != 0 ? &state.memory[o] : nullptr;
+    state.host.emit_log(
+        state.msg->destination, data, s, topics.data(), static_cast<size_t>(arg.p.number));
 }
 
 void op_invalid(execution_state& state, instr_argument) noexcept

@@ -163,6 +163,7 @@ evmc_host_interface execution::interface = {
         const evmc_bytes32 topics[], size_t topics_count) {
         auto& e = *static_cast<execution*>(ctx);
         e.log_data.assign(data, data_size);
+        e.log_topics.clear();
         e.log_topics.reserve(topics_count);
         std::copy_n(topics, topics_count, std::back_inserter(e.log_topics));
     },
@@ -825,6 +826,16 @@ TEST_F(execution, log3)
     EXPECT_EQ(log_topics[0].bytes[31], 4);
     EXPECT_EQ(log_topics[1].bytes[31], 3);
     EXPECT_EQ(log_topics[2].bytes[31], 2);
+}
+
+TEST_F(execution, log0_empty)
+{
+    log_data.resize(1);
+    log_topics.resize(1);
+    auto code = push(0) + OP_DUP1 + OP_LOG0;
+    execute(code);
+    EXPECT_EQ(log_topics.size(), 0);
+    EXPECT_EQ(log_data.size(), 0);
 }
 
 TEST_F(execution, log_data_cost)
