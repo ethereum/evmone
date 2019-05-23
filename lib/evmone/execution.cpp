@@ -302,7 +302,8 @@ void op_sha3(execution_state& state, instr_argument) noexcept
         return;
     }
 
-    auto h = ethash::keccak256(state.memory.data() + i, s);
+    auto data = s != 0 ? &state.memory[i] : nullptr;
+    auto h = ethash::keccak256(data, s);
 
     state.stack.pop_back();
     state.item(0) = intx::be::uint256(h.bytes);
@@ -641,12 +642,15 @@ void op_extcodecopy(execution_state& state, instr_argument) noexcept
         return;
     }
 
-    uint8_t data[32];
-    intx::be::store(data, addr_data);
     evmc_address addr;
-    std::memcpy(addr.bytes, &data[12], sizeof(addr));
+    {
+        uint8_t tmp[32];
+        intx::be::store(tmp, addr_data);
+        std::memcpy(addr.bytes, &tmp[12], sizeof(addr));
+    }
 
-    auto num_bytes_copied = state.host.copy_code(addr, src, state.memory.data() + dst, s);
+    auto data = s != 0 ? &state.memory[dst] : nullptr;
+    auto num_bytes_copied = state.host.copy_code(addr, src, data, s);
     if (s - num_bytes_copied > 0)
         std::memset(&state.memory[dst + num_bytes_copied], 0, s - num_bytes_copied);
 
