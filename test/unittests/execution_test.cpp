@@ -917,6 +917,15 @@ TEST_F(execution, sha3)
     EXPECT_EQ(bytes(&result.output_data[0], 32), hash);
 }
 
+TEST_F(execution, sha3_empty)
+{
+    auto code = push(0) + OP_DUP1 + OP_SHA3 + ret_top();
+    execute(code);
+    ASSERT_EQ(result.output_size, 32);
+    auto keccak256_empty = "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
+    EXPECT_EQ(to_hex({result.output_data, result.output_size}), keccak256_empty);
+}
+
 TEST_F(execution, blockhash)
 {
     blockhash.bytes[13] = 0x13;

@@ -302,7 +302,7 @@ void op_sha3(execution_state& state, instr_argument) noexcept
         return;
     }
 
-    auto h = ethash::keccak256(&state.memory[i], s);
+    auto h = ethash::keccak256(state.memory.data() + i, s);
 
     state.stack.pop_back();
     state.item(0) = intx::be::uint256(h.bytes);
