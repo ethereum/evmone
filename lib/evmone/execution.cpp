@@ -946,6 +946,11 @@ void op_call(execution_state& state, instr_argument arg) noexcept
     {
         if (has_value)
             state.gas_left += 2300;  // Return unused stipend.
+        if (state.gas_left < 0)
+        {
+            state.run = false;
+            state.status = EVMC_OUT_OF_GAS;
+        }
         return;
     }
 
@@ -968,6 +973,11 @@ void op_call(execution_state& state, instr_argument arg) noexcept
         if (b < value)
         {
             state.gas_left += 2300;  // Return unused stipend.
+            if (state.gas_left < 0)
+            {
+                state.run = false;
+                state.status = EVMC_OUT_OF_GAS;
+            }
             return;
         }
 

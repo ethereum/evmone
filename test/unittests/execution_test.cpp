@@ -1324,6 +1324,35 @@ TEST_F(execution, call_with_value_low_gas)
     }
 }
 
+TEST_F(execution, call_oog_after_balance_check)
+{
+    for (auto op : {OP_CALL, OP_CALLCODE})
+    {
+        auto code = 4 * push(0) + push(1) + 2 * push(0) + op + OP_SELFDESTRUCT;
+        execute(12420, code);
+        EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+    }
+}
+
+TEST_F(execution, call_oog_after_depth_check)
+{
+    msg.depth = 1024;
+    for (auto op : {OP_CALL, OP_CALLCODE})
+    {
+        auto code = 4 * push(0) + push(1) + 2 * push(0) + op + OP_SELFDESTRUCT;
+        execute(12420, code);
+        EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+    }
+
+    rev = EVMC_TANGERINE_WHISTLE;
+    auto code = 7 * push(0) + OP_CALL + OP_SELFDESTRUCT;
+    execute(25721, code);
+    EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+
+    execute(25721 + 5000 - 1, code);
+    EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+}
+
 TEST_F(execution, revert)
 {
     std::string s;
