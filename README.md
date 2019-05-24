@@ -9,18 +9,22 @@
 
 > Fast Ethereum Virtual Machine implementation
 
-The C++ implementation of the Ethereum Virtual Machine (EVM) focused on speed.
-Compatible with [EVMC].
+_evmone_ is a C++ implementation of the Ethereum Virtual Machine (EVM). 
+Created by members of the [Ewasm] team, the project aims for clean, standalone EVM implementation 
+that can be imported as an execution module by Ethereum Client projects. 
+The codebase of _evmone_ is optimized to provide fast and efficient execution of EVM smart contracts.
 
 #### Characteristic of evmone
 
-1. The "indirect" subroutine threading is the dispatch method - 
+1. Exposes the [EVMC] API.
+2. The "indirect" subroutine threading is the dispatch method - 
    a table with pointers to subroutines is prepared during the analysis of the bytecode.
-2. The gas cost and stack requirements of block of instructions is precomputed 
+3. The gas cost and stack requirements of block of instructions is precomputed 
    and applied once per block during execution.
-3. The [intx] library is used to provide 256-bit integer precision.
-4. The [ethash] library is used to provide Keccak hash function implementation
+4. The [intx] library is used to provide 256-bit integer precision.
+5. The [ethash] library is used to provide Keccak hash function implementation
    needed for the special `SHA3` instruction.
+6. Requires C++17 standard.
 
 ## Usage
 
@@ -57,6 +61,7 @@ Licensed under the [Apache License, Version 2.0].
 [Apache License, Version 2.0]: LICENSE
 [ethereum]: https://ethereum.org
 [EVMC]: https://github.com/ethereum/evmc
+[Ewasm]: https://github.com/ewasm
 [intx]: https://github.com/chfast/intx
 [ethash]: https://github.com/chfast/ethash
 [standard readme]: https://github.com/RichardLitt/standard-readme
