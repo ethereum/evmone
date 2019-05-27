@@ -146,8 +146,9 @@ evmc_host_interface execution::interface = {
         size_t buffer_size) {
         auto& e = *static_cast<execution*>(ctx);
         e.last_accessed_account = *addr;
+        auto n = std::min(buffer_size, e.extcode.size());
         std::copy_n(&e.extcode[code_offset], buffer_size, buffer_data);
-        return buffer_size;
+        return n;
     },
     [](evmc_context* ctx, const evmc_address*, const evmc_address* beneficiary) {
         static_cast<execution*>(ctx)->selfdestruct_beneficiary = *beneficiary;
