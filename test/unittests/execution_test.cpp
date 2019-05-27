@@ -146,8 +146,9 @@ evmc_host_interface execution::interface = {
         size_t buffer_size) {
         auto& e = *static_cast<execution*>(ctx);
         e.last_accessed_account = *addr;
+        auto n = std::min(buffer_size, e.extcode.size());
         std::copy_n(&e.extcode[code_offset], buffer_size, buffer_data);
-        return buffer_size;
+        return n;
     },
     [](evmc_context* ctx, const evmc_address*, const evmc_address* beneficiary) {
         static_cast<execution*>(ctx)->selfdestruct_beneficiary = *beneficiary;
@@ -1629,6 +1630,19 @@ TEST_F(execution, extcodecopy_nonzero_index)
     EXPECT_EQ(result.output_data[0], 0xc0);
     EXPECT_EQ(result.output_data[1], 0);
     EXPECT_EQ(last_accessed_account.bytes[19], 0xa);
+}
+
+TEST_F(execution, extcodecopy_fill_tail)
+{
+    extcode = {0xff, 0xfe};
+    extcode.resize(1);
+    auto code = push(2) + push(0) + push(0) + push(0xa) + OP_EXTCODECOPY + ret(0, 2);
+    execute(code);
+    EXPECT_EQ(last_accessed_account.bytes[19], 0xa);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 2);
+    EXPECT_EQ(result.output_data[0], 0xff);
+    EXPECT_EQ(result.output_data[1], 0);
 }
 
 struct memory_access_opcode
