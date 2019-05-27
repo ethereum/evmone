@@ -2,105 +2,35 @@
 // Copyright 2019 The evmone Authors.
 // Licensed under the Apache License, Version 2.0.
 
-#include <evmone/evmone.h>
-
-#include <evmc/helpers.hpp>
+#include "execution_fixture.hpp"
 #include <evmc/instructions.h>
-#include <gtest/gtest.h>
-#include <intx/intx.hpp>
 #include <test/utils/bytecode.hpp>
-#include <test/utils/host_mock.hpp>
 #include <algorithm>
 #include <numeric>
-
-using namespace std::literals;
-
-class execution : public testing::Test, public MockedHost
-{
-protected:
-    evmc_instance* vm = nullptr;
-    evmc_revision rev = EVMC_BYZANTIUM;  // Use Byzantium by default.
-    evmc_message msg = {};
-    evmc_result result = {};
-    int64_t gas_used = 0;
-
-    execution() noexcept : vm{evmc_create_evmone()} {}
-
-    ~execution() noexcept override
-    {
-        // Release the attached EVM execution result.
-        if (result.release)
-            result.release(&result);
-    }
-
-    /// Wrapper for evmone::execute. The result will be in the .result field.
-    void execute(int64_t gas, bytes_view code, std::string_view input_hex = {}) noexcept
-    {
-        auto input = from_hex(input_hex);
-        msg.gas = gas;
-        msg.input_data = input.data();
-        msg.input_size = input.size();
-        execute(msg, code);
-    }
-
-    /// Wrapper for evmone::execute. The result will be in the .result field.
-    void execute(int64_t gas, std::string_view code_hex, std::string_view input_hex = {}) noexcept
-    {
-        execute(gas, from_hex(code_hex), input_hex);
-    }
-
-    void execute(bytes_view code, std::string_view input_hex = {}) noexcept
-    {
-        execute(std::numeric_limits<int64_t>::max(), code, input_hex);
-    }
-
-    void execute(std::string_view code_hex, std::string_view input_hex = {}) noexcept
-    {
-        execute(std::numeric_limits<int64_t>::max(), code_hex, input_hex);
-    }
-
-    /// Wrapper for evmone::execute. The result will be in the .result field.
-    void execute(const evmc_message& m, bytes_view code) noexcept
-    {
-        // Release previous result.
-        if (result.release)
-            result.release(&result);
-
-        result = vm->execute(vm, this, rev, &m, &code[0], code.size());
-        gas_used = m.gas - result.gas_left;
-    }
-};
-
 
 TEST_F(execution, empty)
 {
     execute(0, "");
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    EXPECT_EQ(result.gas_left, 0);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 0);
 }
 
 TEST_F(execution, push_and_pop)
 {
-    auto code = push("0102") + OP_POP + push("010203040506070809") + OP_POP;
-    execute(11, code);
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    EXPECT_EQ(result.gas_left, 1);
+    execute(11, push("0102") + OP_POP + push("010203040506070809") + OP_POP);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 10);
 }
 
 TEST_F(execution, stack_underflow)
 {
     execute(13, push("01") + OP_POP + push("01") + OP_POP + OP_POP);
-    EXPECT_EQ(result.status_code, EVMC_STACK_UNDERFLOW);
-    EXPECT_EQ(result.gas_left, 0);
+    EXPECT_STATUS(EVMC_STACK_UNDERFLOW);
 }
 
 TEST_F(execution, add)
 {
     execute(25, "6007600d0160005260206000f3");
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    EXPECT_EQ(result.gas_left, 1);
-    EXPECT_EQ(result.output_size, 32);
-    EXPECT_EQ(result.output_data[31], 20);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 24);
+    EXPECT_OUTPUT_INT(20);
 }
 
 TEST_F(execution, dup)
@@ -111,20 +41,17 @@ TEST_F(execution, dup)
     // 0 7 3 5 20
     // 0 7 3 5 (20 0)
     // 0 7 3 5 3 0
-    execute(49, "6000600760036005818180850101018452602084f3");
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    EXPECT_EQ(result.gas_left, 1);
-    EXPECT_EQ(result.output_size, 32);
-    EXPECT_EQ(result.output_data[31], 20);
+    execute("6000600760036005818180850101018452602084f3");
+    EXPECT_GAS_USED(EVMC_SUCCESS, 48);
+    EXPECT_OUTPUT_INT(20);
 }
 
 TEST_F(execution, dup_all_1)
 {
     execute(push(1) + "808182838485868788898a8b8c8d8e8f" + "01010101010101010101010101010101" +
             ret_top());
-
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    EXPECT_EQ(result.output_data[31], 17);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(17);
 }
 
 TEST_F(execution, dup_stack_overflow)
@@ -134,11 +61,9 @@ TEST_F(execution, dup_stack_overflow)
         code += "8f";
 
     execute(code);
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-
+    EXPECT_STATUS(EVMC_SUCCESS);
     execute(code + "8f");
-    EXPECT_EQ(result.status_code, EVMC_STACK_OVERFLOW);
-    EXPECT_EQ(result.gas_left, 0);
+    EXPECT_STATUS(EVMC_STACK_OVERFLOW);
 }
 
 TEST_F(execution, sub_and_swap)
@@ -1042,13 +967,11 @@ TEST_F(execution, call_failing_with_value)
     call_msg.kind = EVMC_CREATE;
 
     execute(40000, code);
-    EXPECT_EQ(gas_used, 32447);
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 32447);
     EXPECT_EQ(call_msg.kind, EVMC_CREATE);  // There was no call().
 
     execute(0x8000, code);
-    EXPECT_EQ(gas_used, 0x8000);
-    EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+    EXPECT_STATUS(EVMC_OUT_OF_GAS);
     EXPECT_EQ(call_msg.kind, EVMC_CREATE);  // There was no call().
 }
 
@@ -1144,7 +1067,7 @@ TEST_F(execution, call_high_gas)
     exists = true;
     for (auto call_opcode : {"f1", "f2", "f4"})
     {
-        execute(5000, "6000600060006000600060aa61134c"s + call_opcode);
+        execute(5000, 5 * push(0) + push(0xaa) + push(0x134c) + call_opcode);
         EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
     }
 }
