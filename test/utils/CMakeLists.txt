@@ -5,7 +5,6 @@
 add_library(testutils STATIC
     bytecode.hpp
     dump.cpp
-    host_mock.cpp
     host_mock.hpp
     utils.cpp
     utils.hpp
