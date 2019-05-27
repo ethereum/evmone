@@ -9,15 +9,13 @@
 #include <gtest/gtest.h>
 #include <intx/intx.hpp>
 #include <test/utils/bytecode.hpp>
+#include <test/utils/host_mock.hpp>
 #include <algorithm>
 #include <numeric>
-#include <unordered_map>
 
 using namespace std::literals;
 
-extern evmc_host_interface interface;
-
-class execution : public testing::Test, public evmc_context
+class execution : public testing::Test, public MockedHost
 {
 protected:
     evmc_instance* vm = nullptr;
@@ -26,30 +24,7 @@ protected:
     evmc_result result = {};
     int64_t gas_used = 0;
 
-    evmc_address last_accessed_account = {};
-
-    std::unordered_map<evmc_bytes32, evmc_bytes32> storage;
-    bool storage_cold = true;
-
-    evmc_tx_context tx_context = {};
-
-    bytes log_data;
-    std::vector<evmc_bytes32> log_topics;
-
-    evmc_address selfdestruct_beneficiary = {};
-
-    evmc_bytes32 blockhash = {};
-
-    bool exists = false;
-    intx::uint256 balance = {};
-    bytes extcode = {};
-
-    evmc_message call_msg = {};  ///< Recorded call message.
-    evmc_result call_result = {};
-
-    static evmc_host_interface interface;
-
-    execution() noexcept : evmc_context{&interface}, vm{evmc_create_evmone()} {}
+    execution() noexcept : vm{evmc_create_evmone()} {}
 
     ~execution() noexcept override
     {
@@ -96,79 +71,6 @@ protected:
     }
 };
 
-evmc_host_interface execution::interface = {
-    [](evmc_context* ctx, const evmc_address* addr) {
-        auto& e = *static_cast<execution*>(ctx);
-        e.last_accessed_account = *addr;
-        return e.exists;
-    },
-    [](evmc_context* ctx, const evmc_address*, const evmc_bytes32* key) {
-        return static_cast<execution*>(ctx)->storage[*key];
-    },
-    [](evmc_context* ctx, const evmc_address*, const evmc_bytes32* key, const evmc_bytes32* value) {
-        auto& old = static_cast<execution*>(ctx)->storage[*key];
-
-        evmc_storage_status status;
-        if (old == *value)
-            status = EVMC_STORAGE_UNCHANGED;
-        else if (is_zero(old))
-            status = EVMC_STORAGE_ADDED;
-        else if (is_zero(*value))
-            status = EVMC_STORAGE_DELETED;
-        else if (static_cast<execution*>(ctx)->storage_cold)
-            status = EVMC_STORAGE_MODIFIED;
-        else
-            status = EVMC_STORAGE_MODIFIED_AGAIN;
-
-        old = *value;
-        return status;
-    },
-    [](evmc_context* ctx, const evmc_address* addr) {
-        auto& e = *static_cast<execution*>(ctx);
-        e.last_accessed_account = *addr;
-        evmc_uint256be b = {};
-        intx::be::store(b.bytes, e.balance);
-        return b;
-    },
-    [](evmc_context* ctx, const evmc_address* addr) {
-        auto& e = *static_cast<execution*>(ctx);
-        e.last_accessed_account = *addr;
-        return e.extcode.size();
-    },
-    [](evmc_context* ctx, const evmc_address* addr) {
-        auto& e = *static_cast<execution*>(ctx);
-        e.last_accessed_account = *addr;
-        auto hash = evmc_bytes32{};
-        std::fill(std::begin(hash.bytes), std::end(hash.bytes), uint8_t{0xee});
-        return hash;
-    },
-    [](evmc_context* ctx, const evmc_address* addr, size_t code_offset, uint8_t* buffer_data,
-        size_t buffer_size) {
-        auto& e = *static_cast<execution*>(ctx);
-        e.last_accessed_account = *addr;
-        auto n = std::min(buffer_size, e.extcode.size());
-        std::copy_n(&e.extcode[code_offset], buffer_size, buffer_data);
-        return n;
-    },
-    [](evmc_context* ctx, const evmc_address*, const evmc_address* beneficiary) {
-        static_cast<execution*>(ctx)->selfdestruct_beneficiary = *beneficiary;
-    },
-    [](evmc_context* ctx, const evmc_message* m) {
-        auto& e = *static_cast<execution*>(ctx);
-        e.call_msg = *m;
-        return e.call_result;
-    },
-    [](evmc_context* ctx) { return static_cast<execution*>(ctx)->tx_context; },
-    [](evmc_context* ctx, int64_t) { return static_cast<execution*>(ctx)->blockhash; },
-    [](evmc_context* ctx, const evmc_address*, const uint8_t* data, size_t data_size,
-        const evmc_bytes32 topics[], size_t topics_count) {
-        auto& e = *static_cast<execution*>(ctx);
-        e.log_data.assign(data, data_size);
-        e.log_topics.clear();
-        e.log_topics.reserve(topics_count);
-        std::copy_n(topics, topics_count, std::back_inserter(e.log_topics));
-    },
-};
 
 TEST_F(execution, empty)
 {
