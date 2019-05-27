@@ -10,8 +10,8 @@ add_library(evmone
     analysis.cpp
     analysis.hpp
     evmone.cpp
-    execution.cpp
     execution.hpp
+    instructions.cpp
 )
 target_link_libraries(evmone PUBLIC evmc::evmc intx::intx PRIVATE evmc::instructions ethash::ethash)
 target_include_directories(evmone PUBLIC
