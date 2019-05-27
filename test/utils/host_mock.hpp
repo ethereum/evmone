@@ -2,6 +2,8 @@
 // Copyright 2019 The evmone Authors.
 // Licensed under the Apache License, Version 2.0.
 
+#pragma once
+
 #include <evmc/evmc.hpp>
 #include <evmc/helpers.hpp>
 #include <intx/intx.hpp>
