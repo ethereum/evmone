@@ -8,8 +8,6 @@
 #include <algorithm>
 #include <numeric>
 
-using namespace std::literals;
-
 TEST_F(execution, empty)
 {
     execute(0, "");
@@ -1082,7 +1080,7 @@ TEST_F(execution, call_high_gas)
     exists = true;
     for (auto call_opcode : {"f1", "f2", "f4"})
     {
-        execute(5000, "6000600060006000600060aa61134c"s + call_opcode);
+        execute(5000, 5 * push(0) + push(0xaa) + push(0x134c) + call_opcode);
         EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
     }
 }
