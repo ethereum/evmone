@@ -1350,15 +1350,13 @@ void op_selfdestruct(execution_state& state, instr_argument) noexcept
     state.run = false;
 }
 
-constexpr auto num_revisions = int{EVMC_MAX_REVISION + 1};
-exec_fn_table op_table[num_revisions] = {};
-
-exec_fn_table create_op_table_frontier() noexcept
+constexpr exec_fn_table create_op_table_frontier() noexcept
 {
-    exec_fn_table table{};
+    auto table = exec_fn_table{};
 
     // First, mark all opcodes as undefined.
-    std::fill(table.begin(), table.end(), op_undefined);
+    for (auto& t : table)
+        t = op_undefined;
 
     table[OP_STOP] = op_stop;
     table[OP_ADD] = op_add;
@@ -1415,11 +1413,11 @@ exec_fn_table create_op_table_frontier() noexcept
     table[OP_MSIZE] = op_msize;
     table[OP_GAS] = op_gas;
     table[OP_JUMPDEST] = op_jumpdest;
-    for (size_t op = OP_PUSH1; op <= OP_PUSH32; ++op)
+    for (auto op = size_t{OP_PUSH1}; op <= OP_PUSH32; ++op)
         table[op] = op_push_full;
-    for (size_t op = OP_DUP1; op <= OP_DUP16; ++op)
+    for (auto op = size_t{OP_DUP1}; op <= OP_DUP16; ++op)
         table[op] = op_dup;
-    for (size_t op = OP_SWAP1; op <= OP_SWAP16; ++op)
+    for (auto op = size_t{OP_SWAP1}; op <= OP_SWAP16; ++op)
         table[op] = op_swap;
     for (auto op = size_t{OP_LOG0}; op <= OP_LOG4; ++op)
         table[op] = op_log;
@@ -1432,14 +1430,14 @@ exec_fn_table create_op_table_frontier() noexcept
     return table;
 }
 
-exec_fn_table create_op_table_homestead() noexcept
+constexpr exec_fn_table create_op_table_homestead() noexcept
 {
     auto table = create_op_table_frontier();
     table[OP_DELEGATECALL] = op_delegatecall;
     return table;
 }
 
-exec_fn_table create_op_table_byzantium() noexcept
+constexpr exec_fn_table create_op_table_byzantium() noexcept
 {
     auto table = create_op_table_homestead();
     table[OP_RETURNDATASIZE] = op_returndatasize;
@@ -1449,7 +1447,7 @@ exec_fn_table create_op_table_byzantium() noexcept
     return table;
 }
 
-exec_fn_table create_op_table_constantinople() noexcept
+constexpr exec_fn_table create_op_table_constantinople() noexcept
 {
     auto table = create_op_table_byzantium();
     table[OP_SHL] = op_shl;
@@ -1460,32 +1458,22 @@ exec_fn_table create_op_table_constantinople() noexcept
     return table;
 }
 
-exec_fn_table create_op_table_petersburg() noexcept
+constexpr exec_fn_table create_op_table_istanbul() noexcept
 {
     auto table = create_op_table_constantinople();
     return table;
 }
 
-exec_fn_table create_op_table_istanbul() noexcept
-{
-    auto table = create_op_table_petersburg();
-    return table;
-}
-
-const auto op_table_initialized = []() noexcept
-{
-    op_table[EVMC_FRONTIER] = create_op_table_frontier();
-    op_table[EVMC_HOMESTEAD] = create_op_table_homestead();
-    op_table[EVMC_TANGERINE_WHISTLE] = create_op_table_homestead();
-    op_table[EVMC_SPURIOUS_DRAGON] = create_op_table_homestead();
-    op_table[EVMC_BYZANTIUM] = create_op_table_byzantium();
-    op_table[EVMC_CONSTANTINOPLE] = create_op_table_constantinople();
-    op_table[EVMC_PETERSBURG] = create_op_table_petersburg();
-    op_table[EVMC_ISTANBUL] = create_op_table_istanbul();
-    return true;
-}
-();
-
+constexpr exec_fn_table op_table[] = {
+    create_op_table_frontier(),        // Frontier
+    create_op_table_homestead(),       // Homestead
+    create_op_table_homestead(),       // Tangerine Whistle
+    create_op_table_homestead(),       // Spurious Dragon
+    create_op_table_byzantium(),       // Byzantium
+    create_op_table_constantinople(),  // Constantinople
+    create_op_table_constantinople(),  // Petersburg
+    create_op_table_istanbul(),        // Istanbul
+};
 }  // namespace
 
 
