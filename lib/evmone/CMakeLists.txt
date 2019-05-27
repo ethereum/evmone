@@ -10,6 +10,7 @@ add_library(evmone
     analysis.cpp
     analysis.hpp
     evmone.cpp
+    execution.cpp
     execution.hpp
     instructions.cpp
 )
