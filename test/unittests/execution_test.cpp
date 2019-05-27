@@ -1632,6 +1632,19 @@ TEST_F(execution, extcodecopy_nonzero_index)
     EXPECT_EQ(last_accessed_account.bytes[19], 0xa);
 }
 
+TEST_F(execution, extcodecopy_fill_tail)
+{
+    extcode = {0xff, 0xfe};
+    extcode.resize(1);
+    auto code = push(2) + push(0) + push(0) + push(0xa) + OP_EXTCODECOPY + ret(0, 2);
+    execute(code);
+    EXPECT_EQ(last_accessed_account.bytes[19], 0xa);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 2);
+    EXPECT_EQ(result.output_data[0], 0xff);
+    EXPECT_EQ(result.output_data[1], 0);
+}
+
 struct memory_access_opcode
 {
     evmc_opcode opcode;
