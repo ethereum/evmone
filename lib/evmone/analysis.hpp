@@ -27,6 +27,7 @@ struct execution_state
     evmc_status_code status = EVMC_SUCCESS;
 
     std::vector<uint256> stack;
+    int max_stack_size = 0;
 
     std::vector<uint8_t> memory;  // TODO: Use bytes.
     int64_t memory_prev_cost = 0;

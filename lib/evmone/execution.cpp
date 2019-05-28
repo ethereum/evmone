@@ -9,6 +9,10 @@
 #include <evmc/helpers.hpp>
 #include <evmc/instructions.h>
 
+#include <fstream>
+#include <mutex>
+#include <numeric>
+
 namespace evmone
 {
 extern const exec_fn_table op_table[];
@@ -52,6 +56,9 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
                 break;
             }
 
+            state.max_stack_size = std::max(
+                state.max_stack_size, static_cast<int>(state.stack.size()) + block.stack_max);
+
             state.current_block_cost = block.gas_cost;
         }
 
@@ -76,6 +83,55 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
         {
             std::free(const_cast<uint8_t*>(r->output_data));
         };
+    }
+
+    static std::mutex mx;
+    {
+        auto lock = std::lock_guard{mx};
+
+        static auto f = std::ofstream{"evmone-stats.csv", std::ios::out | std::ios::app};
+        static int last_period_number;
+        static std::vector<int> memory_sizes;
+        static std::vector<int> stack_sizes;
+
+        constexpr auto period_length = 1000;
+        auto block_number = int(state.host.get_tx_context().block_number);
+        auto period_number = block_number / period_length;
+        if (period_number > last_period_number)
+        {
+            if (const auto s = stack_sizes.size(); s != 0)
+            {
+                std::sort(memory_sizes.begin(), memory_sizes.end());
+                std::sort(stack_sizes.begin(), stack_sizes.end());
+                auto total_memory =
+                    std::accumulate(memory_sizes.begin(), memory_sizes.end(), int64_t{0});
+                auto p = [s](int x) noexcept { return s * x / 1000; };
+                auto start_block = last_period_number * period_length;
+                auto end_block = start_block + period_length - 1;
+                f << start_block << "," << end_block << "," << s << ",";
+                f << total_memory << "," << memory_sizes[0] << "," << memory_sizes[p(1)] << ","
+                  << memory_sizes[p(10)] << "," << memory_sizes[p(20)] << "," << memory_sizes[p(30)]
+                  << "," << memory_sizes[p(50)] << "," << memory_sizes[p(500)] << ","
+                  << memory_sizes[s - 1 - p(50)] << "," << memory_sizes[s - 1 - p(30)] << ","
+                  << memory_sizes[s - 1 - p(20)] << "," << memory_sizes[s - 1 - p(10)] << ","
+                  << memory_sizes[s - 1 - p(1)] << "," << memory_sizes[s - 1] << ",";
+                f << stack_sizes[0] << "," << stack_sizes[p(1)] << "," << stack_sizes[p(10)] << ","
+                  << stack_sizes[p(20)] << "," << stack_sizes[p(30)] << "," << stack_sizes[p(50)]
+                  << "," << stack_sizes[p(500)] << "," << stack_sizes[s - 1 - p(50)] << ","
+                  << stack_sizes[s - 1 - p(30)] << "," << stack_sizes[s - 1 - p(20)] << ","
+                  << stack_sizes[s - 1 - p(10)] << "," << stack_sizes[s - 1 - p(1)] << ","
+                  << stack_sizes[s - 1] << "\n";
+                f << std::flush;
+
+                memory_sizes.clear();
+                stack_sizes.clear();
+
+                last_period_number = period_number;
+            }
+        }
+
+        memory_sizes.emplace_back(state.memory.size());
+        stack_sizes.emplace_back(state.max_stack_size);
     }
 
     return result;
