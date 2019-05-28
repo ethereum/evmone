@@ -1221,6 +1221,11 @@ void op_create(execution_state& state, instr_argument arg) noexcept
     }
 
     state.gas_left -= msg.gas - result.gas_left;
+    if (state.gas_left < 0)
+    {
+        state.run = false;
+        state.status = EVMC_OUT_OF_GAS;
+    }
 }
 
 void op_create2(execution_state& state, instr_argument arg) noexcept
@@ -1294,6 +1299,11 @@ void op_create2(execution_state& state, instr_argument arg) noexcept
     }
 
     state.gas_left -= msg.gas - result.gas_left;
+    if (state.gas_left < 0)
+    {
+        state.run = false;
+        state.status = EVMC_OUT_OF_GAS;
+    }
 }
 
 void op_undefined(execution_state& state, instr_argument) noexcept
