@@ -222,7 +222,7 @@ TEST_F(execution, call_output)
     call_result.output_data = output;
     call_result.output_size = sizeof(output);
     call_result.release = [](const evmc_result* r) {
-      result_is_correct = r->output_size == sizeof(output) && r->output_data == output;
+        result_is_correct = r->output_size == sizeof(output) && r->output_data == output;
     };
 
     auto code_prefix_output_1 = push(1) + 6 * OP_DUP1 + push("7fffffffffffffff");
@@ -370,7 +370,16 @@ TEST_F(execution, call_oog_after_depth_check)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
-
+TEST_F(execution, create_oog_after)
+{
+    rev = EVMC_CONSTANTINOPLE;
+    for (auto op : {OP_CREATE, OP_CREATE2})
+    {
+        auto code = 4 * push(0) + op + OP_SELFDESTRUCT;
+        execute(39000, code);
+        EXPECT_STATUS(EVMC_OUT_OF_GAS);
+    }
+}
 
 TEST_F(execution, returndatasize_before_call)
 {
