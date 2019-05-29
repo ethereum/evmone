@@ -53,11 +53,11 @@ macro(cable_configure_compiler)
         if(CABLE_COMPILER_GNULIKE)
 
             if(NOT cable_NO_PEDANTIC)
-                add_compile_options(-pedantic)
+                add_compile_options(-Wpedantic)
             endif()
 
             # Enable basing warnings set and treat them as errors.
-            add_compile_options(-Werror -Wall -Wextra)
+            add_compile_options(-Werror -Wall -Wextra -Wshadow)
 
             if(NOT cable_NO_CONVERSION_WARNINGS)
                 # Enable conversion warnings if not explicitly disabled.
