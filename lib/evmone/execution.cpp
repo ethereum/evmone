@@ -72,9 +72,9 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
         auto output_data = static_cast<uint8_t*>(std::malloc(result.output_size));
         std::memcpy(output_data, &state.memory[state.output_offset], result.output_size);
         result.output_data = output_data;
-        result.release = [](const evmc_result* result) noexcept
+        result.release = [](const evmc_result* r) noexcept
         {
-            std::free(const_cast<uint8_t*>(result->output_data));
+            std::free(const_cast<uint8_t*>(r->output_data));
         };
     }
 
