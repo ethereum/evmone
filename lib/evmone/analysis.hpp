@@ -74,7 +74,7 @@ struct instr_info
     instr_argument arg;
     int block_index = -1;
 
-    explicit constexpr instr_info(exec_fn fn) noexcept : fn{fn}, arg{} {};
+    explicit constexpr instr_info(exec_fn f) noexcept : fn{f}, arg{} {};
 };
 
 struct block_info

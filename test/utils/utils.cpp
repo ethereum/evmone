@@ -36,11 +36,11 @@ bytes from_hex(std::string_view hex)
     return bs;
 }
 
-std::string to_hex(bytes_view bytes)
+std::string to_hex(bytes_view bs)
 {
     std::string str;
-    str.reserve(bytes.size() * 2);
-    for (auto b : bytes)
+    str.reserve(bs.size() * 2);
+    for (auto b : bs)
         str += hex(b);
     return str;
 }

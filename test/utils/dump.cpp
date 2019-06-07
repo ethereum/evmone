@@ -31,12 +31,12 @@ void dump_analysis(const evmone::code_analysis& analysis)
         {
             block = &analysis.blocks[size_t(instr.block_index)];
 
-            auto get_jumpdest_offset = [&analysis](size_t i) noexcept
+            auto get_jumpdest_offset = [&analysis](size_t index) noexcept
             {
                 // TODO: Replace with lower_bound().
                 for (const auto& d : analysis.jumpdest_map)
                 {
-                    if (d.second == static_cast<int>(i))
+                    if (d.second == static_cast<int>(index))
                         return d.first;
                 }
                 return -1;
