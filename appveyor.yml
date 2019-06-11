@@ -51,5 +51,5 @@ deploy_script:
         }
         echo $name
         echo $prerelease_flag
-        ghr -u chfast -r evmone -n "$name" $prerelease_flag $env:appveyor_repo_tag_name package/
+        ghr -u ethereum -r evmone -n "$name" $prerelease_flag $env:appveyor_repo_tag_name package/
       }
