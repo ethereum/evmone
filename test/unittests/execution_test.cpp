@@ -230,6 +230,20 @@ TEST_F(execution, bad_jumpdest)
     }
 }
 
+TEST_F(execution, pc)
+{
+    const auto code = OP_CALLDATASIZE + push(9) + OP_JUMPI + push(12) + OP_PC + OP_SWAP1 + OP_JUMP +
+                      OP_JUMPDEST + OP_GAS + OP_PC + OP_JUMPDEST + ret_top();
+
+    execute(code, "");
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(6);
+
+    execute(code, "ff");
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(11);
+}
+
 TEST_F(execution, byte)
 {
     std::string s;
