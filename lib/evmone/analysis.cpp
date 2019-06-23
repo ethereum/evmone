@@ -17,7 +17,7 @@ bool is_terminator(uint8_t c) noexcept
 }
 }  // namespace
 
-int code_analysis::find_jumpdest(int offset) noexcept
+int code_analysis::find_jumpdest(int offset) const noexcept
 {
     // TODO: Replace with lower_bound().
     for (const auto& d : jumpdest_map)
@@ -51,6 +51,7 @@ code_analysis analyze(
     const exec_fn_table& fns, evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
 {
     code_analysis analysis;
+    // TODO: Check if final result exceeds the reservation.
     analysis.instrs.reserve(code_size + 1);
 
     auto* instr_table = evmc_get_instruction_metrics_table(rev);
@@ -61,18 +62,26 @@ code_analysis analyze(
     {
         // TODO: Loop in reverse order for easier GAS analysis.
         const auto c = code[i];
-        auto& instr = analysis.instrs.emplace_back(fns[c]);
 
         const bool jumpdest = c == OP_JUMPDEST;
+
         if (!block || jumpdest)
         {
             // Create new block.
             block = &analysis.blocks.emplace_back();
-            instr.block_index = static_cast<int>(analysis.blocks.size() - 1);
 
-            if (jumpdest)
+            // Create BEGINBLOCK instruction which either replaces JUMPDEST or is injected
+            // in case there is no JUMPDEST.
+            auto& beginblock_instr = analysis.instrs.emplace_back(fns[OPX_BEGINBLOCK]);
+            beginblock_instr.arg.p.number = static_cast<int>(analysis.blocks.size() - 1);
+
+            if (jumpdest)  // Add the jumpdest to the map.
                 analysis.jumpdest_map.emplace_back(static_cast<int>(i), instr_index);
+            else  // Increase instruction count because additional BEGINBLOCK was injected.
+                ++instr_index;
         }
+
+        auto& instr = jumpdest ? analysis.instrs.back() : analysis.instrs.emplace_back(fns[c]);
 
         auto metrics = instr_table[c];
         block->gas_cost += metrics.gas_cost;

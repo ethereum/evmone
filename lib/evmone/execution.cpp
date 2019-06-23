@@ -29,31 +29,6 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
     while (state.run)
     {
         auto& instr = analysis.instrs[state.pc];
-        if (instr.block_index >= 0)
-        {
-            auto& block = analysis.blocks[static_cast<size_t>(instr.block_index)];
-
-            state.gas_left -= block.gas_cost;
-            if (state.gas_left < 0)
-            {
-                state.status = EVMC_OUT_OF_GAS;
-                break;
-            }
-
-            if (static_cast<int>(state.stack.size()) < block.stack_req)
-            {
-                state.status = EVMC_STACK_UNDERFLOW;
-                break;
-            }
-
-            if (static_cast<int>(state.stack.size()) + block.stack_max > 1024)
-            {
-                state.status = EVMC_STACK_OVERFLOW;
-                break;
-            }
-
-            state.current_block_cost = block.gas_cost;
-        }
 
         // Advance the PC not to allow jump opcodes to overwrite it.
         ++state.pc;

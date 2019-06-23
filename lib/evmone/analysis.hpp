@@ -4,6 +4,7 @@
 #pragma once
 
 #include <evmc/evmc.hpp>
+#include <evmc/instructions.h>
 #include <evmc/utils.h>
 #include <intx/intx.hpp>
 #include <array>
@@ -66,6 +67,20 @@ static_assert(sizeof(instr_argument) == sizeof(void*), "Incorrect size of instr_
 
 using exec_fn = void (*)(execution_state&, instr_argument arg);
 
+/// The evmone intrinsic opcodes.
+///
+/// These intrinsic instructions may be injected to the code in the analysis phase.
+/// They contain additional and required logic to be executed by the interpreter.
+enum intrinsic_opcodes
+{
+    /// The BEGINBLOCK instruction.
+    ///
+    /// This instruction is defined as alias for JUMPDEST and replaces all JUMPDEST instructions.
+    /// It is also injected at beginning of basic blocks not being the valid jump destination.
+    /// It checks basic block execution requirements and terminates execution if they are not met.
+    OPX_BEGINBLOCK = OP_JUMPDEST
+};
+
 using exec_fn_table = std::array<exec_fn, 256>;
 
 struct instr_info
@@ -99,7 +114,7 @@ struct code_analysis
     std::vector<std::pair<int, int>> jumpdest_map;
 
     // TODO: Exported for unit tests. Rework unit tests?
-    EVMC_EXPORT int find_jumpdest(int offset) noexcept;
+    EVMC_EXPORT int find_jumpdest(int offset) const noexcept;
 };
 
 EVMC_EXPORT code_analysis analyze(
