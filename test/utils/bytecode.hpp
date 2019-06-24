@@ -100,9 +100,19 @@ inline bytecode mstore(bytecode index)
     return index + OP_MSTORE;
 }
 
+inline bytecode mstore(bytecode index, bytecode value)
+{
+    return value + index + OP_MSTORE;
+}
+
 inline bytecode mstore8(bytecode index)
 {
     return index + OP_MSTORE8;
+}
+
+inline bytecode jump(bytecode target)
+{
+    return target + OP_JUMP;
 }
 
 inline bytecode ret(bytecode index, bytecode size)
