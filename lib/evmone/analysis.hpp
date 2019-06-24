@@ -87,7 +87,6 @@ struct instr_info
 {
     exec_fn fn = nullptr;
     instr_argument arg;
-    int block_index = -1;
 
     explicit constexpr instr_info(exec_fn f) noexcept : fn{f}, arg{} {};
 };
