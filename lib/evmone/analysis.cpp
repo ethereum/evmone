@@ -111,11 +111,12 @@ code_analysis analyze(
             instr.arg.p.number = c - OP_DUP1;
         else if (c >= OP_SWAP1 && c <= OP_SWAP16)
             instr.arg.p.number = c - OP_SWAP1 + 1;
-        else if (c == OP_GAS || c == OP_DELEGATECALL || c == OP_CALL || c == OP_CALLCODE ||
-                 c == OP_STATICCALL || c == OP_CREATE || c == OP_CREATE2)
+        else if (c == OP_GAS)
+            instr.arg.p.number = static_cast<int>(block->gas_cost);
+        else if (c == OP_DELEGATECALL || c == OP_CALL || c == OP_CALLCODE || c == OP_STATICCALL ||
+                 c == OP_CREATE || c == OP_CREATE2)
         {
             instr.arg.p.number = static_cast<int>(block->gas_cost);
-            // TODO: Does not make sense for OP_GAS.
             instr.arg.p.call_kind = op2call_kind(c == OP_STATICCALL ? uint8_t{OP_CALL} : c);
         }
         else if (c == OP_PC)
