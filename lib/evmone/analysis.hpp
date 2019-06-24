@@ -51,6 +51,12 @@ struct execution_state
     evmc_revision rev = {};
 
     uint256& item(size_t index) noexcept { return stack[stack.size() - index - 1]; }
+
+    void exit(evmc_status_code status_code) noexcept
+    {
+        status = status_code;
+        run = false;
+    }
 };
 
 union instr_argument

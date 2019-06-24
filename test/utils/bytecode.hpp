@@ -110,6 +110,11 @@ inline bytecode mstore8(bytecode index)
     return index + OP_MSTORE8;
 }
 
+inline bytecode mstore8(bytecode index, bytecode value)
+{
+    return value + index + OP_MSTORE8;
+}
+
 inline bytecode jump(bytecode target)
 {
     return target + OP_JUMP;

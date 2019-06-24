@@ -32,7 +32,6 @@ void dump_analysis(const evmone::code_analysis& analysis)
 
             auto get_jumpdest_offset = [&analysis](size_t index) noexcept
             {
-                // TODO: Replace with lower_bound().
                 for (const auto& d : analysis.jumpdest_map)
                 {
                     if (d.second == static_cast<int>(index))
