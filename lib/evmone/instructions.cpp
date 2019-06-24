@@ -133,16 +133,15 @@ void op_mulmod(execution_state& state, instr_argument) noexcept
     state.item(0) = m != 0 ? ((uint512{x} * uint512{y}) % uint512{m}).lo : 0;
 }
 
-void op_exp(execution_state& state, instr_argument arg) noexcept
+void op_exp(execution_state& state, instr_argument) noexcept
 {
-    auto base = state.item(0);
+    const auto base = state.item(0);
     auto& exponent = state.item(1);
 
-    auto exponent_significant_bytes = intx::count_significant_words<uint8_t>(exponent);
-
-    auto additional_cost = exponent_significant_bytes * arg.p.number;
-    state.gas_left -= additional_cost;
-    if (state.gas_left < 0)
+    const auto exponent_significant_bytes = intx::count_significant_words<uint8_t>(exponent);
+    const auto exponent_cost = state.rev >= EVMC_SPURIOUS_DRAGON ? 50 : 10;
+    const auto additional_cost = exponent_significant_bytes * exponent_cost;
+    if ((state.gas_left -= additional_cost) < 0)
     {
         state.run = false;
         state.status = EVMC_OUT_OF_GAS;

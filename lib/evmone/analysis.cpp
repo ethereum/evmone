@@ -121,8 +121,6 @@ code_analysis analyze(
         }
         else if (c == OP_PC)
             instr.arg.p.number = static_cast<int>(i);
-        else if (c == OP_EXP)
-            instr.arg.p.number = rev >= EVMC_SPURIOUS_DRAGON ? 50 : 10;
         else if (c == OP_SSTORE)
             instr.arg.p.number = rev;
         else if (c >= OP_LOG0 && c <= OP_LOG4)
