@@ -669,21 +669,24 @@ TEST_F(execution, invalid)
     EXPECT_EQ(result.gas_left, 0);
 }
 
-TEST_F(execution, log3)
+TEST_F(execution, log)
 {
-    // TODO: Extend the test to all LOGs.
-    std::string s;
-    s += "60016002600360046077600253600280a3";  // 1 2 3 4 m[2] = 0x77 2 2 LOG3
-    execute(s);
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    EXPECT_EQ(gas_used, 1546);
-    ASSERT_EQ(log_data.size(), 2);
-    EXPECT_EQ(log_data[0], 0x77);
-    EXPECT_EQ(log_data[1], 0);
-    EXPECT_EQ(log_topics.size(), 3);
-    EXPECT_EQ(log_topics[0].bytes[31], 4);
-    EXPECT_EQ(log_topics[1].bytes[31], 3);
-    EXPECT_EQ(log_topics[2].bytes[31], 2);
+    for (auto op : {OP_LOG0, OP_LOG1, OP_LOG2, OP_LOG3, OP_LOG4})
+    {
+        const auto n = op - OP_LOG0;
+        const auto code =
+            push(1) + push(2) + push(3) + push(4) + mstore8(2, 0x77) + push(2) + push(2) + op;
+        execute(code);
+        EXPECT_GAS_USED(EVMC_SUCCESS, 421 + n * 375);
+        ASSERT_EQ(log_data.size(), 2);
+        EXPECT_EQ(log_data[0], 0x77);
+        EXPECT_EQ(log_data[1], 0);
+        ASSERT_EQ(log_topics.size(), n);
+        for (int i = 0; i < n; ++i)
+        {
+            EXPECT_EQ(log_topics[i].bytes[31], 4 - i);
+        }
+    }
 }
 
 TEST_F(execution, log0_empty)
