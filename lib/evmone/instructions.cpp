@@ -546,8 +546,8 @@ void op_sstore(execution_state& state, instr_argument arg) noexcept
 
 void op_jump(execution_state& state, instr_argument) noexcept
 {
-    auto dst = state.item(0);
-    int pc = -1;
+    const auto dst = state.item(0);
+    auto pc = -1;
     if (std::numeric_limits<int>::max() < dst ||
         (pc = state.analysis->find_jumpdest(static_cast<int>(dst))) < 0)
     {
@@ -560,28 +560,16 @@ void op_jump(execution_state& state, instr_argument) noexcept
     state.stack.pop_back();
 }
 
-void op_jumpi(execution_state& state, instr_argument) noexcept
+void op_jumpi(execution_state& state, instr_argument arg) noexcept
 {
-    auto condition = state.item(1);
-    if (condition != 0)
-    {
-        // TODO: Call op_jump here.
-        auto dst = state.item(0);
-        int pc = -1;
-        if (std::numeric_limits<int>::max() < dst ||
-            (pc = state.analysis->find_jumpdest(static_cast<int>(dst))) < 0)
-        {
-            state.run = false;
-            state.status = EVMC_BAD_JUMP_DESTINATION;
-            return;
-        }
-        state.pc = static_cast<size_t>(pc);
-    }
+    if (state.item(1) != 0)
+        op_jump(state, arg);
+    else
+        state.stack.pop_back();
 
     // OPT: The pc must be the BEGINBLOCK (even in fallback case),
     //      so we can execute it straight away.
 
-    state.stack.pop_back();
     state.stack.pop_back();
 }
 
