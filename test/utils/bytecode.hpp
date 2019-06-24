@@ -115,6 +115,11 @@ inline bytecode jump(bytecode target)
     return target + OP_JUMP;
 }
 
+inline bytecode jumpi(bytecode target, bytecode condition)
+{
+    return condition + target + OP_JUMPI;
+}
+
 inline bytecode ret(bytecode index, bytecode size)
 {
     return size + index + OP_RETURN;

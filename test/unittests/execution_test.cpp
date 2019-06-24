@@ -230,6 +230,13 @@ TEST_F(execution, bad_jumpdest)
     }
 }
 
+TEST_F(execution, jump_to_block_beginning)
+{
+    const auto code = jumpi(0, OP_MSIZE) + jump(4);
+    execute(code);
+    EXPECT_STATUS(EVMC_BAD_JUMP_DESTINATION);
+}
+
 TEST_F(execution, pc)
 {
     const auto code = OP_CALLDATASIZE + push(9) + OP_JUMPI + push(12) + OP_PC + OP_SWAP1 + OP_JUMP +
