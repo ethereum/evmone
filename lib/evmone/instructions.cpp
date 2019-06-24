@@ -498,7 +498,7 @@ void op_sload(execution_state& state, instr_argument) noexcept
     x = intx::be::uint256(state.host.get_storage(state.msg->destination, key).bytes);
 }
 
-void op_sstore(execution_state& state, instr_argument arg) noexcept
+void op_sstore(execution_state& state, instr_argument) noexcept
 {
     if (state.msg->flags & EVMC_STATIC)
     {
@@ -515,18 +515,17 @@ void op_sstore(execution_state& state, instr_argument arg) noexcept
     state.stack.pop_back();
     state.stack.pop_back();
     auto status = state.host.set_storage(state.msg->destination, key, value);
-    auto rev = static_cast<evmc_revision>(arg.p.number);
     int cost = 0;
     switch (status)
     {
     case EVMC_STORAGE_UNCHANGED:
-        cost = rev == EVMC_CONSTANTINOPLE ? 200 : 5000;
+        cost = state.rev == EVMC_CONSTANTINOPLE ? 200 : 5000;
         break;
     case EVMC_STORAGE_MODIFIED:
         cost = 5000;
         break;
     case EVMC_STORAGE_MODIFIED_AGAIN:
-        cost = rev == EVMC_CONSTANTINOPLE ? 200 : 5000;
+        cost = state.rev == EVMC_CONSTANTINOPLE ? 200 : 5000;
         break;
     case EVMC_STORAGE_ADDED:
         cost = 20000;
