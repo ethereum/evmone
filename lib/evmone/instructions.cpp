@@ -8,6 +8,8 @@
 #include <evmc/helpers.hpp>
 #include <evmc/instructions.h>
 
+#include <cassert>
+
 namespace evmone
 {
 namespace
@@ -576,6 +578,9 @@ void op_jumpi(execution_state& state, instr_argument) noexcept
         state.pc = static_cast<size_t>(pc);
     }
 
+    // OPT: The pc must be the BEGINBLOCK (even in fallback case),
+    //      so we can execute it straight away.
+
     state.stack.pop_back();
     state.stack.pop_back();
 }
@@ -595,11 +600,6 @@ void op_gas(execution_state& state, instr_argument arg) noexcept
     auto correction = state.current_block_cost - arg.p.number;
     intx::uint256 gas = static_cast<uint64_t>(state.gas_left + correction);
     state.stack.push_back(gas);
-}
-
-void op_jumpdest(execution_state&, instr_argument) noexcept
-{
-    // OPT: We can skip JUMPDEST instruction in analysis.
 }
 
 void op_gasprice(execution_state& state, instr_argument) noexcept
@@ -1359,6 +1359,36 @@ void op_selfdestruct(execution_state& state, instr_argument) noexcept
     state.run = false;
 }
 
+void opx_beginblock(execution_state& state, instr_argument arg) noexcept
+{
+    assert(arg.p.number >= 0);
+    auto& block = state.analysis->blocks[static_cast<size_t>(arg.p.number)];
+
+    state.gas_left -= block.gas_cost;
+    if (state.gas_left < 0)
+    {
+        state.status = EVMC_OUT_OF_GAS;
+        state.run = false;
+        return;
+    }
+
+    if (static_cast<int>(state.stack.size()) < block.stack_req)
+    {
+        state.status = EVMC_STACK_UNDERFLOW;
+        state.run = false;
+        return;
+    }
+
+    if (static_cast<int>(state.stack.size()) + block.stack_max > 1024)
+    {
+        state.status = EVMC_STACK_OVERFLOW;
+        state.run = false;
+        return;
+    }
+
+    state.current_block_cost = block.gas_cost;
+}
+
 constexpr exec_fn_table create_op_table_frontier() noexcept
 {
     auto table = exec_fn_table{};
@@ -1421,7 +1451,7 @@ constexpr exec_fn_table create_op_table_frontier() noexcept
     table[OP_PC] = op_pc;
     table[OP_MSIZE] = op_msize;
     table[OP_GAS] = op_gas;
-    table[OP_JUMPDEST] = op_jumpdest;
+    table[OPX_BEGINBLOCK] = opx_beginblock;  // Replaces JUMPDEST.
     for (auto op = size_t{OP_PUSH1}; op <= OP_PUSH32; ++op)
         table[op] = op_push_full;
     for (auto op = size_t{OP_DUP1}; op <= OP_DUP16; ++op)
