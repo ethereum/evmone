@@ -142,11 +142,7 @@ void op_exp(execution_state& state, instr_argument) noexcept
     const auto exponent_cost = state.rev >= EVMC_SPURIOUS_DRAGON ? 50 : 10;
     const auto additional_cost = exponent_significant_bytes * exponent_cost;
     if ((state.gas_left -= additional_cost) < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
+        return state.exit(EVMC_OUT_OF_GAS);
 
     exponent = intx::exp(base, exponent);
     state.stack.pop_back();
@@ -290,17 +286,12 @@ void op_sha3(execution_state& state, instr_argument) noexcept
     if (!check_memory(state, index, size))
         return;
 
-    auto i = static_cast<size_t>(index);
-    auto s = static_cast<size_t>(size);
-    auto w = (static_cast<int64_t>(s) + 31) / 32;
-    auto cost = w * 6;
-    state.gas_left -= cost;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
+    const auto i = static_cast<size_t>(index);
+    const auto s = static_cast<size_t>(size);
+    const auto w = (static_cast<int64_t>(s) + 31) / 32;
+    const auto cost = w * 6;
+    if ((state.gas_left -= cost) < 0)
+        return state.exit(EVMC_OUT_OF_GAS);
 
     auto data = s != 0 ? &state.memory[i] : nullptr;
     auto h = ethash::keccak256(data, s);
@@ -391,14 +382,9 @@ void op_calldatacopy(execution_state& state, instr_argument) noexcept
     auto s = static_cast<size_t>(size);
     auto copy_size = std::min(s, state.msg->input_size - src);
 
-    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
-    state.gas_left -= copy_cost;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
+    const auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
+    if ((state.gas_left -= copy_cost) < 0)
+        return state.exit(EVMC_OUT_OF_GAS);
 
     if (copy_size > 0)
         std::memcpy(&state.memory[dst], &state.msg->input_data[src], copy_size);
@@ -431,14 +417,9 @@ void op_codecopy(execution_state& state, instr_argument) noexcept
     auto s = static_cast<size_t>(size);
     auto copy_size = std::min(s, state.code_size - src);
 
-    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
-    state.gas_left -= copy_cost;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
+    const auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
+    if ((state.gas_left -= copy_cost) < 0)
+        return state.exit(EVMC_OUT_OF_GAS);
 
     // TODO: Add unit tests for each combination of conditions.
     if (copy_size > 0)
@@ -500,13 +481,9 @@ void op_sload(execution_state& state, instr_argument) noexcept
 
 void op_sstore(execution_state& state, instr_argument) noexcept
 {
+    // TODO: Implement static mode violation in analysis.
     if (state.msg->flags & EVMC_STATIC)
-    {
-        // TODO: Implement static mode violation in analysis.
-        state.run = false;
-        state.status = EVMC_STATIC_MODE_VIOLATION;
-        return;
-    }
+        return state.exit(EVMC_STATIC_MODE_VIOLATION);
 
     evmc_bytes32 key;
     evmc_bytes32 value;
@@ -534,12 +511,8 @@ void op_sstore(execution_state& state, instr_argument) noexcept
         cost = 5000;
         break;
     }
-    state.gas_left -= cost;
-    if (state.gas_left < 0)
-    {
-        state.status = EVMC_OUT_OF_GAS;
-        state.run = false;
-    }
+    if ((state.gas_left -= cost) < 0)
+        return state.exit(EVMC_OUT_OF_GAS);
 }
 
 void op_jump(execution_state& state, instr_argument) noexcept
@@ -548,11 +521,7 @@ void op_jump(execution_state& state, instr_argument) noexcept
     auto pc = -1;
     if (std::numeric_limits<int>::max() < dst ||
         (pc = state.analysis->find_jumpdest(static_cast<int>(dst))) < 0)
-    {
-        state.run = false;
-        state.status = EVMC_BAD_JUMP_DESTINATION;
-        return;
-    }
+        return state.exit(EVMC_BAD_JUMP_DESTINATION);
 
     state.pc = static_cast<size_t>(pc);
     state.stack.pop_back();
@@ -618,14 +587,9 @@ void op_extcodecopy(execution_state& state, instr_argument) noexcept
     auto src = max_buffer_size < input_index ? max_buffer_size : static_cast<size_t>(input_index);
     auto s = static_cast<size_t>(size);
 
-    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
-    state.gas_left -= copy_cost;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
+    const auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
+    if ((state.gas_left -= copy_cost) < 0)
+        return state.exit(EVMC_OUT_OF_GAS);
 
     evmc_address addr;
     {
@@ -667,28 +631,15 @@ void op_returndatacopy(execution_state& state, instr_argument) noexcept
     auto s = static_cast<size_t>(size);
 
     if (state.return_data.size() < input_index)
-    {
-        state.run = false;
-        state.status = EVMC_INVALID_MEMORY_ACCESS;
-        return;
-    }
+        return state.exit(EVMC_INVALID_MEMORY_ACCESS);
     auto src = static_cast<size_t>(input_index);
 
     if (src + s > state.return_data.size())
-    {
-        state.run = false;
-        state.status = EVMC_INVALID_MEMORY_ACCESS;
-        return;
-    }
+        return state.exit(EVMC_INVALID_MEMORY_ACCESS);
 
-    auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
-    state.gas_left -= copy_cost;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
+    const auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
+    if ((state.gas_left -= copy_cost) < 0)
+        return state.exit(EVMC_OUT_OF_GAS);
 
     if (s > 0)
         std::memcpy(&state.memory[dst], &state.return_data[src], s);
@@ -889,11 +840,7 @@ void op_call(execution_state& state, instr_argument arg) noexcept
     if (has_value)
     {
         if (arg.p.call_kind == EVMC_CALL && state.msg->flags & EVMC_STATIC)
-        {
-            state.run = false;
-            state.status = EVMC_STATIC_MODE_VIOLATION;
-            return;
-        }
+            return state.exit(EVMC_STATIC_MODE_VIOLATION);
         cost += 9000;
     }
 
@@ -903,13 +850,8 @@ void op_call(execution_state& state, instr_argument arg) noexcept
             cost += 25000;
     }
 
-    gas_left -= cost;
-    if (gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
+    if ((gas_left -= cost) < 0)
+        return state.exit(EVMC_OUT_OF_GAS);
 
     msg.gas = std::numeric_limits<int64_t>::max();
     if (gas < msg.gas)
@@ -918,11 +860,7 @@ void op_call(execution_state& state, instr_argument arg) noexcept
     if (state.rev >= EVMC_TANGERINE_WHISTLE)
         msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
     else if (msg.gas > gas_left)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
+        return state.exit(EVMC_OUT_OF_GAS);
 
     state.return_data.clear();
 
@@ -932,10 +870,7 @@ void op_call(execution_state& state, instr_argument arg) noexcept
         if (has_value)
             state.gas_left += 2300;  // Return unused stipend.
         if (state.gas_left < 0)
-        {
-            state.run = false;
-            state.status = EVMC_OUT_OF_GAS;
-        }
+            return state.exit(EVMC_OUT_OF_GAS);
         return;
     }
 
@@ -959,10 +894,7 @@ void op_call(execution_state& state, instr_argument arg) noexcept
         {
             state.gas_left += 2300;  // Return unused stipend.
             if (state.gas_left < 0)
-            {
-                state.run = false;
-                state.status = EVMC_OUT_OF_GAS;
-            }
+                return state.exit(EVMC_OUT_OF_GAS);
             return;
         }
 
@@ -983,13 +915,8 @@ void op_call(execution_state& state, instr_argument arg) noexcept
     if (has_value)
         gas_used -= 2300;
 
-    state.gas_left -= gas_used;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
+    if ((state.gas_left -= gas_used) < 0)
+        return state.exit(EVMC_OUT_OF_GAS);
 }
 
 void op_delegatecall(execution_state& state, instr_argument arg) noexcept
@@ -1033,11 +960,7 @@ void op_delegatecall(execution_state& state, instr_argument arg) noexcept
     if (state.rev >= EVMC_TANGERINE_WHISTLE)
         msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
     else if (msg.gas > gas_left)  // TEST: gas_left vs state.gas_left.
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
+        return state.exit(EVMC_OUT_OF_GAS);
 
     if (state.msg->depth >= 1024)
         return;
@@ -1064,13 +987,8 @@ void op_delegatecall(execution_state& state, instr_argument arg) noexcept
 
     auto gas_used = msg.gas - result.gas_left;
 
-    state.gas_left -= gas_used;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
+    if ((state.gas_left -= gas_used) < 0)
+        return state.exit(EVMC_OUT_OF_GAS);
 }
 
 void op_staticcall(execution_state& state, instr_argument arg) noexcept
@@ -1136,24 +1054,14 @@ void op_staticcall(execution_state& state, instr_argument arg) noexcept
 
     auto gas_used = msg.gas - result.gas_left;
 
-    state.gas_left -= gas_used;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
+    if ((state.gas_left -= gas_used) < 0)
+        return state.exit(EVMC_OUT_OF_GAS);
 }
 
 void op_create(execution_state& state, instr_argument arg) noexcept
 {
     if (state.msg->flags & EVMC_STATIC)
-    {
-        // TODO: Implement static mode violation in analysis.
-        state.run = false;
-        state.status = EVMC_STATIC_MODE_VIOLATION;
-        return;
-    }
+        return state.exit(EVMC_STATIC_MODE_VIOLATION);
 
     auto endowment = state.item(0);
     auto init_code_offset = state.item(1);
@@ -1206,23 +1114,14 @@ void op_create(execution_state& state, instr_argument arg) noexcept
         state.item(0) = intx::be::uint256(data);
     }
 
-    state.gas_left -= msg.gas - result.gas_left;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-    }
+    if ((state.gas_left -= msg.gas - result.gas_left) < 0)
+        return state.exit(EVMC_OUT_OF_GAS);
 }
 
 void op_create2(execution_state& state, instr_argument arg) noexcept
 {
     if (state.msg->flags & EVMC_STATIC)
-    {
-        // TODO: Implement static mode violation in analysis.
-        state.run = false;
-        state.status = EVMC_STATIC_MODE_VIOLATION;
-        return;
-    }
+        return state.exit(EVMC_STATIC_MODE_VIOLATION);
 
     auto endowment = state.item(0);
     auto init_code_offset = state.item(1);
@@ -1240,11 +1139,7 @@ void op_create2(execution_state& state, instr_argument arg) noexcept
     auto salt_cost = ((int64_t(init_code_size) + 31) / 32) * 6;
     state.gas_left -= salt_cost;
     if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
+        return state.exit(EVMC_OUT_OF_GAS);
 
     state.return_data.clear();
 
@@ -1284,29 +1179,19 @@ void op_create2(execution_state& state, instr_argument arg) noexcept
         state.item(0) = intx::be::uint256(data);
     }
 
-    state.gas_left -= msg.gas - result.gas_left;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-    }
+    if ((state.gas_left -= msg.gas - result.gas_left) < 0)
+        return state.exit(EVMC_OUT_OF_GAS);
 }
 
 void op_undefined(execution_state& state, instr_argument) noexcept
 {
-    state.run = false;
-    state.status = EVMC_UNDEFINED_INSTRUCTION;
+    return state.exit(EVMC_UNDEFINED_INSTRUCTION);
 }
 
 void op_selfdestruct(execution_state& state, instr_argument) noexcept
 {
     if (state.msg->flags & EVMC_STATIC)
-    {
-        // TODO: Implement static mode violation in analysis.
-        state.run = false;
-        state.status = EVMC_STATIC_MODE_VIOLATION;
-        return;
-    }
+        return state.exit(EVMC_STATIC_MODE_VIOLATION);
 
     uint8_t data[32];
     intx::be::store(data, state.item(0));
@@ -1325,18 +1210,12 @@ void op_selfdestruct(execution_state& state, instr_argument) noexcept
 
         if (check_existance)
         {
-            // After EIP150 hard fork charge additional cost of sending
-            // ethers to non-existing account.
-            bool exists = state.host.account_exists(addr);
-            if (!exists)
+            // After TANGERINE_WHISTLE apply additional cost of
+            // sending value to a non-existing account.
+            if (!state.host.account_exists(addr))
             {
-                state.gas_left -= 25000;
-                if (state.gas_left < 0)
-                {
-                    state.run = false;
-                    state.status = EVMC_OUT_OF_GAS;
-                    return;
-                }
+                if ((state.gas_left -= 25000) < 0)
+                    return state.exit(EVMC_OUT_OF_GAS);
             }
         }
     }
@@ -1350,27 +1229,14 @@ void opx_beginblock(execution_state& state, instr_argument arg) noexcept
     assert(arg.p.number >= 0);
     auto& block = state.analysis->blocks[static_cast<size_t>(arg.p.number)];
 
-    state.gas_left -= block.gas_cost;
-    if (state.gas_left < 0)
-    {
-        state.status = EVMC_OUT_OF_GAS;
-        state.run = false;
-        return;
-    }
+    if ((state.gas_left -= block.gas_cost) < 0)
+        return state.exit(EVMC_OUT_OF_GAS);
 
     if (static_cast<int>(state.stack.size()) < block.stack_req)
-    {
-        state.status = EVMC_STACK_UNDERFLOW;
-        state.run = false;
-        return;
-    }
+        return state.exit(EVMC_STACK_UNDERFLOW);
 
     if (static_cast<int>(state.stack.size()) + block.stack_max > 1024)
-    {
-        state.status = EVMC_STACK_OVERFLOW;
-        state.run = false;
-        return;
-    }
+        return state.exit(EVMC_STACK_OVERFLOW);
 
     state.current_block_cost = block.gas_cost;
 }
