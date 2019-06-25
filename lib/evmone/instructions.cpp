@@ -1166,10 +1166,12 @@ void op_selfdestruct(execution_state& state, instr_argument) noexcept
     state.exit(EVMC_SUCCESS);
 }
 
-void opx_beginblock(execution_state& state, instr_argument arg) noexcept
+void opx_beginblock(execution_state& state, instr_argument) noexcept
 {
-    assert(arg.p.number >= 0);
-    auto& block = state.analysis->blocks[static_cast<size_t>(arg.p.number)];
+    // OPT: Keep block stats in the instruction table directly.
+    const auto index = state.next_instr++->number;
+    assert(index >= 0);
+    auto& block = state.analysis->blocks[static_cast<size_t>(index)];
 
     if ((state.gas_left -= block.gas_cost) < 0)
         return state.exit(EVMC_OUT_OF_GAS);

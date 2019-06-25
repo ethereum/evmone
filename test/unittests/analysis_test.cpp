@@ -27,17 +27,17 @@ TEST(analysis, example1)
     const auto code = push(0x2a) + push(0x1e) + OP_MSTORE8 + OP_MSIZE + push(0) + OP_SSTORE;
     const auto analysis = analyze(fake_fn_table, rev, &code[0], code.size());
 
-    ASSERT_EQ(analysis.instrs.size(), 8);
+    ASSERT_EQ(analysis.instrs.size(), 9);
 
     EXPECT_EQ(analysis.instrs[0].fn, fake_fn_table[OPX_BEGINBLOCK]);
-    EXPECT_EQ(analysis.instrs[0].arg.p.number, 0);
-    EXPECT_EQ(analysis.instrs[1].fn, fake_fn_table[OP_PUSH1]);
+    EXPECT_EQ(analysis.instrs[1].number, 0);
     EXPECT_EQ(analysis.instrs[2].fn, fake_fn_table[OP_PUSH1]);
-    EXPECT_EQ(analysis.instrs[3].fn, fake_fn_table[OP_MSTORE8]);
-    EXPECT_EQ(analysis.instrs[4].fn, fake_fn_table[OP_MSIZE]);
-    EXPECT_EQ(analysis.instrs[5].fn, fake_fn_table[OP_PUSH1]);
-    EXPECT_EQ(analysis.instrs[6].fn, fake_fn_table[OP_SSTORE]);
-    EXPECT_EQ(analysis.instrs[7].fn, fake_fn_table[OP_STOP]);
+    EXPECT_EQ(analysis.instrs[3].fn, fake_fn_table[OP_PUSH1]);
+    EXPECT_EQ(analysis.instrs[4].fn, fake_fn_table[OP_MSTORE8]);
+    EXPECT_EQ(analysis.instrs[5].fn, fake_fn_table[OP_MSIZE]);
+    EXPECT_EQ(analysis.instrs[6].fn, fake_fn_table[OP_PUSH1]);
+    EXPECT_EQ(analysis.instrs[7].fn, fake_fn_table[OP_SSTORE]);
+    EXPECT_EQ(analysis.instrs[8].fn, fake_fn_table[OP_STOP]);
 
     ASSERT_EQ(analysis.blocks.size(), 1);
     EXPECT_EQ(analysis.blocks[0].gas_cost, 14);
@@ -51,17 +51,17 @@ TEST(analysis, stack_up_and_down)
     const auto code = OP_DUP2 + 6 * OP_DUP1 + 10 * OP_POP + push(0);
     const auto analysis = analyze(fake_fn_table, rev, &code[0], code.size());
 
-    ASSERT_EQ(analysis.instrs.size(), 27);
+    ASSERT_EQ(analysis.instrs.size(), 28);
     EXPECT_EQ(analysis.instrs[0].fn, fake_fn_table[OPX_BEGINBLOCK]);
-    EXPECT_EQ(analysis.instrs[0].arg.p.number, 0);
-    EXPECT_EQ(analysis.instrs[1].fn, fake_fn_table[OP_DUP2]);
-    EXPECT_EQ(analysis.instrs[2].number, 1);
-    EXPECT_EQ(analysis.instrs[3].fn, fake_fn_table[OP_DUP1]);
-    EXPECT_EQ(analysis.instrs[4].number, 0);
-    EXPECT_EQ(analysis.instrs[13].fn, fake_fn_table[OP_DUP1]);
-    EXPECT_EQ(analysis.instrs[14].number, 0);
-    EXPECT_EQ(analysis.instrs[15].fn, fake_fn_table[OP_POP]);
-    EXPECT_EQ(analysis.instrs[25].fn, fake_fn_table[OP_PUSH1]);
+    EXPECT_EQ(analysis.instrs[1].number, 0);
+    EXPECT_EQ(analysis.instrs[2].fn, fake_fn_table[OP_DUP2]);
+    EXPECT_EQ(analysis.instrs[3].number, 1);
+    EXPECT_EQ(analysis.instrs[4].fn, fake_fn_table[OP_DUP1]);
+    EXPECT_EQ(analysis.instrs[5].number, 0);
+    EXPECT_EQ(analysis.instrs[14].fn, fake_fn_table[OP_DUP1]);
+    EXPECT_EQ(analysis.instrs[15].number, 0);
+    EXPECT_EQ(analysis.instrs[16].fn, fake_fn_table[OP_POP]);
+    EXPECT_EQ(analysis.instrs[26].fn, fake_fn_table[OP_PUSH1]);
 
     ASSERT_EQ(analysis.blocks.size(), 1);
     EXPECT_EQ(analysis.blocks[0].gas_cost, 7 * 3 + 10 * 2 + 3);
@@ -75,11 +75,11 @@ TEST(analysis, push)
     const auto code = push(0x0807060504030201) + "7f00ee";
     const auto analysis = analyze(fake_fn_table, rev, &code[0], code.size());
 
-    ASSERT_EQ(analysis.instrs.size(), 4);
+    ASSERT_EQ(analysis.instrs.size(), 5);
     ASSERT_EQ(analysis.args_storage.size(), 2);
     EXPECT_EQ(analysis.instrs[0].fn, fake_fn_table[OPX_BEGINBLOCK]);
-    EXPECT_EQ(analysis.instrs[1].arg.data, &analysis.args_storage[0][0]);
-    EXPECT_EQ(analysis.instrs[2].arg.data, &analysis.args_storage[1][0]);
+    EXPECT_EQ(analysis.instrs[2].arg.data, &analysis.args_storage[0][0]);
+    EXPECT_EQ(analysis.instrs[3].arg.data, &analysis.args_storage[1][0]);
     EXPECT_EQ(analysis.args_storage[0][31 - 7], 0x08);
     EXPECT_EQ(analysis.args_storage[1][1], 0xee);
 }
@@ -93,8 +93,8 @@ TEST(analysis, jump1)
     ASSERT_EQ(analysis.jumpdest_offsets.size(), 1);
     ASSERT_EQ(analysis.jumpdest_targets.size(), 1);
     EXPECT_EQ(analysis.jumpdest_offsets[0], 6);
-    EXPECT_EQ(analysis.jumpdest_targets[0], 5);
-    EXPECT_EQ(find_jumpdest(analysis, 6), 5);
+    EXPECT_EQ(analysis.jumpdest_targets[0], 6);
+    EXPECT_EQ(find_jumpdest(analysis, 6), 6);
     EXPECT_EQ(find_jumpdest(analysis, 0), -1);
     EXPECT_EQ(find_jumpdest(analysis, 7), -1);
 }
