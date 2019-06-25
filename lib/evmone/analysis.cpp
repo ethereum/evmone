@@ -102,7 +102,10 @@ code_analysis analyze(
             ++instr_index;
         }
         else if (c >= OP_SWAP1 && c <= OP_SWAP16)
-            instr.arg.p.number = c - OP_SWAP1 + 1;
+        {
+            analysis.instrs.emplace_back(c - OP_SWAP1 + 1);
+            ++instr_index;
+        }
         else if (c == OP_GAS)
             instr.arg.p.number = static_cast<int>(block->gas_cost);
         else if (c == OP_DELEGATECALL || c == OP_CALL || c == OP_CALLCODE || c == OP_STATICCALL ||

@@ -676,9 +676,9 @@ void op_dup(execution_state& state, instr_argument) noexcept
     state.stack.push(state.stack[state.next_instr++->number]);
 }
 
-void op_swap(execution_state& state, instr_argument arg) noexcept
+void op_swap(execution_state& state, instr_argument) noexcept
 {
-    std::swap(state.stack.top(), state.stack[arg.p.number]);
+    std::swap(state.stack.top(), state.stack[state.next_instr++->number]);
 }
 
 void op_log(execution_state& state, instr_argument arg) noexcept
