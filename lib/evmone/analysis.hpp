@@ -157,6 +157,7 @@ struct instr_info
     union
     {
         exec_fn fn;
+        uint64_t value;  // TODO: Change to size_t for 32-bit systems.
         struct
         {
             int number;
@@ -166,6 +167,7 @@ struct instr_info
     instr_argument arg;
 
     explicit constexpr instr_info(exec_fn f) noexcept : fn{f}, arg{} {};
+    explicit constexpr instr_info(uint64_t v) noexcept : value{v}, arg{} {};
     explicit constexpr instr_info(int n) noexcept : number{n}, arg{} {};
     explicit constexpr instr_info(int n, evmc_call_kind k) noexcept
       : number{n}, call_kind{k}, arg{} {};

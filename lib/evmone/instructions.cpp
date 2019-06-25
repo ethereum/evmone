@@ -660,10 +660,14 @@ void op_gaslimit(execution_state& state, instr_argument) noexcept
     state.stack.push(block_gas_limit);
 }
 
-void op_push_full(execution_state& state, instr_argument arg) noexcept
+void op_push_full(execution_state& state, instr_argument) noexcept
 {
     // OPT: For smaller pushes, use pointer data directly.
-    state.stack.push(intx::be::uint256(arg.data));
+    auto& x = state.stack.emplace_back();
+    x.lo.lo = state.analysis->instrs[state.pc++].value;
+    x.lo.hi = state.analysis->instrs[state.pc++].value;
+    x.hi.lo = state.analysis->instrs[state.pc++].value;
+    x.hi.hi = state.analysis->instrs[state.pc++].value;
 }
 
 void op_pop(execution_state& state, instr_argument) noexcept

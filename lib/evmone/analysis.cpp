@@ -75,7 +75,8 @@ code_analysis analyze(
             ++instr_index;
         }
 
-        auto& instr = jumpdest ? analysis.instrs.back() : analysis.instrs.emplace_back(fns[c]);
+        if (!jumpdest)
+            analysis.instrs.emplace_back(fns[c]);
 
         const auto metrics = instr_table[c];
         const auto instr_stack_req = metrics.num_stack_arguments;
@@ -90,13 +91,19 @@ code_analysis analyze(
             // OPT: bswap data here.
             ++i;
             const auto push_size = size_t(c - OP_PUSH1 + 1);
-            auto& data = analysis.args_storage.emplace_back();
+            auto data = bytes32{};
 
             const auto leading_zeros = 32 - push_size;
             for (size_t j = 0; j < push_size && (i + j) < code_size; ++j)
                 data[leading_zeros + j] = code[i + j];
-            instr.arg.data = &data[0];
             i += push_size - 1;
+
+            const auto value = intx::be::uint256(&data[0]);
+            analysis.instrs.emplace_back(value.lo.lo);
+            analysis.instrs.emplace_back(value.lo.hi);
+            analysis.instrs.emplace_back(value.hi.lo);
+            analysis.instrs.emplace_back(value.hi.hi);
+            instr_index += 4;
         }
         else if (c >= OP_DUP1 && c <= OP_DUP16)
         {

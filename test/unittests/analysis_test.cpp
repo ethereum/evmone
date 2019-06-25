@@ -27,17 +27,29 @@ TEST(analysis, example1)
     const auto code = push(0x2a) + push(0x1e) + OP_MSTORE8 + OP_MSIZE + push(0) + OP_SSTORE;
     const auto analysis = analyze(fake_fn_table, rev, &code[0], code.size());
 
-    ASSERT_EQ(analysis.instrs.size(), 9);
+    ASSERT_EQ(analysis.instrs.size(), 21);
 
     EXPECT_EQ(analysis.instrs[0].fn, fake_fn_table[OPX_BEGINBLOCK]);
     EXPECT_EQ(analysis.instrs[1].number, 0);
     EXPECT_EQ(analysis.instrs[2].fn, fake_fn_table[OP_PUSH1]);
-    EXPECT_EQ(analysis.instrs[3].fn, fake_fn_table[OP_PUSH1]);
-    EXPECT_EQ(analysis.instrs[4].fn, fake_fn_table[OP_MSTORE8]);
-    EXPECT_EQ(analysis.instrs[5].fn, fake_fn_table[OP_MSIZE]);
-    EXPECT_EQ(analysis.instrs[6].fn, fake_fn_table[OP_PUSH1]);
-    EXPECT_EQ(analysis.instrs[7].fn, fake_fn_table[OP_SSTORE]);
-    EXPECT_EQ(analysis.instrs[8].fn, fake_fn_table[OP_STOP]);
+    EXPECT_EQ(analysis.instrs[3].value, 0x2a);
+    EXPECT_EQ(analysis.instrs[4].value, 0);
+    EXPECT_EQ(analysis.instrs[5].value, 0);
+    EXPECT_EQ(analysis.instrs[6].value, 0);
+    EXPECT_EQ(analysis.instrs[7].fn, fake_fn_table[OP_PUSH1]);
+    EXPECT_EQ(analysis.instrs[8].value, 0x1e);
+    EXPECT_EQ(analysis.instrs[9].value, 0);
+    EXPECT_EQ(analysis.instrs[10].value, 0);
+    EXPECT_EQ(analysis.instrs[11].value, 0);
+    EXPECT_EQ(analysis.instrs[12].fn, fake_fn_table[OP_MSTORE8]);
+    EXPECT_EQ(analysis.instrs[13].fn, fake_fn_table[OP_MSIZE]);
+    EXPECT_EQ(analysis.instrs[14].fn, fake_fn_table[OP_PUSH1]);
+    EXPECT_EQ(analysis.instrs[15].value, 0);
+    EXPECT_EQ(analysis.instrs[16].value, 0);
+    EXPECT_EQ(analysis.instrs[17].value, 0);
+    EXPECT_EQ(analysis.instrs[18].value, 0);
+    EXPECT_EQ(analysis.instrs[19].fn, fake_fn_table[OP_SSTORE]);
+    EXPECT_EQ(analysis.instrs[20].fn, fake_fn_table[OP_STOP]);
 
     ASSERT_EQ(analysis.blocks.size(), 1);
     EXPECT_EQ(analysis.blocks[0].gas_cost, 14);
@@ -51,7 +63,7 @@ TEST(analysis, stack_up_and_down)
     const auto code = OP_DUP2 + 6 * OP_DUP1 + 10 * OP_POP + push(0);
     const auto analysis = analyze(fake_fn_table, rev, &code[0], code.size());
 
-    ASSERT_EQ(analysis.instrs.size(), 28);
+    ASSERT_EQ(analysis.instrs.size(), 32);
     EXPECT_EQ(analysis.instrs[0].fn, fake_fn_table[OPX_BEGINBLOCK]);
     EXPECT_EQ(analysis.instrs[1].number, 0);
     EXPECT_EQ(analysis.instrs[2].fn, fake_fn_table[OP_DUP2]);
@@ -75,13 +87,19 @@ TEST(analysis, push)
     const auto code = push(0x0807060504030201) + "7f00ee";
     const auto analysis = analyze(fake_fn_table, rev, &code[0], code.size());
 
-    ASSERT_EQ(analysis.instrs.size(), 5);
-    ASSERT_EQ(analysis.args_storage.size(), 2);
+    ASSERT_EQ(analysis.instrs.size(), 13);
+    ASSERT_EQ(analysis.args_storage.size(), 0);
     EXPECT_EQ(analysis.instrs[0].fn, fake_fn_table[OPX_BEGINBLOCK]);
-    EXPECT_EQ(analysis.instrs[2].arg.data, &analysis.args_storage[0][0]);
-    EXPECT_EQ(analysis.instrs[3].arg.data, &analysis.args_storage[1][0]);
-    EXPECT_EQ(analysis.args_storage[0][31 - 7], 0x08);
-    EXPECT_EQ(analysis.args_storage[1][1], 0xee);
+    EXPECT_EQ(analysis.instrs[2].fn, fake_fn_table[OP_PUSH8]);
+    EXPECT_EQ(analysis.instrs[3].value, 0x0807060504030201);
+    EXPECT_EQ(analysis.instrs[4].value, 0);
+    EXPECT_EQ(analysis.instrs[5].value, 0);
+    EXPECT_EQ(analysis.instrs[6].value, 0);
+    EXPECT_EQ(analysis.instrs[7].fn, fake_fn_table[OP_PUSH32]);
+    EXPECT_EQ(analysis.instrs[8].value, 0);
+    EXPECT_EQ(analysis.instrs[9].value, 0);
+    EXPECT_EQ(analysis.instrs[10].value, 0);
+    EXPECT_EQ(analysis.instrs[11].value, 0x00ee000000000000);
 }
 
 TEST(analysis, jump1)
@@ -93,8 +111,8 @@ TEST(analysis, jump1)
     ASSERT_EQ(analysis.jumpdest_offsets.size(), 1);
     ASSERT_EQ(analysis.jumpdest_targets.size(), 1);
     EXPECT_EQ(analysis.jumpdest_offsets[0], 6);
-    EXPECT_EQ(analysis.jumpdest_targets[0], 6);
-    EXPECT_EQ(find_jumpdest(analysis, 6), 6);
+    EXPECT_EQ(analysis.jumpdest_targets[0], 14);
+    EXPECT_EQ(find_jumpdest(analysis, 6), 14);
     EXPECT_EQ(find_jumpdest(analysis, 0), -1);
     EXPECT_EQ(find_jumpdest(analysis, 7), -1);
 }
