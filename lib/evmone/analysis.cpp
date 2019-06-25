@@ -107,7 +107,10 @@ code_analysis analyze(
             ++instr_index;
         }
         else if (c == OP_GAS)
-            instr.arg.p.number = static_cast<int>(block->gas_cost);
+        {
+            analysis.instrs.emplace_back(static_cast<int>(block->gas_cost));
+            ++instr_index;
+        }
         else if (c == OP_DELEGATECALL || c == OP_CALL || c == OP_CALLCODE || c == OP_STATICCALL ||
                  c == OP_CREATE || c == OP_CREATE2)
         {
