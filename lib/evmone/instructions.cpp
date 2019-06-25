@@ -725,12 +725,7 @@ void op_swap(execution_state& state, instr_argument arg) noexcept
 void op_log(execution_state& state, instr_argument arg) noexcept
 {
     if (state.msg->flags & EVMC_STATIC)
-    {
-        // TODO: Implement static mode violation in analysis.
-        state.run = false;
-        state.status = EVMC_STATIC_MODE_VIOLATION;
-        return;
-    }
+        return state.exit(EVMC_STATIC_MODE_VIOLATION);
 
     auto offset = state.item(0);
     auto size = state.item(1);
@@ -741,13 +736,9 @@ void op_log(execution_state& state, instr_argument arg) noexcept
     auto o = static_cast<size_t>(offset);
     auto s = static_cast<size_t>(size);
 
-    auto cost = int64_t(s) * 8;
-    state.gas_left -= cost;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-    }
+    const auto cost = int64_t(s) * 8;
+    if ((state.gas_left -= cost) < 0)
+        state.exit(EVMC_OUT_OF_GAS);
 
     state.stack.pop_back();
     state.stack.pop_back();
