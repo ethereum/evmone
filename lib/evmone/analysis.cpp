@@ -118,7 +118,10 @@ code_analysis analyze(
             instr.arg.p.call_kind = op2call_kind(c == OP_STATICCALL ? uint8_t{OP_CALL} : c);
         }
         else if (c == OP_PC)
-            instr.arg.p.number = static_cast<int>(i);
+        {
+            analysis.instrs.emplace_back(static_cast<int>(i));
+            ++instr_index;
+        }
         else if (c >= OP_LOG0 && c <= OP_LOG4)
         {
             analysis.instrs.emplace_back(c - OP_LOG0);
