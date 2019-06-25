@@ -23,6 +23,21 @@ TEST_F(evm, push_and_pop)
     EXPECT_GAS_USED(EVMC_SUCCESS, 10);
 }
 
+TEST_F(evm, push_implicit_data)
+{
+    // This test executes 1 byte code with a push instruction without the push data following.
+    // Unfortunately, there is no result we could observe other than program crash.
+
+    // Allocate 1 byte code on heap to allow detecting memory issues by tools like valgrind.
+    auto code = std::make_unique<uint8_t>();
+
+    for (auto op = uint8_t{OP_PUSH1}; op <= OP_PUSH32; ++op)
+    {
+        *code = op;
+        execute({code.get(), 1});
+    }
+}
+
 TEST_F(evm, stack_underflow)
 {
     execute(13, push("01") + OP_POP + push("01") + OP_POP + OP_POP);
