@@ -117,7 +117,10 @@ code_analysis analyze(
         else if (c == OP_PC)
             instr.arg.p.number = static_cast<int>(i);
         else if (c >= OP_LOG0 && c <= OP_LOG4)
-            instr.arg.p.number = c - OP_LOG0;
+        {
+            analysis.instrs.emplace_back(c - OP_LOG0);
+            ++instr_index;
+        }
 
         block->stack_req = std::max(block->stack_req, instr_stack_req - block->stack_change);
         block->stack_change += instr_stack_change;
