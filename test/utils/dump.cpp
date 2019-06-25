@@ -28,7 +28,7 @@ void dump_analysis(const evmone::code_analysis& analysis)
 
         if (c == OPX_BEGINBLOCK)
         {
-            block = &analysis.blocks[size_t(instr.arg.p.number)];
+            block = &analysis.blocks[size_t(analysis.instrs[i++].number)];
 
             const auto get_jumpdest_offset = [&analysis](size_t index) noexcept
             {
@@ -55,7 +55,7 @@ void dump_analysis(const evmone::code_analysis& analysis)
                   << metrics[c].gas_cost;
 
         if (c >= OP_PUSH1 && c <= OP_PUSH32)
-            std::cout << '\t' << to_hex({instr.arg.data, 32});
+            std::cout << '\t' << analysis.instrs[i++].value;
 
         std::cout << '\n';
     }

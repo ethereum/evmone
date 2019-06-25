@@ -9,7 +9,6 @@
 #include <intx/intx.hpp>
 #include <array>
 #include <cstdint>
-#include <deque>
 #include <vector>
 
 namespace evmone
@@ -122,19 +121,7 @@ struct execution_state
     }
 };
 
-union instr_argument
-{
-    struct p  // A pair of fields.
-    {
-        int number;
-        evmc_call_kind call_kind;
-    } p;
-    const uint8_t* data;
-};
-
-static_assert(sizeof(instr_argument) == sizeof(void*), "Incorrect size of instr_argument");
-
-using exec_fn = void (*)(execution_state&, instr_argument arg);
+using exec_fn = void (*)(execution_state&);
 
 /// The evmone intrinsic opcodes.
 ///
@@ -152,25 +139,20 @@ enum intrinsic_opcodes
 
 using exec_fn_table = std::array<exec_fn, 256>;
 
-struct instr_info
+union instr_info
 {
-    union
+    exec_fn fn;
+    uint64_t value;  // TODO: Change to size_t for 32-bit systems.
+    struct
     {
-        exec_fn fn;
-        uint64_t value;  // TODO: Change to size_t for 32-bit systems.
-        struct
-        {
-            int number;
-            evmc_call_kind call_kind;
-        };
+        int number;
+        evmc_call_kind call_kind;
     };
-    instr_argument arg;
 
-    explicit constexpr instr_info(exec_fn f) noexcept : fn{f}, arg{} {};
-    explicit constexpr instr_info(uint64_t v) noexcept : value{v}, arg{} {};
-    explicit constexpr instr_info(int n) noexcept : number{n}, arg{} {};
-    explicit constexpr instr_info(int n, evmc_call_kind k) noexcept
-      : number{n}, call_kind{k}, arg{} {};
+    explicit constexpr instr_info(exec_fn f) noexcept : fn{f} {};
+    explicit constexpr instr_info(uint64_t v) noexcept : value{v} {};
+    explicit constexpr instr_info(int n) noexcept : number{n} {};
+    explicit constexpr instr_info(int n, evmc_call_kind k) noexcept : number{n}, call_kind{k} {};
 };
 
 struct block_info
@@ -185,12 +167,6 @@ struct code_analysis
 {
     std::vector<instr_info> instrs;
     std::vector<block_info> blocks;
-
-    /// Storage for arguments' extended data.
-    ///
-    /// The deque container is used because pointers to its elements are not
-    /// invalidated when the container grows.
-    std::deque<bytes32> args_storage;
 
     /// The offsets of JUMPDESTs in the original code.
     /// These are values that JUMP/JUMPI receives as an argument.

@@ -36,7 +36,7 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
         // Advance next_instr to allow jump opcodes to overwrite it.
         ++state->next_instr;
 
-        instr.fn(*state, instr.arg);
+        instr.fn(*state);
     }
 
     evmc_result result{};
