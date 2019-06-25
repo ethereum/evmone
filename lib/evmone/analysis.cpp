@@ -97,7 +97,10 @@ code_analysis analyze(
             i += push_size - 1;
         }
         else if (c >= OP_DUP1 && c <= OP_DUP16)
-            instr.arg.p.number = c - OP_DUP1;
+        {
+            analysis.instrs.emplace_back(c - OP_DUP1);
+            ++instr_index;
+        }
         else if (c >= OP_SWAP1 && c <= OP_SWAP16)
             instr.arg.p.number = c - OP_SWAP1 + 1;
         else if (c == OP_GAS)

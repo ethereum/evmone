@@ -51,13 +51,17 @@ TEST(analysis, stack_up_and_down)
     const auto code = OP_DUP2 + 6 * OP_DUP1 + 10 * OP_POP + push(0);
     const auto analysis = analyze(fake_fn_table, rev, &code[0], code.size());
 
-    ASSERT_EQ(analysis.instrs.size(), 20);
+    ASSERT_EQ(analysis.instrs.size(), 27);
     EXPECT_EQ(analysis.instrs[0].fn, fake_fn_table[OPX_BEGINBLOCK]);
     EXPECT_EQ(analysis.instrs[0].arg.p.number, 0);
     EXPECT_EQ(analysis.instrs[1].fn, fake_fn_table[OP_DUP2]);
-    EXPECT_EQ(analysis.instrs[2].fn, fake_fn_table[OP_DUP1]);
-    EXPECT_EQ(analysis.instrs[8].fn, fake_fn_table[OP_POP]);
-    EXPECT_EQ(analysis.instrs[18].fn, fake_fn_table[OP_PUSH1]);
+    EXPECT_EQ(analysis.instrs[2].number, 1);
+    EXPECT_EQ(analysis.instrs[3].fn, fake_fn_table[OP_DUP1]);
+    EXPECT_EQ(analysis.instrs[4].number, 0);
+    EXPECT_EQ(analysis.instrs[13].fn, fake_fn_table[OP_DUP1]);
+    EXPECT_EQ(analysis.instrs[14].number, 0);
+    EXPECT_EQ(analysis.instrs[15].fn, fake_fn_table[OP_POP]);
+    EXPECT_EQ(analysis.instrs[25].fn, fake_fn_table[OP_PUSH1]);
 
     ASSERT_EQ(analysis.blocks.size(), 1);
     EXPECT_EQ(analysis.blocks[0].gas_cost, 7 * 3 + 10 * 2 + 3);

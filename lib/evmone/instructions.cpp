@@ -671,9 +671,9 @@ void op_pop(execution_state& state, instr_argument) noexcept
     state.stack.pop();
 }
 
-void op_dup(execution_state& state, instr_argument arg) noexcept
+void op_dup(execution_state& state, instr_argument) noexcept
 {
-    state.stack.push(state.stack[arg.p.number]);
+    state.stack.push(state.stack[state.next_instr++->number]);
 }
 
 void op_swap(execution_state& state, instr_argument arg) noexcept
