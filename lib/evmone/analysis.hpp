@@ -157,12 +157,18 @@ struct instr_info
     union
     {
         exec_fn fn;
-        int number;
+        struct
+        {
+            int number;
+            evmc_call_kind call_kind;
+        };
     };
     instr_argument arg;
 
     explicit constexpr instr_info(exec_fn f) noexcept : fn{f}, arg{} {};
     explicit constexpr instr_info(int n) noexcept : number{n}, arg{} {};
+    explicit constexpr instr_info(int n, evmc_call_kind k) noexcept
+      : number{n}, call_kind{k}, arg{} {};
 };
 
 struct block_info

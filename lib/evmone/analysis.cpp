@@ -116,8 +116,10 @@ code_analysis analyze(
         else if (c == OP_DELEGATECALL || c == OP_CALL || c == OP_CALLCODE || c == OP_STATICCALL ||
                  c == OP_CREATE || c == OP_CREATE2)
         {
-            instr.arg.p.number = static_cast<int>(block->gas_cost);
-            instr.arg.p.call_kind = op2call_kind(c == OP_STATICCALL ? uint8_t{OP_CALL} : c);
+            const auto gas = static_cast<int>(block->gas_cost);
+            const auto call_kind = op2call_kind(c == OP_STATICCALL ? uint8_t{OP_CALL} : c);
+            analysis.instrs.emplace_back(gas, call_kind);
+            ++instr_index;
         }
         else if (c == OP_PC)
         {
