@@ -154,10 +154,15 @@ using exec_fn_table = std::array<exec_fn, 256>;
 
 struct instr_info
 {
-    exec_fn fn = nullptr;
+    union
+    {
+        exec_fn fn;
+        int number;
+    };
     instr_argument arg;
 
     explicit constexpr instr_info(exec_fn f) noexcept : fn{f}, arg{} {};
+    explicit constexpr instr_info(int n) noexcept : number{n}, arg{} {};
 };
 
 struct block_info
