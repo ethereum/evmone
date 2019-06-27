@@ -26,25 +26,10 @@ evmc_result execute(evmc_instance* /*unused*/, evmc_context* ctx, evmc_revision 
     while (instr != nullptr)
         instr = instr->fn(instr, *state);
 
-    evmc_result result{};
+    const auto gas_left =
+        (state->status == EVMC_SUCCESS || state->status == EVMC_REVERT) ? state->gas_left : 0;
 
-    result.status_code = state->status;
-
-    if (result.status_code == EVMC_SUCCESS || result.status_code == EVMC_REVERT)
-        result.gas_left = state->gas_left;
-
-    if (state->output_size > 0)
-    {
-        result.output_size = state->output_size;
-        auto output_data = static_cast<uint8_t*>(std::malloc(result.output_size));
-        std::memcpy(output_data, &state->memory[state->output_offset], result.output_size);
-        result.output_data = output_data;
-        result.release = [](const evmc_result* r) noexcept
-        {
-            std::free(const_cast<uint8_t*>(r->output_data));
-        };
-    }
-
-    return result;
+    return evmc::make_result(
+        state->status, gas_left, &state->memory[state->output_offset], state->output_size);
 }
 }  // namespace evmone
