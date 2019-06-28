@@ -21,9 +21,7 @@ bool check_memory(execution_state& state, const uint256& offset, const uint256& 
     if (size == 0)
         return true;
 
-    constexpr auto limit = uint32_t(-1);
-
-    if (offset > limit || size > limit)
+    if (offset > max_buffer_size || size > max_buffer_size)
     {
         state.exit(EVMC_OUT_OF_GAS);
         return false;
