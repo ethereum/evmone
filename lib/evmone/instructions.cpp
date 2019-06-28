@@ -45,10 +45,12 @@ bool check_memory(execution_state& state, const uint256& offset, const uint256& 
     const auto new_size = o + s;
     if (m < new_size)
     {
+        // OPT: Benchmark variant without storing state.memory_cost.
+
         auto w = num_words(new_size);
         auto new_cost = 3 * w + w * w / 512;
-        auto cost = new_cost - state.memory_prev_cost;
-        state.memory_prev_cost = new_cost;
+        auto cost = new_cost - state.memory_cost;
+        state.memory_cost = new_cost;
 
         if ((state.gas_left -= cost) < 0)
         {
