@@ -16,6 +16,16 @@ namespace
 {
 constexpr auto max_buffer_size = std::numeric_limits<uint32_t>::max();
 
+/// The size of the EVM 256-bit word.
+constexpr auto word_size = 32;
+
+/// Returns number of words what would fit to provided number of bytes,
+/// i.e. it rounds up the number bytes to number of words.
+constexpr int64_t num_words(size_t size_in_bytes) noexcept
+{
+    return (static_cast<int64_t>(size_in_bytes) + (word_size - 1)) / word_size;
+}
+
 bool check_memory(execution_state& state, const uint256& offset, const uint256& size) noexcept
 {
     if (size == 0)
@@ -35,7 +45,7 @@ bool check_memory(execution_state& state, const uint256& offset, const uint256& 
     const auto new_size = o + s;
     if (m < new_size)
     {
-        auto w = (new_size + 31) / 32;
+        auto w = num_words(new_size);
         auto new_cost = 3 * w + w * w / 512;
         auto cost = new_cost - state.memory_prev_cost;
         state.memory_prev_cost = new_cost;
@@ -46,7 +56,7 @@ bool check_memory(execution_state& state, const uint256& offset, const uint256& 
             return false;
         }
 
-        state.memory.resize(static_cast<size_t>(w * 32));
+        state.memory.resize(static_cast<size_t>(w * word_size));
     }
 
     return true;
@@ -268,7 +278,7 @@ void op_sha3(execution_state& state, instr_argument) noexcept
 
     const auto i = static_cast<size_t>(index);
     const auto s = static_cast<size_t>(size);
-    const auto w = (static_cast<int64_t>(s) + 31) / 32;
+    const auto w = num_words(s);
     const auto cost = w * 6;
     if ((state.gas_left -= cost) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
@@ -356,7 +366,7 @@ void op_calldatacopy(execution_state& state, instr_argument) noexcept
     auto s = static_cast<size_t>(size);
     auto copy_size = std::min(s, state.msg->input_size - src);
 
-    const auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
+    const auto copy_cost = num_words(s) * 3;
     if ((state.gas_left -= copy_cost) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
 
@@ -388,7 +398,7 @@ void op_codecopy(execution_state& state, instr_argument) noexcept
     auto s = static_cast<size_t>(size);
     auto copy_size = std::min(s, state.code_size - src);
 
-    const auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
+    const auto copy_cost = num_words(s) * 3;
     if ((state.gas_left -= copy_cost) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
 
@@ -544,7 +554,7 @@ void op_extcodecopy(execution_state& state, instr_argument) noexcept
     auto src = max_buffer_size < input_index ? max_buffer_size : static_cast<size_t>(input_index);
     auto s = static_cast<size_t>(size);
 
-    const auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
+    const auto copy_cost = num_words(s) * 3;
     if ((state.gas_left -= copy_cost) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
 
@@ -585,7 +595,7 @@ void op_returndatacopy(execution_state& state, instr_argument) noexcept
     if (src + s > state.return_data.size())
         return state.exit(EVMC_INVALID_MEMORY_ACCESS);
 
-    const auto copy_cost = ((static_cast<int64_t>(s) + 31) / 32) * 3;
+    const auto copy_cost = num_words(s) * 3;
     if ((state.gas_left -= copy_cost) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
 
@@ -1066,7 +1076,7 @@ void op_create2(execution_state& state, instr_argument arg) noexcept
     if (!check_memory(state, init_code_offset, init_code_size))
         return;
 
-    auto salt_cost = ((int64_t(init_code_size) + 31) / 32) * 6;
+    auto salt_cost = num_words(static_cast<size_t>(init_code_size)) * 6;
     state.gas_left -= salt_cost;
     if (state.gas_left < 0)
         return state.exit(EVMC_OUT_OF_GAS);
