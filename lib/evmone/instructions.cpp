@@ -57,7 +57,7 @@ bool check_memory(execution_state& state, const uint256& offset, const uint256& 
 
 void op_stop(execution_state& state, instr_argument) noexcept
 {
-    state.run = false;
+    state.exit(EVMC_SUCCESS);
 }
 
 void op_add(execution_state& state, instr_argument) noexcept
@@ -754,8 +754,7 @@ void op_log(execution_state& state, instr_argument arg) noexcept
 
 void op_invalid(execution_state& state, instr_argument) noexcept
 {
-    state.run = false;
-    state.status = EVMC_INVALID_INSTRUCTION;
+    state.exit(EVMC_INVALID_INSTRUCTION);
 }
 
 void op_return(execution_state& state, instr_argument) noexcept
@@ -766,9 +765,9 @@ void op_return(execution_state& state, instr_argument) noexcept
     if (!check_memory(state, offset, size))
         return;
 
-    state.run = false;
     state.output_offset = static_cast<size_t>(offset);
     state.output_size = static_cast<size_t>(size);
+    state.exit(EVMC_SUCCESS);
 }
 
 void op_revert(execution_state& state, instr_argument) noexcept
@@ -779,10 +778,9 @@ void op_revert(execution_state& state, instr_argument) noexcept
     if (!check_memory(state, offset, size))
         return;
 
-    state.run = false;
-    state.status = EVMC_REVERT;
     state.output_offset = static_cast<size_t>(offset);
     state.output_size = static_cast<size_t>(size);
+    state.exit(EVMC_REVERT);
 }
 
 void op_call(execution_state& state, instr_argument arg) noexcept
@@ -1209,7 +1207,7 @@ void op_selfdestruct(execution_state& state, instr_argument) noexcept
     }
 
     state.host.selfdestruct(state.msg->destination, addr);
-    state.run = false;
+    state.exit(EVMC_SUCCESS);
 }
 
 void opx_beginblock(execution_state& state, instr_argument arg) noexcept

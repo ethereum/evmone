@@ -26,7 +26,7 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
     state.host = evmc::HostContext{ctx};
     state.gas_left = msg->gas;
     state.rev = rev;
-    while (state.run)
+    while (state.status == continue_status)
     {
         auto& instr = analysis.instrs[state.pc];
 
@@ -37,8 +37,11 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
     }
 
     evmc_result result{};
-    result.status_code = state.status;
-    if (state.status == EVMC_SUCCESS || state.status == EVMC_REVERT)
+
+    // Assign status code, revert the "stop" status back to "continue" status - see .exit().
+    result.status_code = state.status != stop_status ? state.status : continue_status;
+
+    if (result.status_code == EVMC_SUCCESS || result.status_code == EVMC_REVERT)
         result.gas_left = state.gas_left;
 
     if (state.output_size > 0)
