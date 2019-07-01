@@ -25,8 +25,7 @@ bool check_memory(execution_state& state, const uint256& offset, const uint256& 
 
     if (offset > limit || size > limit)
     {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
+        state.exit(EVMC_OUT_OF_GAS);
         return false;
     }
 
@@ -43,11 +42,9 @@ bool check_memory(execution_state& state, const uint256& offset, const uint256& 
         auto cost = new_cost - state.memory_prev_cost;
         state.memory_prev_cost = new_cost;
 
-        state.gas_left -= cost;
-        if (state.gas_left < 0)
+        if ((state.gas_left -= cost) < 0)
         {
-            state.run = false;
-            state.status = EVMC_OUT_OF_GAS;
+            state.exit(EVMC_OUT_OF_GAS);
             return false;
         }
 
@@ -60,7 +57,7 @@ bool check_memory(execution_state& state, const uint256& offset, const uint256& 
 
 void op_stop(execution_state& state, instr_argument) noexcept
 {
-    state.run = false;
+    state.exit(EVMC_SUCCESS);
 }
 
 void op_add(execution_state& state, instr_argument) noexcept
@@ -725,12 +722,7 @@ void op_swap(execution_state& state, instr_argument arg) noexcept
 void op_log(execution_state& state, instr_argument arg) noexcept
 {
     if (state.msg->flags & EVMC_STATIC)
-    {
-        // TODO: Implement static mode violation in analysis.
-        state.run = false;
-        state.status = EVMC_STATIC_MODE_VIOLATION;
-        return;
-    }
+        return state.exit(EVMC_STATIC_MODE_VIOLATION);
 
     auto offset = state.item(0);
     auto size = state.item(1);
@@ -741,13 +733,9 @@ void op_log(execution_state& state, instr_argument arg) noexcept
     auto o = static_cast<size_t>(offset);
     auto s = static_cast<size_t>(size);
 
-    auto cost = int64_t(s) * 8;
-    state.gas_left -= cost;
-    if (state.gas_left < 0)
-    {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
-    }
+    const auto cost = int64_t(s) * 8;
+    if ((state.gas_left -= cost) < 0)
+        state.exit(EVMC_OUT_OF_GAS);
 
     state.stack.pop_back();
     state.stack.pop_back();
@@ -766,8 +754,7 @@ void op_log(execution_state& state, instr_argument arg) noexcept
 
 void op_invalid(execution_state& state, instr_argument) noexcept
 {
-    state.run = false;
-    state.status = EVMC_INVALID_INSTRUCTION;
+    state.exit(EVMC_INVALID_INSTRUCTION);
 }
 
 void op_return(execution_state& state, instr_argument) noexcept
@@ -778,9 +765,9 @@ void op_return(execution_state& state, instr_argument) noexcept
     if (!check_memory(state, offset, size))
         return;
 
-    state.run = false;
     state.output_offset = static_cast<size_t>(offset);
     state.output_size = static_cast<size_t>(size);
+    state.exit(EVMC_SUCCESS);
 }
 
 void op_revert(execution_state& state, instr_argument) noexcept
@@ -791,10 +778,9 @@ void op_revert(execution_state& state, instr_argument) noexcept
     if (!check_memory(state, offset, size))
         return;
 
-    state.run = false;
-    state.status = EVMC_REVERT;
     state.output_offset = static_cast<size_t>(offset);
     state.output_size = static_cast<size_t>(size);
+    state.exit(EVMC_REVERT);
 }
 
 void op_call(execution_state& state, instr_argument arg) noexcept
@@ -1221,7 +1207,7 @@ void op_selfdestruct(execution_state& state, instr_argument) noexcept
     }
 
     state.host.selfdestruct(state.msg->destination, addr);
-    state.run = false;
+    state.exit(EVMC_SUCCESS);
 }
 
 void opx_beginblock(execution_state& state, instr_argument arg) noexcept
