@@ -25,8 +25,7 @@ bool check_memory(execution_state& state, const uint256& offset, const uint256& 
 
     if (offset > limit || size > limit)
     {
-        state.run = false;
-        state.status = EVMC_OUT_OF_GAS;
+        state.exit(EVMC_OUT_OF_GAS);
         return false;
     }
 
@@ -43,11 +42,9 @@ bool check_memory(execution_state& state, const uint256& offset, const uint256& 
         auto cost = new_cost - state.memory_prev_cost;
         state.memory_prev_cost = new_cost;
 
-        state.gas_left -= cost;
-        if (state.gas_left < 0)
+        if ((state.gas_left -= cost) < 0)
         {
-            state.run = false;
-            state.status = EVMC_OUT_OF_GAS;
+            state.exit(EVMC_OUT_OF_GAS);
             return false;
         }
 
