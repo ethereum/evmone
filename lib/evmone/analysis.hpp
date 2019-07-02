@@ -61,11 +61,8 @@ struct evm_stack
     /// Pushes an item on the stack. The stack limit is not checked.
     void push(const uint256& item) noexcept { *++top_item = item; }
 
-    /// Pops the top item from the stack.
-    /// TODO: Rename to pop().
-    /// TODO: Add arg to pop more items at once.
-    /// TODO: Return the item?
-    void pop_back() noexcept { --top_item; }
+    /// Returns an item popped from the top of the stack.
+    uint256 pop() noexcept { return *top_item--; }
 };
 
 struct execution_state

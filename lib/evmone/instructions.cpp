@@ -62,78 +62,72 @@ void op_stop(execution_state& state, instr_argument) noexcept
 
 void op_add(execution_state& state, instr_argument) noexcept
 {
-    state.item(1) += state.item(0);
-    state.stack.pop_back();
+    state.item(0) += state.stack.pop();
 }
 
 void op_mul(execution_state& state, instr_argument) noexcept
 {
-    state.item(1) *= state.item(0);
-    state.stack.pop_back();
+    state.item(0) *= state.stack.pop();
 }
 
 void op_sub(execution_state& state, instr_argument) noexcept
 {
     state.item(1) = state.item(0) - state.item(1);
-    state.stack.pop_back();
+    state.stack.pop();
 }
 
 void op_div(execution_state& state, instr_argument) noexcept
 {
     auto& v = state.item(1);
     v = v != 0 ? state.item(0) / v : 0;
-    state.stack.pop_back();
+    state.stack.pop();
 }
 
 void op_sdiv(execution_state& state, instr_argument) noexcept
 {
     auto& v = state.item(1);
     v = v != 0 ? intx::sdivrem(state.item(0), v).quot : 0;
-    state.stack.pop_back();
+    state.stack.pop();
 }
 
 void op_mod(execution_state& state, instr_argument) noexcept
 {
     auto& v = state.item(1);
     v = v != 0 ? state.item(0) % v : 0;
-    state.stack.pop_back();
+    state.stack.pop();
 }
 
 void op_smod(execution_state& state, instr_argument) noexcept
 {
     auto& v = state.item(1);
     v = v != 0 ? intx::sdivrem(state.item(0), v).rem : 0;
-    state.stack.pop_back();
+    state.stack.pop();
 }
 
 void op_addmod(execution_state& state, instr_argument) noexcept
 {
     using intx::uint512;
-    auto x = state.item(0);
-    auto y = state.item(1);
-    auto m = state.item(2);
-    state.stack.pop_back();
-    state.stack.pop_back();
+    const auto x = state.stack.pop();
+    const auto y = state.stack.pop();
+    auto& m = state.item(0);
 
-    state.item(0) = m != 0 ? ((uint512{x} + uint512{y}) % uint512{m}).lo : 0;
+    m = m != 0 ? ((uint512{x} + uint512{y}) % uint512{m}).lo : 0;
 }
 
 void op_mulmod(execution_state& state, instr_argument) noexcept
 {
     using intx::uint512;
-    auto x = state.item(0);
-    auto y = state.item(1);
-    auto m = state.item(2);
-    state.stack.pop_back();
-    state.stack.pop_back();
+    const auto x = state.stack.pop();
+    const auto y = state.stack.pop();
+    auto& m = state.item(0);
 
-    state.item(0) = m != 0 ? ((uint512{x} * uint512{y}) % uint512{m}).lo : 0;
+    m = m != 0 ? ((uint512{x} * uint512{y}) % uint512{m}).lo : 0;
 }
 
 void op_exp(execution_state& state, instr_argument) noexcept
 {
-    const auto base = state.item(0);
-    auto& exponent = state.item(1);
+    const auto base = state.stack.pop();
+    auto& exponent = state.item(0);
 
     const auto exponent_significant_bytes = intx::count_significant_words<uint8_t>(exponent);
     const auto exponent_cost = state.rev >= EVMC_SPURIOUS_DRAGON ? 50 : 10;
@@ -142,13 +136,11 @@ void op_exp(execution_state& state, instr_argument) noexcept
         return state.exit(EVMC_OUT_OF_GAS);
 
     exponent = intx::exp(base, exponent);
-    state.stack.pop_back();
 }
 
 void op_signextend(execution_state& state, instr_argument) noexcept
 {
-    auto ext = state.item(0);
-    state.stack.pop_back();
+    const auto ext = state.stack.pop();
     auto& x = state.item(0);
 
     if (ext < 31)
@@ -165,13 +157,13 @@ void op_lt(execution_state& state, instr_argument) noexcept
 {
     // OPT: Have single function implementing all comparisons.
     state.item(1) = state.item(0) < state.item(1);
-    state.stack.pop_back();
+    state.stack.pop();
 }
 
 void op_gt(execution_state& state, instr_argument) noexcept
 {
     state.item(1) = state.item(1) < state.item(0);
-    state.stack.pop_back();
+    state.stack.pop();
 }
 
 void op_slt(execution_state& state, instr_argument) noexcept
@@ -181,7 +173,7 @@ void op_slt(execution_state& state, instr_argument) noexcept
     auto x_neg = static_cast<bool>(x >> 255);
     auto y_neg = static_cast<bool>(y >> 255);
     state.item(1) = (x_neg ^ y_neg) ? x_neg : x < y;
-    state.stack.pop_back();
+    state.stack.pop();
 }
 
 void op_sgt(execution_state& state, instr_argument) noexcept
@@ -191,13 +183,13 @@ void op_sgt(execution_state& state, instr_argument) noexcept
     auto x_neg = static_cast<bool>(x >> 255);
     auto y_neg = static_cast<bool>(y >> 255);
     state.item(1) = (x_neg ^ y_neg) ? y_neg : y < x;
-    state.stack.pop_back();
+    state.stack.pop();
 }
 
 void op_eq(execution_state& state, instr_argument) noexcept
 {
     state.item(1) = state.item(0) == state.item(1);
-    state.stack.pop_back();
+    state.stack.pop();
 }
 
 void op_iszero(execution_state& state, instr_argument) noexcept
@@ -207,20 +199,17 @@ void op_iszero(execution_state& state, instr_argument) noexcept
 
 void op_and(execution_state& state, instr_argument) noexcept
 {
-    state.item(1) &= state.item(0);
-    state.stack.pop_back();
+    state.item(0) &= state.stack.pop();
 }
 
 void op_or(execution_state& state, instr_argument) noexcept
 {
-    state.item(1) |= state.item(0);
-    state.stack.pop_back();
+    state.item(0) |= state.stack.pop();
 }
 
 void op_xor(execution_state& state, instr_argument) noexcept
 {
-    state.item(1) ^= state.item(0);
-    state.stack.pop_back();
+    state.item(0) ^= state.stack.pop();
 }
 
 void op_not(execution_state& state, instr_argument) noexcept
@@ -230,8 +219,8 @@ void op_not(execution_state& state, instr_argument) noexcept
 
 void op_byte(execution_state& state, instr_argument) noexcept
 {
-    auto n = state.item(0);
-    auto& x = state.item(1);
+    const auto n = state.stack.pop();
+    auto& x = state.item(0);
 
     if (n > 31)
         x = 0;
@@ -241,20 +230,16 @@ void op_byte(execution_state& state, instr_argument) noexcept
         auto y = x >> sh;
         x = y & 0xff;
     }
-
-    state.stack.pop_back();
 }
 
 void op_shl(execution_state& state, instr_argument) noexcept
 {
-    state.item(1) <<= state.item(0);
-    state.stack.pop_back();
+    state.item(0) <<= state.stack.pop();
 }
 
 void op_shr(execution_state& state, instr_argument) noexcept
 {
-    state.item(1) >>= state.item(0);
-    state.stack.pop_back();
+    state.item(0) >>= state.stack.pop();
 }
 
 void op_sar(execution_state& state, instr_argument arg) noexcept
@@ -272,13 +257,13 @@ void op_sar(execution_state& state, instr_argument arg) noexcept
         state.item(1) = (state.item(1) >> shift) | (allones << (256 - shift));
     }
 
-    state.stack.pop_back();
+    state.stack.pop();
 }
 
 void op_sha3(execution_state& state, instr_argument) noexcept
 {
-    auto index = state.item(0);
-    auto size = state.item(1);
+    const auto index = state.stack.pop();
+    auto& size = state.item(0);
 
     if (!check_memory(state, index, size))
         return;
@@ -293,8 +278,7 @@ void op_sha3(execution_state& state, instr_argument) noexcept
     auto data = s != 0 ? &state.memory[i] : nullptr;
     auto h = ethash::keccak256(data, s);
 
-    state.stack.pop_back();
-    state.item(0) = intx::be::uint256(h.bytes);
+    size = intx::be::uint256(h.bytes);
 }
 
 void op_address(execution_state& state, instr_argument) noexcept
@@ -361,9 +345,9 @@ void op_calldatasize(execution_state& state, instr_argument) noexcept
 
 void op_calldatacopy(execution_state& state, instr_argument) noexcept
 {
-    auto mem_index = state.item(0);
-    auto input_index = state.item(1);
-    auto size = state.item(2);
+    const auto mem_index = state.stack.pop();
+    const auto input_index = state.stack.pop();
+    const auto size = state.stack.pop();
 
     if (!check_memory(state, mem_index, size))
         return;
@@ -383,10 +367,6 @@ void op_calldatacopy(execution_state& state, instr_argument) noexcept
 
     if (s - copy_size > 0)
         std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
 }
 
 void op_codesize(execution_state& state, instr_argument) noexcept
@@ -396,9 +376,11 @@ void op_codesize(execution_state& state, instr_argument) noexcept
 
 void op_codecopy(execution_state& state, instr_argument) noexcept
 {
-    auto mem_index = state.item(0);
-    auto input_index = state.item(1);
-    auto size = state.item(2);
+    // TODO: Similar to op_calldatacopy().
+
+    const auto mem_index = state.stack.pop();
+    const auto input_index = state.stack.pop();
+    const auto size = state.stack.pop();
 
     if (!check_memory(state, mem_index, size))
         return;
@@ -418,10 +400,6 @@ void op_codecopy(execution_state& state, instr_argument) noexcept
 
     if (s - copy_size > 0)
         std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
 }
 
 void op_mload(execution_state& state, instr_argument) noexcept
@@ -436,30 +414,24 @@ void op_mload(execution_state& state, instr_argument) noexcept
 
 void op_mstore(execution_state& state, instr_argument) noexcept
 {
-    auto index = state.item(0);
-    auto x = state.item(1);
+    const auto index = state.stack.pop();
+    const auto value = state.stack.pop();
 
     if (!check_memory(state, index, 32))
         return;
 
-    intx::be::store(&state.memory[static_cast<size_t>(index)], x);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
+    intx::be::store(&state.memory[static_cast<size_t>(index)], value);
 }
 
 void op_mstore8(execution_state& state, instr_argument) noexcept
 {
-    auto index = state.item(0);
-    auto x = state.item(1);
+    const auto index = state.stack.pop();
+    const auto value = state.stack.pop();
 
     if (!check_memory(state, index, 1))
         return;
 
-    state.memory[static_cast<size_t>(index)] = static_cast<uint8_t>(x);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
+    state.memory[static_cast<size_t>(index)] = static_cast<uint8_t>(value);
 }
 
 void op_sload(execution_state& state, instr_argument) noexcept
@@ -478,10 +450,8 @@ void op_sstore(execution_state& state, instr_argument) noexcept
 
     evmc_bytes32 key;
     evmc_bytes32 value;
-    intx::be::store(key.bytes, state.item(0));
-    intx::be::store(value.bytes, state.item(1));
-    state.stack.pop_back();
-    state.stack.pop_back();
+    intx::be::store(key.bytes, state.stack.pop());
+    intx::be::store(value.bytes, state.stack.pop());
     auto status = state.host.set_storage(state.msg->destination, key, value);
     int cost = 0;
     switch (status)
@@ -508,14 +478,13 @@ void op_sstore(execution_state& state, instr_argument) noexcept
 
 void op_jump(execution_state& state, instr_argument) noexcept
 {
-    const auto dst = state.item(0);
+    const auto dst = state.stack.pop();
     auto pc = -1;
     if (std::numeric_limits<int>::max() < dst ||
         (pc = state.analysis->find_jumpdest(static_cast<int>(dst))) < 0)
         return state.exit(EVMC_BAD_JUMP_DESTINATION);
 
     state.pc = static_cast<size_t>(pc);
-    state.stack.pop_back();
 }
 
 void op_jumpi(execution_state& state, instr_argument arg) noexcept
@@ -523,12 +492,12 @@ void op_jumpi(execution_state& state, instr_argument arg) noexcept
     if (state.item(1) != 0)
         op_jump(state, arg);
     else
-        state.stack.pop_back();
+        state.stack.pop();
 
     // OPT: The pc must be the BEGINBLOCK (even in fallback case),
     //      so we can execute it straight away.
 
-    state.stack.pop_back();
+    state.stack.pop();
 }
 
 void op_pc(execution_state& state, instr_argument arg) noexcept
@@ -565,10 +534,10 @@ void op_extcodesize(execution_state& state, instr_argument) noexcept
 
 void op_extcodecopy(execution_state& state, instr_argument) noexcept
 {
-    auto addr_data = state.item(0);
-    auto mem_index = state.item(1);
-    auto input_index = state.item(2);
-    auto size = state.item(3);
+    const auto addr_data = state.stack.pop();
+    const auto mem_index = state.stack.pop();
+    const auto input_index = state.stack.pop();
+    const auto size = state.stack.pop();
 
     if (!check_memory(state, mem_index, size))
         return;
@@ -592,11 +561,6 @@ void op_extcodecopy(execution_state& state, instr_argument) noexcept
     auto num_bytes_copied = state.host.copy_code(addr, src, data, s);
     if (s - num_bytes_copied > 0)
         std::memset(&state.memory[dst + num_bytes_copied], 0, s - num_bytes_copied);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
 }
 
 void op_returndatasize(execution_state& state, instr_argument) noexcept
@@ -606,13 +570,9 @@ void op_returndatasize(execution_state& state, instr_argument) noexcept
 
 void op_returndatacopy(execution_state& state, instr_argument) noexcept
 {
-    auto mem_index = state.item(0);
-    auto input_index = state.item(1);
-    auto size = state.item(2);
-
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
+    const auto mem_index = state.stack.pop();
+    const auto input_index = state.stack.pop();
+    const auto size = state.stack.pop();
 
     if (!check_memory(state, mem_index, size))
         return;
@@ -698,7 +658,7 @@ void op_push_full(execution_state& state, instr_argument arg) noexcept
 
 void op_pop(execution_state& state, instr_argument) noexcept
 {
-    state.stack.pop_back();
+    state.stack.pop();
 }
 
 void op_dup(execution_state& state, instr_argument arg) noexcept
@@ -716,8 +676,8 @@ void op_log(execution_state& state, instr_argument arg) noexcept
     if (state.msg->flags & EVMC_STATIC)
         return state.exit(EVMC_STATIC_MODE_VIOLATION);
 
-    auto offset = state.item(0);
-    auto size = state.item(1);
+    const auto offset = state.stack.pop();
+    const auto size = state.stack.pop();
 
     if (!check_memory(state, offset, size))
         return;
@@ -729,14 +689,11 @@ void op_log(execution_state& state, instr_argument arg) noexcept
     if ((state.gas_left -= cost) < 0)
         state.exit(EVMC_OUT_OF_GAS);
 
-    state.stack.pop_back();
-    state.stack.pop_back();
-
     std::array<evmc_bytes32, 4> topics;
     for (auto i = 0; i < arg.p.number; ++i)
     {
         intx::be::store(topics[i].bytes, state.item(0));
-        state.stack.pop_back();
+        state.stack.pop();
     }
 
     auto data = s != 0 ? &state.memory[o] : nullptr;
@@ -790,12 +747,12 @@ void op_call(execution_state& state, instr_argument arg) noexcept
     auto output_offset = state.item(5);
     auto output_size = state.item(6);
 
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
+    state.stack.pop();
+    state.stack.pop();
+    state.stack.pop();
+    state.stack.pop();
+    state.stack.pop();
+    state.stack.pop();
     state.item(0) = 0;
 
     if (!check_memory(state, input_offset, input_size))
@@ -911,11 +868,11 @@ void op_delegatecall(execution_state& state, instr_argument arg) noexcept
     auto output_offset = state.item(4);
     auto output_size = state.item(5);
 
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
+    state.stack.pop();
+    state.stack.pop();
+    state.stack.pop();
+    state.stack.pop();
+    state.stack.pop();
     state.item(0) = 0;
 
     if (!check_memory(state, input_offset, input_size))
@@ -983,11 +940,11 @@ void op_staticcall(execution_state& state, instr_argument arg) noexcept
     auto output_offset = state.item(4);
     auto output_size = state.item(5);
 
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
+    state.stack.pop();
+    state.stack.pop();
+    state.stack.pop();
+    state.stack.pop();
+    state.stack.pop();
     state.item(0) = 0;
 
     if (!check_memory(state, input_offset, input_size))
@@ -1045,8 +1002,8 @@ void op_create(execution_state& state, instr_argument arg) noexcept
     auto init_code_offset = state.item(1);
     auto init_code_size = state.item(2);
 
-    state.stack.pop_back();
-    state.stack.pop_back();
+    state.stack.pop();
+    state.stack.pop();
     state.item(0) = 0;
 
     if (!check_memory(state, init_code_offset, init_code_size))
@@ -1106,9 +1063,9 @@ void op_create2(execution_state& state, instr_argument arg) noexcept
     auto init_code_size = state.item(2);
     auto salt = state.item(3);
 
-    state.stack.pop_back();
-    state.stack.pop_back();
-    state.stack.pop_back();
+    state.stack.pop();
+    state.stack.pop();
+    state.stack.pop();
     state.item(0) = 0;
 
     if (!check_memory(state, init_code_offset, init_code_size))
