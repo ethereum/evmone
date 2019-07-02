@@ -3,8 +3,7 @@
 // Licensed under the Apache License, Version 2.0.
 #pragma once
 
-#include <evmone/evmone.h>
-
+#include "vm_loader.hpp"
 #include <gtest/gtest.h>
 #include <test/utils/host_mock.hpp>
 #include <test/utils/utils.hpp>
@@ -35,13 +34,13 @@
 class evm : public testing::Test, public MockedHost
 {
 protected:
-    evmc::vm vm;
+    evmc::vm& vm;
     evmc_revision rev = EVMC_BYZANTIUM;  // Byzantium by default. TODO: Add alias evmc::revision.
     evmc_message msg = {};               // TODO: Add evmc::message with default constructor.
     evmc::result result{{}};  // TODO: Add default constructor to evmc::result, update code here.
     int64_t gas_used = 0;
 
-    evm() noexcept : vm{evmc_create_evmone()} {}
+    evm() noexcept : vm{get_vm()} {}
 
     /// Wrapper for evmone::execute. The result will be in the .result field.
     void execute(int64_t gas, bytes_view code, std::string_view input_hex = {}) noexcept

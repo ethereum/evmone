@@ -13,6 +13,8 @@ add_executable(evmone-unittests
     evm_test.cpp
     evmone_test.cpp
     utils_test.cpp
+    vm_loader.hpp
+    vm_loader_evmone.cpp
 )
 
 target_link_libraries(evmone-unittests PRIVATE evmone testutils GTest::gtest GTest::main)
