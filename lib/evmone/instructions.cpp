@@ -1221,7 +1221,7 @@ void opx_beginblock(execution_state& state, instr_argument arg) noexcept
     if (static_cast<int>(state.stack.size()) < block.stack_req)
         return state.exit(EVMC_STACK_UNDERFLOW);
 
-    if (static_cast<int>(state.stack.size()) + block.stack_max > 1024)
+    if (static_cast<int>(state.stack.size()) + block.stack_max > evm_stack::limit)
         return state.exit(EVMC_STACK_OVERFLOW);
 
     state.current_block_cost = block.gas_cost;
