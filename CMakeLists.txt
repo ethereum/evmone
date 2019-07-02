@@ -37,6 +37,9 @@ cable_configure_compiler(NO_PEDANTIC NO_CONVERSION_WARNINGS)
 if(CABLE_COMPILER_GNULIKE)
     # Prepend to CXX flags to allow overriding.
     set(CMAKE_CXX_FLAGS "-fvisibility=hidden ${CMAKE_CXX_FLAGS}")
+elseif(MSVC)
+    add_compile_options(/wd4324)  # Disabled warning about alignment caused by alignas.
+    add_compile_options(/wd5030)  # Allow using unknown attributes.
 endif()
 
 set(include_dir ${CMAKE_CURRENT_SOURCE_DIR}/include)
