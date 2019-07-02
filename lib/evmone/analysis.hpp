@@ -32,13 +32,49 @@ static_assert(continue_status == 0, "The 'continue' status is not 0");
 /// The EVMC_INTERNAL_ERROR MUST NOT be used in evmone for any other case.
 constexpr auto stop_status = EVMC_INTERNAL_ERROR;
 
+/// The stack for 256-bit EVM words.
+///
+/// This implementation reserves memory inplace for all possible stack items (1024),
+/// so this type is big. Make sure it is allocated on heap.
+struct evm_stack
+{
+    /// The maximum number of stack items.
+    static constexpr auto limit = 1024;
+
+    /// The pointer to the top item, or below the stack bottom if stack is empty.
+    uint256* top_item;
+
+    /// The storage allocated for maximum possible number of items.
+    /// This is also the pointer to the bottom item.
+    /// Items are aligned to 256 bits for better packing in cache lines.
+    alignas(sizeof(uint256)) uint256 storage[limit];
+
+    /// Default constructor. Sets the top_item pointer to below the stack bottom.
+    [[clang::no_sanitize("bounds")]] evm_stack() noexcept : top_item{storage - 1} {}
+
+    /// The current number of items on the stack.
+    int size() noexcept { return static_cast<int>(top_item + 1 - storage); }
+
+    /// Returns the reference to the top item.
+    uint256& top() noexcept { return *top_item; }
+
+    /// Returns the reference to the stack item on given position from the stack top.
+    uint256& operator[](int index) noexcept { return *(top_item - index); }
+
+    /// Pushes an item on the stack. The stack limit is not checked.
+    void push(const uint256& item) noexcept { *++top_item = item; }
+
+    /// Returns an item popped from the top of the stack.
+    uint256 pop() noexcept { return *top_item--; }
+};
+
 struct execution_state
 {
     evmc_status_code status = EVMC_SUCCESS;
     size_t pc = 0;
     int64_t gas_left = 0;
 
-    std::vector<uint256> stack;
+    evm_stack stack;
 
     std::vector<uint8_t> memory;  // TODO: Use bytes.
     int64_t memory_prev_cost = 0;
@@ -60,8 +96,6 @@ struct execution_state
     evmc::HostContext host{nullptr};
 
     evmc_revision rev = {};
-
-    uint256& item(size_t index) noexcept { return stack[stack.size() - index - 1]; }
 
     /// Terminates the execution with the given status code.
     void exit(evmc_status_code status_code) noexcept
