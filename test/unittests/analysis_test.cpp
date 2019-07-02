@@ -90,6 +90,7 @@ TEST(analysis, jump1)
     EXPECT_EQ(analysis.jumpdest_map[0], std::pair(6, 5));
     EXPECT_EQ(find_jumpdest(analysis, 6), 5);
     EXPECT_EQ(find_jumpdest(analysis, 0), -1);
+    EXPECT_EQ(find_jumpdest(analysis, 7), -1);
 }
 
 TEST(analysis, empty)

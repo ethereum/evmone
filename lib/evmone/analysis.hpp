@@ -157,13 +157,10 @@ struct code_analysis
 
 inline int find_jumpdest(const code_analysis& analysis, int offset) noexcept
 {
-    // TODO: Replace with lower_bound().
-    for (const auto& d : analysis.jumpdest_map)
-    {
-        if (d.first == offset)
-            return d.second;
-    }
-    return -1;
+    const auto& m = analysis.jumpdest_map;
+    const auto it = std::lower_bound(std::begin(m), std::end(m), offset,
+        [](std::pair<int, int> p, int v) noexcept { return p.first < v; });
+    return (it != std::end(m) && it->first == offset) ? it->second : -1;
 }
 
 EVMC_EXPORT code_analysis analyze(
