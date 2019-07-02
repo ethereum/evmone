@@ -17,17 +17,6 @@ bool is_terminator(uint8_t c) noexcept
 }
 }  // namespace
 
-int code_analysis::find_jumpdest(int offset) const noexcept
-{
-    // TODO: Replace with lower_bound().
-    for (const auto& d : jumpdest_map)
-    {
-        if (d.first == offset)
-            return d.second;
-    }
-    return -1;
-}
-
 evmc_call_kind op2call_kind(uint8_t opcode) noexcept
 {
     switch (opcode)

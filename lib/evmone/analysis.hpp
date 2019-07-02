@@ -153,10 +153,18 @@ struct code_analysis
     std::deque<bytes32> args_storage;
 
     std::vector<std::pair<int, int>> jumpdest_map;
-
-    // TODO: Exported for unit tests. Rework unit tests?
-    EVMC_EXPORT int find_jumpdest(int offset) const noexcept;
 };
+
+inline int find_jumpdest(const code_analysis& analysis, int offset) noexcept
+{
+    // TODO: Replace with lower_bound().
+    for (const auto& d : analysis.jumpdest_map)
+    {
+        if (d.first == offset)
+            return d.second;
+    }
+    return -1;
+}
 
 EVMC_EXPORT code_analysis analyze(
     const exec_fn_table& fns, evmc_revision rev, const uint8_t* code, size_t code_size) noexcept;

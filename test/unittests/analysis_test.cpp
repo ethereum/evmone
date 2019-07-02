@@ -88,8 +88,8 @@ TEST(analysis, jump1)
     ASSERT_EQ(analysis.blocks.size(), 3);
     ASSERT_EQ(analysis.jumpdest_map.size(), 1);
     EXPECT_EQ(analysis.jumpdest_map[0], std::pair(6, 5));
-    EXPECT_EQ(analysis.find_jumpdest(6), 5);
-    EXPECT_EQ(analysis.find_jumpdest(0), -1);
+    EXPECT_EQ(find_jumpdest(analysis, 6), 5);
+    EXPECT_EQ(find_jumpdest(analysis, 0), -1);
 }
 
 TEST(analysis, empty)

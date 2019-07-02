@@ -481,7 +481,7 @@ void op_jump(execution_state& state, instr_argument) noexcept
     const auto dst = state.stack.pop();
     auto pc = -1;
     if (std::numeric_limits<int>::max() < dst ||
-        (pc = state.analysis->find_jumpdest(static_cast<int>(dst))) < 0)
+        (pc = find_jumpdest(*state.analysis, static_cast<int>(dst))) < 0)
         return state.exit(EVMC_BAD_JUMP_DESTINATION);
 
     state.next_instr = &state.analysis->instrs[static_cast<size_t>(pc)];
