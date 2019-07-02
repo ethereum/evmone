@@ -59,11 +59,7 @@ struct evm_stack
     uint256& item(int index) noexcept { return *(top_item - index); }
 
     /// Pushes an item on the stack. The stack limit is not checked.
-    /// TODO: Rename to push().
-    void push_back(const uint256& item) noexcept { *++top_item = item; }
-
-    /// Deprecated.
-    void emplace_back(const uint256& item) noexcept { return push_back(item); }
+    void push(const uint256& item) noexcept { *++top_item = item; }
 
     /// Pops the top item from the stack.
     /// TODO: Rename to pop().

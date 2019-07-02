@@ -302,8 +302,7 @@ void op_address(execution_state& state, instr_argument) noexcept
     // TODO: Might be generalized using pointers to class member.
     uint8_t data[32] = {};
     std::memcpy(&data[12], state.msg->destination.bytes, sizeof(state.msg->destination));
-    auto a = intx::be::uint256(data);
-    state.stack.push_back(a);
+    state.stack.push(intx::be::uint256(data));
 }
 
 void op_balance(execution_state& state, instr_argument) noexcept
@@ -320,8 +319,7 @@ void op_origin(execution_state& state, instr_argument) noexcept
 {
     uint8_t data[32] = {};
     std::memcpy(&data[12], state.host.get_tx_context().tx_origin.bytes, sizeof(evmc_address));
-    auto x = intx::be::uint256(data);
-    state.stack.push_back(x);
+    state.stack.push(intx::be::uint256(data));
 }
 
 void op_caller(execution_state& state, instr_argument) noexcept
@@ -329,14 +327,12 @@ void op_caller(execution_state& state, instr_argument) noexcept
     // TODO: Might be generalized using pointers to class member.
     uint8_t data[32] = {};
     std::memcpy(&data[12], state.msg->sender.bytes, sizeof(state.msg->sender));
-    auto a = intx::be::uint256(data);
-    state.stack.push_back(a);
+    state.stack.push(intx::be::uint256(data));
 }
 
 void op_callvalue(execution_state& state, instr_argument) noexcept
 {
-    auto a = intx::be::uint256(state.msg->value.bytes);
-    state.stack.push_back(a);
+    state.stack.push(intx::be::uint256(state.msg->value.bytes));
 }
 
 void op_calldataload(execution_state& state, instr_argument) noexcept
@@ -360,8 +356,7 @@ void op_calldataload(execution_state& state, instr_argument) noexcept
 
 void op_calldatasize(execution_state& state, instr_argument) noexcept
 {
-    auto s = intx::uint256{state.msg->input_size};
-    state.stack.push_back(s);
+    state.stack.push(state.msg->input_size);
 }
 
 void op_calldatacopy(execution_state& state, instr_argument) noexcept
@@ -396,8 +391,7 @@ void op_calldatacopy(execution_state& state, instr_argument) noexcept
 
 void op_codesize(execution_state& state, instr_argument) noexcept
 {
-    auto s = intx::uint256{state.code_size};
-    state.stack.push_back(s);
+    state.stack.push(state.code_size);
 }
 
 void op_codecopy(execution_state& state, instr_argument) noexcept
@@ -539,25 +533,24 @@ void op_jumpi(execution_state& state, instr_argument arg) noexcept
 
 void op_pc(execution_state& state, instr_argument arg) noexcept
 {
-    state.stack.emplace_back(arg.p.number);
+    state.stack.push(arg.p.number);
 }
 
 void op_msize(execution_state& state, instr_argument) noexcept
 {
-    state.stack.emplace_back(state.memory.size());
+    state.stack.push(state.memory.size());
 }
 
 void op_gas(execution_state& state, instr_argument arg) noexcept
 {
-    auto correction = state.current_block_cost - arg.p.number;
-    intx::uint256 gas = static_cast<uint64_t>(state.gas_left + correction);
-    state.stack.push_back(gas);
+    const auto correction = state.current_block_cost - arg.p.number;
+    const auto gas = static_cast<uint64_t>(state.gas_left + correction);
+    state.stack.push(gas);
 }
 
 void op_gasprice(execution_state& state, instr_argument) noexcept
 {
-    auto x = intx::be::uint256(state.host.get_tx_context().tx_gas_price.bytes);
-    state.stack.push_back(x);
+    state.stack.push(intx::be::uint256(state.host.get_tx_context().tx_gas_price.bytes));
 }
 
 void op_extcodesize(execution_state& state, instr_argument) noexcept
@@ -608,7 +601,7 @@ void op_extcodecopy(execution_state& state, instr_argument) noexcept
 
 void op_returndatasize(execution_state& state, instr_argument) noexcept
 {
-    state.stack.emplace_back(state.return_data.size());
+    state.stack.push(state.return_data.size());
 }
 
 void op_returndatacopy(execution_state& state, instr_argument) noexcept
@@ -669,39 +662,38 @@ void op_coinbase(execution_state& state, instr_argument) noexcept
 {
     uint8_t data[32] = {};
     std::memcpy(&data[12], state.host.get_tx_context().block_coinbase.bytes, sizeof(evmc_address));
-    auto x = intx::be::uint256(data);
-    state.stack.push_back(x);
+    state.stack.push(intx::be::uint256(data));
 }
 
 void op_timestamp(execution_state& state, instr_argument) noexcept
 {
-    auto x = intx::uint256{static_cast<uint64_t>(state.host.get_tx_context().block_timestamp)};
-    state.stack.push_back(x);
+    // TODO: Add tests for negative timestamp?
+    const auto timestamp = static_cast<uint64_t>(state.host.get_tx_context().block_timestamp);
+    state.stack.push(timestamp);
 }
 
 void op_number(execution_state& state, instr_argument) noexcept
 {
-    auto x = intx::uint256{static_cast<uint64_t>(state.host.get_tx_context().block_number)};
-    state.stack.push_back(x);
+    // TODO: Add tests for negative block number?
+    const auto block_number = static_cast<uint64_t>(state.host.get_tx_context().block_number);
+    state.stack.push(block_number);
 }
 
 void op_difficulty(execution_state& state, instr_argument) noexcept
 {
-    auto x = intx::be::uint256(state.host.get_tx_context().block_difficulty.bytes);
-    state.stack.push_back(x);
+    state.stack.push(intx::be::uint256(state.host.get_tx_context().block_difficulty.bytes));
 }
 
 void op_gaslimit(execution_state& state, instr_argument) noexcept
 {
-    auto x = intx::uint256{static_cast<uint64_t>(state.host.get_tx_context().block_gas_limit)};
-    state.stack.push_back(x);
+    const auto block_gas_limit = static_cast<uint64_t>(state.host.get_tx_context().block_gas_limit);
+    state.stack.push(block_gas_limit);
 }
 
 void op_push_full(execution_state& state, instr_argument arg) noexcept
 {
     // OPT: For smaller pushes, use pointer data directly.
-    auto x = intx::be::uint256(arg.data);
-    state.stack.push_back(x);
+    state.stack.push(intx::be::uint256(arg.data));
 }
 
 void op_pop(execution_state& state, instr_argument) noexcept
@@ -711,12 +703,12 @@ void op_pop(execution_state& state, instr_argument) noexcept
 
 void op_dup(execution_state& state, instr_argument arg) noexcept
 {
-    state.stack.push_back(state.item(static_cast<size_t>(arg.p.number)));
+    state.stack.push(state.item(arg.p.number));
 }
 
 void op_swap(execution_state& state, instr_argument arg) noexcept
 {
-    std::swap(state.item(0), state.item(static_cast<size_t>(arg.p.number)));
+    std::swap(state.item(0), state.item(arg.p.number));
 }
 
 void op_log(execution_state& state, instr_argument arg) noexcept
