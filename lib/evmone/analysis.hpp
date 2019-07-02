@@ -60,8 +60,7 @@ struct evm_stack
     uint256& top() noexcept { return *top_item; }
 
     /// Returns the reference to the stack item on given position from the stack top.
-    /// TODO: Rename to get(), at() or operator[].
-    uint256& item(int index) noexcept { return *(top_item - index); }
+    uint256& operator[](int index) noexcept { return *(top_item - index); }
 
     /// Pushes an item on the stack. The stack limit is not checked.
     void push(const uint256& item) noexcept { *++top_item = item; }
@@ -98,8 +97,6 @@ struct execution_state
     evmc::HostContext host{nullptr};
 
     evmc_revision rev = {};
-
-    uint256& item(int index) noexcept { return stack.item(index); }
 
     /// Terminates the execution with the given status code.
     void exit(evmc_status_code status_code) noexcept
