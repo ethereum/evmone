@@ -62,12 +62,12 @@ void op_stop(execution_state& state, instr_argument) noexcept
 
 void op_add(execution_state& state, instr_argument) noexcept
 {
-    state.item(0) += state.stack.pop();
+    state.stack.top() += state.stack.pop();
 }
 
 void op_mul(execution_state& state, instr_argument) noexcept
 {
-    state.item(0) *= state.stack.pop();
+    state.stack.top() *= state.stack.pop();
 }
 
 void op_sub(execution_state& state, instr_argument) noexcept
@@ -109,7 +109,7 @@ void op_addmod(execution_state& state, instr_argument) noexcept
     using intx::uint512;
     const auto x = state.stack.pop();
     const auto y = state.stack.pop();
-    auto& m = state.item(0);
+    auto& m = state.stack.top();
 
     m = m != 0 ? ((uint512{x} + uint512{y}) % uint512{m}).lo : 0;
 }
@@ -119,7 +119,7 @@ void op_mulmod(execution_state& state, instr_argument) noexcept
     using intx::uint512;
     const auto x = state.stack.pop();
     const auto y = state.stack.pop();
-    auto& m = state.item(0);
+    auto& m = state.stack.top();
 
     m = m != 0 ? ((uint512{x} * uint512{y}) % uint512{m}).lo : 0;
 }
@@ -127,7 +127,7 @@ void op_mulmod(execution_state& state, instr_argument) noexcept
 void op_exp(execution_state& state, instr_argument) noexcept
 {
     const auto base = state.stack.pop();
-    auto& exponent = state.item(0);
+    auto& exponent = state.stack.top();
 
     const auto exponent_significant_bytes = intx::count_significant_words<uint8_t>(exponent);
     const auto exponent_cost = state.rev >= EVMC_SPURIOUS_DRAGON ? 50 : 10;
@@ -141,7 +141,7 @@ void op_exp(execution_state& state, instr_argument) noexcept
 void op_signextend(execution_state& state, instr_argument) noexcept
 {
     const auto ext = state.stack.pop();
-    auto& x = state.item(0);
+    auto& x = state.stack.top();
 
     if (ext < 31)
     {
@@ -194,33 +194,33 @@ void op_eq(execution_state& state, instr_argument) noexcept
 
 void op_iszero(execution_state& state, instr_argument) noexcept
 {
-    state.item(0) = state.item(0) == 0;
+    state.stack.top() = state.stack.top() == 0;
 }
 
 void op_and(execution_state& state, instr_argument) noexcept
 {
-    state.item(0) &= state.stack.pop();
+    state.stack.top() &= state.stack.pop();
 }
 
 void op_or(execution_state& state, instr_argument) noexcept
 {
-    state.item(0) |= state.stack.pop();
+    state.stack.top() |= state.stack.pop();
 }
 
 void op_xor(execution_state& state, instr_argument) noexcept
 {
-    state.item(0) ^= state.stack.pop();
+    state.stack.top() ^= state.stack.pop();
 }
 
 void op_not(execution_state& state, instr_argument) noexcept
 {
-    state.item(0) = ~state.item(0);
+    state.stack.top() = ~state.stack.top();
 }
 
 void op_byte(execution_state& state, instr_argument) noexcept
 {
     const auto n = state.stack.pop();
-    auto& x = state.item(0);
+    auto& x = state.stack.top();
 
     if (n > 31)
         x = 0;
@@ -234,12 +234,12 @@ void op_byte(execution_state& state, instr_argument) noexcept
 
 void op_shl(execution_state& state, instr_argument) noexcept
 {
-    state.item(0) <<= state.stack.pop();
+    state.stack.top() <<= state.stack.pop();
 }
 
 void op_shr(execution_state& state, instr_argument) noexcept
 {
-    state.item(0) >>= state.stack.pop();
+    state.stack.top() >>= state.stack.pop();
 }
 
 void op_sar(execution_state& state, instr_argument arg) noexcept
@@ -263,7 +263,7 @@ void op_sar(execution_state& state, instr_argument arg) noexcept
 void op_sha3(execution_state& state, instr_argument) noexcept
 {
     const auto index = state.stack.pop();
-    auto& size = state.item(0);
+    auto& size = state.stack.top();
 
     if (!check_memory(state, index, size))
         return;
@@ -291,7 +291,7 @@ void op_address(execution_state& state, instr_argument) noexcept
 
 void op_balance(execution_state& state, instr_argument) noexcept
 {
-    auto& x = state.item(0);
+    auto& x = state.stack.top();
     uint8_t data[32];
     intx::be::store(data, x);
     evmc_address addr;
@@ -321,7 +321,7 @@ void op_callvalue(execution_state& state, instr_argument) noexcept
 
 void op_calldataload(execution_state& state, instr_argument) noexcept
 {
-    auto& index = state.item(0);
+    auto& index = state.stack.top();
 
     if (state.msg->input_size < index)
         index = 0;
@@ -404,7 +404,7 @@ void op_codecopy(execution_state& state, instr_argument) noexcept
 
 void op_mload(execution_state& state, instr_argument) noexcept
 {
-    auto& index = state.item(0);
+    auto& index = state.stack.top();
 
     if (!check_memory(state, index, 32))
         return;
@@ -436,7 +436,7 @@ void op_mstore8(execution_state& state, instr_argument) noexcept
 
 void op_sload(execution_state& state, instr_argument) noexcept
 {
-    auto& x = state.item(0);
+    auto& x = state.stack.top();
     evmc_bytes32 key;
     intx::be::store(key.bytes, x);
     x = intx::be::uint256(state.host.get_storage(state.msg->destination, key).bytes);
@@ -524,7 +524,7 @@ void op_gasprice(execution_state& state, instr_argument) noexcept
 
 void op_extcodesize(execution_state& state, instr_argument) noexcept
 {
-    auto& x = state.item(0);
+    auto& x = state.stack.top();
     uint8_t data[32];
     intx::be::store(data, x);
     evmc_address addr;
@@ -597,7 +597,7 @@ void op_returndatacopy(execution_state& state, instr_argument) noexcept
 
 void op_extcodehash(execution_state& state, instr_argument) noexcept
 {
-    auto& x = state.item(0);
+    auto& x = state.stack.top();
     uint8_t data[32];
     intx::be::store(data, x);
     evmc_address addr;
@@ -607,7 +607,7 @@ void op_extcodehash(execution_state& state, instr_argument) noexcept
 
 void op_blockhash(execution_state& state, instr_argument) noexcept
 {
-    auto& number = state.item(0);
+    auto& number = state.stack.top();
 
     auto upper_bound = state.host.get_tx_context().block_number;
     auto lower_bound = std::max(upper_bound - 256, decltype(upper_bound){0});
@@ -668,7 +668,7 @@ void op_dup(execution_state& state, instr_argument arg) noexcept
 
 void op_swap(execution_state& state, instr_argument arg) noexcept
 {
-    std::swap(state.item(0), state.item(arg.p.number));
+    std::swap(state.stack.top(), state.item(arg.p.number));
 }
 
 void op_log(execution_state& state, instr_argument arg) noexcept

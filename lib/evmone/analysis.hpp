@@ -46,6 +46,8 @@ struct evm_stack
 
     /// The storage allocated for maximum possible number of items.
     /// This is also the pointer to the bottom item.
+    ///
+    /// OPT: The items are not 256-bit aligned, so access will cross a cache line.
     uint256 storage[limit];
 
     /// Default constructor. Sets the top_item pointer to below the stack bottom.
@@ -53,6 +55,9 @@ struct evm_stack
 
     /// The current number of items on the stack.
     int size() noexcept { return static_cast<int>(top_item + 1 - storage); }
+
+    /// Returns the reference to the top item.
+    uint256& top() noexcept { return *top_item; }
 
     /// Returns the reference to the stack item on given position from the stack top.
     /// TODO: Rename to get(), at() or operator[].
