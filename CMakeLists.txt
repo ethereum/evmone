@@ -35,6 +35,8 @@ add_subdirectory(evmc)
 
 cable_configure_compiler(NO_PEDANTIC NO_CONVERSION_WARNINGS)
 if(CABLE_COMPILER_GNULIKE)
+    add_compile_options(-Wno-attributes)  # Allow using unknown attributes.
+
     # Prepend to CXX flags to allow overriding.
     set(CMAKE_CXX_FLAGS "-fvisibility=hidden ${CMAKE_CXX_FLAGS}")
 elseif(MSVC)
