@@ -34,20 +34,13 @@
 class evm : public testing::Test, public MockedHost
 {
 protected:
-    evmc_instance* vm = nullptr;
-    evmc_revision rev = EVMC_BYZANTIUM;  // Use Byzantium by default.
-    evmc_message msg = {};
-    evmc_result result = {};
+    evmc::vm vm;
+    evmc_revision rev = EVMC_BYZANTIUM;  // Byzantium by default. TODO: Add alias evmc::revision.
+    evmc_message msg = {};               // TODO: Add evmc::message with default constructor.
+    evmc::result result{{}};  // TODO: Add default constructor to evmc::result, update code here.
     int64_t gas_used = 0;
 
     evm() noexcept : vm{evmc_create_evmone()} {}
-
-    ~evm() noexcept override
-    {
-        // Release the attached EVM evm result.
-        if (result.release)
-            result.release(&result);
-    }
 
     /// Wrapper for evmone::execute. The result will be in the .result field.
     void execute(int64_t gas, bytes_view code, std::string_view input_hex = {}) noexcept
@@ -78,11 +71,7 @@ protected:
     /// Wrapper for evmone::execute. The result will be in the .result field.
     void execute(const evmc_message& m, bytes_view code) noexcept
     {
-        // Release previous result.
-        if (result.release)
-            result.release(&result);
-
-        result = vm->execute(vm, this, rev, &m, &code[0], code.size());
+        result = vm.execute(*this, rev, m, &code[0], code.size());
         gas_used = m.gas - result.gas_left;
     }
 };
