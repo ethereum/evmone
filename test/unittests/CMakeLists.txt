@@ -30,6 +30,8 @@ gtest_discover_tests(evmone-unittests TEST_PREFIX ${PROJECT_NAME}/unittests/)
 add_executable(evm-test main.cpp)
 target_link_libraries(evm-test PRIVATE evm-unittests testutils evmc::evmc evmc::loader GTest::gtest)
 
+add_test(NAME ${PROJECT_NAME}/evm-test COMMAND evm-test $<TARGET_FILE:evmone>)
+
 # Provide the project version to selected source files.
 set_source_files_properties(
     evmone_test.cpp
