@@ -923,16 +923,14 @@ TEST_F(evm, undefined_instructions)
     {
         auto r = evmc_revision(i);
         auto names = evmc_get_instruction_names_table(r);
-        auto m = evmc_message{};
 
         for (uint8_t opcode = 0; opcode <= 0xfe; ++opcode)
         {
             if (names[opcode] != nullptr)
                 continue;
 
-            auto res = vm->execute(vm, this, r, &m, &opcode, sizeof(opcode));
+            auto res = vm.execute(*this, r, {}, &opcode, sizeof(opcode));
             EXPECT_EQ(res.status_code, EVMC_UNDEFINED_INSTRUCTION) << hex(opcode);
-            EXPECT_FALSE(res.release);
         }
     }
 }
@@ -942,10 +940,8 @@ TEST_F(evm, abort)
     for (auto r = 0; r <= EVMC_MAX_REVISION; ++r)
     {
         auto opcode = uint8_t{0xfe};
-        auto m = evmc_message{};
-        auto res = vm->execute(vm, this, evmc_revision(r), &m, &opcode, sizeof(opcode));
+        auto res = vm.execute(*this, evmc_revision(r), {}, &opcode, sizeof(opcode));
         EXPECT_EQ(res.status_code, EVMC_INVALID_INSTRUCTION);
-        EXPECT_FALSE(res.release);
     }
 }
 
