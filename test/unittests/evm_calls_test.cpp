@@ -2,7 +2,7 @@
 // Copyright 2019 The evmone Authors.
 // Licensed under the Apache License, Version 2.0.
 
-#include "execution_fixture.hpp"
+#include "evm_fixture.hpp"
 #include <test/utils/bytecode.hpp>
 
 TEST_F(execution, delegatecall)
