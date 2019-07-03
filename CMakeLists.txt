@@ -54,7 +54,14 @@ if(EVMONE_TESTING)
 endif()
 
 
-install(TARGETS evmone EXPORT evmoneTargets
+# INSTALL
+
+set(install_targets evmone)
+if(TARGET evm-test)
+    list(APPEND install_targets evm-test)
+endif()
+
+install(TARGETS ${install_targets} EXPORT evmoneTargets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
