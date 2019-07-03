@@ -1,7 +1,6 @@
 // evmone: Fast Ethereum Virtual Machine implementation
 // Copyright 2019 The evmone Authors.
 // Licensed under the Apache License, Version 2.0.
-
 #pragma once
 
 #include <evmone/evmone.h>
@@ -31,7 +30,8 @@
     }                                                                                              \
     (void)0
 
-class execution : public testing::Test, public MockedHost
+/// The "evm" test fixture with generic unit tests for EVMC-compatible VM implementations.
+class evm : public testing::Test, public MockedHost
 {
 protected:
     evmc_instance* vm = nullptr;
@@ -40,11 +40,11 @@ protected:
     evmc_result result = {};
     int64_t gas_used = 0;
 
-    execution() noexcept : vm{evmc_create_evmone()} {}
+    evm() noexcept : vm{evmc_create_evmone()} {}
 
-    ~execution() noexcept override
+    ~evm() noexcept override
     {
-        // Release the attached EVM execution result.
+        // Release the attached EVM evm result.
         if (result.release)
             result.release(&result);
     }

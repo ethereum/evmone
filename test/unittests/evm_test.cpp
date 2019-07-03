@@ -2,38 +2,38 @@
 // Copyright 2019 The evmone Authors.
 // Licensed under the Apache License, Version 2.0.
 
-#include "execution_fixture.hpp"
+#include "evm_fixture.hpp"
 #include <evmc/instructions.h>
 #include <test/utils/bytecode.hpp>
 #include <algorithm>
 #include <numeric>
 
-TEST_F(execution, empty)
+TEST_F(evm, empty)
 {
     execute(0, "");
     EXPECT_GAS_USED(EVMC_SUCCESS, 0);
 }
 
-TEST_F(execution, push_and_pop)
+TEST_F(evm, push_and_pop)
 {
     execute(11, push("0102") + OP_POP + push("010203040506070809") + OP_POP);
     EXPECT_GAS_USED(EVMC_SUCCESS, 10);
 }
 
-TEST_F(execution, stack_underflow)
+TEST_F(evm, stack_underflow)
 {
     execute(13, push("01") + OP_POP + push("01") + OP_POP + OP_POP);
     EXPECT_STATUS(EVMC_STACK_UNDERFLOW);
 }
 
-TEST_F(execution, add)
+TEST_F(evm, add)
 {
     execute(25, "6007600d0160005260206000f3");
     EXPECT_GAS_USED(EVMC_SUCCESS, 24);
     EXPECT_OUTPUT_INT(20);
 }
 
-TEST_F(execution, dup)
+TEST_F(evm, dup)
 {
     // 0 7 3 5
     // 0 7 3 5 3 5
@@ -46,7 +46,7 @@ TEST_F(execution, dup)
     EXPECT_OUTPUT_INT(20);
 }
 
-TEST_F(execution, dup_all_1)
+TEST_F(evm, dup_all_1)
 {
     execute(push(1) + "808182838485868788898a8b8c8d8e8f" + "01010101010101010101010101010101" +
             ret_top());
@@ -54,7 +54,7 @@ TEST_F(execution, dup_all_1)
     EXPECT_OUTPUT_INT(17);
 }
 
-TEST_F(execution, dup_stack_overflow)
+TEST_F(evm, dup_stack_overflow)
 {
     auto code = push(1) + "808182838485868788898a8b8c8d8e8f";
     for (int i = 0; i < (1024 - 17); ++i)
@@ -66,7 +66,7 @@ TEST_F(execution, dup_stack_overflow)
     EXPECT_STATUS(EVMC_STACK_OVERFLOW);
 }
 
-TEST_F(execution, sub_and_swap)
+TEST_F(evm, sub_and_swap)
 {
     execute(33, "600180810380829052602090f3");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
@@ -75,7 +75,7 @@ TEST_F(execution, sub_and_swap)
     EXPECT_EQ(result.output_data[31], 1);
 }
 
-TEST_F(execution, memory_and_not)
+TEST_F(evm, memory_and_not)
 {
     execute(42, "600060018019815381518252800190f3");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
@@ -85,7 +85,7 @@ TEST_F(execution, memory_and_not)
     EXPECT_EQ(result.output_data[0], 0);
 }
 
-TEST_F(execution, msize)
+TEST_F(evm, msize)
 {
     execute(29, "60aa6022535960005360016000f3");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
@@ -94,7 +94,7 @@ TEST_F(execution, msize)
     EXPECT_EQ(result.output_data[0], 0x40);
 }
 
-TEST_F(execution, gas)
+TEST_F(evm, gas)
 {
     execute(40, "5a5a5a010160005360016000f3");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
@@ -103,7 +103,7 @@ TEST_F(execution, gas)
     EXPECT_EQ(result.output_data[0], 38 + 36 + 34);
 }
 
-TEST_F(execution, arith)
+TEST_F(evm, arith)
 {
     // x = (0 - 1) * 3
     // y = 17 s/ x
@@ -124,7 +124,7 @@ TEST_F(execution, arith)
     EXPECT_EQ(result.output_data[0], 1);
 }
 
-TEST_F(execution, comparison)
+TEST_F(evm, comparison)
 {
     std::string s;
     s += "60006001808203808001";  // 0 1 -1 -2
@@ -149,7 +149,7 @@ TEST_F(execution, comparison)
     EXPECT_EQ(result.output_data[6], 0);
 }
 
-TEST_F(execution, bitwise)
+TEST_F(evm, bitwise)
 {
     std::string s;
     s += "60aa60ff";      // aa ff
@@ -166,7 +166,7 @@ TEST_F(execution, bitwise)
     EXPECT_EQ(result.output_data[2], 0xaa ^ 0xff);
 }
 
-TEST_F(execution, jump)
+TEST_F(evm, jump)
 {
     std::string s;
     s += "60be600053";  // m[0] = be
@@ -185,7 +185,7 @@ TEST_F(execution, jump)
     EXPECT_EQ(result.output_data[1], 0xfa);
 }
 
-TEST_F(execution, jumpi)
+TEST_F(evm, jumpi)
 {
     std::string s;
     s += "5a600557";      // GAS 5 JUMPI
@@ -198,7 +198,7 @@ TEST_F(execution, jumpi)
     EXPECT_EQ(result.output_data[0], 0);
 }
 
-TEST_F(execution, jumpi_else)
+TEST_F(evm, jumpi_else)
 {
     execute(15, dup1(OP_COINBASE) + OP_JUMPI);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
@@ -206,14 +206,14 @@ TEST_F(execution, jumpi_else)
     EXPECT_EQ(result.output_size, 0);
 }
 
-TEST_F(execution, jumpi_at_the_end)
+TEST_F(evm, jumpi_at_the_end)
 {
     execute(1000, "5b6001600057");
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
     EXPECT_EQ(gas_used, 1000);
 }
 
-TEST_F(execution, bad_jumpdest)
+TEST_F(evm, bad_jumpdest)
 {
     tx_context.block_number = 1;
     tx_context.block_gas_limit = 0;
@@ -230,14 +230,14 @@ TEST_F(execution, bad_jumpdest)
     }
 }
 
-TEST_F(execution, jump_to_block_beginning)
+TEST_F(evm, jump_to_block_beginning)
 {
     const auto code = jumpi(0, OP_MSIZE) + jump(4);
     execute(code);
     EXPECT_STATUS(EVMC_BAD_JUMP_DESTINATION);
 }
 
-TEST_F(execution, jumpi_stack)
+TEST_F(evm, jumpi_stack)
 {
     const auto code = push(0xde) + jumpi(6, OP_CALLDATASIZE) + OP_JUMPDEST + ret_top();
     execute(code, "");
@@ -246,7 +246,7 @@ TEST_F(execution, jumpi_stack)
     EXPECT_OUTPUT_INT(0xde);
 }
 
-TEST_F(execution, pc)
+TEST_F(evm, pc)
 {
     const auto code = OP_CALLDATASIZE + push(9) + OP_JUMPI + push(12) + OP_PC + OP_SWAP1 + OP_JUMP +
                       OP_JUMPDEST + OP_GAS + OP_PC + OP_JUMPDEST + ret_top();
@@ -260,7 +260,7 @@ TEST_F(execution, pc)
     EXPECT_OUTPUT_INT(11);
 }
 
-TEST_F(execution, byte)
+TEST_F(evm, byte)
 {
     std::string s;
     s += "63aabbccdd";  // aabbccdd
@@ -283,7 +283,7 @@ TEST_F(execution, byte)
     EXPECT_EQ(result.output_data[6], 0);
 }
 
-TEST_F(execution, addmod_mulmod)
+TEST_F(evm, addmod_mulmod)
 {
     std::string s;
     s += "7fcdeb8272fc01d4d50a6ec165d2ea477af19b9b2c198459f59079583b97e88a66";
@@ -304,7 +304,7 @@ TEST_F(execution, addmod_mulmod)
     EXPECT_EQ(p, bytes(&result.output_data[32], 32));
 }
 
-TEST_F(execution, divmod)
+TEST_F(evm, divmod)
 {
     // Div and mod the -1 by the input and return.
     execute("600035600160000381810460005281810660205260406000f3", "0d");
@@ -317,7 +317,7 @@ TEST_F(execution, divmod)
     EXPECT_EQ(p, bytes(&result.output_data[32], 32));
 }
 
-TEST_F(execution, div_by_zero)
+TEST_F(evm, div_by_zero)
 {
     rev = EVMC_CONSTANTINOPLE;
     auto s = std::string{};
@@ -331,7 +331,7 @@ TEST_F(execution, div_by_zero)
     EXPECT_EQ(it->second, evmc_bytes32{});
 }
 
-TEST_F(execution, mod_by_zero)
+TEST_F(evm, mod_by_zero)
 {
     execute("60008060ff0607600055");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
@@ -341,7 +341,7 @@ TEST_F(execution, mod_by_zero)
     EXPECT_EQ(it->second, evmc_bytes32{});
 }
 
-TEST_F(execution, addmod_mulmod_by_zero)
+TEST_F(evm, addmod_mulmod_by_zero)
 {
     execute("6000358080808008091560005260206000f3");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
@@ -350,7 +350,7 @@ TEST_F(execution, addmod_mulmod_by_zero)
     EXPECT_EQ(result.output_data[31], 1);
 }
 
-TEST_F(execution, signextend)
+TEST_F(evm, signextend)
 {
     std::string s;
     s += "62017ffe";    // 017ffe
@@ -369,7 +369,7 @@ TEST_F(execution, signextend)
     EXPECT_EQ(bytes(&result.output_data[32], 32), b);
 }
 
-TEST_F(execution, signextend_31)
+TEST_F(evm, signextend_31)
 {
     rev = EVMC_CONSTANTINOPLE;
 
@@ -388,7 +388,7 @@ TEST_F(execution, signextend_31)
     EXPECT_EQ(bytes(&result.output_data[0], 32), a);
 }
 
-TEST_F(execution, exp)
+TEST_F(evm, exp)
 {
     std::string s;
     s += "612019";      // 0x2019
@@ -404,7 +404,7 @@ TEST_F(execution, exp)
     EXPECT_EQ(bytes(&result.output_data[0], 32), a);
 }
 
-TEST_F(execution, exp_oog)
+TEST_F(evm, exp_oog)
 {
     auto code = "6001600003800a";
     execute(1622, code);
@@ -416,7 +416,7 @@ TEST_F(execution, exp_oog)
     EXPECT_EQ(result.gas_left, 0);
 }
 
-TEST_F(execution, exp_pre_sd)
+TEST_F(evm, exp_pre_sd)
 {
     rev = EVMC_TANGERINE_WHISTLE;
     std::string s;
@@ -433,7 +433,7 @@ TEST_F(execution, exp_pre_sd)
     EXPECT_EQ(bytes(&result.output_data[0], 32), a);
 }
 
-TEST_F(execution, calldataload)
+TEST_F(evm, calldataload)
 {
     std::string s;
     s += "600335";      // CALLDATALOAD(3)
@@ -447,14 +447,14 @@ TEST_F(execution, calldataload)
     EXPECT_EQ(bytes(&result.output_data[0], 10), a);
 }
 
-TEST_F(execution, calldataload_outofrange)
+TEST_F(evm, calldataload_outofrange)
 {
     execute(calldataload(1) + ret_top());
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(std::count(result.output_data, result.output_data + result.output_size, 0), 32);
 }
 
-TEST_F(execution, calldatacopy)
+TEST_F(evm, calldatacopy)
 {
     std::string s;
     s += "366001600037";  // CALLDATASIZE 1 0 CALLDATACOPY
@@ -476,7 +476,7 @@ TEST_F(execution, calldatacopy)
     EXPECT_EQ(std::count(result.output_data, result.output_data + result.output_size, 0), 0xff);
 }
 
-TEST_F(execution, address)
+TEST_F(evm, address)
 {
     std::string s;
     s += "30600052";    // ADDRESS MSTORE(0)
@@ -490,7 +490,7 @@ TEST_F(execution, address)
     EXPECT_EQ(bytes(&result.output_data[0], 10), a);
 }
 
-TEST_F(execution, caller_callvalue)
+TEST_F(evm, caller_callvalue)
 {
     std::string s;
     s += "333401600052";  // CALLER CALLVALUE ADD MSTORE(0)
@@ -505,7 +505,7 @@ TEST_F(execution, caller_callvalue)
     EXPECT_EQ(bytes(&result.output_data[0], 10), a);
 }
 
-TEST_F(execution, code)
+TEST_F(evm, code)
 {
     // CODESIZE 2 0 CODECOPY RETURN(0,9)
     auto s = "38600260003960096000f3";
@@ -516,7 +516,7 @@ TEST_F(execution, code)
     EXPECT_EQ(bytes(&result.output_data[0], 9), a);
 }
 
-TEST_F(execution, storage)
+TEST_F(evm, storage)
 {
     std::string s;
     s += "60ff60ee55";    // CODESIZE 2 0 CODECOPY
@@ -529,14 +529,14 @@ TEST_F(execution, storage)
     EXPECT_EQ(result.output_data[0], 0xff);
 }
 
-TEST_F(execution, sstore_pop_stack)
+TEST_F(evm, sstore_pop_stack)
 {
     execute(100000, "60008060015560005360016000f3");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.output_data[0], 0);
 }
 
-TEST_F(execution, sload_cost_pre_tw)
+TEST_F(evm, sload_cost_pre_tw)
 {
     rev = EVMC_HOMESTEAD;
     execute(56, "60008054");
@@ -545,7 +545,7 @@ TEST_F(execution, sload_cost_pre_tw)
     EXPECT_NE(storage.find({}), storage.end());
 }
 
-TEST_F(execution, sstore_cost)
+TEST_F(evm, sstore_cost)
 {
     auto v1 = evmc_bytes32{};
     v1.bytes[31] = 1;
@@ -614,7 +614,7 @@ TEST_F(execution, sstore_cost)
     }
 }
 
-TEST_F(execution, tx_context)
+TEST_F(evm, tx_context)
 {
     tx_context.block_timestamp = 0xdd;
     tx_context.block_coinbase.bytes[1] = 0xcc;
@@ -642,7 +642,7 @@ TEST_F(execution, tx_context)
     EXPECT_EQ(result.output_data[1], 0xdd);
 }
 
-TEST_F(execution, balance)
+TEST_F(evm, balance)
 {
     std::string s;
     s += "3031";        // ADDRESS BALANCE
@@ -655,21 +655,21 @@ TEST_F(execution, balance)
     EXPECT_EQ(result.output_data[0], 7);
 }
 
-TEST_F(execution, undefined)
+TEST_F(evm, undefined)
 {
     execute(1, "2a");
     EXPECT_EQ(result.status_code, EVMC_UNDEFINED_INSTRUCTION);
     EXPECT_EQ(result.gas_left, 0);
 }
 
-TEST_F(execution, invalid)
+TEST_F(evm, invalid)
 {
     execute(1, "fe");
     EXPECT_EQ(result.status_code, EVMC_INVALID_INSTRUCTION);
     EXPECT_EQ(result.gas_left, 0);
 }
 
-TEST_F(execution, log)
+TEST_F(evm, log)
 {
     for (auto op : {OP_LOG0, OP_LOG1, OP_LOG2, OP_LOG3, OP_LOG4})
     {
@@ -689,7 +689,7 @@ TEST_F(execution, log)
     }
 }
 
-TEST_F(execution, log0_empty)
+TEST_F(evm, log0_empty)
 {
     log_data.resize(1);
     log_topics.resize(1);
@@ -699,7 +699,7 @@ TEST_F(execution, log0_empty)
     EXPECT_EQ(log_data.size(), 0);
 }
 
-TEST_F(execution, log_data_cost)
+TEST_F(evm, log_data_cost)
 {
     for (auto op : {OP_LOG0, OP_LOG1, OP_LOG2, OP_LOG3, OP_LOG4})
     {
@@ -714,7 +714,7 @@ TEST_F(execution, log_data_cost)
     }
 }
 
-TEST_F(execution, selfdestruct)
+TEST_F(evm, selfdestruct)
 {
     rev = EVMC_SPURIOUS_DRAGON;
     execute("6009ff");
@@ -735,7 +735,7 @@ TEST_F(execution, selfdestruct)
     EXPECT_EQ(selfdestruct_beneficiary.bytes[19], 8);
 }
 
-TEST_F(execution, selfdestruct_with_balance)
+TEST_F(evm, selfdestruct_with_balance)
 {
     auto code = "6000ff";
     balance = 1;
@@ -768,7 +768,7 @@ TEST_F(execution, selfdestruct_with_balance)
     EXPECT_EQ(result.gas_left, 0);
 }
 
-TEST_F(execution, sha3)
+TEST_F(evm, sha3)
 {
     execute("6108006103ff2060005260206000f3");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
@@ -778,7 +778,7 @@ TEST_F(execution, sha3)
     EXPECT_EQ(bytes(&result.output_data[0], 32), hash);
 }
 
-TEST_F(execution, sha3_empty)
+TEST_F(evm, sha3_empty)
 {
     auto code = push(0) + OP_DUP1 + OP_SHA3 + ret_top();
     execute(code);
@@ -787,7 +787,7 @@ TEST_F(execution, sha3_empty)
     EXPECT_EQ(to_hex({result.output_data, result.output_size}), keccak256_empty);
 }
 
-TEST_F(execution, blockhash)
+TEST_F(evm, blockhash)
 {
     blockhash.bytes[13] = 0x13;
 
@@ -814,7 +814,7 @@ TEST_F(execution, blockhash)
     EXPECT_EQ(result.output_data[13], 0x13);
 }
 
-TEST_F(execution, extcode)
+TEST_F(evm, extcode)
 {
     extcode = {'a', 'b', 'c', 'd'};
 
@@ -831,7 +831,7 @@ TEST_F(execution, extcode)
     EXPECT_EQ(last_accessed_account.bytes[19], 0xfe);
 }
 
-TEST_F(execution, extcodehash)
+TEST_F(evm, extcodehash)
 {
     auto code = "60003f60005260206000f3";
 
@@ -847,7 +847,7 @@ TEST_F(execution, extcodehash)
     EXPECT_EQ(bytes_view(result.output_data, result.output_size), expected_hash);
 }
 
-TEST_F(execution, revert)
+TEST_F(evm, revert)
 {
     std::string s;
     s += "60ee8053";    // m[ee] == e
@@ -860,7 +860,7 @@ TEST_F(execution, revert)
     EXPECT_EQ(result.output_data[1], 0xee);
 }
 
-TEST_F(execution, shl)
+TEST_F(evm, shl)
 {
     auto code = "600560011b6000526001601ff3";
     rev = EVMC_CONSTANTINOPLE;
@@ -871,7 +871,7 @@ TEST_F(execution, shl)
     EXPECT_EQ(result.output_data[0], 5 << 1);
 }
 
-TEST_F(execution, shr)
+TEST_F(evm, shr)
 {
     auto code = "600560011c6000526001601ff3";
     rev = EVMC_CONSTANTINOPLE;
@@ -882,7 +882,7 @@ TEST_F(execution, shr)
     EXPECT_EQ(result.output_data[0], 5 >> 1);
 }
 
-TEST_F(execution, sar)
+TEST_F(evm, sar)
 {
     auto code = "600160000360021d60005260016000f3";
     rev = EVMC_CONSTANTINOPLE;
@@ -893,7 +893,7 @@ TEST_F(execution, sar)
     EXPECT_EQ(result.output_data[0], 0xff);  // MSB of (-1 >> 2) == -1
 }
 
-TEST_F(execution, sar_01)
+TEST_F(evm, sar_01)
 {
     auto code = "600060011d60005260016000f3";
     rev = EVMC_CONSTANTINOPLE;
@@ -904,7 +904,7 @@ TEST_F(execution, sar_01)
     EXPECT_EQ(result.output_data[0], 0);
 }
 
-TEST_F(execution, shift_overflow)
+TEST_F(evm, shift_overflow)
 {
     rev = EVMC_CONSTANTINOPLE;
     for (auto op : {OP_SHL, OP_SHR, OP_SAR})
@@ -917,7 +917,7 @@ TEST_F(execution, shift_overflow)
     }
 }
 
-TEST_F(execution, undefined_instructions)
+TEST_F(evm, undefined_instructions)
 {
     for (auto i = 0; i <= EVMC_MAX_REVISION; ++i)
     {
@@ -937,7 +937,7 @@ TEST_F(execution, undefined_instructions)
     }
 }
 
-TEST_F(execution, abort)
+TEST_F(evm, abort)
 {
     for (auto r = 0; r <= EVMC_MAX_REVISION; ++r)
     {
@@ -949,7 +949,7 @@ TEST_F(execution, abort)
     }
 }
 
-TEST_F(execution, staticmode)
+TEST_F(evm, staticmode)
 {
     auto code_prefix = 1 + 6 * OP_DUP1;
 
@@ -964,7 +964,7 @@ TEST_F(execution, staticmode)
     }
 }
 
-TEST_F(execution, mstore8_memory_cost)
+TEST_F(evm, mstore8_memory_cost)
 {
     auto code = push(0) + mstore8(0);
     execute(12, code);
@@ -973,7 +973,7 @@ TEST_F(execution, mstore8_memory_cost)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
-TEST_F(execution, sha3_memory_cost)
+TEST_F(evm, sha3_memory_cost)
 {
     execute(45, sha3(0, 1));
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
@@ -981,7 +981,7 @@ TEST_F(execution, sha3_memory_cost)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
-TEST_F(execution, calldatacopy_memory_cost)
+TEST_F(evm, calldatacopy_memory_cost)
 {
     auto code = push(1) + push(0) + push(0) + OP_CALLDATACOPY;
     execute(18, code);
@@ -990,21 +990,21 @@ TEST_F(execution, calldatacopy_memory_cost)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
-TEST_F(execution, codecopy_empty)
+TEST_F(evm, codecopy_empty)
 {
     execute(push(0) + 2 * OP_DUP1 + OP_CODECOPY + OP_MSIZE + ret_top());
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(std::count(result.output_data, result.output_data + result.output_size, 0), 32);
 }
 
-TEST_F(execution, extcodecopy_empty)
+TEST_F(evm, extcodecopy_empty)
 {
     execute(push(0) + 3 * OP_DUP1 + OP_EXTCODECOPY + OP_MSIZE + ret_top());
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(std::count(result.output_data, result.output_data + result.output_size, 0), 32);
 }
 
-TEST_F(execution, codecopy_memory_cost)
+TEST_F(evm, codecopy_memory_cost)
 {
     auto code = push(1) + push(0) + push(0) + OP_CODECOPY;
     execute(18, code);
@@ -1013,7 +1013,7 @@ TEST_F(execution, codecopy_memory_cost)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
-TEST_F(execution, extcodecopy_memory_cost)
+TEST_F(evm, extcodecopy_memory_cost)
 {
     auto code = push(1) + push(0) + 2 * OP_DUP1 + OP_EXTCODECOPY;
     execute(718, code);
@@ -1022,7 +1022,7 @@ TEST_F(execution, extcodecopy_memory_cost)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
-TEST_F(execution, extcodecopy_nonzero_index)
+TEST_F(evm, extcodecopy_nonzero_index)
 {
     auto index = 15;
     extcode.assign(16, 0x00);
@@ -1037,7 +1037,7 @@ TEST_F(execution, extcodecopy_nonzero_index)
     EXPECT_EQ(last_accessed_account.bytes[19], 0xa);
 }
 
-TEST_F(execution, extcodecopy_fill_tail)
+TEST_F(evm, extcodecopy_fill_tail)
 {
     extcode = {0xff, 0xfe};
     extcode.resize(1);
@@ -1098,7 +1098,7 @@ memory_access_params memory_access_test_cases[] = {
     {0x100000000, 0x100000000},
 };
 
-TEST_F(execution, memory_access)
+TEST_F(evm, memory_access)
 {
     rev = EVMC_CONSTANTINOPLE;
     auto metrics = evmc_get_instruction_metrics_table(rev);
