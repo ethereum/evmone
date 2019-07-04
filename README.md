@@ -43,6 +43,18 @@ bin/evmone-unittests
 bin/evmone-bench
 ```
 
+### Tools
+
+#### evm-test
+
+The **evm-test** executes a collection of unit tests on 
+any EVMC-compatible Ethereum Virtual Machine implementation.
+The collection of tests comes from the evmone project.
+
+```bash
+evm-test ./evmone.so
+```
+
 ## Maintainer
 
 Paweł Bylica [@chfast]
