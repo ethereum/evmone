@@ -3,7 +3,10 @@
 // Licensed under the Apache License, Version 2.0.
 
 #include "evm_fixture.hpp"
+#include <intx/intx.hpp>
 #include <test/utils/bytecode.hpp>
+
+using namespace intx;
 
 TEST_F(evm, delegatecall)
 {
@@ -44,7 +47,7 @@ TEST_F(evm, delegatecall_static)
 
 TEST_F(evm, create)
 {
-    balance = 1;
+    set_balance(1);
 
     auto call_output = bytes{0xa, 0xb, 0xc};
     call_result.output_data = call_output.data();
@@ -78,7 +81,7 @@ TEST_F(evm, create_gas)
 TEST_F(evm, create2)
 {
     rev = EVMC_CONSTANTINOPLE;
-    balance = 1;
+    set_balance(1);
 
     auto call_output = bytes{0xa, 0xb, 0xc};
     call_result.output_data = call_output.data();
@@ -126,7 +129,7 @@ TEST_F(evm, create2_salt_cost)
 TEST_F(evm, create_balance_too_low)
 {
     rev = EVMC_CONSTANTINOPLE;
-    balance = 1;
+    set_balance(1);
     call_msg.kind = EVMC_CALL;
     for (auto op : {OP_CREATE, OP_CREATE2})
     {
@@ -172,7 +175,7 @@ TEST_F(evm, call_with_value)
 
     call_msg.kind = EVMC_CREATE;
     exists = true;
-    balance = 1;
+    set_balance(1);
     call_result.gas_left = 1;
 
     execute(40000, code);
@@ -217,7 +220,7 @@ TEST_F(evm, call_output)
     static bool result_is_correct = false;
     static uint8_t output[] = {0xa, 0xb};
 
-    balance = 1;
+    set_balance(1);
     exists = true;
     call_result.output_data = output;
     call_result.output_size = sizeof(output);
@@ -280,7 +283,7 @@ TEST_F(evm, callcode_new_account_create)
 {
     auto code = "60008080806001600061c350f250";
 
-    balance = 1;
+    set_balance(1);
     call_result.gas_left = 1;
     execute(100000, code);
     EXPECT_EQ(gas_used, 59722);

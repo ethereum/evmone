@@ -4,9 +4,12 @@
 
 #include "evm_fixture.hpp"
 #include <evmc/instructions.h>
+#include <intx/intx.hpp>
 #include <test/utils/bytecode.hpp>
 #include <algorithm>
 #include <numeric>
+
+using namespace intx;
 
 TEST_F(evm, empty)
 {
@@ -641,7 +644,7 @@ TEST_F(evm, tx_context)
 
 TEST_F(evm, balance)
 {
-    balance = 0x0504030201;
+    set_balance(0x0504030201);
     auto code = bytecode{} + OP_ADDRESS + OP_BALANCE + mstore(0) + ret(32 - 6, 6);
     execute(417, code);
     EXPECT_GAS_USED(EVMC_SUCCESS, 417);
@@ -737,7 +740,7 @@ TEST_F(evm, selfdestruct)
 TEST_F(evm, selfdestruct_with_balance)
 {
     auto code = "6000ff";
-    balance = 1;
+    set_balance(1);
     exists = false;
 
     rev = EVMC_TANGERINE_WHISTLE;

@@ -1,12 +1,10 @@
 // evmone: Fast Ethereum Virtual Machine implementation
 // Copyright 2019 The evmone Authors.
 // Licensed under the Apache License, Version 2.0.
-
 #pragma once
 
 #include <evmc/evmc.hpp>
 #include <evmc/helpers.hpp>
-#include <intx/intx.hpp>
 #include <test/utils/utils.hpp>
 #include <unordered_map>
 #include <vector>
@@ -29,11 +27,21 @@ public:
     evmc_bytes32 blockhash = {};
 
     bool exists = false;
-    intx::uint256 balance = {};
+    evmc_uint256be balance = {};
     bytes extcode = {};
 
     evmc_message call_msg = {};  ///< Recorded call message.
     evmc_result call_result = {};
+
+    /// Helper method for setting balance by numeric type.
+    /// Might not be needed when intx API is improved,
+    /// track https://github.com/chfast/intx/issues/105.
+    void set_balance(uint64_t x) noexcept
+    {
+        balance = evmc_uint256be{};
+        for (std::size_t i = 0; i < sizeof(x); ++i)
+            balance.bytes[sizeof(balance) - 1 - i] = static_cast<uint8_t>(x >> (8 * i));
+    }
 
     bool account_exists(const evmc_address& addr) noexcept override
     {
@@ -70,9 +78,7 @@ public:
     evmc_uint256be get_balance(const evmc_address& addr) noexcept override
     {
         last_accessed_account = addr;
-        evmc_uint256be b = {};
-        intx::be::store(b.bytes, balance);
-        return b;
+        return balance;
     }
 
     size_t get_code_size(const evmc_address& addr) noexcept override
