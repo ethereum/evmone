@@ -355,6 +355,17 @@ TEST_F(evm, staticcall_then_oog)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
+TEST_F(evm, staticcall_input)
+{
+    const auto code = mstore(3, 0x010203) + push(0) + push(0) + push(3) + push(32) + push(0) +
+                      push(0xee) + OP_STATICCALL;
+    execute(code);
+    const auto& call_msg = recorded_calls.back();
+    EXPECT_EQ(call_msg.gas, 0xee);
+    EXPECT_EQ(call_msg.input_size, 3);
+    EXPECT_EQ(to_hex(bytes_view(call_msg.input_data, call_msg.input_size)), "010203");
+}
+
 TEST_F(evm, call_with_value_low_gas)
 {
     accounts[{}] = {};

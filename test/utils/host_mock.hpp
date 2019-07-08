@@ -60,6 +60,9 @@ public:
     /// The list of recorded selfdestruct events.
     std::vector<selfdestuct_record> recorded_selfdestructs;
 
+private:
+    bytes m_recorded_calls_input_storage;
+
     bool account_exists(const evmc_address& addr) noexcept override
     {
         recorded_account_accesses.emplace_back(addr);
@@ -145,7 +148,13 @@ public:
     evmc::result call(const evmc_message& msg) noexcept override
     {
         recorded_account_accesses.emplace_back(msg.destination);
-        recorded_calls.emplace_back(msg);  // FIXME: Copy input.
+        auto& call_msg = recorded_calls.emplace_back(msg);
+        if (call_msg.input_size > 0)
+        {
+            const auto input_copy_start_pos = m_recorded_calls_input_storage.size();
+            m_recorded_calls_input_storage.append(call_msg.input_data, call_msg.input_size);
+            call_msg.input_data = &m_recorded_calls_input_storage[input_copy_start_pos];
+        }
         return evmc::result{call_result};
     }
 
