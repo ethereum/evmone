@@ -323,24 +323,27 @@ TEST_F(evm, divmod)
 TEST_F(evm, div_by_zero)
 {
     rev = EVMC_CONSTANTINOPLE;
+    const auto& account = accounts[{}];  // Create account.
+
     auto s = std::string{};
     s += "60008060ff";  // 0 0 ff
     s += "0405600055";  // s[0] = 0
     execute(222, s);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 0);
-    auto it = storage.find({});
-    ASSERT_NE(it, storage.end());
+    auto it = account.storage.find({});
+    ASSERT_NE(it, account.storage.end());
     EXPECT_EQ(it->second, evmc_bytes32{});
 }
 
 TEST_F(evm, mod_by_zero)
 {
+    const auto& account = accounts[{}];  // Create account.
     execute("60008060ff0607600055");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(gas_used, 5022);
-    auto it = storage.find({});
-    ASSERT_NE(it, storage.end());
+    auto it = account.storage.find({});
+    ASSERT_NE(it, account.storage.end());
     EXPECT_EQ(it->second, evmc_bytes32{});
 }
 
@@ -521,6 +524,7 @@ TEST_F(evm, code)
 
 TEST_F(evm, storage)
 {
+    accounts[msg.destination] = {};
     const auto code = sstore(0xee, 0xff) + sload(0xee) + mstore8(0) + ret(0, 1);
     execute(100000, code);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
@@ -531,6 +535,7 @@ TEST_F(evm, storage)
 
 TEST_F(evm, sstore_pop_stack)
 {
+    accounts[msg.destination] = {};
     execute(100000, "60008060015560005360016000f3");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.output_data[0], 0);
@@ -539,14 +544,17 @@ TEST_F(evm, sstore_pop_stack)
 TEST_F(evm, sload_cost_pre_tw)
 {
     rev = EVMC_HOMESTEAD;
+    const auto& account = accounts[msg.destination];
     execute(56, "60008054");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 0);
-    EXPECT_NE(storage.find({}), storage.end());
+    EXPECT_NE(account.storage.find({}), account.storage.end());
 }
 
 TEST_F(evm, sstore_cost)
 {
+    auto& storage = accounts[msg.destination].storage;
+
     auto v1 = evmc_bytes32{};
     v1.bytes[31] = 1;
 
@@ -644,7 +652,7 @@ TEST_F(evm, tx_context)
 
 TEST_F(evm, balance)
 {
-    set_balance(0x0504030201);
+    accounts[msg.destination].set_balance(0x0504030201);
     auto code = bytecode{} + OP_ADDRESS + OP_BALANCE + mstore(0) + ret(32 - 6, 6);
     execute(417, code);
     EXPECT_GAS_USED(EVMC_SUCCESS, 417);
@@ -740,7 +748,7 @@ TEST_F(evm, selfdestruct)
 TEST_F(evm, selfdestruct_with_balance)
 {
     auto code = "6000ff";
-    set_balance(1);
+    accounts[msg.destination].set_balance(1);
     exists = false;
 
     rev = EVMC_TANGERINE_WHISTLE;

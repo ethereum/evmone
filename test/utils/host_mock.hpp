@@ -9,12 +9,31 @@
 #include <unordered_map>
 #include <vector>
 
+struct MockedAccount
+{
+    bytes code;
+    evmc_bytes32 codehash;
+    evmc_uint256be balance;
+    std::unordered_map<evmc_bytes32, evmc_bytes32> storage;
+
+    /// Helper method for setting balance by numeric type.
+    /// Might not be needed when intx API is improved,
+    /// track https://github.com/chfast/intx/issues/105.
+    void set_balance(uint64_t x) noexcept
+    {
+        balance = evmc_uint256be{};
+        for (std::size_t i = 0; i < sizeof(x); ++i)
+            balance.bytes[sizeof(balance) - 1 - i] = static_cast<uint8_t>(x >> (8 * i));
+    }
+};
+
 class MockedHost : public evmc::Host
 {
 public:
+    std::unordered_map<evmc_address, MockedAccount> accounts;
+
     evmc_address last_accessed_account = {};
 
-    std::unordered_map<evmc_bytes32, evmc_bytes32> storage;
     bool storage_cold = true;
 
     evmc_tx_context tx_context = {};
@@ -27,21 +46,10 @@ public:
     evmc_bytes32 blockhash = {};
 
     bool exists = false;
-    evmc_uint256be balance = {};
     bytes extcode = {};
 
     evmc_message call_msg = {};  ///< Recorded call message.
     evmc_result call_result = {};
-
-    /// Helper method for setting balance by numeric type.
-    /// Might not be needed when intx API is improved,
-    /// track https://github.com/chfast/intx/issues/105.
-    void set_balance(uint64_t x) noexcept
-    {
-        balance = evmc_uint256be{};
-        for (std::size_t i = 0; i < sizeof(x); ++i)
-            balance.bytes[sizeof(balance) - 1 - i] = static_cast<uint8_t>(x >> (8 * i));
-    }
 
     bool account_exists(const evmc_address& addr) noexcept override
     {
@@ -49,15 +57,23 @@ public:
         return exists;
     }
 
-    evmc_bytes32 get_storage(const evmc_address&, const evmc_bytes32& key) noexcept override
+    evmc_bytes32 get_storage(const evmc_address& addr, const evmc_bytes32& key) noexcept override
     {
-        return storage[key];
+        const auto it = accounts.find(addr);
+        if (it == accounts.end())
+            return {};
+
+        return it->second.storage[key];
     }
 
-    evmc_storage_status set_storage(
-        const evmc_address&, const evmc_bytes32& key, const evmc_bytes32& value) noexcept override
+    evmc_storage_status set_storage(const evmc_address& addr, const evmc_bytes32& key,
+        const evmc_bytes32& value) noexcept override
     {
-        auto& old = storage[key];
+        const auto it = accounts.find(addr);
+        if (it == accounts.end())
+            return static_cast<evmc_storage_status>(-1);
+
+        auto& old = it->second.storage[key];
 
         evmc_storage_status status;
         if (old == value)
@@ -77,8 +93,12 @@ public:
 
     evmc_uint256be get_balance(const evmc_address& addr) noexcept override
     {
+        const auto it = accounts.find(addr);
+        if (it == accounts.end())  // Report that the account does not exist.
+            return {};
+
         last_accessed_account = addr;
-        return balance;
+        return it->second.balance;
     }
 
     size_t get_code_size(const evmc_address& addr) noexcept override
