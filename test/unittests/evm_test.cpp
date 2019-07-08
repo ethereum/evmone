@@ -829,7 +829,11 @@ TEST_F(evm, blockhash)
 
 TEST_F(evm, extcode)
 {
-    extcode = {'a', 'b', 'c', 'd'};
+    auto addr = evmc_address{};
+    std::fill(std::begin(addr.bytes), std::end(addr.bytes), uint8_t{0xff});
+    addr.bytes[19] -= 1;
+
+    accounts[addr].code = {'a', 'b', 'c', 'd'};
 
     auto code = std::string{};
     code += "6002600003803b60019003";  // S = EXTCODESIZE(-2) - 1
@@ -839,7 +843,7 @@ TEST_F(evm, extcode)
     execute(code);
     EXPECT_EQ(gas_used, 1445);
     ASSERT_EQ(result.output_size, 4);
-    EXPECT_EQ(bytes_view(result.output_data, 3), bytes_view(extcode.data(), 3));
+    EXPECT_EQ(bytes_view(result.output_data, 3), bytes_view(accounts[addr].code.data(), 3));
     EXPECT_EQ(result.output_data[3], 0);
     ASSERT_EQ(recorded_account_accesses.size(), 2);
     EXPECT_EQ(recorded_account_accesses[0].bytes[19], 0xfe);
@@ -848,6 +852,9 @@ TEST_F(evm, extcode)
 
 TEST_F(evm, extcodehash)
 {
+    auto& hash = accounts[{}].codehash;
+    std::fill(std::begin(hash.bytes), std::end(hash.bytes), uint8_t{0xee});
+
     auto code = "60003f60005260206000f3";
 
     rev = EVMC_BYZANTIUM;
@@ -859,7 +866,8 @@ TEST_F(evm, extcodehash)
     EXPECT_EQ(gas_used, 418);
     ASSERT_EQ(result.output_size, 32);
     auto expected_hash = bytes(32, 0xee);
-    EXPECT_EQ(bytes_view(result.output_data, result.output_size), expected_hash);
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+        bytes_view(std::begin(hash.bytes), std::size(hash.bytes)));
 }
 
 TEST_F(evm, revert)
@@ -1035,7 +1043,11 @@ TEST_F(evm, extcodecopy_memory_cost)
 
 TEST_F(evm, extcodecopy_nonzero_index)
 {
+    auto addr = evmc_address{};
+    addr.bytes[19] = 0xa;
     auto index = 15;
+
+    auto& extcode = accounts[addr].code;
     extcode.assign(16, 0x00);
     extcode[index] = 0xc0;
     auto code = push(2) + push(index) + push(0) + push(0xa) + OP_EXTCODECOPY + ret(0, 2);
@@ -1051,6 +1063,10 @@ TEST_F(evm, extcodecopy_nonzero_index)
 
 TEST_F(evm, extcodecopy_fill_tail)
 {
+    auto addr = evmc_address{};
+    addr.bytes[19] = 0xa;
+
+    auto& extcode = accounts[addr].code;
     extcode = {0xff, 0xfe};
     extcode.resize(1);
     auto code = push(2) + push(0) + push(0) + push(0xa) + OP_EXTCODECOPY + ret(0, 2);

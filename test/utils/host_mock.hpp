@@ -43,8 +43,6 @@ public:
 
     evmc_bytes32 blockhash = {};
 
-    bytes extcode = {};
-
     evmc_result call_result = {};
 
     std::vector<evmc_address> recorded_account_accesses;
@@ -109,7 +107,7 @@ private:
     {
         recorded_account_accesses.emplace_back(addr);
         const auto it = accounts.find(addr);
-        if (it == accounts.end())  // Report that the account does not exist.
+        if (it == accounts.end())
             return {};
 
         return it->second.balance;
@@ -118,24 +116,33 @@ private:
     size_t get_code_size(const evmc_address& addr) noexcept override
     {
         recorded_account_accesses.emplace_back(addr);
-        return extcode.size();
+        const auto it = accounts.find(addr);
+        if (it == accounts.end())
+            return 0;
+        return it->second.code.size();
     }
 
     evmc_bytes32 get_code_hash(const evmc_address& addr) noexcept override
     {
         recorded_account_accesses.emplace_back(addr);
-        auto hash = evmc_bytes32{};
-        std::fill(std::begin(hash.bytes), std::end(hash.bytes), uint8_t{0xee});
-        return hash;
+        const auto it = accounts.find(addr);
+        if (it == accounts.end())
+            return {};
+        return it->second.codehash;
     }
 
     size_t copy_code(const evmc_address& addr, size_t code_offset, uint8_t* buffer_data,
         size_t buffer_size) noexcept override
     {
         recorded_account_accesses.emplace_back(addr);
-        const auto n = std::min(buffer_size, extcode.size());
+        const auto it = accounts.find(addr);
+        if (it == accounts.end())
+            return 0;
+
+        const auto& code = it->second.code;
+        const auto n = std::min(buffer_size, code.size());
         if (n > 0)
-            std::copy_n(&extcode[code_offset], buffer_size, buffer_data);
+            std::copy_n(&code[code_offset], buffer_size, buffer_data);
         return n;
     }
 
