@@ -811,6 +811,7 @@ TEST_F(evm, blockhash)
     EXPECT_EQ(gas_used, 38);
     ASSERT_EQ(result.output_size, 32);
     EXPECT_EQ(result.output_data[13], 0);
+    EXPECT_EQ(recorded_blockhashes.size(), 0);
 
     tx_context.block_number = 257;
     execute(code);
@@ -818,6 +819,7 @@ TEST_F(evm, blockhash)
     EXPECT_EQ(gas_used, 38);
     ASSERT_EQ(result.output_size, 32);
     EXPECT_EQ(result.output_data[13], 0);
+    EXPECT_EQ(recorded_blockhashes.size(), 0);
 
     tx_context.block_number = 256;
     execute(code);
@@ -825,6 +827,8 @@ TEST_F(evm, blockhash)
     EXPECT_EQ(gas_used, 38);
     ASSERT_EQ(result.output_size, 32);
     EXPECT_EQ(result.output_data[13], 0x13);
+    ASSERT_EQ(recorded_blockhashes.size(), 1);
+    EXPECT_EQ(recorded_blockhashes.back(), 0);
 }
 
 TEST_F(evm, extcode)

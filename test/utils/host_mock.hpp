@@ -42,6 +42,8 @@ public:
 
     evmc_result call_result = {};
 
+    std::vector<int64_t> recorded_blockhashes;
+
     std::vector<evmc_address> recorded_account_accesses;
 
     std::vector<evmc_message> recorded_calls;
@@ -170,7 +172,11 @@ private:
 
     evmc_tx_context get_tx_context() noexcept override { return tx_context; }
 
-    evmc_bytes32 get_block_hash(int64_t) noexcept override { return blockhash; }
+    evmc_bytes32 get_block_hash(int64_t block_number) noexcept override
+    {
+        recorded_blockhashes.emplace_back(block_number);
+        return blockhash;
+    }
 
     void emit_log(const evmc_address& addr, const uint8_t* data, size_t data_size,
         const evmc_bytes32 topics[], size_t topics_count) noexcept override
