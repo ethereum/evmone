@@ -644,15 +644,17 @@ TEST_F(evm, tx_context)
 
 TEST_F(evm, balance)
 {
-    std::string s;
-    s += "3031";        // ADDRESS BALANCE
-    s += "600053";      // m[0]
-    s += "60016000f3";  // RETURN(0,1)
-    balance = 7;
-    execute(417, s);
-    EXPECT_EQ(gas_used, 417);
-    ASSERT_EQ(result.output_size, 1);
-    EXPECT_EQ(result.output_data[0], 7);
+    balance = 0x0504030201;
+    auto code = bytecode{} + OP_ADDRESS + OP_BALANCE + mstore(0) + ret(32 - 6, 6);
+    execute(417, code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 417);
+    ASSERT_EQ(result.output_size, 6);
+    EXPECT_EQ(result.output_data[0], 0);
+    EXPECT_EQ(result.output_data[1], 0x05);
+    EXPECT_EQ(result.output_data[2], 0x04);
+    EXPECT_EQ(result.output_data[3], 0x03);
+    EXPECT_EQ(result.output_data[4], 0x02);
+    EXPECT_EQ(result.output_data[5], 0x01);
 }
 
 TEST_F(evm, undefined)
