@@ -26,6 +26,8 @@ TEST_F(evm, delegatecall)
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
 
     auto gas_left = 1700 - 736;
+    ASSERT_EQ(recorded_calls.size(), 1);
+    const auto& call_msg = recorded_calls.back();
     EXPECT_EQ(call_msg.gas, gas_left - gas_left / 64);
     EXPECT_EQ(call_msg.input_size, 3);
 
@@ -39,6 +41,8 @@ TEST_F(evm, delegatecall_static)
     // Checks if DELEGATECALL forwards the "static" flag.
     msg.flags = EVMC_STATIC;
     execute("60008080808080f4");
+    ASSERT_EQ(recorded_calls.size(), 1);
+    const auto& call_msg = recorded_calls.back();
     EXPECT_EQ(call_msg.gas, 0);
     EXPECT_EQ(call_msg.flags, EVMC_STATIC);
     EXPECT_EQ(gas_used, 718);
@@ -64,18 +68,23 @@ TEST_F(evm, create)
     key.bytes[31] = 1;
     EXPECT_EQ(account.storage[key].bytes[22], 0xcc);
 
+    ASSERT_EQ(recorded_calls.size(), 1);
+    const auto& call_msg = recorded_calls.back();
     EXPECT_EQ(call_msg.input_size, 0x20);
 }
 
 TEST_F(evm, create_gas)
 {
+    auto c = size_t{0};
     for (auto r : {EVMC_HOMESTEAD, EVMC_TANGERINE_WHISTLE})
     {
+        ++c;
         rev = r;
         execute(50000, "60008080f0");
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         EXPECT_EQ(gas_used, rev == EVMC_HOMESTEAD ? 50000 : 49719) << rev;
-        EXPECT_EQ(call_msg.gas, rev == EVMC_HOMESTEAD ? 17991 : 17710) << rev;
+        ASSERT_EQ(recorded_calls.size(), c);
+        EXPECT_EQ(recorded_calls.back().gas, rev == EVMC_HOMESTEAD ? 17991 : 17710) << rev;
     }
 }
 
@@ -95,6 +104,9 @@ TEST_F(evm, create2)
     EXPECT_EQ(gas_used, 115817);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
 
+
+    ASSERT_EQ(recorded_calls.size(), 1);
+    const auto& call_msg = recorded_calls.back();
     EXPECT_EQ(call_msg.create2_salt.bytes[31], 0x5a);
     EXPECT_EQ(call_msg.gas, 263775);
     EXPECT_EQ(call_msg.kind, EVMC_CREATE2);
@@ -111,34 +123,30 @@ TEST_F(evm, create2_salt_cost)
     rev = EVMC_CONSTANTINOPLE;
     auto code = "600060208180f5";
 
-    call_msg.kind = EVMC_CALL;
-    call_msg.depth = -1;
+
     execute(32021, code);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 0);
-    EXPECT_EQ(call_msg.kind, EVMC_CREATE2);
-    EXPECT_EQ(call_msg.depth, 1);
+    ASSERT_EQ(recorded_calls.size(), 1);
+    EXPECT_EQ(recorded_calls.back().kind, EVMC_CREATE2);
+    EXPECT_EQ(recorded_calls.back().depth, 1);
 
-    call_msg.kind = EVMC_CALL;
-    call_msg.depth = -1;
     execute(32021 - 1, code);
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
     EXPECT_EQ(result.gas_left, 0);
-    EXPECT_EQ(call_msg.kind, EVMC_CALL);
-    EXPECT_EQ(call_msg.depth, -1);
+    EXPECT_EQ(recorded_calls.size(), 1);  // No another CREATE2.
 }
 
 TEST_F(evm, create_balance_too_low)
 {
     rev = EVMC_CONSTANTINOPLE;
     accounts[{}].set_balance(1);
-    call_msg.kind = EVMC_CALL;
     for (auto op : {OP_CREATE, OP_CREATE2})
     {
         execute(push(2) + (3 * OP_DUP1) + hex(op) + ret_top());
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         EXPECT_EQ(std::count(result.output_data, result.output_data + result.output_size, 0), 32);
-        EXPECT_EQ(call_msg.kind, EVMC_CALL);
+        EXPECT_EQ(recorded_calls.size(), 0);
     }
 }
 
@@ -147,12 +155,11 @@ TEST_F(evm, create_failure)
     rev = EVMC_CONSTANTINOPLE;
     for (auto op : {OP_CREATE, OP_CREATE2})
     {
-        call_msg.kind = EVMC_CALL;
-        call_result.status_code = EVMC_FAILURE;
         execute(push(0) + (3 * OP_DUP1) + op + ret_top());
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         EXPECT_EQ(std::count(result.output_data, result.output_data + result.output_size, 0), 32);
-        EXPECT_EQ(call_msg.kind, op == OP_CREATE ? EVMC_CREATE : EVMC_CREATE2);
+        ASSERT_GT(recorded_calls.size(), 0);
+        EXPECT_EQ(recorded_calls.back().kind, op == OP_CREATE ? EVMC_CREATE : EVMC_CREATE2);
     }
 }
 
@@ -160,22 +167,19 @@ TEST_F(evm, call_failing_with_value)
 {
     auto code = "60ff600060ff6000600160aa618000f150";
 
-    call_msg.kind = EVMC_CREATE;
-
     execute(40000, code);
     EXPECT_GAS_USED(EVMC_SUCCESS, 32447);
-    EXPECT_EQ(call_msg.kind, EVMC_CREATE);  // There was no call().
+    EXPECT_EQ(recorded_calls.size(), 0);  // There was no call().
 
     execute(0x8000, code);
     EXPECT_STATUS(EVMC_OUT_OF_GAS);
-    EXPECT_EQ(call_msg.kind, EVMC_CREATE);  // There was no call().
+    EXPECT_EQ(recorded_calls.size(), 0);  // There was no call().
 }
 
 TEST_F(evm, call_with_value)
 {
     auto code = "60ff600060ff6000600160aa618000f150";
 
-    call_msg.kind = EVMC_CREATE;
     accounts[{}].set_balance(1);
     auto call_dst = evmc_address{};
     call_dst.bytes[19] = 0xaa;
@@ -185,6 +189,8 @@ TEST_F(evm, call_with_value)
     execute(40000, code);
     EXPECT_EQ(gas_used, 7447 + 32082);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    ASSERT_EQ(recorded_calls.size(), 1);
+    const auto& call_msg = recorded_calls.back();
     EXPECT_EQ(call_msg.kind, EVMC_CALL);
     EXPECT_EQ(call_msg.depth, 1);
     EXPECT_EQ(call_msg.gas, 32083);
@@ -198,12 +204,10 @@ TEST_F(evm, call_with_value_depth_limit)
     accounts[call_dst] = {};
 
     msg.depth = 1024;
-    call_msg.kind = EVMC_CREATE2;
     execute("60ff600060ff6000600160aa618000f150");
     EXPECT_EQ(gas_used, 7447);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    EXPECT_EQ(call_msg.kind, EVMC_CREATE2);
-    EXPECT_EQ(call_msg.depth, 0);
+    EXPECT_EQ(recorded_calls.size(), 0);
 }
 
 TEST_F(evm, call_depth_limit)
@@ -212,14 +216,12 @@ TEST_F(evm, call_depth_limit)
     msg.depth = 1024;
 
     auto code = push(0) + 6 * OP_DUP1;
-    auto mark = 0xffe;
 
     for (auto op : {OP_CALL, OP_CALLCODE, OP_DELEGATECALL, OP_STATICCALL, OP_CREATE, OP_CREATE2})
     {
-        call_msg.depth = mark;
         execute(code + hex(op));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-        EXPECT_EQ(call_msg.depth, mark);
+        EXPECT_EQ(recorded_calls.size(), 0);
     }
 }
 
@@ -284,6 +286,7 @@ TEST_F(evm, call_new_account_create)
     execute(9000, code);
     EXPECT_EQ(gas_used, 729 + 5000);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    const auto& call_msg = recorded_calls.back();
     EXPECT_EQ(call_msg.kind, EVMC_CALL);
     EXPECT_EQ(call_msg.depth, 1);
     EXPECT_EQ(call_msg.gas, 6000);
@@ -298,6 +301,7 @@ TEST_F(evm, callcode_new_account_create)
     execute(100000, code);
     EXPECT_EQ(gas_used, 59722);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    const auto& call_msg = recorded_calls.back();
     EXPECT_EQ(call_msg.kind, EVMC_CALLCODE);
     EXPECT_EQ(call_msg.depth, 1);
     EXPECT_EQ(call_msg.gas, 52300);
@@ -313,6 +317,7 @@ TEST_F(evm, call_then_oog)
     call_result.gas_left = 0;
     execute(1000, "6040600060406000600060aa60fef180018001800150");
     EXPECT_EQ(gas_used, 1000);
+    const auto& call_msg = recorded_calls.back();
     EXPECT_EQ(call_msg.gas, 254);
     EXPECT_EQ(result.gas_left, 0);
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
@@ -328,6 +333,7 @@ TEST_F(evm, delegatecall_then_oog)
     call_result.gas_left = 0;
     execute(1000, "604060006040600060aa60fef4800180018001800150");
     EXPECT_EQ(gas_used, 1000);
+    const auto& call_msg = recorded_calls.back();
     EXPECT_EQ(call_msg.gas, 254);
     EXPECT_EQ(result.gas_left, 0);
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
@@ -343,6 +349,7 @@ TEST_F(evm, staticcall_then_oog)
     call_result.gas_left = 0;
     execute(1000, "604060006040600060aa60fefa800180018001800150");
     EXPECT_EQ(gas_used, 1000);
+    const auto& call_msg = recorded_calls.back();
     EXPECT_EQ(call_msg.gas, 254);
     EXPECT_EQ(result.gas_left, 0);
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);

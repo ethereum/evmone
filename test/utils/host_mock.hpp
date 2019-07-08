@@ -45,10 +45,11 @@ public:
 
     bytes extcode = {};
 
-    evmc_message call_msg = {};  ///< Recorded call message.
     evmc_result call_result = {};
 
     std::vector<evmc_address> recorded_account_accesses;
+
+    std::vector<evmc_message> recorded_calls;
 
     struct selfdestuct_record
     {
@@ -144,7 +145,7 @@ public:
     evmc::result call(const evmc_message& msg) noexcept override
     {
         recorded_account_accesses.emplace_back(msg.destination);
-        call_msg = msg;
+        recorded_calls.emplace_back(msg);  // FIXME: Copy input.
         return evmc::result{call_result};
     }
 
