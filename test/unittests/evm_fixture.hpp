@@ -7,6 +7,7 @@
 
 #include <gtest/gtest.h>
 #include <test/utils/host_mock.hpp>
+#include <test/utils/utils.hpp>
 
 #define EXPECT_STATUS(STATUS_CODE)                                           \
     EXPECT_EQ(result.status_code, STATUS_CODE);                              \

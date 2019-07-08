@@ -5,9 +5,11 @@
 
 #include <evmc/evmc.hpp>
 #include <evmc/helpers.hpp>
-#include <test/utils/utils.hpp>
+#include <string>
 #include <unordered_map>
 #include <vector>
+
+using bytes = std::basic_string<uint8_t>;
 
 struct MockedAccount
 {
