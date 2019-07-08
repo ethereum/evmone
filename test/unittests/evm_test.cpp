@@ -841,7 +841,9 @@ TEST_F(evm, extcode)
     ASSERT_EQ(result.output_size, 4);
     EXPECT_EQ(bytes_view(result.output_data, 3), bytes_view(extcode.data(), 3));
     EXPECT_EQ(result.output_data[3], 0);
-    EXPECT_EQ(last_accessed_account.bytes[19], 0xfe);
+    ASSERT_EQ(recorded_account_accesses.size(), 2);
+    EXPECT_EQ(recorded_account_accesses[0].bytes[19], 0xfe);
+    EXPECT_EQ(recorded_account_accesses[1].bytes[19], 0xfe);
 }
 
 TEST_F(evm, extcodehash)
@@ -1043,7 +1045,8 @@ TEST_F(evm, extcodecopy_nonzero_index)
     ASSERT_EQ(result.output_size, 2);
     EXPECT_EQ(result.output_data[0], 0xc0);
     EXPECT_EQ(result.output_data[1], 0);
-    EXPECT_EQ(last_accessed_account.bytes[19], 0xa);
+    ASSERT_EQ(recorded_account_accesses.size(), 1);
+    EXPECT_EQ(recorded_account_accesses.back().bytes[19], 0xa);
 }
 
 TEST_F(evm, extcodecopy_fill_tail)
@@ -1052,7 +1055,8 @@ TEST_F(evm, extcodecopy_fill_tail)
     extcode.resize(1);
     auto code = push(2) + push(0) + push(0) + push(0xa) + OP_EXTCODECOPY + ret(0, 2);
     execute(code);
-    EXPECT_EQ(last_accessed_account.bytes[19], 0xa);
+    ASSERT_EQ(recorded_account_accesses.size(), 1);
+    EXPECT_EQ(recorded_account_accesses.back().bytes[19], 0xa);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     ASSERT_EQ(result.output_size, 2);
     EXPECT_EQ(result.output_data[0], 0xff);
