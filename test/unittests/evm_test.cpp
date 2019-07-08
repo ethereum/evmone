@@ -518,11 +518,8 @@ TEST_F(evm, code)
 
 TEST_F(evm, storage)
 {
-    std::string s;
-    s += "60ff60ee55";    // CODESIZE 2 0 CODECOPY
-    s += "60ee54600053";  // m[0] = ff
-    s += "60016000f3";    // RETURN(0,1)
-    execute(100000, s);
+    const auto code = sstore(0xee, 0xff) + sload(0xee) + mstore8(0) + ret(0, 1);
+    execute(100000, code);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 99776 - 20000);
     ASSERT_EQ(result.output_size, 1);
