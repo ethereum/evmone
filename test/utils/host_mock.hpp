@@ -41,8 +41,6 @@ public:
     bytes log_data;
     std::vector<evmc_bytes32> log_topics;
 
-    evmc_address selfdestruct_beneficiary = {};
-
     evmc_bytes32 blockhash = {};
 
     bool exists = false;
@@ -50,6 +48,16 @@ public:
 
     evmc_message call_msg = {};  ///< Recorded call message.
     evmc_result call_result = {};
+
+
+    struct selfdestuct_record
+    {
+        evmc_address address;
+        evmc_address beneficiary;
+    };
+
+    /// The list of recorded selfdestruct events.
+    std::vector<selfdestuct_record> recorded_selfdestructs;
 
     bool account_exists(const evmc_address& addr) noexcept override
     {
@@ -125,9 +133,9 @@ public:
         return n;
     }
 
-    void selfdestruct(const evmc_address&, const evmc_address& beneficiary) noexcept override
+    void selfdestruct(const evmc_address& addr, const evmc_address& beneficiary) noexcept override
     {
-        selfdestruct_beneficiary = beneficiary;
+        recorded_selfdestructs.push_back({addr, beneficiary});
     }
 
     evmc::result call(const evmc_message& msg) noexcept override
