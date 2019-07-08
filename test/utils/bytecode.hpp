@@ -159,3 +159,8 @@ inline bytecode sstore(bytecode index, bytecode value)
 {
     return value + index + OP_SSTORE;
 }
+
+inline bytecode sload(bytecode index)
+{
+    return index + OP_SLOAD;
+}

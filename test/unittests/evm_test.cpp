@@ -4,9 +4,12 @@
 
 #include "evm_fixture.hpp"
 #include <evmc/instructions.h>
+#include <intx/intx.hpp>
 #include <test/utils/bytecode.hpp>
 #include <algorithm>
 #include <numeric>
+
+using namespace intx;
 
 TEST_F(evm, empty)
 {
@@ -320,24 +323,27 @@ TEST_F(evm, divmod)
 TEST_F(evm, div_by_zero)
 {
     rev = EVMC_CONSTANTINOPLE;
+    const auto& account = accounts[{}];  // Create account.
+
     auto s = std::string{};
     s += "60008060ff";  // 0 0 ff
     s += "0405600055";  // s[0] = 0
     execute(222, s);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 0);
-    auto it = storage.find({});
-    ASSERT_NE(it, storage.end());
+    auto it = account.storage.find({});
+    ASSERT_NE(it, account.storage.end());
     EXPECT_EQ(it->second, evmc_bytes32{});
 }
 
 TEST_F(evm, mod_by_zero)
 {
+    const auto& account = accounts[{}];  // Create account.
     execute("60008060ff0607600055");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(gas_used, 5022);
-    auto it = storage.find({});
-    ASSERT_NE(it, storage.end());
+    auto it = account.storage.find({});
+    ASSERT_NE(it, account.storage.end());
     EXPECT_EQ(it->second, evmc_bytes32{});
 }
 
@@ -518,11 +524,9 @@ TEST_F(evm, code)
 
 TEST_F(evm, storage)
 {
-    std::string s;
-    s += "60ff60ee55";    // CODESIZE 2 0 CODECOPY
-    s += "60ee54600053";  // m[0] = ff
-    s += "60016000f3";    // RETURN(0,1)
-    execute(100000, s);
+    accounts[msg.destination] = {};
+    const auto code = sstore(0xee, 0xff) + sload(0xee) + mstore8(0) + ret(0, 1);
+    execute(100000, code);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 99776 - 20000);
     ASSERT_EQ(result.output_size, 1);
@@ -531,6 +535,7 @@ TEST_F(evm, storage)
 
 TEST_F(evm, sstore_pop_stack)
 {
+    accounts[msg.destination] = {};
     execute(100000, "60008060015560005360016000f3");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.output_data[0], 0);
@@ -539,14 +544,17 @@ TEST_F(evm, sstore_pop_stack)
 TEST_F(evm, sload_cost_pre_tw)
 {
     rev = EVMC_HOMESTEAD;
+    const auto& account = accounts[msg.destination];
     execute(56, "60008054");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 0);
-    EXPECT_NE(storage.find({}), storage.end());
+    EXPECT_NE(account.storage.find({}), account.storage.end());
 }
 
 TEST_F(evm, sstore_cost)
 {
+    auto& storage = accounts[msg.destination].storage;
+
     auto v1 = evmc_bytes32{};
     v1.bytes[31] = 1;
 
@@ -644,15 +652,17 @@ TEST_F(evm, tx_context)
 
 TEST_F(evm, balance)
 {
-    std::string s;
-    s += "3031";        // ADDRESS BALANCE
-    s += "600053";      // m[0]
-    s += "60016000f3";  // RETURN(0,1)
-    balance = 7;
-    execute(417, s);
-    EXPECT_EQ(gas_used, 417);
-    ASSERT_EQ(result.output_size, 1);
-    EXPECT_EQ(result.output_data[0], 7);
+    accounts[msg.destination].set_balance(0x0504030201);
+    auto code = bytecode{} + OP_ADDRESS + OP_BALANCE + mstore(0) + ret(32 - 6, 6);
+    execute(417, code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 417);
+    ASSERT_EQ(result.output_size, 6);
+    EXPECT_EQ(result.output_data[0], 0);
+    EXPECT_EQ(result.output_data[1], 0x05);
+    EXPECT_EQ(result.output_data[2], 0x04);
+    EXPECT_EQ(result.output_data[3], 0x03);
+    EXPECT_EQ(result.output_data[4], 0x02);
+    EXPECT_EQ(result.output_data[5], 0x01);
 }
 
 TEST_F(evm, undefined)
@@ -678,25 +688,25 @@ TEST_F(evm, log)
             push(1) + push(2) + push(3) + push(4) + mstore8(2, 0x77) + push(2) + push(2) + op;
         execute(code);
         EXPECT_GAS_USED(EVMC_SUCCESS, 421 + n * 375);
-        ASSERT_EQ(log_data.size(), 2);
-        EXPECT_EQ(log_data[0], 0x77);
-        EXPECT_EQ(log_data[1], 0);
-        ASSERT_EQ(log_topics.size(), n);
+        const auto& last_log = recorded_logs.back();
+        ASSERT_EQ(last_log.data.size(), 2);
+        EXPECT_EQ(last_log.data[0], 0x77);
+        EXPECT_EQ(last_log.data[1], 0);
+        ASSERT_EQ(last_log.topics.size(), n);
         for (int i = 0; i < n; ++i)
         {
-            EXPECT_EQ(log_topics[i].bytes[31], 4 - i);
+            EXPECT_EQ(last_log.topics[i].bytes[31], 4 - i);
         }
     }
 }
 
 TEST_F(evm, log0_empty)
 {
-    log_data.resize(1);
-    log_topics.resize(1);
     auto code = push(0) + OP_DUP1 + OP_LOG0;
     execute(code);
-    EXPECT_EQ(log_topics.size(), 0);
-    EXPECT_EQ(log_data.size(), 0);
+    const auto& last_log = recorded_logs.back();
+    EXPECT_EQ(last_log.topics.size(), 0);
+    EXPECT_EQ(last_log.data.size(), 0);
 }
 
 TEST_F(evm, log_data_cost)
@@ -720,26 +730,29 @@ TEST_F(evm, selfdestruct)
     execute("6009ff");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(gas_used, 5003);
-    EXPECT_EQ(selfdestruct_beneficiary.bytes[19], 9);
+    ASSERT_EQ(recorded_selfdestructs.size(), 1);
+    EXPECT_EQ(recorded_selfdestructs.back().beneficiary.bytes[19], 9);
 
     rev = EVMC_HOMESTEAD;
     execute("6007ff");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(gas_used, 3);
-    EXPECT_EQ(selfdestruct_beneficiary.bytes[19], 7);
+    ASSERT_EQ(recorded_selfdestructs.size(), 2);
+    EXPECT_EQ(recorded_selfdestructs.back().beneficiary.bytes[19], 7);
 
     rev = EVMC_TANGERINE_WHISTLE;
     execute("6008ff");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(gas_used, 30003);
-    EXPECT_EQ(selfdestruct_beneficiary.bytes[19], 8);
+    ASSERT_EQ(recorded_selfdestructs.size(), 3);
+    EXPECT_EQ(recorded_selfdestructs.back().beneficiary.bytes[19], 8);
 }
 
 TEST_F(evm, selfdestruct_with_balance)
 {
     auto code = "6000ff";
-    balance = 1;
-    exists = false;
+    msg.destination.bytes[0] = 1;
+    accounts[msg.destination].set_balance(1);
 
     rev = EVMC_TANGERINE_WHISTLE;
     execute(30003, code);
@@ -755,7 +768,7 @@ TEST_F(evm, selfdestruct_with_balance)
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 0);
 
-    exists = true;
+    accounts[{}] = {};
 
     rev = EVMC_TANGERINE_WHISTLE;
     execute(5003, code);
@@ -798,6 +811,7 @@ TEST_F(evm, blockhash)
     EXPECT_EQ(gas_used, 38);
     ASSERT_EQ(result.output_size, 32);
     EXPECT_EQ(result.output_data[13], 0);
+    EXPECT_EQ(recorded_blockhashes.size(), 0);
 
     tx_context.block_number = 257;
     execute(code);
@@ -805,6 +819,7 @@ TEST_F(evm, blockhash)
     EXPECT_EQ(gas_used, 38);
     ASSERT_EQ(result.output_size, 32);
     EXPECT_EQ(result.output_data[13], 0);
+    EXPECT_EQ(recorded_blockhashes.size(), 0);
 
     tx_context.block_number = 256;
     execute(code);
@@ -812,11 +827,17 @@ TEST_F(evm, blockhash)
     EXPECT_EQ(gas_used, 38);
     ASSERT_EQ(result.output_size, 32);
     EXPECT_EQ(result.output_data[13], 0x13);
+    ASSERT_EQ(recorded_blockhashes.size(), 1);
+    EXPECT_EQ(recorded_blockhashes.back(), 0);
 }
 
 TEST_F(evm, extcode)
 {
-    extcode = {'a', 'b', 'c', 'd'};
+    auto addr = evmc_address{};
+    std::fill(std::begin(addr.bytes), std::end(addr.bytes), uint8_t{0xff});
+    addr.bytes[19] -= 1;
+
+    accounts[addr].code = {'a', 'b', 'c', 'd'};
 
     auto code = std::string{};
     code += "6002600003803b60019003";  // S = EXTCODESIZE(-2) - 1
@@ -826,13 +847,18 @@ TEST_F(evm, extcode)
     execute(code);
     EXPECT_EQ(gas_used, 1445);
     ASSERT_EQ(result.output_size, 4);
-    EXPECT_EQ(bytes_view(result.output_data, 3), bytes_view(extcode.data(), 3));
+    EXPECT_EQ(bytes_view(result.output_data, 3), bytes_view(accounts[addr].code.data(), 3));
     EXPECT_EQ(result.output_data[3], 0);
-    EXPECT_EQ(last_accessed_account.bytes[19], 0xfe);
+    ASSERT_EQ(recorded_account_accesses.size(), 2);
+    EXPECT_EQ(recorded_account_accesses[0].bytes[19], 0xfe);
+    EXPECT_EQ(recorded_account_accesses[1].bytes[19], 0xfe);
 }
 
 TEST_F(evm, extcodehash)
 {
+    auto& hash = accounts[{}].codehash;
+    std::fill(std::begin(hash.bytes), std::end(hash.bytes), uint8_t{0xee});
+
     auto code = "60003f60005260206000f3";
 
     rev = EVMC_BYZANTIUM;
@@ -844,7 +870,8 @@ TEST_F(evm, extcodehash)
     EXPECT_EQ(gas_used, 418);
     ASSERT_EQ(result.output_size, 32);
     auto expected_hash = bytes(32, 0xee);
-    EXPECT_EQ(bytes_view(result.output_data, result.output_size), expected_hash);
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+        bytes_view(std::begin(hash.bytes), std::size(hash.bytes)));
 }
 
 TEST_F(evm, revert)
@@ -1020,7 +1047,11 @@ TEST_F(evm, extcodecopy_memory_cost)
 
 TEST_F(evm, extcodecopy_nonzero_index)
 {
+    auto addr = evmc_address{};
+    addr.bytes[19] = 0xa;
     auto index = 15;
+
+    auto& extcode = accounts[addr].code;
     extcode.assign(16, 0x00);
     extcode[index] = 0xc0;
     auto code = push(2) + push(index) + push(0) + push(0xa) + OP_EXTCODECOPY + ret(0, 2);
@@ -1030,16 +1061,22 @@ TEST_F(evm, extcodecopy_nonzero_index)
     ASSERT_EQ(result.output_size, 2);
     EXPECT_EQ(result.output_data[0], 0xc0);
     EXPECT_EQ(result.output_data[1], 0);
-    EXPECT_EQ(last_accessed_account.bytes[19], 0xa);
+    ASSERT_EQ(recorded_account_accesses.size(), 1);
+    EXPECT_EQ(recorded_account_accesses.back().bytes[19], 0xa);
 }
 
 TEST_F(evm, extcodecopy_fill_tail)
 {
+    auto addr = evmc_address{};
+    addr.bytes[19] = 0xa;
+
+    auto& extcode = accounts[addr].code;
     extcode = {0xff, 0xfe};
     extcode.resize(1);
     auto code = push(2) + push(0) + push(0) + push(0xa) + OP_EXTCODECOPY + ret(0, 2);
     execute(code);
-    EXPECT_EQ(last_accessed_account.bytes[19], 0xa);
+    ASSERT_EQ(recorded_account_accesses.size(), 1);
+    EXPECT_EQ(recorded_account_accesses.back().bytes[19], 0xa);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     ASSERT_EQ(result.output_size, 2);
     EXPECT_EQ(result.output_data[0], 0xff);
