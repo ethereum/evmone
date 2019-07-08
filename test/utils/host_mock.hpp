@@ -38,9 +38,6 @@ public:
 
     evmc_tx_context tx_context = {};
 
-    bytes log_data;
-    std::vector<evmc_bytes32> log_topics;
-
     evmc_bytes32 blockhash = {};
 
     evmc_result call_result = {};
@@ -54,9 +51,15 @@ public:
         evmc_address address;
         evmc_address beneficiary;
     };
-
-    /// The list of recorded selfdestruct events.
     std::vector<selfdestuct_record> recorded_selfdestructs;
+
+    struct log_record
+    {
+        evmc_address address;
+        bytes data;
+        std::vector<evmc_bytes32> topics;
+    };
+    std::vector<log_record> recorded_logs;
 
 private:
     bytes m_recorded_calls_input_storage;
@@ -172,10 +175,9 @@ private:
     void emit_log(const evmc_address& addr, const uint8_t* data, size_t data_size,
         const evmc_bytes32 topics[], size_t topics_count) noexcept override
     {
-        recorded_account_accesses.emplace_back(addr);
-        log_data.assign(data, data_size);
-        log_topics.clear();
-        log_topics.reserve(topics_count);
-        std::copy_n(topics, topics_count, std::back_inserter(log_topics));
+        recorded_logs.push_back({addr, {data, data_size}, {}});
+        auto& record_topics = recorded_logs.back().topics;
+        record_topics.reserve(topics_count);
+        std::copy_n(topics, topics_count, std::back_inserter(record_topics));
     }
 };

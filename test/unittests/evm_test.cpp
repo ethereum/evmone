@@ -688,25 +688,25 @@ TEST_F(evm, log)
             push(1) + push(2) + push(3) + push(4) + mstore8(2, 0x77) + push(2) + push(2) + op;
         execute(code);
         EXPECT_GAS_USED(EVMC_SUCCESS, 421 + n * 375);
-        ASSERT_EQ(log_data.size(), 2);
-        EXPECT_EQ(log_data[0], 0x77);
-        EXPECT_EQ(log_data[1], 0);
-        ASSERT_EQ(log_topics.size(), n);
+        const auto& last_log = recorded_logs.back();
+        ASSERT_EQ(last_log.data.size(), 2);
+        EXPECT_EQ(last_log.data[0], 0x77);
+        EXPECT_EQ(last_log.data[1], 0);
+        ASSERT_EQ(last_log.topics.size(), n);
         for (int i = 0; i < n; ++i)
         {
-            EXPECT_EQ(log_topics[i].bytes[31], 4 - i);
+            EXPECT_EQ(last_log.topics[i].bytes[31], 4 - i);
         }
     }
 }
 
 TEST_F(evm, log0_empty)
 {
-    log_data.resize(1);
-    log_topics.resize(1);
     auto code = push(0) + OP_DUP1 + OP_LOG0;
     execute(code);
-    EXPECT_EQ(log_topics.size(), 0);
-    EXPECT_EQ(log_data.size(), 0);
+    const auto& last_log = recorded_logs.back();
+    EXPECT_EQ(last_log.topics.size(), 0);
+    EXPECT_EQ(last_log.data.size(), 0);
 }
 
 TEST_F(evm, log_data_cost)
