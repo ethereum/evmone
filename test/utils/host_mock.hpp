@@ -45,7 +45,6 @@ public:
 
     evmc_bytes32 blockhash = {};
 
-    bool exists = false;
     bytes extcode = {};
 
     evmc_message call_msg = {};  ///< Recorded call message.
@@ -64,7 +63,7 @@ public:
     bool account_exists(const evmc_address& addr) noexcept override
     {
         last_accessed_account = addr;
-        return exists;
+        return accounts.count(addr);
     }
 
     evmc_bytes32 get_storage(const evmc_address& addr, const evmc_bytes32& key) noexcept override

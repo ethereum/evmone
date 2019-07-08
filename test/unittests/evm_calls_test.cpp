@@ -176,8 +176,10 @@ TEST_F(evm, call_with_value)
     auto code = "60ff600060ff6000600160aa618000f150";
 
     call_msg.kind = EVMC_CREATE;
-    exists = true;
     accounts[{}].set_balance(1);
+    auto call_dst = evmc_address{};
+    call_dst.bytes[19] = 0xaa;
+    accounts[call_dst] = {};
     call_result.gas_left = 1;
 
     execute(40000, code);
@@ -186,11 +188,15 @@ TEST_F(evm, call_with_value)
     EXPECT_EQ(call_msg.kind, EVMC_CALL);
     EXPECT_EQ(call_msg.depth, 1);
     EXPECT_EQ(call_msg.gas, 32083);
+    EXPECT_EQ(call_msg.destination, call_dst);
 }
 
 TEST_F(evm, call_with_value_depth_limit)
 {
-    exists = true;
+    auto call_dst = evmc_address{};
+    call_dst.bytes[19] = 0xaa;
+    accounts[call_dst] = {};
+
     msg.depth = 1024;
     call_msg.kind = EVMC_CREATE2;
     execute("60ff600060ff6000600160aa618000f150");
@@ -223,7 +229,6 @@ TEST_F(evm, call_output)
     static uint8_t output[] = {0xa, 0xb};
 
     accounts[{}].set_balance(1);
-    exists = true;
     call_result.output_data = output;
     call_result.output_size = sizeof(output);
     call_result.release = [](const evmc_result* r) {
@@ -260,7 +265,10 @@ TEST_F(evm, call_output)
 TEST_F(evm, call_high_gas)
 {
     rev = EVMC_HOMESTEAD;
-    exists = true;
+    auto call_dst = evmc_address{};
+    call_dst.bytes[19] = 0xaa;
+    accounts[call_dst] = {};
+
     for (auto call_opcode : {"f1", "f2", "f4"})
     {
         execute(5000, 5 * push(0) + push(0xaa) + push(0x134c) + call_opcode);
@@ -298,7 +306,9 @@ TEST_F(evm, callcode_new_account_create)
 TEST_F(evm, call_then_oog)
 {
     // Performs a CALL then OOG in the same code block.
-    exists = true;
+    auto call_dst = evmc_address{};
+    call_dst.bytes[19] = 0xaa;
+    accounts[call_dst] = {};
     call_result.status_code = EVMC_FAILURE;
     call_result.gas_left = 0;
     execute(1000, "6040600060406000600060aa60fef180018001800150");
@@ -311,7 +321,9 @@ TEST_F(evm, call_then_oog)
 TEST_F(evm, delegatecall_then_oog)
 {
     // Performs a CALL then OOG in the same code block.
-    exists = true;
+    auto call_dst = evmc_address{};
+    call_dst.bytes[19] = 0xaa;
+    accounts[call_dst] = {};
     call_result.status_code = EVMC_FAILURE;
     call_result.gas_left = 0;
     execute(1000, "604060006040600060aa60fef4800180018001800150");
@@ -323,8 +335,10 @@ TEST_F(evm, delegatecall_then_oog)
 
 TEST_F(evm, staticcall_then_oog)
 {
-    // Performs a CALL then OOG in the same code block.
-    exists = true;
+    // Performs a STATICCALL then OOG in the same code block.
+    auto call_dst = evmc_address{};
+    call_dst.bytes[19] = 0xaa;
+    accounts[call_dst] = {};
     call_result.status_code = EVMC_FAILURE;
     call_result.gas_left = 0;
     execute(1000, "604060006040600060aa60fefa800180018001800150");
@@ -336,7 +350,7 @@ TEST_F(evm, staticcall_then_oog)
 
 TEST_F(evm, call_with_value_low_gas)
 {
-    exists = true;
+    accounts[{}] = {};
     for (auto call_op : {OP_CALL, OP_CALLCODE})
     {
         auto code = 4 * push(0) + push(1) + 2 * push(0) + call_op + OP_POP;

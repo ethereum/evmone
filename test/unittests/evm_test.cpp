@@ -751,8 +751,8 @@ TEST_F(evm, selfdestruct)
 TEST_F(evm, selfdestruct_with_balance)
 {
     auto code = "6000ff";
+    msg.destination.bytes[0] = 1;
     accounts[msg.destination].set_balance(1);
-    exists = false;
 
     rev = EVMC_TANGERINE_WHISTLE;
     execute(30003, code);
@@ -768,7 +768,7 @@ TEST_F(evm, selfdestruct_with_balance)
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 0);
 
-    exists = true;
+    accounts[{}] = {};
 
     rev = EVMC_TANGERINE_WHISTLE;
     execute(5003, code);
