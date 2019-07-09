@@ -145,9 +145,14 @@ private:
             return 0;
 
         const auto& code = it->second.code;
-        const auto n = std::min(buffer_size, code.size());
+
+        if (code_offset >= code.size())
+            return 0;
+
+        const auto n = std::min(buffer_size, code.size() - code_offset);
+
         if (n > 0)
-            std::copy_n(&code[code_offset], buffer_size, buffer_data);
+            std::copy_n(&code[code_offset], n, buffer_data);
         return n;
     }
 

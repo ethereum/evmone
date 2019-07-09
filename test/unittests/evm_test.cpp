@@ -1114,6 +1114,29 @@ TEST_F(evm, extcodecopy_fill_tail)
     EXPECT_EQ(result.output_data[1], 0);
 }
 
+TEST_F(evm, extcodecopy_buffer_overflow)
+{
+    const auto code = bytecode{} + OP_NUMBER + OP_TIMESTAMP + OP_CALLDATASIZE + OP_ADDRESS +
+                      OP_EXTCODECOPY + ret(OP_CALLDATASIZE, OP_NUMBER);
+
+    accounts[msg.destination].code = code;
+
+    const auto s = static_cast<int>(code.size());
+    const auto values = {0, 1, s - 1, s, s + 1, 5000};
+    for (auto offset : values)
+    {
+        for (auto size : values)
+        {
+            tx_context.block_timestamp = offset;
+            tx_context.block_number = size;
+
+            execute(code);
+            EXPECT_STATUS(EVMC_SUCCESS);
+            EXPECT_EQ(result.output_size, size);
+        }
+    }
+}
+
 struct memory_access_opcode
 {
     evmc_opcode opcode;
