@@ -5,6 +5,7 @@
 
 #include <evmc/evmc.hpp>
 #include <evmc/helpers.hpp>
+#include <deque>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -64,7 +65,7 @@ public:
     std::vector<log_record> recorded_logs;
 
 private:
-    bytes m_recorded_calls_input_storage;
+    std::deque<bytes> m_recorded_calls_inputs;
 
     bool account_exists(const evmc_address& addr) noexcept override
     {
@@ -168,9 +169,9 @@ private:
         auto& call_msg = recorded_calls.emplace_back(msg);
         if (call_msg.input_size > 0)
         {
-            const auto input_copy_start_pos = m_recorded_calls_input_storage.size();
-            m_recorded_calls_input_storage.append(call_msg.input_data, call_msg.input_size);
-            call_msg.input_data = &m_recorded_calls_input_storage[input_copy_start_pos];
+            const auto& input_copy =
+                m_recorded_calls_inputs.emplace_back(call_msg.input_data, call_msg.input_size);
+            call_msg.input_data = input_copy.data();
         }
         return evmc::result{call_result};
     }
