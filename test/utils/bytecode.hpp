@@ -164,3 +164,34 @@ inline bytecode sload(bytecode index)
 {
     return index + OP_SLOAD;
 }
+
+
+inline std::string decode(bytes_view bytecode, evmc_revision rev)
+{
+    auto s = std::string{"bytecode{}"};
+    const auto names = evmc_get_instruction_names_table(rev);
+    for (auto it = bytecode.begin(); it != bytecode.end(); ++it)
+    {
+        const auto opcode = *it;
+        if (const auto name = names[opcode]; name)
+        {
+            s += std::string{" + OP_"} + name;
+
+            if (opcode >= OP_PUSH1 && opcode <= OP_PUSH32)
+            {
+                auto push_data = std::string{};
+                auto push_data_size = opcode - OP_PUSH1 + 1;
+                while (push_data_size-- && ++it != bytecode.end())
+                    push_data += to_hex({&*it, 1});
+                if (!push_data.empty())
+                    s += " + \"" + push_data + '"';
+                if (it == bytecode.end())
+                    break;
+            }
+        }
+        else
+            s += " + \"" + to_hex({&opcode, 1}) + '"';
+    }
+
+    return s;
+}
