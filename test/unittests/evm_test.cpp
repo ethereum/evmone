@@ -1173,7 +1173,8 @@ TEST_F(evm, memory_access)
 
             code += bytecode{t.opcode};
 
-            execute(code);
+            auto const gas = 8796294610952;
+            execute(gas, code);
 
             auto case_descr_str = std::ostringstream{};
             case_descr_str << "offset = 0x" << std::hex << p.index << " size = 0x" << std::hex
