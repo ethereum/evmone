@@ -1126,6 +1126,7 @@ memory_access_opcode memory_access_opcodes[] = {
 
 memory_access_params memory_access_test_cases[] = {
     {0, 0x100000000},
+    {0x80000000, 0x80000000},
     {0x100000000, 0},
     {0x100000000, 1},
     {0x100000000, 0x100000000},
