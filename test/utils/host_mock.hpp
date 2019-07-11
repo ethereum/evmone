@@ -14,10 +14,24 @@ using bytes = std::basic_string<uint8_t>;
 
 struct MockedAccount
 {
+    struct storage_value
+    {
+        evmc_bytes32 value{};
+
+        /// True means this value has been modified already by the current transaction.
+        bool dirty{false};
+
+        storage_value() noexcept = default;
+
+        storage_value(const evmc_bytes32& _value, bool _dirty = false) noexcept  // NOLINT
+          : value{_value}, dirty{_dirty}
+        {}
+    };
+
     bytes code;
     evmc_bytes32 codehash;
     evmc_uint256be balance;
-    std::unordered_map<evmc_bytes32, evmc_bytes32> storage;
+    std::unordered_map<evmc_bytes32, storage_value> storage;
 
     /// Helper method for setting balance by numeric type.
     /// Might not be needed when intx API is improved,
@@ -60,8 +74,6 @@ public:
 
     std::unordered_map<evmc_address, MockedAccount> accounts;
 
-    bool storage_cold = true;
-
     evmc_tx_context tx_context = {};
 
     evmc_bytes32 blockhash = {};
@@ -86,11 +98,13 @@ private:
     evmc_bytes32 get_storage(const evmc_address& addr, const evmc_bytes32& key) noexcept override
     {
         recorded_account_accesses.emplace_back(addr);
-        const auto it = accounts.find(addr);
-        if (it == accounts.end())
+        const auto ait = accounts.find(addr);
+        if (ait == accounts.end())
             return {};
 
-        return it->second.storage[key];
+        if (const auto sit = ait->second.storage.find(key); sit != ait->second.storage.end())
+            return sit->second.value;
+        return {};
     }
 
     evmc_storage_status set_storage(const evmc_address& addr, const evmc_bytes32& key,
@@ -103,19 +117,29 @@ private:
 
         auto& old = it->second.storage[key];
 
-        evmc_storage_status status;
-        if (old == value)
-            status = EVMC_STORAGE_UNCHANGED;
-        else if (is_zero(old))
-            status = EVMC_STORAGE_ADDED;
-        else if (is_zero(value))
-            status = EVMC_STORAGE_DELETED;
-        else if (storage_cold)
-            status = EVMC_STORAGE_MODIFIED;
-        else
-            status = EVMC_STORAGE_MODIFIED_AGAIN;
+        // Follow https://eips.ethereum.org/EIPS/eip-1283 specification.
+        // WARNING! This is not complete implementation as refund is not handled here.
 
-        old = value;
+        if (old.value == value)
+            return EVMC_STORAGE_UNCHANGED;
+
+        evmc_storage_status status;
+        {
+            if (!old.dirty)
+            {
+                old.dirty = true;
+                if (is_zero(old.value))
+                    status = EVMC_STORAGE_ADDED;
+                else if (is_zero(value))
+                    status = EVMC_STORAGE_DELETED;
+                else
+                    status = EVMC_STORAGE_MODIFIED;
+            }
+            else
+                status = EVMC_STORAGE_MODIFIED_AGAIN;
+        }
+
+        old.value = value;
         return status;
     }
 
