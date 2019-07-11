@@ -33,6 +33,31 @@ struct MockedAccount
 class MockedHost : public evmc::Host
 {
 public:
+    struct log_record
+    {
+        evmc_address address;
+        bytes data;
+        std::vector<evmc_bytes32> topics;
+
+        bool operator==(const log_record& other) noexcept
+        {
+            return address == other.address && data == other.data &&
+                   std::equal(
+                       topics.begin(), topics.end(), other.topics.begin(), other.topics.end());
+        }
+    };
+
+    struct selfdestuct_record
+    {
+        evmc_address address;
+        evmc_address beneficiary;
+
+        bool operator==(const selfdestuct_record& other) noexcept
+        {
+            return address == other.address && beneficiary == other.beneficiary;
+        }
+    };
+
     std::unordered_map<evmc_address, MockedAccount> accounts;
 
     bool storage_cold = true;
@@ -44,25 +69,10 @@ public:
     evmc_result call_result = {};
 
     std::vector<int64_t> recorded_blockhashes;
-
     std::vector<evmc_address> recorded_account_accesses;
-
     std::vector<evmc_message> recorded_calls;
-
-    struct selfdestuct_record
-    {
-        evmc_address address;
-        evmc_address beneficiary;
-    };
-    std::vector<selfdestuct_record> recorded_selfdestructs;
-
-    struct log_record
-    {
-        evmc_address address;
-        bytes data;
-        std::vector<evmc_bytes32> topics;
-    };
     std::vector<log_record> recorded_logs;
+    std::vector<selfdestuct_record> recorded_selfdestructs;
 
 private:
     std::deque<bytes> m_recorded_calls_inputs;
