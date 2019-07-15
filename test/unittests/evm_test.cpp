@@ -960,7 +960,7 @@ TEST_F(evm, undefined_instructions)
 
             auto code = latest_metrics[opcode].num_stack_arguments * push(0) + evmc_opcode(opcode);
 
-            execute(30000000, code);
+            execute(code);
             EXPECT_EQ(result.status_code, EVMC_UNDEFINED_INSTRUCTION) << hex(opcode);
         }
     }
