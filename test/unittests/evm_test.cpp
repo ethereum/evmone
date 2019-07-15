@@ -946,18 +946,22 @@ TEST_F(evm, shift_overflow)
 
 TEST_F(evm, undefined_instructions)
 {
+    auto latest_metrics = evmc_get_instruction_metrics_table(EVMC_MAX_REVISION);
+
     for (auto i = 0; i <= EVMC_MAX_REVISION; ++i)
     {
-        auto r = evmc_revision(i);
-        auto names = evmc_get_instruction_names_table(r);
+        rev = evmc_revision(i);
+        auto names = evmc_get_instruction_names_table(rev);
 
         for (uint8_t opcode = 0; opcode <= 0xfe; ++opcode)
         {
             if (names[opcode] != nullptr)
                 continue;
 
-            auto res = vm.execute(*this, r, {}, &opcode, sizeof(opcode));
-            EXPECT_EQ(res.status_code, EVMC_UNDEFINED_INSTRUCTION) << hex(opcode);
+            auto code = latest_metrics[opcode].num_stack_arguments * push(0) + evmc_opcode(opcode);
+
+            execute(30000000, code);
+            EXPECT_EQ(result.status_code, EVMC_UNDEFINED_INSTRUCTION) << hex(opcode);
         }
     }
 }
