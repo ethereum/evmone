@@ -5,7 +5,6 @@
 
 #include <evmc/evmc.hpp>
 #include <evmc/helpers.hpp>
-#include <deque>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -85,12 +84,14 @@ public:
     static constexpr auto max_recorded_account_accesses = 200;
     std::vector<evmc_address> recorded_account_accesses;
 
+    static constexpr auto max_recorded_calls = 100;
     std::vector<evmc_message> recorded_calls;
+
     std::vector<log_record> recorded_logs;
     std::vector<selfdestuct_record> recorded_selfdestructs;
 
 private:
-    std::deque<bytes> m_recorded_calls_inputs;
+    std::vector<bytes> m_recorded_calls_inputs;
 
     void record_account_access(const evmc_address& addr)
     {
@@ -212,12 +213,22 @@ private:
     evmc::result call(const evmc_message& msg) noexcept override
     {
         record_account_access(msg.destination);
-        auto& call_msg = recorded_calls.emplace_back(msg);
-        if (call_msg.input_size > 0)
+
+        if (recorded_calls.empty())
         {
-            const auto& input_copy =
-                m_recorded_calls_inputs.emplace_back(call_msg.input_data, call_msg.input_size);
-            call_msg.input_data = input_copy.data();
+            recorded_calls.reserve(max_recorded_calls);
+            m_recorded_calls_inputs.reserve(max_recorded_calls);  // Iterators will not invalidate.
+        }
+
+        if (recorded_calls.size() < max_recorded_calls)
+        {
+            auto& call_msg = recorded_calls.emplace_back(msg);
+            if (call_msg.input_size > 0)
+            {
+                const auto& input_copy =
+                    m_recorded_calls_inputs.emplace_back(call_msg.input_data, call_msg.input_size);
+                call_msg.input_data = input_copy.data();
+            }
         }
         return evmc::result{call_result};
     }
