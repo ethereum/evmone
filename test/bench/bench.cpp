@@ -3,6 +3,7 @@
 // Licensed under the Apache License, Version 2.0.
 
 #include <evmc/evmc.hpp>
+#include <evmone/analysis.hpp>
 #include <evmone/evmone.h>
 
 #include <benchmark/benchmark.h>
@@ -59,6 +60,21 @@ void execute(State& state, bytes_view code, bytes_view input) noexcept
     state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
 }
 
+constexpr auto fn_table = evmone::exec_fn_table{};
+
+void analyse(State& state, bytes_view code) noexcept
+{
+    auto bytes_analysed = int64_t{0};
+    for (auto _ : state)
+    {
+        auto r = evmone::analyze(fn_table, EVMC_PETERSBURG, code.data(), code.size());
+        DoNotOptimize(r);
+        bytes_analysed += code.size();
+    }
+    state.counters["size"] = Counter(static_cast<double>(code.size()));
+    state.counters["rate"] = Counter(static_cast<double>(bytes_analysed), Counter::kIsRate);
+}
+
 struct benchmark_case
 {
     std::shared_ptr<bytes> code;
@@ -95,7 +111,6 @@ struct benchmark_case
 
 void load_benchmark(fs::path path)
 {
-    auto base = benchmark_case{};
     auto base_name = path.stem().string();
 
     std::ifstream file{path};
@@ -105,7 +120,11 @@ void load_benchmark(fs::path path)
         std::remove_if(code_hex.begin(), code_hex.end(), [](auto x) { return std::isspace(x); }),
         code_hex.end());
 
-    base.code = std::make_shared<bytes>(from_hex(code_hex));
+    auto code = std::make_shared<bytes>(from_hex(code_hex));
+
+    RegisterBenchmark((base_name + "/analysis").c_str(), [code](State& state) {
+        analyse(state, *code);
+    })->Unit(kMicrosecond);
 
     enum class state
     {
@@ -113,6 +132,9 @@ void load_benchmark(fs::path path)
         input,
         expected_output
     };
+
+    auto base = benchmark_case{};
+    base.code = std::move(code);
 
     path.replace_extension(inputs_extension);
     if (!fs::exists(path))
