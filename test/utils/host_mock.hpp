@@ -81,7 +81,10 @@ public:
     evmc_result call_result = {};
 
     std::vector<int64_t> recorded_blockhashes;
+
+    static constexpr auto max_recorded_account_accesses = 200;
     std::vector<evmc_address> recorded_account_accesses;
+
     std::vector<evmc_message> recorded_calls;
     std::vector<log_record> recorded_logs;
     std::vector<selfdestuct_record> recorded_selfdestructs;
@@ -89,15 +92,24 @@ public:
 private:
     std::deque<bytes> m_recorded_calls_inputs;
 
+    void record_account_access(const evmc_address& addr)
+    {
+        if (recorded_account_accesses.empty())
+            recorded_account_accesses.reserve(max_recorded_account_accesses);
+
+        if (recorded_account_accesses.size() < max_recorded_account_accesses)
+            recorded_account_accesses.emplace_back(addr);
+    }
+
     bool account_exists(const evmc_address& addr) noexcept override
     {
-        recorded_account_accesses.emplace_back(addr);
+        record_account_access(addr);
         return accounts.count(addr);
     }
 
     evmc_bytes32 get_storage(const evmc_address& addr, const evmc_bytes32& key) noexcept override
     {
-        recorded_account_accesses.emplace_back(addr);
+        record_account_access(addr);
         const auto ait = accounts.find(addr);
         if (ait == accounts.end())
             return {};
@@ -110,7 +122,7 @@ private:
     evmc_storage_status set_storage(const evmc_address& addr, const evmc_bytes32& key,
         const evmc_bytes32& value) noexcept override
     {
-        recorded_account_accesses.emplace_back(addr);
+        record_account_access(addr);
         const auto it = accounts.find(addr);
         if (it == accounts.end())
             return static_cast<evmc_storage_status>(-1);
@@ -145,7 +157,7 @@ private:
 
     evmc_uint256be get_balance(const evmc_address& addr) noexcept override
     {
-        recorded_account_accesses.emplace_back(addr);
+        record_account_access(addr);
         const auto it = accounts.find(addr);
         if (it == accounts.end())
             return {};
@@ -155,7 +167,7 @@ private:
 
     size_t get_code_size(const evmc_address& addr) noexcept override
     {
-        recorded_account_accesses.emplace_back(addr);
+        record_account_access(addr);
         const auto it = accounts.find(addr);
         if (it == accounts.end())
             return 0;
@@ -164,7 +176,7 @@ private:
 
     evmc_bytes32 get_code_hash(const evmc_address& addr) noexcept override
     {
-        recorded_account_accesses.emplace_back(addr);
+        record_account_access(addr);
         const auto it = accounts.find(addr);
         if (it == accounts.end())
             return {};
@@ -174,7 +186,7 @@ private:
     size_t copy_code(const evmc_address& addr, size_t code_offset, uint8_t* buffer_data,
         size_t buffer_size) noexcept override
     {
-        recorded_account_accesses.emplace_back(addr);
+        record_account_access(addr);
         const auto it = accounts.find(addr);
         if (it == accounts.end())
             return 0;
@@ -193,13 +205,13 @@ private:
 
     void selfdestruct(const evmc_address& addr, const evmc_address& beneficiary) noexcept override
     {
-        recorded_account_accesses.emplace_back(addr);
+        record_account_access(addr);
         recorded_selfdestructs.push_back({addr, beneficiary});
     }
 
     evmc::result call(const evmc_message& msg) noexcept override
     {
-        recorded_account_accesses.emplace_back(msg.destination);
+        record_account_access(msg.destination);
         auto& call_msg = recorded_calls.emplace_back(msg);
         if (call_msg.input_size > 0)
         {
