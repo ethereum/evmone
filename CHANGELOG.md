@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
 
+## [0.2.0] - unreleased
+### Added
+- **evm-test** - the testing tool for EVMC-compatible Ethereum Virtual Machine implementations
+  [#85](https://github.com/ethereum/evmone/pull/85).
+
+
 ## [0.1.0] - 2019-06-19
 ### Added
 - First release of the evmone project.
@@ -13,6 +19,7 @@ and this project adheres to [Semantic Versioning].
 - The [intx 0.2.0](https://github.com/chfast/intx/releases/tag/v0.2.0) library is used for 256-bit precision arithmetic. 
 
 
+[0.2.0]: https://github.com/ethereum/evmone/compare/v0.1.0..master
 [0.1.0]: https://github.com/ethereum/evmone/releases/tag/v0.1.0
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/

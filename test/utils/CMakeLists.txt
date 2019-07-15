@@ -4,11 +4,14 @@
 
 add_library(testutils STATIC
     bytecode.hpp
-    dump.cpp
     host_mock.hpp
     utils.cpp
     utils.hpp
 )
 
-target_link_libraries(testutils PRIVATE evmone evmc::instructions)
-target_include_directories(testutils PUBLIC ${PROJECT_SOURCE_DIR} PRIVATE ${evmone_private_include_dir})
+target_link_libraries(testutils PRIVATE evmc::instructions)
+target_include_directories(testutils PUBLIC ${PROJECT_SOURCE_DIR})
+
+add_library(testutils-dump STATIC dump.cpp)
+target_link_libraries(testutils-dump PRIVATE testutils evmone)
+target_include_directories(testutils-dump PRIVATE ${evmone_private_include_dir})

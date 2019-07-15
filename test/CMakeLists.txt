@@ -11,7 +11,7 @@ add_subdirectory(bench)
 add_subdirectory(unittests)
 
 set_target_properties(
-    evmone-bench evmone-unittests testutils PROPERTIES
+    evm-test evmone-bench evmone-unittests testutils PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}
