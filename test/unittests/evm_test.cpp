@@ -1126,6 +1126,7 @@ memory_access_opcode memory_access_opcodes[] = {
 
 memory_access_params memory_access_test_cases[] = {
     {0, 0x100000000},
+    {0x80000000, 0x80000000},
     {0x100000000, 0},
     {0x100000000, 1},
     {0x100000000, 0x100000000},
@@ -1135,6 +1136,7 @@ TEST_F(evm, memory_access)
 {
     rev = EVMC_CONSTANTINOPLE;
     auto metrics = evmc_get_instruction_metrics_table(rev);
+    auto names = evmc_get_instruction_names_table(rev);
 
     for (auto& p : memory_access_test_cases)
     {
@@ -1171,16 +1173,34 @@ TEST_F(evm, memory_access)
 
             code += bytecode{t.opcode};
 
-            execute(code);
-            if (p.size == 0)
+            auto const gas = 8796294610952;
+            execute(gas, code);
+
+            auto case_descr_str = std::ostringstream{};
+            case_descr_str << "offset = 0x" << std::hex << p.index << " size = 0x" << std::hex
+                           << p.size << " opcode " << names[t.opcode];
+            auto const case_descr = case_descr_str.str();
+
+            if (p.size == 0)  // It is allowed to request 0 size memory at very big offset.
             {
-                EXPECT_EQ(result.status_code, (t.opcode == OP_REVERT) ? EVMC_REVERT : EVMC_SUCCESS);
-                EXPECT_NE(result.gas_left, 0);
+                EXPECT_EQ(result.status_code, (t.opcode == OP_REVERT) ? EVMC_REVERT : EVMC_SUCCESS)
+                    << case_descr;
+                EXPECT_NE(result.gas_left, 0) << case_descr;
             }
             else
             {
-                EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
-                EXPECT_EQ(result.gas_left, 0);
+                if (t.opcode == OP_RETURNDATACOPY)
+                {
+                    // In case of RETURNDATACOPY the "invalid memory access" might also be returned.
+                    EXPECT_TRUE(result.status_code == EVMC_OUT_OF_GAS ||
+                                result.status_code == EVMC_INVALID_MEMORY_ACCESS);
+                }
+                else
+                {
+                    EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS) << case_descr;
+                }
+
+                EXPECT_EQ(result.gas_left, 0) << case_descr;
             }
         }
     }
