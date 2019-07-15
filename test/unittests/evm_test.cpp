@@ -1172,14 +1172,24 @@ TEST_F(evm, memory_access)
             code += bytecode{t.opcode};
 
             execute(code);
-            if (p.size == 0)
+            if (p.size == 0)  // It is allowed to request 0 size memory at very big offset.
             {
                 EXPECT_EQ(result.status_code, (t.opcode == OP_REVERT) ? EVMC_REVERT : EVMC_SUCCESS);
                 EXPECT_NE(result.gas_left, 0);
             }
             else
             {
-                EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+                if (t.opcode == OP_RETURNDATACOPY)
+                {
+                    // In case of RETURNDATACOPY the "invalid memory access" might also be returned.
+                    EXPECT_TRUE(result.status_code == EVMC_OUT_OF_GAS ||
+                                result.status_code == EVMC_INVALID_MEMORY_ACCESS);
+                }
+                else
+                {
+                    EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+                }
+
                 EXPECT_EQ(result.gas_left, 0);
             }
         }
