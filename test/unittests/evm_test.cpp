@@ -962,6 +962,17 @@ TEST_F(evm, undefined_instructions)
     }
 }
 
+TEST_F(evm, undefined_instruction_analysis_overflow)
+{
+    rev = EVMC_PETERSBURG;
+
+    auto undefined_opcode = evmc_opcode(0x0c);
+    auto code = bytecode{undefined_opcode};
+
+    execute(code);
+    EXPECT_EQ(result.status_code, EVMC_UNDEFINED_INSTRUCTION);
+}
+
 TEST_F(evm, undefined_instruction_block_cost_negative)
 {
     // For undefined instructions EVMC instruction tables have cost -1.
