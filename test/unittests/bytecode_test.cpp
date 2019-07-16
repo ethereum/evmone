@@ -48,3 +48,27 @@ TEST(bytecode, repeat)
 
     EXPECT_EQ(0 * OP_STOP, "");
 }
+
+TEST(bytecode, decode)
+{
+    const auto code = push(0x01e240) + OP_DUP1 + OP_GAS + "cc" + OP_REVERT;
+    EXPECT_EQ(decode(code, EVMC_FRONTIER),
+        "bytecode{} + OP_PUSH3 + \"01e240\" + OP_DUP1 + OP_GAS + \"cc\" + \"fd\"");
+    EXPECT_EQ(decode(code, EVMC_BYZANTIUM),
+        "bytecode{} + OP_PUSH3 + \"01e240\" + OP_DUP1 + OP_GAS + \"cc\" + OP_REVERT");
+}
+
+TEST(bytecode, decode_push_trimmed_data)
+{
+    const auto code1 = bytecode{} + OP_PUSH2 + "0000";
+    EXPECT_EQ(decode(code1, EVMC_FRONTIER), "bytecode{} + OP_PUSH2 + \"0000\"");
+
+    const auto code2 = bytecode{} + OP_PUSH2 + "00";
+    EXPECT_EQ(decode(code2, EVMC_FRONTIER), "bytecode{} + OP_PUSH2 + \"00\"");
+
+    const auto code3 = bytecode{} + OP_PUSH2;
+    EXPECT_EQ(decode(code3, EVMC_FRONTIER), "bytecode{} + OP_PUSH2");
+
+    const auto code4 = bytecode{} + OP_PUSH2 + "";
+    EXPECT_EQ(decode(code4, EVMC_FRONTIER), "bytecode{} + OP_PUSH2");
+}
