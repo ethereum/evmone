@@ -962,6 +962,37 @@ TEST_F(evm, undefined_instructions)
     }
 }
 
+TEST_F(evm, undefined_instruction_analysis_overflow)
+{
+    rev = EVMC_PETERSBURG;
+
+    auto undefined_opcode = evmc_opcode(0x0c);
+    auto code = bytecode{undefined_opcode};
+
+    execute(code);
+    EXPECT_EQ(result.status_code, EVMC_UNDEFINED_INSTRUCTION);
+}
+
+TEST_F(evm, undefined_instruction_block_cost_negative)
+{
+    // For undefined instructions EVMC instruction tables have cost -1.
+    // If naively counted block costs can become negative.
+
+    const auto max_gas = std::numeric_limits<int64_t>::max();
+
+    const auto code1 = bytecode{} + "0f";  // Block cost -1.
+    execute(max_gas, code1);
+    EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
+
+    const auto code2 = bytecode{} + OP_JUMPDEST + "c6" + "4b" + OP_STOP;  // Block cost -1.
+    execute(max_gas, code2);
+    EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
+
+    const auto code3 = bytecode{} + OP_ADDRESS + "2a" + "2b" + "2c" + "2d";  // Block cost -2.
+    execute(max_gas, code3);
+    EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
+}
+
 TEST_F(evm, abort)
 {
     for (auto r = 0; r <= EVMC_MAX_REVISION; ++r)
