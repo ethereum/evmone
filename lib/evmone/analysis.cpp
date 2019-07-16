@@ -84,7 +84,8 @@ code_analysis analyze(
         auto& instr = jumpdest ? analysis.instrs.back() : analysis.instrs.emplace_back(fns[c]);
 
         auto metrics = instr_table[c];
-        block->gas_cost += metrics.gas_cost;
+        if (metrics.gas_cost > 0)  // can be -1 for undefined instruction
+            block->gas_cost += metrics.gas_cost;
         auto stack_req = metrics.num_stack_arguments - block->stack_diff;
         block->stack_diff += (metrics.num_stack_returned_items - metrics.num_stack_arguments);
         block->stack_req = std::max(block->stack_req, stack_req);
