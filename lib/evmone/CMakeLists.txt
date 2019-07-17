@@ -18,6 +18,12 @@ target_link_libraries(evmone PUBLIC evmc::evmc PRIVATE intx::intx evmc::instruct
 target_include_directories(evmone PUBLIC
     $<BUILD_INTERFACE:${include_dir}>$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
+
+if(NOT SANITIZE)
+    # On Linux, check if all symbols in evmone are resolved during linking.
+    target_link_options(evmone PRIVATE $<$<PLATFORM_ID:Linux>:LINKER:--no-undefined>)
+endif()
+
 set_target_properties(
     evmone PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}
