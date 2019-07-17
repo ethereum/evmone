@@ -28,11 +28,5 @@ set_target_properties(
 get_target_property(type evmone TYPE)
 if(type STREQUAL SHARED_LIBRARY)
     add_test(NAME ${PROJECT_NAME}/evm-test COMMAND evm-test $<TARGET_FILE:evmone>)
-
-    gtest_add_tests(
-        TARGET evmc-vmtester
-        SOURCES ${PROJECT_SOURCE_DIR}/evmc/test/vmtester/tests.cpp
-        EXTRA_ARGS $<TARGET_FILE:evmone>
-        TEST_PREFIX ${PROJECT_NAME}/evmc-vmtester/
-    )
+    evmc_add_vm_test(NAME ${PROJECT_NAME}/evmc-vmtester TARGET evmone)
 endif()
