@@ -2,6 +2,8 @@
 # Copyright 2019 Pawel Bylica.
 # Licensed under the Apache License, Version 2.0.
 
+include(LibraryTools)
+
 hunter_add_package(intx)
 find_package(intx CONFIG REQUIRED)
 
@@ -24,10 +26,6 @@ if(NOT SANITIZE)
     target_link_options(evmone PRIVATE $<$<PLATFORM_ID:Linux>:LINKER:--no-undefined>)
 endif()
 
-set_target_properties(
-    evmone PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}
-    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}
-)
 set_source_files_properties(evmone.cpp PROPERTIES COMPILE_DEFINITIONS PROJECT_VERSION="${PROJECT_VERSION}")
+
+add_standalone_library(evmone)
