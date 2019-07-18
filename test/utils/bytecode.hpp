@@ -4,6 +4,7 @@
 #pragma once
 
 #include <test/utils/utils.hpp>
+#include <algorithm>
 
 struct bytecode;
 
