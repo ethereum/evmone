@@ -66,7 +66,7 @@ TEST_F(evm, create)
 
     auto key = evmc_bytes32{};
     key.bytes[31] = 1;
-    EXPECT_EQ(account.storage[key].bytes[22], 0xcc);
+    EXPECT_EQ(account.storage[key].value.bytes[22], 0xcc);
 
     ASSERT_EQ(recorded_calls.size(), 1);
     const auto& call_msg = recorded_calls.back();
@@ -113,7 +113,7 @@ TEST_F(evm, create2)
 
     auto key = evmc_bytes32{};
     key.bytes[31] = 1;
-    EXPECT_EQ(account.storage[key].bytes[22], 0xc2);
+    EXPECT_EQ(account.storage[key].value.bytes[22], 0xc2);
 
     EXPECT_EQ(call_msg.input_size, 0x41);
 }

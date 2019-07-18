@@ -333,7 +333,7 @@ TEST_F(evm, div_by_zero)
     EXPECT_EQ(result.gas_left, 0);
     auto it = account.storage.find({});
     ASSERT_NE(it, account.storage.end());
-    EXPECT_EQ(it->second, evmc_bytes32{});
+    EXPECT_EQ(it->second.value, evmc_bytes32{});
 }
 
 TEST_F(evm, mod_by_zero)
@@ -344,7 +344,7 @@ TEST_F(evm, mod_by_zero)
     EXPECT_EQ(gas_used, 5022);
     auto it = account.storage.find({});
     ASSERT_NE(it, account.storage.end());
-    EXPECT_EQ(it->second, evmc_bytes32{});
+    EXPECT_EQ(it->second.value, evmc_bytes32{});
 }
 
 TEST_F(evm, addmod_mulmod_by_zero)
@@ -548,7 +548,7 @@ TEST_F(evm, sload_cost_pre_tw)
     execute(56, "60008054");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 0);
-    EXPECT_NE(account.storage.find({}), account.storage.end());
+    EXPECT_EQ(account.storage.size(), 0);
 }
 
 TEST_F(evm, sstore_cost)
@@ -562,7 +562,6 @@ TEST_F(evm, sstore_cost)
     for (auto r : revs)
     {
         rev = r;
-        storage_cold = true;
 
         // Added:
         storage.clear();
@@ -605,11 +604,9 @@ TEST_F(evm, sstore_cost)
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         EXPECT_EQ(gas_used, rev == EVMC_CONSTANTINOPLE ? 20212 : 25012);
 
-        storage_cold = false;
-
         // Modified again:
         storage.clear();
-        storage[v1] = v1;
+        storage[v1] = {v1, true};
         execute(sstore(1, push(2)));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         EXPECT_EQ(gas_used, rev == EVMC_CONSTANTINOPLE ? 206 : 5006);
@@ -619,6 +616,20 @@ TEST_F(evm, sstore_cost)
         execute(sstore(1, push(1)) + sstore(1, push(2)));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         EXPECT_EQ(gas_used, rev == EVMC_CONSTANTINOPLE ? 20212 : 25012);
+
+        // Modified & modified again:
+        storage.clear();
+        storage[v1] = v1;
+        execute(sstore(1, push(2)) + sstore(1, push(3)));
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(gas_used, rev == EVMC_CONSTANTINOPLE ? 5212 : 10012);
+
+        // Modified & modified again back to original:
+        storage.clear();
+        storage[v1] = v1;
+        execute(sstore(1, push(2)) + sstore(1, push(1)));
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(gas_used, rev == EVMC_CONSTANTINOPLE ? 5212 : 10012);
     }
 }
 
@@ -1112,6 +1123,29 @@ TEST_F(evm, extcodecopy_fill_tail)
     ASSERT_EQ(result.output_size, 2);
     EXPECT_EQ(result.output_data[0], 0xff);
     EXPECT_EQ(result.output_data[1], 0);
+}
+
+TEST_F(evm, extcodecopy_buffer_overflow)
+{
+    const auto code = bytecode{} + OP_NUMBER + OP_TIMESTAMP + OP_CALLDATASIZE + OP_ADDRESS +
+                      OP_EXTCODECOPY + ret(OP_CALLDATASIZE, OP_NUMBER);
+
+    accounts[msg.destination].code = code;
+
+    const auto s = static_cast<int>(code.size());
+    const auto values = {0, 1, s - 1, s, s + 1, 5000};
+    for (auto offset : values)
+    {
+        for (auto size : values)
+        {
+            tx_context.block_timestamp = offset;
+            tx_context.block_number = size;
+
+            execute(code);
+            EXPECT_STATUS(EVMC_SUCCESS);
+            EXPECT_EQ(result.output_size, size);
+        }
+    }
 }
 
 struct memory_access_opcode
