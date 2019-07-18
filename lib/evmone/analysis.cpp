@@ -86,6 +86,17 @@ code_analysis analyze(
         auto metrics = instr_table[c];
         if (metrics.gas_cost > 0)  // can be -1 for undefined instruction
             block->gas_cost += metrics.gas_cost;
+        else if (metrics.particle_gas_cost > 0)
+        {
+            // TODO: move this to evmc instructions
+            constexpr auto particles_per_gas = 1000;
+            block->particle_gas_cost += metrics.particle_gas_cost;
+            if (block->particle_gas_cost >= particles_per_gas)
+            {
+                block->gas_cost += 1;
+                block->particle_gas_cost %= particles_per_gas;
+            }
+        }
         auto stack_req = metrics.num_stack_arguments - block->stack_diff;
         block->stack_diff += (metrics.num_stack_returned_items - metrics.num_stack_arguments);
         block->stack_req = std::max(block->stack_req, stack_req);

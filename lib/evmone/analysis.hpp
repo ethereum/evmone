@@ -149,6 +149,7 @@ struct instr_info
 struct block_info
 {
     int64_t gas_cost = 0;
+    int64_t particle_gas_cost = 0;
     int stack_req = 0;
     int stack_max = 0;
     int stack_diff = 0;
