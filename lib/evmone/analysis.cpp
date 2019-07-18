@@ -50,6 +50,15 @@ evmc_call_kind op2call_kind(uint8_t opcode) noexcept
 code_analysis analyze(
     const exec_fn_table& fns, evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
 {
+    // FIXME: change to an if outside
+    static auto to_gas_cost = [&](int64_t gas_cost)
+    {
+        if (rev >= EVMC_ISTANBUL)
+            return static_cast<int>(gas_cost / particles_per_gas);
+        else
+            return static_cast<int>(gas_cost);
+    };
+
     code_analysis analysis;
     // TODO: Check if final result exceeds the reservation.
     analysis.instrs.reserve(code_size + 1);
@@ -112,11 +121,13 @@ code_analysis analyze(
         else if (c >= OP_SWAP1 && c <= OP_SWAP16)
             instr.arg.p.number = c - OP_SWAP1 + 1;
         else if (c == OP_GAS)
-            instr.arg.p.number = static_cast<int>(block->gas_cost);
+        {
+            instr.arg.p.number = to_gas_cost(block->gas_cost);
+        }
         else if (c == OP_DELEGATECALL || c == OP_CALL || c == OP_CALLCODE || c == OP_STATICCALL ||
                  c == OP_CREATE || c == OP_CREATE2)
         {
-            instr.arg.p.number = static_cast<int>(block->gas_cost);
+            instr.arg.p.number = to_gas_cost(block->gas_cost);
             instr.arg.p.call_kind = op2call_kind(c == OP_STATICCALL ? uint8_t{OP_CALL} : c);
         }
         else if (c == OP_PC)

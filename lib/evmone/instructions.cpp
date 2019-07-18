@@ -37,8 +37,9 @@ bool check_memory(execution_state& state, const uint256& offset, const uint256& 
     const auto new_size = o + s;
     if (m < new_size)
     {
+        auto cost_per_word = (state.rev >= EVMC_ISTANBUL) ? 3 : 3 * particles_per_gas;
         auto w = (new_size + 31) / 32;
-        auto new_cost = 3 * w + w * w / 512;
+        auto new_cost = cost_per_word * w + w * w / 512;
         auto cost = new_cost - state.memory_prev_cost;
         state.memory_prev_cost = new_cost;
 
@@ -514,7 +515,10 @@ void op_gas(execution_state& state, instr_argument arg) noexcept
 {
     const auto correction = state.current_block_cost - arg.p.number;
     const auto gas = static_cast<uint64_t>(state.gas_left + correction);
-    state.stack.push(gas);
+    if (state.rev >= EVMC_ISTANBUL)
+        state.stack.push(gas / particles_per_gas);
+    else
+        state.stack.push(gas);
 }
 
 void op_gasprice(execution_state& state, instr_argument) noexcept
