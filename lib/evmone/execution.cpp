@@ -32,8 +32,7 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
     while (state.run)
     {
         auto& instr = analysis.instrs[state.pc];
-        auto opcode = state.code[state.pc];
-        std::cout << state.pc << ": " << evmc_get_instruction_names_table(rev)[opcode] << std::endl;
+        std::cout << state.pc << std::endl;
         std::cout << "gas: " << state.gas_left << std::endl;
         if (instr.block_index >= 0)
         {

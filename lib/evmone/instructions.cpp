@@ -15,7 +15,7 @@ namespace
 constexpr auto max_buffer_size = std::numeric_limits<uint32_t>::max();
 
 bool check_memory(execution_state& state, const uint256& offset, const uint256& size) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     if (size == 0)
         return true;
 
@@ -57,58 +57,58 @@ bool check_memory(execution_state& state, const uint256& offset, const uint256& 
 
 
 void op_stop(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     state.run = false;
 }
 
 void op_add(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     state.item(1) += state.item(0);
     state.stack.pop_back();
 }
 
 void op_mul(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     state.item(1) *= state.item(0);
     state.stack.pop_back();
 }
 
 void op_sub(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     state.item(1) = state.item(0) - state.item(1);
     state.stack.pop_back();
 }
 
 void op_div(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto& v = state.item(1);
     v = v != 0 ? state.item(0) / v : 0;
     state.stack.pop_back();
 }
 
 void op_sdiv(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto& v = state.item(1);
     v = v != 0 ? intx::sdivrem(state.item(0), v).quot : 0;
     state.stack.pop_back();
 }
 
 void op_mod(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto& v = state.item(1);
     v = v != 0 ? state.item(0) % v : 0;
     state.stack.pop_back();
 }
 
 void op_smod(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto& v = state.item(1);
     v = v != 0 ? intx::sdivrem(state.item(0), v).rem : 0;
     state.stack.pop_back();
 }
 
 void op_addmod(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     using intx::uint512;
     auto x = state.item(0);
     auto y = state.item(1);
@@ -116,11 +116,11 @@ void op_addmod(execution_state& state, instr_argument) noexcept
     state.stack.pop_back();
     state.stack.pop_back();
 
-    state.item(0) = m != 0 ? ((uint512{x} + uint512{y}) % uint512{m}).lo : 0;
+    state.item(0) = m != 0 ? ((uint512{x} + uint512{ y}) % uint512{ m}).lo : 0;
 }
 
 void op_mulmod(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     using intx::uint512;
     auto x = state.item(0);
     auto y = state.item(1);
@@ -128,11 +128,11 @@ void op_mulmod(execution_state& state, instr_argument) noexcept
     state.stack.pop_back();
     state.stack.pop_back();
 
-    state.item(0) = m != 0 ? ((uint512{x} * uint512{y}) % uint512{m}).lo : 0;
+    state.item(0) = m != 0 ? ((uint512{ x} * uint512{ y}) % uint512{ m}).lo : 0;
 }
 
 void op_exp(execution_state& state, instr_argument arg) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto base = state.item(0);
     auto& exponent = state.item(1);
 
@@ -152,7 +152,7 @@ void op_exp(execution_state& state, instr_argument arg) noexcept
 }
 
 void op_signextend(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto ext = state.item(0);
     state.stack.pop_back();
     auto& x = state.item(0);
@@ -168,20 +168,20 @@ void op_signextend(execution_state& state, instr_argument) noexcept
 }
 
 void op_lt(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     // OPT: Have single function implementing all comparisons.
     state.item(1) = state.item(0) < state.item(1);
     state.stack.pop_back();
 }
 
 void op_gt(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     state.item(1) = state.item(1) < state.item(0);
     state.stack.pop_back();
 }
 
 void op_slt(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto x = state.item(0);
     auto y = state.item(1);
     auto x_neg = static_cast<bool>(x >> 255);
@@ -191,7 +191,7 @@ void op_slt(execution_state& state, instr_argument) noexcept
 }
 
 void op_sgt(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto x = state.item(0);
     auto y = state.item(1);
     auto x_neg = static_cast<bool>(x >> 255);
@@ -201,41 +201,41 @@ void op_sgt(execution_state& state, instr_argument) noexcept
 }
 
 void op_eq(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     state.item(1) = state.item(0) == state.item(1);
     state.stack.pop_back();
 }
 
 void op_iszero(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     state.item(0) = state.item(0) == 0;
 }
 
 void op_and(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     state.item(1) &= state.item(0);
     state.stack.pop_back();
 }
 
 void op_or(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     state.item(1) |= state.item(0);
     state.stack.pop_back();
 }
 
 void op_xor(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     state.item(1) ^= state.item(0);
     state.stack.pop_back();
 }
 
 void op_not(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     state.item(0) = ~state.item(0);
 }
 
 void op_byte(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto n = state.item(0);
     auto& x = state.item(1);
 
@@ -252,19 +252,19 @@ void op_byte(execution_state& state, instr_argument) noexcept
 }
 
 void op_shl(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     state.item(1) <<= state.item(0);
     state.stack.pop_back();
 }
 
 void op_shr(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     state.item(1) >>= state.item(0);
     state.stack.pop_back();
 }
 
 void op_sar(execution_state& state, instr_argument arg) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     if ((state.item(1) & (intx::uint256{1} << 255)) == 0)
         return op_shr(state, arg);
 
@@ -282,7 +282,7 @@ void op_sar(execution_state& state, instr_argument arg) noexcept
 }
 
 void op_sha3(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto index = state.item(0);
     auto size = state.item(1);
 
@@ -309,7 +309,7 @@ void op_sha3(execution_state& state, instr_argument) noexcept
 }
 
 void op_address(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     // TODO: Might be generalized using pointers to class member.
     uint8_t data[32] = {};
     std::memcpy(&data[12], state.msg->destination.bytes, sizeof(state.msg->destination));
@@ -318,7 +318,7 @@ void op_address(execution_state& state, instr_argument) noexcept
 }
 
 void op_balance(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto& x = state.item(0);
     uint8_t data[32];
     intx::be::store(data, x);
@@ -328,7 +328,7 @@ void op_balance(execution_state& state, instr_argument) noexcept
 }
 
 void op_origin(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     uint8_t data[32] = {};
     std::memcpy(&data[12], state.host.get_tx_context().tx_origin.bytes, sizeof(evmc_address));
     auto x = intx::be::uint256(data);
@@ -336,7 +336,7 @@ void op_origin(execution_state& state, instr_argument) noexcept
 }
 
 void op_caller(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     // TODO: Might be generalized using pointers to class member.
     uint8_t data[32] = {};
     std::memcpy(&data[12], state.msg->sender.bytes, sizeof(state.msg->sender));
@@ -345,13 +345,13 @@ void op_caller(execution_state& state, instr_argument) noexcept
 }
 
 void op_callvalue(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto a = intx::be::uint256(state.msg->value.bytes);
     state.stack.push_back(a);
 }
 
 void op_calldataload(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto& index = state.item(0);
 
     if (state.msg->input_size < index)
@@ -370,13 +370,13 @@ void op_calldataload(execution_state& state, instr_argument) noexcept
 }
 
 void op_calldatasize(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto s = intx::uint256{state.msg->input_size};
     state.stack.push_back(s);
 }
 
 void op_calldatacopy(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto mem_index = state.item(0);
     auto input_index = state.item(1);
     auto size = state.item(2);
@@ -411,13 +411,13 @@ void op_calldatacopy(execution_state& state, instr_argument) noexcept
 }
 
 void op_codesize(execution_state& state, instr_argument) noexcept
-{
-    auto s = intx::uint256{state.code_size};
+{ std::cout << __FUNCTION__ << std::endl;
+    auto s = intx::uint256{};
     state.stack.push_back(s);
 }
 
 void op_codecopy(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto mem_index = state.item(0);
     auto input_index = state.item(1);
     auto size = state.item(2);
@@ -452,7 +452,7 @@ void op_codecopy(execution_state& state, instr_argument) noexcept
 }
 
 void op_mload(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto& index = state.item(0);
 
     if (!check_memory(state, index, 32))
@@ -462,7 +462,7 @@ void op_mload(execution_state& state, instr_argument) noexcept
 }
 
 void op_mstore(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto index = state.item(0);
     auto x = state.item(1);
 
@@ -476,7 +476,7 @@ void op_mstore(execution_state& state, instr_argument) noexcept
 }
 
 void op_mstore8(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto index = state.item(0);
     auto x = state.item(1);
 
@@ -490,7 +490,7 @@ void op_mstore8(execution_state& state, instr_argument) noexcept
 }
 
 void op_sload(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto& x = state.item(0);
     evmc_bytes32 key;
     intx::be::store(key.bytes, x);
@@ -498,7 +498,7 @@ void op_sload(execution_state& state, instr_argument) noexcept
 }
 
 void op_sstore(execution_state& state, instr_argument arg) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     if (state.msg->flags & EVMC_STATIC)
     {
         // TODO: Implement static mode violation in analysis.
@@ -543,7 +543,7 @@ void op_sstore(execution_state& state, instr_argument arg) noexcept
 }
 
 void op_jump(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto dst = state.item(0);
     int pc = -1;
     if (std::numeric_limits<int>::max() < dst ||
@@ -559,7 +559,7 @@ void op_jump(execution_state& state, instr_argument) noexcept
 }
 
 void op_jumpi(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto condition = state.item(1);
     if (condition != 0)
     {
@@ -581,35 +581,35 @@ void op_jumpi(execution_state& state, instr_argument) noexcept
 }
 
 void op_pc(execution_state& state, instr_argument arg) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     state.stack.emplace_back(arg.p.number);
 }
 
 void op_msize(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     state.stack.emplace_back(state.memory.size());
 }
 
 void op_gas(execution_state& state, instr_argument arg) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto correction = state.current_block_cost - arg.p.number;
     intx::uint256 gas = static_cast<uint64_t>(state.gas_left + correction);
     state.stack.push_back(gas);
 }
 
 void op_jumpdest(execution_state&, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     // OPT: We can skip JUMPDEST instruction in analysis.
 }
 
 void op_gasprice(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto x = intx::be::uint256(state.host.get_tx_context().tx_gas_price.bytes);
     state.stack.push_back(x);
 }
 
 void op_extcodesize(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto& x = state.item(0);
     uint8_t data[32];
     intx::be::store(data, x);
@@ -619,7 +619,7 @@ void op_extcodesize(execution_state& state, instr_argument) noexcept
 }
 
 void op_extcodecopy(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto addr_data = state.item(0);
     auto mem_index = state.item(1);
     auto input_index = state.item(2);
@@ -660,12 +660,12 @@ void op_extcodecopy(execution_state& state, instr_argument) noexcept
 }
 
 void op_returndatasize(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     state.stack.emplace_back(state.return_data.size());
 }
 
 void op_returndatacopy(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto mem_index = state.item(0);
     auto input_index = state.item(1);
     auto size = state.item(2);
@@ -709,7 +709,7 @@ void op_returndatacopy(execution_state& state, instr_argument) noexcept
 }
 
 void op_extcodehash(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto& x = state.item(0);
     uint8_t data[32];
     intx::be::store(data, x);
@@ -719,7 +719,7 @@ void op_extcodehash(execution_state& state, instr_argument) noexcept
 }
 
 void op_blockhash(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto& number = state.item(0);
 
     auto upper_bound = state.host.get_tx_context().block_number;
@@ -732,7 +732,7 @@ void op_blockhash(execution_state& state, instr_argument) noexcept
 }
 
 void op_coinbase(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     uint8_t data[32] = {};
     std::memcpy(&data[12], state.host.get_tx_context().block_coinbase.bytes, sizeof(evmc_address));
     auto x = intx::be::uint256(data);
@@ -740,53 +740,53 @@ void op_coinbase(execution_state& state, instr_argument) noexcept
 }
 
 void op_timestamp(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto x = intx::uint256{static_cast<uint64_t>(state.host.get_tx_context().block_timestamp)};
     state.stack.push_back(x);
 }
 
 void op_number(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto x = intx::uint256{static_cast<uint64_t>(state.host.get_tx_context().block_number)};
     state.stack.push_back(x);
 }
 
 void op_difficulty(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto x = intx::be::uint256(state.host.get_tx_context().block_difficulty.bytes);
     state.stack.push_back(x);
 }
 
 void op_gaslimit(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto x = intx::uint256{static_cast<uint64_t>(state.host.get_tx_context().block_gas_limit)};
     state.stack.push_back(x);
 }
 
 void op_push_full(execution_state& state, instr_argument arg) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     // OPT: For smaller pushes, use pointer data directly.
     auto x = intx::be::uint256(arg.data);
     state.stack.push_back(x);
 }
 
 void op_pop(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     state.stack.pop_back();
 }
 
 void op_dup(execution_state& state, instr_argument arg) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     state.stack.push_back(state.item(static_cast<size_t>(arg.p.number)));
 }
 
 void op_swap(execution_state& state, instr_argument arg) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     std::swap(state.item(0), state.item(static_cast<size_t>(arg.p.number)));
 }
 
 void op_log(execution_state& state, instr_argument arg) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     if (state.msg->flags & EVMC_STATIC)
     {
         // TODO: Implement static mode violation in analysis.
@@ -828,13 +828,13 @@ void op_log(execution_state& state, instr_argument arg) noexcept
 }
 
 void op_invalid(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     state.run = false;
     state.status = EVMC_INVALID_INSTRUCTION;
 }
 
 void op_return(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto offset = state.item(0);
     auto size = state.item(1);
 
@@ -847,7 +847,7 @@ void op_return(execution_state& state, instr_argument) noexcept
 }
 
 void op_revert(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto offset = state.item(0);
     auto size = state.item(1);
 
@@ -861,7 +861,7 @@ void op_revert(execution_state& state, instr_argument) noexcept
 }
 
 void op_call(execution_state& state, instr_argument arg) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto gas = state.item(0);
 
     uint8_t data[32];
@@ -1007,7 +1007,7 @@ void op_call(execution_state& state, instr_argument arg) noexcept
 }
 
 void op_delegatecall(execution_state& state, instr_argument arg) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto gas = state.item(0);
 
     uint8_t data[32];
@@ -1088,7 +1088,7 @@ void op_delegatecall(execution_state& state, instr_argument arg) noexcept
 }
 
 void op_staticcall(execution_state& state, instr_argument arg) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto gas = state.item(0);
 
     uint8_t data[32];
@@ -1160,7 +1160,7 @@ void op_staticcall(execution_state& state, instr_argument arg) noexcept
 }
 
 void op_create(execution_state& state, instr_argument arg) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     if (state.msg->flags & EVMC_STATIC)
     {
         // TODO: Implement static mode violation in analysis.
@@ -1229,7 +1229,7 @@ void op_create(execution_state& state, instr_argument arg) noexcept
 }
 
 void op_create2(execution_state& state, instr_argument arg) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     if (state.msg->flags & EVMC_STATIC)
     {
         // TODO: Implement static mode violation in analysis.
@@ -1307,13 +1307,13 @@ void op_create2(execution_state& state, instr_argument arg) noexcept
 }
 
 void op_undefined(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     state.run = false;
     state.status = EVMC_UNDEFINED_INSTRUCTION;
 }
 
 void op_selfdestruct(execution_state& state, instr_argument) noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     if (state.msg->flags & EVMC_STATIC)
     {
         // TODO: Implement static mode violation in analysis.
@@ -1360,7 +1360,7 @@ void op_selfdestruct(execution_state& state, instr_argument) noexcept
 }
 
 constexpr exec_fn_table create_op_table_frontier() noexcept
-{
+{ std::cout << __FUNCTION__ << std::endl;
     auto table = exec_fn_table{};
 
     // First, mark all opcodes as undefined.
