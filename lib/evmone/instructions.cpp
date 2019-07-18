@@ -8,6 +8,8 @@
 #include <evmc/helpers.hpp>
 #include <evmc/instructions.h>
 
+#include <iostream>
+
 namespace evmone
 {
 namespace
@@ -412,7 +414,7 @@ void op_calldatacopy(execution_state& state, instr_argument) noexcept
 
 void op_codesize(execution_state& state, instr_argument) noexcept
 { std::cout << __FUNCTION__ << std::endl;
-    auto s = intx::uint256{};
+    auto s = intx::uint256{state.code_size};
     state.stack.push_back(s);
 }
 
@@ -1360,7 +1362,7 @@ void op_selfdestruct(execution_state& state, instr_argument) noexcept
 }
 
 constexpr exec_fn_table create_op_table_frontier() noexcept
-{ std::cout << __FUNCTION__ << std::endl;
+{
     auto table = exec_fn_table{};
 
     // First, mark all opcodes as undefined.
