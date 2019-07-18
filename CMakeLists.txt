@@ -57,9 +57,19 @@ endif()
 # INSTALL
 
 set(install_targets evmone)
+if(TARGET evmone-standalone)
+    list(APPEND install_targets evmone-standalone)
+endif()
 if(TARGET evm-test)
     list(APPEND install_targets evm-test)
 endif()
+
+set_target_properties(
+    ${install_targets} PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}
+)
 
 install(TARGETS ${install_targets} EXPORT evmoneTargets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
