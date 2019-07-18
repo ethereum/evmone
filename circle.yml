@@ -51,6 +51,8 @@ commands:
       - run:
           name: "Install"
           command: cmake --build ~/build --target install
+      - store_artifacts:
+          path: /home/builder/build/lib/
   package:
     description: "Make package"
     steps:
@@ -101,6 +103,8 @@ jobs:
           command: HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake
       - build_and_test
       - package
+      - store_artifacts:
+          path: /home/builder/build/lib/
 
   deploy:
     docker:
