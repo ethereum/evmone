@@ -58,6 +58,9 @@ commands:
           name: "Build Package"
           working_directory: ~/package
           command: cpack --config ~/build/CPackConfig.cmake
+      - store_artifacts:
+          path: ~/package/*.tar.gz
+          destination: package
       - persist_to_workspace:
           root: ~/package
           paths:
