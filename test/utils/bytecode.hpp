@@ -179,14 +179,15 @@ inline std::string decode(bytes_view bytecode, evmc_revision rev)
 
             if (opcode >= OP_PUSH1 && opcode <= OP_PUSH32)
             {
-                auto push_data = std::string{};
-                auto push_data_size = opcode - OP_PUSH1 + 1;
-                while (push_data_size-- && ++it != bytecode.end())
-                    push_data += to_hex({&*it, 1});
-                if (!push_data.empty())
-                    s += " + \"" + push_data + '"';
-                if (it == bytecode.end())
-                    break;
+                const auto push_data_start = it + 1;
+                const auto push_data_size =
+                    std::min(static_cast<std::size_t>(opcode - OP_PUSH1 + 1),
+                        static_cast<std::size_t>(bytecode.end() - push_data_start));
+                if (push_data_size != 0)
+                {
+                    s += " + \"" + to_hex({&*push_data_start, push_data_size}) + '"';
+                    it += push_data_size;
+                }
             }
         }
         else
