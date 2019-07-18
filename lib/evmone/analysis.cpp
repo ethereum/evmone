@@ -15,6 +15,18 @@ bool is_terminator(uint8_t c) noexcept
     return c == OP_JUMP || c == OP_JUMPI || c == OP_STOP || c == OP_RETURN || c == OP_REVERT ||
            c == OP_SELFDESTRUCT;
 }
+
+int load_1byte_immediate_value(const uint8_t* code, size_t code_size, size_t& index) noexcept
+{
+    return (index + 1 < code_size) ? code[++index] : 0;
+}
+
+int load_2byte_immediate_value(const uint8_t* code, size_t code_size, size_t& index) noexcept
+{
+    const auto hi_byte = load_1byte_immediate_value(code, code_size, index);
+    const auto lo_byte = load_1byte_immediate_value(code, code_size, index);
+    return (hi_byte << 8) | lo_byte;
+}
 }  // namespace
 
 int code_analysis::find_jumpdest(int offset) const noexcept
@@ -84,8 +96,8 @@ code_analysis analyze(
         auto& instr = jumpdest ? analysis.instrs.back() : analysis.instrs.emplace_back(fns[c]);
 
         const auto metrics = instr_table[c];
-        const auto instr_stack_req = metrics.num_stack_arguments;
-        const auto instr_stack_change = metrics.num_stack_returned_items - instr_stack_req;
+        auto instr_stack_req = int{metrics.num_stack_arguments};
+        auto instr_stack_change = int{metrics.num_stack_returned_items - instr_stack_req};
 
         if (metrics.gas_cost > 0)  // can be -1 for undefined instruction
             block->gas_cost += metrics.gas_cost;
@@ -123,6 +135,34 @@ code_analysis analyze(
             instr.arg.p.number = static_cast<int>(i);
         else if (c >= OP_LOG0 && c <= OP_LOG4)
             instr.arg.p.number = c - OP_LOG0;
+
+        if (rev >= EVMC_ISTANBUL)
+        {
+            if (c == OP_DUPN)
+            {
+                instr.arg.p.number = load_2byte_immediate_value(code, code_size, i);
+                instr_stack_req = instr.arg.p.number + 1;
+                instr_stack_change = 1;
+            }
+            else if (c == OP_SWAPN)
+            {
+                instr.arg.p.number = load_2byte_immediate_value(code, code_size, i) + 1;
+                instr_stack_req = instr.arg.p.number + 1;
+                instr_stack_change = 0;
+            }
+            else if (c == OP_DUPSN)
+            {
+                instr.arg.p.number = load_1byte_immediate_value(code, code_size, i);
+                instr_stack_req = instr.arg.p.number + 1;
+                instr_stack_change = 1;
+            }
+            else if (c == OP_SWAPSN)
+            {
+                instr.arg.p.number = load_1byte_immediate_value(code, code_size, i) + 1;
+                instr_stack_req = instr.arg.p.number + 1;
+                instr_stack_change = 0;
+            }
+        }
 
         block->stack_req = std::max(block->stack_req, instr_stack_req - block->stack_change);
         block->stack_change += instr_stack_change;

@@ -1284,6 +1284,10 @@ constexpr exec_fn_table create_op_table_constantinople() noexcept
 constexpr exec_fn_table create_op_table_istanbul() noexcept
 {
     auto table = create_op_table_constantinople();
+    table[OP_DUPN] = op_dup;
+    table[OP_SWAPN] = op_swap;
+    table[OP_DUPSN] = op_dup;
+    table[OP_SWAPSN] = op_swap;
     return table;
 }
 }  // namespace
