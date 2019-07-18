@@ -57,9 +57,9 @@ commands:
       - run:
           name: "Build Package"
           working_directory: ~/package
-          command: cpack --config ~/build/CPackConfig.cmake
+          command: cmake --build ~/build --target package && mv ~/build/evmone*.tar.gz* .
       - store_artifacts:
-          path: ~/package/*.tar.gz
+          path: ~/package
           destination: package
       - persist_to_workspace:
           root: ~/package
