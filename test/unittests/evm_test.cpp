@@ -78,6 +78,154 @@ TEST_F(evm, sub_and_swap)
     EXPECT_EQ(result.output_data[31], 1);
 }
 
+TEST_F(evm, dupn)
+{
+    rev = EVMC_ISTANBUL;
+    const auto pushes = push(1) + push(2) + push(3) + push(4);
+
+    execute(pushes + OP_DUPN + "0000" + ret_top());
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(4);
+
+    execute(pushes + OP_DUPN + "0002" + ret_top());
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(2);
+
+    execute(pushes + OP_DUPN + "0003" + ret_top());
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(1);
+
+    execute(pushes + OP_DUPN + "0004" + ret_top());
+    EXPECT_STATUS(EVMC_STACK_UNDERFLOW);
+
+    execute(pushes + OP_DUPSN + "00" + ret_top());
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(4);
+
+    execute(pushes + OP_DUPSN + "01" + ret_top());
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(3);
+
+    execute(pushes + OP_DUPSN + "03" + ret_top());
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(1);
+
+    execute(pushes + OP_DUPSN + "04" + ret_top());
+    EXPECT_STATUS(EVMC_STACK_UNDERFLOW);
+}
+
+TEST_F(evm, swapn)
+{
+    rev = EVMC_ISTANBUL;
+    const auto pushes = push(1) + push(2) + push(3) + push(4);
+
+    execute(pushes + OP_SWAPN + "0000" + ret_top());
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(3);
+
+    execute(pushes + OP_SWAPN + "0001" + ret_top());
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(2);
+
+    execute(pushes + OP_SWAPN + "0002" + ret_top());
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(1);
+
+    execute(pushes + OP_SWAPN + "0003" + ret_top());
+    EXPECT_STATUS(EVMC_STACK_UNDERFLOW);
+
+    execute(pushes + OP_SWAPSN + "00" + ret_top());
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(3);
+
+    execute(pushes + OP_SWAPSN + "01" + ret_top());
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(2);
+
+    execute(pushes + OP_SWAPSN + "02" + ret_top());
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(1);
+
+    execute(pushes + OP_SWAPSN + "03" + ret_top());
+    EXPECT_STATUS(EVMC_STACK_UNDERFLOW);
+}
+
+TEST_F(evm, dupn_full_stack)
+{
+    rev = EVMC_ISTANBUL;
+    auto full_stack_code = bytecode{};
+    for (int i = 1023; i >= 1; --i)
+        full_stack_code += push(i);
+
+    execute(full_stack_code + OP_POP + OP_DUPSN + "00" + ret_top());
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(2);
+
+    execute(full_stack_code + OP_POP + OP_DUPSN + "ff" + ret_top());
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(255 + 2);
+
+    execute(full_stack_code + OP_DUPSN + "01" + OP_DUPSN + "02");
+    EXPECT_STATUS(EVMC_STACK_OVERFLOW);
+
+    execute(full_stack_code + OP_POP + OP_DUPN + "0000" + ret_top());
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(2);
+
+    execute(full_stack_code + OP_POP + OP_DUPN + "0100" + ret_top());
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(256 + 2);
+
+    execute(full_stack_code + OP_POP + OP_DUPN + "03fd" + ret_top());
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(1023);
+
+    execute(full_stack_code + OP_DUPN + "03fe" + OP_SWAPSN + "00" + OP_RETURN);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_EQ(result.output_size, 1023);
+
+    execute(full_stack_code + OP_DUPN + "03ff");
+    EXPECT_STATUS(EVMC_STACK_UNDERFLOW);
+
+    execute(full_stack_code + OP_DUPN + "03fe" + OP_DUPN + "03ff");
+    EXPECT_STATUS(EVMC_STACK_OVERFLOW);
+}
+
+TEST_F(evm, swapn_full_stack)
+{
+    rev = EVMC_ISTANBUL;
+    auto full_stack_code = bytecode{};
+    for (int i = 1024; i >= 1; --i)
+        full_stack_code += push(i);
+
+    execute(full_stack_code + OP_POP + OP_SWAPSN + "00" + ret_top());
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(3);
+
+    execute(full_stack_code + OP_POP + OP_SWAPSN + "ff" + ret_top());
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(255 + 3);
+
+    execute(full_stack_code + OP_POP + OP_SWAPN + "0000" + ret_top());
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(3);
+
+    execute(full_stack_code + OP_POP + OP_SWAPN + "0100" + ret_top());
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(256 + 3);
+
+    execute(full_stack_code + OP_POP + OP_SWAPN + "03fd" + ret_top());
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(1024);
+
+    execute(full_stack_code + OP_SWAPN + "03fe" + OP_SWAPN + "0000" + OP_RETURN);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_EQ(result.output_size, 1024);
+
+    execute(full_stack_code + OP_SWAPN + "03ff");
+    EXPECT_STATUS(EVMC_STACK_UNDERFLOW);
+}
+
 TEST_F(evm, memory_and_not)
 {
     execute(42, "600060018019815381518252800190f3");
