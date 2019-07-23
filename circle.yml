@@ -94,6 +94,30 @@ jobs:
       - build_and_test
       - package
 
+  benchmark:
+    executor: linux
+    environment:
+      BUILD_TYPE: Release
+      CC: clang-8
+      CXX: clang++-8
+      CMAKE_OPTIONS: -DBUILD_SHARED_LIBS=OFF
+    steps:
+      - build_and_test
+      - run:
+          name: "Store new evmone-bench"
+          command: |
+            mv ~/build/bin/evmone-bench ~/build/bin/evmone-bench-new
+            ldd ~/build/bin/evmone-bench-new
+      - run:
+          name: "Checkout base commit"
+          command: |
+            git branch
+            git merge-base HEAD master
+            git checkout $(git merge-base HEAD master)
+      - build_and_test
+
+
+
   release-macos:
     executor: macos
     environment:
@@ -178,27 +202,28 @@ workflows:
   version: 2
   evmone:
     jobs:
-      - lint
-      - release-linux:
-          filters:
-            tags:
-              only: /.*/
-      - release-macos:
-          filters:
-            branches:
-              ignore: /.*/
-            tags:
-              only: /.*/
-      - deploy:
-          requires:
-            - release-linux
-            - release-macos
-          filters:
-            branches:
-              ignore: /.*/
-            tags:
-              only: /^v[0-9].*/
-      - gcc-min
-      - gcc-latest-coverage
-      - clang-latest-ubsan
-      - macos-asan
+      - benchmark
+      # - lint
+      # - release-linux:
+      #     filters:
+      #       tags:
+      #         only: /.*/
+      # - release-macos:
+      #     filters:
+      #       branches:
+      #         ignore: /.*/
+      #       tags:
+      #         only: /.*/
+      # - deploy:
+      #     requires:
+      #       - release-linux
+      #       - release-macos
+      #     filters:
+      #       branches:
+      #         ignore: /.*/
+      #       tags:
+      #         only: /^v[0-9].*/
+      # - gcc-min
+      # - gcc-latest-coverage
+      # - clang-latest-ubsan
+      # - macos-asan
