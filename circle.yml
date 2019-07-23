@@ -9,10 +9,9 @@ executors:
       xcode: 10.2.1
 
 commands:
-  build_and_test:
-    description: "Build & Test"
+  build:
+    description: "Build"
     steps:
-      - checkout
       - run:
           name: "Update submodules"
           command: git submodule update --init --recursive
@@ -45,12 +44,19 @@ commands:
           name: "Build"
           command: cmake --build ~/build -- -j4
       - run:
+          name: "Install"
+          command: cmake --build ~/build --target install
+
+  build_and_test:
+    description: "Build & Test"
+    steps:
+      - checkout
+      - build
+      - run:
           name: "Test"
           working_directory: ~/build
           command: ctest -R ${TESTS_FILTER:-'.*'} -j4 --schedule-random --output-on-failure
-      - run:
-          name: "Install"
-          command: cmake --build ~/build --target install
+
   package:
     description: "Make package"
     steps:
@@ -102,7 +108,8 @@ jobs:
       CXX: clang++-8
       CMAKE_OPTIONS: -DBUILD_SHARED_LIBS=OFF
     steps:
-      - build_and_test
+      - checkout
+      - build
       - run:
           name: "Store new evmone-bench"
           command: |
@@ -112,9 +119,19 @@ jobs:
           name: "Checkout base commit"
           command: |
             git branch
+            git fetch origin master
+            git rev-parse master
+            git rev-parse HEAD
             git merge-base HEAD master
             git checkout $(git merge-base HEAD master)
-      - build_and_test
+            git checkout master
+      - build
+      - run:
+          name: "Benchmark"
+          command: |
+            ls -l ~/.hunter/_Base/bc7da32/3568dc6/cedd094/Install
+            ls -l ~/.hunter/_Base/bc7da32/3568dc6/cedd094/Install/share
+            ls -l ~/.hunter/_Base/bc7da32/3568dc6/cedd094/Install/share/benchmark
 
 
 
