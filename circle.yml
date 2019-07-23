@@ -128,10 +128,10 @@ jobs:
       - build
       - run:
           name: "Benchmark"
+          working_directory: ~/build
           command: |
-            sudo apt update && sudo apt install libbenchmark-tools
-            /usr/share/benchmark/compare.py benchmarks --help
-
+            sudo apt -q update && sudo apt install -qy libbenchmark-tools
+            /usr/share/benchmark/compare.py benchmarks bin/evmone-bench bin/evmone-bench-new ~/project/test/benchmarks --benchmark_min_time=1
 
   release-macos:
     executor: macos
