@@ -131,7 +131,7 @@ jobs:
           working_directory: ~/build
           command: |
             sudo apt -q update && sudo apt install -qy libbenchmark-tools
-            /usr/share/benchmark/compare.py benchmarks bin/evmone-bench bin/evmone-bench-new ~/project/test/benchmarks --benchmark_min_time=1
+            /usr/share/benchmark/compare.py benchmarks bin/evmone-bench-new bin/evmone-bench ~/project/test/benchmarks --benchmark_min_time=1
 
   release-macos:
     executor: macos
