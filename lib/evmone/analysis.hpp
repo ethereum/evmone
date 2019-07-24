@@ -20,18 +20,6 @@ using bytes32 = std::array<uint8_t, 32>;
 
 using bytes = std::basic_string<uint8_t>;
 
-/// The status code value indicating that the execution should continue.
-/// The 0 value is used.
-constexpr auto continue_status = EVMC_SUCCESS;
-static_assert(continue_status == 0, "The 'continue' status is not 0");
-
-/// The status code value indicating that the execution should be stopped.
-/// The internal error (-1) is used. We could use any other negative value,
-/// but using one of the constants defined by evmc_status_code avoids
-/// warnings in Undefined Behavior Sanitizer.
-/// The EVMC_INTERNAL_ERROR MUST NOT be used in evmone for any other case.
-constexpr auto stop_status = EVMC_INTERNAL_ERROR;
-
 /// The stack for 256-bit EVM words.
 ///
 /// This implementation reserves memory inplace for all possible stack items (1024),
@@ -68,10 +56,12 @@ struct evm_stack
     uint256 pop() noexcept { return *top_item--; }
 };
 
+struct instr_info;
+
 struct execution_state
 {
+    const instr_info* next_instr{nullptr};
     evmc_status_code status = EVMC_SUCCESS;
-    size_t pc = 0;
     int64_t gas_left = 0;
 
     evm_stack stack;
@@ -100,11 +90,8 @@ struct execution_state
     /// Terminates the execution with the given status code.
     void exit(evmc_status_code status_code) noexcept
     {
-        // If the status_code matches the "continue" status, replace it with the "stop" status.
-        // That will be revert after the execution loop terminates.
-        if (status_code == continue_status)
-            status_code = stop_status;
         status = status_code;
+        next_instr = nullptr;
     }
 };
 
