@@ -286,6 +286,7 @@ TEST_F(evm, call_new_account_create)
     execute(9000, code);
     EXPECT_EQ(gas_used, 729 + 5000);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    ASSERT_EQ(recorded_calls.size(), 1);
     const auto& call_msg = recorded_calls.back();
     EXPECT_EQ(call_msg.kind, EVMC_CALL);
     EXPECT_EQ(call_msg.depth, 1);
@@ -301,6 +302,7 @@ TEST_F(evm, callcode_new_account_create)
     execute(100000, code);
     EXPECT_EQ(gas_used, 59722);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    ASSERT_EQ(recorded_calls.size(), 1);
     const auto& call_msg = recorded_calls.back();
     EXPECT_EQ(call_msg.kind, EVMC_CALLCODE);
     EXPECT_EQ(call_msg.depth, 1);
@@ -317,6 +319,7 @@ TEST_F(evm, call_then_oog)
     call_result.gas_left = 0;
     execute(1000, "6040600060406000600060aa60fef180018001800150");
     EXPECT_EQ(gas_used, 1000);
+    ASSERT_EQ(recorded_calls.size(), 1);
     const auto& call_msg = recorded_calls.back();
     EXPECT_EQ(call_msg.gas, 254);
     EXPECT_EQ(result.gas_left, 0);
@@ -333,6 +336,7 @@ TEST_F(evm, delegatecall_then_oog)
     call_result.gas_left = 0;
     execute(1000, "604060006040600060aa60fef4800180018001800150");
     EXPECT_EQ(gas_used, 1000);
+    ASSERT_EQ(recorded_calls.size(), 1);
     const auto& call_msg = recorded_calls.back();
     EXPECT_EQ(call_msg.gas, 254);
     EXPECT_EQ(result.gas_left, 0);
@@ -349,6 +353,7 @@ TEST_F(evm, staticcall_then_oog)
     call_result.gas_left = 0;
     execute(1000, "604060006040600060aa60fefa800180018001800150");
     EXPECT_EQ(gas_used, 1000);
+    ASSERT_EQ(recorded_calls.size(), 1);
     const auto& call_msg = recorded_calls.back();
     EXPECT_EQ(call_msg.gas, 254);
     EXPECT_EQ(result.gas_left, 0);
@@ -360,6 +365,7 @@ TEST_F(evm, staticcall_input)
     const auto code = mstore(3, 0x010203) + push(0) + push(0) + push(3) + push(32) + push(0) +
                       push(0xee) + OP_STATICCALL;
     execute(code);
+    ASSERT_EQ(recorded_calls.size(), 1);
     const auto& call_msg = recorded_calls.back();
     EXPECT_EQ(call_msg.gas, 0xee);
     EXPECT_EQ(call_msg.input_size, 3);
