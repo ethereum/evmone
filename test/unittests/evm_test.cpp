@@ -74,7 +74,7 @@ TEST_F(evm, sub_and_swap)
     execute(33, "600180810380829052602090f3");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 0);
-    EXPECT_EQ(result.output_size, 32);
+    ASSERT_EQ(result.output_size, 32);
     EXPECT_EQ(result.output_data[31], 1);
 }
 
@@ -83,7 +83,7 @@ TEST_F(evm, memory_and_not)
     execute(42, "600060018019815381518252800190f3");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 0);
-    EXPECT_EQ(result.output_size, 2);
+    ASSERT_EQ(result.output_size, 2);
     EXPECT_EQ(result.output_data[1], 0xfe);
     EXPECT_EQ(result.output_data[0], 0);
 }
@@ -93,7 +93,7 @@ TEST_F(evm, msize)
     execute(29, "60aa6022535960005360016000f3");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 0);
-    EXPECT_EQ(result.output_size, 1);
+    ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 0x40);
 }
 
@@ -102,7 +102,7 @@ TEST_F(evm, gas)
     execute(40, "5a5a5a010160005360016000f3");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 13);
-    EXPECT_EQ(result.output_size, 1);
+    ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 38 + 36 + 34);
 }
 
@@ -123,7 +123,7 @@ TEST_F(evm, arith)
     execute(100, s);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 26);
-    EXPECT_EQ(result.output_size, 1);
+    ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 1);
 }
 
