@@ -56,11 +56,11 @@ struct evm_stack
     uint256 pop() noexcept { return *top_item--; }
 };
 
+struct instr_info;
+
 struct execution_state
 {
-    static constexpr auto stop_sentinel = std::numeric_limits<size_t>::max();
-
-    size_t pc = 0;
+    const instr_info* next_instr{nullptr};
     evmc_status_code status = EVMC_SUCCESS;
     int64_t gas_left = 0;
 
@@ -91,7 +91,7 @@ struct execution_state
     void exit(evmc_status_code status_code) noexcept
     {
         status = status_code;
-        pc = stop_sentinel;
+        next_instr = nullptr;
     }
 };
 
