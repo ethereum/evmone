@@ -697,8 +697,10 @@ TEST_F(evm, log)
         const auto n = op - OP_LOG0;
         const auto code =
             push(1) + push(2) + push(3) + push(4) + mstore8(2, 0x77) + push(2) + push(2) + op;
+        recorded_logs.clear();
         execute(code);
         EXPECT_GAS_USED(EVMC_SUCCESS, 421 + n * 375);
+        ASSERT_EQ(recorded_logs.size(), 1);
         const auto& last_log = recorded_logs.back();
         ASSERT_EQ(last_log.data.size(), 2);
         EXPECT_EQ(last_log.data[0], 0x77);
@@ -715,6 +717,7 @@ TEST_F(evm, log0_empty)
 {
     auto code = push(0) + OP_DUP1 + OP_LOG0;
     execute(code);
+    ASSERT_EQ(recorded_logs.size(), 1);
     const auto& last_log = recorded_logs.back();
     EXPECT_EQ(last_log.topics.size(), 0);
     EXPECT_EQ(last_log.data.size(), 0);
