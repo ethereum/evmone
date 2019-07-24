@@ -322,29 +322,18 @@ TEST_F(evm, divmod)
 
 TEST_F(evm, div_by_zero)
 {
-    rev = EVMC_CONSTANTINOPLE;
-    const auto& account = accounts[{}];  // Create account.
-
-    auto s = std::string{};
-    s += "60008060ff";  // 0 0 ff
-    s += "0405600055";  // s[0] = 0
-    execute(222, s);
+    execute(34, dup1(push(0)) + push(0xff) + OP_DIV + OP_SDIV + ret_top());
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 0);
-    auto it = account.storage.find({});
-    ASSERT_NE(it, account.storage.end());
-    EXPECT_EQ(it->second.value, evmc_bytes32{});
+    EXPECT_OUTPUT_INT(0);
 }
 
 TEST_F(evm, mod_by_zero)
 {
-    const auto& account = accounts[{}];  // Create account.
-    execute("60008060ff0607600055");
+    execute(dup1(push(0)) + push(0xeffe) + OP_MOD + OP_SMOD + ret_top());
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    EXPECT_EQ(gas_used, 5022);
-    auto it = account.storage.find({});
-    ASSERT_NE(it, account.storage.end());
-    EXPECT_EQ(it->second.value, evmc_bytes32{});
+    EXPECT_EQ(gas_used, 34);
+    EXPECT_OUTPUT_INT(0);
 }
 
 TEST_F(evm, addmod_mulmod_by_zero)
