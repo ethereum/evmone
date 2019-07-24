@@ -102,6 +102,7 @@ jobs:
 
   benchmark:
     executor: linux
+    resource_class: small
     environment:
       BUILD_TYPE: Release
       CC: clang-8
@@ -131,7 +132,7 @@ jobs:
           working_directory: ~/build
           command: |
             sudo apt -q update && sudo apt install -qy libbenchmark-tools
-            /usr/share/benchmark/compare.py benchmarks bin/evmone-bench-new bin/evmone-bench ~/project/test/benchmarks --benchmark_min_time=1
+            /usr/share/benchmark/compare.py benchmarks bin/evmone-bench-new bin/evmone-bench ~/project/test/benchmarks --benchmark_repetitions=5
 
   release-macos:
     executor: macos
