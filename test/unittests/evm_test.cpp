@@ -961,7 +961,8 @@ TEST_F(evm, undefined_instructions)
                 continue;
 
             auto res = vm.execute(*this, r, {}, &opcode, sizeof(opcode));
-            EXPECT_EQ(res.status_code, EVMC_UNDEFINED_INSTRUCTION) << hex(opcode);
+            EXPECT_EQ(res.status_code, EVMC_UNDEFINED_INSTRUCTION)
+                << " for opcode " << hex(opcode) << " on revision " << r;
         }
     }
 }
