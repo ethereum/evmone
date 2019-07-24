@@ -28,11 +28,11 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
     state->host = evmc::HostContext{ctx};
     state->gas_left = msg->gas;
     state->rev = rev;
-    while (state->status == continue_status)
+    while (state->pc != execution_state::stop_sentinel)
     {
         auto& instr = analysis.instrs[state->pc];
 
-        // Advance the PC not to allow jump opcodes to overwrite it.
+        // Advance the PC to allow jump opcodes to overwrite it.
         ++state->pc;
 
         instr.fn(*state, instr.arg);
@@ -40,8 +40,7 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
 
     evmc_result result{};
 
-    // Assign status code, revert the "stop" status back to "continue" status - see .exit().
-    result.status_code = state->status != stop_status ? state->status : continue_status;
+    result.status_code = state->status;
 
     if (result.status_code == EVMC_SUCCESS || result.status_code == EVMC_REVERT)
         result.gas_left = state->gas_left;
