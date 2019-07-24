@@ -1400,7 +1400,7 @@ const auto op_table_initialized = []() noexcept
     memcpy(&op_table[EVMC_SPURIOUS_DRAGON], homestead, sizeof(void*) * JUMP_TABLE_SIZE);
     memcpy(&op_table[EVMC_BYZANTIUM], byzantium, sizeof(void*) * JUMP_TABLE_SIZE);
     memcpy(&op_table[EVMC_CONSTANTINOPLE], constantinople, sizeof(void*) * JUMP_TABLE_SIZE);
-    memcpy(&op_table[EVMC_CONSTANTINOPLE2], petersburg, sizeof(void*) * JUMP_TABLE_SIZE);
+    memcpy(&op_table[EVMC_PETERSBURG], petersburg, sizeof(void*) * JUMP_TABLE_SIZE);
     memcpy(&op_table[EVMC_ISTANBUL], istanbul, sizeof(void*) * JUMP_TABLE_SIZE);
 
     memcpy(&op_table[num_revisions + EVMC_FRONTIER], frontier, sizeof(void*) * JUMP_TABLE_SIZE);
@@ -1409,7 +1409,7 @@ const auto op_table_initialized = []() noexcept
     memcpy(&op_table[num_revisions + EVMC_SPURIOUS_DRAGON], homestead, sizeof(void*) * JUMP_TABLE_SIZE);
     memcpy(&op_table[num_revisions + EVMC_BYZANTIUM], byzantium, sizeof(void*) * JUMP_TABLE_SIZE);
     memcpy(&op_table[num_revisions + EVMC_CONSTANTINOPLE], constantinople, sizeof(void*) * JUMP_TABLE_SIZE);
-    memcpy(&op_table[num_revisions + EVMC_CONSTANTINOPLE2], petersburg, sizeof(void*) * JUMP_TABLE_SIZE);
+    memcpy(&op_table[num_revisions + EVMC_PETERSBURG], petersburg, sizeof(void*) * JUMP_TABLE_SIZE);
     memcpy(&op_table[num_revisions + EVMC_ISTANBUL], istanbul, sizeof(void*) * JUMP_TABLE_SIZE);
     for (size_t i = 0; i < num_revisions; i++)
     {

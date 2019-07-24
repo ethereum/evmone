@@ -81,7 +81,7 @@ public:
 
 protected:
     evmc_instance* vm = nullptr;
-    evmc_revision rev = EVMC_CONSTANTINOPLE2;  // Use Constantinople by default.
+    evmc_revision rev = EVMC_PETERSBURG;  // Use Constantinople by default.
     evmc_message msg = {};
     evmc_result result = {};
 
