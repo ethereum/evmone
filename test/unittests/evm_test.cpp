@@ -411,7 +411,7 @@ TEST_F(evm, exp_oog)
     EXPECT_EQ(result.gas_left, 0);
 }
 
-TEST_F(evm, exp_pre_sd)
+TEST_F(evm, exp_pre_spurious_dragon)
 {
     rev = EVMC_TANGERINE_WHISTLE;
     std::string s;
@@ -531,7 +531,7 @@ TEST_F(evm, sstore_pop_stack)
     EXPECT_EQ(result.output_data[0], 0);
 }
 
-TEST_F(evm, sload_cost_pre_tw)
+TEST_F(evm, sload_cost_pre_tangerine_whistle)
 {
     rev = EVMC_HOMESTEAD;
     const auto& account = accounts[msg.destination];
