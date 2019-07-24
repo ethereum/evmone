@@ -322,29 +322,18 @@ TEST_F(evm, divmod)
 
 TEST_F(evm, div_by_zero)
 {
-    rev = EVMC_CONSTANTINOPLE;
-    const auto& account = accounts[{}];  // Create account.
-
-    auto s = std::string{};
-    s += "60008060ff";  // 0 0 ff
-    s += "0405600055";  // s[0] = 0
-    execute(222, s);
+    execute(34, dup1(push(0)) + push(0xff) + OP_DIV + OP_SDIV + ret_top());
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 0);
-    auto it = account.storage.find({});
-    ASSERT_NE(it, account.storage.end());
-    EXPECT_EQ(it->second.value, evmc_bytes32{});
+    EXPECT_OUTPUT_INT(0);
 }
 
 TEST_F(evm, mod_by_zero)
 {
-    const auto& account = accounts[{}];  // Create account.
-    execute("60008060ff0607600055");
+    execute(dup1(push(0)) + push(0xeffe) + OP_MOD + OP_SMOD + ret_top());
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    EXPECT_EQ(gas_used, 5022);
-    auto it = account.storage.find({});
-    ASSERT_NE(it, account.storage.end());
-    EXPECT_EQ(it->second.value, evmc_bytes32{});
+    EXPECT_EQ(gas_used, 34);
+    EXPECT_OUTPUT_INT(0);
 }
 
 TEST_F(evm, addmod_mulmod_by_zero)
@@ -538,6 +527,7 @@ TEST_F(evm, sstore_pop_stack)
     accounts[msg.destination] = {};
     execute(100000, "60008060015560005360016000f3");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 0);
 }
 
@@ -697,8 +687,10 @@ TEST_F(evm, log)
         const auto n = op - OP_LOG0;
         const auto code =
             push(1) + push(2) + push(3) + push(4) + mstore8(2, 0x77) + push(2) + push(2) + op;
+        recorded_logs.clear();
         execute(code);
         EXPECT_GAS_USED(EVMC_SUCCESS, 421 + n * 375);
+        ASSERT_EQ(recorded_logs.size(), 1);
         const auto& last_log = recorded_logs.back();
         ASSERT_EQ(last_log.data.size(), 2);
         EXPECT_EQ(last_log.data[0], 0x77);
@@ -715,6 +707,7 @@ TEST_F(evm, log0_empty)
 {
     auto code = push(0) + OP_DUP1 + OP_LOG0;
     execute(code);
+    ASSERT_EQ(recorded_logs.size(), 1);
     const auto& last_log = recorded_logs.back();
     EXPECT_EQ(last_log.topics.size(), 0);
     EXPECT_EQ(last_log.data.size(), 0);
