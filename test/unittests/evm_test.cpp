@@ -538,6 +538,7 @@ TEST_F(evm, sstore_pop_stack)
     accounts[msg.destination] = {};
     execute(100000, "60008060015560005360016000f3");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 0);
 }
 
