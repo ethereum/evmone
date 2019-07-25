@@ -5,6 +5,7 @@
 #include "analysis.hpp"
 
 #include <evmc/instructions.h>
+#include <tuple>
 
 namespace evmone
 {
@@ -16,16 +17,18 @@ bool is_terminator(uint8_t c) noexcept
            c == OP_SELFDESTRUCT;
 }
 
-int load_1byte_immediate_value(const uint8_t* code, size_t code_size, size_t& index) noexcept
+std::pair<int, size_t> load_1byte_immediate_value(
+    const uint8_t* code, size_t code_size, size_t index) noexcept
 {
-    return (index + 1 < code_size) ? code[++index] : 0;
+    return {(index + 1 < code_size) ? code[++index] : 0, index};
 }
 
-int load_2byte_immediate_value(const uint8_t* code, size_t code_size, size_t& index) noexcept
+std::pair<int, size_t> load_2byte_immediate_value(
+    const uint8_t* code, size_t code_size, size_t index) noexcept
 {
-    const auto hi_byte = load_1byte_immediate_value(code, code_size, index);
-    const auto lo_byte = load_1byte_immediate_value(code, code_size, index);
-    return (hi_byte << 8) | lo_byte;
+    const auto [hi_byte, index1] = load_1byte_immediate_value(code, code_size, index);
+    const auto [lo_byte, index2] = load_1byte_immediate_value(code, code_size, index1);
+    return {(hi_byte << 8) | lo_byte, index2};
 }
 }  // namespace
 
@@ -140,25 +143,27 @@ code_analysis analyze(
         {
             if (c == OP_DUPN)
             {
-                instr.arg.p.number = load_2byte_immediate_value(code, code_size, i);
+                std::tie(instr.arg.p.number, i) = load_2byte_immediate_value(code, code_size, i);
                 instr_stack_req = instr.arg.p.number + 1;
                 instr_stack_change = 1;
             }
             else if (c == OP_SWAPN)
             {
-                instr.arg.p.number = load_2byte_immediate_value(code, code_size, i) + 1;
+                std::tie(instr.arg.p.number, i) = load_2byte_immediate_value(code, code_size, i);
+                ++instr.arg.p.number;
                 instr_stack_req = instr.arg.p.number + 1;
                 instr_stack_change = 0;
             }
             else if (c == OP_DUPSN)
             {
-                instr.arg.p.number = load_1byte_immediate_value(code, code_size, i);
+                std::tie(instr.arg.p.number, i) = load_1byte_immediate_value(code, code_size, i);
                 instr_stack_req = instr.arg.p.number + 1;
                 instr_stack_change = 1;
             }
             else if (c == OP_SWAPSN)
             {
-                instr.arg.p.number = load_1byte_immediate_value(code, code_size, i) + 1;
+                std::tie(instr.arg.p.number, i) = load_1byte_immediate_value(code, code_size, i);
+                ++instr.arg.p.number;
                 instr_stack_req = instr.arg.p.number + 1;
                 instr_stack_change = 0;
             }
