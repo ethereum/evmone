@@ -48,7 +48,7 @@ void dump_analysis(const evmone::code_analysis& analysis)
                 std::cout << "  ";
 
             std::cout << " " << std::setw(10) << block->gas_cost << " " << block->stack_req << " "
-                      << block->stack_max << " " << block->stack_diff << "\n";
+                      << block->stack_max << " " << block->stack_change << "\n";
         }
 
         std::cout << "│ " << std::setw(9) << std::left << name << std::setw(4) << std::right
