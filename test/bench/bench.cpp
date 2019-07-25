@@ -3,6 +3,7 @@
 // Licensed under the Apache License, Version 2.0.
 
 #include <evmc/evmc.hpp>
+#include <evmc/loader.h>
 #include <evmone/analysis.hpp>
 #include <evmone/evmone.h>
 
@@ -32,7 +33,7 @@ using namespace benchmark;
 namespace
 {
 constexpr auto gas_limit = std::numeric_limits<int64_t>::max();
-auto vm = evmc::vm{evmc_create_evmone()};
+auto vm = evmc::vm{};
 
 constexpr auto inputs_extension = ".inputs";
 
@@ -174,7 +175,7 @@ void load_benchmark(fs::path path)
     }
 }
 
-bool load_benchmarks_from_dir(const char* path)
+void load_benchmarks_from_dir(const char* path)
 {
     for (auto& e : fs::directory_iterator{path})
     {
@@ -183,16 +184,44 @@ bool load_benchmarks_from_dir(const char* path)
 
         load_benchmark(e.path());
     }
-    return true;
 }
 
-bool parseargs(int argc, char** argv)
+/// The error code for CLI arguments parsing error in evmone-bench.
+/// The number tries to be different from EVMC loading error codes.
+constexpr auto cli_parsing_error = -3;
+
+int parseargs(int argc, char** argv)
 {
     if (argc == 2)
-        return load_benchmarks_from_dir(argv[1]);
+    {
+        vm = evmc::vm{evmc_create_evmone()};
+        std::cout << "Benchmarking evmone\n\n";
+        load_benchmarks_from_dir(argv[1]);
+        return 0;
+    }
+
+    if (argc == 3)
+    {
+        const auto evmc_config = argv[1];
+        auto ec = evmc_loader_error_code{};
+        vm = evmc::vm{evmc_load_and_configure(evmc_config, &ec)};
+
+        if (ec != EVMC_LOADER_SUCCESS)
+        {
+            if (const auto error = evmc_last_error_msg())
+                std::cerr << "EVMC loading error: " << error << "\n";
+            else
+                std::cerr << "EVMC loading error " << ec << "\n";
+            return static_cast<int>(ec);
+        }
+
+        std::cout << "Benchmarking " << evmc_config << "\n\n";
+        load_benchmarks_from_dir(argv[2]);
+        return 0;
+    }
 
     if (argc != 4)
-        return false;
+        return cli_parsing_error;
 
     std::ifstream file{argv[1]};
     std::string code_hex{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
@@ -205,8 +234,7 @@ bool parseargs(int argc, char** argv)
     b.input = from_hex(argv[2]);
     b.expected_output = from_hex(argv[3]);
     RegisterBenchmark("external_evm_code", b)->Unit(kMicrosecond);
-
-    return true;
+    return 0;
 }
 }  // namespace
 
@@ -216,8 +244,13 @@ int main(int argc, char** argv)
     {
         Initialize(&argc, argv);
 
-        if (!parseargs(argc, argv) && ReportUnrecognizedArguments(argc, argv))
-            return 1;
+        const auto ec = parseargs(argc, argv);
+
+        if (ec == cli_parsing_error && ReportUnrecognizedArguments(argc, argv))
+            return ec;
+
+        if (ec != 0)
+            return ec;
 
         RunSpecifiedBenchmarks();
         return 0;
