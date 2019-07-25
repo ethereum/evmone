@@ -54,7 +54,7 @@ code_analysis analyze(
     // TODO: Check if final result exceeds the reservation.
     analysis.instrs.reserve(code_size + 1);
 
-    auto* instr_table = evmc_get_instruction_metrics_table(rev);
+    const auto* instr_table = evmc_get_instruction_metrics_table(rev);
 
     block_info* block = nullptr;
     int instr_index = 0;
@@ -83,13 +83,12 @@ code_analysis analyze(
 
         auto& instr = jumpdest ? analysis.instrs.back() : analysis.instrs.emplace_back(fns[c]);
 
-        auto metrics = instr_table[c];
+        const auto metrics = instr_table[c];
+        const auto instr_stack_req = metrics.num_stack_arguments;
+        const auto instr_stack_change = metrics.num_stack_returned_items - instr_stack_req;
+
         if (metrics.gas_cost > 0)  // can be -1 for undefined instruction
             block->gas_cost += metrics.gas_cost;
-        auto stack_req = metrics.num_stack_arguments - block->stack_change;
-        block->stack_change += (metrics.num_stack_returned_items - metrics.num_stack_arguments);
-        block->stack_req = std::max(block->stack_req, stack_req);
-        block->stack_max = std::max(block->stack_max, block->stack_change);
 
         // Skip PUSH data.
         if (c >= OP_PUSH1 && c <= OP_PUSH32)
@@ -124,7 +123,12 @@ code_analysis analyze(
             instr.arg.p.number = static_cast<int>(i);
         else if (c >= OP_LOG0 && c <= OP_LOG4)
             instr.arg.p.number = c - OP_LOG0;
-        else if (is_terminator(c))
+
+        block->stack_req = std::max(block->stack_req, instr_stack_req - block->stack_change);
+        block->stack_change += instr_stack_change;
+        block->stack_max = std::max(block->stack_max, block->stack_change);
+
+        if (is_terminator(c))
             block = nullptr;
     }
 
