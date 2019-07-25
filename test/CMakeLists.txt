@@ -8,10 +8,12 @@ set(evmone_private_include_dir ${PROJECT_SOURCE_DIR}/lib)
 
 add_subdirectory(utils)
 add_subdirectory(bench)
+add_subdirectory(internal_benchmarks)
 add_subdirectory(unittests)
 
 set_target_properties(
-    evm-test evmone-bench evmone-unittests testutils PROPERTIES
+    evm-test evmone-bench evmone-bench-internal evmone-unittests testutils
+    PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}
