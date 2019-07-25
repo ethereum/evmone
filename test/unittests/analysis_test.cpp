@@ -43,7 +43,7 @@ TEST(analysis, example1)
     EXPECT_EQ(analysis.blocks[0].gas_cost, 14);
     EXPECT_EQ(analysis.blocks[0].stack_req, 0);
     EXPECT_EQ(analysis.blocks[0].stack_max, 2);
-    EXPECT_EQ(analysis.blocks[0].stack_diff, 0);
+    EXPECT_EQ(analysis.blocks[0].stack_change, 0);
 }
 
 TEST(analysis, stack_up_and_down)
@@ -63,7 +63,7 @@ TEST(analysis, stack_up_and_down)
     EXPECT_EQ(analysis.blocks[0].gas_cost, 7 * 3 + 10 * 2 + 3);
     EXPECT_EQ(analysis.blocks[0].stack_req, 3);
     EXPECT_EQ(analysis.blocks[0].stack_max, 7);
-    EXPECT_EQ(analysis.blocks[0].stack_diff, -2);
+    EXPECT_EQ(analysis.blocks[0].stack_change, -2);
 }
 
 TEST(analysis, push)

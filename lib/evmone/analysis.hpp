@@ -136,9 +136,9 @@ struct instr_info
 struct block_info
 {
     int64_t gas_cost = 0;
-    int stack_req = 0;
-    int stack_max = 0;
-    int stack_diff = 0;
+    int stack_req = 0;     ///< The required stack height to execute the block.
+    int stack_max = 0;     ///< The relative maximum stack height in the block.
+    int stack_change = 0;  ///< The relative stack height change after the execution of the block.
 };
 
 struct code_analysis

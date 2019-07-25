@@ -86,10 +86,10 @@ code_analysis analyze(
         auto metrics = instr_table[c];
         if (metrics.gas_cost > 0)  // can be -1 for undefined instruction
             block->gas_cost += metrics.gas_cost;
-        auto stack_req = metrics.num_stack_arguments - block->stack_diff;
-        block->stack_diff += (metrics.num_stack_returned_items - metrics.num_stack_arguments);
+        auto stack_req = metrics.num_stack_arguments - block->stack_change;
+        block->stack_change += (metrics.num_stack_returned_items - metrics.num_stack_arguments);
         block->stack_req = std::max(block->stack_req, stack_req);
-        block->stack_max = std::max(block->stack_max, block->stack_diff);
+        block->stack_max = std::max(block->stack_max, block->stack_change);
 
         // Skip PUSH data.
         if (c >= OP_PUSH1 && c <= OP_PUSH32)
