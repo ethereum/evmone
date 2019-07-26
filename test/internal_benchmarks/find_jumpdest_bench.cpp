@@ -4,6 +4,7 @@
 
 #include <benchmark/benchmark.h>
 #include <array>
+#include <random>
 
 namespace
 {
@@ -54,22 +55,21 @@ inline T binary_search(const std::pair<T, T>* arr, size_t size, T offset) noexce
 }
 
 template <typename T>
-inline T binary_search2(const std::pair<T, T>* first, size_t count, T offset) noexcept
+inline T binary_search2(const std::pair<T, T>* begin, size_t size, T offset) noexcept
 {
-    while (count > 0)
+    while (size > 0)
     {
-        auto it = first;
-        auto step = count / 2;
-        it += step;
+        const auto half = size / 2;
+        const auto it = begin + half;
         if (it->first == offset)
             return it->second;
         else if (it->first < offset)
         {
-            first = ++it;
-            count -= step + 1;
+            begin = it + 1;
+            size -= half + 1;
         }
         else
-            count = step;
+            size = half;
     }
 
     return T(-1);
@@ -82,12 +82,14 @@ struct map_builder
 };
 
 template <typename T>
-const std::array<std::pair<T, T>, jumpdest_map_size> map_builder<T>::map = []() noexcept {
+const std::array<std::pair<T, T>, jumpdest_map_size> map_builder<T>::map = []() noexcept
+{
     auto m = std::array<std::pair<T, T>, jumpdest_map_size>{};
     for (int i = 0; i < static_cast<int>(m.size()); ++i)
         m[i] = {2 * i + 1, 2 * i + 2};
     return m;
-}();
+}
+();
 
 template <typename T, T (*F)(const std::pair<T, T>*, size_t, T) noexcept>
 void find_jumpdest(benchmark::State& state)
@@ -95,19 +97,19 @@ void find_jumpdest(benchmark::State& state)
     const auto& map = map_builder<T>::map;
     const auto begin = map.data();
     const auto size = state.range(0);
-    const auto niddle = state.range(1);
+    const auto needle = state.range(1);
     benchmark::ClobberMemory();
 
     int x = -1;
     for (auto _ : state)
     {
-        x = F(begin, size, niddle);
+        x = F(begin, size, needle);
         benchmark::DoNotOptimize(x);
     }
 
-    if (niddle % 2 == 1)
+    if (needle % 2 == 1)
     {
-        if (x != niddle + 1)
+        if (x != needle + 1)
             state.SkipWithError("incorrect element found");
     }
     else if (x != T(-1))
@@ -134,6 +136,154 @@ BENCHMARK_TEMPLATE(find_jumpdest, uint16_t, linear) ARGS;
 BENCHMARK_TEMPLATE(find_jumpdest, uint16_t, lower_bound) ARGS;
 BENCHMARK_TEMPLATE(find_jumpdest, uint16_t, binary_search) ARGS;
 BENCHMARK_TEMPLATE(find_jumpdest, uint16_t, binary_search2) ARGS;
+
+
+std::array<uint16_t, 1000> get_random_indexes()
+{
+    auto gen = std::mt19937_64{std::random_device{}()};
+    auto dist = std::uniform_int_distribution<uint16_t>(0, jumpdest_map_size - 1);
+    auto res = std::array<uint16_t, 1000>{};
+    for (auto& x : res)
+        x = dist(gen);
+    return res;
+}
+
+const auto random_indexes = get_random_indexes();
+
+template <typename T, T (*F)(const std::pair<T, T>*, size_t, T) noexcept>
+void find_jumpdest_random(benchmark::State& state)
+{
+    const auto indexes = random_indexes;
+    const auto& map = map_builder<T>::map;
+    const auto begin = map.data();
+    benchmark::ClobberMemory();
+
+    for (auto _ : state)
+    {
+        for (auto i : indexes)
+        {
+            auto x = F(begin, jumpdest_map_size, i);
+            benchmark::DoNotOptimize(x);
+        }
+    }
+}
+
+BENCHMARK_TEMPLATE(find_jumpdest_random, int, linear);
+BENCHMARK_TEMPLATE(find_jumpdest_random, int, lower_bound);
+BENCHMARK_TEMPLATE(find_jumpdest_random, int, binary_search);
+BENCHMARK_TEMPLATE(find_jumpdest_random, int, binary_search2);
+BENCHMARK_TEMPLATE(find_jumpdest_random, uint16_t, linear);
+BENCHMARK_TEMPLATE(find_jumpdest_random, uint16_t, lower_bound);
+BENCHMARK_TEMPLATE(find_jumpdest_random, uint16_t, binary_search);
+BENCHMARK_TEMPLATE(find_jumpdest_random, uint16_t, binary_search2);
+
+
+template <typename T>
+struct split_map
+{
+    std::array<T, jumpdest_map_size> key;
+    std::array<T, jumpdest_map_size> value;
+};
+
+template <typename T>
+struct split_map_builder
+{
+    static const split_map<T> map;
+};
+
+template <typename T>
+const split_map<T> split_map_builder<T>::map = []() noexcept
+{
+    auto m = split_map<T>{};
+    for (int i = 0; i < static_cast<int>(m.key.size()); ++i)
+    {
+        m.key[i] = 2 * i + 1;
+        m.value[i] = 2 * i + 2;
+    }
+    return m;
+}
+();
+
+template <typename T>
+inline T lower_bound(const T* begin, const T* values, size_t size, T offset) noexcept
+{
+    const auto end = begin + size;
+    const auto it = std::lower_bound(begin, end, offset);
+    return (it != end && *it == offset) ? values[it - begin] : T(-1);
+}
+
+template <typename T>
+inline T binary_search2(const T* begin, const T* values, size_t size, T offset) noexcept
+{
+    const auto begin_copy = begin;
+    while (size > 0)
+    {
+        const auto half = size / 2;
+        const auto it = begin + half;
+        if (*it == offset)
+            return values[it - begin_copy];
+        else if (*it < offset)
+        {
+            begin = it + 1;
+            size -= half + 1;
+        }
+        else
+            size = half;
+    }
+
+    return T(-1);
+}
+
+
+template <typename T, T (*F)(const T*, const T*, size_t, T) noexcept>
+void find_jumpdest_split(benchmark::State& state)
+{
+    const auto& map = split_map_builder<T>::map;
+    const auto begin = map.key.data();
+    const auto values = map.value.data();
+    const auto size = state.range(0);
+    const auto needle = state.range(1);
+    benchmark::ClobberMemory();
+
+    int x = -1;
+    for (auto _ : state)
+    {
+        x = F(begin, values, size, needle);
+        benchmark::DoNotOptimize(x);
+    }
+
+    if (needle % 2 == 1)
+    {
+        if (x != needle + 1)
+            state.SkipWithError("incorrect element found");
+    }
+    else if (x != T(-1))
+        state.SkipWithError("element should not have been found");
+}
+
+template <typename T, T (*F)(const T*, const T*, size_t, T) noexcept>
+void find_jumpdest_split_random(benchmark::State& state)
+{
+    const auto indexes = random_indexes;
+    const auto& map = split_map_builder<T>::map;
+    const auto key = map.key.data();
+    const auto value = map.value.data();
+    benchmark::ClobberMemory();
+
+    for (auto _ : state)
+    {
+        for (auto i : indexes)
+        {
+            auto x = F(key, value, jumpdest_map_size, i);
+            benchmark::DoNotOptimize(x);
+        }
+    }
+}
+
+BENCHMARK_TEMPLATE(find_jumpdest_split, uint16_t, lower_bound) ARGS;
+BENCHMARK_TEMPLATE(find_jumpdest_split, uint16_t, binary_search2) ARGS;
+BENCHMARK_TEMPLATE(find_jumpdest_split_random, uint16_t, lower_bound);
+BENCHMARK_TEMPLATE(find_jumpdest_split_random, uint16_t, binary_search2);
 
 }  // namespace
 
