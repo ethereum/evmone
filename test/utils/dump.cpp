@@ -30,14 +30,14 @@ void dump_analysis(const evmone::code_analysis& analysis)
         {
             block = &analysis.blocks[size_t(instr.arg.p.number)];
 
-            auto get_jumpdest_offset = [&analysis](size_t index) noexcept
+            const auto get_jumpdest_offset = [&analysis](size_t index) noexcept
             {
-                for (const auto& d : analysis.jumpdest_map)
+                for (size_t t = 0; t < analysis.jumpdest_targets.size(); ++t)
                 {
-                    if (d.second == static_cast<int>(index))
-                        return d.first;
+                    if (t == index)
+                        return analysis.jumpdest_offsets[t];
                 }
-                return -1;
+                return int16_t{-1};
             };
 
             std::cout << "┌ ";

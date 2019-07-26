@@ -152,15 +152,23 @@ struct code_analysis
     /// invalidated when the container grows.
     std::deque<bytes32> args_storage;
 
-    std::vector<std::pair<int, int>> jumpdest_map;
+    /// The offsets of JUMPDESTs in the original code.
+    /// These are values that JUMP/JUMPI receives as an argument.
+    /// The elements are sorted.
+    std::vector<int16_t> jumpdest_offsets;
+
+    /// The indexes of the instructions in the generated instruction table
+    /// matching the elements from jumdest_offsets.
+    /// This is value to which the next instruction pointer must be set in JUMP/JUMPI.
+    std::vector<int16_t> jumpdest_targets;
 };
 
 inline int find_jumpdest(const code_analysis& analysis, int offset) noexcept
 {
-    const auto& m = analysis.jumpdest_map;
-    const auto it = std::lower_bound(std::begin(m), std::end(m), offset,
-        [](std::pair<int, int> p, int v) noexcept { return p.first < v; });
-    return (it != std::end(m) && it->first == offset) ? it->second : -1;
+    const auto begin = std::begin(analysis.jumpdest_offsets);
+    const auto end = std::end(analysis.jumpdest_offsets);
+    const auto it = std::lower_bound(begin, end, offset);
+    return (it != end && *it == offset) ? analysis.jumpdest_targets[it - begin] : -1;
 }
 
 EVMC_EXPORT code_analysis analyze(
