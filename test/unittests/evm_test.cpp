@@ -226,6 +226,19 @@ TEST_F(evm, swapn_full_stack)
     EXPECT_STATUS(EVMC_STACK_UNDERFLOW);
 }
 
+TEST_F(evm, swapsn_jumpdest)
+{
+    const auto code = push(4) + OP_JUMP + OP_SWAPSN + OP_JUMPDEST + push(0) + ret_top();
+
+    rev = EVMC_PETERSBURG;
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+
+    rev = EVMC_ISTANBUL;
+    execute(code);
+    EXPECT_STATUS(EVMC_BAD_JUMP_DESTINATION);
+}
+
 TEST_F(evm, memory_and_not)
 {
     execute(42, "600060018019815381518252800190f3");
