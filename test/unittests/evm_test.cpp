@@ -95,6 +95,40 @@ TEST_F(evm, sub_and_swap)
     EXPECT_EQ(result.output_data[31], 1);
 }
 
+TEST_F(evm, swapsn_jumpdest)
+{
+    // Test demonstrating possible problem with introducing multibyte SWAP/DUP instructions as per
+    // EIP-663 variants B and C.
+    // When SWAPSN is implemented execution will fail with EVMC_BAD_JUMP_DESTINATION.
+    const auto swapsn = "b3";
+    const auto code = push(4) + OP_JUMP + swapsn + OP_JUMPDEST + push(0) + ret_top();
+
+    rev = EVMC_PETERSBURG;
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+
+    rev = EVMC_ISTANBUL;
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+}
+
+TEST_F(evm, swapsn_push)
+{
+    // Test demonstrating possible problem with introducing multibyte SWAP/DUP instructions as per
+    // EIP-663 variants B and C.
+    // When SWAPSN is implemented execution will succeed, considering PUSH an argument of SWAPSN.
+    const auto swapsn = "b3";
+    const auto code = push(5) + OP_JUMP + swapsn + push(OP_JUMPDEST) + push(0) + ret_top();
+
+    rev = EVMC_PETERSBURG;
+    execute(code);
+    EXPECT_STATUS(EVMC_BAD_JUMP_DESTINATION);
+
+    rev = EVMC_ISTANBUL;
+    execute(code);
+    EXPECT_STATUS(EVMC_BAD_JUMP_DESTINATION);
+}
+
 TEST_F(evm, memory_and_not)
 {
     execute(42, "600060018019815381518252800190f3");
