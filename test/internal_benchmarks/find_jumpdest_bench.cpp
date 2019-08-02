@@ -6,6 +6,8 @@
 #include <array>
 #include <random>
 
+#pragma GCC diagnostic error "-Wconversion"
+
 namespace
 {
 constexpr size_t jumpdest_map_size = 0x6000;
@@ -85,8 +87,8 @@ template <typename T>
 const std::array<std::pair<T, T>, jumpdest_map_size> map_builder<T>::map = []() noexcept
 {
     auto m = std::array<std::pair<T, T>, jumpdest_map_size>{};
-    for (int i = 0; i < static_cast<int>(m.size()); ++i)
-        m[i] = {2 * i + 1, 2 * i + 2};
+    for (size_t i = 0; i < static_cast<int>(m.size()); ++i)
+        m[i] = {static_cast<T>(2 * i + 1), static_cast<T>(2 * i + 2)};
     return m;
 }
 ();
@@ -96,8 +98,8 @@ void find_jumpdest(benchmark::State& state)
 {
     const auto& map = map_builder<T>::map;
     const auto begin = map.data();
-    const auto size = state.range(0);
-    const auto needle = state.range(1);
+    const auto size = static_cast<size_t>(state.range(0));
+    const auto needle = static_cast<T>(state.range(1));
     benchmark::ClobberMemory();
 
     int x = -1;
@@ -116,17 +118,17 @@ void find_jumpdest(benchmark::State& state)
         state.SkipWithError("element should not have been found");
 }
 
-#define ARGS                             \
-    ->Args({0, 0})                       \
-        ->Args({3, 0})                   \
-        ->Args({16, 0})                  \
-        ->Args({256, 1})                 \
-        ->Args({256, 255})               \
-        ->Args({256, 511})               \
-        ->Args({256, 0})                 \
-        ->Args({jumpdest_map_size, 1})   \
-        ->Args({jumpdest_map_size, 359}) \
-        ->Args({jumpdest_map_size, 0})
+#define ARGS                                  \
+    ->Args({0, 0})                            \
+        ->Args({3, 0})                        \
+        ->Args({16, 0})                       \
+        ->Args({256, 1})                      \
+        ->Args({256, 255})                    \
+        ->Args({256, 511})                    \
+        ->Args({256, 0})                      \
+        ->Args({int{jumpdest_map_size}, 1})   \
+        ->Args({int{jumpdest_map_size}, 359}) \
+        ->Args({int{jumpdest_map_size}, 0})
 
 BENCHMARK_TEMPLATE(find_jumpdest, int, linear) ARGS;
 BENCHMARK_TEMPLATE(find_jumpdest, int, lower_bound) ARGS;
@@ -195,10 +197,10 @@ template <typename T>
 const split_map<T> split_map_builder<T>::map = []() noexcept
 {
     auto m = split_map<T>{};
-    for (int i = 0; i < static_cast<int>(m.key.size()); ++i)
+    for (size_t i = 0; i < m.key.size(); ++i)
     {
-        m.key[i] = 2 * i + 1;
-        m.value[i] = 2 * i + 2;
+        m.key[i] = static_cast<T>(2 * i + 1);
+        m.value[i] = static_cast<T>(2 * i + 2);
     }
     return m;
 }
@@ -241,8 +243,8 @@ void find_jumpdest_split(benchmark::State& state)
     const auto& map = split_map_builder<T>::map;
     const auto begin = map.key.data();
     const auto values = map.value.data();
-    const auto size = state.range(0);
-    const auto needle = state.range(1);
+    const auto size = static_cast<size_t>(state.range(0));
+    const auto needle = static_cast<T>(state.range(1));
     benchmark::ClobberMemory();
 
     int x = -1;
