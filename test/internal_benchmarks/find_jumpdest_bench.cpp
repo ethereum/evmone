@@ -5,6 +5,7 @@
 #include <benchmark/benchmark.h>
 #include <array>
 #include <random>
+#include <unordered_map>
 
 #pragma GCC diagnostic error "-Wconversion"
 
@@ -286,6 +287,30 @@ BENCHMARK_TEMPLATE(find_jumpdest_split, uint16_t, lower_bound) ARGS;
 BENCHMARK_TEMPLATE(find_jumpdest_split, uint16_t, binary_search2) ARGS;
 BENCHMARK_TEMPLATE(find_jumpdest_split_random, uint16_t, lower_bound);
 BENCHMARK_TEMPLATE(find_jumpdest_split_random, uint16_t, binary_search2);
+
+
+template <typename T>
+void find_jumpdest_hashmap_random(benchmark::State& state)
+{
+    const auto indexes = random_indexes;
+    const auto& map = map_builder<T>::map;
+
+    const auto hashmap = std::unordered_map<T, T>{map.begin(), map.end()};
+    benchmark::ClobberMemory();
+
+    for (auto _ : state)
+    {
+        for (auto i : indexes)
+        {
+            auto it = hashmap.find(i);
+            auto x = it != hashmap.end() ? it->second : -1;
+            benchmark::DoNotOptimize(x);
+        }
+    }
+}
+
+BENCHMARK_TEMPLATE(find_jumpdest_hashmap_random, int);
+BENCHMARK_TEMPLATE(find_jumpdest_hashmap_random, uint16_t);
 
 }  // namespace
 
