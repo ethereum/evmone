@@ -5,6 +5,10 @@
 hunter_add_package(benchmark)
 find_package(benchmark CONFIG REQUIRED)
 
-add_executable(evmone-bench-internal find_jumpdest_bench.cpp)
+add_executable(
+    evmone-bench-internal
+    find_jumpdest_bench.cpp
+    memory_allocation.cpp
+)
 
 target_link_libraries(evmone-bench-internal PRIVATE benchmark::benchmark)
