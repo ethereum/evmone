@@ -17,17 +17,6 @@ bool is_terminator(uint8_t c) noexcept
 }
 }  // namespace
 
-int code_analysis::find_jumpdest(int offset) const noexcept
-{
-    // TODO: Replace with lower_bound().
-    for (const auto& d : jumpdest_map)
-    {
-        if (d.first == offset)
-            return d.second;
-    }
-    return -1;
-}
-
 evmc_call_kind op2call_kind(uint8_t opcode) noexcept
 {
     switch (opcode)
@@ -76,7 +65,10 @@ code_analysis analyze(
             beginblock_instr.arg.p.number = static_cast<int>(analysis.blocks.size() - 1);
 
             if (jumpdest)  // Add the jumpdest to the map.
-                analysis.jumpdest_map.emplace_back(static_cast<int>(i), instr_index);
+            {
+                analysis.jumpdest_offsets.emplace_back(static_cast<int16_t>(i));
+                analysis.jumpdest_targets.emplace_back(static_cast<int16_t>(instr_index));
+            }
             else  // Increase instruction count because additional BEGINBLOCK was injected.
                 ++instr_index;
         }

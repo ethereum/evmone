@@ -86,10 +86,13 @@ TEST(analysis, jump1)
     const auto analysis = analyze(fake_fn_table, rev, &code[0], code.size());
 
     ASSERT_EQ(analysis.blocks.size(), 3);
-    ASSERT_EQ(analysis.jumpdest_map.size(), 1);
-    EXPECT_EQ(analysis.jumpdest_map[0], std::pair(6, 5));
-    EXPECT_EQ(analysis.find_jumpdest(6), 5);
-    EXPECT_EQ(analysis.find_jumpdest(0), -1);
+    ASSERT_EQ(analysis.jumpdest_offsets.size(), 1);
+    ASSERT_EQ(analysis.jumpdest_targets.size(), 1);
+    EXPECT_EQ(analysis.jumpdest_offsets[0], 6);
+    EXPECT_EQ(analysis.jumpdest_targets[0], 5);
+    EXPECT_EQ(find_jumpdest(analysis, 6), 5);
+    EXPECT_EQ(find_jumpdest(analysis, 0), -1);
+    EXPECT_EQ(find_jumpdest(analysis, 7), -1);
 }
 
 TEST(analysis, empty)
@@ -108,8 +111,10 @@ TEST(analysis, only_jumpdest)
     auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
 
     ASSERT_EQ(analysis.blocks.size(), 1);
-    ASSERT_EQ(analysis.jumpdest_map.size(), 1);
-    EXPECT_EQ(analysis.jumpdest_map[0], std::pair(0, 0));
+    ASSERT_EQ(analysis.jumpdest_offsets.size(), 1);
+    ASSERT_EQ(analysis.jumpdest_targets.size(), 1);
+    EXPECT_EQ(analysis.jumpdest_offsets[0], 0);
+    EXPECT_EQ(analysis.jumpdest_targets[0], 0);
 }
 
 TEST(analysis, jumpi_at_the_end)
