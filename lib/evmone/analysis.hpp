@@ -56,6 +56,33 @@ struct evm_stack
     uint256 pop() noexcept { return *top_item--; }
 };
 
+/// The EVM memory.
+///
+/// At this point it is a wrapper for std::vector<uint8_t> with initial allocation of 4k.
+/// Some benchmarks has been done to confirm 4k is ok-ish value.
+/// Also std::basic_string<uint8_t> has been tried but not faster and we don't want SSO
+/// if initial_capacity is used.
+/// In future, transition to std::realloc() + std::free() planned.
+class evm_memory
+{
+    /// The initial memory allocation.
+    static constexpr size_t initial_capacity = 4 * 1024;
+
+    std::vector<uint8_t> m_memory;
+
+public:
+    evm_memory() noexcept { m_memory.reserve(initial_capacity); }
+
+    evm_memory(const evm_memory&) = delete;
+    evm_memory& operator=(const evm_memory&) = delete;
+
+    uint8_t& operator[](size_t index) noexcept { return m_memory[index]; }
+
+    [[nodiscard]] size_t size() const noexcept { return m_memory.size(); }
+
+    void resize(size_t new_size) { m_memory.resize(new_size); }
+};
+
 struct instr_info;
 
 struct execution_state
@@ -65,8 +92,8 @@ struct execution_state
     int64_t gas_left = 0;
 
     evm_stack stack;
+    evm_memory memory;
 
-    std::vector<uint8_t> memory;  // TODO: Use bytes.
     int64_t memory_cost = 0;
     size_t output_offset = 0;
     size_t output_size = 0;
