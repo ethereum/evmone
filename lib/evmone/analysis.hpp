@@ -20,6 +20,8 @@ using bytes32 = std::array<uint8_t, 32>;
 
 using bytes = std::basic_string<uint8_t>;
 
+constexpr unsigned particles_per_gas = 1000;
+
 /// The stack for 256-bit EVM words.
 ///
 /// This implementation reserves memory inplace for all possible stack items (1024),

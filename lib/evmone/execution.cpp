@@ -29,6 +29,8 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
     state->host = evmc::HostContext{ctx};
     state->gas_left = msg->gas;
     state->rev = rev;
+    if (rev >= EVMC_ISTANBUL)
+        state->gas_left *= particles_per_gas;
     while (state->next_instr)
     {
         const auto& instr = *state->next_instr;
@@ -44,7 +46,11 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
     result.status_code = state->status;
 
     if (result.status_code == EVMC_SUCCESS || result.status_code == EVMC_REVERT)
+    {
         result.gas_left = state->gas_left;
+        if (rev >= EVMC_ISTANBUL)
+            result.gas_left /= particles_per_gas;
+    }
 
     if (state->output_size > 0)
     {
