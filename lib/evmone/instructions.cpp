@@ -26,30 +26,23 @@ constexpr int64_t num_words(size_t size_in_bytes) noexcept
     return (static_cast<int64_t>(size_in_bytes) + (word_size - 1)) / word_size;
 }
 
-bool check_memory(execution_state& state, const uint256& offset, const uint256& size) noexcept
+inline bool check_memory(execution_state& state, const uint256& offset, int64_t size) noexcept
 {
-    if (size == 0)
-        return true;
-
-    if (offset > max_buffer_size || size > max_buffer_size)
+    if (offset > max_buffer_size)
     {
         state.exit(EVMC_OUT_OF_GAS);
         return false;
     }
 
-    const auto o = static_cast<int64_t>(offset);
-    const auto s = static_cast<int64_t>(size);
-
-    const auto m = static_cast<int64_t>(state.memory.size());
-
-    const auto new_size = o + s;
-    if (m < new_size)
+    const auto new_size = static_cast<int64_t>(offset) + size;
+    const auto current_size = static_cast<int64_t>(state.memory.size());
+    if (new_size > current_size)
     {
         // OPT: Benchmark variant without storing state.memory_cost.
 
-        auto w = num_words(new_size);
-        auto new_cost = 3 * w + w * w / 512;
-        auto cost = new_cost - state.memory_cost;
+        const auto new_words = num_words(new_size);
+        const auto new_cost = 3 * new_words + new_words * new_words / 512;
+        const auto cost = new_cost - state.memory_cost;
         state.memory_cost = new_cost;
 
         if ((state.gas_left -= cost) < 0)
@@ -58,10 +51,25 @@ bool check_memory(execution_state& state, const uint256& offset, const uint256& 
             return false;
         }
 
-        state.memory.resize(static_cast<size_t>(w * word_size));
+        state.memory.resize(static_cast<size_t>(new_words * word_size));
     }
 
     return true;
+}
+
+inline bool check_memory(
+    execution_state& state, const uint256& offset, const uint256& size) noexcept
+{
+    if (size == 0)
+        return true;
+
+    if (size > max_buffer_size)
+    {
+        state.exit(EVMC_OUT_OF_GAS);
+        return false;
+    }
+
+    return check_memory(state, offset, static_cast<int64_t>(size));
 }
 
 
