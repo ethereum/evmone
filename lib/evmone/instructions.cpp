@@ -38,12 +38,11 @@ inline bool check_memory(execution_state& state, const uint256& offset, int64_t 
     const auto current_size = static_cast<int64_t>(state.memory.size());
     if (new_size > current_size)
     {
-        // OPT: Benchmark variant without storing state.memory_cost.
-
         const auto new_words = num_words(new_size);
+        const auto current_words = current_size / 32;  // Memory always has full words.
         const auto new_cost = 3 * new_words + new_words * new_words / 512;
-        const auto cost = new_cost - state.memory_cost;
-        state.memory_cost = new_cost;
+        const auto current_cost = 3 * current_words + current_words * current_words / 512;
+        const auto cost = new_cost - current_cost;
 
         if ((state.gas_left -= cost) < 0)
         {
