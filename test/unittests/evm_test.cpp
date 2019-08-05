@@ -1023,6 +1023,17 @@ TEST_F(evm, staticmode)
     }
 }
 
+TEST_F(evm, memory_big_allocation)
+{
+    constexpr auto size = 256 * 1024 + 1;
+    const auto code = ret(0, size);
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, size);
+    for (auto b : bytes_view{result.output_data, result.output_size})
+        EXPECT_EQ(b, 0);
+}
+
 TEST_F(evm, mstore8_memory_cost)
 {
     auto code = push(0) + mstore8(0);
