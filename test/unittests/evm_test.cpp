@@ -1034,6 +1034,26 @@ TEST_F(evm, memory_big_allocation)
         EXPECT_EQ(b, 0);
 }
 
+TEST_F(evm, memory_grow_mstore8)
+{
+    const auto code = calldataload(0) + push(0) + OP_JUMPDEST + mstore8(OP_DUP1, OP_DUP1) + add(1) +
+                      jumpi(5, iszero(eq(OP_DUP3, OP_DUP1))) + ret(0, OP_MSIZE);
+
+    const size_t size = 4 * 1024 + 256 + 1;
+    auto input = std::ostringstream{};
+    input << std::hex << std::setw(64) << std::setfill('0') << size;
+
+    execute(code, input.str());
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, ((size + 31) / 32) * 32);
+
+    for (size_t i = 0; i < size; ++i)
+        EXPECT_EQ(result.output_data[i], i % 256);
+
+    for (size_t i = size; i < result.output_size; ++i)
+        EXPECT_EQ(result.output_data[i], 0);
+}
+
 TEST_F(evm, mstore8_memory_cost)
 {
     auto code = push(0) + mstore8(0);
