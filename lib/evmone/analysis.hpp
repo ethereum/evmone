@@ -10,6 +10,7 @@
 #include <intx/intx.hpp>
 #include <array>
 #include <cstdint>
+#include <cstdlib>
 #include <vector>
 
 namespace evmone
@@ -68,19 +69,36 @@ class evm_memory
     /// The initial memory allocation.
     static constexpr size_t initial_capacity = 4 * 1024;
 
-    std::vector<uint8_t> m_memory;
+    uint8_t* m_memory{nullptr};
+    size_t m_size{0};
+    size_t m_capacity{initial_capacity};
 
 public:
-    evm_memory() noexcept { m_memory.reserve(initial_capacity); }
+    evm_memory() noexcept { m_memory = static_cast<uint8_t*>(std::realloc(nullptr, m_capacity)); }
+
+    ~evm_memory() noexcept { std::free(m_memory); }
 
     evm_memory(const evm_memory&) = delete;
     evm_memory& operator=(const evm_memory&) = delete;
 
     uint8_t& operator[](size_t index) noexcept { return m_memory[index]; }
 
-    [[nodiscard]] size_t size() const noexcept { return m_memory.size(); }
+    [[nodiscard]] size_t size() const noexcept { return m_size; }
 
-    void resize(size_t new_size) { m_memory.resize(new_size); }
+    void resize(size_t new_size) noexcept
+    {
+        if (new_size > m_capacity)
+        {
+            do
+                m_capacity *= 2;
+            while (new_size > m_capacity);
+
+            m_memory = static_cast<uint8_t*>(std::realloc(m_memory, m_capacity));
+        }
+        if (new_size > m_size)
+            std::memset(m_memory + m_size, 0, new_size - m_size);
+        m_size = new_size;
+    }
 };
 
 struct instr_info;
