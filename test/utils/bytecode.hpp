@@ -95,6 +95,21 @@ inline bytecode add(bytecode a, bytecode b)
     return b + a + OP_ADD;
 }
 
+inline bytecode add(bytecode a)
+{
+    return a + OP_ADD;
+}
+
+inline bytecode iszero(bytecode a)
+{
+    return a + OP_ISZERO;
+}
+
+inline bytecode eq(bytecode a, bytecode b)
+{
+    return b + a + OP_EQ;
+}
+
 inline bytecode mstore(bytecode index)
 {
     return index + OP_MSTORE;
