@@ -87,13 +87,10 @@ code_analysis analyze(
         {
             // OPT: bswap data here.
             ++i;
-            auto push_size = size_t(c - OP_PUSH1 + 1);
-            analysis.args_storage.emplace_back();
-            auto& data = analysis.args_storage.back();
+            const auto push_size = size_t(c - OP_PUSH1 + 1);
+            auto& data = analysis.args_storage.emplace_back();
 
-            auto leading_zeros = 32 - push_size;
-            for (auto& b : data)
-                b = 0;
+            const auto leading_zeros = 32 - push_size;
             for (size_t j = 0; j < push_size && (i + j) < code_size; ++j)
                 data[leading_zeros + j] = code[i + j];
             instr.arg.data = &data[0];
