@@ -82,7 +82,7 @@ public:
     void resize(size_t new_size) { m_memory.resize(new_size); }
 };
 
-struct instr_info;
+union instr_info;
 
 struct execution_state
 {

@@ -663,11 +663,12 @@ void op_gaslimit(execution_state& state) noexcept
 void op_push_full(execution_state& state) noexcept
 {
     // OPT: For smaller pushes, use pointer data directly.
-    auto& x = state.stack.emplace_back();
-    x.lo.lo = state.analysis->instrs[state.pc++].value;
-    x.lo.hi = state.analysis->instrs[state.pc++].value;
-    x.hi.lo = state.analysis->instrs[state.pc++].value;
-    x.hi.hi = state.analysis->instrs[state.pc++].value;
+    auto x = intx::uint256{};
+    x.lo.lo = state.next_instr++->value;
+    x.lo.hi = state.next_instr++->value;
+    x.hi.lo = state.next_instr++->value;
+    x.hi.hi = state.next_instr++->value;
+    state.stack.push(x);
 }
 
 void op_pop(execution_state& state) noexcept
@@ -752,8 +753,8 @@ void op_call(execution_state& state) noexcept
     intx::be::store(data, state.stack[1]);
     auto dst = evmc_address{};
     std::memcpy(dst.bytes, &data[12], sizeof(dst));
-const auto params = state.analysis->instrs[state.pc++];
-    
+    const auto params = *state.next_instr++;
+
     auto value = state.stack[2];
     auto input_offset = state.stack[3];
     auto input_size = state.stack[4];
@@ -875,7 +876,7 @@ void op_delegatecall(execution_state& state) noexcept
     auto dst = evmc_address{};
     std::memcpy(dst.bytes, &data[12], sizeof(dst));
 
-    const auto params = state.analysis->instrs[state.pc++];
+    const auto params = *state.next_instr++;
     auto input_offset = state.stack[2];
     auto input_size = state.stack[3];
     auto output_offset = state.stack[4];
@@ -948,7 +949,7 @@ void op_staticcall(execution_state& state) noexcept
     auto dst = evmc_address{};
     std::memcpy(dst.bytes, &data[12], sizeof(dst));
 
-    const auto params = state.analysis->instrs[state.pc++];
+    const auto params = *state.next_instr++;
     auto input_offset = state.stack[2];
     auto input_size = state.stack[3];
     auto output_offset = state.stack[4];
@@ -1012,7 +1013,7 @@ void op_create(execution_state& state) noexcept
     if (state.msg->flags & EVMC_STATIC)
         return state.exit(EVMC_STATIC_MODE_VIOLATION);
 
-    const auto params = state.analysis->instrs[state.pc++];
+    const auto params = *state.next_instr++;
     auto endowment = state.stack[0];
     auto init_code_offset = state.stack[1];
     auto init_code_size = state.stack[2];
@@ -1073,7 +1074,7 @@ void op_create2(execution_state& state) noexcept
     if (state.msg->flags & EVMC_STATIC)
         return state.exit(EVMC_STATIC_MODE_VIOLATION);
 
-    const auto params = state.analysis->instrs[state.pc++];
+    const auto params = *state.next_instr++;
     auto endowment = state.stack[0];
     auto init_code_offset = state.stack[1];
     auto init_code_size = state.stack[2];
