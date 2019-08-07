@@ -702,7 +702,11 @@ void op_log(execution_state& state) noexcept
 
     const auto cost = int64_t(s) * 8;
     if ((state.gas_left -= cost) < 0)
+    {
+        // FIXME: Add unit test that checks no log is emitted after exception.
         state.exit(EVMC_OUT_OF_GAS);
+        return;
+    }
 
     std::array<evmc_bytes32, 4> topics;
     const auto num_topics = state.next_instr++->number;
