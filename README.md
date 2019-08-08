@@ -17,8 +17,8 @@ The codebase of _evmone_ is optimized to provide fast and efficient execution of
 #### Characteristic of evmone
 
 1. Exposes the [EVMC] API.
-2. The "indirect" subroutine threading is the dispatch method - 
-   a table with pointers to subroutines is prepared during the analysis of the bytecode.
+2. The direct call threading is the dispatch method used -
+   a loaded EVM program is a table with pointers to functions implementing virtual instructions.
 3. The gas cost and stack requirements of block of instructions is precomputed 
    and applied once per block during execution.
 4. The [intx] library is used to provide 256-bit integer precision.
