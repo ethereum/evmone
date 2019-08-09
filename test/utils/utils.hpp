@@ -18,11 +18,6 @@ inline std::string hex(uint8_t b) noexcept
     return {hex_chars[b >> 4], hex_chars[b & 0xf]};
 }
 
-inline std::string hex(evmc_opcode opcode) noexcept
-{
-    return hex(static_cast<uint8_t>(opcode));
-}
-
 bytes from_hex(std::string_view hex);
 std::string to_hex(bytes_view bytes);
 

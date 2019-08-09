@@ -4,6 +4,7 @@
 #pragma once
 
 #include <test/utils/utils.hpp>
+#include <algorithm>
 
 struct bytecode;
 
@@ -180,6 +181,19 @@ inline bytecode sload(bytecode index)
     return index + OP_SLOAD;
 }
 
+inline std::string hex(evmc_opcode opcode) noexcept
+{
+    return hex(static_cast<uint8_t>(opcode));
+}
+
+inline std::string to_name(evmc_opcode opcode, evmc_revision rev = EVMC_MAX_REVISION) noexcept
+{
+    const auto names = evmc_get_instruction_names_table(rev);
+    if (const auto name = names[opcode]; name)
+        return name;
+
+    return "UNDEFINED_INSTRUCTION:" + hex(opcode);
+}
 
 inline std::string decode(bytes_view bytecode, evmc_revision rev)
 {
@@ -206,7 +220,7 @@ inline std::string decode(bytes_view bytecode, evmc_revision rev)
             }
         }
         else
-            s += " + \"" + to_hex({&opcode, 1}) + '"';
+            s += " + \"" + hex(opcode) + '"';
     }
 
     return s;
