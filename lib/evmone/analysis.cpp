@@ -43,13 +43,15 @@ code_analysis analyze(
     const auto* instr_table = evmc_get_instruction_metrics_table(rev);
 
     block_info* block = nullptr;
+
     int instr_index = 0;
-    for (size_t i = 0; i < code_size; ++i, ++instr_index)
+
+    for (auto code_pos = code; code_pos < code + code_size; ++code_pos, ++instr_index)
     {
         // TODO: Loop in reverse order for easier GAS analysis.
-        const auto c = code[i];
+        const auto opcode = *code_pos;
 
-        const bool jumpdest = c == OP_JUMPDEST;
+        const bool jumpdest = opcode == OP_JUMPDEST;
 
         if (!block || jumpdest)
         {
@@ -63,16 +65,16 @@ code_analysis analyze(
 
             if (jumpdest)  // Add the jumpdest to the map.
             {
-                analysis.jumpdest_offsets.emplace_back(static_cast<int16_t>(i));
+                analysis.jumpdest_offsets.emplace_back(static_cast<int16_t>(code_pos - code));
                 analysis.jumpdest_targets.emplace_back(static_cast<int16_t>(instr_index));
             }
             else  // Increase instruction count because additional BEGINBLOCK was injected.
                 ++instr_index;
         }
 
-        auto& instr = jumpdest ? analysis.instrs.back() : analysis.instrs.emplace_back(fns[c]);
+        auto& instr = jumpdest ? analysis.instrs.back() : analysis.instrs.emplace_back(fns[opcode]);
 
-        const auto metrics = instr_table[c];
+        const auto metrics = instr_table[opcode];
         const auto instr_stack_req = metrics.num_stack_arguments;
         const auto instr_stack_change = metrics.num_stack_returned_items - instr_stack_req;
 
@@ -83,29 +85,29 @@ code_analysis analyze(
         if (metrics.gas_cost > 0)  // can be -1 for undefined instruction
             block->gas_cost += metrics.gas_cost;
 
-        switch (c)
+        switch (opcode)
         {
         case ANY_PUSH:
         {
             // OPT: bswap data here.
-            ++i;
-            const auto push_size = size_t(c - OP_PUSH1 + 1);
+            const auto push_size = size_t(opcode - OP_PUSH1 + 1);
             auto& data = analysis.args_storage.emplace_back();
 
             const auto leading_zeros = 32 - push_size;
+            const auto i = code_pos - code + 1;
             for (size_t j = 0; j < push_size && (i + j) < code_size; ++j)
                 data[leading_zeros + j] = code[i + j];
             instr.arg.data = &data[0];
-            i += push_size - 1;
+            code_pos += push_size;
             break;
         }
 
         case ANY_DUP:
-            instr.arg.p.number = c - OP_DUP1;
+            instr.arg.p.number = opcode - OP_DUP1;
             break;
 
         case ANY_SWAP:
-            instr.arg.p.number = c - OP_SWAP1 + 1;
+            instr.arg.p.number = opcode - OP_SWAP1 + 1;
             break;
 
         case OP_GAS:
@@ -119,11 +121,12 @@ code_analysis analyze(
         case OP_CREATE:
         case OP_CREATE2:
             instr.arg.p.number = static_cast<int>(block->gas_cost);
-            instr.arg.p.call_kind = op2call_kind(c == OP_STATICCALL ? uint8_t{OP_CALL} : c);
+            instr.arg.p.call_kind =
+                op2call_kind(opcode == OP_STATICCALL ? uint8_t{OP_CALL} : opcode);
             break;
 
         case OP_PC:
-            instr.arg.p.number = static_cast<int>(i);
+            instr.arg.p.number = static_cast<int>(code_pos - code);
             break;
 
         case OP_LOG0:
@@ -131,7 +134,7 @@ code_analysis analyze(
         case OP_LOG2:
         case OP_LOG3:
         case OP_LOG4:
-            instr.arg.p.number = c - OP_LOG0;
+            instr.arg.p.number = opcode - OP_LOG0;
             break;
 
         case OP_JUMP:
