@@ -5,6 +5,7 @@
 #include "analysis.hpp"
 #include "opcodes_helpers.h"
 #include <evmc/instructions.h>
+#include <cassert>
 
 namespace evmone
 {
@@ -31,8 +32,13 @@ code_analysis analyze(
     const exec_fn_table& fns, evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
 {
     code_analysis analysis;
-    // TODO: Check if final result exceeds the reservation.
-    analysis.instrs.reserve(code_size + 1);
+
+    const auto max_instrs_size = code_size + 1;
+    analysis.instrs.reserve(max_instrs_size);
+
+    // This is 2x more than needed but using (code_size / 2 + 1) increases page-faults 1000x.
+    const auto max_args_storage_size = code_size + 1;
+    analysis.args_storage.reserve(max_args_storage_size);
 
     const auto* instr_table = evmc_get_instruction_metrics_table(rev);
 
@@ -142,6 +148,11 @@ code_analysis analyze(
     // Not terminated block or empty code.
     if (block || code_size == 0 || code[code_size - 1] == OP_JUMPI)
         analysis.instrs.emplace_back(fns[OP_STOP]);
+
+    // FIXME: assert(analysis.instrs.size() <= max_instrs_size);
+
+    // Make sure the args_storage has not been reallocated. Otherwise iterators are invalid.
+    assert(analysis.args_storage.size() <= max_args_storage_size);
 
     return analysis;
 }
