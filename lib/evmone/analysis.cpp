@@ -3,21 +3,12 @@
 // Licensed under the Apache License, Version 2.0.
 
 #include "analysis.hpp"
-
+#include "opcodes_helpers.h"
 #include <evmc/instructions.h>
 
 namespace evmone
 {
-namespace
-{
-bool is_terminator(uint8_t c) noexcept
-{
-    return c == OP_JUMP || c == OP_JUMPI || c == OP_STOP || c == OP_RETURN || c == OP_REVERT ||
-           c == OP_SELFDESTRUCT;
-}
-}  // namespace
-
-evmc_call_kind op2call_kind(uint8_t opcode) noexcept
+inline constexpr evmc_call_kind op2call_kind(uint8_t opcode) noexcept
 {
     switch (opcode)
     {
@@ -86,8 +77,9 @@ code_analysis analyze(
         if (metrics.gas_cost > 0)  // can be -1 for undefined instruction
             block->gas_cost += metrics.gas_cost;
 
-        // Skip PUSH data.
-        if (c >= OP_PUSH1 && c <= OP_PUSH32)
+        switch (c)
+        {
+        case ANY_PUSH:
         {
             // OPT: bswap data here.
             ++i;
@@ -99,25 +91,52 @@ code_analysis analyze(
                 data[leading_zeros + j] = code[i + j];
             instr.arg.data = &data[0];
             i += push_size - 1;
+            break;
         }
-        else if (c >= OP_DUP1 && c <= OP_DUP16)
+
+        case ANY_DUP:
             instr.arg.p.number = c - OP_DUP1;
-        else if (c >= OP_SWAP1 && c <= OP_SWAP16)
+            break;
+
+        case ANY_SWAP:
             instr.arg.p.number = c - OP_SWAP1 + 1;
-        else if (c == OP_GAS)
+            break;
+
+        case OP_GAS:
             instr.arg.p.number = static_cast<int>(block->gas_cost);
-        else if (c == OP_DELEGATECALL || c == OP_CALL || c == OP_CALLCODE || c == OP_STATICCALL ||
-                 c == OP_CREATE || c == OP_CREATE2)
-        {
+            break;
+
+        case OP_CALL:
+        case OP_CALLCODE:
+        case OP_DELEGATECALL:
+        case OP_STATICCALL:
+        case OP_CREATE:
+        case OP_CREATE2:
             instr.arg.p.number = static_cast<int>(block->gas_cost);
             instr.arg.p.call_kind = op2call_kind(c == OP_STATICCALL ? uint8_t{OP_CALL} : c);
-        }
-        else if (c == OP_PC)
+            break;
+
+        case OP_PC:
             instr.arg.p.number = static_cast<int>(i);
-        else if (c >= OP_LOG0 && c <= OP_LOG4)
+            break;
+
+        case OP_LOG0:
+        case OP_LOG1:
+        case OP_LOG2:
+        case OP_LOG3:
+        case OP_LOG4:
             instr.arg.p.number = c - OP_LOG0;
-        else if (is_terminator(c))
+            break;
+
+        case OP_JUMP:
+        case OP_JUMPI:
+        case OP_STOP:
+        case OP_RETURN:
+        case OP_REVERT:
+        case OP_SELFDESTRUCT:
             block = nullptr;
+            break;
+        }
     }
 
     // Not terminated block or empty code.
