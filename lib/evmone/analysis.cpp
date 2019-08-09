@@ -28,6 +28,14 @@ inline constexpr evmc_call_kind op2call_kind(uint8_t opcode) noexcept
     }
 }
 
+inline constexpr uint64_t load64be(const unsigned char* data) noexcept
+{
+    return uint64_t{data[7]} | (uint64_t{data[6]} << 8) | (uint64_t{data[5]} << 16) |
+           (uint64_t{data[4]} << 24) | (uint64_t{data[3]} << 32) | (uint64_t{data[2]} << 40) |
+           (uint64_t{data[1]} << 48) | (uint64_t{data[0]} << 56);
+}
+
+
 code_analysis analyze(
     const exec_fn_table& fns, evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
 {
@@ -87,7 +95,21 @@ code_analysis analyze(
 
         switch (opcode)
         {
-        case ANY_PUSH:
+        case ANY_SMALL_PUSH:
+        {
+            const auto push_size = size_t(opcode - OP_PUSH1 + 1);
+            uint8_t data[8]{};
+
+            const auto leading_zeros = 8 - push_size;
+            const auto i = code_pos - code + 1;
+            for (size_t j = 0; j < push_size && (i + j) < code_size; ++j)
+                data[leading_zeros + j] = code[i + j];
+            instr.arg.small_push_value = load64be(data);
+            code_pos += push_size;
+            break;
+        }
+
+        case ANY_LARGE_PUSH:
         {
             // OPT: bswap data here.
             const auto push_size = size_t(opcode - OP_PUSH1 + 1);

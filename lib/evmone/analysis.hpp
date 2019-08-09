@@ -129,6 +129,7 @@ union instr_argument
         evmc_call_kind call_kind;
     } p;
     const uint8_t* data;
+    uint64_t small_push_value;
 };
 
 static_assert(sizeof(instr_argument) == sizeof(void*), "Incorrect size of instr_argument");
