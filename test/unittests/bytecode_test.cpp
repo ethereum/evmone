@@ -49,6 +49,12 @@ TEST(bytecode, repeat)
     EXPECT_EQ(0 * OP_STOP, "");
 }
 
+TEST(bytecode, to_name)
+{
+    EXPECT_EQ(to_name(OP_SAR), "SAR");
+    EXPECT_EQ(to_name(OP_SAR, EVMC_HOMESTEAD), "UNDEFINED_INSTRUCTION:1d");
+}
+
 TEST(bytecode, decode)
 {
     const auto code = push(0x01e240) + OP_DUP1 + OP_GAS + "cc" + OP_REVERT;
