@@ -90,7 +90,7 @@ public:
     std::vector<log_record> recorded_logs;
     std::vector<selfdestuct_record> recorded_selfdestructs;
 
-private:
+protected:
     std::vector<bytes> m_recorded_calls_inputs;
 
     void record_account_access(const evmc_address& addr)
