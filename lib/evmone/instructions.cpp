@@ -697,7 +697,10 @@ void op_log(execution_state& state, instr_argument arg) noexcept
 
     const auto cost = int64_t(s) * 8;
     if ((state.gas_left -= cost) < 0)
+    {
         state.exit(EVMC_OUT_OF_GAS);
+        return;
+    }
 
     std::array<evmc_bytes32, 4> topics;
     for (auto i = 0; i < arg.p.number; ++i)

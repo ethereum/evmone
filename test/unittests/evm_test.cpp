@@ -735,11 +735,17 @@ TEST_F(evm, log_data_cost)
         auto num_topics = op - OP_LOG0;
         auto code = push(0) + (4 * OP_DUP1) + push(1) + push(0) + op;
         auto cost = 407 + num_topics * 375;
+        EXPECT_EQ(recorded_logs.size(), 0);
         execute(cost, code);
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(recorded_logs.size(), 1);
+        recorded_logs.clear();
 
+        EXPECT_EQ(recorded_logs.size(), 0);
         execute(cost - 1, code);
         EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+        EXPECT_EQ(recorded_logs.size(), 0) << to_name(op);
+        recorded_logs.clear();
     }
 }
 
