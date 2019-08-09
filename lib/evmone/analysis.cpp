@@ -79,6 +79,10 @@ code_analysis analyze(
         const auto instr_stack_req = metrics.num_stack_arguments;
         const auto instr_stack_change = metrics.num_stack_returned_items - instr_stack_req;
 
+        block->stack_req = std::max(block->stack_req, instr_stack_req - block->stack_change);
+        block->stack_change += instr_stack_change;
+        block->stack_max = std::max(block->stack_max, block->stack_change);
+
         if (metrics.gas_cost > 0)  // can be -1 for undefined instruction
             block->gas_cost += metrics.gas_cost;
 
@@ -112,12 +116,7 @@ code_analysis analyze(
             instr.arg.p.number = static_cast<int>(i);
         else if (c >= OP_LOG0 && c <= OP_LOG4)
             instr.arg.p.number = c - OP_LOG0;
-
-        block->stack_req = std::max(block->stack_req, instr_stack_req - block->stack_change);
-        block->stack_change += instr_stack_change;
-        block->stack_max = std::max(block->stack_max, block->stack_change);
-
-        if (is_terminator(c))
+        else if (is_terminator(c))
             block = nullptr;
     }
 
