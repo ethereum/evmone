@@ -9,6 +9,7 @@ add_executable(
     evmone-bench-internal
     find_jumpdest_bench.cpp
     memory_allocation.cpp
+    push_data_parsing.cpp
 )
 
 target_link_libraries(evmone-bench-internal PRIVATE benchmark::benchmark)
