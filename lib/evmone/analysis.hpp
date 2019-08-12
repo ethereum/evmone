@@ -9,7 +9,6 @@
 #include <intx/intx.hpp>
 #include <array>
 #include <cstdint>
-#include <deque>
 #include <vector>
 
 namespace evmone
@@ -177,7 +176,7 @@ struct code_analysis
     ///
     /// The deque container is used because pointers to its elements are not
     /// invalidated when the container grows.
-    std::deque<bytes32> args_storage;
+    std::vector<bytes32> args_storage;
 
     /// The offsets of JUMPDESTs in the original code.
     /// These are values that JUMP/JUMPI receives as an argument.

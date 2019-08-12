@@ -15,6 +15,7 @@ add_library(evmone
     execution.cpp
     execution.hpp
     instructions.cpp
+    opcodes_helpers.h
 )
 target_link_libraries(evmone PUBLIC evmc::evmc PRIVATE intx::intx evmc::instructions ethash::keccak)
 target_include_directories(evmone PUBLIC

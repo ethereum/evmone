@@ -11,6 +11,8 @@
 
 using namespace intx;
 
+constexpr auto max_code_size = 0x6000;
+
 TEST_F(evm, empty)
 {
     execute(0, "");
@@ -1192,6 +1194,19 @@ TEST_F(evm, extcodecopy_buffer_overflow)
             EXPECT_EQ(result.output_size, size);
         }
     }
+}
+
+TEST_F(evm, max_code_size_push1)
+{
+    // TODO: Optimize the code generation.
+    const auto code = (max_code_size / 2) * push(1);
+    ASSERT_EQ(code.size(), max_code_size);
+
+    execute(code);
+    EXPECT_STATUS(EVMC_STACK_OVERFLOW);
+
+    execute(code.substr(0, code.size() - 1));
+    EXPECT_STATUS(EVMC_STACK_OVERFLOW);
 }
 
 struct memory_access_opcode
