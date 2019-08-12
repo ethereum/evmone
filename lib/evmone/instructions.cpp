@@ -667,7 +667,7 @@ void op_push_small(execution_state& state, instr_argument arg) noexcept
 
 void op_push_full(execution_state& state, instr_argument arg) noexcept
 {
-    state.stack.push(intx::be::uint256(arg.data));
+    state.stack.push(*arg.push_value);
 }
 
 void op_pop(execution_state& state, instr_argument) noexcept

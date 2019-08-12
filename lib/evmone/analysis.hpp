@@ -129,6 +129,7 @@ union instr_argument
         evmc_call_kind call_kind;
     } p;
     const uint8_t* data;
+    const intx::uint256* push_value;
     uint64_t small_push_value;
 };
 
@@ -174,7 +175,7 @@ struct code_analysis
     std::vector<block_info> blocks;
 
     /// Storage for large push values.
-    std::vector<bytes32> push_values;
+    std::vector<intx::uint256> push_values;
 
     /// The offsets of JUMPDESTs in the original code.
     /// These are values that JUMP/JUMPI receives as an argument.

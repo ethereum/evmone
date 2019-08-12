@@ -106,6 +106,7 @@ code_analysis analyze(
             uint8_t value_bytes[8]{};
             auto insert_pos = &value_bytes[sizeof(value_bytes) - push_size];
 
+            // TODO: Consier the same endianness-specific loop as in ANY_LARGE_PUSH case.
             while (code_pos < push_end && code_pos < code_end)
                 *insert_pos++ = *code_pos++;
             instr.arg.small_push_value = load64be(value_bytes);
@@ -114,16 +115,27 @@ code_analysis analyze(
 
         case ANY_LARGE_PUSH:
         {
-            // OPT: bswap data here.
             const auto push_size = size_t(opcode - OP_PUSH1 + 1);
             const auto push_end = code_pos + push_size;
 
-            auto& value_bytes = analysis.push_values.emplace_back();
-            auto insert_pos = &value_bytes[sizeof(value_bytes) - push_size];
+            auto& push_value = analysis.push_values.emplace_back();
+            // TODO: Add as_bytes() helper to intx.
+            const auto push_value_bytes = reinterpret_cast<uint8_t*>(intx::as_words(push_value));
+            auto insert_pos = &push_value_bytes[push_size - 1];
 
+            // Copy bytes to the deticated storage in the order to match native endianness.
+            // The condition `code_pos < code_end` is to handle the edge case of PUSH being at
+            // the end of the code with incomplete value bytes.
+            // This condition can be replaced with single `push_end <= code_end` done once before
+            // the loop. Then the push value will stay 0 but the value is not reachable
+            // during the execution anyway.
+            // This seems like a good micro-optimization but we were not able to show
+            // this is faster, at least with GCC 8 (producing the best results at the time).
+            // FIXME: Add support for big endian architectures.
             while (code_pos < push_end && code_pos < code_end)
-                *insert_pos++ = *code_pos++;
-            instr.arg.data = &value_bytes[0];
+                *insert_pos-- = *code_pos++;
+
+            instr.arg.push_value = &push_value;
             break;
         }
 
