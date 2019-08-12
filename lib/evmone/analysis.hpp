@@ -173,11 +173,8 @@ struct code_analysis
     std::vector<instr_info> instrs;
     std::vector<block_info> blocks;
 
-    /// Storage for arguments' extended data.
-    ///
-    /// The deque container is used because pointers to its elements are not
-    /// invalidated when the container grows.
-    std::vector<bytes32> args_storage;
+    /// Storage for large push values.
+    std::vector<bytes32> push_values;
 
     /// The offsets of JUMPDESTs in the original code.
     /// These are values that JUMP/JUMPI receives as an argument.

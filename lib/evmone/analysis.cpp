@@ -9,6 +9,8 @@
 
 namespace evmone
 {
+namespace
+{
 inline constexpr evmc_call_kind op2call_kind(uint8_t opcode) noexcept
 {
     switch (opcode)
@@ -34,7 +36,7 @@ inline constexpr uint64_t load64be(const unsigned char* data) noexcept
            (uint64_t{data[4]} << 24) | (uint64_t{data[3]} << 32) | (uint64_t{data[2]} << 40) |
            (uint64_t{data[1]} << 48) | (uint64_t{data[0]} << 56);
 }
-
+}  // namespace
 
 code_analysis analyze(
     const exec_fn_table& fns, evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
@@ -46,7 +48,7 @@ code_analysis analyze(
 
     // This is 2x more than needed but using (code_size / 2 + 1) increases page-faults 1000x.
     const auto max_args_storage_size = code_size + 1;
-    analysis.args_storage.reserve(max_args_storage_size);
+    analysis.push_values.reserve(max_args_storage_size);
 
     const auto* instr_table = evmc_get_instruction_metrics_table(rev);
 
@@ -54,7 +56,8 @@ code_analysis analyze(
 
     int instr_index = 0;
 
-    for (auto code_pos = code; code_pos < code + code_size; ++code_pos, ++instr_index)
+    const auto code_end = code + code_size;
+    for (auto code_pos = code; code_pos < code_end; ++code_pos, ++instr_index)
     {
         // TODO: Loop in reverse order for easier GAS analysis.
         const auto opcode = *code_pos;
@@ -98,14 +101,15 @@ code_analysis analyze(
         case ANY_SMALL_PUSH:
         {
             const auto push_size = size_t(opcode - OP_PUSH1 + 1);
-            uint8_t data[8]{};
-
-            const auto leading_zeros = 8 - push_size;
             const auto i = code_pos - code + 1;
-            for (size_t j = 0; j < push_size && (i + j) < code_size; ++j)
-                data[leading_zeros + j] = code[i + j];
-            instr.arg.small_push_value = load64be(data);
             code_pos += push_size;
+
+            uint8_t value_bytes[8]{};
+            auto insert_pos = &value_bytes[sizeof(value_bytes) - push_size];
+
+            for (size_t j = 0; j < push_size && (i + j) < code_size; ++j)
+                *insert_pos++ = code[i + j];
+            instr.arg.small_push_value = load64be(value_bytes);
             break;
         }
 
@@ -113,14 +117,15 @@ code_analysis analyze(
         {
             // OPT: bswap data here.
             const auto push_size = size_t(opcode - OP_PUSH1 + 1);
-            auto& data = analysis.args_storage.emplace_back();
-
-            const auto leading_zeros = 32 - push_size;
             const auto i = code_pos - code + 1;
-            for (size_t j = 0; j < push_size && (i + j) < code_size; ++j)
-                data[leading_zeros + j] = code[i + j];
-            instr.arg.data = &data[0];
             code_pos += push_size;
+
+            auto& value_bytes = analysis.push_values.emplace_back();
+            auto insert_pos = &value_bytes[sizeof(value_bytes) - push_size];
+
+            for (size_t j = 0; j < push_size && (i + j) < code_size; ++j)
+                *insert_pos++ = code[i + j];
+            instr.arg.data = &value_bytes[0];
             break;
         }
 
@@ -176,8 +181,8 @@ code_analysis analyze(
 
     // FIXME: assert(analysis.instrs.size() <= max_instrs_size);
 
-    // Make sure the args_storage has not been reallocated. Otherwise iterators are invalid.
-    assert(analysis.args_storage.size() <= max_args_storage_size);
+    // Make sure the push_values has not been reallocated. Otherwise iterators are invalid.
+    assert(analysis.push_values.size() <= max_args_storage_size);
 
     return analysis;
 }
