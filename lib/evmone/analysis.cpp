@@ -57,10 +57,10 @@ code_analysis analyze(
     int instr_index = 0;
 
     const auto code_end = code + code_size;
-    for (auto code_pos = code; code_pos < code_end; ++code_pos, ++instr_index)
+    for (auto code_pos = code; code_pos < code_end; ++instr_index)
     {
         // TODO: Loop in reverse order for easier GAS analysis.
-        const auto opcode = *code_pos;
+        const auto opcode = *code_pos++;
 
         const bool jumpdest = opcode == OP_JUMPDEST;
 
@@ -76,7 +76,7 @@ code_analysis analyze(
 
             if (jumpdest)  // Add the jumpdest to the map.
             {
-                analysis.jumpdest_offsets.emplace_back(static_cast<int16_t>(code_pos - code));
+                analysis.jumpdest_offsets.emplace_back(static_cast<int16_t>(code_pos - code - 1));
                 analysis.jumpdest_targets.emplace_back(static_cast<int16_t>(instr_index));
             }
             else  // Increase instruction count because additional BEGINBLOCK was injected.
@@ -101,14 +101,13 @@ code_analysis analyze(
         case ANY_SMALL_PUSH:
         {
             const auto push_size = size_t(opcode - OP_PUSH1 + 1);
-            const auto i = code_pos - code + 1;
-            code_pos += push_size;
+            const auto push_end = code_pos + push_size;
 
             uint8_t value_bytes[8]{};
             auto insert_pos = &value_bytes[sizeof(value_bytes) - push_size];
 
-            for (size_t j = 0; j < push_size && (i + j) < code_size; ++j)
-                *insert_pos++ = code[i + j];
+            while (code_pos < push_end && code_pos < code_end)
+                *insert_pos++ = *code_pos++;
             instr.arg.small_push_value = load64be(value_bytes);
             break;
         }
@@ -117,14 +116,13 @@ code_analysis analyze(
         {
             // OPT: bswap data here.
             const auto push_size = size_t(opcode - OP_PUSH1 + 1);
-            const auto i = code_pos - code + 1;
-            code_pos += push_size;
+            const auto push_end = code_pos + push_size;
 
             auto& value_bytes = analysis.push_values.emplace_back();
             auto insert_pos = &value_bytes[sizeof(value_bytes) - push_size];
 
-            for (size_t j = 0; j < push_size && (i + j) < code_size; ++j)
-                *insert_pos++ = code[i + j];
+            while (code_pos < push_end && code_pos < code_end)
+                *insert_pos++ = *code_pos++;
             instr.arg.data = &value_bytes[0];
             break;
         }
@@ -153,7 +151,7 @@ code_analysis analyze(
             break;
 
         case OP_PC:
-            instr.arg.p.number = static_cast<int>(code_pos - code);
+            instr.arg.p.number = static_cast<int>(code_pos - code - 1);
             break;
 
         case OP_LOG0:
