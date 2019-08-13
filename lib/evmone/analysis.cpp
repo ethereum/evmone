@@ -9,6 +9,8 @@
 
 namespace evmone
 {
+namespace
+{
 inline constexpr evmc_call_kind op2call_kind(uint8_t opcode) noexcept
 {
     switch (opcode)
@@ -28,6 +30,14 @@ inline constexpr evmc_call_kind op2call_kind(uint8_t opcode) noexcept
     }
 }
 
+inline constexpr uint64_t load64be(const unsigned char* data) noexcept
+{
+    return uint64_t{data[7]} | (uint64_t{data[6]} << 8) | (uint64_t{data[5]} << 16) |
+           (uint64_t{data[4]} << 24) | (uint64_t{data[3]} << 32) | (uint64_t{data[2]} << 40) |
+           (uint64_t{data[1]} << 48) | (uint64_t{data[0]} << 56);
+}
+}  // namespace
+
 code_analysis analyze(
     const exec_fn_table& fns, evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
 {
@@ -38,7 +48,7 @@ code_analysis analyze(
 
     // This is 2x more than needed but using (code_size / 2 + 1) increases page-faults 1000x.
     const auto max_args_storage_size = code_size + 1;
-    analysis.args_storage.reserve(max_args_storage_size);
+    analysis.push_values.reserve(max_args_storage_size);
 
     const auto* instr_table = evmc_get_instruction_metrics_table(rev);
 
@@ -46,10 +56,11 @@ code_analysis analyze(
 
     int instr_index = 0;
 
-    for (auto code_pos = code; code_pos < code + code_size; ++code_pos, ++instr_index)
+    const auto code_end = code + code_size;
+    for (auto code_pos = code; code_pos < code_end; ++instr_index)
     {
         // TODO: Loop in reverse order for easier GAS analysis.
-        const auto opcode = *code_pos;
+        const auto opcode = *code_pos++;
 
         const bool jumpdest = opcode == OP_JUMPDEST;
 
@@ -65,7 +76,7 @@ code_analysis analyze(
 
             if (jumpdest)  // Add the jumpdest to the map.
             {
-                analysis.jumpdest_offsets.emplace_back(static_cast<int16_t>(code_pos - code));
+                analysis.jumpdest_offsets.emplace_back(static_cast<int16_t>(code_pos - code - 1));
                 analysis.jumpdest_targets.emplace_back(static_cast<int16_t>(instr_index));
             }
             else  // Increase instruction count because additional BEGINBLOCK was injected.
@@ -87,18 +98,44 @@ code_analysis analyze(
 
         switch (opcode)
         {
-        case ANY_PUSH:
+        case ANY_SMALL_PUSH:
         {
-            // OPT: bswap data here.
             const auto push_size = size_t(opcode - OP_PUSH1 + 1);
-            auto& data = analysis.args_storage.emplace_back();
+            const auto push_end = code_pos + push_size;
 
-            const auto leading_zeros = 32 - push_size;
-            const auto i = code_pos - code + 1;
-            for (size_t j = 0; j < push_size && (i + j) < code_size; ++j)
-                data[leading_zeros + j] = code[i + j];
-            instr.arg.data = &data[0];
-            code_pos += push_size;
+            uint8_t value_bytes[8]{};
+            auto insert_pos = &value_bytes[sizeof(value_bytes) - push_size];
+
+            // TODO: Consier the same endianness-specific loop as in ANY_LARGE_PUSH case.
+            while (code_pos < push_end && code_pos < code_end)
+                *insert_pos++ = *code_pos++;
+            instr.arg.small_push_value = load64be(value_bytes);
+            break;
+        }
+
+        case ANY_LARGE_PUSH:
+        {
+            const auto push_size = size_t(opcode - OP_PUSH1 + 1);
+            const auto push_end = code_pos + push_size;
+
+            auto& push_value = analysis.push_values.emplace_back();
+            // TODO: Add as_bytes() helper to intx.
+            const auto push_value_bytes = reinterpret_cast<uint8_t*>(intx::as_words(push_value));
+            auto insert_pos = &push_value_bytes[push_size - 1];
+
+            // Copy bytes to the deticated storage in the order to match native endianness.
+            // The condition `code_pos < code_end` is to handle the edge case of PUSH being at
+            // the end of the code with incomplete value bytes.
+            // This condition can be replaced with single `push_end <= code_end` done once before
+            // the loop. Then the push value will stay 0 but the value is not reachable
+            // during the execution anyway.
+            // This seems like a good micro-optimization but we were not able to show
+            // this is faster, at least with GCC 8 (producing the best results at the time).
+            // FIXME: Add support for big endian architectures.
+            while (code_pos < push_end && code_pos < code_end)
+                *insert_pos-- = *code_pos++;
+
+            instr.arg.push_value = &push_value;
             break;
         }
 
@@ -126,7 +163,7 @@ code_analysis analyze(
             break;
 
         case OP_PC:
-            instr.arg.p.number = static_cast<int>(code_pos - code);
+            instr.arg.p.number = static_cast<int>(code_pos - code - 1);
             break;
 
         case OP_LOG0:
@@ -154,8 +191,8 @@ code_analysis analyze(
 
     // FIXME: assert(analysis.instrs.size() <= max_instrs_size);
 
-    // Make sure the args_storage has not been reallocated. Otherwise iterators are invalid.
-    assert(analysis.args_storage.size() <= max_args_storage_size);
+    // Make sure the push_values has not been reallocated. Otherwise iterators are invalid.
+    assert(analysis.push_values.size() <= max_args_storage_size);
 
     return analysis;
 }

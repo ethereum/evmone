@@ -660,10 +660,14 @@ void op_gaslimit(execution_state& state, instr_argument) noexcept
     state.stack.push(block_gas_limit);
 }
 
+void op_push_small(execution_state& state, instr_argument arg) noexcept
+{
+    state.stack.push(arg.small_push_value);
+}
+
 void op_push_full(execution_state& state, instr_argument arg) noexcept
 {
-    // OPT: For smaller pushes, use pointer data directly.
-    state.stack.push(intx::be::uint256(arg.data));
+    state.stack.push(*arg.push_value);
 }
 
 void op_pop(execution_state& state, instr_argument) noexcept
@@ -1249,7 +1253,9 @@ constexpr exec_fn_table create_op_table_frontier() noexcept
     table[OP_MSIZE] = op_msize;
     table[OP_GAS] = op_gas;
     table[OPX_BEGINBLOCK] = opx_beginblock;  // Replaces JUMPDEST.
-    for (auto op = size_t{OP_PUSH1}; op <= OP_PUSH32; ++op)
+    for (auto op = size_t{OP_PUSH1}; op <= OP_PUSH8; ++op)
+        table[op] = op_push_small;
+    for (auto op = size_t{OP_PUSH9}; op <= OP_PUSH32; ++op)
         table[op] = op_push_full;
     for (auto op = size_t{OP_DUP1}; op <= OP_DUP16; ++op)
         table[op] = op_dup;

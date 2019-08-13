@@ -129,6 +129,8 @@ union instr_argument
         evmc_call_kind call_kind;
     } p;
     const uint8_t* data;
+    const intx::uint256* push_value;
+    uint64_t small_push_value;
 };
 
 static_assert(sizeof(instr_argument) == sizeof(void*), "Incorrect size of instr_argument");
@@ -172,11 +174,8 @@ struct code_analysis
     std::vector<instr_info> instrs;
     std::vector<block_info> blocks;
 
-    /// Storage for arguments' extended data.
-    ///
-    /// The deque container is used because pointers to its elements are not
-    /// invalidated when the container grows.
-    std::vector<bytes32> args_storage;
+    /// Storage for large push values.
+    std::vector<intx::uint256> push_values;
 
     /// The offsets of JUMPDESTs in the original code.
     /// These are values that JUMP/JUMPI receives as an argument.
