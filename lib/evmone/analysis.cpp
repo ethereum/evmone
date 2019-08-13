@@ -54,6 +54,7 @@ code_analysis analyze(
 
     block_info* block = nullptr;
 
+    int block_stack_change = 0;
     int instr_index = 0;
 
     const auto code_end = code + code_size;
@@ -68,6 +69,7 @@ code_analysis analyze(
         {
             // Create new block.
             block = &analysis.blocks.emplace_back();
+            block_stack_change = 0;
 
             // Create BEGINBLOCK instruction which either replaces JUMPDEST or is injected
             // in case there is no JUMPDEST.
@@ -89,9 +91,9 @@ code_analysis analyze(
         const auto instr_stack_req = metrics.num_stack_arguments;
         const auto instr_stack_change = metrics.num_stack_returned_items - instr_stack_req;
 
-        block->stack_req = std::max(block->stack_req, instr_stack_req - block->stack_change);
-        block->stack_change += instr_stack_change;
-        block->stack_max = std::max(block->stack_max, block->stack_change);
+        block->stack_req = std::max(block->stack_req, instr_stack_req - block_stack_change);
+        block_stack_change += instr_stack_change;
+        block->stack_max = std::max(block->stack_max, block_stack_change);
 
         if (metrics.gas_cost > 0)  // can be -1 for undefined instruction
             block->gas_cost += metrics.gas_cost;
