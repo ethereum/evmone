@@ -687,9 +687,11 @@ void op_dup(execution_state& state, instr_argument arg) noexcept
     state.stack.push(state.stack[arg.p.number]);
 }
 
-void op_swap(execution_state& state, instr_argument arg) noexcept
+template <evmc_opcode SwapOp>
+void op_swap(execution_state& state, instr_argument) noexcept
 {
-    std::swap(state.stack.top(), state.stack[arg.p.number]);
+    constexpr auto index = SwapOp - OP_SWAP1 + 1;
+    std::swap(state.stack.top(), state.stack[index]);
 }
 
 void op_log(execution_state& state, instr_argument arg) noexcept
@@ -1266,8 +1268,24 @@ constexpr exec_fn_table create_op_table_frontier() noexcept
         table[op] = op_push_full;
     for (auto op = size_t{OP_DUP1}; op <= OP_DUP16; ++op)
         table[op] = op_dup;
-    for (auto op = size_t{OP_SWAP1}; op <= OP_SWAP16; ++op)
-        table[op] = op_swap;
+
+    table[OP_SWAP1] = op_swap<OP_SWAP1>;
+    table[OP_SWAP2] = op_swap<OP_SWAP2>;
+    table[OP_SWAP3] = op_swap<OP_SWAP3>;
+    table[OP_SWAP4] = op_swap<OP_SWAP4>;
+    table[OP_SWAP5] = op_swap<OP_SWAP5>;
+    table[OP_SWAP6] = op_swap<OP_SWAP6>;
+    table[OP_SWAP7] = op_swap<OP_SWAP7>;
+    table[OP_SWAP8] = op_swap<OP_SWAP8>;
+    table[OP_SWAP9] = op_swap<OP_SWAP9>;
+    table[OP_SWAP10] = op_swap<OP_SWAP10>;
+    table[OP_SWAP11] = op_swap<OP_SWAP11>;
+    table[OP_SWAP12] = op_swap<OP_SWAP12>;
+    table[OP_SWAP13] = op_swap<OP_SWAP13>;
+    table[OP_SWAP14] = op_swap<OP_SWAP14>;
+    table[OP_SWAP15] = op_swap<OP_SWAP15>;
+    table[OP_SWAP16] = op_swap<OP_SWAP16>;
+
     for (auto op = size_t{OP_LOG0}; op <= OP_LOG4; ++op)
         table[op] = op_log;
     table[OP_CREATE] = op_create;

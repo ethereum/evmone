@@ -144,6 +144,8 @@ code_analysis analyze(
             break;
 
         case ANY_SWAP:
+            // TODO: This is not needed, but we keep it
+            //       otherwise compiler will not use the jumptable for switch implementation.
             instr.arg.p.number = opcode - OP_SWAP1 + 1;
             break;
 
