@@ -696,7 +696,7 @@ void op_swap(execution_state& state, instr_argument) noexcept
     std::swap(state.stack.top(), state.stack[index]);
 }
 
-void op_log(execution_state& state, instr_argument arg) noexcept
+void op_log(execution_state& state, size_t num_topics) noexcept
 {
     if (state.msg->flags & EVMC_STATIC)
         return state.exit(EVMC_STATIC_MODE_VIOLATION);
@@ -707,23 +707,26 @@ void op_log(execution_state& state, instr_argument arg) noexcept
     if (!check_memory(state, offset, size))
         return;
 
-    auto o = static_cast<size_t>(offset);
-    auto s = static_cast<size_t>(size);
+    const auto o = static_cast<size_t>(offset);
+    const auto s = static_cast<size_t>(size);
 
     const auto cost = int64_t(s) * 8;
     if ((state.gas_left -= cost) < 0)
-    {
-        state.exit(EVMC_OUT_OF_GAS);
-        return;
-    }
+        return state.exit(EVMC_OUT_OF_GAS);
 
-    std::array<evmc_bytes32, 4> topics;
-    for (auto i = 0; i < arg.p.number; ++i)
+    auto topics = std::array<evmc_bytes32, 4>{};
+    for (size_t i = 0; i < num_topics; ++i)
         intx::be::store(topics[i].bytes, state.stack.pop());
 
-    auto data = s != 0 ? &state.memory[o] : nullptr;
-    state.host.emit_log(
-        state.msg->destination, data, s, topics.data(), static_cast<size_t>(arg.p.number));
+    const auto data = s != 0 ? &state.memory[o] : nullptr;
+    state.host.emit_log(state.msg->destination, data, s, topics.data(), num_topics);
+}
+
+template <evmc_opcode LogOp>
+void op_log(execution_state& state, instr_argument) noexcept
+{
+    constexpr auto num_topics = LogOp - OP_LOG0;
+    op_log(state, num_topics);
 }
 
 void op_invalid(execution_state& state, instr_argument) noexcept
@@ -1303,8 +1306,12 @@ constexpr exec_fn_table create_op_table_frontier() noexcept
     table[OP_SWAP15] = op_swap<OP_SWAP15>;
     table[OP_SWAP16] = op_swap<OP_SWAP16>;
 
-    for (auto op = size_t{OP_LOG0}; op <= OP_LOG4; ++op)
-        table[op] = op_log;
+    table[OP_LOG0] = op_log<OP_LOG0>;
+    table[OP_LOG1] = op_log<OP_LOG1>;
+    table[OP_LOG2] = op_log<OP_LOG2>;
+    table[OP_LOG3] = op_log<OP_LOG3>;
+    table[OP_LOG4] = op_log<OP_LOG4>;
+
     table[OP_CREATE] = op_create;
     table[OP_CALL] = op_call;
     table[OP_CALLCODE] = op_call;
