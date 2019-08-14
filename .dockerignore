@@ -1,0 +1,5 @@
+/.git/
+/.idea/
+/build/
+/.dockerignore
+/Dockerfile
