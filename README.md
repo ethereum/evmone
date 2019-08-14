@@ -28,6 +28,8 @@ The codebase of _evmone_ is optimized to provide fast and efficient execution of
 
 ## Usage
 
+### Building from source
+
 To build the evmone EVMC module (shared library), test or benchmark.
 
 ```bash
@@ -53,6 +55,15 @@ The collection of tests comes from the evmone project.
 
 ```bash
 evm-test ./evmone.so
+```
+
+### Docker
+
+Docker images with evmone and modified geth are available on Docker Hub:
+https://hub.docker.com/r/ethereum/evmone.
+
+```bash
+docker run ethereum/evmone --vm.evm=libevmone.so
 ```
 
 ## Maintainer
