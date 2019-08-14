@@ -682,9 +682,11 @@ void op_pop(execution_state& state, instr_argument) noexcept
     state.stack.pop();
 }
 
-void op_dup(execution_state& state, instr_argument arg) noexcept
+template <evmc_opcode DupOp>
+void op_dup(execution_state& state, instr_argument) noexcept
 {
-    state.stack.push(state.stack[arg.p.number]);
+    constexpr auto index = DupOp - OP_DUP1;
+    state.stack.push(state.stack[index]);
 }
 
 template <evmc_opcode SwapOp>
@@ -1266,8 +1268,23 @@ constexpr exec_fn_table create_op_table_frontier() noexcept
         table[op] = op_push_small;
     for (auto op = size_t{OP_PUSH9}; op <= OP_PUSH32; ++op)
         table[op] = op_push_full;
-    for (auto op = size_t{OP_DUP1}; op <= OP_DUP16; ++op)
-        table[op] = op_dup;
+
+    table[OP_DUP1] = op_dup<OP_DUP1>;
+    table[OP_DUP2] = op_dup<OP_DUP2>;
+    table[OP_DUP3] = op_dup<OP_DUP3>;
+    table[OP_DUP4] = op_dup<OP_DUP4>;
+    table[OP_DUP5] = op_dup<OP_DUP5>;
+    table[OP_DUP6] = op_dup<OP_DUP6>;
+    table[OP_DUP7] = op_dup<OP_DUP7>;
+    table[OP_DUP8] = op_dup<OP_DUP8>;
+    table[OP_DUP9] = op_dup<OP_DUP9>;
+    table[OP_DUP10] = op_dup<OP_DUP10>;
+    table[OP_DUP11] = op_dup<OP_DUP11>;
+    table[OP_DUP12] = op_dup<OP_DUP12>;
+    table[OP_DUP13] = op_dup<OP_DUP13>;
+    table[OP_DUP14] = op_dup<OP_DUP14>;
+    table[OP_DUP15] = op_dup<OP_DUP15>;
+    table[OP_DUP16] = op_dup<OP_DUP16>;
 
     table[OP_SWAP1] = op_swap<OP_SWAP1>;
     table[OP_SWAP2] = op_swap<OP_SWAP2>;

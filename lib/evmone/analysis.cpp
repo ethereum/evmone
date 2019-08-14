@@ -140,6 +140,8 @@ code_analysis analyze(
         }
 
         case ANY_DUP:
+            // TODO: This is not needed, but we keep it
+            //       otherwise compiler will not use the jumptable for switch implementation.
             instr.arg.p.number = opcode - OP_DUP1;
             break;
 
