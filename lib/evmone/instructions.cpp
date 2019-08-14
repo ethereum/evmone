@@ -682,17 +682,21 @@ void op_pop(execution_state& state, instr_argument) noexcept
     state.stack.pop();
 }
 
-void op_dup(execution_state& state, instr_argument arg) noexcept
+template <evmc_opcode DupOp>
+void op_dup(execution_state& state, instr_argument) noexcept
 {
-    state.stack.push(state.stack[arg.p.number]);
+    constexpr auto index = DupOp - OP_DUP1;
+    state.stack.push(state.stack[index]);
 }
 
-void op_swap(execution_state& state, instr_argument arg) noexcept
+template <evmc_opcode SwapOp>
+void op_swap(execution_state& state, instr_argument) noexcept
 {
-    std::swap(state.stack.top(), state.stack[arg.p.number]);
+    constexpr auto index = SwapOp - OP_SWAP1 + 1;
+    std::swap(state.stack.top(), state.stack[index]);
 }
 
-void op_log(execution_state& state, instr_argument arg) noexcept
+void op_log(execution_state& state, size_t num_topics) noexcept
 {
     if (state.msg->flags & EVMC_STATIC)
         return state.exit(EVMC_STATIC_MODE_VIOLATION);
@@ -703,23 +707,26 @@ void op_log(execution_state& state, instr_argument arg) noexcept
     if (!check_memory(state, offset, size))
         return;
 
-    auto o = static_cast<size_t>(offset);
-    auto s = static_cast<size_t>(size);
+    const auto o = static_cast<size_t>(offset);
+    const auto s = static_cast<size_t>(size);
 
     const auto cost = int64_t(s) * 8;
     if ((state.gas_left -= cost) < 0)
-    {
-        state.exit(EVMC_OUT_OF_GAS);
-        return;
-    }
+        return state.exit(EVMC_OUT_OF_GAS);
 
-    std::array<evmc_bytes32, 4> topics;
-    for (auto i = 0; i < arg.p.number; ++i)
+    auto topics = std::array<evmc_bytes32, 4>{};
+    for (size_t i = 0; i < num_topics; ++i)
         intx::be::store(topics[i].bytes, state.stack.pop());
 
-    auto data = s != 0 ? &state.memory[o] : nullptr;
-    state.host.emit_log(
-        state.msg->destination, data, s, topics.data(), static_cast<size_t>(arg.p.number));
+    const auto data = s != 0 ? &state.memory[o] : nullptr;
+    state.host.emit_log(state.msg->destination, data, s, topics.data(), num_topics);
+}
+
+template <evmc_opcode LogOp>
+void op_log(execution_state& state, instr_argument) noexcept
+{
+    constexpr auto num_topics = LogOp - OP_LOG0;
+    op_log(state, num_topics);
 }
 
 void op_invalid(execution_state& state, instr_argument) noexcept
@@ -1264,12 +1271,47 @@ constexpr exec_fn_table create_op_table_frontier() noexcept
         table[op] = op_push_small;
     for (auto op = size_t{OP_PUSH9}; op <= OP_PUSH32; ++op)
         table[op] = op_push_full;
-    for (auto op = size_t{OP_DUP1}; op <= OP_DUP16; ++op)
-        table[op] = op_dup;
-    for (auto op = size_t{OP_SWAP1}; op <= OP_SWAP16; ++op)
-        table[op] = op_swap;
-    for (auto op = size_t{OP_LOG0}; op <= OP_LOG4; ++op)
-        table[op] = op_log;
+
+    table[OP_DUP1] = op_dup<OP_DUP1>;
+    table[OP_DUP2] = op_dup<OP_DUP2>;
+    table[OP_DUP3] = op_dup<OP_DUP3>;
+    table[OP_DUP4] = op_dup<OP_DUP4>;
+    table[OP_DUP5] = op_dup<OP_DUP5>;
+    table[OP_DUP6] = op_dup<OP_DUP6>;
+    table[OP_DUP7] = op_dup<OP_DUP7>;
+    table[OP_DUP8] = op_dup<OP_DUP8>;
+    table[OP_DUP9] = op_dup<OP_DUP9>;
+    table[OP_DUP10] = op_dup<OP_DUP10>;
+    table[OP_DUP11] = op_dup<OP_DUP11>;
+    table[OP_DUP12] = op_dup<OP_DUP12>;
+    table[OP_DUP13] = op_dup<OP_DUP13>;
+    table[OP_DUP14] = op_dup<OP_DUP14>;
+    table[OP_DUP15] = op_dup<OP_DUP15>;
+    table[OP_DUP16] = op_dup<OP_DUP16>;
+
+    table[OP_SWAP1] = op_swap<OP_SWAP1>;
+    table[OP_SWAP2] = op_swap<OP_SWAP2>;
+    table[OP_SWAP3] = op_swap<OP_SWAP3>;
+    table[OP_SWAP4] = op_swap<OP_SWAP4>;
+    table[OP_SWAP5] = op_swap<OP_SWAP5>;
+    table[OP_SWAP6] = op_swap<OP_SWAP6>;
+    table[OP_SWAP7] = op_swap<OP_SWAP7>;
+    table[OP_SWAP8] = op_swap<OP_SWAP8>;
+    table[OP_SWAP9] = op_swap<OP_SWAP9>;
+    table[OP_SWAP10] = op_swap<OP_SWAP10>;
+    table[OP_SWAP11] = op_swap<OP_SWAP11>;
+    table[OP_SWAP12] = op_swap<OP_SWAP12>;
+    table[OP_SWAP13] = op_swap<OP_SWAP13>;
+    table[OP_SWAP14] = op_swap<OP_SWAP14>;
+    table[OP_SWAP15] = op_swap<OP_SWAP15>;
+    table[OP_SWAP16] = op_swap<OP_SWAP16>;
+
+    table[OP_LOG0] = op_log<OP_LOG0>;
+    table[OP_LOG1] = op_log<OP_LOG1>;
+    table[OP_LOG2] = op_log<OP_LOG2>;
+    table[OP_LOG3] = op_log<OP_LOG3>;
+    table[OP_LOG4] = op_log<OP_LOG4>;
+
     table[OP_CREATE] = op_create;
     table[OP_CALL] = op_call;
     table[OP_CALLCODE] = op_call;
