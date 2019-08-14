@@ -181,7 +181,7 @@ TEST_F(evm, call_with_value)
     auto code = "60ff600060ff6000600160aa618000f150";
 
     accounts[{}].set_balance(1);
-    auto call_dst = evmc_address{};
+    auto call_dst = evmc::address{};
     call_dst.bytes[19] = 0xaa;
     accounts[call_dst] = {};
     call_result.gas_left = 1;
