@@ -6,7 +6,11 @@
 #include <ethash/keccak.h>
 
 #include "../support/attributes.h"
+
+#if _MSC_VER
 #include <string.h>
+#define __builtin_memcpy memcpy
+#endif
 
 #if _WIN32
 /* On Windows assume little endian. */
@@ -35,7 +39,7 @@ static INLINE ALWAYS_INLINE uint64_t load_le(const uint8_t* data)
        This is great trick because we are violating C/C++ memory alignment
        restrictions with no performance penalty. */
     uint64_t word;
-    memcpy(&word, data, sizeof(word));
+    __builtin_memcpy(&word, data, sizeof(word));
     return to_le64(word);
 }
 
