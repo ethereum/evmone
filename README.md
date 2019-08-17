@@ -28,6 +28,21 @@ The codebase of _evmone_ is optimized to provide fast and efficient execution of
 
 ## Usage
 
+### As geth plugin
+
+evmone implements the [EVMC] API for Ethereum Virtual Machines.
+It can be used as a plugin replacing geth's internal EVM. But for that a modified
+version of geth is needed. The [Ewasm]'s fork
+of go-ethereum provides [binary releases of geth with EVMC support](https://github.com/ewasm/go-ethereum/releases).
+
+Next, download evmone from [Releases].
+
+Start the downloaded geth with `--vm.evm` option pointing to the evmone shared library.
+
+```bash
+geth --vm.evm=./libevmone.so
+```
+
 ### Building from source
 
 To build the evmone EVMC module (shared library), test or benchmark.
@@ -87,6 +102,7 @@ Licensed under the [Apache License, Version 2.0].
 [Ewasm]: https://github.com/ewasm
 [intx]: https://github.com/chfast/intx
 [ethash]: https://github.com/chfast/ethash
+[Releases]: https://github.com/ethereum/evmone/releases
 [standard readme]: https://github.com/RichardLitt/standard-readme
 
 [appveyor badge]: https://img.shields.io/appveyor/ci/chfast/evmone/master.svg?logo=appveyor
