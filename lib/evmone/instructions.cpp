@@ -10,6 +10,8 @@
 
 #include <cassert>
 
+using namespace intx;
+
 namespace evmone
 {
 namespace
@@ -103,7 +105,7 @@ void op_div(execution_state& state, instr_argument) noexcept
 void op_sdiv(execution_state& state, instr_argument) noexcept
 {
     auto& v = state.stack[1];
-    v = v != 0 ? intx::sdivrem(state.stack[0], v).quot : 0;
+    v = v != 0 ? sdivrem(state.stack[0], v).quot : 0;
     state.stack.pop();
 }
 
@@ -117,13 +119,12 @@ void op_mod(execution_state& state, instr_argument) noexcept
 void op_smod(execution_state& state, instr_argument) noexcept
 {
     auto& v = state.stack[1];
-    v = v != 0 ? intx::sdivrem(state.stack[0], v).rem : 0;
+    v = v != 0 ? sdivrem(state.stack[0], v).rem : 0;
     state.stack.pop();
 }
 
 void op_addmod(execution_state& state, instr_argument) noexcept
 {
-    using intx::uint512;
     const auto x = state.stack.pop();
     const auto y = state.stack.pop();
     auto& m = state.stack.top();
@@ -133,7 +134,6 @@ void op_addmod(execution_state& state, instr_argument) noexcept
 
 void op_mulmod(execution_state& state, instr_argument) noexcept
 {
-    using intx::uint512;
     const auto x = state.stack.pop();
     const auto y = state.stack.pop();
     auto& m = state.stack.top();
@@ -146,13 +146,13 @@ void op_exp(execution_state& state, instr_argument) noexcept
     const auto base = state.stack.pop();
     auto& exponent = state.stack.top();
 
-    const auto exponent_significant_bytes = intx::count_significant_words<uint8_t>(exponent);
+    const auto exponent_significant_bytes = count_significant_words<uint8_t>(exponent);
     const auto exponent_cost = state.rev >= EVMC_SPURIOUS_DRAGON ? 50 : 10;
     const auto additional_cost = exponent_significant_bytes * exponent_cost;
     if ((state.gas_left -= additional_cost) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
 
-    exponent = intx::exp(base, exponent);
+    exponent = exp(base, exponent);
 }
 
 void op_signextend(execution_state& state, instr_argument) noexcept
@@ -163,7 +163,7 @@ void op_signextend(execution_state& state, instr_argument) noexcept
     if (ext < 31)
     {
         auto sign_bit = static_cast<int>(ext) * 8 + 7;
-        auto sign_mask = intx::uint256{1} << sign_bit;
+        auto sign_mask = uint256{1} << sign_bit;
         auto value_mask = sign_mask - 1;
         auto is_neg = (x & sign_mask) != 0;
         x = is_neg ? x | ~value_mask : x & value_mask;
@@ -261,7 +261,7 @@ void op_shr(execution_state& state, instr_argument) noexcept
 
 void op_sar(execution_state& state, instr_argument arg) noexcept
 {
-    if ((state.stack[1] & (intx::uint256{1} << 255)) == 0)
+    if ((state.stack[1] & (uint256{1} << 255)) == 0)
         return op_shr(state, arg);
 
     constexpr auto allones = ~uint256{};
@@ -293,47 +293,35 @@ void op_sha3(execution_state& state, instr_argument) noexcept
         return state.exit(EVMC_OUT_OF_GAS);
 
     auto data = s != 0 ? &state.memory[i] : nullptr;
-    auto h = ethash::keccak256(data, s);
-
-    size = intx::be::uint256(h.bytes);
+    size = be::load<uint256>(ethash::keccak256(data, s));
 }
 
 void op_address(execution_state& state, instr_argument) noexcept
 {
     // TODO: Might be generalized using pointers to class member.
-    uint8_t data[32] = {};
-    std::memcpy(&data[12], state.msg->destination.bytes, sizeof(state.msg->destination));
-    state.stack.push(intx::be::uint256(data));
+    state.stack.push(be::load<uint256>(state.msg->destination));
 }
 
 void op_balance(execution_state& state, instr_argument) noexcept
 {
     auto& x = state.stack.top();
-    uint8_t data[32];
-    intx::be::store(data, x);
-    evmc_address addr;
-    std::memcpy(addr.bytes, &data[12], sizeof(addr));
-    x = intx::be::uint256(state.host.get_balance(addr).bytes);
+    x = be::load<uint256>(state.host.get_balance(be::trunc<evmc::address>(x)));
 }
 
 void op_origin(execution_state& state, instr_argument) noexcept
 {
-    uint8_t data[32] = {};
-    std::memcpy(&data[12], state.host.get_tx_context().tx_origin.bytes, sizeof(evmc_address));
-    state.stack.push(intx::be::uint256(data));
+    state.stack.push(be::load<uint256>(state.host.get_tx_context().tx_origin));
 }
 
 void op_caller(execution_state& state, instr_argument) noexcept
 {
     // TODO: Might be generalized using pointers to class member.
-    uint8_t data[32] = {};
-    std::memcpy(&data[12], state.msg->sender.bytes, sizeof(state.msg->sender));
-    state.stack.push(intx::be::uint256(data));
+    state.stack.push(be::load<uint256>(state.msg->sender));
 }
 
 void op_callvalue(execution_state& state, instr_argument) noexcept
 {
-    state.stack.push(intx::be::uint256(state.msg->value.bytes));
+    state.stack.push(be::load<uint256>(state.msg->value));
 }
 
 void op_calldataload(execution_state& state, instr_argument) noexcept
@@ -351,7 +339,7 @@ void op_calldataload(execution_state& state, instr_argument) noexcept
         for (size_t i = 0; i < (end - begin); ++i)
             data[i] = state.msg->input_data[begin + i];
 
-        index = intx::be::uint256(data);
+        index = be::load<uint256>(data);
     }
 }
 
@@ -426,7 +414,7 @@ void op_mload(execution_state& state, instr_argument) noexcept
     if (!check_memory(state, index, 32))
         return;
 
-    index = intx::be::uint256(&state.memory[static_cast<size_t>(index)]);
+    index = be::unsafe::load<uint256>(&state.memory[static_cast<size_t>(index)]);
 }
 
 void op_mstore(execution_state& state, instr_argument) noexcept
@@ -437,7 +425,7 @@ void op_mstore(execution_state& state, instr_argument) noexcept
     if (!check_memory(state, index, 32))
         return;
 
-    intx::be::store(&state.memory[static_cast<size_t>(index)], value);
+    be::unsafe::store(&state.memory[static_cast<size_t>(index)], value);
 }
 
 void op_mstore8(execution_state& state, instr_argument) noexcept
@@ -454,9 +442,8 @@ void op_mstore8(execution_state& state, instr_argument) noexcept
 void op_sload(execution_state& state, instr_argument) noexcept
 {
     auto& x = state.stack.top();
-    evmc_bytes32 key;
-    intx::be::store(key.bytes, x);
-    x = intx::be::uint256(state.host.get_storage(state.msg->destination, key).bytes);
+    x = be::load<uint256>(
+        state.host.get_storage(state.msg->destination, be::store<evmc::bytes32>(x)));
 }
 
 void op_sstore(execution_state& state, instr_argument) noexcept
@@ -465,10 +452,8 @@ void op_sstore(execution_state& state, instr_argument) noexcept
     if (state.msg->flags & EVMC_STATIC)
         return state.exit(EVMC_STATIC_MODE_VIOLATION);
 
-    evmc_bytes32 key;
-    evmc_bytes32 value;
-    intx::be::store(key.bytes, state.stack.pop());
-    intx::be::store(value.bytes, state.stack.pop());
+    const auto key = be::store<evmc::bytes32>(state.stack.pop());
+    const auto value = be::store<evmc::bytes32>(state.stack.pop());
     auto status = state.host.set_storage(state.msg->destination, key, value);
     int cost = 0;
     switch (status)
@@ -536,22 +521,18 @@ void op_gas(execution_state& state, instr_argument arg) noexcept
 
 void op_gasprice(execution_state& state, instr_argument) noexcept
 {
-    state.stack.push(intx::be::uint256(state.host.get_tx_context().tx_gas_price.bytes));
+    state.stack.push(be::load<uint256>(state.host.get_tx_context().tx_gas_price));
 }
 
 void op_extcodesize(execution_state& state, instr_argument) noexcept
 {
     auto& x = state.stack.top();
-    uint8_t data[32];
-    intx::be::store(data, x);
-    evmc_address addr;
-    std::memcpy(addr.bytes, &data[12], sizeof(addr));
-    x = state.host.get_code_size(addr);
+    x = state.host.get_code_size(be::trunc<evmc::address>(x));
 }
 
 void op_extcodecopy(execution_state& state, instr_argument) noexcept
 {
-    const auto addr_data = state.stack.pop();
+    const auto addr = be::trunc<evmc::address>(state.stack.pop());
     const auto mem_index = state.stack.pop();
     const auto input_index = state.stack.pop();
     const auto size = state.stack.pop();
@@ -566,13 +547,6 @@ void op_extcodecopy(execution_state& state, instr_argument) noexcept
     const auto copy_cost = num_words(s) * 3;
     if ((state.gas_left -= copy_cost) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
-
-    evmc_address addr;
-    {
-        uint8_t tmp[32];
-        intx::be::store(tmp, addr_data);
-        std::memcpy(addr.bytes, &tmp[12], sizeof(addr));
-    }
 
     auto data = s != 0 ? &state.memory[dst] : nullptr;
     auto num_bytes_copied = state.host.copy_code(addr, src, data, s);
@@ -615,11 +589,7 @@ void op_returndatacopy(execution_state& state, instr_argument) noexcept
 void op_extcodehash(execution_state& state, instr_argument) noexcept
 {
     auto& x = state.stack.top();
-    uint8_t data[32];
-    intx::be::store(data, x);
-    evmc_address addr;
-    std::memcpy(addr.bytes, &data[12], sizeof(addr));
-    x = intx::be::uint256(state.host.get_code_hash(addr).bytes);
+    x = be::load<uint256>(state.host.get_code_hash(be::trunc<evmc::address>(x)));
 }
 
 void op_blockhash(execution_state& state, instr_argument) noexcept
@@ -631,14 +601,12 @@ void op_blockhash(execution_state& state, instr_argument) noexcept
     const auto n = static_cast<int64_t>(number);
     const auto header =
         (number < upper_bound && n >= lower_bound) ? state.host.get_block_hash(n) : evmc::bytes32{};
-    number = intx::be::uint256(header.bytes);
+    number = be::load<uint256>(header);
 }
 
 void op_coinbase(execution_state& state, instr_argument) noexcept
 {
-    uint8_t data[32] = {};
-    std::memcpy(&data[12], state.host.get_tx_context().block_coinbase.bytes, sizeof(evmc_address));
-    state.stack.push(intx::be::uint256(data));
+    state.stack.push(be::load<uint256>(state.host.get_tx_context().block_coinbase));
 }
 
 void op_timestamp(execution_state& state, instr_argument) noexcept
@@ -657,7 +625,7 @@ void op_number(execution_state& state, instr_argument) noexcept
 
 void op_difficulty(execution_state& state, instr_argument) noexcept
 {
-    state.stack.push(intx::be::uint256(state.host.get_tx_context().block_difficulty.bytes));
+    state.stack.push(be::load<uint256>(state.host.get_tx_context().block_difficulty));
 }
 
 void op_gaslimit(execution_state& state, instr_argument) noexcept
@@ -715,7 +683,7 @@ void op_log(execution_state& state, size_t num_topics) noexcept
 
     auto topics = std::array<evmc::bytes32, 4>{};
     for (size_t i = 0; i < num_topics; ++i)
-        intx::be::store(topics[i].bytes, state.stack.pop());
+        topics[i] = be::store<evmc::bytes32>(state.stack.pop());
 
     const auto data = s != 0 ? &state.memory[o] : nullptr;
     state.host.emit_log(state.msg->destination, data, s, topics.data(), num_topics);
@@ -762,12 +730,7 @@ void op_revert(execution_state& state, instr_argument) noexcept
 void op_call(execution_state& state, instr_argument arg) noexcept
 {
     auto gas = state.stack[0];
-
-    uint8_t data[32];
-    intx::be::store(data, state.stack[1]);
-    auto dst = evmc_address{};
-    std::memcpy(dst.bytes, &data[12], sizeof(dst));
-
+    const auto dst = be::trunc<evmc::address>(state.stack[1]);
     auto value = state.stack[2];
     auto input_offset = state.stack[3];
     auto input_size = state.stack[4];
@@ -792,7 +755,7 @@ void op_call(execution_state& state, instr_argument arg) noexcept
     auto msg = evmc_message{};
     msg.kind = arg.p.call_kind;
     msg.flags = state.msg->flags;
-    intx::be::store(msg.value.bytes, value);
+    msg.value = be::store<evmc::uint256be>(value);
 
     auto correction = state.current_block_cost - arg.p.number;
     auto gas_left = state.gas_left + correction;
@@ -838,7 +801,7 @@ void op_call(execution_state& state, instr_argument arg) noexcept
 
     msg.destination = dst;
     msg.sender = state.msg->destination;
-    intx::be::store(msg.value.bytes, value);
+    msg.value = be::store<evmc::uint256be>(value);
 
     if (size_t(input_size) > 0)
     {
@@ -850,9 +813,8 @@ void op_call(execution_state& state, instr_argument arg) noexcept
 
     if (has_value)
     {
-        auto balance = state.host.get_balance(state.msg->destination);
-        auto b = intx::be::uint256(balance.bytes);
-        if (b < value)
+        const auto balance = be::load<uint256>(state.host.get_balance(state.msg->destination));
+        if (balance < value)
         {
             state.gas_left += 2300;  // Return unused stipend.
             if (state.gas_left < 0)
@@ -884,12 +846,7 @@ void op_call(execution_state& state, instr_argument arg) noexcept
 void op_delegatecall(execution_state& state, instr_argument arg) noexcept
 {
     auto gas = state.stack[0];
-
-    uint8_t data[32];
-    intx::be::store(data, state.stack[1]);
-    auto dst = evmc_address{};
-    std::memcpy(dst.bytes, &data[12], sizeof(dst));
-
+    const auto dst = be::trunc<evmc::address>(state.stack[1]);
     auto input_offset = state.stack[2];
     auto input_size = state.stack[3];
     auto output_offset = state.stack[4];
@@ -956,12 +913,7 @@ void op_delegatecall(execution_state& state, instr_argument arg) noexcept
 void op_staticcall(execution_state& state, instr_argument arg) noexcept
 {
     auto gas = state.stack[0];
-
-    uint8_t data[32];
-    intx::be::store(data, state.stack[1]);
-    auto dst = evmc_address{};
-    std::memcpy(dst.bytes, &data[12], sizeof(dst));
-
+    const auto dst = be::trunc<evmc::address>(state.stack[1]);
     auto input_offset = state.stack[2];
     auto input_size = state.stack[3];
     auto output_offset = state.stack[4];
@@ -1043,7 +995,7 @@ void op_create(execution_state& state, instr_argument arg) noexcept
 
     if (endowment != 0)
     {
-        auto balance = intx::be::uint256(state.host.get_balance(state.msg->destination).bytes);
+        const auto balance = be::load<uint256>(state.host.get_balance(state.msg->destination));
         if (balance < endowment)
             return;
     }
@@ -1065,16 +1017,12 @@ void op_create(execution_state& state, instr_argument arg) noexcept
 
     msg.sender = state.msg->destination;
     msg.depth = state.msg->depth + 1;
-    intx::be::store(msg.value.bytes, endowment);
+    msg.value = be::store<evmc::uint256be>(endowment);
 
     auto result = state.host.call(msg);
     state.return_data.assign(result.output_data, result.output_size);
     if (result.status_code == EVMC_SUCCESS)
-    {
-        uint8_t data[32] = {};
-        std::memcpy(&data[12], &result.create_address, sizeof(result.create_address));
-        state.stack[0] = intx::be::uint256(data);
-    }
+        state.stack[0] = be::load<uint256>(result.create_address);
 
     if ((state.gas_left -= msg.gas - result.gas_left) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
@@ -1110,7 +1058,7 @@ void op_create2(execution_state& state, instr_argument arg) noexcept
 
     if (endowment != 0)
     {
-        auto balance = intx::be::uint256(state.host.get_balance(state.msg->destination).bytes);
+        const auto balance = be::load<uint256>(state.host.get_balance(state.msg->destination));
         if (balance < endowment)
             return;
     }
@@ -1129,17 +1077,13 @@ void op_create2(execution_state& state, instr_argument arg) noexcept
     }
     msg.sender = state.msg->destination;
     msg.depth = state.msg->depth + 1;
-    intx::be::store(msg.create2_salt.bytes, salt);
-    intx::be::store(msg.value.bytes, endowment);
+    msg.create2_salt = be::store<evmc::bytes32>(salt);
+    msg.value = be::store<evmc::uint256be>(endowment);
 
     auto result = state.host.call(msg);
     state.return_data.assign(result.output_data, result.output_size);
     if (result.status_code == EVMC_SUCCESS)
-    {
-        uint8_t data[32] = {};
-        std::memcpy(&data[12], &result.create_address, sizeof(result.create_address));
-        state.stack[0] = intx::be::uint256(data);
-    }
+        state.stack[0] = be::load<uint256>(result.create_address);
 
     if ((state.gas_left -= msg.gas - result.gas_left) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
@@ -1155,10 +1099,7 @@ void op_selfdestruct(execution_state& state, instr_argument) noexcept
     if (state.msg->flags & EVMC_STATIC)
         return state.exit(EVMC_STATIC_MODE_VIOLATION);
 
-    uint8_t data[32];
-    intx::be::store(data, state.stack[0]);
-    evmc::address addr;
-    std::memcpy(addr.bytes, &data[12], sizeof(addr));
+    const auto addr = be::trunc<evmc::address>(state.stack[0]);
 
     if (state.rev >= EVMC_TANGERINE_WHISTLE)
     {
