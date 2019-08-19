@@ -42,7 +42,7 @@ TEST(analysis, example1)
     ASSERT_EQ(analysis.blocks.size(), 1);
     EXPECT_EQ(analysis.blocks[0].gas_cost, 14);
     EXPECT_EQ(analysis.blocks[0].stack_req, 0);
-    EXPECT_EQ(analysis.blocks[0].stack_max, 2);
+    EXPECT_EQ(analysis.blocks[0].stack_max_growth, 2);
 }
 
 TEST(analysis, stack_up_and_down)
@@ -61,7 +61,7 @@ TEST(analysis, stack_up_and_down)
     ASSERT_EQ(analysis.blocks.size(), 1);
     EXPECT_EQ(analysis.blocks[0].gas_cost, 7 * 3 + 10 * 2 + 3);
     EXPECT_EQ(analysis.blocks[0].stack_req, 3);
-    EXPECT_EQ(analysis.blocks[0].stack_max, 7);
+    EXPECT_EQ(analysis.blocks[0].stack_max_growth, 7);
 }
 
 TEST(analysis, push)

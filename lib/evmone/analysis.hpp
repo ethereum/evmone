@@ -168,8 +168,8 @@ struct block_info
     /// The stack height required to execute the block.
     int stack_req = 0;
 
-    /// The maximum stack height relative to the stack height at block start.
-    int stack_max = 0;
+    /// The maximum stack height growth relative to the stack height at block start.
+    int stack_max_growth = 0;
 };
 
 struct code_analysis
