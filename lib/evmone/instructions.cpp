@@ -129,7 +129,7 @@ void op_addmod(execution_state& state, instr_argument) noexcept
     const auto y = state.stack.pop();
     auto& m = state.stack.top();
 
-    m = m != 0 ? ((uint512{x} + uint512{y}) % uint512{m}).lo : 0;
+    m = m != 0 ? addmod(x, y, m) : 0;
 }
 
 void op_mulmod(execution_state& state, instr_argument) noexcept
@@ -138,7 +138,7 @@ void op_mulmod(execution_state& state, instr_argument) noexcept
     const auto y = state.stack.pop();
     auto& m = state.stack.top();
 
-    m = m != 0 ? ((uint512{x} * uint512{y}) % uint512{m}).lo : 0;
+    m = m != 0 ? mulmod(x, y, m) : 0;
 }
 
 void op_exp(execution_state& state, instr_argument) noexcept
