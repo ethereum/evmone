@@ -562,7 +562,7 @@ TEST_F(evm, sstore_cost)
 {
     auto& storage = accounts[msg.destination].storage;
 
-    auto v1 = evmc_bytes32{};
+    auto v1 = evmc::bytes32{};
     v1.bytes[31] = 1;
 
     auto revs = {EVMC_BYZANTIUM, EVMC_CONSTANTINOPLE, EVMC_PETERSBURG};

@@ -4,7 +4,6 @@
 #pragma once
 
 #include <evmc/evmc.hpp>
-#include <evmc/helpers.hpp>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -15,29 +14,29 @@ struct MockedAccount
 {
     struct storage_value
     {
-        evmc_bytes32 value{};
+        evmc::bytes32 value;
 
         /// True means this value has been modified already by the current transaction.
         bool dirty{false};
 
         storage_value() noexcept = default;
 
-        storage_value(const evmc_bytes32& _value, bool _dirty = false) noexcept  // NOLINT
+        storage_value(const evmc::bytes32& _value, bool _dirty = false) noexcept  // NOLINT
           : value{_value}, dirty{_dirty}
         {}
     };
 
     bytes code;
-    evmc_bytes32 codehash;
-    evmc_uint256be balance;
-    std::unordered_map<evmc_bytes32, storage_value> storage;
+    evmc::bytes32 codehash;
+    evmc::uint256be balance;
+    std::unordered_map<evmc::bytes32, storage_value> storage;
 
     /// Helper method for setting balance by numeric type.
     /// Might not be needed when intx API is improved,
     /// track https://github.com/chfast/intx/issues/105.
     void set_balance(uint64_t x) noexcept
     {
-        balance = evmc_uint256be{};
+        balance = evmc::uint256be{};
         for (std::size_t i = 0; i < sizeof(x); ++i)
             balance.bytes[sizeof(balance) - 1 - i] = static_cast<uint8_t>(x >> (8 * i));
     }
@@ -48,11 +47,11 @@ class MockedHost : public evmc::Host
 public:
     struct log_record
     {
-        evmc_address address;
+        evmc::address address;
         bytes data;
-        std::vector<evmc_bytes32> topics;
+        std::vector<evmc::bytes32> topics;
 
-        bool operator==(const log_record& other) noexcept
+        bool operator==(const log_record& other) const noexcept
         {
             return address == other.address && data == other.data &&
                    std::equal(
@@ -62,27 +61,27 @@ public:
 
     struct selfdestuct_record
     {
-        evmc_address address;
-        evmc_address beneficiary;
+        evmc::address address;
+        evmc::address beneficiary;
 
-        bool operator==(const selfdestuct_record& other) noexcept
+        bool operator==(const selfdestuct_record& other) const noexcept
         {
             return address == other.address && beneficiary == other.beneficiary;
         }
     };
 
-    std::unordered_map<evmc_address, MockedAccount> accounts;
+    std::unordered_map<evmc::address, MockedAccount> accounts;
 
     evmc_tx_context tx_context = {};
 
-    evmc_bytes32 blockhash = {};
+    evmc::bytes32 blockhash = {};
 
     evmc_result call_result = {};
 
     std::vector<int64_t> recorded_blockhashes;
 
     static constexpr auto max_recorded_account_accesses = 200;
-    std::vector<evmc_address> recorded_account_accesses;
+    std::vector<evmc::address> recorded_account_accesses;
 
     static constexpr auto max_recorded_calls = 100;
     std::vector<evmc_message> recorded_calls;
@@ -93,7 +92,7 @@ public:
 protected:
     std::vector<bytes> m_recorded_calls_inputs;
 
-    void record_account_access(const evmc_address& addr)
+    void record_account_access(const evmc::address& addr)
     {
         if (recorded_account_accesses.empty())
             recorded_account_accesses.reserve(max_recorded_account_accesses);
@@ -102,13 +101,13 @@ protected:
             recorded_account_accesses.emplace_back(addr);
     }
 
-    bool account_exists(const evmc_address& addr) noexcept override
+    bool account_exists(const evmc::address& addr) noexcept override
     {
         record_account_access(addr);
         return accounts.count(addr);
     }
 
-    evmc_bytes32 get_storage(const evmc_address& addr, const evmc_bytes32& key) noexcept override
+    evmc::bytes32 get_storage(const evmc::address& addr, const evmc::bytes32& key) noexcept override
     {
         record_account_access(addr);
         const auto ait = accounts.find(addr);
@@ -120,8 +119,8 @@ protected:
         return {};
     }
 
-    evmc_storage_status set_storage(const evmc_address& addr, const evmc_bytes32& key,
-        const evmc_bytes32& value) noexcept override
+    evmc_storage_status set_storage(const evmc::address& addr, const evmc::bytes32& key,
+        const evmc::bytes32& value) noexcept override
     {
         record_account_access(addr);
         const auto it = accounts.find(addr);
@@ -141,12 +140,12 @@ protected:
             if (!old.dirty)
             {
                 old.dirty = true;
-                if (is_zero(old.value))
+                if (!old.value)
                     status = EVMC_STORAGE_ADDED;
-                else if (is_zero(value))
-                    status = EVMC_STORAGE_DELETED;
-                else
+                else if (value)
                     status = EVMC_STORAGE_MODIFIED;
+                else
+                    status = EVMC_STORAGE_DELETED;
             }
             else
                 status = EVMC_STORAGE_MODIFIED_AGAIN;
@@ -156,7 +155,7 @@ protected:
         return status;
     }
 
-    evmc_uint256be get_balance(const evmc_address& addr) noexcept override
+    evmc::uint256be get_balance(const evmc::address& addr) noexcept override
     {
         record_account_access(addr);
         const auto it = accounts.find(addr);
@@ -166,7 +165,7 @@ protected:
         return it->second.balance;
     }
 
-    size_t get_code_size(const evmc_address& addr) noexcept override
+    size_t get_code_size(const evmc::address& addr) noexcept override
     {
         record_account_access(addr);
         const auto it = accounts.find(addr);
@@ -175,7 +174,7 @@ protected:
         return it->second.code.size();
     }
 
-    evmc_bytes32 get_code_hash(const evmc_address& addr) noexcept override
+    evmc::bytes32 get_code_hash(const evmc::address& addr) noexcept override
     {
         record_account_access(addr);
         const auto it = accounts.find(addr);
@@ -184,7 +183,7 @@ protected:
         return it->second.codehash;
     }
 
-    size_t copy_code(const evmc_address& addr, size_t code_offset, uint8_t* buffer_data,
+    size_t copy_code(const evmc::address& addr, size_t code_offset, uint8_t* buffer_data,
         size_t buffer_size) noexcept override
     {
         record_account_access(addr);
@@ -204,7 +203,7 @@ protected:
         return n;
     }
 
-    void selfdestruct(const evmc_address& addr, const evmc_address& beneficiary) noexcept override
+    void selfdestruct(const evmc::address& addr, const evmc::address& beneficiary) noexcept override
     {
         record_account_access(addr);
         recorded_selfdestructs.push_back({addr, beneficiary});
@@ -235,14 +234,14 @@ protected:
 
     evmc_tx_context get_tx_context() noexcept override { return tx_context; }
 
-    evmc_bytes32 get_block_hash(int64_t block_number) noexcept override
+    evmc::bytes32 get_block_hash(int64_t block_number) noexcept override
     {
         recorded_blockhashes.emplace_back(block_number);
         return blockhash;
     }
 
-    void emit_log(const evmc_address& addr, const uint8_t* data, size_t data_size,
-        const evmc_bytes32 topics[], size_t topics_count) noexcept override
+    void emit_log(const evmc::address& addr, const uint8_t* data, size_t data_size,
+        const evmc::bytes32 topics[], size_t topics_count) noexcept override
     {
         recorded_logs.push_back({addr, {data, data_size}, {}});
         auto& record_topics = recorded_logs.back().topics;

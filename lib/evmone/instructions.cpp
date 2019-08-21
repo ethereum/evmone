@@ -714,7 +714,7 @@ void op_log(execution_state& state, size_t num_topics) noexcept
     if ((state.gas_left -= cost) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
 
-    auto topics = std::array<evmc_bytes32, 4>{};
+    auto topics = std::array<evmc::bytes32, 4>{};
     for (size_t i = 0; i < num_topics; ++i)
         intx::be::store(topics[i].bytes, state.stack.pop());
 
@@ -1158,20 +1158,12 @@ void op_selfdestruct(execution_state& state, instr_argument) noexcept
 
     uint8_t data[32];
     intx::be::store(data, state.stack[0]);
-    evmc_address addr;
+    evmc::address addr;
     std::memcpy(addr.bytes, &data[12], sizeof(addr));
 
     if (state.rev >= EVMC_TANGERINE_WHISTLE)
     {
-        auto check_existance = true;
-
-        if (state.rev >= EVMC_SPURIOUS_DRAGON)
-        {
-            auto balance = state.host.get_balance(state.msg->destination);
-            check_existance = !is_zero(balance);
-        }
-
-        if (check_existance)
+        if (state.rev == EVMC_TANGERINE_WHISTLE || state.host.get_balance(state.msg->destination))
         {
             // After TANGERINE_WHISTLE apply additional cost of
             // sending value to a non-existing account.
