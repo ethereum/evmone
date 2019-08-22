@@ -161,6 +161,8 @@ struct instr_info
 
 struct block_info
 {
+    int jumpdest_target = -1;
+
     /// The total base gas cost of all instructions in the block.
     int64_t gas_cost = 0;
 
@@ -187,7 +189,7 @@ struct code_analysis
     /// The indexes of the instructions in the generated instruction table
     /// matching the elements from jumdest_offsets.
     /// This is value to which the next instruction pointer must be set in JUMP/JUMPI.
-    std::vector<int16_t> jumpdest_targets;
+    std::vector<block_info> jumpdest_targets;
 };
 
 inline int find_jumpdest(const code_analysis& analysis, int offset) noexcept
@@ -195,7 +197,8 @@ inline int find_jumpdest(const code_analysis& analysis, int offset) noexcept
     const auto begin = std::begin(analysis.jumpdest_offsets);
     const auto end = std::end(analysis.jumpdest_offsets);
     const auto it = std::lower_bound(begin, end, offset);
-    return (it != end && *it == offset) ? analysis.jumpdest_targets[it - begin] : -1;
+    return (it != end && *it == offset) ? analysis.jumpdest_targets[it - begin].jumpdest_target :
+                                          -1;
 }
 
 EVMC_EXPORT code_analysis analyze(

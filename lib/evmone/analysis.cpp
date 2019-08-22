@@ -80,7 +80,8 @@ code_analysis analyze(
             if (jumpdest)  // Add the jumpdest to the map.
             {
                 analysis.jumpdest_offsets.emplace_back(static_cast<int16_t>(code_pos - code - 1));
-                analysis.jumpdest_targets.emplace_back(static_cast<int16_t>(instr_index));
+                auto& t = analysis.jumpdest_targets.emplace_back();
+                t.jumpdest_target = instr_index;
             }
             else  // Increase instruction count because additional BEGINBLOCK was injected.
                 ++instr_index;

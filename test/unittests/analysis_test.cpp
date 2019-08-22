@@ -86,7 +86,7 @@ TEST(analysis, jump1)
     ASSERT_EQ(analysis.jumpdest_offsets.size(), 1);
     ASSERT_EQ(analysis.jumpdest_targets.size(), 1);
     EXPECT_EQ(analysis.jumpdest_offsets[0], 6);
-    EXPECT_EQ(analysis.jumpdest_targets[0], 5);
+    EXPECT_EQ(analysis.jumpdest_targets[0].jumpdest_target, 5);
     EXPECT_EQ(find_jumpdest(analysis, 6), 5);
     EXPECT_EQ(find_jumpdest(analysis, 0), -1);
     EXPECT_EQ(find_jumpdest(analysis, 7), -1);
@@ -111,7 +111,7 @@ TEST(analysis, only_jumpdest)
     ASSERT_EQ(analysis.jumpdest_offsets.size(), 1);
     ASSERT_EQ(analysis.jumpdest_targets.size(), 1);
     EXPECT_EQ(analysis.jumpdest_offsets[0], 0);
-    EXPECT_EQ(analysis.jumpdest_targets[0], 0);
+    EXPECT_EQ(analysis.jumpdest_targets[0].jumpdest_target, 0);
 }
 
 TEST(analysis, jumpi_at_the_end)
