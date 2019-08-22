@@ -62,13 +62,13 @@ TEST(analysis, push)
     const auto code = push(push_value) + "7f00ee";
     const auto analysis = analyze(rev, &code[0], code.size());
 
-    ASSERT_EQ(analysis.instrs.size(), 5);
+    ASSERT_EQ(analysis.instrs.size(), 6);
     ASSERT_EQ(analysis.push_values.size(), 1);
     EXPECT_EQ(analysis.instrs[0].fn, op_tbl[OPX_BEGINBLOCK].fn);
     EXPECT_EQ(analysis.instrs[1].fn, op_tbl[OP_PUSH8].fn);
     EXPECT_EQ(analysis.instrs[2].arg.small_push_value, push_value);
     EXPECT_EQ(analysis.instrs[3].fn, op_tbl[OP_PUSH32].fn);
-    EXPECT_EQ(analysis.instrs[3].arg.push_value, &analysis.push_values[0]);
+    EXPECT_EQ(analysis.instrs[4].arg.push_value, &analysis.push_values[0]);
     EXPECT_EQ(analysis.push_values[0], intx::uint256{0xee} << 240);
 }
 

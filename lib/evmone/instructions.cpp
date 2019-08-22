@@ -701,7 +701,7 @@ const instr_info* op_push_small(const instr_info* instr, execution_state& state)
 
 const instr_info* op_push_full(const instr_info* instr, execution_state& state) noexcept
 {
-    state.stack.push(*instr->arg.push_value);
+    state.stack.push(*(++instr)->arg.push_value);
     return ++instr;
 }
 

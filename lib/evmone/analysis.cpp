@@ -120,7 +120,8 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
             while (code_pos < push_end && code_pos < code_end)
                 *insert_pos-- = *code_pos++;
 
-            instr.arg.push_value = &push_value;
+            auto& arg = analysis.instrs.emplace_back(nullptr);
+            arg.arg.push_value = &push_value;
             break;
         }
 
