@@ -569,6 +569,7 @@ TEST_F(evm, caller_callvalue)
     auto a = from_hex("0000ddee000000000000");
     EXPECT_EQ(bytes(&result.output_data[0], 10), a);
 }
+
 TEST_F(evm, undefined)
 {
     execute(1, "2a");
@@ -582,6 +583,7 @@ TEST_F(evm, invalid)
     EXPECT_EQ(result.status_code, EVMC_INVALID_INSTRUCTION);
     EXPECT_EQ(result.gas_left, 0);
 }
+
 TEST_F(evm, sha3)
 {
     execute("6108006103ff2060005260206000f3");

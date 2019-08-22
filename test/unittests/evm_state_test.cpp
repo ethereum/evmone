@@ -214,6 +214,29 @@ TEST_F(evm_state, balance)
     EXPECT_EQ(result.output_data[5], 0x01);
 }
 
+TEST_F(evm_state, selfbalance)
+{
+    host.accounts[msg.destination].set_balance(0x0504030201);
+    // NOTE: adding push here to balance out the stack pre-Istanbul (needed to get undefined
+    // instruction as a result)
+    auto code = bytecode{} + push(1) + OP_SELFBALANCE + mstore(0) + ret(32 - 6, 6);
+
+    rev = EVMC_CONSTANTINOPLE;
+    execute(code);
+    EXPECT_EQ(result.status_code, EVMC_UNDEFINED_INSTRUCTION);
+
+    rev = EVMC_ISTANBUL;
+    execute(code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 23);
+    ASSERT_EQ(result.output_size, 6);
+    EXPECT_EQ(result.output_data[0], 0);
+    EXPECT_EQ(result.output_data[1], 0x05);
+    EXPECT_EQ(result.output_data[2], 0x04);
+    EXPECT_EQ(result.output_data[3], 0x03);
+    EXPECT_EQ(result.output_data[4], 0x02);
+    EXPECT_EQ(result.output_data[5], 0x01);
+}
+
 TEST_F(evm_state, log)
 {
     for (auto op : {OP_LOG0, OP_LOG1, OP_LOG2, OP_LOG3, OP_LOG4})
