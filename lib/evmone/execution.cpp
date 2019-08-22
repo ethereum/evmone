@@ -31,7 +31,7 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
 
     const instr_info* instr = &state->analysis->instrs[0];
     while (instr)
-        instr = instr->fn(instr, *state, instr->arg);
+        instr = instr->fn(instr, *state);
 
     evmc_result result{};
 

@@ -72,31 +72,31 @@ inline bool check_memory(
 }
 
 
-const instr_info* op_stop(const instr_info*, execution_state& state, instr_argument) noexcept
+const instr_info* op_stop(const instr_info*, execution_state& state) noexcept
 {
     return state.exit(EVMC_SUCCESS);
 }
 
-const instr_info* op_add(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_add(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.top() += state.stack.pop();
     return ++instr;
 }
 
-const instr_info* op_mul(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_mul(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.top() *= state.stack.pop();
     return ++instr;
 }
 
-const instr_info* op_sub(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_sub(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack[1] = state.stack[0] - state.stack[1];
     state.stack.pop();
     return ++instr;
 }
 
-const instr_info* op_div(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_div(const instr_info* instr, execution_state& state) noexcept
 {
     auto& v = state.stack[1];
     v = v != 0 ? state.stack[0] / v : 0;
@@ -104,7 +104,7 @@ const instr_info* op_div(const instr_info* instr, execution_state& state, instr_
     return ++instr;
 }
 
-const instr_info* op_sdiv(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_sdiv(const instr_info* instr, execution_state& state) noexcept
 {
     auto& v = state.stack[1];
     v = v != 0 ? intx::sdivrem(state.stack[0], v).quot : 0;
@@ -112,7 +112,7 @@ const instr_info* op_sdiv(const instr_info* instr, execution_state& state, instr
     return ++instr;
 }
 
-const instr_info* op_mod(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_mod(const instr_info* instr, execution_state& state) noexcept
 {
     auto& v = state.stack[1];
     v = v != 0 ? state.stack[0] % v : 0;
@@ -120,7 +120,7 @@ const instr_info* op_mod(const instr_info* instr, execution_state& state, instr_
     return ++instr;
 }
 
-const instr_info* op_smod(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_smod(const instr_info* instr, execution_state& state) noexcept
 {
     auto& v = state.stack[1];
     v = v != 0 ? intx::sdivrem(state.stack[0], v).rem : 0;
@@ -128,8 +128,7 @@ const instr_info* op_smod(const instr_info* instr, execution_state& state, instr
     return ++instr;
 }
 
-const instr_info* op_addmod(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_addmod(const instr_info* instr, execution_state& state) noexcept
 {
     const auto x = state.stack.pop();
     const auto y = state.stack.pop();
@@ -139,8 +138,7 @@ const instr_info* op_addmod(
     return ++instr;
 }
 
-const instr_info* op_mulmod(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_mulmod(const instr_info* instr, execution_state& state) noexcept
 {
     const auto x = state.stack.pop();
     const auto y = state.stack.pop();
@@ -150,7 +148,7 @@ const instr_info* op_mulmod(
     return ++instr;
 }
 
-const instr_info* op_exp(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_exp(const instr_info* instr, execution_state& state) noexcept
 {
     const auto base = state.stack.pop();
     auto& exponent = state.stack.top();
@@ -166,7 +164,7 @@ const instr_info* op_exp(const instr_info* instr, execution_state& state, instr_
     return ++instr;
 }
 
-auto op_signextend(const instr_info* pc, execution_state& state, instr_argument) noexcept
+auto op_signextend(const instr_info* pc, execution_state& state) noexcept
 {
     const auto ext = state.stack.pop();
     auto& x = state.stack.top();
@@ -182,7 +180,7 @@ auto op_signextend(const instr_info* pc, execution_state& state, instr_argument)
     return ++pc;
 }
 
-const instr_info* op_lt(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_lt(const instr_info* instr, execution_state& state) noexcept
 {
     // OPT: Have single function implementing all comparisons.
     state.stack[1] = state.stack[0] < state.stack[1];
@@ -190,14 +188,14 @@ const instr_info* op_lt(const instr_info* instr, execution_state& state, instr_a
     return ++instr;
 }
 
-const instr_info* op_gt(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_gt(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack[1] = state.stack[1] < state.stack[0];
     state.stack.pop();
     return ++instr;
 }
 
-const instr_info* op_slt(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_slt(const instr_info* instr, execution_state& state) noexcept
 {
     auto x = state.stack[0];
     auto y = state.stack[1];
@@ -208,7 +206,7 @@ const instr_info* op_slt(const instr_info* instr, execution_state& state, instr_
     return ++instr;
 }
 
-const instr_info* op_sgt(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_sgt(const instr_info* instr, execution_state& state) noexcept
 {
     auto x = state.stack[0];
     auto y = state.stack[1];
@@ -219,45 +217,44 @@ const instr_info* op_sgt(const instr_info* instr, execution_state& state, instr_
     return ++instr;
 }
 
-const instr_info* op_eq(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_eq(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack[1] = state.stack[0] == state.stack[1];
     state.stack.pop();
     return ++instr;
 }
 
-const instr_info* op_iszero(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_iszero(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.top() = state.stack.top() == 0;
     return ++instr;
 }
 
-const instr_info* op_and(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_and(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.top() &= state.stack.pop();
     return ++instr;
 }
 
-const instr_info* op_or(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_or(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.top() |= state.stack.pop();
     return ++instr;
 }
 
-const instr_info* op_xor(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_xor(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.top() ^= state.stack.pop();
     return ++instr;
 }
 
-const instr_info* op_not(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_not(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.top() = ~state.stack.top();
     return ++instr;
 }
 
-const instr_info* op_byte(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_byte(const instr_info* instr, execution_state& state) noexcept
 {
     const auto n = state.stack.pop();
     auto& x = state.stack.top();
@@ -273,23 +270,22 @@ const instr_info* op_byte(const instr_info* instr, execution_state& state, instr
     return ++instr;
 }
 
-const instr_info* op_shl(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_shl(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.top() <<= state.stack.pop();
     return ++instr;
 }
 
-const instr_info* op_shr(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_shr(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.top() >>= state.stack.pop();
     return ++instr;
 }
 
-const instr_info* op_sar(
-    const instr_info* instr, execution_state& state, instr_argument arg) noexcept
+const instr_info* op_sar(const instr_info* instr, execution_state& state) noexcept
 {
     if ((state.stack[1] & (uint256{1} << 255)) == 0)
-        return op_shr(instr, state, arg);
+        return op_shr(instr, state);
 
     constexpr auto allones = ~uint256{};
 
@@ -305,7 +301,7 @@ const instr_info* op_sar(
     return ++instr;
 }
 
-const instr_info* op_sha3(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_sha3(const instr_info* instr, execution_state& state) noexcept
 {
     const auto index = state.stack.pop();
     auto& size = state.stack.top();
@@ -325,46 +321,40 @@ const instr_info* op_sha3(const instr_info* instr, execution_state& state, instr
     return ++instr;
 }
 
-const instr_info* op_address(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_address(const instr_info* instr, execution_state& state) noexcept
 {
     // TODO: Might be generalized using pointers to class member.
     state.stack.push(intx::be::load<uint256>(state.msg->destination));
     return ++instr;
 }
 
-const instr_info* op_balance(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_balance(const instr_info* instr, execution_state& state) noexcept
 {
     auto& x = state.stack.top();
     x = intx::be::load<uint256>(state.host.get_balance(intx::be::trunc<evmc::address>(x)));
     return ++instr;
 }
 
-const instr_info* op_origin(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_origin(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().tx_origin));
     return ++instr;
 }
 
-const instr_info* op_caller(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_caller(const instr_info* instr, execution_state& state) noexcept
 {
     // TODO: Might be generalized using pointers to class member.
     state.stack.push(intx::be::load<uint256>(state.msg->sender));
     return ++instr;
 }
 
-const instr_info* op_callvalue(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_callvalue(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.push(intx::be::load<uint256>(state.msg->value));
     return ++instr;
 }
 
-const instr_info* op_calldataload(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_calldataload(const instr_info* instr, execution_state& state) noexcept
 {
     auto& index = state.stack.top();
 
@@ -384,15 +374,13 @@ const instr_info* op_calldataload(
     return ++instr;
 }
 
-const instr_info* op_calldatasize(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_calldatasize(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.push(state.msg->input_size);
     return ++instr;
 }
 
-const instr_info* op_calldatacopy(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_calldatacopy(const instr_info* instr, execution_state& state) noexcept
 {
     const auto mem_index = state.stack.pop();
     const auto input_index = state.stack.pop();
@@ -419,15 +407,13 @@ const instr_info* op_calldatacopy(
     return ++instr;
 }
 
-const instr_info* op_codesize(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_codesize(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.push(state.code_size);
     return ++instr;
 }
 
-const instr_info* op_codecopy(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_codecopy(const instr_info* instr, execution_state& state) noexcept
 {
     // TODO: Similar to op_calldatacopy().
 
@@ -456,7 +442,7 @@ const instr_info* op_codecopy(
     return ++instr;
 }
 
-const instr_info* op_mload(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_mload(const instr_info* instr, execution_state& state) noexcept
 {
     auto& index = state.stack.top();
 
@@ -467,8 +453,7 @@ const instr_info* op_mload(const instr_info* instr, execution_state& state, inst
     return ++instr;
 }
 
-const instr_info* op_mstore(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_mstore(const instr_info* instr, execution_state& state) noexcept
 {
     const auto index = state.stack.pop();
     const auto value = state.stack.pop();
@@ -480,8 +465,7 @@ const instr_info* op_mstore(
     return ++instr;
 }
 
-const instr_info* op_mstore8(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_mstore8(const instr_info* instr, execution_state& state) noexcept
 {
     const auto index = state.stack.pop();
     const auto value = state.stack.pop();
@@ -493,7 +477,7 @@ const instr_info* op_mstore8(
     return ++instr;
 }
 
-const instr_info* op_sload(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_sload(const instr_info* instr, execution_state& state) noexcept
 {
     auto& x = state.stack.top();
     x = intx::be::load<uint256>(
@@ -501,8 +485,7 @@ const instr_info* op_sload(const instr_info* instr, execution_state& state, inst
     return ++instr;
 }
 
-const instr_info* op_sstore(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_sstore(const instr_info* instr, execution_state& state) noexcept
 {
     // TODO: Implement static mode violation in analysis.
     if (state.msg->flags & EVMC_STATIC)
@@ -535,7 +518,7 @@ const instr_info* op_sstore(
     return ++instr;
 }
 
-const instr_info* op_jump(const instr_info*, execution_state& state, instr_argument) noexcept
+const instr_info* op_jump(const instr_info*, execution_state& state) noexcept
 {
     const auto dst = state.stack.pop();
     auto pc = -1;
@@ -546,11 +529,10 @@ const instr_info* op_jump(const instr_info*, execution_state& state, instr_argum
     return &state.analysis->instrs[static_cast<size_t>(pc)];
 }
 
-const instr_info* op_jumpi(
-    const instr_info* instr, execution_state& state, instr_argument arg) noexcept
+const instr_info* op_jumpi(const instr_info* instr, execution_state& state) noexcept
 {
     if (state.stack[1] != 0)
-        instr = op_jump(instr, state, arg);
+        instr = op_jump(instr, state);
     else
     {
         state.stack.pop();
@@ -564,19 +546,19 @@ const instr_info* op_jumpi(
     return instr;
 }
 
-const instr_info* op_pc(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_pc(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.push(instr->arg.p.number);
     return ++instr;
 }
 
-const instr_info* op_msize(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_msize(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.push(state.memory.size());
     return ++instr;
 }
 
-const instr_info* op_gas(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_gas(const instr_info* instr, execution_state& state) noexcept
 {
     const auto correction = state.current_block_cost - instr->arg.p.number;
     const auto gas = static_cast<uint64_t>(state.gas_left + correction);
@@ -584,23 +566,20 @@ const instr_info* op_gas(const instr_info* instr, execution_state& state, instr_
     return ++instr;
 }
 
-const instr_info* op_gasprice(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_gasprice(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().tx_gas_price));
     return ++instr;
 }
 
-const instr_info* op_extcodesize(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_extcodesize(const instr_info* instr, execution_state& state) noexcept
 {
     auto& x = state.stack.top();
     x = state.host.get_code_size(intx::be::trunc<evmc::address>(x));
     return ++instr;
 }
 
-const instr_info* op_extcodecopy(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_extcodecopy(const instr_info* instr, execution_state& state) noexcept
 {
     const auto addr = intx::be::trunc<evmc::address>(state.stack.pop());
     const auto mem_index = state.stack.pop();
@@ -625,15 +604,13 @@ const instr_info* op_extcodecopy(
     return ++instr;
 }
 
-const instr_info* op_returndatasize(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_returndatasize(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.push(state.return_data.size());
     return ++instr;
 }
 
-const instr_info* op_returndatacopy(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_returndatacopy(const instr_info* instr, execution_state& state) noexcept
 {
     const auto mem_index = state.stack.pop();
     const auto input_index = state.stack.pop();
@@ -661,16 +638,14 @@ const instr_info* op_returndatacopy(
     return ++instr;
 }
 
-const instr_info* op_extcodehash(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_extcodehash(const instr_info* instr, execution_state& state) noexcept
 {
     auto& x = state.stack.top();
     x = intx::be::load<uint256>(state.host.get_code_hash(intx::be::trunc<evmc::address>(x)));
     return ++instr;
 }
 
-const instr_info* op_blockhash(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_blockhash(const instr_info* instr, execution_state& state) noexcept
 {
     auto& number = state.stack.top();
 
@@ -683,15 +658,13 @@ const instr_info* op_blockhash(
     return ++instr;
 }
 
-const instr_info* op_coinbase(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_coinbase(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().block_coinbase));
     return ++instr;
 }
 
-const instr_info* op_timestamp(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_timestamp(const instr_info* instr, execution_state& state) noexcept
 {
     // TODO: Add tests for negative timestamp?
     const auto timestamp = static_cast<uint64_t>(state.host.get_tx_context().block_timestamp);
@@ -699,8 +672,7 @@ const instr_info* op_timestamp(
     return ++instr;
 }
 
-const instr_info* op_number(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_number(const instr_info* instr, execution_state& state) noexcept
 {
     // TODO: Add tests for negative block number?
     const auto block_number = static_cast<uint64_t>(state.host.get_tx_context().block_number);
@@ -708,43 +680,39 @@ const instr_info* op_number(
     return ++instr;
 }
 
-const instr_info* op_difficulty(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_difficulty(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().block_difficulty));
     return ++instr;
 }
 
-const instr_info* op_gaslimit(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_gaslimit(const instr_info* instr, execution_state& state) noexcept
 {
     const auto block_gas_limit = static_cast<uint64_t>(state.host.get_tx_context().block_gas_limit);
     state.stack.push(block_gas_limit);
     return ++instr;
 }
 
-const instr_info* op_push_small(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_push_small(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.push(instr->arg.small_push_value);
     return ++instr;
 }
 
-const instr_info* op_push_full(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_push_full(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.push(*instr->arg.push_value);
     return ++instr;
 }
 
-const instr_info* op_pop(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_pop(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.pop();
     return ++instr;
 }
 
 template <evmc_opcode DupOp>
-const instr_info* op_dup(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_dup(const instr_info* instr, execution_state& state) noexcept
 {
     constexpr auto index = DupOp - OP_DUP1;
     state.stack.push(state.stack[index]);
@@ -752,7 +720,7 @@ const instr_info* op_dup(const instr_info* instr, execution_state& state, instr_
 }
 
 template <evmc_opcode SwapOp>
-const instr_info* op_swap(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_swap(const instr_info* instr, execution_state& state) noexcept
 {
     constexpr auto index = SwapOp - OP_SWAP1 + 1;
     std::swap(state.stack.top(), state.stack[index]);
@@ -788,18 +756,18 @@ const instr_info* op_log(
 }
 
 template <evmc_opcode LogOp>
-const instr_info* op_log(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_log(const instr_info* instr, execution_state& state) noexcept
 {
     constexpr auto num_topics = LogOp - OP_LOG0;
     return op_log(instr, state, num_topics);
 }
 
-const instr_info* op_invalid(const instr_info*, execution_state& state, instr_argument) noexcept
+const instr_info* op_invalid(const instr_info*, execution_state& state) noexcept
 {
     return state.exit(EVMC_INVALID_INSTRUCTION);
 }
 
-const instr_info* op_return(const instr_info*, execution_state& state, instr_argument) noexcept
+const instr_info* op_return(const instr_info*, execution_state& state) noexcept
 {
     auto offset = state.stack[0];
     auto size = state.stack[1];
@@ -812,7 +780,7 @@ const instr_info* op_return(const instr_info*, execution_state& state, instr_arg
     return state.exit(EVMC_SUCCESS);
 }
 
-const instr_info* op_revert(const instr_info*, execution_state& state, instr_argument) noexcept
+const instr_info* op_revert(const instr_info*, execution_state& state) noexcept
 {
     auto offset = state.stack[0];
     auto size = state.stack[1];
@@ -825,7 +793,7 @@ const instr_info* op_revert(const instr_info*, execution_state& state, instr_arg
     return state.exit(EVMC_REVERT);
 }
 
-const instr_info* op_call(const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_call(const instr_info* instr, execution_state& state) noexcept
 {
     const auto arg = instr->arg;
     auto gas = state.stack[0];
@@ -944,8 +912,7 @@ const instr_info* op_call(const instr_info* instr, execution_state& state, instr
     return ++instr;
 }
 
-const instr_info* op_delegatecall(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_delegatecall(const instr_info* instr, execution_state& state) noexcept
 {
     const auto arg = instr->arg;
     auto gas = state.stack[0];
@@ -1014,8 +981,7 @@ const instr_info* op_delegatecall(
     return ++instr;
 }
 
-const instr_info* op_staticcall(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_staticcall(const instr_info* instr, execution_state& state) noexcept
 {
     const auto arg = instr->arg;
     auto gas = state.stack[0];
@@ -1079,8 +1045,7 @@ const instr_info* op_staticcall(
     return ++instr;
 }
 
-const instr_info* op_create(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_create(const instr_info* instr, execution_state& state) noexcept
 {
     if (state.msg->flags & EVMC_STATIC)
         return state.exit(EVMC_STATIC_MODE_VIOLATION);
@@ -1139,8 +1104,7 @@ const instr_info* op_create(
     return ++instr;
 }
 
-const instr_info* op_create2(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* op_create2(const instr_info* instr, execution_state& state) noexcept
 {
     if (state.msg->flags & EVMC_STATIC)
         return state.exit(EVMC_STATIC_MODE_VIOLATION);
@@ -1204,13 +1168,12 @@ const instr_info* op_create2(
     return ++instr;
 }
 
-const instr_info* op_undefined(const instr_info*, execution_state& state, instr_argument) noexcept
+const instr_info* op_undefined(const instr_info*, execution_state& state) noexcept
 {
     return state.exit(EVMC_UNDEFINED_INSTRUCTION);
 }
 
-const instr_info* op_selfdestruct(
-    const instr_info*, execution_state& state, instr_argument) noexcept
+const instr_info* op_selfdestruct(const instr_info*, execution_state& state) noexcept
 {
     if (state.msg->flags & EVMC_STATIC)
         return state.exit(EVMC_STATIC_MODE_VIOLATION);
@@ -1235,8 +1198,7 @@ const instr_info* op_selfdestruct(
     return state.exit(EVMC_SUCCESS);
 }
 
-const instr_info* opx_beginblock(
-    const instr_info* instr, execution_state& state, instr_argument) noexcept
+const instr_info* opx_beginblock(const instr_info* instr, execution_state& state) noexcept
 {
     auto& block = state.analysis->blocks[static_cast<size_t>(instr->arg.p.number)];
 
