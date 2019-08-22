@@ -564,10 +564,9 @@ const instr_info* op_jumpi(
     return instr;
 }
 
-const instr_info* op_pc(
-    const instr_info* instr, execution_state& state, instr_argument arg) noexcept
+const instr_info* op_pc(const instr_info* instr, execution_state& state, instr_argument) noexcept
 {
-    state.stack.push(arg.p.number);
+    state.stack.push(instr->arg.p.number);
     return ++instr;
 }
 
@@ -577,10 +576,9 @@ const instr_info* op_msize(const instr_info* instr, execution_state& state, inst
     return ++instr;
 }
 
-const instr_info* op_gas(
-    const instr_info* instr, execution_state& state, instr_argument arg) noexcept
+const instr_info* op_gas(const instr_info* instr, execution_state& state, instr_argument) noexcept
 {
-    const auto correction = state.current_block_cost - arg.p.number;
+    const auto correction = state.current_block_cost - instr->arg.p.number;
     const auto gas = static_cast<uint64_t>(state.gas_left + correction);
     state.stack.push(gas);
     return ++instr;
@@ -726,16 +724,16 @@ const instr_info* op_gaslimit(
 }
 
 const instr_info* op_push_small(
-    const instr_info* instr, execution_state& state, instr_argument arg) noexcept
+    const instr_info* instr, execution_state& state, instr_argument) noexcept
 {
-    state.stack.push(arg.small_push_value);
+    state.stack.push(instr->arg.small_push_value);
     return ++instr;
 }
 
 const instr_info* op_push_full(
-    const instr_info* instr, execution_state& state, instr_argument arg) noexcept
+    const instr_info* instr, execution_state& state, instr_argument) noexcept
 {
-    state.stack.push(*arg.push_value);
+    state.stack.push(*instr->arg.push_value);
     return ++instr;
 }
 
@@ -827,9 +825,9 @@ const instr_info* op_revert(const instr_info*, execution_state& state, instr_arg
     return state.exit(EVMC_REVERT);
 }
 
-const instr_info* op_call(
-    const instr_info* instr, execution_state& state, instr_argument arg) noexcept
+const instr_info* op_call(const instr_info* instr, execution_state& state, instr_argument) noexcept
 {
+    const auto arg = instr->arg;
     auto gas = state.stack[0];
     const auto dst = intx::be::trunc<evmc::address>(state.stack[1]);
     auto value = state.stack[2];
@@ -947,8 +945,9 @@ const instr_info* op_call(
 }
 
 const instr_info* op_delegatecall(
-    const instr_info* instr, execution_state& state, instr_argument arg) noexcept
+    const instr_info* instr, execution_state& state, instr_argument) noexcept
 {
+    const auto arg = instr->arg;
     auto gas = state.stack[0];
     const auto dst = intx::be::trunc<evmc::address>(state.stack[1]);
     auto input_offset = state.stack[2];
@@ -1016,8 +1015,9 @@ const instr_info* op_delegatecall(
 }
 
 const instr_info* op_staticcall(
-    const instr_info* instr, execution_state& state, instr_argument arg) noexcept
+    const instr_info* instr, execution_state& state, instr_argument) noexcept
 {
+    const auto arg = instr->arg;
     auto gas = state.stack[0];
     const auto dst = intx::be::trunc<evmc::address>(state.stack[1]);
     auto input_offset = state.stack[2];
@@ -1080,11 +1080,12 @@ const instr_info* op_staticcall(
 }
 
 const instr_info* op_create(
-    const instr_info* instr, execution_state& state, instr_argument arg) noexcept
+    const instr_info* instr, execution_state& state, instr_argument) noexcept
 {
     if (state.msg->flags & EVMC_STATIC)
         return state.exit(EVMC_STATIC_MODE_VIOLATION);
 
+    const auto arg = instr->arg;
     auto endowment = state.stack[0];
     auto init_code_offset = state.stack[1];
     auto init_code_size = state.stack[2];
@@ -1139,11 +1140,12 @@ const instr_info* op_create(
 }
 
 const instr_info* op_create2(
-    const instr_info* instr, execution_state& state, instr_argument arg) noexcept
+    const instr_info* instr, execution_state& state, instr_argument) noexcept
 {
     if (state.msg->flags & EVMC_STATIC)
         return state.exit(EVMC_STATIC_MODE_VIOLATION);
 
+    const auto arg = instr->arg;
     auto endowment = state.stack[0];
     auto init_code_offset = state.stack[1];
     auto init_code_size = state.stack[2];
@@ -1234,10 +1236,9 @@ const instr_info* op_selfdestruct(
 }
 
 const instr_info* opx_beginblock(
-    const instr_info* instr, execution_state& state, instr_argument arg) noexcept
+    const instr_info* instr, execution_state& state, instr_argument) noexcept
 {
-    assert(arg.p.number >= 0);
-    auto& block = state.analysis->blocks[static_cast<size_t>(arg.p.number)];
+    auto& block = state.analysis->blocks[static_cast<size_t>(instr->arg.p.number)];
 
     if ((state.gas_left -= block.gas_cost) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
