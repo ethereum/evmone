@@ -63,6 +63,7 @@ code_analysis analyze(
         // TODO: Loop in reverse order for easier GAS analysis.
         const auto opcode = *code_pos++;
 
+
         const bool jumpdest = opcode == OP_JUMPDEST;
 
         if (!block || jumpdest)
@@ -85,7 +86,7 @@ code_analysis analyze(
                 ++instr_index;
         }
 
-        auto& instr = jumpdest ? analysis.instrs.back() : analysis.instrs.emplace_back(fns[opcode]);
+        const auto arg = !jumpdest ? &analysis.instrs.emplace_back(fns[opcode]).arg : nullptr;
 
         const auto metrics = instr_table[opcode];
         const auto instr_stack_req = metrics.num_stack_arguments;
@@ -111,7 +112,7 @@ code_analysis analyze(
             // TODO: Consier the same endianness-specific loop as in ANY_LARGE_PUSH case.
             while (code_pos < push_end && code_pos < code_end)
                 *insert_pos++ = *code_pos++;
-            instr.arg.small_push_value = load64be(value_bytes);
+            arg->small_push_value = load64be(value_bytes);
             break;
         }
 
@@ -137,24 +138,24 @@ code_analysis analyze(
             while (code_pos < push_end && code_pos < code_end)
                 *insert_pos-- = *code_pos++;
 
-            instr.arg.push_value = &push_value;
+            arg->push_value = &push_value;
             break;
         }
 
         case ANY_DUP:
             // TODO: This is not needed, but we keep it
             //       otherwise compiler will not use the jumptable for switch implementation.
-            instr.arg.p.number = opcode - OP_DUP1;
+            arg->p.number = opcode - OP_DUP1;
             break;
 
         case ANY_SWAP:
             // TODO: This is not needed, but we keep it
             //       otherwise compiler will not use the jumptable for switch implementation.
-            instr.arg.p.number = opcode - OP_SWAP1 + 1;
+            arg->p.number = opcode - OP_SWAP1 + 1;
             break;
 
         case OP_GAS:
-            instr.arg.p.number = static_cast<int>(block->gas_cost);
+            arg->p.number = static_cast<int>(block->gas_cost);
             break;
 
         case OP_CALL:
@@ -163,13 +164,12 @@ code_analysis analyze(
         case OP_STATICCALL:
         case OP_CREATE:
         case OP_CREATE2:
-            instr.arg.p.number = static_cast<int>(block->gas_cost);
-            instr.arg.p.call_kind =
-                op2call_kind(opcode == OP_STATICCALL ? uint8_t{OP_CALL} : opcode);
+            arg->p.number = static_cast<int>(block->gas_cost);
+            arg->p.call_kind = op2call_kind(opcode == OP_STATICCALL ? uint8_t{OP_CALL} : opcode);
             break;
 
         case OP_PC:
-            instr.arg.p.number = static_cast<int>(code_pos - code - 1);
+            arg->p.number = static_cast<int>(code_pos - code - 1);
             break;
 
         case OP_LOG0:
@@ -179,7 +179,7 @@ code_analysis analyze(
         case OP_LOG4:
             // TODO: This is not needed, but we keep it
             //       otherwise compiler will not use the jumptable for switch implementation.
-            instr.arg.p.number = opcode - OP_LOG0;
+            arg->p.number = opcode - OP_LOG0;
             break;
 
         case OP_JUMP:
