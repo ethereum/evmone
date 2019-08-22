@@ -1199,7 +1199,6 @@ const instr_info* op_selfdestruct(const instr_info*, execution_state& state) noe
 
 const instr_info* opx_beginblock(const instr_info* instr, execution_state& state) noexcept
 {
-    assert(arg.p.number >= 0);
     auto& block = state.analysis->blocks[static_cast<size_t>(instr->arg.p.number)];
 
     if ((state.gas_left -= block.gas_cost) < 0)
