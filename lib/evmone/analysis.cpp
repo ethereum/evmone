@@ -69,8 +69,6 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
         else
             analysis.instrs.emplace_back(opcode_info.fn);
 
-        auto& instr = analysis.instrs.back();
-
         bool is_terminator = false;  // A flag whenever this is a block terminating instruction.
         switch (opcode)
         {
@@ -133,11 +131,12 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
         case OP_STATICCALL:
         case OP_CREATE:
         case OP_CREATE2:
-            instr.arg.number = block.gas_cost;
+            analysis.instrs.emplace_back(nullptr).arg.number = static_cast<int>(block.gas_cost);
             break;
 
         case OP_PC:
-            instr.arg.number = static_cast<int>(code_pos - code - 1);
+            analysis.instrs.emplace_back(nullptr).arg.number =
+                static_cast<int>(code_pos - code - 1);
             break;
         }
 
