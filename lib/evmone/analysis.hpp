@@ -133,7 +133,7 @@ union instr_argument
 
 static_assert(sizeof(instr_argument) == sizeof(void*), "Incorrect size of instr_argument");
 
-using exec_fn = const instr_info* (*)(const instr_info*, execution_state&, instr_argument arg);
+using exec_fn = const instr_info* (*)(const instr_info*, execution_state&);
 
 /// The evmone intrinsic opcodes.
 ///
