@@ -94,7 +94,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
                 value |= uint64_t{*code_pos++} << insert_bit_pos;
                 insert_bit_pos -= 8;
             }
-            instr.arg.small_push_value = value;
+            analysis.instrs.emplace_back(nullptr).arg.small_push_value = value;
             break;
         }
 

@@ -693,7 +693,9 @@ const instr_info* op_gaslimit(const instr_info* instr, execution_state& state) n
 
 const instr_info* op_push_small(const instr_info* instr, execution_state& state) noexcept
 {
-    state.stack.push(instr->arg.small_push_value);
+    ++instr;
+    const auto value = instr->arg.small_push_value;
+    state.stack.push(value);
     return ++instr;
 }
 
