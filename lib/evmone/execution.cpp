@@ -22,22 +22,16 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
 
     auto state = std::make_unique<execution_state>();
     state->analysis = &analysis;
-    state->next_instr = &state->analysis->instrs[0];
     state->msg = msg;
     state->code = code;
     state->code_size = code_size;
     state->host = evmc::HostContext{ctx};
     state->gas_left = msg->gas;
     state->rev = rev;
-    while (state->next_instr)
-    {
-        const auto& instr = *state->next_instr;
 
-        // Advance next_instr to allow jump opcodes to overwrite it.
-        ++state->next_instr;
-
-        instr.fn(*state, instr.arg);
-    }
+    const instr_info* instr = &state->analysis->instrs[0];
+    while (instr)
+        instr = instr->fn(instr, *state, instr->arg);
 
     evmc_result result{};
 

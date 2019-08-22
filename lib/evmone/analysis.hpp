@@ -86,7 +86,6 @@ struct instr_info;
 
 struct execution_state
 {
-    const instr_info* next_instr{nullptr};
     evmc_status_code status = EVMC_SUCCESS;
     int64_t gas_left = 0;
 
@@ -113,10 +112,10 @@ struct execution_state
     evmc_revision rev = {};
 
     /// Terminates the execution with the given status code.
-    void exit(evmc_status_code status_code) noexcept
+    const instr_info* exit(evmc_status_code status_code) noexcept
     {
         status = status_code;
-        next_instr = nullptr;
+        return nullptr;
     }
 };
 
@@ -134,7 +133,7 @@ union instr_argument
 
 static_assert(sizeof(instr_argument) == sizeof(void*), "Incorrect size of instr_argument");
 
-using exec_fn = void (*)(execution_state&, instr_argument arg);
+using exec_fn = const instr_info* (*)(const instr_info*, execution_state&, instr_argument arg);
 
 /// The evmone intrinsic opcodes.
 ///
