@@ -152,14 +152,38 @@ TEST_F(evm, create_balance_too_low)
 
 TEST_F(evm, create_failure)
 {
+    call_result.create_address = evmc::address{{0xce}};
+    const auto create_address =
+        bytes_view{call_result.create_address.bytes, sizeof(call_result.create_address)};
     rev = EVMC_CONSTANTINOPLE;
     for (auto op : {OP_CREATE, OP_CREATE2})
     {
-        execute(push(0) + (3 * OP_DUP1) + op + ret_top());
+        const auto code = push(0) + (3 * OP_DUP1) + op + ret_top();
+
+        call_result.status_code = EVMC_SUCCESS;
+        execute(code);
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-        EXPECT_EQ(std::count(result.output_data, result.output_data + result.output_size, 0), 32);
-        ASSERT_GT(recorded_calls.size(), 0);
+        ASSERT_EQ(result.output_size, 32);
+        EXPECT_EQ((bytes_view{result.output_data + 12, 20}), create_address);
+        ASSERT_EQ(recorded_calls.size(), 1);
         EXPECT_EQ(recorded_calls.back().kind, op == OP_CREATE ? EVMC_CREATE : EVMC_CREATE2);
+        recorded_calls.clear();
+
+        call_result.status_code = EVMC_REVERT;
+        execute(code);
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_OUTPUT_INT(0);
+        ASSERT_EQ(recorded_calls.size(), 1);
+        EXPECT_EQ(recorded_calls.back().kind, op == OP_CREATE ? EVMC_CREATE : EVMC_CREATE2);
+        recorded_calls.clear();
+
+        call_result.status_code = EVMC_FAILURE;
+        execute(code);
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_OUTPUT_INT(0);
+        ASSERT_EQ(recorded_calls.size(), 1);
+        EXPECT_EQ(recorded_calls.back().kind, op == OP_CREATE ? EVMC_CREATE : EVMC_CREATE2);
+        recorded_calls.clear();
     }
 }
 
