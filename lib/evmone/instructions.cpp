@@ -626,12 +626,11 @@ void op_blockhash(execution_state& state, instr_argument) noexcept
 {
     auto& number = state.stack.top();
 
-    auto upper_bound = state.host.get_tx_context().block_number;
-    auto lower_bound = std::max(upper_bound - 256, decltype(upper_bound){0});
-    auto n = static_cast<int64_t>(number);
-    auto header = evmc_bytes32{};
-    if (number < upper_bound && n >= lower_bound)
-        header = state.host.get_block_hash(n);
+    const auto upper_bound = state.host.get_tx_context().block_number;
+    const auto lower_bound = std::max(upper_bound - 256, decltype(upper_bound){0});
+    const auto n = static_cast<int64_t>(number);
+    const auto header =
+        (number < upper_bound && n >= lower_bound) ? state.host.get_block_hash(n) : evmc::bytes32{};
     number = intx::be::uint256(header.bytes);
 }
 
