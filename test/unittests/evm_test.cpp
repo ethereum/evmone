@@ -110,6 +110,10 @@ TEST_F(evm, swapsn_jumpdest)
     rev = EVMC_ISTANBUL;
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
+
+    rev = EVMC_MAX_REVISION;
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
 }
 
 TEST_F(evm, swapsn_push)
@@ -125,6 +129,10 @@ TEST_F(evm, swapsn_push)
     EXPECT_STATUS(EVMC_BAD_JUMP_DESTINATION);
 
     rev = EVMC_ISTANBUL;
+    execute(code);
+    EXPECT_STATUS(EVMC_BAD_JUMP_DESTINATION);
+
+    rev = EVMC_MAX_REVISION;
     execute(code);
     EXPECT_STATUS(EVMC_BAD_JUMP_DESTINATION);
 }
