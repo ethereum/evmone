@@ -35,17 +35,36 @@
 class evm : public testing::Test
 {
 protected:
+    /// The VM handle.
     evmc::vm& vm;
-    evmc_revision rev = EVMC_BYZANTIUM;  // Byzantium by default. TODO: Add alias evmc::revision.
-    evmc_message msg = {};               // TODO: Add evmc::message with default constructor.
-    evmc::result result{{}};  // TODO: Add default constructor to evmc::result, update code here.
+
+    /// The EVM revision for unit test execution. Byzantium by default.
+    /// TODO: Add alias evmc::revision.
+    evmc_revision rev = EVMC_BYZANTIUM;
+
+    /// The message to be executed by a unit test (with execute() method).
+    /// TODO: Add evmc::message with default constructor.
+    evmc_message msg{};
+
+    /// The result of execution (available after execute() is invoked).
+    /// TODO: Add default constructor to evmc::result, update code here.
+    evmc::result result{{}};
+
+    /// The total amount of gas used during execution.
     int64_t gas_used = 0;
 
     MockedHost host;
 
     evm() noexcept : vm{get_vm()} {}
 
-    /// Wrapper for evmone::execute. The result will be in the .result field.
+
+    /// Executes the supplied code.
+    ///
+    /// @param gas        The gas limit for execution.
+    /// @param code       The EVM bytecode.
+    /// @param input_hex  The hex encoded EVM "calldata" input.
+    /// The execution result will be available in the `result` field.
+    /// The `gas_used` field  will be updated accordingly.
     void execute(int64_t gas, bytes_view code, std::string_view input_hex = {}) noexcept
     {
         auto input = from_hex(input_hex);
@@ -55,23 +74,46 @@ protected:
         execute(msg, code);
     }
 
-    /// Wrapper for evmone::execute. The result will be in the .result field.
+    /// Executes the supplied code.
+    ///
+    /// @param gas        The gas limit for execution.
+    /// @param code_hex   The hex encoded EVM bytecode.
+    /// @param input_hex  The hex encoded EVM "calldata" input.
+    /// The execution result will be available in the `result` field.
+    /// The `gas_used` field  will be updated accordingly.
     void execute(int64_t gas, std::string_view code_hex, std::string_view input_hex = {}) noexcept
     {
         execute(gas, from_hex(code_hex), input_hex);
     }
 
+    /// Executes the supplied code.
+    ///
+    /// @param code       The EVM bytecode.
+    /// @param input_hex  The hex encoded EVM "calldata" input.
+    /// The execution result will be available in the `result` field.
+    /// The `gas_used` field  will be updated accordingly.
     void execute(bytes_view code, std::string_view input_hex = {}) noexcept
     {
         execute(std::numeric_limits<int64_t>::max(), code, input_hex);
     }
 
+    /// Executes the supplied code.
+    ///
+    /// @param code_hex   The hex encoded EVM bytecode.
+    /// @param input_hex  The hex encoded EVM "calldata" input.
+    /// The execution result will be available in the `result` field.
+    /// The `gas_used` field  will be updated accordingly.
     void execute(std::string_view code_hex, std::string_view input_hex = {}) noexcept
     {
         execute(std::numeric_limits<int64_t>::max(), code_hex, input_hex);
     }
 
-    /// Wrapper for evmone::execute. The result will be in the .result field.
+    /// Executes given message and code.
+    ///
+    /// @param m     The EVM message, contains the input.
+    /// @param code  The EVM bytecode.
+    /// The execution result will be available in the `result` field.
+    /// The `gas_used` field  will be updated accordingly.
     void execute(const evmc_message& m, bytes_view code) noexcept
     {
         result = vm.execute(host, rev, m, code.data(), code.size());
