@@ -92,7 +92,8 @@ code_analysis analyze(
 
         block->stack_req = std::max(block->stack_req, instr_stack_req - block_stack_change);
         block_stack_change += instr_stack_change;
-        block->stack_max_growth = std::max(block->stack_max_growth, block_stack_change);
+        block->stack_max_growth =
+            static_cast<int16_t>(std::max(int{block->stack_max_growth}, block_stack_change));
 
         if (metrics.gas_cost > 0)  // can be -1 for undefined instruction
             block->gas_cost += metrics.gas_cost;

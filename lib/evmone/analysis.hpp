@@ -174,7 +174,12 @@ struct block_info
     int stack_req = 0;
 
     /// The maximum stack height growth relative to the stack height at block start.
-    int stack_max_growth = 0;
+    /// This cannot overflow, see the static_assert() below.
+    int16_t stack_max_growth = 0;
+
+    static_assert(max_code_size * max_instruction_stack_increase <
+                      std::numeric_limits<decltype(stack_max_growth)>::max(),
+        "Potential block_info::stack_max_growth overflow");
 };
 
 struct code_analysis
