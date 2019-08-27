@@ -9,4 +9,5 @@ include(HunterGate)
 HunterGate(
     URL "https://github.com/ruslo/hunter/archive/v0.23.190.tar.gz"
     SHA1 "bc7da329d2493201de28f0c2a5fcd4de1415c477"
+    LOCAL
 )
