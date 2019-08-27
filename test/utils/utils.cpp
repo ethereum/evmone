@@ -50,7 +50,7 @@ bytes from_hexx(const std::string& hexx)
     const auto re = std::regex{R"(\((\d+)x([^)]+)\))"};
 
     auto hex = hexx;
-    auto position_correction = int{0};
+    auto position_correction = size_t{0};
     for (auto it = std::sregex_iterator{hexx.begin(), hexx.end(), re}; it != std::sregex_iterator{};
          ++it)
     {
@@ -59,8 +59,10 @@ bytes from_hexx(const std::string& hexx)
         while (num_repetitions-- > 0)
             replacement += (*it)[2];
 
-        hex.replace(it->position() + position_correction, it->length(), replacement);
-        position_correction += static_cast<int>(replacement.length() - it->length());
+        const auto pos = static_cast<size_t>(it->position()) + position_correction;
+        const auto length = static_cast<size_t>(it->length());
+        hex.replace(pos, length, replacement);
+        position_correction += replacement.length() - length;
     }
     return from_hex(hex);
 }

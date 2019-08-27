@@ -125,7 +125,7 @@ protected:
         record_account_access(addr);
         const auto it = accounts.find(addr);
         if (it == accounts.end())
-            return static_cast<evmc_storage_status>(-1);
+            return EVMC_STORAGE_UNCHANGED;
 
         auto& old = it->second.storage[key];
 

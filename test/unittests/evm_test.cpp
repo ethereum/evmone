@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <numeric>
 
+using namespace evmc::literals;
 using namespace intx;
 
 constexpr auto max_code_size = 0x6000;
@@ -755,7 +756,7 @@ TEST_F(evm, log)
         EXPECT_EQ(last_log.data[0], 0x77);
         EXPECT_EQ(last_log.data[1], 0);
         ASSERT_EQ(last_log.topics.size(), n);
-        for (int i = 0; i < n; ++i)
+        for (size_t i = 0; i < static_cast<size_t>(n); ++i)
         {
             EXPECT_EQ(last_log.topics[i].bytes[31], 4 - i);
         }
@@ -904,7 +905,7 @@ TEST_F(evm, extcode)
 {
     auto addr = evmc_address{};
     std::fill(std::begin(addr.bytes), std::end(addr.bytes), uint8_t{0xff});
-    addr.bytes[19] -= 1;
+    addr.bytes[19]--;
 
     accounts[addr].code = {'a', 'b', 'c', 'd'};
 
@@ -1179,9 +1180,8 @@ TEST_F(evm, extcodecopy_memory_cost)
 
 TEST_F(evm, extcodecopy_nonzero_index)
 {
-    auto addr = evmc_address{};
-    addr.bytes[19] = 0xa;
-    auto index = 15;
+    constexpr auto addr = 0x000000000000000000000000000000000000000a_address;
+    constexpr auto index = 15;
 
     auto& extcode = accounts[addr].code;
     extcode.assign(16, 0x00);
