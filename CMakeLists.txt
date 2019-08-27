@@ -33,7 +33,7 @@ find_package(ethash CONFIG REQUIRED)
 option(EVMC_TEST_TOOLS "Build EVMC test tools" ${EVMONE_TESTING})
 add_subdirectory(evmc)
 
-cable_configure_compiler(NO_PEDANTIC NO_CONVERSION_WARNINGS)
+cable_configure_compiler(NO_PEDANTIC)
 if(CABLE_COMPILER_GNULIKE)
     add_compile_options(-Wno-attributes)  # Allow using unknown attributes.
 
