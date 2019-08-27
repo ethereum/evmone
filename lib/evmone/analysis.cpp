@@ -157,9 +157,8 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
                                        static_cast<int16_t>(block.stack_req) :
                                        std::numeric_limits<int16_t>::max();
             const auto stack_max_growth = static_cast<int16_t>(block.stack_max_growth);
-            analysis.blocks.emplace_back(block_info{block.gas_cost, stack_req, stack_max_growth});
-            analysis.instrs[block.begin_block_index].arg.number =
-                static_cast<int>(analysis.blocks.size() - 1);
+            analysis.instrs[block.begin_block_index].arg.block = {
+                block.gas_cost, stack_req, stack_max_growth};
 
 
             // Create new block.
@@ -173,9 +172,8 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
                                static_cast<int16_t>(block.stack_req) :
                                std::numeric_limits<int16_t>::max();
     const auto stack_max_growth = static_cast<int16_t>(block.stack_max_growth);
-    analysis.blocks.emplace_back(block_info{block.gas_cost, stack_req, stack_max_growth});
-    analysis.instrs[block.begin_block_index].arg.number =
-        static_cast<int>(analysis.blocks.size() - 1);
+    analysis.instrs[block.begin_block_index].arg.block = {
+        block.gas_cost, stack_req, stack_max_growth};
 
     // Make sure the last block is terminated.
     // TODO: This is not needed if the last instruction is a terminating one.
