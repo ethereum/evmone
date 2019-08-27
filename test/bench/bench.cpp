@@ -65,7 +65,7 @@ constexpr auto fn_table = evmone::exec_fn_table{};
 
 void analyse(State& state, bytes_view code) noexcept
 {
-    auto bytes_analysed = int64_t{0};
+    auto bytes_analysed = uint64_t{0};
     for (auto _ : state)
     {
         auto r = evmone::analyze(fn_table, EVMC_PETERSBURG, code.data(), code.size());
