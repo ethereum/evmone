@@ -10,6 +10,7 @@ add_library(evm-unittests OBJECT
     evm_fixture.hpp
     evm_test.cpp
     evm_calls_test.cpp
+    evm_state_test.cpp
 )
 target_link_libraries(evm-unittests PRIVATE testutils evmc::evmc GTest::gtest)
 target_include_directories(evm-unittests PRIVATE ${evmone_private_include_dir})
