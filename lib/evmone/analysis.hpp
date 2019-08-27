@@ -85,6 +85,29 @@ public:
 
 struct instr_info;
 
+struct block_info
+{
+    /// The total base gas cost of all instructions in the block.
+    /// This cannot overflow, see the static_assert() below.
+    int32_t gas_cost = 0;
+
+    static_assert(
+        max_code_size * max_instruction_base_cost < std::numeric_limits<decltype(gas_cost)>::max(),
+        "Potential block_info::gas_cost overflow");
+
+    /// The stack height required to execute the block.
+    /// This MAY overflow.
+    int16_t stack_req = 0;
+
+    /// The maximum stack height growth relative to the stack height at block start.
+    /// This cannot overflow, see the static_assert() below.
+    int16_t stack_max_growth = 0;
+
+    static_assert(max_code_size * max_instruction_stack_increase <
+                      std::numeric_limits<decltype(stack_max_growth)>::max(),
+        "Potential block_info::stack_max_growth overflow");
+};
+
 struct execution_state
 {
     evmc_status_code status = EVMC_SUCCESS;
@@ -130,6 +153,7 @@ union instr_argument
     const uint8_t* data;
     const intx::uint256* push_value;
     uint64_t small_push_value;
+    block_info block{};
 };
 
 static_assert(sizeof(instr_argument) == sizeof(void*), "Incorrect size of instr_argument");
@@ -158,29 +182,6 @@ struct instr_info
     instr_argument arg;
 
     explicit constexpr instr_info(exec_fn f) noexcept : fn{f}, arg{} {};
-};
-
-struct block_info
-{
-    /// The total base gas cost of all instructions in the block.
-    /// This cannot overflow, see the static_assert() below.
-    int32_t gas_cost = 0;
-
-    static_assert(
-        max_code_size * max_instruction_base_cost < std::numeric_limits<decltype(gas_cost)>::max(),
-        "Potential block_info::gas_cost overflow");
-
-    /// The stack height required to execute the block.
-    /// This MAY overflow.
-    int16_t stack_req = 0;
-
-    /// The maximum stack height growth relative to the stack height at block start.
-    /// This cannot overflow, see the static_assert() below.
-    int16_t stack_max_growth = 0;
-
-    static_assert(max_code_size * max_instruction_stack_increase <
-                      std::numeric_limits<decltype(stack_max_growth)>::max(),
-        "Potential block_info::stack_max_growth overflow");
 };
 
 static_assert(sizeof(block_info) == 8);
