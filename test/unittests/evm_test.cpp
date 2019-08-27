@@ -4,6 +4,7 @@
 
 #include "evm_fixture.hpp"
 #include <evmc/instructions.h>
+#include <evmone/limits.hpp>
 #include <intx/intx.hpp>
 #include <test/utils/bytecode.hpp>
 #include <algorithm>
@@ -11,8 +12,6 @@
 
 using namespace evmc::literals;
 using namespace intx;
-
-constexpr auto max_code_size = 0x6000;
 
 TEST_F(evm, empty)
 {
