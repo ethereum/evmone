@@ -66,13 +66,14 @@ code_analysis analyze(
 
         if (!block || jumpdest)
         {
+            // Create new block.
+            block = &analysis.blocks.emplace_back();
+            block_stack_change = 0;
+
             // Create BEGINBLOCK instruction which either replaces JUMPDEST or is injected
             // in case there is no JUMPDEST.
             auto& beginblock_instr = analysis.instrs.emplace_back(fns[OPX_BEGINBLOCK]);
-
-            // Start new block.
-            block = &beginblock_instr.arg.block;
-            block_stack_change = 0;
+            beginblock_instr.arg.p.number = static_cast<int>(analysis.blocks.size() - 1);
 
             if (jumpdest)  // Add the jumpdest to the map.
             {

@@ -28,7 +28,7 @@ void dump_analysis(const evmone::code_analysis& analysis)
 
         if (c == OPX_BEGINBLOCK)
         {
-            block = &instr.arg.block;
+            block = &analysis.blocks[size_t(instr.arg.p.number)];
 
             const auto get_jumpdest_offset = [&analysis](size_t index) noexcept
             {
