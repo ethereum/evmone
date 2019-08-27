@@ -5,6 +5,7 @@
 
 #include "vm_loader.hpp"
 #include <gtest/gtest.h>
+#include <intx/intx.hpp>
 #include <test/utils/host_mock.hpp>
 #include <test/utils/utils.hpp>
 
