@@ -7,9 +7,9 @@ find_package(GTest CONFIG REQUIRED)
 
 # The evm-unittests library contains generic EVM unit tests for EVMC-compatible VMs.
 add_library(evm-unittests OBJECT
-    evm_calls_test.cpp
     evm_fixture.hpp
     evm_test.cpp
+    evm_calls_test.cpp
 )
 target_link_libraries(evm-unittests PRIVATE testutils evmc::evmc GTest::gtest)
 target_include_directories(evm-unittests PRIVATE ${evmone_private_include_dir})
