@@ -153,7 +153,7 @@ code_analysis analyze(
             break;
 
         case OP_GAS:
-            instr.arg.p.number = static_cast<int>(block->gas_cost);
+            instr.arg.p.number = block->gas_cost;
             break;
 
         case OP_CALL:
@@ -162,7 +162,7 @@ code_analysis analyze(
         case OP_STATICCALL:
         case OP_CREATE:
         case OP_CREATE2:
-            instr.arg.p.number = static_cast<int>(block->gas_cost);
+            instr.arg.p.number = block->gas_cost;
             instr.arg.p.call_kind =
                 op2call_kind(opcode == OP_STATICCALL ? uint8_t{OP_CALL} : opcode);
             break;

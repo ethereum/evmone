@@ -3,6 +3,7 @@
 // Licensed under the Apache License, Version 2.0.
 #pragma once
 
+#include "limits.hpp"
 #include <evmc/evmc.hpp>
 #include <evmc/instructions.h>
 #include <evmc/utils.h>
@@ -99,7 +100,7 @@ struct execution_state
     ///
     /// This is only needed to correctly calculate remaining gas for GAS instruction.
     /// TODO: Maybe this should be precomputed in analysis.
-    int64_t current_block_cost = 0;
+    int32_t current_block_cost = 0;
 
     struct code_analysis* analysis = nullptr;
     bytes return_data;
@@ -162,7 +163,12 @@ struct instr_info
 struct block_info
 {
     /// The total base gas cost of all instructions in the block.
-    int64_t gas_cost = 0;
+    /// This cannot overflow, see the static_assert() below.
+    int32_t gas_cost = 0;
+
+    static_assert(
+        max_code_size * max_instruction_base_cost < std::numeric_limits<decltype(gas_cost)>::max(),
+        "Potential block_info::gas_cost overflow");
 
     /// The stack height required to execute the block.
     int stack_req = 0;
