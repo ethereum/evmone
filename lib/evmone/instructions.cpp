@@ -1200,7 +1200,7 @@ const instr_info* op_selfdestruct(const instr_info*, execution_state& state) noe
 
 const instr_info* opx_beginblock(const instr_info* instr, execution_state& state) noexcept
 {
-    auto& block = state.analysis->blocks[static_cast<size_t>(instr->arg.p.number)];
+    auto& block = instr->arg.block;
 
     if ((state.gas_left -= block.gas_cost) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
