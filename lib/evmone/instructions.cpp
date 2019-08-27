@@ -144,7 +144,8 @@ void op_exp(execution_state& state, instr_argument) noexcept
     const auto base = state.stack.pop();
     auto& exponent = state.stack.top();
 
-    const auto exponent_significant_bytes = intx::count_significant_words<uint8_t>(exponent);
+    const auto exponent_significant_bytes =
+        static_cast<int>(intx::count_significant_words<uint8_t>(exponent));
     const auto exponent_cost = state.rev >= EVMC_SPURIOUS_DRAGON ? 50 : 10;
     const auto additional_cost = exponent_significant_bytes * exponent_cost;
     if ((state.gas_left -= additional_cost) < 0)
