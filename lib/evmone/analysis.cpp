@@ -15,6 +15,7 @@ inline constexpr evmc_call_kind op2call_kind(uint8_t opcode) noexcept
 {
     switch (opcode)
     {
+    default:
     case OP_CREATE:
         return EVMC_CREATE;
     case OP_CALL:
@@ -25,8 +26,6 @@ inline constexpr evmc_call_kind op2call_kind(uint8_t opcode) noexcept
         return EVMC_DELEGATECALL;
     case OP_CREATE2:
         return EVMC_CREATE2;
-    default:
-        return evmc_call_kind(-1);
     }
 }
 

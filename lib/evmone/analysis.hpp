@@ -196,7 +196,9 @@ inline int find_jumpdest(const code_analysis& analysis, int offset) noexcept
     const auto begin = std::begin(analysis.jumpdest_offsets);
     const auto end = std::end(analysis.jumpdest_offsets);
     const auto it = std::lower_bound(begin, end, offset);
-    return (it != end && *it == offset) ? analysis.jumpdest_targets[it - begin] : -1;
+    return (it != end && *it == offset) ?
+               analysis.jumpdest_targets[static_cast<size_t>(it - begin)] :
+               -1;
 }
 
 EVMC_EXPORT code_analysis analyze(

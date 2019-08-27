@@ -21,12 +21,12 @@ constexpr auto word_size = 32;
 
 /// Returns number of words what would fit to provided number of bytes,
 /// i.e. it rounds up the number bytes to number of words.
-constexpr int64_t num_words(size_t size_in_bytes) noexcept
+constexpr int64_t num_words(uint64_t size_in_bytes) noexcept
 {
     return (static_cast<int64_t>(size_in_bytes) + (word_size - 1)) / word_size;
 }
 
-inline bool check_memory(execution_state& state, const uint256& offset, int64_t size) noexcept
+inline bool check_memory(execution_state& state, const uint256& offset, uint64_t size) noexcept
 {
     if (offset > max_buffer_size)
     {
@@ -34,12 +34,12 @@ inline bool check_memory(execution_state& state, const uint256& offset, int64_t 
         return false;
     }
 
-    const auto new_size = static_cast<int64_t>(offset) + size;
-    const auto current_size = static_cast<int64_t>(state.memory.size());
+    const auto new_size = static_cast<uint64_t>(offset) + size;
+    const auto current_size = state.memory.size();
     if (new_size > current_size)
     {
         const auto new_words = num_words(new_size);
-        const auto current_words = current_size / 32;  // Memory always has full words.
+        const auto current_words = static_cast<int64_t>(current_size / 32);
         const auto new_cost = 3 * new_words + new_words * new_words / 512;
         const auto current_cost = 3 * current_words + current_words * current_words / 512;
         const auto cost = new_cost - current_cost;
@@ -68,7 +68,7 @@ inline bool check_memory(
         return false;
     }
 
-    return check_memory(state, offset, static_cast<int64_t>(size));
+    return check_memory(state, offset, static_cast<uint64_t>(size));
 }
 
 
@@ -144,7 +144,8 @@ void op_exp(execution_state& state, instr_argument) noexcept
     const auto base = state.stack.pop();
     auto& exponent = state.stack.top();
 
-    const auto exponent_significant_bytes = intx::count_significant_words<uint8_t>(exponent);
+    const auto exponent_significant_bytes =
+        static_cast<int>(intx::count_significant_words<uint8_t>(exponent));
     const auto exponent_cost = state.rev >= EVMC_SPURIOUS_DRAGON ? 50 : 10;
     const auto additional_cost = exponent_significant_bytes * exponent_cost;
     if ((state.gas_left -= additional_cost) < 0)
