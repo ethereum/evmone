@@ -72,74 +72,83 @@ inline bool check_memory(
 }
 
 
-void op_stop(execution_state& state, instr_argument) noexcept
+const instr_info* op_stop(const instr_info*, execution_state& state) noexcept
 {
-    state.exit(EVMC_SUCCESS);
+    return state.exit(EVMC_SUCCESS);
 }
 
-void op_add(execution_state& state, instr_argument) noexcept
+const instr_info* op_add(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.top() += state.stack.pop();
+    return ++instr;
 }
 
-void op_mul(execution_state& state, instr_argument) noexcept
+const instr_info* op_mul(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.top() *= state.stack.pop();
+    return ++instr;
 }
 
-void op_sub(execution_state& state, instr_argument) noexcept
+const instr_info* op_sub(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack[1] = state.stack[0] - state.stack[1];
     state.stack.pop();
+    return ++instr;
 }
 
-void op_div(execution_state& state, instr_argument) noexcept
+const instr_info* op_div(const instr_info* instr, execution_state& state) noexcept
 {
     auto& v = state.stack[1];
     v = v != 0 ? state.stack[0] / v : 0;
     state.stack.pop();
+    return ++instr;
 }
 
-void op_sdiv(execution_state& state, instr_argument) noexcept
+const instr_info* op_sdiv(const instr_info* instr, execution_state& state) noexcept
 {
     auto& v = state.stack[1];
     v = v != 0 ? intx::sdivrem(state.stack[0], v).quot : 0;
     state.stack.pop();
+    return ++instr;
 }
 
-void op_mod(execution_state& state, instr_argument) noexcept
+const instr_info* op_mod(const instr_info* instr, execution_state& state) noexcept
 {
     auto& v = state.stack[1];
     v = v != 0 ? state.stack[0] % v : 0;
     state.stack.pop();
+    return ++instr;
 }
 
-void op_smod(execution_state& state, instr_argument) noexcept
+const instr_info* op_smod(const instr_info* instr, execution_state& state) noexcept
 {
     auto& v = state.stack[1];
     v = v != 0 ? intx::sdivrem(state.stack[0], v).rem : 0;
     state.stack.pop();
+    return ++instr;
 }
 
-void op_addmod(execution_state& state, instr_argument) noexcept
+const instr_info* op_addmod(const instr_info* instr, execution_state& state) noexcept
 {
     const auto x = state.stack.pop();
     const auto y = state.stack.pop();
     auto& m = state.stack.top();
 
     m = m != 0 ? intx::addmod(x, y, m) : 0;
+    return ++instr;
 }
 
-void op_mulmod(execution_state& state, instr_argument) noexcept
+const instr_info* op_mulmod(const instr_info* instr, execution_state& state) noexcept
 {
     const auto x = state.stack.pop();
     const auto y = state.stack.pop();
     auto& m = state.stack.top();
 
     m = m != 0 ? intx::mulmod(x, y, m) : 0;
+    return ++instr;
 }
 
-void op_exp(execution_state& state, instr_argument) noexcept
+const instr_info* op_exp(const instr_info* instr, execution_state& state) noexcept
 {
     const auto base = state.stack.pop();
     auto& exponent = state.stack.top();
@@ -152,9 +161,10 @@ void op_exp(execution_state& state, instr_argument) noexcept
         return state.exit(EVMC_OUT_OF_GAS);
 
     exponent = intx::exp(base, exponent);
+    return ++instr;
 }
 
-void op_signextend(execution_state& state, instr_argument) noexcept
+auto op_signextend(const instr_info* pc, execution_state& state) noexcept
 {
     const auto ext = state.stack.pop();
     auto& x = state.stack.top();
@@ -167,22 +177,25 @@ void op_signextend(execution_state& state, instr_argument) noexcept
         auto is_neg = (x & sign_mask) != 0;
         x = is_neg ? x | ~value_mask : x & value_mask;
     }
+    return ++pc;
 }
 
-void op_lt(execution_state& state, instr_argument) noexcept
+const instr_info* op_lt(const instr_info* instr, execution_state& state) noexcept
 {
     // OPT: Have single function implementing all comparisons.
     state.stack[1] = state.stack[0] < state.stack[1];
     state.stack.pop();
+    return ++instr;
 }
 
-void op_gt(execution_state& state, instr_argument) noexcept
+const instr_info* op_gt(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack[1] = state.stack[1] < state.stack[0];
     state.stack.pop();
+    return ++instr;
 }
 
-void op_slt(execution_state& state, instr_argument) noexcept
+const instr_info* op_slt(const instr_info* instr, execution_state& state) noexcept
 {
     auto x = state.stack[0];
     auto y = state.stack[1];
@@ -190,9 +203,10 @@ void op_slt(execution_state& state, instr_argument) noexcept
     auto y_neg = static_cast<bool>(y >> 255);
     state.stack[1] = (x_neg ^ y_neg) ? x_neg : x < y;
     state.stack.pop();
+    return ++instr;
 }
 
-void op_sgt(execution_state& state, instr_argument) noexcept
+const instr_info* op_sgt(const instr_info* instr, execution_state& state) noexcept
 {
     auto x = state.stack[0];
     auto y = state.stack[1];
@@ -200,40 +214,47 @@ void op_sgt(execution_state& state, instr_argument) noexcept
     auto y_neg = static_cast<bool>(y >> 255);
     state.stack[1] = (x_neg ^ y_neg) ? y_neg : y < x;
     state.stack.pop();
+    return ++instr;
 }
 
-void op_eq(execution_state& state, instr_argument) noexcept
+const instr_info* op_eq(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack[1] = state.stack[0] == state.stack[1];
     state.stack.pop();
+    return ++instr;
 }
 
-void op_iszero(execution_state& state, instr_argument) noexcept
+const instr_info* op_iszero(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.top() = state.stack.top() == 0;
+    return ++instr;
 }
 
-void op_and(execution_state& state, instr_argument) noexcept
+const instr_info* op_and(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.top() &= state.stack.pop();
+    return ++instr;
 }
 
-void op_or(execution_state& state, instr_argument) noexcept
+const instr_info* op_or(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.top() |= state.stack.pop();
+    return ++instr;
 }
 
-void op_xor(execution_state& state, instr_argument) noexcept
+const instr_info* op_xor(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.top() ^= state.stack.pop();
+    return ++instr;
 }
 
-void op_not(execution_state& state, instr_argument) noexcept
+const instr_info* op_not(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.top() = ~state.stack.top();
+    return ++instr;
 }
 
-void op_byte(execution_state& state, instr_argument) noexcept
+const instr_info* op_byte(const instr_info* instr, execution_state& state) noexcept
 {
     const auto n = state.stack.pop();
     auto& x = state.stack.top();
@@ -246,22 +267,25 @@ void op_byte(execution_state& state, instr_argument) noexcept
         auto y = x >> sh;
         x = y & 0xff;
     }
+    return ++instr;
 }
 
-void op_shl(execution_state& state, instr_argument) noexcept
+const instr_info* op_shl(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.top() <<= state.stack.pop();
+    return ++instr;
 }
 
-void op_shr(execution_state& state, instr_argument) noexcept
+const instr_info* op_shr(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.top() >>= state.stack.pop();
+    return ++instr;
 }
 
-void op_sar(execution_state& state, instr_argument arg) noexcept
+const instr_info* op_sar(const instr_info* instr, execution_state& state) noexcept
 {
     if ((state.stack[1] & (uint256{1} << 255)) == 0)
-        return op_shr(state, arg);
+        return op_shr(instr, state);
 
     constexpr auto allones = ~uint256{};
 
@@ -274,15 +298,16 @@ void op_sar(execution_state& state, instr_argument arg) noexcept
     }
 
     state.stack.pop();
+    return ++instr;
 }
 
-void op_sha3(execution_state& state, instr_argument) noexcept
+const instr_info* op_sha3(const instr_info* instr, execution_state& state) noexcept
 {
     const auto index = state.stack.pop();
     auto& size = state.stack.top();
 
     if (!check_memory(state, index, size))
-        return;
+        return nullptr;
 
     const auto i = static_cast<size_t>(index);
     const auto s = static_cast<size_t>(size);
@@ -293,37 +318,43 @@ void op_sha3(execution_state& state, instr_argument) noexcept
 
     auto data = s != 0 ? &state.memory[i] : nullptr;
     size = intx::be::load<uint256>(ethash::keccak256(data, s));
+    return ++instr;
 }
 
-void op_address(execution_state& state, instr_argument) noexcept
+const instr_info* op_address(const instr_info* instr, execution_state& state) noexcept
 {
     // TODO: Might be generalized using pointers to class member.
     state.stack.push(intx::be::load<uint256>(state.msg->destination));
+    return ++instr;
 }
 
-void op_balance(execution_state& state, instr_argument) noexcept
+const instr_info* op_balance(const instr_info* instr, execution_state& state) noexcept
 {
     auto& x = state.stack.top();
     x = intx::be::load<uint256>(state.host.get_balance(intx::be::trunc<evmc::address>(x)));
+    return ++instr;
 }
 
-void op_origin(execution_state& state, instr_argument) noexcept
+const instr_info* op_origin(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().tx_origin));
+    return ++instr;
 }
 
-void op_caller(execution_state& state, instr_argument) noexcept
+const instr_info* op_caller(const instr_info* instr, execution_state& state) noexcept
 {
     // TODO: Might be generalized using pointers to class member.
     state.stack.push(intx::be::load<uint256>(state.msg->sender));
+    return ++instr;
 }
 
-void op_callvalue(execution_state& state, instr_argument) noexcept
+const instr_info* op_callvalue(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.push(intx::be::load<uint256>(state.msg->value));
+    return ++instr;
 }
 
-void op_calldataload(execution_state& state, instr_argument) noexcept
+const instr_info* op_calldataload(const instr_info* instr, execution_state& state) noexcept
 {
     auto& index = state.stack.top();
 
@@ -340,21 +371,23 @@ void op_calldataload(execution_state& state, instr_argument) noexcept
 
         index = intx::be::load<uint256>(data);
     }
+    return ++instr;
 }
 
-void op_calldatasize(execution_state& state, instr_argument) noexcept
+const instr_info* op_calldatasize(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.push(state.msg->input_size);
+    return ++instr;
 }
 
-void op_calldatacopy(execution_state& state, instr_argument) noexcept
+const instr_info* op_calldatacopy(const instr_info* instr, execution_state& state) noexcept
 {
     const auto mem_index = state.stack.pop();
     const auto input_index = state.stack.pop();
     const auto size = state.stack.pop();
 
     if (!check_memory(state, mem_index, size))
-        return;
+        return nullptr;
 
     auto dst = static_cast<size_t>(mem_index);
     auto src = state.msg->input_size < input_index ? state.msg->input_size :
@@ -371,14 +404,16 @@ void op_calldatacopy(execution_state& state, instr_argument) noexcept
 
     if (s - copy_size > 0)
         std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
+    return ++instr;
 }
 
-void op_codesize(execution_state& state, instr_argument) noexcept
+const instr_info* op_codesize(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.push(state.code_size);
+    return ++instr;
 }
 
-void op_codecopy(execution_state& state, instr_argument) noexcept
+const instr_info* op_codecopy(const instr_info* instr, execution_state& state) noexcept
 {
     // TODO: Similar to op_calldatacopy().
 
@@ -387,7 +422,7 @@ void op_codecopy(execution_state& state, instr_argument) noexcept
     const auto size = state.stack.pop();
 
     if (!check_memory(state, mem_index, size))
-        return;
+        return nullptr;
 
     auto dst = static_cast<size_t>(mem_index);
     auto src = state.code_size < input_index ? state.code_size : static_cast<size_t>(input_index);
@@ -404,48 +439,53 @@ void op_codecopy(execution_state& state, instr_argument) noexcept
 
     if (s - copy_size > 0)
         std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
+    return ++instr;
 }
 
-void op_mload(execution_state& state, instr_argument) noexcept
+const instr_info* op_mload(const instr_info* instr, execution_state& state) noexcept
 {
     auto& index = state.stack.top();
 
     if (!check_memory(state, index, 32))
-        return;
+        return nullptr;
 
     index = intx::be::unsafe::load<uint256>(&state.memory[static_cast<size_t>(index)]);
+    return ++instr;
 }
 
-void op_mstore(execution_state& state, instr_argument) noexcept
+const instr_info* op_mstore(const instr_info* instr, execution_state& state) noexcept
 {
     const auto index = state.stack.pop();
     const auto value = state.stack.pop();
 
     if (!check_memory(state, index, 32))
-        return;
+        return nullptr;
 
     intx::be::unsafe::store(&state.memory[static_cast<size_t>(index)], value);
+    return ++instr;
 }
 
-void op_mstore8(execution_state& state, instr_argument) noexcept
+const instr_info* op_mstore8(const instr_info* instr, execution_state& state) noexcept
 {
     const auto index = state.stack.pop();
     const auto value = state.stack.pop();
 
     if (!check_memory(state, index, 1))
-        return;
+        return nullptr;
 
     state.memory[static_cast<size_t>(index)] = static_cast<uint8_t>(value);
+    return ++instr;
 }
 
-void op_sload(execution_state& state, instr_argument) noexcept
+const instr_info* op_sload(const instr_info* instr, execution_state& state) noexcept
 {
     auto& x = state.stack.top();
     x = intx::be::load<uint256>(
         state.host.get_storage(state.msg->destination, intx::be::store<evmc::bytes32>(x)));
+    return ++instr;
 }
 
-void op_sstore(execution_state& state, instr_argument) noexcept
+const instr_info* op_sstore(const instr_info* instr, execution_state& state) noexcept
 {
     // TODO: Implement static mode violation in analysis.
     if (state.msg->flags & EVMC_STATIC)
@@ -475,9 +515,10 @@ void op_sstore(execution_state& state, instr_argument) noexcept
     }
     if ((state.gas_left -= cost) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
+    return ++instr;
 }
 
-void op_jump(execution_state& state, instr_argument) noexcept
+const instr_info* op_jump(const instr_info*, execution_state& state) noexcept
 {
     const auto dst = state.stack.pop();
     auto pc = -1;
@@ -485,51 +526,60 @@ void op_jump(execution_state& state, instr_argument) noexcept
         (pc = find_jumpdest(*state.analysis, static_cast<int>(dst))) < 0)
         return state.exit(EVMC_BAD_JUMP_DESTINATION);
 
-    state.next_instr = &state.analysis->instrs[static_cast<size_t>(pc)];
+    return &state.analysis->instrs[static_cast<size_t>(pc)];
 }
 
-void op_jumpi(execution_state& state, instr_argument arg) noexcept
+const instr_info* op_jumpi(const instr_info* instr, execution_state& state) noexcept
 {
     if (state.stack[1] != 0)
-        op_jump(state, arg);
+        instr = op_jump(instr, state);
     else
+    {
         state.stack.pop();
+        ++instr;
+    }
 
     // OPT: The pc must be the BEGINBLOCK (even in fallback case),
     //      so we can execute it straight away.
 
     state.stack.pop();
+    return instr;
 }
 
-void op_pc(execution_state& state, instr_argument arg) noexcept
+const instr_info* op_pc(const instr_info* instr, execution_state& state) noexcept
 {
-    state.stack.push(arg.p.number);
+    state.stack.push(instr->arg.p.number);
+    return ++instr;
 }
 
-void op_msize(execution_state& state, instr_argument) noexcept
+const instr_info* op_msize(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.push(state.memory.size());
+    return ++instr;
 }
 
-void op_gas(execution_state& state, instr_argument arg) noexcept
+const instr_info* op_gas(const instr_info* instr, execution_state& state) noexcept
 {
-    const auto correction = state.current_block_cost - arg.p.number;
+    const auto correction = state.current_block_cost - instr->arg.p.number;
     const auto gas = static_cast<uint64_t>(state.gas_left + correction);
     state.stack.push(gas);
+    return ++instr;
 }
 
-void op_gasprice(execution_state& state, instr_argument) noexcept
+const instr_info* op_gasprice(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().tx_gas_price));
+    return ++instr;
 }
 
-void op_extcodesize(execution_state& state, instr_argument) noexcept
+const instr_info* op_extcodesize(const instr_info* instr, execution_state& state) noexcept
 {
     auto& x = state.stack.top();
     x = state.host.get_code_size(intx::be::trunc<evmc::address>(x));
+    return ++instr;
 }
 
-void op_extcodecopy(execution_state& state, instr_argument) noexcept
+const instr_info* op_extcodecopy(const instr_info* instr, execution_state& state) noexcept
 {
     const auto addr = intx::be::trunc<evmc::address>(state.stack.pop());
     const auto mem_index = state.stack.pop();
@@ -537,7 +587,7 @@ void op_extcodecopy(execution_state& state, instr_argument) noexcept
     const auto size = state.stack.pop();
 
     if (!check_memory(state, mem_index, size))
-        return;
+        return nullptr;
 
     auto dst = static_cast<size_t>(mem_index);
     auto src = max_buffer_size < input_index ? max_buffer_size : static_cast<size_t>(input_index);
@@ -551,21 +601,23 @@ void op_extcodecopy(execution_state& state, instr_argument) noexcept
     auto num_bytes_copied = state.host.copy_code(addr, src, data, s);
     if (s - num_bytes_copied > 0)
         std::memset(&state.memory[dst + num_bytes_copied], 0, s - num_bytes_copied);
+    return ++instr;
 }
 
-void op_returndatasize(execution_state& state, instr_argument) noexcept
+const instr_info* op_returndatasize(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.push(state.return_data.size());
+    return ++instr;
 }
 
-void op_returndatacopy(execution_state& state, instr_argument) noexcept
+const instr_info* op_returndatacopy(const instr_info* instr, execution_state& state) noexcept
 {
     const auto mem_index = state.stack.pop();
     const auto input_index = state.stack.pop();
     const auto size = state.stack.pop();
 
     if (!check_memory(state, mem_index, size))
-        return;
+        return nullptr;
 
     auto dst = static_cast<size_t>(mem_index);
     auto s = static_cast<size_t>(size);
@@ -583,15 +635,17 @@ void op_returndatacopy(execution_state& state, instr_argument) noexcept
 
     if (s > 0)
         std::memcpy(&state.memory[dst], &state.return_data[src], s);
+    return ++instr;
 }
 
-void op_extcodehash(execution_state& state, instr_argument) noexcept
+const instr_info* op_extcodehash(const instr_info* instr, execution_state& state) noexcept
 {
     auto& x = state.stack.top();
     x = intx::be::load<uint256>(state.host.get_code_hash(intx::be::trunc<evmc::address>(x)));
+    return ++instr;
 }
 
-void op_blockhash(execution_state& state, instr_argument) noexcept
+const instr_info* op_blockhash(const instr_info* instr, execution_state& state) noexcept
 {
     auto& number = state.stack.top();
 
@@ -601,68 +655,80 @@ void op_blockhash(execution_state& state, instr_argument) noexcept
     const auto header =
         (number < upper_bound && n >= lower_bound) ? state.host.get_block_hash(n) : evmc::bytes32{};
     number = intx::be::load<uint256>(header);
+    return ++instr;
 }
 
-void op_coinbase(execution_state& state, instr_argument) noexcept
+const instr_info* op_coinbase(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().block_coinbase));
+    return ++instr;
 }
 
-void op_timestamp(execution_state& state, instr_argument) noexcept
+const instr_info* op_timestamp(const instr_info* instr, execution_state& state) noexcept
 {
     // TODO: Add tests for negative timestamp?
     const auto timestamp = static_cast<uint64_t>(state.host.get_tx_context().block_timestamp);
     state.stack.push(timestamp);
+    return ++instr;
 }
 
-void op_number(execution_state& state, instr_argument) noexcept
+const instr_info* op_number(const instr_info* instr, execution_state& state) noexcept
 {
     // TODO: Add tests for negative block number?
     const auto block_number = static_cast<uint64_t>(state.host.get_tx_context().block_number);
     state.stack.push(block_number);
+    return ++instr;
 }
 
-void op_difficulty(execution_state& state, instr_argument) noexcept
+const instr_info* op_difficulty(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().block_difficulty));
+    return ++instr;
 }
 
-void op_gaslimit(execution_state& state, instr_argument) noexcept
+const instr_info* op_gaslimit(const instr_info* instr, execution_state& state) noexcept
 {
     const auto block_gas_limit = static_cast<uint64_t>(state.host.get_tx_context().block_gas_limit);
     state.stack.push(block_gas_limit);
+    return ++instr;
 }
 
-void op_push_small(execution_state& state, instr_argument arg) noexcept
+const instr_info* op_push_small(const instr_info* instr, execution_state& state) noexcept
 {
-    state.stack.push(arg.small_push_value);
+    state.stack.push(instr->arg.small_push_value);
+    return ++instr;
 }
 
-void op_push_full(execution_state& state, instr_argument arg) noexcept
+const instr_info* op_push_full(const instr_info* instr, execution_state& state) noexcept
 {
-    state.stack.push(*arg.push_value);
+    state.stack.push(*instr->arg.push_value);
+    return ++instr;
 }
 
-void op_pop(execution_state& state, instr_argument) noexcept
+const instr_info* op_pop(const instr_info* instr, execution_state& state) noexcept
 {
     state.stack.pop();
+    return ++instr;
 }
 
 template <evmc_opcode DupOp>
-void op_dup(execution_state& state, instr_argument) noexcept
+const instr_info* op_dup(const instr_info* instr, execution_state& state) noexcept
 {
     constexpr auto index = DupOp - OP_DUP1;
     state.stack.push(state.stack[index]);
+    return ++instr;
 }
 
 template <evmc_opcode SwapOp>
-void op_swap(execution_state& state, instr_argument) noexcept
+const instr_info* op_swap(const instr_info* instr, execution_state& state) noexcept
 {
     constexpr auto index = SwapOp - OP_SWAP1 + 1;
     std::swap(state.stack.top(), state.stack[index]);
+    return ++instr;
 }
 
-void op_log(execution_state& state, size_t num_topics) noexcept
+const instr_info* op_log(
+    const instr_info* instr, execution_state& state, size_t num_topics) noexcept
 {
     if (state.msg->flags & EVMC_STATIC)
         return state.exit(EVMC_STATIC_MODE_VIOLATION);
@@ -671,7 +737,7 @@ void op_log(execution_state& state, size_t num_topics) noexcept
     const auto size = state.stack.pop();
 
     if (!check_memory(state, offset, size))
-        return;
+        return nullptr;
 
     const auto o = static_cast<size_t>(offset);
     const auto s = static_cast<size_t>(size);
@@ -686,48 +752,50 @@ void op_log(execution_state& state, size_t num_topics) noexcept
 
     const auto data = s != 0 ? &state.memory[o] : nullptr;
     state.host.emit_log(state.msg->destination, data, s, topics.data(), num_topics);
+    return ++instr;
 }
 
 template <evmc_opcode LogOp>
-void op_log(execution_state& state, instr_argument) noexcept
+const instr_info* op_log(const instr_info* instr, execution_state& state) noexcept
 {
     constexpr auto num_topics = LogOp - OP_LOG0;
-    op_log(state, num_topics);
+    return op_log(instr, state, num_topics);
 }
 
-void op_invalid(execution_state& state, instr_argument) noexcept
+const instr_info* op_invalid(const instr_info*, execution_state& state) noexcept
 {
-    state.exit(EVMC_INVALID_INSTRUCTION);
+    return state.exit(EVMC_INVALID_INSTRUCTION);
 }
 
-void op_return(execution_state& state, instr_argument) noexcept
-{
-    auto offset = state.stack[0];
-    auto size = state.stack[1];
-
-    if (!check_memory(state, offset, size))
-        return;
-
-    state.output_offset = static_cast<size_t>(offset);
-    state.output_size = static_cast<size_t>(size);
-    state.exit(EVMC_SUCCESS);
-}
-
-void op_revert(execution_state& state, instr_argument) noexcept
+const instr_info* op_return(const instr_info*, execution_state& state) noexcept
 {
     auto offset = state.stack[0];
     auto size = state.stack[1];
 
     if (!check_memory(state, offset, size))
-        return;
+        return nullptr;
 
     state.output_offset = static_cast<size_t>(offset);
     state.output_size = static_cast<size_t>(size);
-    state.exit(EVMC_REVERT);
+    return state.exit(EVMC_SUCCESS);
 }
 
-void op_call(execution_state& state, instr_argument arg) noexcept
+const instr_info* op_revert(const instr_info*, execution_state& state) noexcept
 {
+    auto offset = state.stack[0];
+    auto size = state.stack[1];
+
+    if (!check_memory(state, offset, size))
+        return nullptr;
+
+    state.output_offset = static_cast<size_t>(offset);
+    state.output_size = static_cast<size_t>(size);
+    return state.exit(EVMC_REVERT);
+}
+
+const instr_info* op_call(const instr_info* instr, execution_state& state) noexcept
+{
+    const auto arg = instr->arg;
     auto gas = state.stack[0];
     const auto dst = intx::be::trunc<evmc::address>(state.stack[1]);
     auto value = state.stack[2];
@@ -745,10 +813,10 @@ void op_call(execution_state& state, instr_argument arg) noexcept
     state.stack[0] = 0;
 
     if (!check_memory(state, input_offset, input_size))
-        return;
+        return nullptr;
 
     if (!check_memory(state, output_offset, output_size))
-        return;
+        return nullptr;
 
 
     auto msg = evmc_message{};
@@ -795,7 +863,7 @@ void op_call(execution_state& state, instr_argument arg) noexcept
             state.gas_left += 2300;  // Return unused stipend.
         if (state.gas_left < 0)
             return state.exit(EVMC_OUT_OF_GAS);
-        return;
+        return ++instr;
     }
 
     msg.destination = dst;
@@ -819,7 +887,7 @@ void op_call(execution_state& state, instr_argument arg) noexcept
             state.gas_left += 2300;  // Return unused stipend.
             if (state.gas_left < 0)
                 return state.exit(EVMC_OUT_OF_GAS);
-            return;
+            return ++instr;
         }
 
         msg.gas += 2300;  // Add stipend.
@@ -841,10 +909,12 @@ void op_call(execution_state& state, instr_argument arg) noexcept
 
     if ((state.gas_left -= gas_used) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
+    return ++instr;
 }
 
-void op_delegatecall(execution_state& state, instr_argument arg) noexcept
+const instr_info* op_delegatecall(const instr_info* instr, execution_state& state) noexcept
 {
+    const auto arg = instr->arg;
     auto gas = state.stack[0];
     const auto dst = intx::be::trunc<evmc::address>(state.stack[1]);
     auto input_offset = state.stack[2];
@@ -860,10 +930,10 @@ void op_delegatecall(execution_state& state, instr_argument arg) noexcept
     state.stack[0] = 0;
 
     if (!check_memory(state, input_offset, input_size))
-        return;
+        return nullptr;
 
     if (!check_memory(state, output_offset, output_size))
-        return;
+        return nullptr;
 
     auto msg = evmc_message{};
     msg.kind = EVMC_DELEGATECALL;
@@ -882,7 +952,7 @@ void op_delegatecall(execution_state& state, instr_argument arg) noexcept
         return state.exit(EVMC_OUT_OF_GAS);
 
     if (state.msg->depth >= 1024)
-        return;
+        return ++instr;
 
     msg.depth = state.msg->depth + 1;
     msg.flags = state.msg->flags;
@@ -908,10 +978,12 @@ void op_delegatecall(execution_state& state, instr_argument arg) noexcept
 
     if ((state.gas_left -= gas_used) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
+    return ++instr;
 }
 
-void op_staticcall(execution_state& state, instr_argument arg) noexcept
+const instr_info* op_staticcall(const instr_info* instr, execution_state& state) noexcept
 {
+    const auto arg = instr->arg;
     auto gas = state.stack[0];
     const auto dst = intx::be::trunc<evmc::address>(state.stack[1]);
     auto input_offset = state.stack[2];
@@ -927,13 +999,13 @@ void op_staticcall(execution_state& state, instr_argument arg) noexcept
     state.stack[0] = 0;
 
     if (!check_memory(state, input_offset, input_size))
-        return;
+        return nullptr;
 
     if (!check_memory(state, output_offset, output_size))
-        return;
+        return nullptr;
 
     if (state.msg->depth >= 1024)
-        return;
+        return ++instr;
 
     auto msg = evmc_message{};
     msg.kind = EVMC_CALL;
@@ -970,13 +1042,15 @@ void op_staticcall(execution_state& state, instr_argument arg) noexcept
 
     if ((state.gas_left -= gas_used) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
+    return ++instr;
 }
 
-void op_create(execution_state& state, instr_argument arg) noexcept
+const instr_info* op_create(const instr_info* instr, execution_state& state) noexcept
 {
     if (state.msg->flags & EVMC_STATIC)
         return state.exit(EVMC_STATIC_MODE_VIOLATION);
 
+    const auto arg = instr->arg;
     auto endowment = state.stack[0];
     auto init_code_offset = state.stack[1];
     auto init_code_size = state.stack[2];
@@ -986,19 +1060,19 @@ void op_create(execution_state& state, instr_argument arg) noexcept
     state.stack[0] = 0;
 
     if (!check_memory(state, init_code_offset, init_code_size))
-        return;
+        return nullptr;
 
     state.return_data.clear();
 
     if (state.msg->depth >= 1024)
-        return;
+        return nullptr;
 
     if (endowment != 0)
     {
         const auto balance =
             intx::be::load<uint256>(state.host.get_balance(state.msg->destination));
         if (balance < endowment)
-            return;
+            return ++instr;
     }
 
     auto msg = evmc_message{};
@@ -1027,13 +1101,15 @@ void op_create(execution_state& state, instr_argument arg) noexcept
 
     if ((state.gas_left -= msg.gas - result.gas_left) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
+    return ++instr;
 }
 
-void op_create2(execution_state& state, instr_argument arg) noexcept
+const instr_info* op_create2(const instr_info* instr, execution_state& state) noexcept
 {
     if (state.msg->flags & EVMC_STATIC)
         return state.exit(EVMC_STATIC_MODE_VIOLATION);
 
+    const auto arg = instr->arg;
     auto endowment = state.stack[0];
     auto init_code_offset = state.stack[1];
     auto init_code_size = state.stack[2];
@@ -1045,7 +1121,7 @@ void op_create2(execution_state& state, instr_argument arg) noexcept
     state.stack[0] = 0;
 
     if (!check_memory(state, init_code_offset, init_code_size))
-        return;
+        return nullptr;
 
     auto salt_cost = num_words(static_cast<size_t>(init_code_size)) * 6;
     state.gas_left -= salt_cost;
@@ -1055,14 +1131,14 @@ void op_create2(execution_state& state, instr_argument arg) noexcept
     state.return_data.clear();
 
     if (state.msg->depth >= 1024)
-        return;
+        return ++instr;
 
     if (endowment != 0)
     {
         const auto balance =
             intx::be::load<uint256>(state.host.get_balance(state.msg->destination));
         if (balance < endowment)
-            return;
+            return ++instr;
     }
 
     auto msg = evmc_message{};
@@ -1089,14 +1165,15 @@ void op_create2(execution_state& state, instr_argument arg) noexcept
 
     if ((state.gas_left -= msg.gas - result.gas_left) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
+    return ++instr;
 }
 
-void op_undefined(execution_state& state, instr_argument) noexcept
+const instr_info* op_undefined(const instr_info*, execution_state& state) noexcept
 {
     return state.exit(EVMC_UNDEFINED_INSTRUCTION);
 }
 
-void op_selfdestruct(execution_state& state, instr_argument) noexcept
+const instr_info* op_selfdestruct(const instr_info*, execution_state& state) noexcept
 {
     if (state.msg->flags & EVMC_STATIC)
         return state.exit(EVMC_STATIC_MODE_VIOLATION);
@@ -1118,13 +1195,12 @@ void op_selfdestruct(execution_state& state, instr_argument) noexcept
     }
 
     state.host.selfdestruct(state.msg->destination, addr);
-    state.exit(EVMC_SUCCESS);
+    return state.exit(EVMC_SUCCESS);
 }
 
-void opx_beginblock(execution_state& state, instr_argument arg) noexcept
+const instr_info* opx_beginblock(const instr_info* instr, execution_state& state) noexcept
 {
-    assert(arg.p.number >= 0);
-    auto& block = state.analysis->blocks[static_cast<size_t>(arg.p.number)];
+    auto& block = state.analysis->blocks[static_cast<size_t>(instr->arg.p.number)];
 
     if ((state.gas_left -= block.gas_cost) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
@@ -1136,6 +1212,7 @@ void opx_beginblock(execution_state& state, instr_argument arg) noexcept
         return state.exit(EVMC_STACK_OVERFLOW);
 
     state.current_block_cost = block.gas_cost;
+    return ++instr;
 }
 
 constexpr exec_fn_table create_op_table_frontier() noexcept
