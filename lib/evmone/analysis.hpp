@@ -171,7 +171,8 @@ struct block_info
         "Potential block_info::gas_cost overflow");
 
     /// The stack height required to execute the block.
-    int stack_req = 0;
+    /// This MAY overflow.
+    int16_t stack_req = 0;
 
     /// The maximum stack height growth relative to the stack height at block start.
     /// This cannot overflow, see the static_assert() below.
@@ -181,6 +182,8 @@ struct block_info
                       std::numeric_limits<decltype(stack_max_growth)>::max(),
         "Potential block_info::stack_max_growth overflow");
 };
+
+static_assert(sizeof(block_info) == 8);
 
 struct code_analysis
 {

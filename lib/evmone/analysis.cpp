@@ -90,7 +90,13 @@ code_analysis analyze(
         const auto instr_stack_req = metrics.num_stack_arguments;
         const auto instr_stack_change = metrics.num_stack_returned_items - instr_stack_req;
 
-        block->stack_req = std::max(block->stack_req, instr_stack_req - block_stack_change);
+        // TODO: Define a block_analysis struct with regular ints for analysis.
+        //       Compress it when block is closed.
+        auto stack_req = instr_stack_req - block_stack_change;
+        if (stack_req > std::numeric_limits<decltype(block->stack_req)>::max())
+            stack_req = std::numeric_limits<decltype(block->stack_req)>::max();
+
+        block->stack_req = std::max(block->stack_req, static_cast<int16_t>(stack_req));
         block_stack_change += instr_stack_change;
         block->stack_max_growth =
             static_cast<int16_t>(std::max(int{block->stack_max_growth}, block_stack_change));
