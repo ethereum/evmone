@@ -12,6 +12,7 @@ add_library(evm-unittests OBJECT
     evm_test.cpp
 )
 target_link_libraries(evm-unittests PRIVATE testutils evmc::evmc GTest::gtest)
+target_include_directories(evm-unittests PRIVATE ${evmone_private_include_dir})
 
 # The internal evmone unit tests. The generic EVM ones are also built in.
 add_executable(evmone-unittests

@@ -66,14 +66,13 @@ code_analysis analyze(
 
         if (!block || jumpdest)
         {
-            // Create new block.
-            block = &analysis.blocks.emplace_back();
-            block_stack_change = 0;
-
             // Create BEGINBLOCK instruction which either replaces JUMPDEST or is injected
             // in case there is no JUMPDEST.
             auto& beginblock_instr = analysis.instrs.emplace_back(fns[OPX_BEGINBLOCK]);
-            beginblock_instr.arg.p.number = static_cast<int>(analysis.blocks.size() - 1);
+
+            // Start new block.
+            block = &beginblock_instr.arg.block;
+            block_stack_change = 0;
 
             if (jumpdest)  // Add the jumpdest to the map.
             {
@@ -90,9 +89,16 @@ code_analysis analyze(
         const auto instr_stack_req = metrics.num_stack_arguments;
         const auto instr_stack_change = metrics.num_stack_returned_items - instr_stack_req;
 
-        block->stack_req = std::max(block->stack_req, instr_stack_req - block_stack_change);
+        // TODO: Define a block_analysis struct with regular ints for analysis.
+        //       Compress it when block is closed.
+        auto stack_req = instr_stack_req - block_stack_change;
+        if (stack_req > std::numeric_limits<decltype(block->stack_req)>::max())
+            stack_req = std::numeric_limits<decltype(block->stack_req)>::max();
+
+        block->stack_req = std::max(block->stack_req, static_cast<int16_t>(stack_req));
         block_stack_change += instr_stack_change;
-        block->stack_max_growth = std::max(block->stack_max_growth, block_stack_change);
+        block->stack_max_growth =
+            static_cast<int16_t>(std::max(int{block->stack_max_growth}, block_stack_change));
 
         if (metrics.gas_cost > 0)  // can be -1 for undefined instruction
             block->gas_cost += metrics.gas_cost;
@@ -153,7 +159,7 @@ code_analysis analyze(
             break;
 
         case OP_GAS:
-            instr.arg.p.number = static_cast<int>(block->gas_cost);
+            instr.arg.p.number = block->gas_cost;
             break;
 
         case OP_CALL:
@@ -162,7 +168,7 @@ code_analysis analyze(
         case OP_STATICCALL:
         case OP_CREATE:
         case OP_CREATE2:
-            instr.arg.p.number = static_cast<int>(block->gas_cost);
+            instr.arg.p.number = block->gas_cost;
             instr.arg.p.call_kind =
                 op2call_kind(opcode == OP_STATICCALL ? uint8_t{OP_CALL} : opcode);
             break;

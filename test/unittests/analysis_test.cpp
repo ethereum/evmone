@@ -30,7 +30,6 @@ TEST(analysis, example1)
     ASSERT_EQ(analysis.instrs.size(), 8);
 
     EXPECT_EQ(analysis.instrs[0].fn, fake_fn_table[OPX_BEGINBLOCK]);
-    EXPECT_EQ(analysis.instrs[0].arg.p.number, 0);
     EXPECT_EQ(analysis.instrs[1].fn, fake_fn_table[OP_PUSH1]);
     EXPECT_EQ(analysis.instrs[2].fn, fake_fn_table[OP_PUSH1]);
     EXPECT_EQ(analysis.instrs[3].fn, fake_fn_table[OP_MSTORE8]);
@@ -39,10 +38,9 @@ TEST(analysis, example1)
     EXPECT_EQ(analysis.instrs[6].fn, fake_fn_table[OP_SSTORE]);
     EXPECT_EQ(analysis.instrs[7].fn, fake_fn_table[OP_STOP]);
 
-    ASSERT_EQ(analysis.blocks.size(), 1);
-    EXPECT_EQ(analysis.blocks[0].gas_cost, 14);
-    EXPECT_EQ(analysis.blocks[0].stack_req, 0);
-    EXPECT_EQ(analysis.blocks[0].stack_max_growth, 2);
+    EXPECT_EQ(analysis.instrs[0].arg.block.gas_cost, 14);
+    EXPECT_EQ(analysis.instrs[0].arg.block.stack_req, 0);
+    EXPECT_EQ(analysis.instrs[0].arg.block.stack_max_growth, 2);
 }
 
 TEST(analysis, stack_up_and_down)
@@ -52,16 +50,14 @@ TEST(analysis, stack_up_and_down)
 
     ASSERT_EQ(analysis.instrs.size(), 20);
     EXPECT_EQ(analysis.instrs[0].fn, fake_fn_table[OPX_BEGINBLOCK]);
-    EXPECT_EQ(analysis.instrs[0].arg.p.number, 0);
     EXPECT_EQ(analysis.instrs[1].fn, fake_fn_table[OP_DUP2]);
     EXPECT_EQ(analysis.instrs[2].fn, fake_fn_table[OP_DUP1]);
     EXPECT_EQ(analysis.instrs[8].fn, fake_fn_table[OP_POP]);
     EXPECT_EQ(analysis.instrs[18].fn, fake_fn_table[OP_PUSH1]);
 
-    ASSERT_EQ(analysis.blocks.size(), 1);
-    EXPECT_EQ(analysis.blocks[0].gas_cost, 7 * 3 + 10 * 2 + 3);
-    EXPECT_EQ(analysis.blocks[0].stack_req, 3);
-    EXPECT_EQ(analysis.blocks[0].stack_max_growth, 7);
+    EXPECT_EQ(analysis.instrs[0].arg.block.gas_cost, 7 * 3 + 10 * 2 + 3);
+    EXPECT_EQ(analysis.instrs[0].arg.block.stack_req, 3);
+    EXPECT_EQ(analysis.instrs[0].arg.block.stack_max_growth, 7);
 }
 
 TEST(analysis, push)
@@ -82,7 +78,6 @@ TEST(analysis, jump1)
     const auto code = jump(add(4, 2)) + OP_JUMPDEST + mstore(0, 3) + ret(0, 0x20) + jump(6);
     const auto analysis = analyze(fake_fn_table, rev, &code[0], code.size());
 
-    ASSERT_EQ(analysis.blocks.size(), 3);
     ASSERT_EQ(analysis.jumpdest_offsets.size(), 1);
     ASSERT_EQ(analysis.jumpdest_targets.size(), 1);
     EXPECT_EQ(analysis.jumpdest_offsets[0], 6);
@@ -97,7 +92,6 @@ TEST(analysis, empty)
     bytes code;
     auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
 
-    EXPECT_EQ(analysis.blocks.size(), 0);
     EXPECT_EQ(analysis.instrs.size(), 1);
     EXPECT_EQ(analysis.instrs.back().fn, fake_fn_table[OP_STOP]);
 }
@@ -107,7 +101,6 @@ TEST(analysis, only_jumpdest)
     auto code = from_hex("5b");
     auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
 
-    ASSERT_EQ(analysis.blocks.size(), 1);
     ASSERT_EQ(analysis.jumpdest_offsets.size(), 1);
     ASSERT_EQ(analysis.jumpdest_targets.size(), 1);
     EXPECT_EQ(analysis.jumpdest_offsets[0], 0);
@@ -119,6 +112,5 @@ TEST(analysis, jumpi_at_the_end)
     auto code = from_hex("57");
     auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
 
-    EXPECT_EQ(analysis.blocks.size(), 1);
     EXPECT_EQ(analysis.instrs.back().fn, fake_fn_table[OP_STOP]);
 }
