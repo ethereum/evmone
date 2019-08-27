@@ -29,7 +29,7 @@ if(NOT HAVE_FILESYSTEM)
         INSTALL_COMMAND ""
     )
 
-    target_include_directories(evmone-bench PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+    target_include_directories(evmone-bench SYSTEM PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
     add_dependencies(evmone-bench ghcfilesystem)
 elseif(UNIX AND NOT APPLE)
     target_link_libraries(evmone-bench PRIVATE stdc++fs)
