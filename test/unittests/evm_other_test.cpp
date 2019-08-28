@@ -19,3 +19,14 @@ TEST_F(evm_other, evmone_loaded_program_relocation)
     execute(bytecode{} + OP_STOP + OP_ORIGIN);
     EXPECT_GAS_USED(EVMC_SUCCESS, 0);
 }
+
+TEST_F(evm_other, evmone_block_stack_req_overflow)
+{
+    // This tests constructs a code with single basic block which stack requirement is > int16 max.
+    // Such basic block can cause int16_t overflow during analysis.
+    // The CALL instruction is going to be used because it has -6 stack change.
+
+    const auto code = push(1) + 10 * OP_DUP1 + 5463 * OP_CALL;
+    execute(code);
+    EXPECT_STATUS(EVMC_STACK_UNDERFLOW);
+}
