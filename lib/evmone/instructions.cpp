@@ -1065,7 +1065,7 @@ const instr_info* op_create(const instr_info* instr, execution_state& state) noe
     state.return_data.clear();
 
     if (state.msg->depth >= 1024)
-        return nullptr;
+        return ++instr;
 
     if (endowment != 0)
     {
