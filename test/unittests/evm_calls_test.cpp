@@ -2,13 +2,14 @@
 // Copyright 2019 The evmone Authors.
 // Licensed under the Apache License, Version 2.0.
 
+/// This file contains EVM unit tests that perform any kind of calls.
+
 #include "evm_fixture.hpp"
-#include <intx/intx.hpp>
 #include <test/utils/bytecode.hpp>
 
-using namespace intx;
+using evm_calls = evm;
 
-TEST_F(evm, delegatecall)
+TEST_F(evm_calls, delegatecall)
 {
     auto code = std::string{};
     code += "6001600003600052";              // m[0] = 0xffffff...
@@ -36,7 +37,7 @@ TEST_F(evm, delegatecall)
     EXPECT_EQ(output, (bytes{0xff, 0xff, 0xff, 0xff, 0xa, 0xb, 0xc, 0xff}));
 }
 
-TEST_F(evm, delegatecall_static)
+TEST_F(evm_calls, delegatecall_static)
 {
     // Checks if DELEGATECALL forwards the "static" flag.
     msg.flags = EVMC_STATIC;
@@ -49,7 +50,7 @@ TEST_F(evm, delegatecall_static)
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
 }
 
-TEST_F(evm, create)
+TEST_F(evm_calls, create)
 {
     auto& account = accounts[{}];
     account.set_balance(1);
@@ -73,7 +74,7 @@ TEST_F(evm, create)
     EXPECT_EQ(call_msg.input_size, 0x20);
 }
 
-TEST_F(evm, create_gas)
+TEST_F(evm_calls, create_gas)
 {
     auto c = size_t{0};
     for (auto r : {EVMC_HOMESTEAD, EVMC_TANGERINE_WHISTLE})
@@ -88,7 +89,7 @@ TEST_F(evm, create_gas)
     }
 }
 
-TEST_F(evm, create2)
+TEST_F(evm_calls, create2)
 {
     rev = EVMC_CONSTANTINOPLE;
     auto& account = accounts[{}];
@@ -118,7 +119,7 @@ TEST_F(evm, create2)
     EXPECT_EQ(call_msg.input_size, 0x41);
 }
 
-TEST_F(evm, create2_salt_cost)
+TEST_F(evm_calls, create2_salt_cost)
 {
     rev = EVMC_CONSTANTINOPLE;
     auto code = "600060208180f5";
@@ -137,7 +138,7 @@ TEST_F(evm, create2_salt_cost)
     EXPECT_EQ(recorded_calls.size(), 1);  // No another CREATE2.
 }
 
-TEST_F(evm, create_balance_too_low)
+TEST_F(evm_calls, create_balance_too_low)
 {
     rev = EVMC_CONSTANTINOPLE;
     accounts[{}].set_balance(1);
@@ -150,7 +151,7 @@ TEST_F(evm, create_balance_too_low)
     }
 }
 
-TEST_F(evm, create_failure)
+TEST_F(evm_calls, create_failure)
 {
     call_result.create_address = evmc::address{{0xce}};
     const auto create_address =
@@ -187,7 +188,7 @@ TEST_F(evm, create_failure)
     }
 }
 
-TEST_F(evm, call_failing_with_value)
+TEST_F(evm_calls, call_failing_with_value)
 {
     auto code = "60ff600060ff6000600160aa618000f150";
 
@@ -200,7 +201,7 @@ TEST_F(evm, call_failing_with_value)
     EXPECT_EQ(recorded_calls.size(), 0);  // There was no call().
 }
 
-TEST_F(evm, call_with_value)
+TEST_F(evm_calls, call_with_value)
 {
     auto code = "60ff600060ff6000600160aa618000f150";
 
@@ -221,7 +222,7 @@ TEST_F(evm, call_with_value)
     EXPECT_EQ(call_msg.destination, call_dst);
 }
 
-TEST_F(evm, call_with_value_depth_limit)
+TEST_F(evm_calls, call_with_value_depth_limit)
 {
     auto call_dst = evmc_address{};
     call_dst.bytes[19] = 0xaa;
@@ -234,7 +235,7 @@ TEST_F(evm, call_with_value_depth_limit)
     EXPECT_EQ(recorded_calls.size(), 0);
 }
 
-TEST_F(evm, call_depth_limit)
+TEST_F(evm_calls, call_depth_limit)
 {
     rev = EVMC_CONSTANTINOPLE;
     msg.depth = 1024;
@@ -249,7 +250,7 @@ TEST_F(evm, call_depth_limit)
     }
 }
 
-TEST_F(evm, call_output)
+TEST_F(evm_calls, call_output)
 {
     static bool result_is_correct = false;
     static uint8_t output[] = {0xa, 0xb};
@@ -288,7 +289,7 @@ TEST_F(evm, call_output)
     }
 }
 
-TEST_F(evm, call_high_gas)
+TEST_F(evm_calls, call_high_gas)
 {
     rev = EVMC_HOMESTEAD;
     auto call_dst = evmc_address{};
@@ -302,7 +303,7 @@ TEST_F(evm, call_high_gas)
     }
 }
 
-TEST_F(evm, call_new_account_create)
+TEST_F(evm_calls, call_new_account_create)
 {
     auto code = "6040600060406000600060aa611770f150";
 
@@ -317,7 +318,7 @@ TEST_F(evm, call_new_account_create)
     EXPECT_EQ(call_msg.gas, 6000);
 }
 
-TEST_F(evm, callcode_new_account_create)
+TEST_F(evm_calls, callcode_new_account_create)
 {
     auto code = "60008080806001600061c350f250";
 
@@ -333,7 +334,7 @@ TEST_F(evm, callcode_new_account_create)
     EXPECT_EQ(call_msg.gas, 52300);
 }
 
-TEST_F(evm, call_then_oog)
+TEST_F(evm_calls, call_then_oog)
 {
     // Performs a CALL then OOG in the same code block.
     auto call_dst = evmc_address{};
@@ -350,7 +351,7 @@ TEST_F(evm, call_then_oog)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
-TEST_F(evm, delegatecall_then_oog)
+TEST_F(evm_calls, delegatecall_then_oog)
 {
     // Performs a CALL then OOG in the same code block.
     auto call_dst = evmc_address{};
@@ -367,7 +368,7 @@ TEST_F(evm, delegatecall_then_oog)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
-TEST_F(evm, staticcall_then_oog)
+TEST_F(evm_calls, staticcall_then_oog)
 {
     // Performs a STATICCALL then OOG in the same code block.
     auto call_dst = evmc_address{};
@@ -384,7 +385,7 @@ TEST_F(evm, staticcall_then_oog)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
-TEST_F(evm, staticcall_input)
+TEST_F(evm_calls, staticcall_input)
 {
     const auto code = mstore(3, 0x010203) + push(0) + push(0) + push(3) + push(32) + push(0) +
                       push(0xee) + OP_STATICCALL;
@@ -396,7 +397,7 @@ TEST_F(evm, staticcall_input)
     EXPECT_EQ(to_hex(bytes_view(call_msg.input_data, call_msg.input_size)), "010203");
 }
 
-TEST_F(evm, call_with_value_low_gas)
+TEST_F(evm_calls, call_with_value_low_gas)
 {
     accounts[{}] = {};
     for (auto call_op : {OP_CALL, OP_CALLCODE})
@@ -408,7 +409,7 @@ TEST_F(evm, call_with_value_low_gas)
     }
 }
 
-TEST_F(evm, call_oog_after_balance_check)
+TEST_F(evm_calls, call_oog_after_balance_check)
 {
     for (auto op : {OP_CALL, OP_CALLCODE})
     {
@@ -418,7 +419,7 @@ TEST_F(evm, call_oog_after_balance_check)
     }
 }
 
-TEST_F(evm, call_oog_after_depth_check)
+TEST_F(evm_calls, call_oog_after_depth_check)
 {
     msg.depth = 1024;
     for (auto op : {OP_CALL, OP_CALLCODE})
@@ -437,7 +438,7 @@ TEST_F(evm, call_oog_after_depth_check)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
-TEST_F(evm, create_oog_after)
+TEST_F(evm_calls, create_oog_after)
 {
     rev = EVMC_CONSTANTINOPLE;
     for (auto op : {OP_CREATE, OP_CREATE2})
@@ -448,7 +449,7 @@ TEST_F(evm, create_oog_after)
     }
 }
 
-TEST_F(evm, returndatasize_before_call)
+TEST_F(evm_calls, returndatasize_before_call)
 {
     execute("3d60005360016000f3");
     EXPECT_EQ(gas_used, 17);
@@ -456,7 +457,7 @@ TEST_F(evm, returndatasize_before_call)
     EXPECT_EQ(result.output_data[0], 0);
 }
 
-TEST_F(evm, returndatasize)
+TEST_F(evm_calls, returndatasize)
 {
     uint8_t output[13];
     call_result.output_size = std::size(output);
@@ -483,7 +484,7 @@ TEST_F(evm, returndatasize)
     EXPECT_EQ(result.output_data[0], 0);
 }
 
-TEST_F(evm, returndatacopy)
+TEST_F(evm_calls, returndatacopy)
 {
     uint8_t output[32] = {1, 2, 3, 4, 5, 6, 7};
     call_result.output_size = std::size(output);
@@ -500,7 +501,7 @@ TEST_F(evm, returndatacopy)
     EXPECT_EQ(result.output_data[7], 0);
 }
 
-TEST_F(evm, returndatacopy_empty)
+TEST_F(evm_calls, returndatacopy_empty)
 {
     auto code = "600080808060aa60fff4600080803e60016000f3";
     execute(code);
@@ -509,7 +510,7 @@ TEST_F(evm, returndatacopy_empty)
     EXPECT_EQ(result.output_data[0], 0);
 }
 
-TEST_F(evm, returndatacopy_cost)
+TEST_F(evm_calls, returndatacopy_cost)
 {
     auto output = uint8_t{};
     call_result.output_data = &output;
@@ -521,7 +522,7 @@ TEST_F(evm, returndatacopy_cost)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
-TEST_F(evm, returndatacopy_outofrange)
+TEST_F(evm_calls, returndatacopy_outofrange)
 {
     auto output = uint8_t{};
     call_result.output_data = &output;
