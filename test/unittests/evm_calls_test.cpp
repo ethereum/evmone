@@ -240,13 +240,13 @@ TEST_F(evm_calls, call_depth_limit)
     rev = EVMC_CONSTANTINOPLE;
     msg.depth = 1024;
 
-    auto code = push(0) + 6 * OP_DUP1;
-
     for (auto op : {OP_CALL, OP_CALLCODE, OP_DELEGATECALL, OP_STATICCALL, OP_CREATE, OP_CREATE2})
     {
-        execute(code + hex(op));
+        const auto code = push(0) + 6 * OP_DUP1 + op + ret_top() + OP_INVALID;
+        execute(code);
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         EXPECT_EQ(recorded_calls.size(), 0);
+        EXPECT_OUTPUT_INT(0);
     }
 }
 
