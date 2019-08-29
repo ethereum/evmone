@@ -41,13 +41,12 @@ TEST_F(evm_calls, delegatecall_static)
 {
     // Checks if DELEGATECALL forwards the "static" flag.
     msg.flags = EVMC_STATIC;
-    execute("60008080808080f4");
+    execute(bytecode{} + delegatecall(0).gas(1));
     ASSERT_EQ(host.recorded_calls.size(), 1);
     const auto& call_msg = host.recorded_calls.back();
-    EXPECT_EQ(call_msg.gas, 0);
+    EXPECT_EQ(call_msg.gas, 1);
     EXPECT_EQ(call_msg.flags, EVMC_STATIC);
-    EXPECT_EQ(gas_used, 718);
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 719);
 }
 
 TEST_F(evm_calls, create)
@@ -411,7 +410,11 @@ TEST_F(evm_calls, call_then_oog)
     host.accounts[call_dst] = {};
     host.call_result.status_code = EVMC_FAILURE;
     host.call_result.gas_left = 0;
-    execute(1000, "6040600060406000600060aa60fef180018001800150");
+
+    const auto code =
+        call(0xaa).gas(254).value(0).input(0, 0x40).output(0, 0x40) + 4 * add(OP_DUP1) + OP_POP;
+
+    execute(1000, code);
     EXPECT_EQ(gas_used, 1000);
     ASSERT_EQ(host.recorded_calls.size(), 1);
     const auto& call_msg = host.recorded_calls.back();
@@ -445,7 +448,11 @@ TEST_F(evm_calls, staticcall_then_oog)
     host.accounts[call_dst] = {};
     host.call_result.status_code = EVMC_FAILURE;
     host.call_result.gas_left = 0;
-    execute(1000, "604060006040600060aa60fefa800180018001800150");
+
+    const auto code =
+        staticcall(0xaa).gas(254).input(0, 0x40).output(0, 0x40) + 4 * add(OP_DUP1) + OP_POP;
+
+    execute(1000, code);
     EXPECT_EQ(gas_used, 1000);
     ASSERT_EQ(host.recorded_calls.size(), 1);
     const auto& call_msg = host.recorded_calls.back();
@@ -456,8 +463,7 @@ TEST_F(evm_calls, staticcall_then_oog)
 
 TEST_F(evm_calls, staticcall_input)
 {
-    const auto code = mstore(3, 0x010203) + push(0) + push(0) + push(3) + push(32) + push(0) +
-                      push(0xee) + OP_STATICCALL;
+    const auto code = mstore(3, 0x010203) + staticcall(0).gas(0xee).input(32, 3);
     execute(code);
     ASSERT_EQ(host.recorded_calls.size(), 1);
     const auto& call_msg = host.recorded_calls.back();
