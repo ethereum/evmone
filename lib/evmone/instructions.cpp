@@ -506,13 +506,23 @@ const instruction* op_sstore(const instruction* instr, execution_state& state) n
     switch (status)
     {
     case EVMC_STORAGE_UNCHANGED:
-        cost = state.rev == EVMC_CONSTANTINOPLE ? 200 : 5000;
+        if (state.rev >= EVMC_ISTANBUL)
+            cost = 800;
+        else if (state.rev == EVMC_CONSTANTINOPLE)
+            cost = 200;
+        else
+            cost = 5000;
         break;
     case EVMC_STORAGE_MODIFIED:
         cost = 5000;
         break;
     case EVMC_STORAGE_MODIFIED_AGAIN:
-        cost = state.rev == EVMC_CONSTANTINOPLE ? 200 : 5000;
+        if (state.rev >= EVMC_ISTANBUL)
+            cost = 800;
+        else if (state.rev == EVMC_CONSTANTINOPLE)
+            cost = 200;
+        else
+            cost = 5000;
         break;
     case EVMC_STORAGE_ADDED:
         cost = 20000;
