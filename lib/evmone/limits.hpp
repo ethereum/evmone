@@ -7,8 +7,8 @@
 constexpr auto max_code_size = 0x6000;
 
 /// The maximum base cost of any EVM instruction.
-/// The value comes from the cost of the SSTORE instruction.
-constexpr auto max_instruction_base_cost = 20000;
+/// The value comes from the cost of the CREATE instruction.
+constexpr auto max_instruction_base_cost = 32000;
 
 /// The maximum stack increase any instruction can cause.
 /// Only instructions taking 0 arguments and pushing an item to the stack
