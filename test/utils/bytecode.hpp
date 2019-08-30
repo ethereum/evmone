@@ -181,6 +181,81 @@ inline bytecode sload(bytecode index)
     return index + OP_SLOAD;
 }
 
+template <evmc_opcode kind>
+struct call_instruction
+{
+private:
+    bytecode m_address = 0;
+    bytecode m_gas = 0;
+    bytecode m_value = 0;
+    bytecode m_input = 0;
+    bytecode m_input_size = 0;
+    bytecode m_output = 0;
+    bytecode m_output_size = 0;
+
+public:
+    explicit call_instruction(bytecode address) : m_address{std::move(address)} {}
+
+    auto& gas(bytecode g)
+    {
+        m_gas = std::move(g);
+        return *this;
+    }
+
+
+    template <evmc_opcode k = kind>
+    typename std::enable_if<k == OP_CALL || k == OP_CALLCODE, call_instruction&>::type value(
+        bytecode v)
+    {
+        m_value = std::move(v);
+        return *this;
+    }
+
+    auto& input(bytecode index, bytecode size)
+    {
+        m_input = std::move(index);
+        m_input_size = std::move(size);
+        return *this;
+    }
+
+    auto& output(bytecode index, bytecode size)
+    {
+        m_output = std::move(index);
+        m_output_size = std::move(size);
+        return *this;
+    }
+
+    operator bytecode() const
+    {
+        auto code = m_output_size + m_output + m_input_size + m_input;
+        if constexpr (kind == OP_CALL || kind == OP_CALLCODE)
+            code += m_value;
+        code += m_address + m_gas + kind;
+        return code;
+    }
+};
+
+inline call_instruction<OP_DELEGATECALL> delegatecall(bytecode address)
+{
+    return call_instruction<OP_DELEGATECALL>{std::move(address)};
+}
+
+inline call_instruction<OP_STATICCALL> staticcall(bytecode address)
+{
+    return call_instruction<OP_STATICCALL>{std::move(address)};
+}
+
+inline call_instruction<OP_CALL> call(bytecode address)
+{
+    return call_instruction<OP_CALL>{std::move(address)};
+}
+
+inline call_instruction<OP_CALLCODE> callcode(bytecode address)
+{
+    return call_instruction<OP_CALLCODE>{std::move(address)};
+}
+
+
 inline std::string hex(evmc_opcode opcode) noexcept
 {
     return hex(static_cast<uint8_t>(opcode));
