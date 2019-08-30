@@ -257,35 +257,174 @@ TEST_F(evm_state, selfdestruct)
 
 TEST_F(evm_state, selfdestruct_with_balance)
 {
-    auto code = "6000ff";
-    msg.destination.bytes[0] = 1;
-    accounts[msg.destination].set_balance(1);
+    const auto beneficiary = evmc::address{{0xbe}};
+    const auto code = push({beneficiary.bytes, sizeof(beneficiary)}) + OP_SELFDESTRUCT;
+    msg.destination = evmc_address{{0x5e}};
+
+
+    accounts[msg.destination].set_balance(0);
+
+    rev = EVMC_HOMESTEAD;
+    execute(3, code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 3);
+    EXPECT_EQ(result.gas_left, 0);
+    ASSERT_EQ(recorded_account_accesses.size(), 1);
+    EXPECT_EQ(recorded_account_accesses[0], msg.destination);  // Selfdestruct.
+    recorded_account_accesses.clear();
 
     rev = EVMC_TANGERINE_WHISTLE;
     execute(30003, code);
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    EXPECT_EQ(result.gas_left, 0);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 30003);
+    ASSERT_EQ(recorded_account_accesses.size(), 2);
+    EXPECT_EQ(recorded_account_accesses[0], beneficiary);      // Exists?
+    EXPECT_EQ(recorded_account_accesses[1], msg.destination);  // Selfdestruct.
+    recorded_account_accesses.clear();
 
     execute(30002, code);
-    EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+    EXPECT_GAS_USED(EVMC_OUT_OF_GAS, 30002);
     EXPECT_EQ(result.gas_left, 0);
+    ASSERT_EQ(recorded_account_accesses.size(), 1);
+    EXPECT_EQ(recorded_account_accesses[0], beneficiary);  // Exists?
+    recorded_account_accesses.clear();
+
+    rev = EVMC_SPURIOUS_DRAGON;
+    execute(5003, code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 5003);
+    ASSERT_EQ(recorded_account_accesses.size(), 2);
+    EXPECT_EQ(recorded_account_accesses[0], msg.destination);  // Balance.
+    EXPECT_EQ(recorded_account_accesses[1], msg.destination);  // Selfdestruct.
+    recorded_account_accesses.clear();
+
+    execute(5002, code);
+    EXPECT_GAS_USED(EVMC_OUT_OF_GAS, 5002);
+    EXPECT_EQ(result.gas_left, 0);
+    EXPECT_EQ(recorded_account_accesses.size(), 0);
+    recorded_account_accesses.clear();
+
+
+    accounts[msg.destination].set_balance(1);
 
     rev = EVMC_HOMESTEAD;
     execute(3, code);
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 3);
     EXPECT_EQ(result.gas_left, 0);
+    ASSERT_EQ(recorded_account_accesses.size(), 1);
+    EXPECT_EQ(recorded_account_accesses[0], msg.destination);  // Selfdestruct.
+    recorded_account_accesses.clear();
 
-    accounts[{}] = {};
+    rev = EVMC_TANGERINE_WHISTLE;
+    execute(30003, code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 30003);
+    ASSERT_EQ(recorded_account_accesses.size(), 2);
+    EXPECT_EQ(recorded_account_accesses[0], beneficiary);      // Exists?
+    EXPECT_EQ(recorded_account_accesses[1], msg.destination);  // Selfdestruct.
+    recorded_account_accesses.clear();
+
+    execute(30002, code);
+    EXPECT_GAS_USED(EVMC_OUT_OF_GAS, 30002);
+    EXPECT_EQ(result.gas_left, 0);
+    ASSERT_EQ(recorded_account_accesses.size(), 1);
+    EXPECT_EQ(recorded_account_accesses[0], beneficiary);  // Exists?
+    recorded_account_accesses.clear();
+
+    rev = EVMC_SPURIOUS_DRAGON;
+    execute(30003, code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 30003);
+    ASSERT_EQ(recorded_account_accesses.size(), 3);
+    EXPECT_EQ(recorded_account_accesses[0], msg.destination);  // Balance.
+    EXPECT_EQ(recorded_account_accesses[1], beneficiary);      // Exists?
+    EXPECT_EQ(recorded_account_accesses[2], msg.destination);  // Selfdestruct.
+    recorded_account_accesses.clear();
+
+    execute(30002, code);
+    EXPECT_GAS_USED(EVMC_OUT_OF_GAS, 30002);
+    EXPECT_EQ(result.gas_left, 0);
+    ASSERT_EQ(recorded_account_accesses.size(), 2);
+    EXPECT_EQ(recorded_account_accesses[0], msg.destination);  // Balance.
+    EXPECT_EQ(recorded_account_accesses[1], beneficiary);      // Exists?
+    recorded_account_accesses.clear();
+
+
+    accounts[beneficiary] = {};  // Beneficiary exists.
+
+
+    accounts[msg.destination].set_balance(0);
+
+    rev = EVMC_HOMESTEAD;
+    execute(3, code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 3);
+    EXPECT_EQ(result.gas_left, 0);
+    ASSERT_EQ(recorded_account_accesses.size(), 1);
+    EXPECT_EQ(recorded_account_accesses[0], msg.destination);  // Selfdestruct.
+    recorded_account_accesses.clear();
 
     rev = EVMC_TANGERINE_WHISTLE;
     execute(5003, code);
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 5003);
+    ASSERT_EQ(recorded_account_accesses.size(), 2);
+    EXPECT_EQ(recorded_account_accesses[0], beneficiary);      // Exists?
+    EXPECT_EQ(recorded_account_accesses[1], msg.destination);  // Selfdestruct.
+    recorded_account_accesses.clear();
+
+    execute(5002, code);
+    EXPECT_GAS_USED(EVMC_OUT_OF_GAS, 5002);
     EXPECT_EQ(result.gas_left, 0);
+    EXPECT_EQ(recorded_account_accesses.size(), 0);
+    recorded_account_accesses.clear();
+
+    rev = EVMC_SPURIOUS_DRAGON;
+    execute(5003, code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 5003);
+    ASSERT_EQ(recorded_account_accesses.size(), 2);
+    EXPECT_EQ(recorded_account_accesses[0], msg.destination);  // Balance.
+    EXPECT_EQ(recorded_account_accesses[1], msg.destination);  // Selfdestruct.
+    recorded_account_accesses.clear();
+
+    execute(5002, code);
+    EXPECT_GAS_USED(EVMC_OUT_OF_GAS, 5002);
+    EXPECT_EQ(result.gas_left, 0);
+    EXPECT_EQ(recorded_account_accesses.size(), 0);
+    recorded_account_accesses.clear();
+
+
+    accounts[msg.destination].set_balance(1);
 
     rev = EVMC_HOMESTEAD;
     execute(3, code);
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 3);
     EXPECT_EQ(result.gas_left, 0);
+    ASSERT_EQ(recorded_account_accesses.size(), 1);
+    EXPECT_EQ(recorded_account_accesses[0], msg.destination);  // Selfdestruct.
+    recorded_account_accesses.clear();
+
+    rev = EVMC_TANGERINE_WHISTLE;
+    execute(5003, code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 5003);
+    ASSERT_EQ(recorded_account_accesses.size(), 2);
+    EXPECT_EQ(recorded_account_accesses[0], beneficiary);      // Exists?
+    EXPECT_EQ(recorded_account_accesses[1], msg.destination);  // Selfdestruct.
+    recorded_account_accesses.clear();
+
+    execute(5002, code);
+    EXPECT_GAS_USED(EVMC_OUT_OF_GAS, 5002);
+    EXPECT_EQ(result.gas_left, 0);
+    EXPECT_EQ(recorded_account_accesses.size(), 0);
+    recorded_account_accesses.clear();
+
+    rev = EVMC_SPURIOUS_DRAGON;
+    execute(5003, code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 5003);
+    ASSERT_EQ(recorded_account_accesses.size(), 3);
+    EXPECT_EQ(recorded_account_accesses[0], msg.destination);  // Balance.
+    EXPECT_EQ(recorded_account_accesses[1], beneficiary);      // Exists?
+    EXPECT_EQ(recorded_account_accesses[2], msg.destination);  // Selfdestruct.
+    recorded_account_accesses.clear();
+
+    execute(5002, code);
+    EXPECT_GAS_USED(EVMC_OUT_OF_GAS, 5002);
+    EXPECT_EQ(result.gas_left, 0);
+    EXPECT_EQ(recorded_account_accesses.size(), 0);
+    recorded_account_accesses.clear();
 }
 
 

@@ -303,19 +303,88 @@ TEST_F(evm_calls, call_high_gas)
     }
 }
 
-TEST_F(evm_calls, call_new_account_create)
+TEST_F(evm_calls, call_value_zero_to_nonexistent_account)
 {
-    auto code = "6040600060406000600060aa611770f150";
-
+    constexpr auto call_gas = 6000;
     call_result.gas_left = 1000;
+
+    const auto code = push(0x40) + push(0) + push(0x40) + push(0) + push(0) + push(0xaa) +
+                      push(call_gas) + OP_CALL + OP_POP;
+
     execute(9000, code);
-    EXPECT_EQ(gas_used, 729 + 5000);
+    EXPECT_EQ(gas_used, 729 + (call_gas - call_result.gas_left));
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     ASSERT_EQ(recorded_calls.size(), 1);
     const auto& call_msg = recorded_calls.back();
     EXPECT_EQ(call_msg.kind, EVMC_CALL);
     EXPECT_EQ(call_msg.depth, 1);
     EXPECT_EQ(call_msg.gas, 6000);
+}
+
+TEST_F(evm_calls, call_new_account_creation_cost)
+{
+    const auto call_dst = evmc::address{{0xad}};
+    const auto code = 4 * push(0) + calldataload(0) + push({call_dst.bytes, sizeof(call_dst)}) +
+                      push(0) + OP_CALL + ret_top();
+    msg.destination = evmc_address{{3}};
+
+
+    rev = EVMC_TANGERINE_WHISTLE;
+    accounts[msg.destination].set_balance(0);
+    execute(code, "00");
+    EXPECT_GAS_USED(EVMC_SUCCESS, 25000 + 739);
+    EXPECT_OUTPUT_INT(1);
+    ASSERT_EQ(recorded_calls.size(), 1);
+    EXPECT_EQ(recorded_calls.back().destination, call_dst);
+    EXPECT_EQ(recorded_calls.back().gas, 0);
+    ASSERT_EQ(recorded_account_accesses.size(), 2);
+    EXPECT_EQ(recorded_account_accesses[0], call_dst);  // Account exist?
+    EXPECT_EQ(recorded_account_accesses[1], call_dst);  // Call.
+    recorded_account_accesses.clear();
+    recorded_calls.clear();
+
+    rev = EVMC_TANGERINE_WHISTLE;
+    accounts[msg.destination].set_balance(1);
+    execute(code, "0000000000000000000000000000000000000000000000000000000000000001");
+    EXPECT_GAS_USED(EVMC_SUCCESS, 25000 + 9000 + 739);
+    EXPECT_OUTPUT_INT(1);
+    ASSERT_EQ(recorded_calls.size(), 1);
+    EXPECT_EQ(recorded_calls.back().destination, call_dst);
+    EXPECT_EQ(recorded_calls.back().gas, 2300);
+    ASSERT_EQ(recorded_account_accesses.size(), 3);
+    EXPECT_EQ(recorded_account_accesses[0], call_dst);         // Account exist?
+    EXPECT_EQ(recorded_account_accesses[1], msg.destination);  // Balance.
+    EXPECT_EQ(recorded_account_accesses[2], call_dst);         // Call.
+    recorded_account_accesses.clear();
+    recorded_calls.clear();
+
+    rev = EVMC_SPURIOUS_DRAGON;
+    accounts[msg.destination].set_balance(0);
+    execute(code, "00");
+    EXPECT_GAS_USED(EVMC_SUCCESS, 739);
+    EXPECT_OUTPUT_INT(1);
+    ASSERT_EQ(recorded_calls.size(), 1);
+    EXPECT_EQ(recorded_calls.back().destination, call_dst);
+    EXPECT_EQ(recorded_calls.back().gas, 0);
+    ASSERT_EQ(recorded_account_accesses.size(), 1);
+    EXPECT_EQ(recorded_account_accesses[0], call_dst);  // Call.
+    recorded_account_accesses.clear();
+    recorded_calls.clear();
+
+    rev = EVMC_SPURIOUS_DRAGON;
+    accounts[msg.destination].set_balance(1);
+    execute(code, "0000000000000000000000000000000000000000000000000000000000000001");
+    EXPECT_GAS_USED(EVMC_SUCCESS, 25000 + 9000 + 739);
+    EXPECT_OUTPUT_INT(1);
+    ASSERT_EQ(recorded_calls.size(), 1);
+    EXPECT_EQ(recorded_calls.back().destination, call_dst);
+    EXPECT_EQ(recorded_calls.back().gas, 2300);
+    ASSERT_EQ(recorded_account_accesses.size(), 3);
+    EXPECT_EQ(recorded_account_accesses[0], call_dst);         // Account exist?
+    EXPECT_EQ(recorded_account_accesses[1], msg.destination);  // Balance.
+    EXPECT_EQ(recorded_account_accesses[2], call_dst);         // Call.
+    recorded_account_accesses.clear();
+    recorded_calls.clear();
 }
 
 TEST_F(evm_calls, callcode_new_account_create)
