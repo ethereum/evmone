@@ -32,7 +32,7 @@
     (void)0
 
 /// The "evm" test fixture with generic unit tests for EVMC-compatible VM implementations.
-class evm : public testing::Test, public MockedHost
+class evm : public testing::Test
 {
 protected:
     evmc::vm& vm;
@@ -40,6 +40,8 @@ protected:
     evmc_message msg = {};               // TODO: Add evmc::message with default constructor.
     evmc::result result{{}};  // TODO: Add default constructor to evmc::result, update code here.
     int64_t gas_used = 0;
+
+    MockedHost host;
 
     evm() noexcept : vm{get_vm()} {}
 
@@ -72,7 +74,7 @@ protected:
     /// Wrapper for evmone::execute. The result will be in the .result field.
     void execute(const evmc_message& m, bytes_view code) noexcept
     {
-        result = vm.execute(*this, rev, m, &code[0], code.size());
+        result = vm.execute(host, rev, m, &code[0], code.size());
         gas_used = m.gas - result.gas_left;
     }
 };

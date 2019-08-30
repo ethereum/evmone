@@ -277,9 +277,9 @@ TEST_F(evm, jumpi_at_the_end)
 
 TEST_F(evm, bad_jumpdest)
 {
-    tx_context.block_number = 1;
-    tx_context.block_gas_limit = 0;
-    tx_context.block_timestamp = 0x80000000;
+    host.tx_context.block_number = 1;
+    host.tx_context.block_gas_limit = 0;
+    host.tx_context.block_timestamp = 0x80000000;
     for (auto op : {OP_JUMP, OP_JUMPI})
     {
         execute("4345" + hex(op));
@@ -672,7 +672,7 @@ TEST_F(evm, undefined_instructions)
             if (names[opcode] != nullptr)
                 continue;
 
-            auto res = vm.execute(*this, r, {}, &opcode, sizeof(opcode));
+            auto res = vm.execute(host, r, {}, &opcode, sizeof(opcode));
             EXPECT_EQ(res.status_code, EVMC_UNDEFINED_INSTRUCTION)
                 << " for opcode " << hex(opcode) << " on revision " << r;
         }
@@ -715,7 +715,7 @@ TEST_F(evm, abort)
     for (auto r = 0; r <= EVMC_MAX_REVISION; ++r)
     {
         auto opcode = uint8_t{0xfe};
-        auto res = vm.execute(*this, evmc_revision(r), {}, &opcode, sizeof(opcode));
+        auto res = vm.execute(host, evmc_revision(r), {}, &opcode, sizeof(opcode));
         EXPECT_EQ(res.status_code, EVMC_INVALID_INSTRUCTION);
     }
 }
