@@ -74,7 +74,7 @@ protected:
     /// Wrapper for evmone::execute. The result will be in the .result field.
     void execute(const evmc_message& m, bytes_view code) noexcept
     {
-        result = vm.execute(host, rev, m, &code[0], code.size());
+        result = vm.execute(host, rev, m, code.data(), code.size());
         gas_used = m.gas - result.gas_left;
     }
 };
