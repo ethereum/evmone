@@ -101,6 +101,16 @@ inline bytecode add(bytecode a)
     return a + OP_ADD;
 }
 
+inline bytecode mul(bytecode a, bytecode b)
+{
+    return b + a + OP_MUL;
+}
+
+inline bytecode not_(bytecode a)
+{
+    return a + OP_NOT;
+}
+
 inline bytecode iszero(bytecode a)
 {
     return a + OP_ISZERO;
@@ -154,11 +164,6 @@ inline bytecode ret_top()
 inline bytecode ret(bytecode c)
 {
     return c + ret_top();
-}
-
-inline bytecode not_(bytecode c)
-{
-    return c + OP_NOT;
 }
 
 inline bytecode sha3(bytecode index, bytecode size)
