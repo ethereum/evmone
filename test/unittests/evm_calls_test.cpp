@@ -45,7 +45,7 @@ TEST_F(evm_calls, delegatecall_static)
     ASSERT_EQ(host.recorded_calls.size(), 1);
     const auto& call_msg = host.recorded_calls.back();
     EXPECT_EQ(call_msg.gas, 1);
-    EXPECT_EQ(call_msg.flags, EVMC_STATIC);
+    EXPECT_EQ(call_msg.flags, uint32_t{EVMC_STATIC});
     EXPECT_GAS_USED(EVMC_SUCCESS, 719);
 }
 

@@ -17,6 +17,6 @@ TEST(evmone, info)
 TEST(evmone, capabilities)
 {
     auto vm = evmc_create_evmone();
-    EXPECT_EQ(vm->get_capabilities(vm), EVMC_CAPABILITY_EVM1);
+    EXPECT_EQ(vm->get_capabilities(vm), evmc_capabilities_flagset{EVMC_CAPABILITY_EVM1});
     vm->destroy(vm);
 }

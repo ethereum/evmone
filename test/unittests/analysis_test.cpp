@@ -66,13 +66,14 @@ TEST(analysis, stack_up_and_down)
 
 TEST(analysis, push)
 {
-    const auto code = push(0x0807060504030201) + "7f00ee";
+    constexpr auto push_value = 0x8807060504030201;
+    const auto code = push(push_value) + "7f00ee";
     const auto analysis = analyze(fake_fn_table, rev, &code[0], code.size());
 
     ASSERT_EQ(analysis.instrs.size(), 4);
     ASSERT_EQ(analysis.push_values.size(), 1);
     EXPECT_EQ(analysis.instrs[0].fn, fake_fn_table[OPX_BEGINBLOCK]);
-    EXPECT_EQ(analysis.instrs[1].arg.small_push_value, 0x0807060504030201);
+    EXPECT_EQ(analysis.instrs[1].arg.small_push_value, push_value);
     EXPECT_EQ(analysis.instrs[2].arg.push_value, &analysis.push_values[0]);
     EXPECT_EQ(analysis.push_values[0], intx::uint256{0xee} << 240);
 }
