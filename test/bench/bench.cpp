@@ -11,10 +11,8 @@
 #include <test/utils/utils.hpp>
 #include <cctype>
 #include <fstream>
-#include <iomanip>
 #include <iostream>
 #include <memory>
-#include <sstream>
 
 
 #if __has_include(<filesystem>)
@@ -110,9 +108,9 @@ struct benchmark_case
 };
 
 
-void load_benchmark(fs::path path)
+void load_benchmark(fs::path path, const fs::path& subdir)
 {
-    auto base_name = path.stem().string();
+    const auto base_name = (subdir / path.stem()).string();
 
     std::ifstream file{path};
     std::string code_hex{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
@@ -175,15 +173,27 @@ void load_benchmark(fs::path path)
     }
 }
 
-void load_benchmarks_from_dir(const char* path)
+void load_benchmarks_from_dir(const fs::path& path, const fs::path& subdir = {})
 {
+    std::vector<fs::path> subdirs;
+    std::vector<fs::path> files;
+
     for (auto& e : fs::directory_iterator{path})
     {
-        if (e.path().extension() == inputs_extension)
-            continue;
-
-        load_benchmark(e.path());
+        if (e.is_directory())
+            subdirs.emplace_back(e);
+        else if (e.path().extension() != inputs_extension)
+            files.emplace_back(e);
     }
+
+    std::sort(std::begin(subdirs), std::end(subdirs));
+    std::sort(std::begin(files), std::end(files));
+
+    for (auto& f : files)
+        load_benchmark(f, subdir);
+
+    for (auto& d : subdirs)
+        load_benchmarks_from_dir(d, subdir / d.filename());
 }
 
 /// The error code for CLI arguments parsing error in evmone-bench.
