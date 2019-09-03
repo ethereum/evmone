@@ -108,7 +108,7 @@ struct benchmark_case
 };
 
 
-void load_benchmark(fs::path path, const fs::path& subdir)
+void load_benchmark(const fs::path& path, const fs::path& subdir)
 {
     const auto base_name = (subdir / path.stem()).string();
 
@@ -135,15 +135,16 @@ void load_benchmark(fs::path path, const fs::path& subdir)
     auto base = benchmark_case{};
     base.code = std::move(code);
 
-    path.replace_extension(inputs_extension);
-    if (!fs::exists(path))
+    auto inputs_path = path;
+    inputs_path.replace_extension(inputs_extension);
+    if (!fs::exists(inputs_path))
     {
         RegisterBenchmark(base_name.c_str(), base)->Unit(kMicrosecond);
     }
     else
     {
         auto st = state::name;
-        auto inputs_file = std::ifstream{path};
+        auto inputs_file = std::ifstream{inputs_path};
         auto input = benchmark_case{};
         auto name = std::string{};
         for (std::string l; std::getline(inputs_file, l);)
