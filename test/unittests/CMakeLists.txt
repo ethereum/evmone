@@ -24,7 +24,7 @@ add_executable(evmone-unittests
     utils_test.cpp
     vm_loader_evmone.cpp
 )
-target_link_libraries(evmone-unittests PRIVATE evm-unittests evmone testutils GTest::gtest GTest::main)
+target_link_libraries(evmone-unittests PRIVATE evm-unittests evmone testutils GTest::gtest GTest::gtest_main)
 target_include_directories(evmone-unittests PRIVATE ${evmone_private_include_dir})
 
 gtest_discover_tests(evmone-unittests TEST_PREFIX ${PROJECT_NAME}/unittests/)
