@@ -499,6 +499,14 @@ const instruction* op_sstore(const instruction* instr, execution_state& state) n
     if (state.msg->flags & EVMC_STATIC)
         return state.exit(EVMC_STATIC_MODE_VIOLATION);
 
+    if (state.rev >= EVMC_ISTANBUL)
+    {
+        const auto correction = state.current_block_cost - instr->arg.number;
+        const auto gas_left = state.gas_left + correction;
+        if (gas_left <= 2300)
+            return state.exit(EVMC_OUT_OF_GAS);
+    }
+
     const auto key = intx::be::store<evmc::bytes32>(state.stack.pop());
     const auto value = intx::be::store<evmc::bytes32>(state.stack.pop());
     auto status = state.host.set_storage(state.msg->destination, key, value);

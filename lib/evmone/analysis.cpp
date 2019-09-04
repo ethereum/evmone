@@ -131,6 +131,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
         case OP_STATICCALL:
         case OP_CREATE:
         case OP_CREATE2:
+        case OP_SSTORE:
             instr.arg.number = block.gas_cost;
             break;
 

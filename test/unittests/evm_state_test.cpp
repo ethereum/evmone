@@ -199,6 +199,26 @@ TEST_F(evm_state, sstore_cost)
     }
 }
 
+TEST_F(evm_state, sstore_below_stipend)
+{
+    const auto code = sstore(0, 0);
+
+    rev = EVMC_HOMESTEAD;
+    execute(2306, code);
+    EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+
+    rev = EVMC_CONSTANTINOPLE;
+    execute(2306, code);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+
+    rev = EVMC_ISTANBUL;
+    execute(2306, code);
+    EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+
+    execute(2307, code);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+}
+
 TEST_F(evm_state, tx_context)
 {
     rev = EVMC_ISTANBUL;
