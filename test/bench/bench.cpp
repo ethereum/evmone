@@ -11,10 +11,8 @@
 #include <test/utils/utils.hpp>
 #include <cctype>
 #include <fstream>
-#include <iomanip>
 #include <iostream>
 #include <memory>
-#include <sstream>
 
 
 #if __has_include(<filesystem>)
@@ -110,9 +108,9 @@ struct benchmark_case
 };
 
 
-void load_benchmark(fs::path path)
+void load_benchmark(const fs::path& path, const std::string& name_prefix)
 {
-    auto base_name = path.stem().string();
+    const auto base_name = name_prefix + path.stem().string();
 
     std::ifstream file{path};
     std::string code_hex{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
@@ -137,15 +135,16 @@ void load_benchmark(fs::path path)
     auto base = benchmark_case{};
     base.code = std::move(code);
 
-    path.replace_extension(inputs_extension);
-    if (!fs::exists(path))
+    auto inputs_path = path;
+    inputs_path.replace_extension(inputs_extension);
+    if (!fs::exists(inputs_path))
     {
         RegisterBenchmark(base_name.c_str(), base)->Unit(kMicrosecond);
     }
     else
     {
         auto st = state::name;
-        auto inputs_file = std::ifstream{path};
+        auto inputs_file = std::ifstream{inputs_path};
         auto input = benchmark_case{};
         auto name = std::string{};
         for (std::string l; std::getline(inputs_file, l);)
@@ -175,15 +174,27 @@ void load_benchmark(fs::path path)
     }
 }
 
-void load_benchmarks_from_dir(const char* path)
+void load_benchmarks_from_dir(const fs::path& path, const std::string& name_prefix = {})
 {
+    std::vector<fs::path> subdirs;
+    std::vector<fs::path> files;
+
     for (auto& e : fs::directory_iterator{path})
     {
-        if (e.path().extension() == inputs_extension)
-            continue;
-
-        load_benchmark(e.path());
+        if (e.is_directory())
+            subdirs.emplace_back(e);
+        else if (e.path().extension() != inputs_extension)
+            files.emplace_back(e);
     }
+
+    std::sort(std::begin(subdirs), std::end(subdirs));
+    std::sort(std::begin(files), std::end(files));
+
+    for (const auto& f : files)
+        load_benchmark(f, name_prefix);
+
+    for (const auto& d : subdirs)
+        load_benchmarks_from_dir(d, name_prefix + d.filename().string() + '/');
 }
 
 /// The error code for CLI arguments parsing error in evmone-bench.
