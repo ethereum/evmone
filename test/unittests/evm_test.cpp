@@ -308,6 +308,14 @@ TEST_F(evm, jumpi_stack)
     EXPECT_OUTPUT_INT(0xde);
 }
 
+TEST_F(evm, jump_over_jumpdest)
+{
+    // The code contains 2 consecutive JUMPDESTs. The JUMP at the beginning lands on the second one.
+    const auto code = push(4) + OP_JUMP + 2 * OP_JUMPDEST;
+    execute(code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 3 + 8 + 1);
+}
+
 TEST_F(evm, pc)
 {
     const auto code = OP_CALLDATASIZE + push(9) + OP_JUMPI + push(12) + OP_PC + OP_SWAP1 + OP_JUMP +

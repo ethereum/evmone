@@ -11,6 +11,19 @@ namespace evmone
 {
 namespace
 {
+struct block_analysis
+{
+    int gas_cost = 0;
+
+    int stack_req = 0;
+    int stack_max_growth = 0;
+    int stack_change = 0;
+
+    size_t first_instruction_index = 0;
+
+    explicit block_analysis(size_t index) noexcept : first_instruction_index{index} {}
+};
+
 inline constexpr evmc_call_kind op2call_kind(uint8_t opcode) noexcept
 {
     switch (opcode)
@@ -51,61 +64,52 @@ code_analysis analyze(
 
     const auto* instr_table = evmc_get_instruction_metrics_table(rev);
 
-    block_info* block = nullptr;
-
-    int block_stack_change = 0;
-    int instr_index = 0;
+    // Create first block.
+    analysis.instrs.emplace_back(fns[OPX_BEGINBLOCK]);
+    analysis.instrs.emplace_back(nullptr);
+    auto block = block_analysis{analysis.instrs.size() - 1};
 
     const auto code_end = code + code_size;
-    for (auto code_pos = code; code_pos < code_end; ++instr_index)
+    auto code_pos = code;
+
+    while (code_pos != code_end)
     {
-        // TODO: Loop in reverse order for easier GAS analysis.
         const auto opcode = *code_pos++;
-
-        const bool jumpdest = opcode == OP_JUMPDEST;
-
-        if (!block || jumpdest)
-        {
-            // Create new block.
-            block = &analysis.blocks.emplace_back();
-            block_stack_change = 0;
-
-            // Create BEGINBLOCK instruction which either replaces JUMPDEST or is injected
-            // in case there is no JUMPDEST.
-            auto& beginblock_instr = analysis.instrs.emplace_back(fns[OPX_BEGINBLOCK]);
-            beginblock_instr.arg.p.number = static_cast<int>(analysis.blocks.size() - 1);
-
-            if (jumpdest)  // Add the jumpdest to the map.
-            {
-                analysis.jumpdest_offsets.emplace_back(static_cast<int16_t>(code_pos - code - 1));
-                analysis.jumpdest_targets.emplace_back(static_cast<int16_t>(instr_index));
-            }
-            else  // Increase instruction count because additional BEGINBLOCK was injected.
-                ++instr_index;
-        }
-
-        auto& instr = jumpdest ? analysis.instrs.back() : analysis.instrs.emplace_back(fns[opcode]);
 
         const auto metrics = instr_table[opcode];
         const auto instr_stack_req = metrics.num_stack_arguments;
         const auto instr_stack_change = metrics.num_stack_returned_items - instr_stack_req;
 
-        // TODO: Define a block_analysis struct with regular ints for analysis.
-        //       Compress it when block is closed.
-        auto stack_req = instr_stack_req - block_stack_change;
-        if (stack_req > std::numeric_limits<decltype(block->stack_req)>::max())
-            stack_req = std::numeric_limits<decltype(block->stack_req)>::max();
-
-        block->stack_req = std::max(block->stack_req, static_cast<int16_t>(stack_req));
-        block_stack_change += instr_stack_change;
-        block->stack_max_growth =
-            static_cast<int16_t>(std::max(int{block->stack_max_growth}, block_stack_change));
+        block.stack_req = std::max(block.stack_req, instr_stack_req - block.stack_change);
+        block.stack_change += instr_stack_change;
+        block.stack_max_growth = std::max(block.stack_max_growth, block.stack_change);
 
         if (metrics.gas_cost > 0)  // can be -1 for undefined instruction
-            block->gas_cost += metrics.gas_cost;
+            block.gas_cost += metrics.gas_cost;
 
+        if (opcode == OP_JUMPDEST)
+        {
+            // The JUMPDEST is always the first instruction in the block.
+            // We don't have to insert anything to the instruction table.
+            analysis.jumpdest_offsets.emplace_back(static_cast<int16_t>(code_pos - code - 1));
+            analysis.jumpdest_targets.emplace_back(
+                static_cast<int16_t>(analysis.instrs.size() - 2));
+        }
+        else
+            analysis.instrs.emplace_back(fns[opcode]);
+
+        bool create_new_block = false;
         switch (opcode)
         {
+        case OP_JUMP:
+        case OP_JUMPI:
+        case OP_STOP:
+        case OP_RETURN:
+        case OP_REVERT:
+        case OP_SELFDESTRUCT:
+            create_new_block = true;
+            break;
+
         case ANY_SMALL_PUSH:
         {
             const auto push_size = size_t(opcode - OP_PUSH1 + 1);
@@ -117,7 +121,8 @@ code_analysis analyze(
             // TODO: Consier the same endianness-specific loop as in ANY_LARGE_PUSH case.
             while (code_pos < push_end && code_pos < code_end)
                 *insert_pos++ = *code_pos++;
-            instr.arg.small_push_value = load64be(value_bytes);
+
+            analysis.instrs.emplace_back(nullptr).small_push_value = load64be(value_bytes);
             break;
         }
 
@@ -143,24 +148,13 @@ code_analysis analyze(
             while (code_pos < push_end && code_pos < code_end)
                 *insert_pos-- = *code_pos++;
 
-            instr.arg.push_value = &push_value;
+            // FIXME: Check if using constructor (nullptr) for instr_info is optimal.
+            analysis.instrs.emplace_back(nullptr).push_value = &push_value;
             break;
         }
 
-        case ANY_DUP:
-            // TODO: This is not needed, but we keep it
-            //       otherwise compiler will not use the jumptable for switch implementation.
-            instr.arg.p.number = opcode - OP_DUP1;
-            break;
-
-        case ANY_SWAP:
-            // TODO: This is not needed, but we keep it
-            //       otherwise compiler will not use the jumptable for switch implementation.
-            instr.arg.p.number = opcode - OP_SWAP1 + 1;
-            break;
-
         case OP_GAS:
-            instr.arg.p.number = block->gas_cost;
+            analysis.instrs.emplace_back(nullptr).p.number = static_cast<int>(block.gas_cost);
             break;
 
         case OP_CALL:
@@ -169,39 +163,44 @@ code_analysis analyze(
         case OP_STATICCALL:
         case OP_CREATE:
         case OP_CREATE2:
-            instr.arg.p.number = block->gas_cost;
-            instr.arg.p.call_kind =
+            analysis.instrs.emplace_back(nullptr).p.number = static_cast<int>(block.gas_cost);
+            analysis.instrs.back().p.call_kind =
                 op2call_kind(opcode == OP_STATICCALL ? uint8_t{OP_CALL} : opcode);
             break;
 
         case OP_PC:
-            instr.arg.p.number = static_cast<int>(code_pos - code - 1);
+            analysis.instrs.emplace_back(nullptr).p.number = static_cast<int>(code_pos - code - 1);
             break;
+        }
 
-        case OP_LOG0:
-        case OP_LOG1:
-        case OP_LOG2:
-        case OP_LOG3:
-        case OP_LOG4:
-            // TODO: This is not needed, but we keep it
-            //       otherwise compiler will not use the jumptable for switch implementation.
-            instr.arg.p.number = opcode - OP_LOG0;
-            break;
+        if (create_new_block || (code_pos != code_end && *code_pos == OP_JUMPDEST))
+        {
+            // Save current block.
+            const auto stack_req = block.stack_req <= std::numeric_limits<int16_t>::max() ?
+                                       static_cast<int16_t>(block.stack_req) :
+                                       std::numeric_limits<int16_t>::max();
+            const auto stack_max_growth = static_cast<int16_t>(block.stack_max_growth);
+            analysis.instrs[block.first_instruction_index].block = {
+                block.gas_cost, stack_req, stack_max_growth};
 
-        case OP_JUMP:
-        case OP_JUMPI:
-        case OP_STOP:
-        case OP_RETURN:
-        case OP_REVERT:
-        case OP_SELFDESTRUCT:
-            block = nullptr;
-            break;
+            // Create new block.
+            analysis.instrs.emplace_back(fns[OPX_BEGINBLOCK]);
+            analysis.instrs.emplace_back(nullptr);
+            block = block_analysis{analysis.instrs.size() - 1};
         }
     }
 
-    // Not terminated block or empty code.
-    if (block || code_size == 0 || code[code_size - 1] == OP_JUMPI)
-        analysis.instrs.emplace_back(fns[OP_STOP]);
+    // Save current block.
+    const auto stack_req = block.stack_req <= std::numeric_limits<int16_t>::max() ?
+                               static_cast<int16_t>(block.stack_req) :
+                               std::numeric_limits<int16_t>::max();
+    const auto stack_max_growth = static_cast<int16_t>(block.stack_max_growth);
+    analysis.instrs[block.first_instruction_index].block = {
+        block.gas_cost, stack_req, stack_max_growth};
+
+    // Make sure the last block is terminated.
+    // TODO: This is not needed if the last instruction is a terminating one.
+    analysis.instrs.emplace_back(fns[OP_STOP]);
 
     // FIXME: assert(analysis.instrs.size() <= max_instrs_size);
 
