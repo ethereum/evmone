@@ -2,15 +2,14 @@
 // Copyright 2018-2019 The evmone Authors.
 // Licensed under the Apache License, Version 2.0.
 
-#include <test/utils/utils.hpp>
-
+#include "dump.hpp"
 #include <evmc/instructions.h>
 #include <evmone/analysis.hpp>
-
+#include <test/utils/utils.hpp>
 #include <iomanip>
 #include <iostream>
 
-void dump_analysis(const evmone::code_analysis& analysis)
+void dump(const evmone::code_analysis& analysis)
 {
     using namespace evmone;
 
