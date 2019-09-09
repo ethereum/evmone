@@ -93,19 +93,12 @@ code_analysis analyze(
         else
             analysis.instrs.emplace_back(fns[opcode]);
 
-        bool create_new_block = false;
-        switch (opcode)
+        switch (metrics.group)
         {
-        case OP_JUMP:
-        case OP_JUMPI:
-        case OP_STOP:
-        case OP_RETURN:
-        case OP_REVERT:
-        case OP_SELFDESTRUCT:
-            create_new_block = true;
+        default:
             break;
 
-        case ANY_SMALL_PUSH:
+        case small_push:
         {
             const auto push_size = size_t(opcode - OP_PUSH1 + 1);
             const auto push_end = code_pos + push_size;
@@ -121,7 +114,7 @@ code_analysis analyze(
             break;
         }
 
-        case ANY_LARGE_PUSH:
+        case large_push:
         {
             const auto push_size = size_t(opcode - OP_PUSH1 + 1);
             const auto push_end = code_pos + push_size;
@@ -148,27 +141,19 @@ code_analysis analyze(
             break;
         }
 
-        case OP_GAS:
+        case gas_counter_user:
             analysis.instrs.emplace_back(nullptr).p.number = static_cast<int>(block.gas_cost);
+            if (opcode != OP_GAS)
+                analysis.instrs.back().p.call_kind =
+                    op2call_kind(opcode == OP_STATICCALL ? uint8_t{OP_CALL} : opcode);
             break;
 
-        case OP_CALL:
-        case OP_CALLCODE:
-        case OP_DELEGATECALL:
-        case OP_STATICCALL:
-        case OP_CREATE:
-        case OP_CREATE2:
-            analysis.instrs.emplace_back(nullptr).p.number = static_cast<int>(block.gas_cost);
-            analysis.instrs.back().p.call_kind =
-                op2call_kind(opcode == OP_STATICCALL ? uint8_t{OP_CALL} : opcode);
-            break;
-
-        case OP_PC:
+        case pc:
             analysis.instrs.emplace_back(nullptr).p.number = static_cast<int>(code_pos - code - 1);
             break;
         }
 
-        if (create_new_block || (code_pos != code_end && *code_pos == OP_JUMPDEST))
+        if (metrics.group == terminator || (code_pos != code_end && *code_pos == OP_JUMPDEST))
         {
             // Save current block.
             const auto stack_req = block.stack_req <= std::numeric_limits<int16_t>::max() ?
