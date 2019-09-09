@@ -83,7 +83,7 @@ public:
     void resize(size_t new_size) { m_memory.resize(new_size); }
 };
 
-struct instr_info;
+union instr_info;
 
 struct block_info
 {
@@ -143,16 +143,6 @@ struct execution_state
     }
 };
 
-union instr_argument
-{
-    int number;
-    const uint8_t* data;
-    const intx::uint256* push_value;
-    uint64_t small_push_value;
-    block_info block{};
-};
-
-static_assert(sizeof(instr_argument) == sizeof(void*), "Incorrect size of instr_argument");
 
 using exec_fn = const instr_info* (*)(const instr_info*, execution_state&);
 
@@ -180,13 +170,17 @@ struct op_table_entry
 
 using op_table = std::array<op_table_entry, 256>;
 
-struct instr_info
+union instr_info
 {
     exec_fn fn = nullptr;
-    instr_argument arg;
+    int number;
+    const intx::uint256* push_value;
+    uint64_t small_push_value;
+    block_info block;
 
-    explicit constexpr instr_info(exec_fn f) noexcept : fn{f}, arg{} {};
+    explicit constexpr instr_info(exec_fn f) noexcept : fn{f} {};
 };
+static_assert(sizeof(instr_info) == sizeof(void*), "Incorrect size of instr_info");
 
 static_assert(sizeof(block_info) == 8);
 

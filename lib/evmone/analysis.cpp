@@ -93,7 +93,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
                 value |= uint64_t{*code_pos++} << insert_bit_pos;
                 insert_bit_pos -= 8;
             }
-            analysis.instrs.emplace_back(nullptr).arg.small_push_value = value;
+            analysis.instrs.emplace_back(nullptr).small_push_value = value;
             break;
         }
 
@@ -119,8 +119,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
             while (code_pos < push_end && code_pos < code_end)
                 *insert_pos-- = *code_pos++;
 
-            auto& arg = analysis.instrs.emplace_back(nullptr);
-            arg.arg.push_value = &push_value;
+            analysis.instrs.emplace_back(nullptr).push_value = &push_value;
             break;
         }
 
@@ -131,12 +130,11 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
         case OP_STATICCALL:
         case OP_CREATE:
         case OP_CREATE2:
-            analysis.instrs.emplace_back(nullptr).arg.number = static_cast<int>(block.gas_cost);
+            analysis.instrs.emplace_back(nullptr).number = static_cast<int>(block.gas_cost);
             break;
 
         case OP_PC:
-            analysis.instrs.emplace_back(nullptr).arg.number =
-                static_cast<int>(code_pos - code - 1);
+            analysis.instrs.emplace_back(nullptr).number = static_cast<int>(code_pos - code - 1);
             break;
         }
 
@@ -148,7 +146,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
                                        static_cast<int16_t>(block.stack_req) :
                                        stack_req_max;
             const auto stack_max_growth = static_cast<int16_t>(block.stack_max_growth);
-            analysis.instrs[block.begin_block_index].arg.block = {
+            analysis.instrs[block.begin_block_index].block = {
                 block.gas_cost, stack_req, stack_max_growth};
 
 
@@ -163,8 +161,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
     const auto stack_req =
         block.stack_req <= stack_req_max ? static_cast<int16_t>(block.stack_req) : stack_req_max;
     const auto stack_max_growth = static_cast<int16_t>(block.stack_max_growth);
-    analysis.instrs[block.begin_block_index].arg.block = {
-        block.gas_cost, stack_req, stack_max_growth};
+    analysis.instrs[block.begin_block_index].block = {block.gas_cost, stack_req, stack_max_growth};
 
     // Make sure the last block is terminated.
     // TODO: This is not needed if the last instruction is a terminating one.
