@@ -41,7 +41,8 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
 
     // Create first block.
     analysis.instrs.emplace_back(opx_beginblock_fn);
-    auto block = block_analysis{0};
+    analysis.instrs.emplace_back(nullptr);  // Placeholder for the block info data.
+    auto block = block_analysis{analysis.instrs.size() - 1};
 
     const auto code_end = code + code_size;
     auto code_pos = code;
@@ -63,7 +64,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
             // We don't have to insert anything to the instruction table.
             analysis.jumpdest_offsets.emplace_back(static_cast<int16_t>(code_pos - code - 1));
             analysis.jumpdest_targets.emplace_back(
-                static_cast<int16_t>(analysis.instrs.size() - 1));
+                static_cast<int16_t>(analysis.instrs.size() - 2));
         }
         else
             analysis.instrs.emplace_back(opcode_info.fn);
@@ -154,6 +155,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
 
             // Create new block.
             analysis.instrs.emplace_back(opx_beginblock_fn);
+            analysis.instrs.emplace_back(nullptr);
             block = block_analysis{analysis.instrs.size() - 1};
         }
     }

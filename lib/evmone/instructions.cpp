@@ -1204,7 +1204,8 @@ const instr_info* op_selfdestruct(const instr_info*, execution_state& state) noe
 
 const instr_info* opx_beginblock(const instr_info* instr, execution_state& state) noexcept
 {
-    auto& block = instr->arg.block;
+    // FIXME: Do not use reference, check assembly.
+    const auto& block = (++instr)->arg.block;
 
     if ((state.gas_left -= block.gas_cost) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
