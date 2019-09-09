@@ -724,7 +724,7 @@ TEST_F(evm, abort)
     {
         auto opcode = uint8_t{0xfe};
         auto res = vm.execute(host, evmc_revision(r), {}, &opcode, sizeof(opcode));
-        EXPECT_EQ(res.status_code, EVMC_INVALID_INSTRUCTION);
+        EXPECT_EQ(res.status_code, EVMC_INVALID_INSTRUCTION) << "rev " << r;
     }
 }
 

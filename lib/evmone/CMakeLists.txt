@@ -14,11 +14,13 @@ add_library(evmone
     evmone.cpp
     execution.cpp
     execution.hpp
+    instruction_metrics.cpp
+    instruction_metrics.hpp
     instructions.cpp
     limits.hpp
     opcodes_helpers.h
 )
-target_link_libraries(evmone PUBLIC evmc::evmc PRIVATE intx::intx evmc::instructions ethash::keccak)
+target_link_libraries(evmone PUBLIC evmc::evmc PRIVATE intx::intx ethash::keccak)
 target_include_directories(evmone PUBLIC
     $<BUILD_INTERFACE:${include_dir}>$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )

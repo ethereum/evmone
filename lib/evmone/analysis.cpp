@@ -3,8 +3,8 @@
 // Licensed under the Apache License, Version 2.0.
 
 #include "analysis.hpp"
+#include "instruction_metrics.hpp"
 #include "opcodes_helpers.h"
-#include <evmc/instructions.h>
 #include <cassert>
 
 namespace evmone
@@ -62,7 +62,7 @@ code_analysis analyze(
     const auto max_args_storage_size = code_size + 1;
     analysis.push_values.reserve(max_args_storage_size);
 
-    const auto* instr_table = evmc_get_instruction_metrics_table(rev);
+    const auto* instr_table = get_metrics(rev);
 
     // Create first block.
     analysis.instrs.emplace_back(fns[OPX_BEGINBLOCK]);
@@ -77,8 +77,8 @@ code_analysis analyze(
         const auto opcode = *code_pos++;
 
         const auto metrics = instr_table[opcode];
-        const auto instr_stack_req = metrics.num_stack_arguments;
-        const auto instr_stack_change = metrics.num_stack_returned_items - instr_stack_req;
+        const auto instr_stack_req = metrics.stack_req;
+        const auto instr_stack_change = metrics.stack_change - instr_stack_req;
 
         block.stack_req = std::max(block.stack_req, instr_stack_req - block.stack_change);
         block.stack_change += instr_stack_change;
