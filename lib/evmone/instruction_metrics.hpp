@@ -9,11 +9,22 @@
 
 namespace evmone
 {
+enum instruction_group
+{
+    regular,
+    terminator,
+    small_push,
+    large_push,
+    gas_counter_user,
+    pc
+};
+
 struct instruction_metrics
 {
-    int16_t gas_cost = 0;
-    int8_t stack_req = 0;
-    int8_t stack_change = 0;
+    int16_t gas_cost;
+    int8_t stack_req;
+    int8_t stack_change : 4;
+    instruction_group group : 4;
 };
 
 const instruction_metrics* get_metrics(evmc_revision rev) noexcept;
