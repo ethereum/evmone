@@ -88,7 +88,9 @@ TEST_F(evm, dup_stack_overflow)
 
 TEST_F(evm, sub_and_swap)
 {
-    execute(33, "600180810380829052602090f3");
+    const auto code = push(1) + OP_DUP1 + OP_DUP2 + OP_SUB + OP_DUP1 + OP_DUP3 + OP_SWAP1 +
+                      OP_MSTORE + push(0x20) + OP_SWAP1 + OP_RETURN;
+    execute(33, code);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 0);
     ASSERT_EQ(result.output_size, 32);

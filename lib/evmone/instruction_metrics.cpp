@@ -15,56 +15,56 @@ constexpr metrics_table build_frontier_metrics() noexcept
 {
     auto metrics = metrics_table{};
     metrics[OP_STOP] = {0, 0, 0};
-    metrics[OP_ADD] = {3, 2, 1};
-    metrics[OP_MUL] = {5, 2, 1};
-    metrics[OP_SUB] = {3, 2, 1};
-    metrics[OP_DIV] = {5, 2, 1};
-    metrics[OP_SDIV] = {5, 2, 1};
-    metrics[OP_MOD] = {5, 2, 1};
-    metrics[OP_SMOD] = {5, 2, 1};
-    metrics[OP_ADDMOD] = {8, 3, 1};
-    metrics[OP_MULMOD] = {8, 3, 1};
-    metrics[OP_EXP] = {10, 2, 1};
-    metrics[OP_SIGNEXTEND] = {5, 2, 1};
-    metrics[OP_LT] = {3, 2, 1};
-    metrics[OP_GT] = {3, 2, 1};
-    metrics[OP_SLT] = {3, 2, 1};
-    metrics[OP_SGT] = {3, 2, 1};
-    metrics[OP_EQ] = {3, 2, 1};
-    metrics[OP_ISZERO] = {3, 1, 1};
-    metrics[OP_AND] = {3, 2, 1};
-    metrics[OP_OR] = {3, 2, 1};
-    metrics[OP_XOR] = {3, 2, 1};
-    metrics[OP_NOT] = {3, 1, 1};
-    metrics[OP_BYTE] = {3, 2, 1};
-    metrics[OP_SHA3] = {30, 2, 1};
+    metrics[OP_ADD] = {3, 2, -1};
+    metrics[OP_MUL] = {5, 2, -1};
+    metrics[OP_SUB] = {3, 2, -1};
+    metrics[OP_DIV] = {5, 2, -1};
+    metrics[OP_SDIV] = {5, 2, -1};
+    metrics[OP_MOD] = {5, 2, -1};
+    metrics[OP_SMOD] = {5, 2, -1};
+    metrics[OP_ADDMOD] = {8, 3, -2};
+    metrics[OP_MULMOD] = {8, 3, -2};
+    metrics[OP_EXP] = {10, 2, -1};
+    metrics[OP_SIGNEXTEND] = {5, 2, -1};
+    metrics[OP_LT] = {3, 2, -1};
+    metrics[OP_GT] = {3, 2, -1};
+    metrics[OP_SLT] = {3, 2, -1};
+    metrics[OP_SGT] = {3, 2, -1};
+    metrics[OP_EQ] = {3, 2, -1};
+    metrics[OP_ISZERO] = {3, 1, 0};
+    metrics[OP_AND] = {3, 2, -1};
+    metrics[OP_OR] = {3, 2, -1};
+    metrics[OP_XOR] = {3, 2, -1};
+    metrics[OP_NOT] = {3, 1, 0};
+    metrics[OP_BYTE] = {3, 2, -1};
+    metrics[OP_SHA3] = {30, 2, -1};
     metrics[OP_ADDRESS] = {2, 0, 1};
-    metrics[OP_BALANCE] = {20, 1, 1};
+    metrics[OP_BALANCE] = {20, 1, 0};
     metrics[OP_ORIGIN] = {2, 0, 1};
     metrics[OP_CALLER] = {2, 0, 1};
     metrics[OP_CALLVALUE] = {2, 0, 1};
-    metrics[OP_CALLDATALOAD] = {3, 1, 1};
+    metrics[OP_CALLDATALOAD] = {3, 1, 0};
     metrics[OP_CALLDATASIZE] = {2, 0, 1};
-    metrics[OP_CALLDATACOPY] = {3, 3, 0};
+    metrics[OP_CALLDATACOPY] = {3, 3, -3};
     metrics[OP_CODESIZE] = {2, 0, 1};
-    metrics[OP_CODECOPY] = {3, 3, 0};
+    metrics[OP_CODECOPY] = {3, 3, -3};
     metrics[OP_GASPRICE] = {2, 0, 1};
-    metrics[OP_EXTCODESIZE] = {20, 1, 1};
-    metrics[OP_EXTCODECOPY] = {20, 4, 0};
-    metrics[OP_BLOCKHASH] = {20, 1, 1};
+    metrics[OP_EXTCODESIZE] = {20, 1, 0};
+    metrics[OP_EXTCODECOPY] = {20, 4, -4};
+    metrics[OP_BLOCKHASH] = {20, 1, 0};
     metrics[OP_COINBASE] = {2, 0, 1};
     metrics[OP_TIMESTAMP] = {2, 0, 1};
     metrics[OP_NUMBER] = {2, 0, 1};
     metrics[OP_DIFFICULTY] = {2, 0, 1};
     metrics[OP_GASLIMIT] = {2, 0, 1};
-    metrics[OP_POP] = {2, 1, 0};
-    metrics[OP_MLOAD] = {3, 1, 1};
-    metrics[OP_MSTORE] = {3, 2, 0};
-    metrics[OP_MSTORE8] = {3, 2, 0};
-    metrics[OP_SLOAD] = {50, 1, 1};
-    metrics[OP_SSTORE] = {0, 2, 0};
-    metrics[OP_JUMP] = {8, 1, 0};
-    metrics[OP_JUMPI] = {10, 2, 0};
+    metrics[OP_POP] = {2, 1, -1};
+    metrics[OP_MLOAD] = {3, 1, 0};
+    metrics[OP_MSTORE] = {3, 2, -2};
+    metrics[OP_MSTORE8] = {3, 2, -2};
+    metrics[OP_SLOAD] = {50, 1, 0};
+    metrics[OP_SSTORE] = {0, 2, -2};
+    metrics[OP_JUMP] = {8, 1, -1};
+    metrics[OP_JUMPI] = {10, 2, -2};
     metrics[OP_PC] = {2, 0, 1};
     metrics[OP_MSIZE] = {2, 0, 1};
     metrics[OP_GAS] = {2, 0, 1};
@@ -74,24 +74,24 @@ constexpr metrics_table build_frontier_metrics() noexcept
         metrics[op] = {3, 0, 1};
 
     for (size_t op = OP_DUP1; op <= OP_DUP16; ++op)
-        metrics[op] = {3, int8_t(op - OP_DUP1 + 1), int8_t(op - OP_DUP1 + 2)};
+        metrics[op] = {3, int8_t(op - OP_DUP1 + 1), 1};
 
     for (size_t op = OP_SWAP1; op <= OP_SWAP16; ++op)
-        metrics[op] = {3, int8_t(op - OP_SWAP1 + 2), int8_t(op - OP_SWAP1 + 2)};
+        metrics[op] = {3, int8_t(op - OP_SWAP1 + 2), 0};
 
     // FIXME: Use loop?
-    metrics[OP_LOG0] = {1 * 375, 2, 0};
-    metrics[OP_LOG1] = {2 * 375, 3, 0};
-    metrics[OP_LOG2] = {3 * 375, 4, 0};
-    metrics[OP_LOG3] = {4 * 375, 5, 0};
-    metrics[OP_LOG4] = {5 * 375, 6, 0};
+    metrics[OP_LOG0] = {1 * 375, 2, -2};
+    metrics[OP_LOG1] = {2 * 375, 3, -3};
+    metrics[OP_LOG2] = {3 * 375, 4, -4};
+    metrics[OP_LOG3] = {4 * 375, 5, -5};
+    metrics[OP_LOG4] = {5 * 375, 6, -6};
 
-    metrics[OP_CREATE] = {32000, 3, 1};
-    metrics[OP_CALL] = {40, 7, 1};
-    metrics[OP_CALLCODE] = {40, 7, 1};
-    metrics[OP_RETURN] = {0, 2, 0};
+    metrics[OP_CREATE] = {32000, 3, -2};
+    metrics[OP_CALL] = {40, 7, -6};
+    metrics[OP_CALLCODE] = {40, 7, -6};
+    metrics[OP_RETURN] = {0, 2, -2};
     metrics[OP_INVALID] = {0, 0, 0};
-    metrics[OP_SELFDESTRUCT] = {0, 1, 0};
+    metrics[OP_SELFDESTRUCT] = {0, 1, -1};
 
     return metrics;
 }
@@ -99,7 +99,7 @@ constexpr metrics_table build_frontier_metrics() noexcept
 constexpr metrics_table build_homestead_metrics() noexcept
 {
     auto metrics = build_frontier_metrics();
-    metrics[OP_DELEGATECALL] = {40, 6, 1};
+    metrics[OP_DELEGATECALL] = {40, 6, -5};
     return metrics;
 }
 
@@ -121,20 +121,20 @@ constexpr metrics_table build_byzantium_metrics() noexcept
 {
     auto metrics = build_tangerine_whistle_metrics();
     metrics[OP_RETURNDATASIZE] = {2, 0, 1};
-    metrics[OP_RETURNDATACOPY] = {3, 3, 0};
-    metrics[OP_STATICCALL] = {700, 6, 1};
-    metrics[OP_REVERT] = {0, 2, 0};
+    metrics[OP_RETURNDATACOPY] = {3, 3, -3};
+    metrics[OP_STATICCALL] = {700, 6, -5};
+    metrics[OP_REVERT] = {0, 2, -2};
     return metrics;
 }
 
 constexpr metrics_table build_constantinople_metrics() noexcept
 {
     auto metrics = build_byzantium_metrics();
-    metrics[OP_SHL] = {3, 2, 1};
-    metrics[OP_SHR] = {3, 2, 1};
-    metrics[OP_SAR] = {3, 2, 1};
-    metrics[OP_EXTCODEHASH] = {400, 1, 1};
-    metrics[OP_CREATE2] = {32000, 4, 1};
+    metrics[OP_SHL] = {3, 2, -1};
+    metrics[OP_SHR] = {3, 2, -1};
+    metrics[OP_SAR] = {3, 2, -1};
+    metrics[OP_EXTCODEHASH] = {400, 1, 0};
+    metrics[OP_CREATE2] = {32000, 4, -3};
     return metrics;
 }
 }  // namespace

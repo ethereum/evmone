@@ -77,13 +77,9 @@ code_analysis analyze(
         const auto opcode = *code_pos++;
 
         const auto metrics = instr_table[opcode];
-        const auto instr_stack_req = metrics.stack_req;
-        const auto instr_stack_change = metrics.stack_change - instr_stack_req;
-
-        block.stack_req = std::max(block.stack_req, instr_stack_req - block.stack_change);
-        block.stack_change += instr_stack_change;
+        block.stack_req = std::max(block.stack_req, metrics.stack_req - block.stack_change);
+        block.stack_change += metrics.stack_change;
         block.stack_max_growth = std::max(block.stack_max_growth, block.stack_change);
-
         block.gas_cost += metrics.gas_cost;
 
         if (opcode == OP_JUMPDEST)
