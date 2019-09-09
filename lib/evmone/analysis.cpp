@@ -84,8 +84,7 @@ code_analysis analyze(
         block.stack_change += instr_stack_change;
         block.stack_max_growth = std::max(block.stack_max_growth, block.stack_change);
 
-        if (metrics.gas_cost > 0)  // can be -1 for undefined instruction
-            block.gas_cost += metrics.gas_cost;
+        block.gas_cost += metrics.gas_cost;
 
         if (opcode == OP_JUMPDEST)
         {
