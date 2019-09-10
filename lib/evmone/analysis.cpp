@@ -4,7 +4,6 @@
 
 #include "analysis.hpp"
 #include "instruction_metrics.hpp"
-#include "opcodes_helpers.h"
 #include <cassert>
 
 namespace evmone

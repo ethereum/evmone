@@ -18,7 +18,6 @@ add_library(evmone
     instruction_metrics.hpp
     instructions.cpp
     limits.hpp
-    opcodes_helpers.h
 )
 target_link_libraries(evmone PUBLIC evmc::evmc PRIVATE intx::intx ethash::keccak)
 target_include_directories(evmone PUBLIC
