@@ -170,7 +170,12 @@ enum intrinsic_opcodes
     OPX_BEGINBLOCK = OP_JUMPDEST
 };
 
-using op_table = std::array<exec_fn, 256>;
+struct op_table_entry
+{
+    exec_fn fn;
+};
+
+using op_table = std::array<op_table_entry, 256>;
 
 struct instr_info
 {

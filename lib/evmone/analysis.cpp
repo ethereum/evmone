@@ -33,7 +33,7 @@ inline constexpr uint64_t load64be(const unsigned char* data) noexcept
 code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
 {
     const auto& op_tbl = get_op_table(rev);
-    const auto opx_beginblock_fn = op_tbl[OPX_BEGINBLOCK];
+    const auto opx_beginblock_fn = op_tbl[OPX_BEGINBLOCK].fn;
 
     code_analysis analysis;
 
@@ -77,7 +77,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
                 static_cast<int16_t>(analysis.instrs.size() - 1));
         }
         else
-            analysis.instrs.emplace_back(op_tbl[opcode]);
+            analysis.instrs.emplace_back(op_tbl[opcode].fn);
 
         auto& instr = analysis.instrs.back();
 
@@ -177,7 +177,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
 
     // Make sure the last block is terminated.
     // TODO: This is not needed if the last instruction is a terminating one.
-    analysis.instrs.emplace_back(op_tbl[OP_STOP]);
+    analysis.instrs.emplace_back(op_tbl[OP_STOP].fn);
 
     // FIXME: assert(analysis.instrs.size() <= max_instrs_size);
 
