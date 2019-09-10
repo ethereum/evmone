@@ -482,6 +482,14 @@ TEST_F(evm_state, extcode)
     EXPECT_EQ(host.recorded_account_accesses[1].bytes[19], 0xfe);
 }
 
+TEST_F(evm_state, extcodesize)
+{
+    constexpr auto addr = 0x0000000000000000000000000000000000000002_address;
+    host.accounts[addr].code = {'\0'};
+    execute(push(2) + OP_EXTCODESIZE + ret_top());
+    EXPECT_OUTPUT_INT(1);
+}
+
 TEST_F(evm_state, extcodehash)
 {
     auto& hash = host.accounts[{}].codehash;
