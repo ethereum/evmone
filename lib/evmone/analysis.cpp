@@ -9,33 +9,12 @@
 
 namespace evmone
 {
-namespace
-{
-inline constexpr evmc_call_kind op2call_kind(uint8_t opcode) noexcept
-{
-    switch (opcode)
-    {
-    default:
-    case OP_CREATE:
-        return EVMC_CREATE;
-    case OP_CALL:
-        return EVMC_CALL;
-    case OP_CALLCODE:
-        return EVMC_CALLCODE;
-    case OP_DELEGATECALL:
-        return EVMC_DELEGATECALL;
-    case OP_CREATE2:
-        return EVMC_CREATE2;
-    }
-}
-
 inline constexpr uint64_t load64be(const unsigned char* data) noexcept
 {
     return uint64_t{data[7]} | (uint64_t{data[6]} << 8) | (uint64_t{data[5]} << 16) |
            (uint64_t{data[4]} << 24) | (uint64_t{data[3]} << 32) | (uint64_t{data[2]} << 40) |
            (uint64_t{data[1]} << 48) | (uint64_t{data[0]} << 56);
 }
-}  // namespace
 
 code_analysis analyze(
     const exec_fn_table& fns, evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
@@ -160,9 +139,6 @@ code_analysis analyze(
             break;
 
         case OP_GAS:
-            instr.arg.p.number = block->gas_cost;
-            break;
-
         case OP_CALL:
         case OP_CALLCODE:
         case OP_DELEGATECALL:
@@ -170,8 +146,6 @@ code_analysis analyze(
         case OP_CREATE:
         case OP_CREATE2:
             instr.arg.p.number = block->gas_cost;
-            instr.arg.p.call_kind =
-                op2call_kind(opcode == OP_STATICCALL ? uint8_t{OP_CALL} : opcode);
             break;
 
         case OP_PC:

@@ -793,6 +793,7 @@ const instr_info* op_revert(const instr_info*, execution_state& state) noexcept
     return state.exit(EVMC_REVERT);
 }
 
+template <evmc_call_kind kind>
 const instr_info* op_call(const instr_info* instr, execution_state& state) noexcept
 {
     const auto arg = instr->arg;
@@ -820,7 +821,7 @@ const instr_info* op_call(const instr_info* instr, execution_state& state) noexc
 
 
     auto msg = evmc_message{};
-    msg.kind = arg.p.call_kind;
+    msg.kind = kind;
     msg.flags = state.msg->flags;
     msg.value = intx::be::store<evmc::uint256be>(value);
 
@@ -831,12 +832,12 @@ const instr_info* op_call(const instr_info* instr, execution_state& state) noexc
     auto has_value = value != 0;
     if (has_value)
     {
-        if (arg.p.call_kind == EVMC_CALL && state.msg->flags & EVMC_STATIC)
+        if (kind == EVMC_CALL && state.msg->flags & EVMC_STATIC)
             return state.exit(EVMC_STATIC_MODE_VIOLATION);
         cost += 9000;
     }
 
-    if (arg.p.call_kind == EVMC_CALL && (has_value || state.rev < EVMC_SPURIOUS_DRAGON))
+    if (kind == EVMC_CALL && (has_value || state.rev < EVMC_SPURIOUS_DRAGON))
     {
         if (!state.host.account_exists(dst))
             cost += 25000;
@@ -1324,8 +1325,8 @@ constexpr exec_fn_table create_op_table_frontier() noexcept
     table[OP_LOG4] = op_log<OP_LOG4>;
 
     table[OP_CREATE] = op_create;
-    table[OP_CALL] = op_call;
-    table[OP_CALLCODE] = op_call;
+    table[OP_CALL] = op_call<EVMC_CALL>;
+    table[OP_CALLCODE] = op_call<EVMC_CALLCODE>;
     table[OP_RETURN] = op_return;
     table[OP_INVALID] = op_invalid;
     table[OP_SELFDESTRUCT] = op_selfdestruct;

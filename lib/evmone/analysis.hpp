@@ -148,7 +148,6 @@ union instr_argument
     struct p  // A pair of fields.
     {
         int number;
-        evmc_call_kind call_kind;
     } p;
     const uint8_t* data;
     const intx::uint256* push_value;
