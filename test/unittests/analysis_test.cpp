@@ -78,6 +78,22 @@ TEST(analysis, push)
     EXPECT_EQ(analysis.push_values[0], intx::uint256{0xee} << 240);
 }
 
+TEST(analysis, jumpdest_skip)
+{
+    // If the JUMPDEST is the first instruction in a basic block it should be just omitted
+    // and no new block should be created in this place.
+
+    const auto code = bytecode{} + OP_STOP + OP_JUMPDEST;
+    auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
+
+    EXPECT_EQ(analysis.blocks.size(), 2);
+    ASSERT_EQ(analysis.instrs.size(), 4);
+    EXPECT_EQ(analysis.instrs[0].fn, fake_fn_table[OPX_BEGINBLOCK]);
+    EXPECT_EQ(analysis.instrs[1].fn, fake_fn_table[OP_STOP]);
+    EXPECT_EQ(analysis.instrs[2].fn, fake_fn_table[OP_JUMPDEST]);
+    EXPECT_EQ(analysis.instrs[3].fn, fake_fn_table[OP_STOP]);
+}
+
 TEST(analysis, jump1)
 {
     const auto code = jump(add(4, 2)) + OP_JUMPDEST + mstore(0, 3) + ret(0, 0x20) + jump(6);
@@ -99,13 +115,13 @@ TEST(analysis, empty)
     auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
 
     EXPECT_EQ(analysis.blocks.size(), 0);
-    EXPECT_EQ(analysis.instrs.size(), 1);
-    EXPECT_EQ(analysis.instrs.back().fn, fake_fn_table[OP_STOP]);
+    ASSERT_EQ(analysis.instrs.size(), 1);
+    EXPECT_EQ(analysis.instrs[0].fn, fake_fn_table[OP_STOP]);
 }
 
 TEST(analysis, only_jumpdest)
 {
-    auto code = from_hex("5b");
+    const auto code = bytecode{OP_JUMPDEST};
     auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
 
     ASSERT_EQ(analysis.blocks.size(), 1);
@@ -117,9 +133,60 @@ TEST(analysis, only_jumpdest)
 
 TEST(analysis, jumpi_at_the_end)
 {
-    auto code = from_hex("57");
+    const auto code = bytecode{OP_JUMPI};
     auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
 
     EXPECT_EQ(analysis.blocks.size(), 1);
-    EXPECT_EQ(analysis.instrs.back().fn, fake_fn_table[OP_STOP]);
+    ASSERT_EQ(analysis.instrs.size(), 3);
+    EXPECT_EQ(analysis.instrs[0].fn, fake_fn_table[OPX_BEGINBLOCK]);
+    EXPECT_EQ(analysis.instrs[1].fn, fake_fn_table[OP_JUMPI]);
+    EXPECT_EQ(analysis.instrs[2].fn, fake_fn_table[OP_STOP]);
+}
+
+TEST(analysis, terminated_last_block)
+{
+    // TODO: Even if the last basic block is properly terminated an additional artificial block
+    // is going to be created with only STOP instruction.
+    const auto code = ret(0, 0);
+    auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
+
+    EXPECT_EQ(analysis.blocks.size(), 1);
+    ASSERT_EQ(analysis.instrs.size(), 4);
+    EXPECT_EQ(analysis.instrs[0].fn, fake_fn_table[OPX_BEGINBLOCK]);
+    EXPECT_EQ(analysis.instrs[3].fn, fake_fn_table[OP_RETURN]);
+}
+
+TEST(analysis, jumpdests_groups)
+{
+    const auto code = 3 * OP_JUMPDEST + push(1) + 3 * OP_JUMPDEST + push(2) + OP_JUMPI;
+    auto analysis = evmone::analyze(fake_fn_table, rev, &code[0], code.size());
+
+    EXPECT_EQ(analysis.blocks.size(), 6);
+    ASSERT_EQ(analysis.instrs.size(), 10);
+    EXPECT_EQ(analysis.instrs[0].fn, fake_fn_table[OP_JUMPDEST]);
+    EXPECT_EQ(analysis.instrs[1].fn, fake_fn_table[OP_JUMPDEST]);
+    EXPECT_EQ(analysis.instrs[2].fn, fake_fn_table[OP_JUMPDEST]);
+    EXPECT_EQ(analysis.instrs[3].fn, fake_fn_table[OP_PUSH1]);
+    EXPECT_EQ(analysis.instrs[4].fn, fake_fn_table[OP_JUMPDEST]);
+    EXPECT_EQ(analysis.instrs[5].fn, fake_fn_table[OP_JUMPDEST]);
+    EXPECT_EQ(analysis.instrs[6].fn, fake_fn_table[OP_JUMPDEST]);
+    EXPECT_EQ(analysis.instrs[7].fn, fake_fn_table[OP_PUSH1]);
+    EXPECT_EQ(analysis.instrs[8].fn, fake_fn_table[OP_JUMPI]);
+    EXPECT_EQ(analysis.instrs[9].fn, fake_fn_table[OP_STOP]);
+
+
+    ASSERT_EQ(analysis.jumpdest_offsets.size(), 6);
+    ASSERT_EQ(analysis.jumpdest_targets.size(), 6);
+    EXPECT_EQ(analysis.jumpdest_offsets[0], 0);
+    EXPECT_EQ(analysis.jumpdest_targets[0], 0);
+    EXPECT_EQ(analysis.jumpdest_offsets[1], 1);
+    EXPECT_EQ(analysis.jumpdest_targets[1], 1);
+    EXPECT_EQ(analysis.jumpdest_offsets[2], 2);
+    EXPECT_EQ(analysis.jumpdest_targets[2], 2);
+    EXPECT_EQ(analysis.jumpdest_offsets[3], 5);
+    EXPECT_EQ(analysis.jumpdest_targets[3], 4);
+    EXPECT_EQ(analysis.jumpdest_offsets[4], 6);
+    EXPECT_EQ(analysis.jumpdest_targets[4], 5);
+    EXPECT_EQ(analysis.jumpdest_offsets[5], 7);
+    EXPECT_EQ(analysis.jumpdest_targets[5], 6);
 }
