@@ -4,17 +4,14 @@
 
 #include "execution.hpp"
 #include "analysis.hpp"
-
 #include <memory>
 
 namespace evmone
 {
-extern const exec_fn_table op_table[];
-
 evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const evmc_message* msg,
     const uint8_t* code, size_t code_size) noexcept
 {
-    auto analysis = analyze(op_table[rev], rev, code, code_size);
+    auto analysis = analyze(rev, code, code_size);
 
     auto state = std::make_unique<execution_state>();
     state->analysis = &analysis;

@@ -15,9 +15,9 @@ inline constexpr uint64_t load64be(const unsigned char* data) noexcept
            (uint64_t{data[1]} << 48) | (uint64_t{data[0]} << 56);
 }
 
-code_analysis analyze(
-    const exec_fn_table& fns, evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
+code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
 {
+    const auto& fns = get_op_table(rev);
     code_analysis analysis;
 
     const auto max_instrs_size = code_size + 1;

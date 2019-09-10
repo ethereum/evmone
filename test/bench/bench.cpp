@@ -59,14 +59,12 @@ void execute(State& state, bytes_view code, bytes_view input) noexcept
     state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
 }
 
-constexpr auto fn_table = evmone::exec_fn_table{};
-
 void analyse(State& state, bytes_view code) noexcept
 {
     auto bytes_analysed = uint64_t{0};
     for (auto _ : state)
     {
-        auto r = evmone::analyze(fn_table, EVMC_PETERSBURG, code.data(), code.size());
+        auto r = evmone::analyze(EVMC_PETERSBURG, code.data(), code.size());
         DoNotOptimize(r);
         bytes_analysed += code.size();
     }

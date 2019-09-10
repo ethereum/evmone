@@ -1367,9 +1367,8 @@ constexpr exec_fn_table create_op_table_istanbul() noexcept
     auto table = create_op_table_constantinople();
     return table;
 }
-}  // namespace
 
-extern const exec_fn_table op_table[] = {
+constexpr exec_fn_table op_tables[] = {
     create_op_table_frontier(),        // Frontier
     create_op_table_homestead(),       // Homestead
     create_op_table_homestead(),       // Tangerine Whistle
@@ -1379,4 +1378,12 @@ extern const exec_fn_table op_table[] = {
     create_op_table_constantinople(),  // Petersburg
     create_op_table_istanbul(),        // Istanbul
 };
+static_assert(sizeof(op_tables) / sizeof(op_tables[0]) > EVMC_MAX_REVISION,
+    "op table entry missing for an EVMC revision");
+}  // namespace
+
+EVMC_EXPORT const exec_fn_table& get_op_table(evmc_revision rev) noexcept
+{
+    return op_tables[rev];
+}
 }  // namespace evmone

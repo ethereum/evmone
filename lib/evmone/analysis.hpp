@@ -212,6 +212,8 @@ inline int find_jumpdest(const code_analysis& analysis, int offset) noexcept
 }
 
 EVMC_EXPORT code_analysis analyze(
-    const exec_fn_table& fns, evmc_revision rev, const uint8_t* code, size_t code_size) noexcept;
+    evmc_revision rev, const uint8_t* code, size_t code_size) noexcept;
+
+EVMC_EXPORT const exec_fn_table& get_op_table(evmc_revision rev) noexcept;
 
 }  // namespace evmone
