@@ -1217,9 +1217,9 @@ const instr_info* opx_beginblock(const instr_info* instr, execution_state& state
     return ++instr;
 }
 
-constexpr exec_fn_table create_op_table_frontier() noexcept
+constexpr op_table create_op_table_frontier() noexcept
 {
-    auto table = exec_fn_table{};
+    auto table = op_table{};
 
     // First, mark all opcodes as undefined.
     for (auto& t : table)
@@ -1334,14 +1334,14 @@ constexpr exec_fn_table create_op_table_frontier() noexcept
     return table;
 }
 
-constexpr exec_fn_table create_op_table_homestead() noexcept
+constexpr op_table create_op_table_homestead() noexcept
 {
     auto table = create_op_table_frontier();
     table[OP_DELEGATECALL] = op_delegatecall;
     return table;
 }
 
-constexpr exec_fn_table create_op_table_byzantium() noexcept
+constexpr op_table create_op_table_byzantium() noexcept
 {
     auto table = create_op_table_homestead();
     table[OP_RETURNDATASIZE] = op_returndatasize;
@@ -1351,7 +1351,7 @@ constexpr exec_fn_table create_op_table_byzantium() noexcept
     return table;
 }
 
-constexpr exec_fn_table create_op_table_constantinople() noexcept
+constexpr op_table create_op_table_constantinople() noexcept
 {
     auto table = create_op_table_byzantium();
     table[OP_SHL] = op_shl;
@@ -1362,13 +1362,13 @@ constexpr exec_fn_table create_op_table_constantinople() noexcept
     return table;
 }
 
-constexpr exec_fn_table create_op_table_istanbul() noexcept
+constexpr op_table create_op_table_istanbul() noexcept
 {
     auto table = create_op_table_constantinople();
     return table;
 }
 
-constexpr exec_fn_table op_tables[] = {
+constexpr op_table op_tables[] = {
     create_op_table_frontier(),        // Frontier
     create_op_table_homestead(),       // Homestead
     create_op_table_homestead(),       // Tangerine Whistle
@@ -1382,7 +1382,7 @@ static_assert(sizeof(op_tables) / sizeof(op_tables[0]) > EVMC_MAX_REVISION,
     "op table entry missing for an EVMC revision");
 }  // namespace
 
-EVMC_EXPORT const exec_fn_table& get_op_table(evmc_revision rev) noexcept
+EVMC_EXPORT const op_table& get_op_table(evmc_revision rev) noexcept
 {
     return op_tables[rev];
 }
