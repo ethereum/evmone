@@ -4,6 +4,9 @@
 
 #include "analysis.hpp"
 #include <ethash/keccak.hpp>
+#include <evmc/instructions.h>
+
+#include <cassert>
 
 namespace evmone
 {
@@ -327,6 +330,12 @@ const instruction* op_balance(const instruction* instr, execution_state& state) 
 {
     auto& x = state.stack.top();
     x = intx::be::load<uint256>(state.host.get_balance(intx::be::trunc<evmc::address>(x)));
+    return ++instr;
+}
+
+const instruction* op_chainid(const instruction* instr, execution_state& state) noexcept
+{
+    state.stack.push(state.host.get_tx_context().chain_id);
     return ++instr;
 }
 
@@ -1377,6 +1386,13 @@ constexpr op_table create_op_table_constantinople() noexcept
 constexpr op_table create_op_table_istanbul() noexcept
 {
     auto table = create_op_table_constantinople();
+    table[OP_CHAINID] = {op_chainid, 2, 0, 1};
+    return table;
+}
+
+constexpr op_table create_op_table_berlin() noexcept
+{
+    auto table = create_op_table_istanbul();
     return table;
 }
 
@@ -1389,6 +1405,7 @@ constexpr op_table op_tables[] = {
     create_op_table_constantinople(),     // Constantinople
     create_op_table_constantinople(),     // Petersburg
     create_op_table_istanbul(),           // Istanbul
+    create_op_table_berlin(),             // Berlin
 };
 static_assert(sizeof(op_tables) / sizeof(op_tables[0]) > EVMC_MAX_REVISION,
     "op table entry missing for an EVMC revision");

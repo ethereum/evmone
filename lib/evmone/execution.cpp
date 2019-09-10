@@ -4,6 +4,10 @@
 
 #include "execution.hpp"
 #include "analysis.hpp"
+
+#include <ethash/keccak.hpp>
+#include <evmc/instructions.h>
+
 #include <memory>
 
 namespace evmone
