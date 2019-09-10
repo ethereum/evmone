@@ -18,6 +18,8 @@ inline constexpr uint64_t load64be(const unsigned char* data) noexcept
 code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
 {
     const auto& fns = get_op_table(rev);
+    const auto opx_beginblock_fn = fns[OPX_BEGINBLOCK];
+
     code_analysis analysis;
 
     const auto max_instrs_size = code_size + 1;
@@ -29,40 +31,20 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
 
     const auto* instr_table = evmc_get_instruction_metrics_table(rev);
 
-    block_info* block = nullptr;
-
+    // Create new block.
+    auto block = &analysis.blocks.emplace_back();
     int block_stack_change = 0;
-    int instr_index = 0;
+    {
+        auto& beginblock_instr = analysis.instrs.emplace_back(opx_beginblock_fn);
+        beginblock_instr.arg.number = static_cast<int>(analysis.blocks.size() - 1);
+    }
 
     const auto code_end = code + code_size;
-    for (auto code_pos = code; code_pos < code_end; ++instr_index)
+    auto code_pos = code;
+
+    while (code_pos != code_end)
     {
-        // TODO: Loop in reverse order for easier GAS analysis.
         const auto opcode = *code_pos++;
-
-        const bool jumpdest = opcode == OP_JUMPDEST;
-
-        if (!block || jumpdest)
-        {
-            // Create new block.
-            block = &analysis.blocks.emplace_back();
-            block_stack_change = 0;
-
-            // Create BEGINBLOCK instruction which either replaces JUMPDEST or is injected
-            // in case there is no JUMPDEST.
-            auto& beginblock_instr = analysis.instrs.emplace_back(fns[OPX_BEGINBLOCK]);
-            beginblock_instr.arg.number = static_cast<int>(analysis.blocks.size() - 1);
-
-            if (jumpdest)  // Add the jumpdest to the map.
-            {
-                analysis.jumpdest_offsets.emplace_back(static_cast<int16_t>(code_pos - code - 1));
-                analysis.jumpdest_targets.emplace_back(static_cast<int16_t>(instr_index));
-            }
-            else  // Increase instruction count because additional BEGINBLOCK was injected.
-                ++instr_index;
-        }
-
-        auto& instr = jumpdest ? analysis.instrs.back() : analysis.instrs.emplace_back(fns[opcode]);
 
         const auto metrics = instr_table[opcode];
         const auto instr_stack_req = metrics.num_stack_arguments;
@@ -82,8 +64,31 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
         if (metrics.gas_cost > 0)  // can be -1 for undefined instruction
             block->gas_cost += metrics.gas_cost;
 
+        if (opcode == OP_JUMPDEST)
+        {
+            // The JUMPDEST is always the first instruction in the block.
+            // We don't have to insert anything to the instruction table.
+            analysis.jumpdest_offsets.emplace_back(static_cast<int16_t>(code_pos - code - 1));
+            analysis.jumpdest_targets.emplace_back(
+                static_cast<int16_t>(analysis.instrs.size() - 1));
+        }
+        else
+            analysis.instrs.emplace_back(fns[opcode]);
+
+        auto& instr = analysis.instrs.back();
+
+        bool is_terminator = false;  // A flag whenever this is a block terminating instruction.
         switch (opcode)
         {
+        case OP_JUMP:
+        case OP_JUMPI:
+        case OP_STOP:
+        case OP_RETURN:
+        case OP_REVERT:
+        case OP_SELFDESTRUCT:
+            is_terminator = true;
+            break;
+
         case ANY_SMALL_PUSH:
         {
             const auto push_size = size_t(opcode - OP_PUSH1 + 1);
@@ -125,18 +130,6 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
             break;
         }
 
-        case ANY_DUP:
-            // TODO: This is not needed, but we keep it
-            //       otherwise compiler will not use the jumptable for switch implementation.
-            instr.arg.number = opcode - OP_DUP1;
-            break;
-
-        case ANY_SWAP:
-            // TODO: This is not needed, but we keep it
-            //       otherwise compiler will not use the jumptable for switch implementation.
-            instr.arg.number = opcode - OP_SWAP1 + 1;
-            break;
-
         case OP_GAS:
         case OP_CALL:
         case OP_CALLCODE:
@@ -150,31 +143,22 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
         case OP_PC:
             instr.arg.number = static_cast<int>(code_pos - code - 1);
             break;
+        }
 
-        case OP_LOG0:
-        case OP_LOG1:
-        case OP_LOG2:
-        case OP_LOG3:
-        case OP_LOG4:
-            // TODO: This is not needed, but we keep it
-            //       otherwise compiler will not use the jumptable for switch implementation.
-            instr.arg.number = opcode - OP_LOG0;
-            break;
-
-        case OP_JUMP:
-        case OP_JUMPI:
-        case OP_STOP:
-        case OP_RETURN:
-        case OP_REVERT:
-        case OP_SELFDESTRUCT:
-            block = nullptr;
-            break;
+        if (is_terminator || (code_pos != code_end && *code_pos == OP_JUMPDEST))
+        {
+            // Create new basic block if
+            // this is a terminating instruction or the next instruction is a JUMPDEST.
+            block = &analysis.blocks.emplace_back();
+            block_stack_change = 0;
+            auto& beginblock_instr = analysis.instrs.emplace_back(opx_beginblock_fn);
+            beginblock_instr.arg.number = static_cast<int>(analysis.blocks.size() - 1);
         }
     }
 
-    // Not terminated block or empty code.
-    if (block || code_size == 0 || code[code_size - 1] == OP_JUMPI)
-        analysis.instrs.emplace_back(fns[OP_STOP]);
+    // Make sure the last block is terminated.
+    // TODO: This is not needed if the last instruction is a terminating one.
+    analysis.instrs.emplace_back(fns[OP_STOP]);
 
     // FIXME: assert(analysis.instrs.size() <= max_instrs_size);
 
