@@ -830,17 +830,20 @@ const instr_info* op_call(const instr_info* instr, execution_state& state) noexc
 
     auto cost = 0;
     auto has_value = value != 0;
-    if (has_value)
-    {
-        if (kind == EVMC_CALL && state.msg->flags & EVMC_STATIC)
-            return state.exit(EVMC_STATIC_MODE_VIOLATION);
-        cost += 9000;
-    }
 
-    if (kind == EVMC_CALL && (has_value || state.rev < EVMC_SPURIOUS_DRAGON))
+    if (has_value)
+        cost += 9000;
+
+    if constexpr (kind == EVMC_CALL)
     {
-        if (!state.host.account_exists(dst))
-            cost += 25000;
+        if (has_value && state.msg->flags & EVMC_STATIC)
+            return state.exit(EVMC_STATIC_MODE_VIOLATION);
+
+        if (has_value || state.rev < EVMC_SPURIOUS_DRAGON)
+        {
+            if (!state.host.account_exists(dst))
+                cost += 25000;
+        }
     }
 
     if ((gas_left -= cost) < 0)
