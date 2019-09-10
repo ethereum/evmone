@@ -548,7 +548,7 @@ const instr_info* op_jumpi(const instr_info* instr, execution_state& state) noex
 
 const instr_info* op_pc(const instr_info* instr, execution_state& state) noexcept
 {
-    state.stack.push(instr->arg.p.number);
+    state.stack.push(instr->arg.number);
     return ++instr;
 }
 
@@ -560,7 +560,7 @@ const instr_info* op_msize(const instr_info* instr, execution_state& state) noex
 
 const instr_info* op_gas(const instr_info* instr, execution_state& state) noexcept
 {
-    const auto correction = state.current_block_cost - instr->arg.p.number;
+    const auto correction = state.current_block_cost - instr->arg.number;
     const auto gas = static_cast<uint64_t>(state.gas_left + correction);
     state.stack.push(gas);
     return ++instr;
@@ -825,7 +825,7 @@ const instr_info* op_call(const instr_info* instr, execution_state& state) noexc
     msg.flags = state.msg->flags;
     msg.value = intx::be::store<evmc::uint256be>(value);
 
-    auto correction = state.current_block_cost - arg.p.number;
+    auto correction = state.current_block_cost - arg.number;
     auto gas_left = state.gas_left + correction;
 
     auto cost = 0;
@@ -939,7 +939,7 @@ const instr_info* op_delegatecall(const instr_info* instr, execution_state& stat
     auto msg = evmc_message{};
     msg.kind = EVMC_DELEGATECALL;
 
-    auto correction = state.current_block_cost - arg.p.number;
+    auto correction = state.current_block_cost - arg.number;
     auto gas_left = state.gas_left + correction;
 
     // TEST: Gas saturation for big gas values.
@@ -1014,7 +1014,7 @@ const instr_info* op_staticcall(const instr_info* instr, execution_state& state)
 
     msg.depth = state.msg->depth + 1;
 
-    auto correction = state.current_block_cost - arg.p.number;
+    auto correction = state.current_block_cost - arg.number;
     auto gas_left = state.gas_left + correction;
 
     msg.gas = std::numeric_limits<int64_t>::max();
@@ -1078,7 +1078,7 @@ const instr_info* op_create(const instr_info* instr, execution_state& state) noe
 
     auto msg = evmc_message{};
 
-    auto correction = state.current_block_cost - arg.p.number;
+    auto correction = state.current_block_cost - arg.number;
     msg.gas = state.gas_left + correction;
     if (state.rev >= EVMC_TANGERINE_WHISTLE)
         msg.gas = msg.gas - msg.gas / 64;
@@ -1144,7 +1144,7 @@ const instr_info* op_create2(const instr_info* instr, execution_state& state) no
 
     auto msg = evmc_message{};
 
-    auto correction = state.current_block_cost - arg.p.number;
+    auto correction = state.current_block_cost - arg.number;
     auto gas = state.gas_left + correction;
     msg.gas = gas - gas / 64;
 
@@ -1201,7 +1201,7 @@ const instr_info* op_selfdestruct(const instr_info*, execution_state& state) noe
 
 const instr_info* opx_beginblock(const instr_info* instr, execution_state& state) noexcept
 {
-    auto& block = state.analysis->blocks[static_cast<size_t>(instr->arg.p.number)];
+    auto& block = state.analysis->blocks[static_cast<size_t>(instr->arg.number)];
 
     if ((state.gas_left -= block.gas_cost) < 0)
         return state.exit(EVMC_OUT_OF_GAS);

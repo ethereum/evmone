@@ -30,7 +30,7 @@ TEST(analysis, example1)
     ASSERT_EQ(analysis.instrs.size(), 8);
 
     EXPECT_EQ(analysis.instrs[0].fn, fake_fn_table[OPX_BEGINBLOCK]);
-    EXPECT_EQ(analysis.instrs[0].arg.p.number, 0);
+    EXPECT_EQ(analysis.instrs[0].arg.number, 0);
     EXPECT_EQ(analysis.instrs[1].fn, fake_fn_table[OP_PUSH1]);
     EXPECT_EQ(analysis.instrs[2].fn, fake_fn_table[OP_PUSH1]);
     EXPECT_EQ(analysis.instrs[3].fn, fake_fn_table[OP_MSTORE8]);
@@ -52,7 +52,7 @@ TEST(analysis, stack_up_and_down)
 
     ASSERT_EQ(analysis.instrs.size(), 20);
     EXPECT_EQ(analysis.instrs[0].fn, fake_fn_table[OPX_BEGINBLOCK]);
-    EXPECT_EQ(analysis.instrs[0].arg.p.number, 0);
+    EXPECT_EQ(analysis.instrs[0].arg.number, 0);
     EXPECT_EQ(analysis.instrs[1].fn, fake_fn_table[OP_DUP2]);
     EXPECT_EQ(analysis.instrs[2].fn, fake_fn_table[OP_DUP1]);
     EXPECT_EQ(analysis.instrs[8].fn, fake_fn_table[OP_POP]);

@@ -145,10 +145,7 @@ struct execution_state
 
 union instr_argument
 {
-    struct p  // A pair of fields.
-    {
-        int number;
-    } p;
+    int number;
     const uint8_t* data;
     const intx::uint256* push_value;
     uint64_t small_push_value;

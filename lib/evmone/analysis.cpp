@@ -52,7 +52,7 @@ code_analysis analyze(
             // Create BEGINBLOCK instruction which either replaces JUMPDEST or is injected
             // in case there is no JUMPDEST.
             auto& beginblock_instr = analysis.instrs.emplace_back(fns[OPX_BEGINBLOCK]);
-            beginblock_instr.arg.p.number = static_cast<int>(analysis.blocks.size() - 1);
+            beginblock_instr.arg.number = static_cast<int>(analysis.blocks.size() - 1);
 
             if (jumpdest)  // Add the jumpdest to the map.
             {
@@ -129,13 +129,13 @@ code_analysis analyze(
         case ANY_DUP:
             // TODO: This is not needed, but we keep it
             //       otherwise compiler will not use the jumptable for switch implementation.
-            instr.arg.p.number = opcode - OP_DUP1;
+            instr.arg.number = opcode - OP_DUP1;
             break;
 
         case ANY_SWAP:
             // TODO: This is not needed, but we keep it
             //       otherwise compiler will not use the jumptable for switch implementation.
-            instr.arg.p.number = opcode - OP_SWAP1 + 1;
+            instr.arg.number = opcode - OP_SWAP1 + 1;
             break;
 
         case OP_GAS:
@@ -145,11 +145,11 @@ code_analysis analyze(
         case OP_STATICCALL:
         case OP_CREATE:
         case OP_CREATE2:
-            instr.arg.p.number = block->gas_cost;
+            instr.arg.number = block->gas_cost;
             break;
 
         case OP_PC:
-            instr.arg.p.number = static_cast<int>(code_pos - code - 1);
+            instr.arg.number = static_cast<int>(code_pos - code - 1);
             break;
 
         case OP_LOG0:
@@ -159,7 +159,7 @@ code_analysis analyze(
         case OP_LOG4:
             // TODO: This is not needed, but we keep it
             //       otherwise compiler will not use the jumptable for switch implementation.
-            instr.arg.p.number = opcode - OP_LOG0;
+            instr.arg.number = opcode - OP_LOG0;
             break;
 
         case OP_JUMP:
