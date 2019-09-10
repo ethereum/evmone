@@ -4,7 +4,6 @@
 
 #include "analysis.hpp"
 #include "opcodes_helpers.h"
-#include <evmc/instructions.h>
 #include <cassert>
 
 namespace evmone
