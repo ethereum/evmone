@@ -1223,142 +1223,157 @@ constexpr op_table create_op_table_frontier() noexcept
 
     // First, mark all opcodes as undefined.
     for (auto& t : table)
-        t = {op_undefined};
+        t = {op_undefined, 0, 0, 0};
 
-    table[OP_STOP] = {op_stop};
-    table[OP_ADD] = {op_add};
-    table[OP_MUL] = {op_mul};
-    table[OP_SUB] = {op_sub};
-    table[OP_DIV] = {op_div};
-    table[OP_SDIV] = {op_sdiv};
-    table[OP_MOD] = {op_mod};
-    table[OP_SMOD] = {op_smod};
-    table[OP_ADDMOD] = {op_addmod};
-    table[OP_MULMOD] = {op_mulmod};
-    table[OP_EXP] = {op_exp};
-    table[OP_SIGNEXTEND] = {op_signextend};
-    table[OP_LT] = {op_lt};
-    table[OP_GT] = {op_gt};
-    table[OP_SLT] = {op_slt};
-    table[OP_SGT] = {op_sgt};
-    table[OP_EQ] = {op_eq};
-    table[OP_ISZERO] = {op_iszero};
-    table[OP_AND] = {op_and};
-    table[OP_OR] = {op_or};
-    table[OP_XOR] = {op_xor};
-    table[OP_NOT] = {op_not};
-    table[OP_BYTE] = {op_byte};
-    table[OP_SHA3] = {op_sha3};
-    table[OP_ADDRESS] = {op_address};
-    table[OP_BALANCE] = {op_balance};
-    table[OP_ORIGIN] = {op_origin};
-    table[OP_CALLER] = {op_caller};
-    table[OP_CALLVALUE] = {op_callvalue};
-    table[OP_CALLDATALOAD] = {op_calldataload};
-    table[OP_CALLDATASIZE] = {op_calldatasize};
-    table[OP_CALLDATACOPY] = {op_calldatacopy};
-    table[OP_CODESIZE] = {op_codesize};
-    table[OP_CODECOPY] = {op_codecopy};
-    table[OP_EXTCODESIZE] = {op_extcodesize};
-    table[OP_EXTCODECOPY] = {op_extcodecopy};
-    table[OP_GASPRICE] = {op_gasprice};
-    table[OP_BLOCKHASH] = {op_blockhash};
-    table[OP_COINBASE] = {op_coinbase};
-    table[OP_TIMESTAMP] = {op_timestamp};
-    table[OP_NUMBER] = {op_number};
-    table[OP_DIFFICULTY] = {op_difficulty};
-    table[OP_GASLIMIT] = {op_gaslimit};
-    table[OP_POP] = {op_pop};
-    table[OP_MLOAD] = {op_mload};
-    table[OP_MSTORE] = {op_mstore};
-    table[OP_MSTORE8] = {op_mstore8};
-    table[OP_SLOAD] = {op_sload};
-    table[OP_SSTORE] = {op_sstore};
-    table[OP_JUMP] = {op_jump};
-    table[OP_JUMPI] = {op_jumpi};
-    table[OP_PC] = {op_pc};
-    table[OP_MSIZE] = {op_msize};
-    table[OP_GAS] = {op_gas};
-    table[OPX_BEGINBLOCK] = {opx_beginblock};  // Replaces JUMPDEST.
+    table[OP_STOP] = {op_stop, 0, 0, 0};
+    table[OP_ADD] = {op_add, 3, 2, -1};
+    table[OP_MUL] = {op_mul, 5, 2, -1};
+    table[OP_SUB] = {op_sub, 3, 2, -1};
+    table[OP_DIV] = {op_div, 5, 2, -1};
+    table[OP_SDIV] = {op_sdiv, 5, 2, -1};
+    table[OP_MOD] = {op_mod, 5, 2, -1};
+    table[OP_SMOD] = {op_smod, 5, 2, -1};
+    table[OP_ADDMOD] = {op_addmod, 8, 3, -2};
+    table[OP_MULMOD] = {op_mulmod, 8, 3, -2};
+    table[OP_EXP] = {op_exp, 10, 2, -1};
+    table[OP_SIGNEXTEND] = {op_signextend, 5, 2, -1};
+    table[OP_LT] = {op_lt, 3, 2, -1};
+    table[OP_GT] = {op_gt, 3, 2, -1};
+    table[OP_SLT] = {op_slt, 3, 2, -1};
+    table[OP_SGT] = {op_sgt, 3, 2, -1};
+    table[OP_EQ] = {op_eq, 3, 2, -1};
+    table[OP_ISZERO] = {op_iszero, 3, 1, 0};
+    table[OP_AND] = {op_and, 3, 2, -1};
+    table[OP_OR] = {op_or, 3, 2, -1};
+    table[OP_XOR] = {op_xor, 3, 2, -1};
+    table[OP_NOT] = {op_not, 3, 1, 0};
+    table[OP_BYTE] = {op_byte, 3, 2, -1};
+    table[OP_SHA3] = {op_sha3, 30, 2, -1};
+    table[OP_ADDRESS] = {op_address, 2, 0, 1};
+    table[OP_BALANCE] = {op_balance, 20, 1, 0};
+    table[OP_ORIGIN] = {op_origin, 2, 0, 1};
+    table[OP_CALLER] = {op_caller, 2, 0, 1};
+    table[OP_CALLVALUE] = {op_callvalue, 2, 0, 1};
+    table[OP_CALLDATALOAD] = {op_calldataload, 3, 1, 0};
+    table[OP_CALLDATASIZE] = {op_calldatasize, 2, 0, 1};
+    table[OP_CALLDATACOPY] = {op_calldatacopy, 3, 3, -3};
+    table[OP_CODESIZE] = {op_codesize, 2, 0, 1};
+    table[OP_CODECOPY] = {op_codecopy, 3, 3, -3};
+    table[OP_GASPRICE] = {op_gasprice, 2, 0, 1};
+    table[OP_EXTCODESIZE] = {op_extcodesize, 20, 1, 0};
+    table[OP_EXTCODECOPY] = {op_extcodecopy, 20, 4, -4};
+    table[OP_BLOCKHASH] = {op_blockhash, 20, 1, 0};
+    table[OP_COINBASE] = {op_coinbase, 2, 0, 1};
+    table[OP_TIMESTAMP] = {op_timestamp, 2, 0, 1};
+    table[OP_NUMBER] = {op_number, 2, 0, 1};
+    table[OP_DIFFICULTY] = {op_difficulty, 2, 0, 1};
+    table[OP_GASLIMIT] = {op_gaslimit, 2, 0, 1};
+    table[OP_POP] = {op_pop, 2, 1, -1};
+    table[OP_MLOAD] = {op_mload, 3, 1, 0};
+    table[OP_MSTORE] = {op_mstore, 3, 2, -2};
+    table[OP_MSTORE8] = {op_mstore8, 3, 2, -2};
+    table[OP_SLOAD] = {op_sload, 50, 1, 0};
+    table[OP_SSTORE] = {op_sstore, 0, 2, -2};
+    table[OP_JUMP] = {op_jump, 8, 1, -1};
+    table[OP_JUMPI] = {op_jumpi, 10, 2, -2};
+    table[OP_PC] = {op_pc, 2, 0, 1};
+    table[OP_MSIZE] = {op_msize, 2, 0, 1};
+    table[OP_GAS] = {op_gas, 2, 0, 1};
+    table[OPX_BEGINBLOCK] = {opx_beginblock, 1, 0, 0};  // Replaces JUMPDEST.
+
     for (auto op = size_t{OP_PUSH1}; op <= OP_PUSH8; ++op)
-        table[op] = {op_push_small};
+        table[op] = {op_push_small, 3, 0, 1};
     for (auto op = size_t{OP_PUSH9}; op <= OP_PUSH32; ++op)
-        table[op] = {op_push_full};
+        table[op] = {op_push_full, 3, 0, 1};
 
-    table[OP_DUP1] = {op_dup<OP_DUP1>};
-    table[OP_DUP2] = {op_dup<OP_DUP2>};
-    table[OP_DUP3] = {op_dup<OP_DUP3>};
-    table[OP_DUP4] = {op_dup<OP_DUP4>};
-    table[OP_DUP5] = {op_dup<OP_DUP5>};
-    table[OP_DUP6] = {op_dup<OP_DUP6>};
-    table[OP_DUP7] = {op_dup<OP_DUP7>};
-    table[OP_DUP8] = {op_dup<OP_DUP8>};
-    table[OP_DUP9] = {op_dup<OP_DUP9>};
-    table[OP_DUP10] = {op_dup<OP_DUP10>};
-    table[OP_DUP11] = {op_dup<OP_DUP11>};
-    table[OP_DUP12] = {op_dup<OP_DUP12>};
-    table[OP_DUP13] = {op_dup<OP_DUP13>};
-    table[OP_DUP14] = {op_dup<OP_DUP14>};
-    table[OP_DUP15] = {op_dup<OP_DUP15>};
-    table[OP_DUP16] = {op_dup<OP_DUP16>};
+    table[OP_DUP1] = {op_dup<OP_DUP1>, 3, 1, 1};
+    table[OP_DUP2] = {op_dup<OP_DUP2>, 3, 2, 1};
+    table[OP_DUP3] = {op_dup<OP_DUP3>, 3, 3, 1};
+    table[OP_DUP4] = {op_dup<OP_DUP4>, 3, 4, 1};
+    table[OP_DUP5] = {op_dup<OP_DUP5>, 3, 5, 1};
+    table[OP_DUP6] = {op_dup<OP_DUP6>, 3, 6, 1};
+    table[OP_DUP7] = {op_dup<OP_DUP7>, 3, 7, 1};
+    table[OP_DUP8] = {op_dup<OP_DUP8>, 3, 8, 1};
+    table[OP_DUP9] = {op_dup<OP_DUP9>, 3, 9, 1};
+    table[OP_DUP10] = {op_dup<OP_DUP10>, 3, 10, 1};
+    table[OP_DUP11] = {op_dup<OP_DUP11>, 3, 11, 1};
+    table[OP_DUP12] = {op_dup<OP_DUP12>, 3, 12, 1};
+    table[OP_DUP13] = {op_dup<OP_DUP13>, 3, 13, 1};
+    table[OP_DUP14] = {op_dup<OP_DUP14>, 3, 14, 1};
+    table[OP_DUP15] = {op_dup<OP_DUP15>, 3, 15, 1};
+    table[OP_DUP16] = {op_dup<OP_DUP16>, 3, 16, 1};
 
-    table[OP_SWAP1] = {op_swap<OP_SWAP1>};
-    table[OP_SWAP2] = {op_swap<OP_SWAP2>};
-    table[OP_SWAP3] = {op_swap<OP_SWAP3>};
-    table[OP_SWAP4] = {op_swap<OP_SWAP4>};
-    table[OP_SWAP5] = {op_swap<OP_SWAP5>};
-    table[OP_SWAP6] = {op_swap<OP_SWAP6>};
-    table[OP_SWAP7] = {op_swap<OP_SWAP7>};
-    table[OP_SWAP8] = {op_swap<OP_SWAP8>};
-    table[OP_SWAP9] = {op_swap<OP_SWAP9>};
-    table[OP_SWAP10] = {op_swap<OP_SWAP10>};
-    table[OP_SWAP11] = {op_swap<OP_SWAP11>};
-    table[OP_SWAP12] = {op_swap<OP_SWAP12>};
-    table[OP_SWAP13] = {op_swap<OP_SWAP13>};
-    table[OP_SWAP14] = {op_swap<OP_SWAP14>};
-    table[OP_SWAP15] = {op_swap<OP_SWAP15>};
-    table[OP_SWAP16] = {op_swap<OP_SWAP16>};
+    table[OP_SWAP1] = {op_swap<OP_SWAP1>, 3, 2, 0};
+    table[OP_SWAP2] = {op_swap<OP_SWAP2>, 3, 3, 0};
+    table[OP_SWAP3] = {op_swap<OP_SWAP3>, 3, 4, 0};
+    table[OP_SWAP4] = {op_swap<OP_SWAP4>, 3, 5, 0};
+    table[OP_SWAP5] = {op_swap<OP_SWAP5>, 3, 6, 0};
+    table[OP_SWAP6] = {op_swap<OP_SWAP6>, 3, 7, 0};
+    table[OP_SWAP7] = {op_swap<OP_SWAP7>, 3, 8, 0};
+    table[OP_SWAP8] = {op_swap<OP_SWAP8>, 3, 9, 0};
+    table[OP_SWAP9] = {op_swap<OP_SWAP9>, 3, 10, 0};
+    table[OP_SWAP10] = {op_swap<OP_SWAP10>, 3, 11, 0};
+    table[OP_SWAP11] = {op_swap<OP_SWAP11>, 3, 12, 0};
+    table[OP_SWAP12] = {op_swap<OP_SWAP12>, 3, 13, 0};
+    table[OP_SWAP13] = {op_swap<OP_SWAP13>, 3, 14, 0};
+    table[OP_SWAP14] = {op_swap<OP_SWAP14>, 3, 15, 0};
+    table[OP_SWAP15] = {op_swap<OP_SWAP15>, 3, 16, 0};
+    table[OP_SWAP16] = {op_swap<OP_SWAP16>, 3, 17, 0};
 
-    table[OP_LOG0] = {op_log<OP_LOG0>};
-    table[OP_LOG1] = {op_log<OP_LOG1>};
-    table[OP_LOG2] = {op_log<OP_LOG2>};
-    table[OP_LOG3] = {op_log<OP_LOG3>};
-    table[OP_LOG4] = {op_log<OP_LOG4>};
+    table[OP_LOG0] = {op_log<OP_LOG0>, 1 * 375, 2, -2};
+    table[OP_LOG1] = {op_log<OP_LOG1>, 2 * 375, 3, -3};
+    table[OP_LOG2] = {op_log<OP_LOG2>, 3 * 375, 4, -4};
+    table[OP_LOG3] = {op_log<OP_LOG3>, 4 * 375, 5, -5};
+    table[OP_LOG4] = {op_log<OP_LOG4>, 5 * 375, 6, -6};
 
-    table[OP_CREATE] = {op_create};
-    table[OP_CALL] = {op_call<EVMC_CALL>};
-    table[OP_CALLCODE] = {op_call<EVMC_CALLCODE>};
-    table[OP_RETURN] = {op_return};
-    table[OP_INVALID] = {op_invalid};
-    table[OP_SELFDESTRUCT] = {op_selfdestruct};
+    table[OP_CREATE] = {op_create, 32000, 3, -2};
+    table[OP_CALL] = {op_call<EVMC_CALL>, 40, 7, -6};
+    table[OP_CALLCODE] = {op_call<EVMC_CALLCODE>, 40, 7, -6};
+    table[OP_RETURN] = {op_return, 0, 2, -2};
+    table[OP_INVALID] = {op_invalid, 0, 0, 0};
+    table[OP_SELFDESTRUCT] = {op_selfdestruct, 0, 1, -1};
     return table;
 }
 
 constexpr op_table create_op_table_homestead() noexcept
 {
     auto table = create_op_table_frontier();
-    table[OP_DELEGATECALL] = {op_delegatecall};
+    table[OP_DELEGATECALL] = {op_delegatecall, 40, 6, -5};
+    return table;
+}
+
+constexpr op_table create_op_table_tangerine_whistle() noexcept
+{
+    auto table = create_op_table_homestead();
+    table[OP_BALANCE].gas_cost = 400;
+    table[OP_EXTCODESIZE].gas_cost = 700;
+    table[OP_EXTCODECOPY].gas_cost = 700;
+    table[OP_SLOAD].gas_cost = 200;
+    table[OP_CALL].gas_cost = 700;
+    table[OP_CALLCODE].gas_cost = 700;
+    table[OP_DELEGATECALL].gas_cost = 700;
+    table[OP_SELFDESTRUCT].gas_cost = 5000;
     return table;
 }
 
 constexpr op_table create_op_table_byzantium() noexcept
 {
-    auto table = create_op_table_homestead();
-    table[OP_RETURNDATASIZE] = {op_returndatasize};
-    table[OP_RETURNDATACOPY] = {op_returndatacopy};
-    table[OP_STATICCALL] = {op_staticcall};
-    table[OP_REVERT] = {op_revert};
+    auto table = create_op_table_tangerine_whistle();
+    table[OP_RETURNDATASIZE] = {op_returndatasize, 2, 0, 1};
+    table[OP_RETURNDATACOPY] = {op_returndatacopy, 3, 3, -3};
+    table[OP_STATICCALL] = {op_staticcall, 700, 6, -5};
+    table[OP_REVERT] = {op_revert, 0, 2, -2};
     return table;
 }
 
 constexpr op_table create_op_table_constantinople() noexcept
 {
     auto table = create_op_table_byzantium();
-    table[OP_SHL] = {op_shl};
-    table[OP_SHR] = {op_shr};
-    table[OP_SAR] = {op_sar};
-    table[OP_EXTCODEHASH] = {op_extcodehash};
-    table[OP_CREATE2] = {op_create2};
+    table[OP_SHL] = {op_shl, 3, 2, -1};
+    table[OP_SHR] = {op_shr, 3, 2, -1};
+    table[OP_SAR] = {op_sar, 3, 2, -1};
+    table[OP_EXTCODEHASH] = {op_extcodehash, 400, 1, 0};
+    table[OP_CREATE2] = {op_create2, 32000, 4, -3};
     return table;
 }
 
@@ -1369,14 +1384,14 @@ constexpr op_table create_op_table_istanbul() noexcept
 }
 
 constexpr op_table op_tables[] = {
-    create_op_table_frontier(),        // Frontier
-    create_op_table_homestead(),       // Homestead
-    create_op_table_homestead(),       // Tangerine Whistle
-    create_op_table_homestead(),       // Spurious Dragon
-    create_op_table_byzantium(),       // Byzantium
-    create_op_table_constantinople(),  // Constantinople
-    create_op_table_constantinople(),  // Petersburg
-    create_op_table_istanbul(),        // Istanbul
+    create_op_table_frontier(),           // Frontier
+    create_op_table_homestead(),          // Homestead
+    create_op_table_tangerine_whistle(),  // Tangerine Whistle
+    create_op_table_tangerine_whistle(),  // Spurious Dragon
+    create_op_table_byzantium(),          // Byzantium
+    create_op_table_constantinople(),     // Constantinople
+    create_op_table_constantinople(),     // Petersburg
+    create_op_table_istanbul(),           // Istanbul
 };
 static_assert(sizeof(op_tables) / sizeof(op_tables[0]) > EVMC_MAX_REVISION,
     "op table entry missing for an EVMC revision");

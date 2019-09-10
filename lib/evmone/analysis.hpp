@@ -173,6 +173,9 @@ enum intrinsic_opcodes
 struct op_table_entry
 {
     exec_fn fn;
+    int16_t gas_cost;
+    int8_t stack_req;
+    int8_t stack_change;
 };
 
 using op_table = std::array<op_table_entry, 256>;
