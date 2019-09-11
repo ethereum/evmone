@@ -185,7 +185,6 @@ static_assert(sizeof(block_info) == 8);
 struct code_analysis
 {
     std::vector<instr_info> instrs;
-    std::vector<block_info> blocks;
 
     /// Storage for large push values.
     std::vector<intx::uint256> push_values;

@@ -8,6 +8,21 @@
 
 namespace evmone
 {
+struct block_analysis
+{
+    int gas_cost = 0;
+
+    int stack_req = 0;
+    int stack_max_growth = 0;
+    int stack_change = 0;
+
+    /// The index of the beginblock instruction that starts the block.
+    /// This is the place where the analysis data is going to be dumped.
+    size_t begin_block_index = 0;
+
+    explicit block_analysis(size_t index) noexcept : begin_block_index{index} {}
+};
+
 inline constexpr uint64_t load64be(const unsigned char* data) noexcept
 {
     return uint64_t{data[7]} | (uint64_t{data[6]} << 8) | (uint64_t{data[5]} << 16) |
@@ -31,13 +46,9 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
 
     const auto* instr_table = evmc_get_instruction_metrics_table(rev);
 
-    // Create new block.
-    auto block = &analysis.blocks.emplace_back();
-    int block_stack_change = 0;
-    {
-        auto& beginblock_instr = analysis.instrs.emplace_back(opx_beginblock_fn);
-        beginblock_instr.arg.number = static_cast<int>(analysis.blocks.size() - 1);
-    }
+    // Create first block.
+    analysis.instrs.emplace_back(opx_beginblock_fn);
+    auto block = block_analysis{0};
 
     const auto code_end = code + code_size;
     auto code_pos = code;
@@ -50,19 +61,12 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
         const auto instr_stack_req = metrics.num_stack_arguments;
         const auto instr_stack_change = metrics.num_stack_returned_items - instr_stack_req;
 
-        // TODO: Define a block_analysis struct with regular ints for analysis.
-        //       Compress it when block is closed.
-        auto stack_req = instr_stack_req - block_stack_change;
-        if (stack_req > std::numeric_limits<decltype(block->stack_req)>::max())
-            stack_req = std::numeric_limits<decltype(block->stack_req)>::max();
-
-        block->stack_req = std::max(block->stack_req, static_cast<int16_t>(stack_req));
-        block_stack_change += instr_stack_change;
-        block->stack_max_growth =
-            static_cast<int16_t>(std::max(int{block->stack_max_growth}, block_stack_change));
+        block.stack_req = std::max(block.stack_req, instr_stack_req - block.stack_change);
+        block.stack_change += instr_stack_change;
+        block.stack_max_growth = std::max(block.stack_max_growth, block.stack_change);
 
         if (metrics.gas_cost > 0)  // can be -1 for undefined instruction
-            block->gas_cost += metrics.gas_cost;
+            block.gas_cost += metrics.gas_cost;
 
         if (opcode == OP_JUMPDEST)
         {
@@ -137,7 +141,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
         case OP_STATICCALL:
         case OP_CREATE:
         case OP_CREATE2:
-            instr.arg.number = block->gas_cost;
+            instr.arg.number = block.gas_cost;
             break;
 
         case OP_PC:
@@ -145,16 +149,31 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
             break;
         }
 
+        // If this is a terminating instruction or the next instruction is a JUMPDEST.
         if (is_terminator || (code_pos != code_end && *code_pos == OP_JUMPDEST))
         {
-            // Create new basic block if
-            // this is a terminating instruction or the next instruction is a JUMPDEST.
-            block = &analysis.blocks.emplace_back();
-            block_stack_change = 0;
-            auto& beginblock_instr = analysis.instrs.emplace_back(opx_beginblock_fn);
-            beginblock_instr.arg.number = static_cast<int>(analysis.blocks.size() - 1);
+            // Save current block.
+            const auto stack_req = block.stack_req <= std::numeric_limits<int16_t>::max() ?
+                                       static_cast<int16_t>(block.stack_req) :
+                                       std::numeric_limits<int16_t>::max();
+            const auto stack_max_growth = static_cast<int16_t>(block.stack_max_growth);
+            analysis.instrs[block.begin_block_index].arg.block = {
+                block.gas_cost, stack_req, stack_max_growth};
+
+
+            // Create new block.
+            analysis.instrs.emplace_back(opx_beginblock_fn);
+            block = block_analysis{analysis.instrs.size() - 1};
         }
     }
+
+    // Save current block.
+    const auto stack_req = block.stack_req <= std::numeric_limits<int16_t>::max() ?
+                               static_cast<int16_t>(block.stack_req) :
+                               std::numeric_limits<int16_t>::max();
+    const auto stack_max_growth = static_cast<int16_t>(block.stack_max_growth);
+    analysis.instrs[block.begin_block_index].arg.block = {
+        block.gas_cost, stack_req, stack_max_growth};
 
     // Make sure the last block is terminated.
     // TODO: This is not needed if the last instruction is a terminating one.
