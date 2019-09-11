@@ -815,7 +815,7 @@ void op_log(execution_state& state, instr_argument arg) noexcept
     state.stack.pop_back();
     state.stack.pop_back();
 
-    std::array<evmc_bytes32, 4> topics;
+    std::array<evmc::bytes32, 4> topics;
     for (auto i = 0; i < arg.p.number; ++i)
     {
         intx::be::store(topics[i].bytes, state.item(0));
