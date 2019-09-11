@@ -30,13 +30,14 @@ TEST_F(evm, push_implicit_data)
     // This test executes 1 byte code with a push instruction without the push data following.
     // Unfortunately, there is no result we could observe other than program crash.
 
-    // Allocate 1 byte code on heap to allow detecting memory issues by tools like valgrind.
-    auto code = std::make_unique<uint8_t>();
+    // Create long bytecode prefix to force the bytecode to be stored on the heap which
+    // enables invalid heap access detection via memory access validation tooling (e.g. Valgrind).
+    auto code = bytecode{} + OP_PC + OP_GAS + 100 * OP_SWAP1 + OP_STOP;
 
     for (auto op = uint8_t{OP_PUSH1}; op <= OP_PUSH32; ++op)
     {
-        *code = op;
-        execute({code.get(), 1});
+        code.back() = op;
+        execute(code);
     }
 }
 
