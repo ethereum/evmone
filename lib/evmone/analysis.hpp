@@ -170,13 +170,26 @@ enum intrinsic_opcodes
     OPX_BEGINBLOCK = OP_JUMPDEST
 };
 
+/// Defines classification of EVM instructions.
+enum class op_kind
+{
+    regular,             ///< Totally uninteresting instruction.
+    terminator,          ///< Terminator instruction.
+    small_push,          ///< Push instruction up to 8 bytes of value.
+    large_push,          ///< Push instruction with more than 8 bytes of value.
+    gas_counter_access,  ///< Instruction that requires access to the gas counter.
+    pc                   ///< The PC instruction.
+};
+
 struct op_table_entry
 {
     exec_fn fn;
     int16_t gas_cost;
     int8_t stack_req;
     int8_t stack_change;
+    op_kind kind;
 };
+static_assert(sizeof(op_table_entry) <= 2 * sizeof(void*));
 
 using op_table = std::array<op_table_entry, 256>;
 
