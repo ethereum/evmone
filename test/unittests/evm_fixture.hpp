@@ -6,8 +6,8 @@
 #include "vm_loader.hpp"
 #include <gtest/gtest.h>
 #include <intx/intx.hpp>
+#include <test/utils/bytecode.hpp>
 #include <test/utils/host_mock.hpp>
-#include <test/utils/utils.hpp>
 
 #define EXPECT_STATUS(STATUS_CODE)                                           \
     EXPECT_EQ(result.status_code, STATUS_CODE);                              \
@@ -65,7 +65,7 @@ protected:
     /// @param input_hex  The hex encoded EVM "calldata" input.
     /// The execution result will be available in the `result` field.
     /// The `gas_used` field  will be updated accordingly.
-    void execute(int64_t gas, bytes_view code, std::string_view input_hex = {}) noexcept
+    void execute(int64_t gas, const bytecode& code, std::string_view input_hex = {}) noexcept
     {
         const auto input = from_hex(input_hex);
         msg.input_data = input.data();
@@ -78,35 +78,12 @@ protected:
 
     /// Executes the supplied code.
     ///
-    /// @param gas        The gas limit for execution.
-    /// @param code_hex   The hex encoded EVM bytecode.
-    /// @param input_hex  The hex encoded EVM "calldata" input.
-    /// The execution result will be available in the `result` field.
-    /// The `gas_used` field  will be updated accordingly.
-    void execute(int64_t gas, std::string_view code_hex, std::string_view input_hex = {}) noexcept
-    {
-        execute(gas, from_hex(code_hex), input_hex);
-    }
-
-    /// Executes the supplied code.
-    ///
     /// @param code       The EVM bytecode.
     /// @param input_hex  The hex encoded EVM "calldata" input.
     /// The execution result will be available in the `result` field.
     /// The `gas_used` field  will be updated accordingly.
-    void execute(bytes_view code, std::string_view input_hex = {}) noexcept
+    void execute(const bytecode& code, std::string_view input_hex = {}) noexcept
     {
         execute(std::numeric_limits<int64_t>::max(), code, input_hex);
-    }
-
-    /// Executes the supplied code.
-    ///
-    /// @param code_hex   The hex encoded EVM bytecode.
-    /// @param input_hex  The hex encoded EVM "calldata" input.
-    /// The execution result will be available in the `result` field.
-    /// The `gas_used` field  will be updated accordingly.
-    void execute(std::string_view code_hex, std::string_view input_hex = {}) noexcept
-    {
-        execute(std::numeric_limits<int64_t>::max(), code_hex, input_hex);
     }
 };

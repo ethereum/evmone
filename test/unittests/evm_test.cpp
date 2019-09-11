@@ -6,7 +6,6 @@
 #include <evmc/instructions.h>
 #include <evmone/limits.hpp>
 #include <intx/intx.hpp>
-#include <test/utils/bytecode.hpp>
 #include <algorithm>
 #include <numeric>
 

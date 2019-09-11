@@ -9,7 +9,6 @@
 
 #include "evm_fixture.hpp"
 #include <evmone/limits.hpp>
-#include <test/utils/bytecode.hpp>
 
 using evm_other = evm;
 
