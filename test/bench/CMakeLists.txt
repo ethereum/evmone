@@ -11,7 +11,8 @@ find_package(benchmark CONFIG REQUIRED)
 
 add_executable(evmone-bench bench.cpp)
 
-target_link_libraries(evmone-bench PRIVATE evmone testutils benchmark::benchmark)
+target_include_directories(evmone-bench PRIVATE ${evmone_private_include_dir})
+target_link_libraries(evmone-bench PRIVATE evmone testutils evmc::loader benchmark::benchmark)
 
 check_include_file_cxx(filesystem HAVE_FILESYSTEM)
 if(NOT HAVE_FILESYSTEM)
@@ -28,7 +29,7 @@ if(NOT HAVE_FILESYSTEM)
         INSTALL_COMMAND ""
     )
 
-    target_include_directories(evmone-bench PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+    target_include_directories(evmone-bench SYSTEM PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
     add_dependencies(evmone-bench ghcfilesystem)
 elseif(UNIX AND NOT APPLE)
     target_link_libraries(evmone-bench PRIVATE stdc++fs)
