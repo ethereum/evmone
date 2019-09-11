@@ -10,6 +10,7 @@ endif()
 
 option(BUILD_SHARED_LIBS "Build evmone as a shared library" ON)
 option(EVMONE_TESTING "Build tests and test tools" OFF)
+option(EVMONE_FUZZING "Instrument libraries and build fuzzing tools" OFF)
 
 include(cmake/cable/bootstrap.cmake)
 include(CableBuildType)
@@ -42,6 +43,25 @@ if(CABLE_COMPILER_GNULIKE)
 elseif(MSVC)
     add_compile_options(/wd4324)  # Disabled warning about alignment caused by alignas.
     add_compile_options(/wd5030)  # Allow using unknown attributes.
+endif()
+
+if(EVMONE_FUZZING)
+    if(NOT ${CMAKE_CXX_COMPILER_ID} MATCHES Clang OR ${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS 8)
+        message(FATAL_ERROR "Clang 8+ compiler is required for fuzzing")
+    endif()
+
+    option(EVMONE_FUZZING_COVERAGE "Fuzzing coverage" OFF)
+
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build evmone as a shared library" FORCE)
+    set(EVMONE_TESTING ON CACHE BOOL "Build tests and test tools" FORCE)
+
+    if(EVMONE_FUZZING_COVERAGE)
+        add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
+    else()
+        set(fuzzing_flags -fsanitize=fuzzer-no-link,undefined,address)
+        add_compile_options(${fuzzing_flags})
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${fuzzing_flags}")
+    endif()
 endif()
 
 set(include_dir ${CMAKE_CURRENT_SOURCE_DIR}/include)

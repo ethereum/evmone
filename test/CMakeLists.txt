@@ -13,6 +13,11 @@ add_subdirectory(unittests)
 
 set(targets evm-test evmone-bench evmone-bench-internal evmone-unittests testutils)
 
+if(EVMONE_FUZZING)
+    add_subdirectory(fuzzer)
+    list(APPEND targets evmone-fuzzer)
+endif()
+
 set_target_properties(
     ${targets} PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}
