@@ -67,11 +67,13 @@ protected:
     /// The `gas_used` field  will be updated accordingly.
     void execute(int64_t gas, bytes_view code, std::string_view input_hex = {}) noexcept
     {
-        auto input = from_hex(input_hex);
-        msg.gas = gas;
+        const auto input = from_hex(input_hex);
         msg.input_data = input.data();
         msg.input_size = input.size();
-        execute(msg, code);
+        msg.gas = gas;
+
+        result = vm.execute(host, rev, msg, code.data(), code.size());
+        gas_used = msg.gas - result.gas_left;
     }
 
     /// Executes the supplied code.
@@ -106,17 +108,5 @@ protected:
     void execute(std::string_view code_hex, std::string_view input_hex = {}) noexcept
     {
         execute(std::numeric_limits<int64_t>::max(), code_hex, input_hex);
-    }
-
-    /// Executes given message and code.
-    ///
-    /// @param m     The EVM message, contains the input.
-    /// @param code  The EVM bytecode.
-    /// The execution result will be available in the `result` field.
-    /// The `gas_used` field  will be updated accordingly.
-    void execute(const evmc_message& m, bytes_view code) noexcept
-    {
-        result = vm.execute(host, rev, m, code.data(), code.size());
-        gas_used = m.gas - result.gas_left;
     }
 };
