@@ -32,8 +32,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
 
     code_analysis analysis;
 
-    const auto max_instrs_size = code_size + 1;
-    analysis.instrs.reserve(max_instrs_size);
+    analysis.instrs.reserve(2 * (code_size + 1));
 
     // This is 2x more than needed but using (code_size / 2 + 1) increases page-faults 1000x.
     const auto max_args_storage_size = code_size + 1;
