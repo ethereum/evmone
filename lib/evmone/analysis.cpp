@@ -40,8 +40,8 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
     analysis.push_values.reserve(max_args_storage_size);
 
     // Create first block.
-    analysis.instrs.emplace_back(opx_beginblock_fn);
-    analysis.instrs.emplace_back(nullptr);  // Placeholder for the block info data.
+    analysis.instrs.emplace_back().fn = opx_beginblock_fn;
+    analysis.instrs.emplace_back();  // Placeholder for the block info data.
     auto block = block_analysis{analysis.instrs.size() - 1};
 
     const auto code_end = code + code_size;
@@ -67,7 +67,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
                 static_cast<int16_t>(analysis.instrs.size() - 2));
         }
         else
-            analysis.instrs.emplace_back(opcode_info.fn);
+            analysis.instrs.emplace_back().fn = opcode_info.fn;
 
         bool is_terminator = false;  // A flag whenever this is a block terminating instruction.
         switch (opcode)
@@ -93,7 +93,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
                 value |= uint64_t{*code_pos++} << insert_bit_pos;
                 insert_bit_pos -= 8;
             }
-            analysis.instrs.emplace_back(nullptr).small_push_value = value;
+            analysis.instrs.emplace_back().small_push_value = value;
             break;
         }
 
@@ -119,7 +119,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
             while (code_pos < push_end && code_pos < code_end)
                 *insert_pos-- = *code_pos++;
 
-            analysis.instrs.emplace_back(nullptr).push_value = &push_value;
+            analysis.instrs.emplace_back().push_value = &push_value;
             break;
         }
 
@@ -130,11 +130,11 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
         case OP_STATICCALL:
         case OP_CREATE:
         case OP_CREATE2:
-            analysis.instrs.emplace_back(nullptr).number = static_cast<int>(block.gas_cost);
+            analysis.instrs.emplace_back().number = static_cast<int>(block.gas_cost);
             break;
 
         case OP_PC:
-            analysis.instrs.emplace_back(nullptr).number = static_cast<int>(code_pos - code - 1);
+            analysis.instrs.emplace_back().number = static_cast<int>(code_pos - code - 1);
             break;
         }
 
@@ -151,8 +151,8 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
 
 
             // Create new block.
-            analysis.instrs.emplace_back(opx_beginblock_fn);
-            analysis.instrs.emplace_back(nullptr);
+            analysis.instrs.emplace_back().fn = opx_beginblock_fn;
+            analysis.instrs.emplace_back();
             block = block_analysis{analysis.instrs.size() - 1};
         }
     }
@@ -165,7 +165,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
 
     // Make sure the last block is terminated.
     // TODO: This is not needed if the last instruction is a terminating one.
-    analysis.instrs.emplace_back(op_tbl[OP_STOP].fn);
+    analysis.instrs.emplace_back().fn = op_tbl[OP_STOP].fn;
 
     // FIXME: assert(analysis.instrs.size() <= max_instrs_size);
 

@@ -89,7 +89,7 @@ struct block_info
 {
     /// The total base gas cost of all instructions in the block.
     /// This cannot overflow, see the static_assert() below.
-    int32_t gas_cost = 0;
+    int32_t gas_cost;
 
     static_assert(
         max_code_size * max_instruction_base_cost < std::numeric_limits<decltype(gas_cost)>::max(),
@@ -97,11 +97,11 @@ struct block_info
 
     /// The stack height required to execute the block.
     /// This MAY overflow.
-    int16_t stack_req = 0;
+    int16_t stack_req;
 
     /// The maximum stack height growth relative to the stack height at block start.
     /// This cannot overflow, see the static_assert() below.
-    int16_t stack_max_growth = 0;
+    int16_t stack_max_growth;
 
     static_assert(max_code_size * max_instruction_stack_increase <
                       std::numeric_limits<decltype(stack_max_growth)>::max(),
@@ -172,13 +172,11 @@ using op_table = std::array<op_table_entry, 256>;
 
 union instr_info
 {
-    exec_fn fn = nullptr;
+    exec_fn fn;
     int number;
     const intx::uint256* push_value;
     uint64_t small_push_value;
     block_info block;
-
-    explicit constexpr instr_info(exec_fn f) noexcept : fn{f} {};
 };
 static_assert(sizeof(instr_info) == sizeof(void*), "Incorrect size of instr_info");
 
