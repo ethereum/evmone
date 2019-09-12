@@ -32,8 +32,8 @@ inline constexpr uint64_t load64be(const unsigned char* data) noexcept
 
 code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
 {
-    const auto& fns = get_op_table(rev);
-    const auto opx_beginblock_fn = fns[OPX_BEGINBLOCK];
+    const auto& op_tbl = get_op_table(rev);
+    const auto opx_beginblock_fn = op_tbl[OPX_BEGINBLOCK].fn;
 
     code_analysis analysis;
 
@@ -43,8 +43,6 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
     // This is 2x more than needed but using (code_size / 2 + 1) increases page-faults 1000x.
     const auto max_args_storage_size = code_size + 1;
     analysis.push_values.reserve(max_args_storage_size);
-
-    const auto* instr_table = evmc_get_instruction_metrics_table(rev);
 
     // Create first block.
     analysis.instrs.emplace_back(opx_beginblock_fn);
@@ -56,17 +54,13 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
     while (code_pos != code_end)
     {
         const auto opcode = *code_pos++;
+        const auto& opcode_info = op_tbl[opcode];
 
-        const auto metrics = instr_table[opcode];
-        const auto instr_stack_req = metrics.num_stack_arguments;
-        const auto instr_stack_change = metrics.num_stack_returned_items - instr_stack_req;
-
-        block.stack_req = std::max(block.stack_req, instr_stack_req - block.stack_change);
-        block.stack_change += instr_stack_change;
+        block.stack_req = std::max(block.stack_req, opcode_info.stack_req - block.stack_change);
+        block.stack_change += opcode_info.stack_change;
         block.stack_max_growth = std::max(block.stack_max_growth, block.stack_change);
 
-        if (metrics.gas_cost > 0)  // can be -1 for undefined instruction
-            block.gas_cost += metrics.gas_cost;
+        block.gas_cost += opcode_info.gas_cost;
 
         if (opcode == OP_JUMPDEST)
         {
@@ -77,7 +71,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
                 static_cast<int16_t>(analysis.instrs.size() - 1));
         }
         else
-            analysis.instrs.emplace_back(fns[opcode]);
+            analysis.instrs.emplace_back(opcode_info.fn);
 
         auto& instr = analysis.instrs.back();
 
@@ -177,7 +171,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
 
     // Make sure the last block is terminated.
     // TODO: This is not needed if the last instruction is a terminating one.
-    analysis.instrs.emplace_back(fns[OP_STOP]);
+    analysis.instrs.emplace_back(op_tbl[OP_STOP].fn);
 
     // FIXME: assert(analysis.instrs.size() <= max_instrs_size);
 

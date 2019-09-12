@@ -170,7 +170,15 @@ enum intrinsic_opcodes
     OPX_BEGINBLOCK = OP_JUMPDEST
 };
 
-using exec_fn_table = std::array<exec_fn, 256>;
+struct op_table_entry
+{
+    exec_fn fn;
+    int16_t gas_cost;
+    int8_t stack_req;
+    int8_t stack_change;
+};
+
+using op_table = std::array<op_table_entry, 256>;
 
 struct instr_info
 {
@@ -213,6 +221,6 @@ inline int find_jumpdest(const code_analysis& analysis, int offset) noexcept
 EVMC_EXPORT code_analysis analyze(
     evmc_revision rev, const uint8_t* code, size_t code_size) noexcept;
 
-EVMC_EXPORT const exec_fn_table& get_op_table(evmc_revision rev) noexcept;
+EVMC_EXPORT const op_table& get_op_table(evmc_revision rev) noexcept;
 
 }  // namespace evmone
