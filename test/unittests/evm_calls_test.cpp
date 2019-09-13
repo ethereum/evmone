@@ -5,7 +5,6 @@
 /// This file contains EVM unit tests that perform any kind of calls.
 
 #include "evm_fixture.hpp"
-#include <test/utils/bytecode.hpp>
 
 using evm_calls = evm;
 

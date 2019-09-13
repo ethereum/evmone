@@ -6,7 +6,6 @@
 /// or other kind of external execution context.
 
 #include "evm_fixture.hpp"
-#include <test/utils/bytecode.hpp>
 
 using namespace evmc::literals;
 using evm_state = evm;
