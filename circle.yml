@@ -175,6 +175,37 @@ jobs:
       - build
       - test
 
+  clang-latest-coverage:
+    executor: linux
+    environment:
+      CC: clang-8
+      CXX: clang++-8
+      BUILD_TYPE: Coverage
+      TESTS_FILTER: unittests
+    steps:
+      - build
+      - run:
+          name: "Run unit tests"
+          working_directory: ~/build
+          command: |
+            bin/evmone-unittests
+      - run:
+          name: "Coverage report"
+          working_directory: ~/build
+          command: |
+            mkdir ~/coverage
+            llvm-profdata-8 merge *.profraw -o evmone.profdata
+            llvm-cov-8 show lib/libevmone.so bin/evmone-unittests -Xdemangler llvm-cxxfilt-8 -instr-profile=evmone.profdata -ignore-filename-regex=include/evmc -region-coverage-lt=100 -format=html > ~/coverage/missing.html
+            llvm-cov-8 show lib/libevmone.so bin/evmone-unittests -Xdemangler llvm-cxxfilt-8 -instr-profile=evmone.profdata -ignore-filename-regex=include/evmc -format=html > ~/coverage/full.html
+
+            llvm-cov-8 report lib/libevmone.so bin/evmone-unittests -Xdemangler llvm-cxxfilt-8 -instr-profile=evmone.profdata -ignore-filename-regex=include/evmc > ~/coverage/report.txt
+            llvm-cov-8 report lib/libevmone.so bin/evmone-unittests -Xdemangler llvm-cxxfilt-8 -instr-profile=evmone.profdata -ignore-filename-regex=include/evmc -use-color
+      - store_artifacts:
+          path: ~/coverage
+          destination: coverage
+
+
+
   macos-asan:
     executor: macos
     environment:
@@ -215,4 +246,5 @@ workflows:
       - gcc-min
       - gcc-latest-coverage
       - clang-latest-ubsan
+      - clang-latest-coverage
       - macos-asan
