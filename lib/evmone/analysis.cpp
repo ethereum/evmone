@@ -23,13 +23,6 @@ struct block_analysis
     explicit block_analysis(size_t index) noexcept : begin_block_index{index} {}
 };
 
-inline constexpr uint64_t load64be(const unsigned char* data) noexcept
-{
-    return uint64_t{data[7]} | (uint64_t{data[6]} << 8) | (uint64_t{data[5]} << 16) |
-           (uint64_t{data[4]} << 24) | (uint64_t{data[3]} << 32) | (uint64_t{data[2]} << 40) |
-           (uint64_t{data[1]} << 48) | (uint64_t{data[0]} << 56);
-}
-
 code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
 {
     static constexpr auto stack_req_max = std::numeric_limits<int16_t>::max();
@@ -94,13 +87,14 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
             const auto push_size = static_cast<size_t>(opcode - OP_PUSH1) + 1;
             const auto push_end = code_pos + push_size;
 
-            uint8_t value_bytes[8]{};
-            auto insert_pos = &value_bytes[sizeof(value_bytes) - push_size];
-
-            // TODO: Consier the same endianness-specific loop as in ANY_LARGE_PUSH case.
+            uint64_t value = 0;
+            auto insert_bit_pos = (push_size - 1) * 8;
             while (code_pos < push_end && code_pos < code_end)
-                *insert_pos++ = *code_pos++;
-            instr.arg.small_push_value = load64be(value_bytes);
+            {
+                value |= uint64_t{*code_pos++} << insert_bit_pos;
+                insert_bit_pos -= 8;
+            }
+            instr.arg.small_push_value = value;
             break;
         }
 
