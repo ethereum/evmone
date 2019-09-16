@@ -21,6 +21,14 @@ struct block_analysis
     size_t begin_block_index = 0;
 
     explicit block_analysis(size_t index) noexcept : begin_block_index{index} {}
+
+    void update(const op_table_entry* info) noexcept
+    {
+        stack_req = std::max(stack_req, info->stack_req - stack_change);
+        stack_change += info->stack_change;
+        stack_max_growth = std::max(stack_max_growth, stack_change);
+        gas_cost += info->gas_cost;
+    }
 };
 
 code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
@@ -51,11 +59,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
         const auto opcode = *code_pos++;
         const auto& opcode_info = op_tbl[opcode];
 
-        block.stack_req = std::max(block.stack_req, opcode_info.stack_req - block.stack_change);
-        block.stack_change += opcode_info.stack_change;
-        block.stack_max_growth = std::max(block.stack_max_growth, block.stack_change);
-
-        block.gas_cost += opcode_info.gas_cost;
+        block.update(&opcode_info);
 
         if (opcode == OP_JUMPDEST)
         {
