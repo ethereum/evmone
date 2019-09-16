@@ -29,6 +29,9 @@ TEST_F(evm_other, evmone_block_stack_req_overflow)
     const auto code = push(1) + 10 * OP_DUP1 + 5463 * OP_CALL;
     execute(code);
     EXPECT_STATUS(EVMC_STACK_UNDERFLOW);
+
+    execute(code + ret_top());  // A variant with terminator.
+    EXPECT_STATUS(EVMC_STACK_UNDERFLOW);
 }
 
 TEST_F(evm_other, loop_full_of_jumpdests)

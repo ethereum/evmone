@@ -32,6 +32,8 @@ inline constexpr uint64_t load64be(const unsigned char* data) noexcept
 
 code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
 {
+    static constexpr auto stack_req_max = std::numeric_limits<int16_t>::max();
+
     const auto& op_tbl = get_op_table(rev);
     const auto opx_beginblock_fn = op_tbl[OPX_BEGINBLOCK].fn;
 
@@ -147,9 +149,9 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
         if (is_terminator || (code_pos != code_end && *code_pos == OP_JUMPDEST))
         {
             // Save current block.
-            const auto stack_req = block.stack_req <= std::numeric_limits<int16_t>::max() ?
+            const auto stack_req = block.stack_req <= stack_req_max ?
                                        static_cast<int16_t>(block.stack_req) :
-                                       std::numeric_limits<int16_t>::max();
+                                       stack_req_max;
             const auto stack_max_growth = static_cast<int16_t>(block.stack_max_growth);
             analysis.instrs[block.begin_block_index].arg.block = {
                 block.gas_cost, stack_req, stack_max_growth};
@@ -162,9 +164,8 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
     }
 
     // Save current block.
-    const auto stack_req = block.stack_req <= std::numeric_limits<int16_t>::max() ?
-                               static_cast<int16_t>(block.stack_req) :
-                               std::numeric_limits<int16_t>::max();
+    const auto stack_req =
+        block.stack_req <= stack_req_max ? static_cast<int16_t>(block.stack_req) : stack_req_max;
     const auto stack_max_growth = static_cast<int16_t>(block.stack_max_growth);
     analysis.instrs[block.begin_block_index].arg.block = {
         block.gas_cost, stack_req, stack_max_growth};

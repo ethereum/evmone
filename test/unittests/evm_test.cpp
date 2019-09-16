@@ -813,6 +813,36 @@ TEST_F(evm, max_code_size_push1)
     EXPECT_STATUS(EVMC_STACK_OVERFLOW);
 }
 
+TEST_F(evm, reverse_16_stack_items)
+{
+    // This test puts values 1, 2, ... , 16 on the stack and then reverse them with SWAP opcodes.
+    // This uses all variants of SWAP instruction.
+
+    constexpr auto n = 16;
+    auto code = bytecode{};
+    for (uint64_t i = 1; i <= n; ++i)
+        code += push(i);
+    code += push(0);                                        // Temporary stack item.
+    code += bytecode{} + OP_SWAP16 + OP_SWAP1 + OP_SWAP16;  // Swap 1 and 16.
+    code += bytecode{} + OP_SWAP15 + OP_SWAP2 + OP_SWAP15;  // Swap 2 and 15.
+    code += bytecode{} + OP_SWAP14 + OP_SWAP3 + OP_SWAP14;
+    code += bytecode{} + OP_SWAP13 + OP_SWAP4 + OP_SWAP13;
+    code += bytecode{} + OP_SWAP12 + OP_SWAP5 + OP_SWAP12;
+    code += bytecode{} + OP_SWAP11 + OP_SWAP6 + OP_SWAP11;
+    code += bytecode{} + OP_SWAP10 + OP_SWAP7 + OP_SWAP10;
+    code += bytecode{} + OP_SWAP9 + OP_SWAP8 + OP_SWAP9;
+    code += bytecode{} + OP_POP;
+    for (uint64_t i = 0; i < n; ++i)
+        code += mstore8(i);
+    code += ret(0, n);
+
+    execute(code);
+
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, n);
+    EXPECT_EQ(to_hex({result.output_data, result.output_size}), "0102030405060708090a0b0c0d0e0f10");
+}
+
 struct memory_access_opcode
 {
     evmc_opcode opcode;
