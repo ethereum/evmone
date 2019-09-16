@@ -91,7 +91,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
 
         case ANY_SMALL_PUSH:
         {
-            const auto push_size = size_t(opcode - OP_PUSH1 + 1);
+            const auto push_size = static_cast<size_t>(opcode - OP_PUSH1) + 1;
             const auto push_end = code_pos + push_size;
 
             uint8_t value_bytes[8]{};
@@ -106,7 +106,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
 
         case ANY_LARGE_PUSH:
         {
-            const auto push_size = size_t(opcode - OP_PUSH1 + 1);
+            const auto push_size = static_cast<size_t>(opcode - OP_PUSH1) + 1;
             const auto push_end = code_pos + push_size;
 
             auto& push_value = analysis.push_values.emplace_back();
