@@ -24,10 +24,21 @@ struct block_analysis
 
     void update(const op_table_entry* info) noexcept
     {
-        stack_req = std::max(stack_req, info->stack_req - stack_change);
-        stack_change += info->stack_change;
-        stack_max_growth = std::max(stack_max_growth, stack_change);
-        gas_cost += info->gas_cost;
+        const auto cost = info->gas_cost;
+        const auto req = info->stack_req;
+        const auto change = info->stack_change;
+
+        const auto t = req - stack_change;
+
+        if (t > stack_req)
+            stack_req = t;
+
+        stack_change += change;
+
+        if (stack_change > stack_max_growth)
+            stack_max_growth = stack_change;
+
+        gas_cost += cost;
     }
 };
 
