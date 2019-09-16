@@ -9,8 +9,8 @@ executors:
       xcode: 10.2.1
 
 commands:
-  build_and_test:
-    description: "Build & Test"
+  build:
+    description: "Build"
     steps:
       - checkout
       - run:
@@ -45,12 +45,17 @@ commands:
           name: "Build"
           command: cmake --build ~/build -- -j4
       - run:
-          name: "Test"
-          working_directory: ~/build
-          command: ctest -R ${TESTS_FILTER:-'.*'} -j4 --schedule-random --output-on-failure
-      - run:
           name: "Install"
           command: cmake --build ~/build --target install
+
+  test:
+    description: "Test"
+    steps:
+    - run:
+        name: "Test"
+        working_directory: ~/build
+        command: ctest -R ${TESTS_FILTER:-'.*'} -j4 --schedule-random --output-on-failure
+
   package:
     description: "Make package"
     steps:
@@ -91,7 +96,8 @@ jobs:
       CC: clang-8
       CXX: clang++-8
     steps:
-      - build_and_test
+      - build
+      - test
       - package
 
   release-macos:
@@ -102,7 +108,8 @@ jobs:
       - run:
           name: "Install System Dependencies"
           command: HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake
-      - build_and_test
+      - build
+      - test
       - package
 
   deploy:
@@ -130,7 +137,8 @@ jobs:
       CC: gcc-7
       CXX: g++-7
     steps:
-      - build_and_test
+      - build
+      - test
 
   gcc-latest-coverage:
     executor: linux
@@ -140,9 +148,13 @@ jobs:
       CXX: g++-8
       GCOV: gcov-8
       CMAKE_OPTIONS: -DCOVERAGE=ON
-      TESTS_FILTER: unittests
     steps:
-      - build_and_test
+      - build
+      - run:
+          name: "Run unit tests"
+          working_directory: ~/build
+          command: |
+            bin/evmone-unittests
       - run:
           name: "Upload coverage data"
           command: |
@@ -160,7 +172,8 @@ jobs:
       # TODO: There is unresolved __ubsan_vptr_type_cache in evmone.so
       TESTS_FILTER: unittests
     steps:
-      - build_and_test
+      - build
+      - test
 
   macos-asan:
     executor: macos
@@ -172,7 +185,8 @@ jobs:
       - run:
           name: "Install System Dependencies"
           command: HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake
-      - build_and_test
+      - build
+      - test
 
 workflows:
   version: 2
