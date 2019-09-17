@@ -1,7 +1,4 @@
 comment:
   layout: "diff"
 ignore:
-  - "test/bench/*"
-  - "test/fuzzer/*"
-  - "test/integration/*"
-  - "test/utils/dump.*"
+  - "test/*"
