@@ -121,6 +121,11 @@ inline bytecode eq(bytecode a, bytecode b)
     return b + a + OP_EQ;
 }
 
+inline bytecode byte(bytecode a, bytecode n)
+{
+    return a + n + OP_BYTE;
+}
+
 inline bytecode mstore(bytecode index)
 {
     return index + OP_MSTORE;
