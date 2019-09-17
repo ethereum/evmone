@@ -525,6 +525,14 @@ TEST_F(evm_state, extcodesize)
     EXPECT_OUTPUT_INT(1);
 }
 
+TEST_F(evm_state, extcodecopy_big_index)
+{
+    constexpr auto index = uint64_t{std::numeric_limits<uint32_t>::max()} + 1;
+    const auto code = dup1(1) + push(index) + dup1(0) + OP_EXTCODECOPY + ret(0, {});
+    execute(code);
+    EXPECT_EQ(output, from_hex("00"));
+}
+
 TEST_F(evm_state, extcodehash)
 {
     auto& hash = host.accounts[{}].codehash;
