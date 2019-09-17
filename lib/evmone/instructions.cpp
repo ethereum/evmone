@@ -3,10 +3,7 @@
 // Licensed under the Apache License, Version 2.0.
 
 #include "analysis.hpp"
-
 #include <ethash/keccak.hpp>
-
-#include <cassert>
 
 namespace evmone
 {
