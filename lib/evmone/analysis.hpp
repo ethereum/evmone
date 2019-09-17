@@ -107,6 +107,7 @@ struct block_info
                       std::numeric_limits<decltype(stack_max_growth)>::max(),
         "Potential block_info::stack_max_growth overflow");
 };
+static_assert(sizeof(block_info) == 8);
 
 struct execution_state
 {
@@ -150,7 +151,6 @@ union instr_argument
     uint64_t small_push_value;
     block_info block{};
 };
-
 static_assert(sizeof(instr_argument) == sizeof(void*), "Incorrect size of instr_argument");
 
 using exec_fn = const instr_info* (*)(const instr_info*, execution_state&);
@@ -186,8 +186,6 @@ struct instr_info
 
     explicit constexpr instr_info(exec_fn f) noexcept : fn{f}, arg{} {};
 };
-
-static_assert(sizeof(block_info) == 8);
 
 struct code_analysis
 {
