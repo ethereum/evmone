@@ -18,18 +18,20 @@ TEST(analysis, example1)
     const auto code = push(0x2a) + push(0x1e) + OP_MSTORE8 + OP_MSIZE + push(0) + OP_SSTORE;
     const auto analysis = analyze(rev, &code[0], code.size());
 
-    ASSERT_EQ(analysis.instrs.size(), 8);
+    ASSERT_EQ(analysis.instrs.size(), 12);
 
     EXPECT_EQ(analysis.instrs[0].fn, op_tbl[OPX_BEGINBLOCK].fn);
-    EXPECT_EQ(analysis.instrs[1].fn, op_tbl[OP_PUSH1].fn);
     EXPECT_EQ(analysis.instrs[2].fn, op_tbl[OP_PUSH1].fn);
-    EXPECT_EQ(analysis.instrs[3].fn, op_tbl[OP_MSTORE8].fn);
-    EXPECT_EQ(analysis.instrs[4].fn, op_tbl[OP_MSIZE].fn);
-    EXPECT_EQ(analysis.instrs[5].fn, op_tbl[OP_PUSH1].fn);
-    EXPECT_EQ(analysis.instrs[6].fn, op_tbl[OP_SSTORE].fn);
-    EXPECT_EQ(analysis.instrs[7].fn, op_tbl[OP_STOP].fn);
+    EXPECT_EQ(analysis.instrs[3].small_push_value, 0x2a);
+    EXPECT_EQ(analysis.instrs[4].fn, op_tbl[OP_PUSH1].fn);
+    EXPECT_EQ(analysis.instrs[5].small_push_value, 0x1e);
+    EXPECT_EQ(analysis.instrs[6].fn, op_tbl[OP_MSTORE8].fn);
+    EXPECT_EQ(analysis.instrs[7].fn, op_tbl[OP_MSIZE].fn);
+    EXPECT_EQ(analysis.instrs[8].fn, op_tbl[OP_PUSH1].fn);
+    EXPECT_EQ(analysis.instrs[10].fn, op_tbl[OP_SSTORE].fn);
+    EXPECT_EQ(analysis.instrs[11].fn, op_tbl[OP_STOP].fn);
 
-    const auto& block = analysis.instrs[0].arg.block;
+    const auto& block = analysis.instrs[1].block;
     EXPECT_EQ(block.gas_cost, 14);
     EXPECT_EQ(block.stack_req, 0);
     EXPECT_EQ(block.stack_max_growth, 2);
@@ -40,14 +42,15 @@ TEST(analysis, stack_up_and_down)
     const auto code = OP_DUP2 + 6 * OP_DUP1 + 10 * OP_POP + push(0);
     const auto analysis = analyze(rev, &code[0], code.size());
 
-    ASSERT_EQ(analysis.instrs.size(), 20);
+    ASSERT_EQ(analysis.instrs.size(), 22);
     EXPECT_EQ(analysis.instrs[0].fn, op_tbl[OPX_BEGINBLOCK].fn);
-    EXPECT_EQ(analysis.instrs[1].fn, op_tbl[OP_DUP2].fn);
-    EXPECT_EQ(analysis.instrs[2].fn, op_tbl[OP_DUP1].fn);
-    EXPECT_EQ(analysis.instrs[8].fn, op_tbl[OP_POP].fn);
-    EXPECT_EQ(analysis.instrs[18].fn, op_tbl[OP_PUSH1].fn);
+    EXPECT_EQ(analysis.instrs[2].fn, op_tbl[OP_DUP2].fn);
+    EXPECT_EQ(analysis.instrs[3].fn, op_tbl[OP_DUP1].fn);
+    EXPECT_EQ(analysis.instrs[9].fn, op_tbl[OP_POP].fn);
+    EXPECT_EQ(analysis.instrs[19].fn, op_tbl[OP_PUSH1].fn);
+    EXPECT_EQ(analysis.instrs[20].small_push_value, 0);
 
-    const auto& block = analysis.instrs[0].arg.block;
+    const auto& block = analysis.instrs[1].block;
     EXPECT_EQ(block.gas_cost, 7 * 3 + 10 * 2 + 3);
     EXPECT_EQ(block.stack_req, 3);
     EXPECT_EQ(block.stack_max_growth, 7);
@@ -59,11 +62,14 @@ TEST(analysis, push)
     const auto code = push(push_value) + "7f00ee";
     const auto analysis = analyze(rev, &code[0], code.size());
 
-    ASSERT_EQ(analysis.instrs.size(), 4);
+    ASSERT_EQ(analysis.instrs.size(), 7);
     ASSERT_EQ(analysis.push_values.size(), 1);
     EXPECT_EQ(analysis.instrs[0].fn, op_tbl[OPX_BEGINBLOCK].fn);
-    EXPECT_EQ(analysis.instrs[1].arg.small_push_value, push_value);
-    EXPECT_EQ(analysis.instrs[2].arg.push_value, &analysis.push_values[0]);
+    EXPECT_EQ(analysis.instrs[1].block.gas_cost, 6);
+    EXPECT_EQ(analysis.instrs[2].fn, op_tbl[OP_PUSH8].fn);
+    EXPECT_EQ(analysis.instrs[3].small_push_value, push_value);
+    EXPECT_EQ(analysis.instrs[4].fn, op_tbl[OP_PUSH32].fn);
+    EXPECT_EQ(analysis.instrs[5].push_value, &analysis.push_values[0]);
     EXPECT_EQ(analysis.push_values[0], intx::uint256{0xee} << 240);
 }
 
@@ -75,11 +81,13 @@ TEST(analysis, jumpdest_skip)
     const auto code = bytecode{} + OP_STOP + OP_JUMPDEST;
     auto analysis = evmone::analyze(rev, &code[0], code.size());
 
-    ASSERT_EQ(analysis.instrs.size(), 4);
+    ASSERT_EQ(analysis.instrs.size(), 6);
     EXPECT_EQ(analysis.instrs[0].fn, op_tbl[OPX_BEGINBLOCK].fn);
-    EXPECT_EQ(analysis.instrs[1].fn, op_tbl[OP_STOP].fn);
-    EXPECT_EQ(analysis.instrs[2].fn, op_tbl[OP_JUMPDEST].fn);
-    EXPECT_EQ(analysis.instrs[3].fn, op_tbl[OP_STOP].fn);
+    EXPECT_EQ(analysis.instrs[1].block.gas_cost, 0);
+    EXPECT_EQ(analysis.instrs[2].fn, op_tbl[OP_STOP].fn);
+    EXPECT_EQ(analysis.instrs[3].fn, op_tbl[OP_JUMPDEST].fn);
+    EXPECT_EQ(analysis.instrs[4].block.gas_cost, 1);
+    EXPECT_EQ(analysis.instrs[5].fn, op_tbl[OP_STOP].fn);
 }
 
 TEST(analysis, jump1)
@@ -90,8 +98,8 @@ TEST(analysis, jump1)
     ASSERT_EQ(analysis.jumpdest_offsets.size(), 1);
     ASSERT_EQ(analysis.jumpdest_targets.size(), 1);
     EXPECT_EQ(analysis.jumpdest_offsets[0], 6);
-    EXPECT_EQ(analysis.jumpdest_targets[0], 5);
-    EXPECT_EQ(find_jumpdest(analysis, 6), 5);
+    EXPECT_EQ(analysis.jumpdest_targets[0], 8);
+    EXPECT_EQ(find_jumpdest(analysis, 6), 8);
     EXPECT_EQ(find_jumpdest(analysis, 0), -1);
     EXPECT_EQ(find_jumpdest(analysis, 7), -1);
 }
@@ -101,9 +109,10 @@ TEST(analysis, empty)
     bytes code;
     auto analysis = evmone::analyze(rev, &code[0], code.size());
 
-    ASSERT_EQ(analysis.instrs.size(), 2);
+    ASSERT_EQ(analysis.instrs.size(), 3);
     EXPECT_EQ(analysis.instrs[0].fn, op_tbl[OPX_BEGINBLOCK].fn);
-    EXPECT_EQ(analysis.instrs[1].fn, op_tbl[OP_STOP].fn);
+    EXPECT_EQ(analysis.instrs[1].block.gas_cost, 0);
+    EXPECT_EQ(analysis.instrs[2].fn, op_tbl[OP_STOP].fn);
 }
 
 TEST(analysis, only_jumpdest)
@@ -122,11 +131,11 @@ TEST(analysis, jumpi_at_the_end)
     const auto code = bytecode{OP_JUMPI};
     auto analysis = evmone::analyze(rev, &code[0], code.size());
 
-    ASSERT_EQ(analysis.instrs.size(), 4);
+    ASSERT_EQ(analysis.instrs.size(), 6);
     EXPECT_EQ(analysis.instrs[0].fn, op_tbl[OPX_BEGINBLOCK].fn);
-    EXPECT_EQ(analysis.instrs[1].fn, op_tbl[OP_JUMPI].fn);
-    EXPECT_EQ(analysis.instrs[2].fn, op_tbl[OPX_BEGINBLOCK].fn);
-    EXPECT_EQ(analysis.instrs[3].fn, op_tbl[OP_STOP].fn);
+    EXPECT_EQ(analysis.instrs[2].fn, op_tbl[OP_JUMPI].fn);
+    EXPECT_EQ(analysis.instrs[3].fn, op_tbl[OPX_BEGINBLOCK].fn);
+    EXPECT_EQ(analysis.instrs[5].fn, op_tbl[OP_STOP].fn);
 }
 
 TEST(analysis, terminated_last_block)
@@ -136,11 +145,11 @@ TEST(analysis, terminated_last_block)
     const auto code = ret(0, 0);
     auto analysis = evmone::analyze(rev, &code[0], code.size());
 
-    ASSERT_EQ(analysis.instrs.size(), 6);
+    ASSERT_EQ(analysis.instrs.size(), 10);
     EXPECT_EQ(analysis.instrs[0].fn, op_tbl[OPX_BEGINBLOCK].fn);
-    EXPECT_EQ(analysis.instrs[3].fn, op_tbl[OP_RETURN].fn);
-    EXPECT_EQ(analysis.instrs[4].fn, op_tbl[OPX_BEGINBLOCK].fn);
-    EXPECT_EQ(analysis.instrs[5].fn, op_tbl[OP_STOP].fn);
+    EXPECT_EQ(analysis.instrs[6].fn, op_tbl[OP_RETURN].fn);
+    EXPECT_EQ(analysis.instrs[7].fn, op_tbl[OPX_BEGINBLOCK].fn);
+    EXPECT_EQ(analysis.instrs[9].fn, op_tbl[OP_STOP].fn);
 }
 
 TEST(analysis, jumpdests_groups)
@@ -148,18 +157,18 @@ TEST(analysis, jumpdests_groups)
     const auto code = 3 * OP_JUMPDEST + push(1) + 3 * OP_JUMPDEST + push(2) + OP_JUMPI;
     auto analysis = evmone::analyze(rev, &code[0], code.size());
 
-    ASSERT_EQ(analysis.instrs.size(), 11);
+    ASSERT_EQ(analysis.instrs.size(), 20);
     EXPECT_EQ(analysis.instrs[0].fn, op_tbl[OP_JUMPDEST].fn);
-    EXPECT_EQ(analysis.instrs[1].fn, op_tbl[OP_JUMPDEST].fn);
     EXPECT_EQ(analysis.instrs[2].fn, op_tbl[OP_JUMPDEST].fn);
-    EXPECT_EQ(analysis.instrs[3].fn, op_tbl[OP_PUSH1].fn);
     EXPECT_EQ(analysis.instrs[4].fn, op_tbl[OP_JUMPDEST].fn);
-    EXPECT_EQ(analysis.instrs[5].fn, op_tbl[OP_JUMPDEST].fn);
-    EXPECT_EQ(analysis.instrs[6].fn, op_tbl[OP_JUMPDEST].fn);
-    EXPECT_EQ(analysis.instrs[7].fn, op_tbl[OP_PUSH1].fn);
-    EXPECT_EQ(analysis.instrs[8].fn, op_tbl[OP_JUMPI].fn);
-    EXPECT_EQ(analysis.instrs[9].fn, op_tbl[OPX_BEGINBLOCK].fn);
-    EXPECT_EQ(analysis.instrs[10].fn, op_tbl[OP_STOP].fn);
+    EXPECT_EQ(analysis.instrs[6].fn, op_tbl[OP_PUSH1].fn);
+    EXPECT_EQ(analysis.instrs[8].fn, op_tbl[OP_JUMPDEST].fn);
+    EXPECT_EQ(analysis.instrs[10].fn, op_tbl[OP_JUMPDEST].fn);
+    EXPECT_EQ(analysis.instrs[12].fn, op_tbl[OP_JUMPDEST].fn);
+    EXPECT_EQ(analysis.instrs[14].fn, op_tbl[OP_PUSH1].fn);
+    EXPECT_EQ(analysis.instrs[16].fn, op_tbl[OP_JUMPI].fn);
+    EXPECT_EQ(analysis.instrs[17].fn, op_tbl[OPX_BEGINBLOCK].fn);
+    EXPECT_EQ(analysis.instrs[19].fn, op_tbl[OP_STOP].fn);
 
 
     ASSERT_EQ(analysis.jumpdest_offsets.size(), 6);
@@ -167,13 +176,13 @@ TEST(analysis, jumpdests_groups)
     EXPECT_EQ(analysis.jumpdest_offsets[0], 0);
     EXPECT_EQ(analysis.jumpdest_targets[0], 0);
     EXPECT_EQ(analysis.jumpdest_offsets[1], 1);
-    EXPECT_EQ(analysis.jumpdest_targets[1], 1);
+    EXPECT_EQ(analysis.jumpdest_targets[1], 2);
     EXPECT_EQ(analysis.jumpdest_offsets[2], 2);
-    EXPECT_EQ(analysis.jumpdest_targets[2], 2);
+    EXPECT_EQ(analysis.jumpdest_targets[2], 4);
     EXPECT_EQ(analysis.jumpdest_offsets[3], 5);
-    EXPECT_EQ(analysis.jumpdest_targets[3], 4);
+    EXPECT_EQ(analysis.jumpdest_targets[3], 8);
     EXPECT_EQ(analysis.jumpdest_offsets[4], 6);
-    EXPECT_EQ(analysis.jumpdest_targets[4], 5);
+    EXPECT_EQ(analysis.jumpdest_targets[4], 10);
     EXPECT_EQ(analysis.jumpdest_offsets[5], 7);
-    EXPECT_EQ(analysis.jumpdest_targets[5], 6);
+    EXPECT_EQ(analysis.jumpdest_targets[5], 12);
 }

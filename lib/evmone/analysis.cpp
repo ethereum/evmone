@@ -23,13 +23,6 @@ struct block_analysis
     explicit block_analysis(size_t index) noexcept : begin_block_index{index} {}
 };
 
-inline constexpr uint64_t load64be(const unsigned char* data) noexcept
-{
-    return uint64_t{data[7]} | (uint64_t{data[6]} << 8) | (uint64_t{data[5]} << 16) |
-           (uint64_t{data[4]} << 24) | (uint64_t{data[3]} << 32) | (uint64_t{data[2]} << 40) |
-           (uint64_t{data[1]} << 48) | (uint64_t{data[0]} << 56);
-}
-
 code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
 {
     static constexpr auto stack_req_max = std::numeric_limits<int16_t>::max();
@@ -39,16 +32,16 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
 
     code_analysis analysis;
 
-    const auto max_instrs_size = code_size + 1;
-    analysis.instrs.reserve(max_instrs_size);
+    analysis.instrs.reserve(2 * (code_size + 1));
 
     // This is 2x more than needed but using (code_size / 2 + 1) increases page-faults 1000x.
     const auto max_args_storage_size = code_size + 1;
     analysis.push_values.reserve(max_args_storage_size);
 
     // Create first block.
-    analysis.instrs.emplace_back(opx_beginblock_fn);
-    auto block = block_analysis{0};
+    analysis.instrs.emplace_back().fn = opx_beginblock_fn;
+    analysis.instrs.emplace_back();  // Placeholder for the block info data.
+    auto block = block_analysis{analysis.instrs.size() - 1};
 
     const auto code_end = code + code_size;
     auto code_pos = code;
@@ -70,12 +63,10 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
             // We don't have to insert anything to the instruction table.
             analysis.jumpdest_offsets.emplace_back(static_cast<int16_t>(code_pos - code - 1));
             analysis.jumpdest_targets.emplace_back(
-                static_cast<int16_t>(analysis.instrs.size() - 1));
+                static_cast<int16_t>(analysis.instrs.size() - 2));
         }
         else
-            analysis.instrs.emplace_back(opcode_info.fn);
-
-        auto& instr = analysis.instrs.back();
+            analysis.instrs.emplace_back().fn = opcode_info.fn;
 
         bool is_terminator = false;  // A flag whenever this is a block terminating instruction.
         switch (opcode)
@@ -91,22 +82,23 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
 
         case ANY_SMALL_PUSH:
         {
-            const auto push_size = size_t(opcode - OP_PUSH1 + 1);
+            const auto push_size = static_cast<size_t>(opcode - OP_PUSH1) + 1;
             const auto push_end = code_pos + push_size;
 
-            uint8_t value_bytes[8]{};
-            auto insert_pos = &value_bytes[sizeof(value_bytes) - push_size];
-
-            // TODO: Consier the same endianness-specific loop as in ANY_LARGE_PUSH case.
+            uint64_t value = 0;
+            auto insert_bit_pos = (push_size - 1) * 8;
             while (code_pos < push_end && code_pos < code_end)
-                *insert_pos++ = *code_pos++;
-            instr.arg.small_push_value = load64be(value_bytes);
+            {
+                value |= uint64_t{*code_pos++} << insert_bit_pos;
+                insert_bit_pos -= 8;
+            }
+            analysis.instrs.emplace_back().small_push_value = value;
             break;
         }
 
         case ANY_LARGE_PUSH:
         {
-            const auto push_size = size_t(opcode - OP_PUSH1 + 1);
+            const auto push_size = static_cast<size_t>(opcode - OP_PUSH1) + 1;
             const auto push_end = code_pos + push_size;
 
             auto& push_value = analysis.push_values.emplace_back();
@@ -126,7 +118,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
             while (code_pos < push_end && code_pos < code_end)
                 *insert_pos-- = *code_pos++;
 
-            instr.arg.push_value = &push_value;
+            analysis.instrs.emplace_back().push_value = &push_value;
             break;
         }
 
@@ -137,11 +129,11 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
         case OP_STATICCALL:
         case OP_CREATE:
         case OP_CREATE2:
-            instr.arg.number = block.gas_cost;
+            analysis.instrs.emplace_back().number = static_cast<int>(block.gas_cost);
             break;
 
         case OP_PC:
-            instr.arg.number = static_cast<int>(code_pos - code - 1);
+            analysis.instrs.emplace_back().number = static_cast<int>(code_pos - code - 1);
             break;
         }
 
@@ -153,12 +145,13 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
                                        static_cast<int16_t>(block.stack_req) :
                                        stack_req_max;
             const auto stack_max_growth = static_cast<int16_t>(block.stack_max_growth);
-            analysis.instrs[block.begin_block_index].arg.block = {
+            analysis.instrs[block.begin_block_index].block = {
                 block.gas_cost, stack_req, stack_max_growth};
 
 
             // Create new block.
-            analysis.instrs.emplace_back(opx_beginblock_fn);
+            analysis.instrs.emplace_back().fn = opx_beginblock_fn;
+            analysis.instrs.emplace_back();
             block = block_analysis{analysis.instrs.size() - 1};
         }
     }
@@ -167,12 +160,11 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
     const auto stack_req =
         block.stack_req <= stack_req_max ? static_cast<int16_t>(block.stack_req) : stack_req_max;
     const auto stack_max_growth = static_cast<int16_t>(block.stack_max_growth);
-    analysis.instrs[block.begin_block_index].arg.block = {
-        block.gas_cost, stack_req, stack_max_growth};
+    analysis.instrs[block.begin_block_index].block = {block.gas_cost, stack_req, stack_max_growth};
 
     // Make sure the last block is terminated.
     // TODO: This is not needed if the last instruction is a terminating one.
-    analysis.instrs.emplace_back(op_tbl[OP_STOP].fn);
+    analysis.instrs.emplace_back().fn = op_tbl[OP_STOP].fn;
 
     // FIXME: assert(analysis.instrs.size() <= max_instrs_size);
 

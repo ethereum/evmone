@@ -83,13 +83,13 @@ public:
     void resize(size_t new_size) { m_memory.resize(new_size); }
 };
 
-struct instr_info;
+union instr_info;
 
 struct block_info
 {
     /// The total base gas cost of all instructions in the block.
     /// This cannot overflow, see the static_assert() below.
-    int32_t gas_cost = 0;
+    int32_t gas_cost;
 
     static_assert(
         max_code_size * max_instruction_base_cost < std::numeric_limits<decltype(gas_cost)>::max(),
@@ -97,11 +97,11 @@ struct block_info
 
     /// The stack height required to execute the block.
     /// This MAY overflow.
-    int16_t stack_req = 0;
+    int16_t stack_req;
 
     /// The maximum stack height growth relative to the stack height at block start.
     /// This cannot overflow, see the static_assert() below.
-    int16_t stack_max_growth = 0;
+    int16_t stack_max_growth;
 
     static_assert(max_code_size * max_instruction_stack_increase <
                       std::numeric_limits<decltype(stack_max_growth)>::max(),
@@ -143,16 +143,6 @@ struct execution_state
     }
 };
 
-union instr_argument
-{
-    int number;
-    const uint8_t* data;
-    const intx::uint256* push_value;
-    uint64_t small_push_value;
-    block_info block{};
-};
-
-static_assert(sizeof(instr_argument) == sizeof(void*), "Incorrect size of instr_argument");
 
 using exec_fn = const instr_info* (*)(const instr_info*, execution_state&);
 
@@ -180,13 +170,15 @@ struct op_table_entry
 
 using op_table = std::array<op_table_entry, 256>;
 
-struct instr_info
+union instr_info
 {
-    exec_fn fn = nullptr;
-    instr_argument arg;
-
-    explicit constexpr instr_info(exec_fn f) noexcept : fn{f}, arg{} {};
+    exec_fn fn;
+    int number;
+    const intx::uint256* push_value;
+    uint64_t small_push_value;
+    block_info block;
 };
+static_assert(sizeof(instr_info) == sizeof(void*), "Incorrect size of instr_info");
 
 static_assert(sizeof(block_info) == 8);
 
