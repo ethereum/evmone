@@ -43,6 +43,8 @@ if(CABLE_COMPILER_GNULIKE)
 
     if(CABLE_COMPILER_CLANG)
         set(CMAKE_CXX_FLAGS_COVERAGE "-fprofile-instr-generate -fcoverage-mapping")
+    elseif(CABLE_COMPILER_GNU)
+        set(CMAKE_CXX_FLAGS_COVERAGE "--coverage")
     endif()
 
 elseif(MSVC)
