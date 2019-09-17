@@ -8,8 +8,8 @@
 
 namespace evmone
 {
-evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const evmc_message* msg,
-    const uint8_t* code, size_t code_size) noexcept
+evmc_result execute(evmc_instance* /*unused*/, evmc_context* ctx, evmc_revision rev,
+    const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
 {
     auto analysis = analyze(rev, code, code_size);
 
@@ -22,8 +22,8 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
     state->gas_left = msg->gas;
     state->rev = rev;
 
-    const instr_info* instr = &state->analysis->instrs[0];
-    while (instr)
+    const auto* instr = &state->analysis->instrs[0];
+    while (instr != nullptr)
         instr = instr->fn(instr, *state);
 
     evmc_result result{};

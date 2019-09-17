@@ -38,39 +38,3 @@
     case OP_PUSH30:    \
     case OP_PUSH31:    \
     case OP_PUSH32
-
-#define ANY_DUP    \
-    OP_DUP1:       \
-    case OP_DUP2:  \
-    case OP_DUP3:  \
-    case OP_DUP4:  \
-    case OP_DUP5:  \
-    case OP_DUP6:  \
-    case OP_DUP7:  \
-    case OP_DUP8:  \
-    case OP_DUP9:  \
-    case OP_DUP10: \
-    case OP_DUP11: \
-    case OP_DUP12: \
-    case OP_DUP13: \
-    case OP_DUP14: \
-    case OP_DUP15: \
-    case OP_DUP16
-
-#define ANY_SWAP    \
-    OP_SWAP1:       \
-    case OP_SWAP2:  \
-    case OP_SWAP3:  \
-    case OP_SWAP4:  \
-    case OP_SWAP5:  \
-    case OP_SWAP6:  \
-    case OP_SWAP7:  \
-    case OP_SWAP8:  \
-    case OP_SWAP9:  \
-    case OP_SWAP10: \
-    case OP_SWAP11: \
-    case OP_SWAP12: \
-    case OP_SWAP13: \
-    case OP_SWAP14: \
-    case OP_SWAP15: \
-    case OP_SWAP16

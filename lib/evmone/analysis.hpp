@@ -83,7 +83,7 @@ public:
     void resize(size_t new_size) { m_memory.resize(new_size); }
 };
 
-struct instr_info;
+struct instruction;
 
 struct block_info
 {
@@ -107,6 +107,7 @@ struct block_info
                       std::numeric_limits<decltype(stack_max_growth)>::max(),
         "Potential block_info::stack_max_growth overflow");
 };
+static_assert(sizeof(block_info) == 8);
 
 struct execution_state
 {
@@ -136,25 +137,25 @@ struct execution_state
     evmc_revision rev = {};
 
     /// Terminates the execution with the given status code.
-    const instr_info* exit(evmc_status_code status_code) noexcept
+    const instruction* exit(evmc_status_code status_code) noexcept
     {
         status = status_code;
         return nullptr;
     }
 };
 
-union instr_argument
+union instruction_argument
 {
     int number;
-    const uint8_t* data;
     const intx::uint256* push_value;
     uint64_t small_push_value;
     block_info block{};
 };
+static_assert(
+    sizeof(instruction_argument) == sizeof(uint64_t), "Incorrect size of instruction_argument");
 
-static_assert(sizeof(instr_argument) == sizeof(void*), "Incorrect size of instr_argument");
-
-using exec_fn = const instr_info* (*)(const instr_info*, execution_state&);
+/// The pointer to function implementing an instruction execution.
+using instruction_exec_fn = const instruction* (*)(const instruction*, execution_state&);
 
 /// The evmone intrinsic opcodes.
 ///
@@ -172,7 +173,7 @@ enum intrinsic_opcodes
 
 struct op_table_entry
 {
-    exec_fn fn;
+    instruction_exec_fn fn;
     int16_t gas_cost;
     int8_t stack_req;
     int8_t stack_change;
@@ -180,19 +181,17 @@ struct op_table_entry
 
 using op_table = std::array<op_table_entry, 256>;
 
-struct instr_info
+struct instruction
 {
-    exec_fn fn = nullptr;
-    instr_argument arg;
+    instruction_exec_fn fn = nullptr;
+    instruction_argument arg;
 
-    explicit constexpr instr_info(exec_fn f) noexcept : fn{f}, arg{} {};
+    explicit constexpr instruction(instruction_exec_fn f) noexcept : fn{f}, arg{} {};
 };
-
-static_assert(sizeof(block_info) == 8);
 
 struct code_analysis
 {
-    std::vector<instr_info> instrs;
+    std::vector<instruction> instrs;
 
     /// Storage for large push values.
     std::vector<intx::uint256> push_values;
