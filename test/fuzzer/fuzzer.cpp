@@ -61,6 +61,7 @@ extern "C" evmc_instance* evmc_create_interpreter() noexcept;
 /// The reference VM.
 static auto ref_vm = evmc::vm{evmc_create_evmone()};
 
+#pragma clang diagnostic ignored "-Wzero-length-array"
 static evmc::vm external_vms[] = {
 #if ALETH
     evmc::vm{evmc_create_interpreter()},
