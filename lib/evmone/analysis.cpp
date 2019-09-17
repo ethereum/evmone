@@ -85,11 +85,11 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
         case ANY_SMALL_PUSH:
         {
             const auto push_size = static_cast<size_t>(opcode - OP_PUSH1) + 1;
-            const auto push_end = code_pos + push_size;
+            const auto push_end = std::min(code_pos + push_size, code_end);
 
             uint64_t value = 0;
             auto insert_bit_pos = (push_size - 1) * 8;
-            while (code_pos < push_end && code_pos < code_end)
+            while (code_pos < push_end)
             {
                 value |= uint64_t{*code_pos++} << insert_bit_pos;
                 insert_bit_pos -= 8;
