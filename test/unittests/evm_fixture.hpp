@@ -50,6 +50,9 @@ protected:
     /// TODO: Add default constructor to evmc::result, update code here.
     evmc::result result{{}};
 
+    /// The result output. Updated by execute().
+    bytes_view output;
+
     /// The total amount of gas used during execution.
     int64_t gas_used = 0;
 
@@ -73,6 +76,7 @@ protected:
         msg.gas = gas;
 
         result = vm.execute(host, rev, msg, code.data(), code.size());
+        output = {result.output_data, result.output_size};
         gas_used = msg.gas - result.gas_left;
     }
 

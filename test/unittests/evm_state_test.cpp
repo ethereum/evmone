@@ -21,6 +21,42 @@ TEST_F(evm_state, code)
     EXPECT_EQ(bytes(&result.output_data[0], 9), a);
 }
 
+TEST_F(evm_state, codecopy_combinations)
+{
+    // The CODECOPY arguments are provided in calldata: first byte is index, second byte is size.
+    // The whole copied code is returned.
+    const auto code = dup1(byte(calldataload(0), 1)) + byte(calldataload(0), 0) + push(0) +
+                      OP_CODECOPY + ret(0, {});
+    EXPECT_EQ(code.size(), 0x13);
+
+    execute(code, "0013");
+    EXPECT_EQ(output, code);
+
+    execute(code, "0012");
+    EXPECT_EQ(output, code.substr(0, 0x12));
+
+    execute(code, "0014");
+    EXPECT_EQ(output, code + "00");
+
+    execute(code, "1300");
+    EXPECT_EQ(output, bytes_view{});
+
+    execute(code, "1400");
+    EXPECT_EQ(output, bytes_view{});
+
+    execute(code, "1200");
+    EXPECT_EQ(output, bytes_view{});
+
+    execute(code, "1301");
+    EXPECT_EQ(output, from_hex("00"));
+
+    execute(code, "1401");
+    EXPECT_EQ(output, from_hex("00"));
+
+    execute(code, "1201");
+    EXPECT_EQ(output, code.substr(0x12, 1));
+}
+
 TEST_F(evm_state, storage)
 {
     host.accounts[msg.destination] = {};
@@ -487,6 +523,14 @@ TEST_F(evm_state, extcodesize)
     host.accounts[addr].code = {'\0'};
     execute(push(2) + OP_EXTCODESIZE + ret_top());
     EXPECT_OUTPUT_INT(1);
+}
+
+TEST_F(evm_state, extcodecopy_big_index)
+{
+    constexpr auto index = uint64_t{std::numeric_limits<uint32_t>::max()} + 1;
+    const auto code = dup1(1) + push(index) + dup1(0) + OP_EXTCODECOPY + ret(0, {});
+    execute(code);
+    EXPECT_EQ(output, from_hex("00"));
 }
 
 TEST_F(evm_state, extcodehash)
