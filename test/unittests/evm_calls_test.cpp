@@ -32,7 +32,6 @@ TEST_F(evm_calls, delegatecall)
     EXPECT_EQ(call_msg.input_size, 3);
 
     ASSERT_EQ(result.output_size, 8);
-    auto output = bytes_view{result.output_data, result.output_size};
     EXPECT_EQ(output, (bytes{0xff, 0xff, 0xff, 0xff, 0xa, 0xb, 0xc, 0xff}));
 }
 
@@ -251,13 +250,13 @@ TEST_F(evm_calls, call_depth_limit)
 TEST_F(evm_calls, call_output)
 {
     static bool result_is_correct = false;
-    static uint8_t output[] = {0xa, 0xb};
+    static uint8_t call_output[] = {0xa, 0xb};
 
     host.accounts[{}].set_balance(1);
-    host.call_result.output_data = output;
-    host.call_result.output_size = sizeof(output);
+    host.call_result.output_data = call_output;
+    host.call_result.output_size = sizeof(call_output);
     host.call_result.release = [](const evmc_result* r) {
-        result_is_correct = r->output_size == sizeof(output) && r->output_data == output;
+        result_is_correct = r->output_size == sizeof(call_output) && r->output_data == call_output;
     };
 
     auto code_prefix_output_1 = push(1) + 6 * OP_DUP1 + push("7fffffffffffffff");
@@ -533,15 +532,15 @@ TEST_F(evm_calls, returndatasize_before_call)
 
 TEST_F(evm_calls, returndatasize)
 {
-    uint8_t output[13];
-    host.call_result.output_size = std::size(output);
-    host.call_result.output_data = std::begin(output);
+    uint8_t call_output[13];
+    host.call_result.output_size = std::size(call_output);
+    host.call_result.output_data = std::begin(call_output);
 
     auto code = "60008080808080f43d60005360016000f3";
     execute(code);
     EXPECT_EQ(gas_used, 735);
     ASSERT_EQ(result.output_size, 1);
-    EXPECT_EQ(result.output_data[0], std::size(output));
+    EXPECT_EQ(result.output_data[0], std::size(call_output));
 
     host.call_result.output_size = 1;
     host.call_result.status_code = EVMC_FAILURE;
@@ -560,9 +559,9 @@ TEST_F(evm_calls, returndatasize)
 
 TEST_F(evm_calls, returndatacopy)
 {
-    uint8_t output[32] = {1, 2, 3, 4, 5, 6, 7};
-    host.call_result.output_size = std::size(output);
-    host.call_result.output_data = std::begin(output);
+    uint8_t call_output[32] = {1, 2, 3, 4, 5, 6, 7};
+    host.call_result.output_size = std::size(call_output);
+    host.call_result.output_data = std::begin(call_output);
 
     auto code = "600080808060aa60fff4506020600060003e60206000f3";
     execute(code);
@@ -586,9 +585,9 @@ TEST_F(evm_calls, returndatacopy_empty)
 
 TEST_F(evm_calls, returndatacopy_cost)
 {
-    auto output = uint8_t{};
-    host.call_result.output_data = &output;
-    host.call_result.output_size = sizeof(output);
+    auto call_output = uint8_t{};
+    host.call_result.output_data = &call_output;
+    host.call_result.output_size = sizeof(call_output);
     auto code = "60008080808080fa6001600060003e";
     execute(736, code);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
@@ -598,9 +597,9 @@ TEST_F(evm_calls, returndatacopy_cost)
 
 TEST_F(evm_calls, returndatacopy_outofrange)
 {
-    auto output = uint8_t{};
-    host.call_result.output_data = &output;
-    host.call_result.output_size = sizeof(output);
+    auto call_output = uint8_t{};
+    host.call_result.output_data = &call_output;
+    host.call_result.output_size = sizeof(call_output);
     execute(735, "60008080808080fa6002600060003e");
     EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
 
