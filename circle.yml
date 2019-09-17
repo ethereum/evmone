@@ -143,11 +143,10 @@ jobs:
   gcc-latest-coverage:
     executor: linux
     environment:
-      BUILD_TYPE: Debug
+      BUILD_TYPE: Coverage
       CC: gcc-8
       CXX: g++-8
       GCOV: gcov-8
-      CMAKE_OPTIONS: -DCOVERAGE=ON
     steps:
       - build
       - run:
