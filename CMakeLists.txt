@@ -55,14 +55,15 @@ if(EVMONE_FUZZING)
         message(FATAL_ERROR "Clang 8+ compiler is required for fuzzing")
     endif()
 
-    option(EVMONE_FUZZING_COVERAGE "Fuzzing coverage" OFF)
-
     set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build evmone as a shared library" FORCE)
     set(EVMONE_TESTING ON CACHE BOOL "Build tests and test tools" FORCE)
 
-    if(EVMONE_FUZZING_COVERAGE)
-        add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
-    else()
+    string(TOUPPER ${CMAKE_BUILD_TYPE} build_type)
+    string(COMPARE EQUAL ${build_type} COVERAGE fuzzing_coverage)
+    if(NOT fuzzing_coverage)
+        # Add fuzzing instrumentation only for non-coverage builds.
+        # The coverage builds should be without fuzzing instrumentation to allow
+        # running fuzzing corpus once and getting code coverage.
         set(fuzzing_flags -fsanitize=fuzzer-no-link,undefined,address)
         add_compile_options(${fuzzing_flags})
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${fuzzing_flags}")

@@ -8,8 +8,8 @@ if(NOT type STREQUAL STATIC_LIBRARY)
     message(FATAL_ERROR "The evmone must be built as static library")
 endif()
 
-if(EVMONE_FUZZING_COVERAGE)
-    set(CMAKE_EXE_LINKER_FLAGS "-fprofile-instr-generate -fcoverage-mapping -fsanitize=fuzzer")
+if(fuzzing_coverage)
+    set(CMAKE_EXE_LINKER_FLAGS "-fsanitize=fuzzer")
 else()
     string(REPLACE fuzzer-no-link fuzzer CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS})
 endif()
@@ -17,7 +17,7 @@ endif()
 add_executable(evmone-fuzzer fuzzer.cpp)
 target_link_libraries(evmone-fuzzer PRIVATE evmone testutils)
 
-if(NOT EVMONE_FUZZING_COVERAGE)
+if(NOT fuzzing_coverage)
     # TODO: Aleth reports undefined behaviors, disable it for fuzzing.
     string(REPLACE undefined "" aleth_fuzzing_flags ${fuzzing_flags})
 
