@@ -22,7 +22,7 @@ evmc_result execute(evmc_instance*, evmc_context* ctx, evmc_revision rev, const 
     state->gas_left = msg->gas;
     state->rev = rev;
 
-    const instr_info* instr = &state->analysis->instrs[0];
+    const auto* instr = &state->analysis->instrs[0];
     while (instr)
         instr = instr->fn(instr, *state);
 

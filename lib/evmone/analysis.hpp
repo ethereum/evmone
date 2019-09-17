@@ -83,7 +83,7 @@ public:
     void resize(size_t new_size) { m_memory.resize(new_size); }
 };
 
-struct instr_info;
+struct instruction;
 
 struct block_info
 {
@@ -137,7 +137,7 @@ struct execution_state
     evmc_revision rev = {};
 
     /// Terminates the execution with the given status code.
-    const instr_info* exit(evmc_status_code status_code) noexcept
+    const instruction* exit(evmc_status_code status_code) noexcept
     {
         status = status_code;
         return nullptr;
@@ -155,7 +155,7 @@ static_assert(
     sizeof(instruction_argument) == sizeof(uint64_t), "Incorrect size of instruction_argument");
 
 /// The pointer to function implementing an instruction execution.
-using instruction_exec_fn = const instr_info* (*)(const instr_info*, execution_state&);
+using instruction_exec_fn = const instruction* (*)(const instruction*, execution_state&);
 
 /// The evmone intrinsic opcodes.
 ///
@@ -181,17 +181,17 @@ struct op_table_entry
 
 using op_table = std::array<op_table_entry, 256>;
 
-struct instr_info
+struct instruction
 {
     instruction_exec_fn fn = nullptr;
     instruction_argument arg;
 
-    explicit constexpr instr_info(instruction_exec_fn f) noexcept : fn{f}, arg{} {};
+    explicit constexpr instruction(instruction_exec_fn f) noexcept : fn{f}, arg{} {};
 };
 
 struct code_analysis
 {
-    std::vector<instr_info> instrs;
+    std::vector<instruction> instrs;
 
     /// Storage for large push values.
     std::vector<intx::uint256> push_values;
