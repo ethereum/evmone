@@ -144,14 +144,15 @@ struct execution_state
     }
 };
 
-union instr_argument
+union instruction_argument
 {
     int number;
     const intx::uint256* push_value;
     uint64_t small_push_value;
     block_info block{};
 };
-static_assert(sizeof(instr_argument) == sizeof(void*), "Incorrect size of instr_argument");
+static_assert(
+    sizeof(instruction_argument) == sizeof(uint64_t), "Incorrect size of instruction_argument");
 
 /// The pointer to function implementing an instruction execution.
 using instruction_exec_fn = const instr_info* (*)(const instr_info*, execution_state&);
@@ -183,7 +184,7 @@ using op_table = std::array<op_table_entry, 256>;
 struct instr_info
 {
     instruction_exec_fn fn = nullptr;
-    instr_argument arg;
+    instruction_argument arg;
 
     explicit constexpr instr_info(instruction_exec_fn f) noexcept : fn{f}, arg{} {};
 };
