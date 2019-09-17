@@ -153,7 +153,8 @@ union instr_argument
 };
 static_assert(sizeof(instr_argument) == sizeof(void*), "Incorrect size of instr_argument");
 
-using exec_fn = const instr_info* (*)(const instr_info*, execution_state&);
+/// The pointer to function implementing an instruction execution.
+using instruction_exec_fn = const instr_info* (*)(const instr_info*, execution_state&);
 
 /// The evmone intrinsic opcodes.
 ///
@@ -171,7 +172,7 @@ enum intrinsic_opcodes
 
 struct op_table_entry
 {
-    exec_fn fn;
+    instruction_exec_fn fn;
     int16_t gas_cost;
     int8_t stack_req;
     int8_t stack_change;
@@ -181,10 +182,10 @@ using op_table = std::array<op_table_entry, 256>;
 
 struct instr_info
 {
-    exec_fn fn = nullptr;
+    instruction_exec_fn fn = nullptr;
     instr_argument arg;
 
-    explicit constexpr instr_info(exec_fn f) noexcept : fn{f}, arg{} {};
+    explicit constexpr instr_info(instruction_exec_fn f) noexcept : fn{f}, arg{} {};
 };
 
 struct code_analysis
