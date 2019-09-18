@@ -6,6 +6,7 @@
 
 #include "evm_fixture.hpp"
 
+using namespace evmc::literals;
 using evm_calls = evm;
 
 TEST_F(evm_calls, delegatecall)
@@ -472,7 +473,8 @@ TEST_F(evm_calls, staticcall_input)
 
 TEST_F(evm_calls, call_with_value_low_gas)
 {
-    host.accounts[{}] = {};
+    // Create the call destination account.
+    host.accounts[0x0000000000000000000000000000000000000000_address] = {};
     for (auto call_op : {OP_CALL, OP_CALLCODE})
     {
         auto code = 4 * push(0) + push(1) + 2 * push(0) + call_op + OP_POP;
@@ -484,6 +486,8 @@ TEST_F(evm_calls, call_with_value_low_gas)
 
 TEST_F(evm_calls, call_oog_after_balance_check)
 {
+    // Create the call destination account.
+    host.accounts[0x0000000000000000000000000000000000000000_address] = {};
     for (auto op : {OP_CALL, OP_CALLCODE})
     {
         auto code = 4 * push(0) + push(1) + 2 * push(0) + op + OP_SELFDESTRUCT;
@@ -494,20 +498,23 @@ TEST_F(evm_calls, call_oog_after_balance_check)
 
 TEST_F(evm_calls, call_oog_after_depth_check)
 {
+    // Create the call destination account.
+    host.accounts[0x0000000000000000000000000000000000000000_address] = {};
     msg.depth = 1024;
+
     for (auto op : {OP_CALL, OP_CALLCODE})
     {
-        auto code = 4 * push(0) + push(1) + 2 * push(0) + op + OP_SELFDESTRUCT;
+        const auto code = 4 * push(0) + push(1) + 2 * push(0) + op + OP_SELFDESTRUCT;
         execute(12420, code);
         EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
     }
 
     rev = EVMC_TANGERINE_WHISTLE;
-    auto code = 7 * push(0) + OP_CALL + OP_SELFDESTRUCT;
-    execute(25721, code);
+    const auto code = 7 * push(0) + OP_CALL + OP_SELFDESTRUCT;
+    execute(721, code);
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 
-    execute(25721 + 5000 - 1, code);
+    execute(721 + 5000 - 1, code);
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
