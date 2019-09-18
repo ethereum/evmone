@@ -434,6 +434,22 @@ TEST_F(evm_calls, call_then_oog)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
+TEST_F(evm_calls, callcode_then_oog)
+{
+    // Performs a CALLCODE then OOG in the same code block.
+    host.call_result.status_code = EVMC_FAILURE;
+    host.call_result.gas_left = 0;
+
+    const auto code =
+        callcode(0xaa).gas(100).value(0).input(0, 3).output(3, 9) + 4 * add(OP_DUP1) + OP_POP;
+
+    execute(825, code);
+    EXPECT_STATUS(EVMC_OUT_OF_GAS);
+    ASSERT_EQ(host.recorded_calls.size(), 1);
+    const auto& call_msg = host.recorded_calls.back();
+    EXPECT_EQ(call_msg.gas, 100);
+}
+
 TEST_F(evm_calls, delegatecall_then_oog)
 {
     // Performs a CALL then OOG in the same code block.
