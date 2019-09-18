@@ -188,15 +188,27 @@ TEST_F(evm_calls, create_failure)
 
 TEST_F(evm_calls, call_failing_with_value)
 {
-    auto code = "60ff600060ff6000600160aa618000f150";
+    host.accounts[0x00000000000000000000000000000000000000aa_address] = {};
+    for (auto op : {OP_CALL, OP_CALLCODE})
+    {
+        const auto code = push(0xff) + push(0) + OP_DUP2 + OP_DUP2 + push(1) + push(0xaa) +
+                          push(0x8000) + op + OP_POP;
 
-    execute(40000, code);
-    EXPECT_GAS_USED(EVMC_SUCCESS, 32447);
-    EXPECT_EQ(host.recorded_calls.size(), 0);  // There was no call().
+        // Fails on balance check.
+        execute(12000, code);
+        EXPECT_GAS_USED(EVMC_SUCCESS, 7447);
+        EXPECT_EQ(host.recorded_calls.size(), 0);  // There was no call().
 
-    execute(0x8000, code);
-    EXPECT_STATUS(EVMC_OUT_OF_GAS);
-    EXPECT_EQ(host.recorded_calls.size(), 0);  // There was no call().
+        // Fails on value transfer additional cost - minimum gas limit that triggers this condition.
+        execute(747, code);
+        EXPECT_STATUS(EVMC_OUT_OF_GAS);
+        EXPECT_EQ(host.recorded_calls.size(), 0);  // There was no call().
+
+        // Fails on value transfer additional cost - maximum gas limit that triggers this condition.
+        execute(744 + 9000, code);
+        EXPECT_STATUS(EVMC_OUT_OF_GAS);
+        EXPECT_EQ(host.recorded_calls.size(), 0);  // There was no call().
+    }
 }
 
 TEST_F(evm_calls, call_with_value)
