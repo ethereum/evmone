@@ -1,14 +1,11 @@
-// evmone: Fast Ethereum Virtual Machine implementation
-// Copyright 2019 Pawel Bylica.
+// evmone-fuzzer: LibFuzzer based testing tool for EVMC-compatible EVM implementations.
+// Copyright 2019 The evmone Authors.
 // Licensed under the Apache License, Version 2.0.
 
 #include <evmone/evmone.h>
-
-#include <evmc/instructions.h>
 #include <test/utils/bytecode.hpp>
 #include <test/utils/host_mock.hpp>
 #include <test/utils/utils.hpp>
-#include <algorithm>
 #include <cstring>
 #include <iostream>
 
