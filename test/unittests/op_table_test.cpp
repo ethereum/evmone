@@ -5,6 +5,7 @@
 #include <evmc/instructions.h>
 #include <evmone/analysis.hpp>
 #include <gtest/gtest.h>
+#include <test/utils/bytecode.hpp>
 
 TEST(op_table, compare_with_evmc_instruction_tables)
 {
@@ -19,12 +20,21 @@ TEST(op_table, compare_with_evmc_instruction_tables)
             const auto& metrics = evmone_tbl[i];
             const auto& ref_metrics = evmc_tbl[i];
 
-            // Compare gas costs. Normalize -1 values in EVMC for undefined instructions.
-            EXPECT_EQ(metrics.gas_cost, std::max(ref_metrics.gas_cost, int16_t{0}));
+            const auto case_descr = [rev](size_t opcode) {
+                auto case_descr_str = std::ostringstream{};
+                case_descr_str << "opcode " << to_name(evmc_opcode(opcode), rev);
+                case_descr_str << " on revision " << rev;
+                return case_descr_str.str();
+            };
 
-            EXPECT_EQ(metrics.stack_req, ref_metrics.num_stack_arguments);
+            // Compare gas costs. Normalize -1 values in EVMC for undefined instructions.
+            EXPECT_EQ(metrics.gas_cost, std::max(ref_metrics.gas_cost, int16_t{0}))
+                << case_descr(i);
+
+            EXPECT_EQ(metrics.stack_req, ref_metrics.num_stack_arguments) << case_descr(i);
             EXPECT_EQ(metrics.stack_change,
-                ref_metrics.num_stack_returned_items - ref_metrics.num_stack_arguments);
+                ref_metrics.num_stack_returned_items - ref_metrics.num_stack_arguments)
+                << case_descr(i);
         }
     }
 }
