@@ -22,9 +22,13 @@ and this project adheres to [Semantic Versioning].
 
 
 ## [0.1.0] - 2019-06-19
+
+The first release of the evmone project. 
+It delivers fully-compatible and high-speed EVM implementation.
+
 ### Added
-- First release of the evmone project.
 - Support for all current EVM revisions up to Petersburg.
+- Exposes [EVMC] 6 ABI.
 - The [intx 0.2.0](https://github.com/chfast/intx/releases/tag/v0.2.0) library is used for 256-bit precision arithmetic. 
 
 
