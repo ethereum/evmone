@@ -6,6 +6,7 @@
 
 #include "evm_fixture.hpp"
 
+using namespace evmc::literals;
 using evm_calls = evm;
 
 TEST_F(evm_calls, delegatecall)
@@ -187,15 +188,27 @@ TEST_F(evm_calls, create_failure)
 
 TEST_F(evm_calls, call_failing_with_value)
 {
-    auto code = "60ff600060ff6000600160aa618000f150";
+    host.accounts[0x00000000000000000000000000000000000000aa_address] = {};
+    for (auto op : {OP_CALL, OP_CALLCODE})
+    {
+        const auto code = push(0xff) + push(0) + OP_DUP2 + OP_DUP2 + push(1) + push(0xaa) +
+                          push(0x8000) + op + OP_POP;
 
-    execute(40000, code);
-    EXPECT_GAS_USED(EVMC_SUCCESS, 32447);
-    EXPECT_EQ(host.recorded_calls.size(), 0);  // There was no call().
+        // Fails on balance check.
+        execute(12000, code);
+        EXPECT_GAS_USED(EVMC_SUCCESS, 7447);
+        EXPECT_EQ(host.recorded_calls.size(), 0);  // There was no call().
 
-    execute(0x8000, code);
-    EXPECT_STATUS(EVMC_OUT_OF_GAS);
-    EXPECT_EQ(host.recorded_calls.size(), 0);  // There was no call().
+        // Fails on value transfer additional cost - minimum gas limit that triggers this condition.
+        execute(747, code);
+        EXPECT_STATUS(EVMC_OUT_OF_GAS);
+        EXPECT_EQ(host.recorded_calls.size(), 0);  // There was no call().
+
+        // Fails on value transfer additional cost - maximum gas limit that triggers this condition.
+        execute(744 + 9000, code);
+        EXPECT_STATUS(EVMC_OUT_OF_GAS);
+        EXPECT_EQ(host.recorded_calls.size(), 0);  // There was no call().
+    }
 }
 
 TEST_F(evm_calls, call_with_value)
@@ -421,6 +434,22 @@ TEST_F(evm_calls, call_then_oog)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
+TEST_F(evm_calls, callcode_then_oog)
+{
+    // Performs a CALLCODE then OOG in the same code block.
+    host.call_result.status_code = EVMC_FAILURE;
+    host.call_result.gas_left = 0;
+
+    const auto code =
+        callcode(0xaa).gas(100).value(0).input(0, 3).output(3, 9) + 4 * add(OP_DUP1) + OP_POP;
+
+    execute(825, code);
+    EXPECT_STATUS(EVMC_OUT_OF_GAS);
+    ASSERT_EQ(host.recorded_calls.size(), 1);
+    const auto& call_msg = host.recorded_calls.back();
+    EXPECT_EQ(call_msg.gas, 100);
+}
+
 TEST_F(evm_calls, delegatecall_then_oog)
 {
     // Performs a CALL then OOG in the same code block.
@@ -472,7 +501,8 @@ TEST_F(evm_calls, staticcall_input)
 
 TEST_F(evm_calls, call_with_value_low_gas)
 {
-    host.accounts[{}] = {};
+    // Create the call destination account.
+    host.accounts[0x0000000000000000000000000000000000000000_address] = {};
     for (auto call_op : {OP_CALL, OP_CALLCODE})
     {
         auto code = 4 * push(0) + push(1) + 2 * push(0) + call_op + OP_POP;
@@ -484,6 +514,8 @@ TEST_F(evm_calls, call_with_value_low_gas)
 
 TEST_F(evm_calls, call_oog_after_balance_check)
 {
+    // Create the call destination account.
+    host.accounts[0x0000000000000000000000000000000000000000_address] = {};
     for (auto op : {OP_CALL, OP_CALLCODE})
     {
         auto code = 4 * push(0) + push(1) + 2 * push(0) + op + OP_SELFDESTRUCT;
@@ -494,20 +526,23 @@ TEST_F(evm_calls, call_oog_after_balance_check)
 
 TEST_F(evm_calls, call_oog_after_depth_check)
 {
+    // Create the call destination account.
+    host.accounts[0x0000000000000000000000000000000000000000_address] = {};
     msg.depth = 1024;
+
     for (auto op : {OP_CALL, OP_CALLCODE})
     {
-        auto code = 4 * push(0) + push(1) + 2 * push(0) + op + OP_SELFDESTRUCT;
+        const auto code = 4 * push(0) + push(1) + 2 * push(0) + op + OP_SELFDESTRUCT;
         execute(12420, code);
         EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
     }
 
     rev = EVMC_TANGERINE_WHISTLE;
-    auto code = 7 * push(0) + OP_CALL + OP_SELFDESTRUCT;
-    execute(25721, code);
+    const auto code = 7 * push(0) + OP_CALL + OP_SELFDESTRUCT;
+    execute(721, code);
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 
-    execute(25721 + 5000 - 1, code);
+    execute(721 + 5000 - 1, code);
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
