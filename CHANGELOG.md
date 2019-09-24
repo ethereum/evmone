@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
 ## [0.2.0] - unreleased
+
+This release of evmone is binary compatible with 0.1 and delivers big performance improvements
+– both code preprocessing and execution is **~66%** faster (needs ~40% less time).
+
 ### Added
 - **evm-test** – the testing tool for [EVMC]-compatible EVM implementations.
   [#85](https://github.com/ethereum/evmone/pull/85)
