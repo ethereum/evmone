@@ -5,8 +5,8 @@
 #include "vm_loader.hpp"
 #include <evmone/evmone.h>
 
-evmc::vm& get_vm() noexcept
+evmc::VM& get_vm() noexcept
 {
-    static auto vm = evmc::vm{evmc_create_evmone()};
+    static auto vm = evmc::VM{evmc_create_evmone()};
     return vm;
 }
