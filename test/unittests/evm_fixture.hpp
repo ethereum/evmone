@@ -36,7 +36,7 @@ class evm : public testing::Test
 {
 protected:
     /// The VM handle.
-    evmc::vm& vm;
+    evmc::VM& vm;
 
     /// The EVM revision for unit test execution. Byzantium by default.
     /// TODO: Add alias evmc::revision.
