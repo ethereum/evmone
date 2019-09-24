@@ -84,11 +84,11 @@ and this project adheres to [Semantic Versioning].
 ## [0.1.1] - 2019-09-11
 ### Changed
 - [EVMC] upgraded to version 6.3.1 (still ABI-compatible with evmone 0.1.0).
-  [[#171](https://github.com/ethereum/evmone/pull/171)]
+  [#171](https://github.com/ethereum/evmone/pull/171)
 - Changes to the **evmone-bench** tool backported from 0.2. 
   This allows better performance comparison between 0.1 and 0.2 as both versions
   can run the same set of benchmarks.
-  [[#172](https://github.com/ethereum/evmone/pull/172)]
+  [#172](https://github.com/ethereum/evmone/pull/172)
 
 
 ## [0.1.0] - 2019-06-19
