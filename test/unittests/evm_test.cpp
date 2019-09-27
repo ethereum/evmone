@@ -912,7 +912,7 @@ TEST_F(evm, memory_access)
 
         for (auto& t : memory_access_opcodes)
         {
-            const int num_args = metrics[t.opcode].num_stack_arguments;
+            const int num_args = metrics[t.opcode].stack_height_required;
             auto h = std::max(num_args, t.memory_size_arg + 1);
             auto code = bytecode{};
 
