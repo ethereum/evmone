@@ -32,6 +32,7 @@ hunter_add_package(ethash)
 find_package(ethash CONFIG REQUIRED)
 
 option(EVMC_TEST_TOOLS "Build EVMC test tools" ${EVMONE_TESTING})
+option(EVMC_INSTALL "Enable EVMC installation (e.g. make install)" OFF)
 add_subdirectory(evmc)
 
 cable_configure_compiler()
