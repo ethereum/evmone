@@ -159,6 +159,18 @@ jobs:
           command: |
             codecov --required --gcov-exec "$GCOV" --gcov-root ~/build
 
+  gcc-32bit:
+    executor: linux
+    environment:
+      CMAKE_OPTIONS: -DTOOLCHAIN=cxx17-32bit
+    steps:
+      - run:
+          name: "Install GCC 32-bit"
+          command: |
+            sudo apt -q update && sudo apt -qy install g++-multilib
+      - build
+      - test
+
   clang-latest-ubsan:
     executor: linux
     environment:
@@ -247,3 +259,4 @@ workflows:
       - clang-latest-ubsan
       - clang-latest-coverage
       - macos-asan
+      - gcc-32bit
