@@ -42,7 +42,10 @@ TEST_F(evm, push_implicit_data)
 
 TEST_F(evm, stack_underflow)
 {
-    execute(13, push("01") + OP_POP + push("01") + OP_POP + OP_POP);
+    execute(13, push(1) + OP_POP + push(1) + OP_POP + OP_POP);
+    EXPECT_STATUS(EVMC_STACK_UNDERFLOW);
+
+    execute(OP_NOT);
     EXPECT_STATUS(EVMC_STACK_UNDERFLOW);
 }
 
