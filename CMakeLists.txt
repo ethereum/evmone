@@ -26,7 +26,7 @@ cable_set_build_type(DEFAULT Release CONFIGURATION_TYPES Release Debug)
 include(Hunter/init)
 
 project(evmone LANGUAGES CXX)
-set(PROJECT_VERSION 0.2.0)
+set(PROJECT_VERSION 0.3.0-dev)
 
 hunter_add_package(ethash)
 find_package(ethash CONFIG REQUIRED)
