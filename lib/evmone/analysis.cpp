@@ -70,19 +70,12 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
 
         auto& instr = analysis.instrs.back();
 
-        bool is_terminator = false;  // A flag whenever this is a block terminating instruction.
-        switch (opcode)
+        switch (opcode_info.kind)
         {
-        case OP_JUMP:
-        case OP_JUMPI:
-        case OP_STOP:
-        case OP_RETURN:
-        case OP_REVERT:
-        case OP_SELFDESTRUCT:
-            is_terminator = true;
+        default:
             break;
 
-        case ANY_SMALL_PUSH:
+        case op_kind::small_push:
         {
             const auto push_size = static_cast<size_t>(opcode - OP_PUSH1) + 1;
             const auto push_end = std::min(code_pos + push_size, code_end);
@@ -98,7 +91,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
             break;
         }
 
-        case ANY_LARGE_PUSH:
+        case op_kind::large_push:
         {
             const auto push_size = static_cast<size_t>(opcode - OP_PUSH1) + 1;
             const auto push_end = code_pos + push_size;
@@ -124,23 +117,18 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
             break;
         }
 
-        case OP_GAS:
-        case OP_CALL:
-        case OP_CALLCODE:
-        case OP_DELEGATECALL:
-        case OP_STATICCALL:
-        case OP_CREATE:
-        case OP_CREATE2:
+        case op_kind::gas_counter_access:
             instr.arg.number = block.gas_cost;
             break;
 
-        case OP_PC:
+        case op_kind::pc:
             instr.arg.number = static_cast<int>(code_pos - code - 1);
             break;
         }
 
         // If this is a terminating instruction or the next instruction is a JUMPDEST.
-        if (is_terminator || (code_pos != code_end && *code_pos == OP_JUMPDEST))
+        if (opcode_info.kind == op_kind::terminator ||
+            (code_pos != code_end && *code_pos == OP_JUMPDEST))
         {
             // Save current block.
             const auto stack_req = block.stack_req <= stack_req_max ?
