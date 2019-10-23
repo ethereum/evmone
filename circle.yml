@@ -4,6 +4,12 @@ executors:
   linux:
     docker:
       - image: ethereum/cpp-build-env:11
+  linux-gcc-9:
+    docker:
+      - image: ethereum/cpp-build-env:12-gcc-9
+  linux-gcc-7:
+    docker:
+      - image: ethereum/cpp-build-env:12-gcc-7
   linux-clang-9:
     docker:
       - image: ethereum/cpp-build-env:12-clang-9
@@ -93,8 +99,7 @@ jobs:
           codespell --quiet-level=4
 
   release-linux:
-    docker:
-      - image: ethereum/cpp-build-env:12-gcc-9
+    executor: linux-gcc-9
     environment:
       BUILD_TYPE: Release
     steps:
@@ -134,10 +139,7 @@ jobs:
             ghr -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME -n "$name" $prerelease_flag $CIRCLE_TAG ~/package
 
   gcc-min:
-    executor: linux
-    environment:
-      CC: gcc-7
-      CXX: g++-7
+    executor: linux-gcc-7
     steps:
       - build
       - test
