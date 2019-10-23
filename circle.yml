@@ -161,7 +161,7 @@ jobs:
             codecov --required --gcov-root ~/build
 
   gcc-32bit:
-    executor: linux
+    executor: linux-gcc-9
     environment:
       CMAKE_OPTIONS: -DTOOLCHAIN=cxx17-32bit
     steps:
@@ -173,8 +173,7 @@ jobs:
       - test
 
   clang-latest-ubsan:
-    docker:
-      - image: ethereum/cpp-build-env:12-clang-9
+    executor: linux-clang-9
     environment:
       CMAKE_OPTIONS: -DSANITIZE=undefined,implicit-conversion,nullability
       UBSAN_OPTIONS: halt_on_error=1
