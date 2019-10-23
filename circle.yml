@@ -36,11 +36,11 @@ commands:
             $CXX --version
             cmake --version
 
-            # Save to the toolchain file.
-            echo $CXX --version >> toolchain
+            # Create the toolchain.info file for cache key.
+            $CXX --version >> toolchain.info
       - restore_cache:
           name: "Restore Hunter cache"
-          key: &hunter-cache-key hunter-{{arch}}-{{checksum "toolchain"}}-{{checksum "cmake/Hunter/init.cmake"}}
+          key: &hunter-cache-key hunter-{{arch}}-{{checksum "toolchain.info"}}-{{checksum "cmake/Hunter/init.cmake"}}
       - run:
           name: "Configure"
           working_directory: ~/build
