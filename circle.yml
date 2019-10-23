@@ -4,6 +4,9 @@ executors:
   linux:
     docker:
       - image: ethereum/cpp-build-env:11
+  linux-clang-9:
+    docker:
+      - image: ethereum/cpp-build-env:12-clang-9
   macos:
     macos:
       xcode: 11.1.0
@@ -183,10 +186,8 @@ jobs:
       - test
 
   clang-latest-coverage:
-    executor: linux
+    executor: linux-clang-9
     environment:
-      CC: clang-8
-      CXX: clang++-8
       BUILD_TYPE: Coverage
       TESTS_FILTER: unittests
     steps:
@@ -201,12 +202,12 @@ jobs:
           working_directory: ~/build
           command: |
             mkdir ~/coverage
-            llvm-profdata-8 merge *.profraw -o evmone.profdata
-            llvm-cov-8 show lib/libevmone.so bin/evmone-unittests -Xdemangler llvm-cxxfilt-8 -instr-profile=evmone.profdata -ignore-filename-regex=include/evmc -region-coverage-lt=100 -format=html > ~/coverage/missing.html
-            llvm-cov-8 show lib/libevmone.so bin/evmone-unittests -Xdemangler llvm-cxxfilt-8 -instr-profile=evmone.profdata -ignore-filename-regex=include/evmc -format=html > ~/coverage/full.html
+            llvm-profdata merge *.profraw -o evmone.profdata
+            llvm-cov show lib/libevmone.so bin/evmone-unittests -Xdemangler llvm-cxxfilt -instr-profile=evmone.profdata -ignore-filename-regex=include/evmc -region-coverage-lt=100 -format=html > ~/coverage/missing.html
+            llvm-cov show lib/libevmone.so bin/evmone-unittests -Xdemangler llvm-cxxfilt -instr-profile=evmone.profdata -ignore-filename-regex=include/evmc -format=html > ~/coverage/full.html
 
-            llvm-cov-8 report lib/libevmone.so bin/evmone-unittests -Xdemangler llvm-cxxfilt-8 -instr-profile=evmone.profdata -ignore-filename-regex=include/evmc > ~/coverage/report.txt
-            llvm-cov-8 report lib/libevmone.so bin/evmone-unittests -Xdemangler llvm-cxxfilt-8 -instr-profile=evmone.profdata -ignore-filename-regex=include/evmc -use-color
+            llvm-cov report lib/libevmone.so bin/evmone-unittests -Xdemangler llvm-cxxfilt -instr-profile=evmone.profdata -ignore-filename-regex=include/evmc > ~/coverage/report.txt
+            llvm-cov report lib/libevmone.so bin/evmone-unittests -Xdemangler llvm-cxxfilt -instr-profile=evmone.profdata -ignore-filename-regex=include/evmc -use-color
       - store_artifacts:
           path: ~/coverage
           destination: coverage
