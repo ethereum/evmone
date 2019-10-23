@@ -37,6 +37,7 @@ commands:
             cmake --version
 
             # Create the toolchain.info file for cache key.
+            echo $TOOLCHAIN >> toolchain.info
             $CXX --version >> toolchain.info
       - restore_cache:
           name: "Restore Hunter cache"
