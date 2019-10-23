@@ -15,7 +15,7 @@
 #include <memory>
 
 
-#if __has_include(<filesystem>)
+#if HAVE_STD_FILESYSTEM
 #include <filesystem>
 namespace fs = std::filesystem;
 #else
