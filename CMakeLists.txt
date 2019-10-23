@@ -38,19 +38,19 @@ cable_configure_compiler()
 if(CABLE_COMPILER_GNULIKE)
     add_compile_options(-Wno-attributes)  # Allow using unknown attributes.
 
-    # Prepend to CXX flags to allow overriding.
-    set(CMAKE_CXX_FLAGS "-fvisibility=hidden ${CMAKE_CXX_FLAGS}")
-
     if(CABLE_COMPILER_CLANG)
         set(CMAKE_CXX_FLAGS_COVERAGE "-fprofile-instr-generate -fcoverage-mapping")
     elseif(CABLE_COMPILER_GNU)
         set(CMAKE_CXX_FLAGS_COVERAGE "--coverage")
     endif()
-
 elseif(MSVC)
     add_compile_options(/wd4324)  # Disabled warning about alignment caused by alignas.
     add_compile_options(/wd5030)  # Allow using unknown attributes.
 endif()
+
+set(CMAKE_C_VISIBILITY_PRESET hidden)
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN YES)
 
 if(EVMONE_FUZZING)
     if(NOT ${CMAKE_CXX_COMPILER_ID} MATCHES Clang OR ${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS 8)
