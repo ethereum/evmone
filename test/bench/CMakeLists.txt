@@ -29,9 +29,9 @@ target_compile_definitions(evmone-bench PRIVATE HAVE_STD_FILESYSTEM=${HAVE_STD_F
 if(NOT HAVE_STD_FILESYSTEM)
     file(
         DOWNLOAD
-        https://raw.githubusercontent.com/gulrak/filesystem/v1.1.4/include/ghc/filesystem.hpp
+        https://github.com/gulrak/filesystem/releases/download/v1.2.6/filesystem.hpp
         ${CMAKE_CURRENT_BINARY_DIR}/filesystem.hpp
-        EXPECTED_HASH SHA256=d0d073e7191e7a5e9242de8f571ad59c789b6a3abaae0f976a2543307f71aa59
+        EXPECTED_HASH SHA256=adc78f68ac26189c18679a87400d83b072f047f2ecd00b3ce6b1da16799dc217
     )
     target_include_directories(evmone-bench SYSTEM PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 elseif(UNIX AND NOT APPLE)
