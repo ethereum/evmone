@@ -145,12 +145,9 @@ jobs:
       - test
 
   gcc-latest-coverage:
-    executor: linux
+    executor: linux-gcc-9
     environment:
       BUILD_TYPE: Coverage
-      CC: gcc-8
-      CXX: g++-8
-      GCOV: gcov-8
     steps:
       - build
       - run:
@@ -161,7 +158,7 @@ jobs:
       - run:
           name: "Upload coverage data"
           command: |
-            codecov --required --gcov-exec "$GCOV" --gcov-root ~/build
+            codecov --required --gcov-root ~/build
 
   gcc-32bit:
     executor: linux
