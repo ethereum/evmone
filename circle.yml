@@ -90,11 +90,10 @@ jobs:
           codespell --quiet-level=4
 
   release-linux:
-    executor: linux
+    docker:
+      - image: ethereum/cpp-build-env:12-gcc-9
     environment:
       BUILD_TYPE: Release
-      CC: clang-8
-      CXX: clang++-8
     steps:
       - build
       - test
