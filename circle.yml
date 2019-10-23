@@ -44,7 +44,11 @@ commands:
       - run:
           name: "Configure"
           working_directory: ~/build
-          command: cmake ../project -DCMAKE_INSTALL_PREFIX=~/install -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DEVMONE_TESTING=ON $CMAKE_OPTIONS
+          command: |
+            if [ "$TOOLCHAIN" ]; then
+              export toolchain_option="-DTOOLCHAIN=$TOOLCHAIN"
+            fi
+            cmake ../project $toolchain_option -DCMAKE_INSTALL_PREFIX=~/install -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DEVMONE_TESTING=ON $CMAKE_OPTIONS
       - save_cache:
           name: "Save Hunter cache"
           key: *hunter-cache-key
@@ -163,7 +167,7 @@ jobs:
   gcc-32bit:
     executor: linux-gcc-9
     environment:
-      CMAKE_OPTIONS: -DTOOLCHAIN=cxx17-32bit
+      TOOLCHAIN: cxx17-32bit
     steps:
       - run:
           name: "Install GCC 32-bit"
