@@ -11,13 +11,14 @@ Let's start by defining some basic and universal instructions' parameters.
 1. Base gas cost.
    
    This is the static gas cost of instructions. Some instructions may have 
-   additional cost depending on their operand values - these have to be
-   handled individually during the instruction execution.
+   _additional_ cost depending on their operand values and/or the environment
+   — these have to be handled individually during the instruction execution.
+   The _final_ cost is never less than the _base_ cost.
    
 2. Stack height requirement.
 
    This is the minimum stack height (number of items on the stack) 
-   required for the instruction execution.
+   required prior to the instruction execution.
    
 3. Stack height change.
 
@@ -36,45 +37,49 @@ Examples:
 | CALL    | 700           | 7                        | -6                  |
 
 
-## Basic blocks
+## Basic instruction blocks
 
-A _basic block_ is a sequence of instructions that are executed "straight-line"
-without being interrupted by jumps. I.e. they are nodes in the _control flow graph_.
+A _basic instruction block_ is a sequence of "straight-line" instructions 
+without jumps and jumpdests in the middle.
+Jumpdests are only allowed at the entry, jumps at the exit.
+Basic blocks are nodes in the _control flow graph_.
+See [Basic Block] in Wikipedia.
 
-The name "basic block" has been taken from LLVM. Other names are: just "block"
-in wasm or "subroutine" in subroutine-threaded interpreters.
+In EVM there are simple rules to identify basic instruction block boundaries:
 
-In EVM there are simple rules to identify basic block boundaries:
+1. A basic instruction block _starts_ right before:
+   - the first instruction in the code,
+   - `JUMPDEST` instruction.
 
-1. The following instructions _end_ a basic block:
+2. A basic instruction block _ends_ after the "terminator" instructions:
    - `JUMP`,
    - `JUMPI`,
    - `STOP`,
    - `RETURN`,
    - `REVERT`,
-   - `SELFDESTRUCT`,
-   - an instruction directly preceding `JUMPDEST`.
+   - `SELFDESTRUCT`.
 
-2. The following instructions _start_ a basic block:
-   - `JUMPDEST`,
-   - the first instruction in the code,
-   - an instruction directly after an instruction that has ended previous basic block.
+A basic instruction block is a shortest sequence of instructions such that 
+a basic block starts before the first instruction and ends after the last.
 
+In some cases multiple of the above rules can apply to single basic instruction 
+block boundary.
 
 ## Algorithm
 
-The algorithm for calculating gas and checking stack requirements precomputes
-the values for basic blocks and during execution the checks are done once per block.
+The algorithm for calculating gas and checking stack requirements pre-computes
+the values for basic instruction blocks and during execution the checks 
+are done only once per instruction block.
 
 ### Collecting requirements for basic blocks
 
-For a basic block we need to collect following information:
+For a basic block we need to collect the following information:
 
-- total base gas required by instructions,
-- the stack height required (the minimum stack height needed to execute 
-  all instructions in the block),
-- ~~the start-to-end stack height change~~,
-- the relative maximum stack height.
+- total **base gas cost** of all instructions,
+- the **stack height required** (the minimum stack height needed to execute all 
+  instructions in the block),
+- the **maximum stack height growth** relative to the stack height at block 
+  start.
 
 This is done as follows:
 
@@ -83,26 +88,26 @@ This is done as follows:
 
 ```python
 class Instruction:
-    gas_required = 0
+    base_gas_cost = 0
     stack_required = 0
     stack_change = 0
 
 class BasicBlock:
-    gas_required = 0
+    base_gas_cost = 0
     stack_required = 0
-    stack_change = 0  # FIXME: We don't have too keep it.
-    stack_max = 0
+    stack_max_growth = 0
 
 def collect_basic_block_requirements(basic_block):
+    stack_change = 0
     for instruction in basic_block:
-        basic_block.gas_required += instruction.gas_required
+        basic_block.base_gas_cost += instruction.base_gas_cost
         
-        current_stack_required = instruction.stack_required - basic_block.stack_change
+        current_stack_required = instruction.stack_required - stack_change
         basic_block.stack_required = max(basic_block.stack_required, current_stack_required)
         
-        basic_block.stack_change += instruction.stack_change
+        stack_change += instruction.stack_change
         
-        basic_block.stack_max = max(basic_block.stack_max, basic_block.stack_change)
+        basic_block.stack_max_growth = max(basic_block.stack_max_growth, stack_change)
 ```
 
 ### Checking basic block requirements
@@ -116,14 +121,14 @@ class ExecutionState:
     stack = []
 
 def check_basic_block_requirements(state, basic_block):
-    state.gas_left -= basic_block.gas_required
+    state.gas_left -= basic_block.base_gas_cost
     if state.gas_left < 0:
         raise OutOfGas()
     
     if len(state.stack) < basic_block.stack_required:
         raise StackUnderflow()
     
-    if len(state.stack) + basic_block.stack_max > 1024:
+    if len(state.stack) + basic_block.stack_max_growth > 1024:
         raise StackOverflow()
 ```
 
@@ -131,7 +136,7 @@ def check_basic_block_requirements(state, basic_block):
 
 ### EVM may terminate earlier
 
-Because requirements for a whole basic blocks are checked up front, the instructions
+Because requirements for a whole basic block are checked up front, the instructions
 that have observable external effects might not be executed although they would be
 executed if the gas counting would have been done per instruction.
 This is not a consensus issue because the execution terminates with a "hard" exception
@@ -140,17 +145,19 @@ or terminate with a different exception type.
 
 ### Current "gas left" value
 
-In EVMJIT also `GAS` and _call_ instructions begin a basic block. This is because
+In EVMJIT additional instructions that begin a basic block are `GAS` and any of the _call_ instructions. This is because
 these instructions need to know the precise _gas left_ counter value. 
 However, in evmone this problem has been solved without additional blocks splitting 
 by attaching the correction value to the mentioned instructions.
 
+### Undefined instructions
+
+Undefined instructions have base gas cost 0 and not stack requirements.
 
 
 
 
-
-
+[Basic Block]: https://en.wikipedia.org/wiki/Basic_block
 
 
    
