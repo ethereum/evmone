@@ -88,7 +88,7 @@ template <typename T>
 const std::array<std::pair<T, T>, jumpdest_map_size> map_builder<T>::map = []() noexcept
 {
     auto m = std::array<std::pair<T, T>, jumpdest_map_size>{};
-    for (size_t i = 0; i < static_cast<int>(m.size()); ++i)
+    for (size_t i = 0; i < m.size(); ++i)
         m[i] = {static_cast<T>(2 * i + 1), static_cast<T>(2 * i + 2)};
     return m;
 }
