@@ -15,15 +15,12 @@
 #include <memory>
 
 
-#if __has_include(<filesystem>)
+#if HAVE_STD_FILESYSTEM
 #include <filesystem>
 namespace fs = std::filesystem;
 #else
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wshadow"
 #include "filesystem.hpp"
 namespace fs = ghc::filesystem;
-#pragma GCC diagnostic pop
 #endif
 
 using namespace benchmark;
