@@ -1,4 +1,4 @@
 comment:
   layout: "diff"
 ignore:
-  - "test/*"
+  - "test/.*"
