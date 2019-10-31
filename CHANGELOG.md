@@ -5,6 +5,17 @@ Documentation of all notable changes to the **evmone** project.
 The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
+
+## [0.3.0] - unreleased
+
+### Added
+
+- **Istanbul** EVM revision support with new costs for some instructions ([EIP-1884]).
+  [#191](https://github.com/ethereum/evmone/pull/191)
+- Implementation of CHAINID instruction from the **Istanbul** EVM revision ([EIP-1344]).
+  [#190](https://github.com/ethereum/evmone/pull/190)
+
+
 ## [0.2.0] - 2019-09-24
 
 This release of evmone is binary compatible with 0.1 and delivers big performance improvements
@@ -106,11 +117,14 @@ It delivers fully-compatible and high-speed EVM implementation.
 - The [intx 0.2.0](https://github.com/chfast/intx/releases/tag/v0.2.0) library is used for 256-bit precision arithmetic. 
 
 
+[0.3.0]: https://github.com/ethereum/evmone/compare/v0.2.0..master
 [0.2.0]: https://github.com/ethereum/evmone/releases/tag/v0.2.0
 [0.1.1]: https://github.com/ethereum/evmone/releases/tag/v0.1.1
 [0.1.0]: https://github.com/ethereum/evmone/releases/tag/v0.1.0
 
 [Aleth]: https://github.com/ethereum/aleth
+[EIP-1884]: https://eips.ethereum.org/EIPS/eip-1884
+[EIP-1344]: https://eips.ethereum.org/EIPS/eip-1344
 [EVMC]: https://github.com/ethereum/evmc
 [intx]: https://github.com/chfast/intx
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
