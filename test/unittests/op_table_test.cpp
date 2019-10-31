@@ -27,14 +27,9 @@ TEST(op_table, compare_with_evmc_instruction_tables)
                 return case_descr_str.str();
             };
 
-            // Compare gas costs. Normalize -1 values in EVMC for undefined instructions.
-            EXPECT_EQ(metrics.gas_cost, std::max(ref_metrics.gas_cost, int16_t{0}))
-                << case_descr(i);
-
-            EXPECT_EQ(metrics.stack_req, ref_metrics.num_stack_arguments) << case_descr(i);
-            EXPECT_EQ(metrics.stack_change,
-                ref_metrics.num_stack_returned_items - ref_metrics.num_stack_arguments)
-                << case_descr(i);
+            EXPECT_EQ(metrics.gas_cost, ref_metrics.gas_cost) << case_descr(i);
+            EXPECT_EQ(metrics.stack_req, ref_metrics.stack_height_required) << case_descr(i);
+            EXPECT_EQ(metrics.stack_change, ref_metrics.stack_height_change) << case_descr(i);
         }
     }
 }

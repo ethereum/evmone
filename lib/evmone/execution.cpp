@@ -8,7 +8,7 @@
 
 namespace evmone
 {
-evmc_result execute(evmc_instance* /*unused*/, evmc_context* ctx, evmc_revision rev,
+evmc_result execute(evmc_vm* /*unused*/, evmc_host_context* ctx, evmc_revision rev,
     const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
 {
     auto analysis = analyze(rev, code, code_size);

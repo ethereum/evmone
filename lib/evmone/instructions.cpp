@@ -1377,6 +1377,11 @@ constexpr op_table create_op_table_constantinople() noexcept
 constexpr op_table create_op_table_istanbul() noexcept
 {
     auto table = create_op_table_constantinople();
+    table[OP_BALANCE] = {op_balance, 700, 1, 0};
+    table[OP_CHAINID] = {op_undefined, 2, 0, 1};
+    table[OP_EXTCODEHASH] = {op_extcodehash, 700, 1, 0};
+    table[OP_SELFBALANCE] = {op_undefined, 5, 0, 1};
+    table[OP_SLOAD] = {op_sload, 800, 1, 0};
     return table;
 }
 
@@ -1389,6 +1394,7 @@ constexpr op_table op_tables[] = {
     create_op_table_constantinople(),     // Constantinople
     create_op_table_constantinople(),     // Petersburg
     create_op_table_istanbul(),           // Istanbul
+    create_op_table_istanbul(),           // Berlin
 };
 static_assert(sizeof(op_tables) / sizeof(op_tables[0]) > EVMC_MAX_REVISION,
     "op table entry missing for an EVMC revision");

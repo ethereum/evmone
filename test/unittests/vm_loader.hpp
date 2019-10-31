@@ -5,4 +5,4 @@
 
 #include <evmc/evmc.hpp>
 
-evmc::vm& get_vm() noexcept;
+evmc::VM& get_vm() noexcept;

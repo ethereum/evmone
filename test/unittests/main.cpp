@@ -10,9 +10,9 @@
 #include <vector>
 
 /// The loaded EVMC module.
-static evmc::vm evmc_module;
+static evmc::VM evmc_module;
 
-evmc::vm& get_vm() noexcept
+evmc::VM& get_vm() noexcept
 {
     return evmc_module;
 }
@@ -157,7 +157,7 @@ int main(int argc, char* argv[])
 
         const auto& evmc_config = cli.arguments[0];
         evmc_loader_error_code ec;
-        evmc_module = evmc::vm{evmc_load_and_configure(evmc_config.c_str(), &ec)};
+        evmc_module = evmc::VM{evmc_load_and_configure(evmc_config.c_str(), &ec)};
 
         if (ec != EVMC_LOADER_SUCCESS)
         {

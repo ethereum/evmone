@@ -7,6 +7,6 @@
 
 namespace evmone
 {
-evmc_result execute(evmc_instance* instance, evmc_context* ctx, evmc_revision rev,
-    const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept;
+evmc_result execute(evmc_vm* vm, evmc_host_context* ctx, evmc_revision rev, const evmc_message* msg,
+    const uint8_t* code, size_t code_size) noexcept;
 }  // namespace evmone

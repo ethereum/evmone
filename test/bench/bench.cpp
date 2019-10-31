@@ -28,7 +28,7 @@ using namespace benchmark;
 namespace
 {
 constexpr auto gas_limit = std::numeric_limits<int64_t>::max();
-auto vm = evmc::vm{};
+auto vm = evmc::VM{};
 
 constexpr auto inputs_extension = ".inputs";
 
@@ -38,7 +38,7 @@ inline evmc::result execute(bytes_view code, bytes_view input) noexcept
     msg.gas = gas_limit;
     msg.input_data = input.data();
     msg.input_size = input.size();
-    auto null_ctx = evmc_context{};
+    auto null_ctx = evmc_host_context{};
     return vm.execute(null_ctx, EVMC_CONSTANTINOPLE, msg, code.data(), code.size());
 }
 
@@ -200,7 +200,7 @@ int parseargs(int argc, char** argv)
 {
     if (argc == 2)
     {
-        vm = evmc::vm{evmc_create_evmone()};
+        vm = evmc::VM{evmc_create_evmone()};
         std::cout << "Benchmarking evmone\n\n";
         load_benchmarks_from_dir(argv[1]);
         return 0;
@@ -210,7 +210,7 @@ int parseargs(int argc, char** argv)
     {
         const auto evmc_config = argv[1];
         auto ec = evmc_loader_error_code{};
-        vm = evmc::vm{evmc_load_and_configure(evmc_config, &ec)};
+        vm = evmc::VM{evmc_load_and_configure(evmc_config, &ec)};
 
         if (ec != EVMC_LOADER_SUCCESS)
         {

@@ -8,7 +8,7 @@
 
 TEST(evmone, info)
 {
-    auto vm = evmc::vm{evmc_create_evmone()};
+    auto vm = evmc::VM{evmc_create_evmone()};
     EXPECT_STREQ(vm.name(), "evmone");
     EXPECT_STREQ(vm.version(), PROJECT_VERSION);
     EXPECT_TRUE(vm.is_abi_compatible());
