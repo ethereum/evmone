@@ -330,6 +330,12 @@ const instruction* op_balance(const instruction* instr, execution_state& state) 
     return ++instr;
 }
 
+const instruction* op_chainid(const instruction* instr, execution_state& state) noexcept
+{
+    state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().chain_id));
+    return ++instr;
+}
+
 const instruction* op_origin(const instruction* instr, execution_state& state) noexcept
 {
     state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().tx_origin));
@@ -1378,7 +1384,7 @@ constexpr op_table create_op_table_istanbul() noexcept
 {
     auto table = create_op_table_constantinople();
     table[OP_BALANCE] = {op_balance, 700, 1, 0};
-    table[OP_CHAINID] = {op_undefined, 2, 0, 1};
+    table[OP_CHAINID] = {op_chainid, 2, 0, 1};
     table[OP_EXTCODEHASH] = {op_extcodehash, 700, 1, 0};
     table[OP_SELFBALANCE] = {op_undefined, 5, 0, 1};
     table[OP_SLOAD] = {op_sload, 800, 1, 0};
