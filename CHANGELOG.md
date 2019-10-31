@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning].
   [#191](https://github.com/ethereum/evmone/pull/191)
 - Implementation of CHAINID instruction from the **Istanbul** EVM revision ([EIP-1344]).
   [#190](https://github.com/ethereum/evmone/pull/190)
+- Implementation of SELFBALANCE instruction from the **Istanbul** EVM revision ([EIP-1884]).
+  [#24](https://github.com/ethereum/evmone/pull/24)
 
 
 ## [0.2.0] - 2019-09-24
