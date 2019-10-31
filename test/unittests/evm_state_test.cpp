@@ -171,26 +171,28 @@ TEST_F(evm_state, sstore_cost)
 
 TEST_F(evm_state, tx_context)
 {
-    host.tx_context.block_timestamp = 0xdd;
-    host.tx_context.block_coinbase.bytes[1] = 0xcc;
-    host.tx_context.block_number = 0x1100;
-    host.tx_context.block_difficulty.bytes[1] = 0xdd;
-    host.tx_context.block_gas_limit = 0x990000;
-    host.tx_context.tx_gas_price.bytes[2] = 0x66;
-    host.tx_context.tx_origin.bytes[2] = 0x55;
+    rev = EVMC_ISTANBUL;
 
-    std::string s;
-    s += "4241173a17";        // TIMESTAMP COINBASE OR GASPRICE OR
-    s += "4317441745173217";  // NUMBER OR DIFFICULTY OR GASLIMIT OR ORIGIN OR
-    s += "600052";            // m[0..] =
-    s += "60206000f3";        // RETURN(0,32)
-    execute(47, s);
+    host.tx_context.block_timestamp = 0xdd;
+    host.tx_context.block_number = 0x1100;
+    host.tx_context.block_gas_limit = 0x990000;
+    host.tx_context.chain_id.bytes[28] = 0xaa;
+    host.tx_context.block_coinbase.bytes[1] = 0xcc;
+    host.tx_context.tx_origin.bytes[2] = 0x55;
+    host.tx_context.block_difficulty.bytes[1] = 0xdd;
+    host.tx_context.tx_gas_price.bytes[2] = 0x66;
+
+    auto const code = bytecode{} + OP_TIMESTAMP + OP_COINBASE + OP_OR + OP_GASPRICE + OP_OR +
+                      OP_NUMBER + OP_OR + OP_DIFFICULTY + OP_OR + OP_GASLIMIT + OP_OR + OP_ORIGIN +
+                      OP_OR + OP_CHAINID + OP_OR + ret_top();
+    execute(52, code);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 0);
     ASSERT_EQ(result.output_size, 32);
     EXPECT_EQ(result.output_data[31], 0xdd);
     EXPECT_EQ(result.output_data[30], 0x11);
     EXPECT_EQ(result.output_data[29], 0x99);
+    EXPECT_EQ(result.output_data[28], 0xaa);
     EXPECT_EQ(result.output_data[14], 0x55);
     EXPECT_EQ(result.output_data[13], 0xcc);
     EXPECT_EQ(result.output_data[2], 0x66);
