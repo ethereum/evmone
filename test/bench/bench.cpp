@@ -38,8 +38,7 @@ inline evmc::result execute(bytes_view code, bytes_view input) noexcept
     msg.gas = gas_limit;
     msg.input_data = input.data();
     msg.input_size = input.size();
-    auto null_ctx = evmc_host_context{};
-    return vm.execute(null_ctx, EVMC_CONSTANTINOPLE, msg, code.data(), code.size());
+    return vm.execute(EVMC_CONSTANTINOPLE, msg, code.data(), code.size());
 }
 
 void execute(State& state, bytes_view code, bytes_view input) noexcept
