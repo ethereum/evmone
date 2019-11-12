@@ -53,15 +53,15 @@ template <typename T1, typename T2>
 
 static auto print_input = std::getenv("PRINT");
 
-extern "C" evmc_instance* evmc_create_interpreter() noexcept;
+extern "C" evmc_vm* evmc_create_aleth_interpreter() noexcept;
 
 /// The reference VM.
-static auto ref_vm = evmc::vm{evmc_create_evmone()};
+static auto ref_vm = evmc::VM{evmc_create_evmone()};
 
 #pragma clang diagnostic ignored "-Wzero-length-array"
-static evmc::vm external_vms[] = {
+static evmc::VM external_vms[] = {
 #if ALETH
-    evmc::vm{evmc_create_interpreter()},
+    evmc::VM{evmc_create_aleth_interpreter()},
 #endif
 };
 

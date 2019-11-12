@@ -21,7 +21,7 @@ if(NOT fuzzing_coverage)
     # TODO: Aleth reports undefined behaviors, disable it for fuzzing.
     string(REPLACE undefined "" aleth_fuzzing_flags ${fuzzing_flags})
 
-    set(aleth_git_tag v1.7.0-alpha.1)
+    set(aleth_git_tag v1.7.0-rc.1)
     if(NOT aleth_git_tag STREQUAL "${aleth_current_git_tag}")
         message(STATUS "Aleth git tag has changed: ${aleth_current_git_tag} -> ${aleth_git_tag}")
         set(aleth_current_git_tag ${aleth_git_tag} CACHE INTERNAL "Current Aleth git tag" FORCE)
@@ -48,6 +48,8 @@ if(NOT fuzzing_coverage)
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_FLAGS=${aleth_fuzzing_flags}
         -DCMAKE_C_FLAGS=${aleth_fuzzing_flags}
+        -DTOOLS=OFF
+        -DTESTS=OFF
 
         BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target aleth-interpreter
         INSTALL_COMMAND ""
