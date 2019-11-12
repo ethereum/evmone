@@ -8,8 +8,8 @@
 
 namespace evmone
 {
-evmc_result execute(evmc_vm* /*unused*/, evmc_host_context* ctx, evmc_revision rev,
-    const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
+evmc_result execute(evmc_vm* /*unused*/, const evmc_host_interface* host, evmc_host_context* ctx,
+    evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
 {
     auto analysis = analyze(rev, code, code_size);
 
@@ -18,7 +18,7 @@ evmc_result execute(evmc_vm* /*unused*/, evmc_host_context* ctx, evmc_revision r
     state->msg = msg;
     state->code = code;
     state->code_size = code_size;
-    state->host = evmc::HostContext{ctx};
+    state->host = evmc::HostContext{*host, ctx};
     state->gas_left = msg->gas;
     state->rev = rev;
 

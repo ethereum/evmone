@@ -132,7 +132,7 @@ struct execution_state
     const uint8_t* code = nullptr;
     size_t code_size = 0;
 
-    evmc::HostContext host{nullptr};
+    evmc::HostContext host;
 
     evmc_revision rev = {};
 
