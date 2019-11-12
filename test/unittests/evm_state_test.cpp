@@ -94,7 +94,7 @@ TEST_F(evm_state, sstore_cost)
     auto v1 = evmc::bytes32{};
     v1.bytes[31] = 1;
 
-    auto revs = {EVMC_BYZANTIUM, EVMC_CONSTANTINOPLE, EVMC_PETERSBURG};
+    auto revs = {EVMC_BYZANTIUM, EVMC_CONSTANTINOPLE, EVMC_PETERSBURG, EVMC_ISTANBUL};
     for (auto r : revs)
     {
         rev = r;
@@ -130,7 +130,12 @@ TEST_F(evm_state, sstore_cost)
         storage[v1] = v1;
         execute(sstore(1, push(1)));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-        EXPECT_EQ(gas_used, rev == EVMC_CONSTANTINOPLE ? 206 : 5006);
+        if (rev >= EVMC_ISTANBUL)
+            EXPECT_EQ(gas_used, 806);
+        else if (rev == EVMC_CONSTANTINOPLE)
+            EXPECT_EQ(gas_used, 206);
+        else
+            EXPECT_EQ(gas_used, 5006);
         execute(205, sstore(1, push(1)));
         EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 
@@ -138,35 +143,80 @@ TEST_F(evm_state, sstore_cost)
         storage.clear();
         execute(sstore(1, push(1)) + sstore(1, push(1)));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-        EXPECT_EQ(gas_used, rev == EVMC_CONSTANTINOPLE ? 20212 : 25012);
+        if (rev >= EVMC_ISTANBUL)
+            EXPECT_EQ(gas_used, 20812);
+        else if (rev == EVMC_CONSTANTINOPLE)
+            EXPECT_EQ(gas_used, 20212);
+        else
+            EXPECT_EQ(gas_used, 25012);
 
         // Modified again:
         storage.clear();
         storage[v1] = {v1, true};
         execute(sstore(1, push(2)));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-        EXPECT_EQ(gas_used, rev == EVMC_CONSTANTINOPLE ? 206 : 5006);
+        if (rev >= EVMC_ISTANBUL)
+            EXPECT_EQ(gas_used, 806);
+        else if (rev == EVMC_CONSTANTINOPLE)
+            EXPECT_EQ(gas_used, 206);
+        else
+            EXPECT_EQ(gas_used, 5006);
 
         // Added & modified again:
         storage.clear();
         execute(sstore(1, push(1)) + sstore(1, push(2)));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-        EXPECT_EQ(gas_used, rev == EVMC_CONSTANTINOPLE ? 20212 : 25012);
+        if (rev >= EVMC_ISTANBUL)
+            EXPECT_EQ(gas_used, 20812);
+        else if (rev == EVMC_CONSTANTINOPLE)
+            EXPECT_EQ(gas_used, 20212);
+        else
+            EXPECT_EQ(gas_used, 25012);
 
         // Modified & modified again:
         storage.clear();
         storage[v1] = v1;
         execute(sstore(1, push(2)) + sstore(1, push(3)));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-        EXPECT_EQ(gas_used, rev == EVMC_CONSTANTINOPLE ? 5212 : 10012);
+        if (rev >= EVMC_ISTANBUL)
+            EXPECT_EQ(gas_used, 5812);
+        else if (rev == EVMC_CONSTANTINOPLE)
+            EXPECT_EQ(gas_used, 5212);
+        else
+            EXPECT_EQ(gas_used, 10012);
 
         // Modified & modified again back to original:
         storage.clear();
         storage[v1] = v1;
         execute(sstore(1, push(2)) + sstore(1, push(1)));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-        EXPECT_EQ(gas_used, rev == EVMC_CONSTANTINOPLE ? 5212 : 10012);
+        if (rev >= EVMC_ISTANBUL)
+            EXPECT_EQ(gas_used, 5812);
+        else if (rev == EVMC_CONSTANTINOPLE)
+            EXPECT_EQ(gas_used, 5212);
+        else
+            EXPECT_EQ(gas_used, 10012);
     }
+}
+
+TEST_F(evm_state, sstore_below_stipend)
+{
+    const auto code = sstore(0, 0);
+
+    rev = EVMC_HOMESTEAD;
+    execute(2306, code);
+    EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+
+    rev = EVMC_CONSTANTINOPLE;
+    execute(2306, code);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+
+    rev = EVMC_ISTANBUL;
+    execute(2306, code);
+    EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+
+    execute(2307, code);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
 }
 
 TEST_F(evm_state, tx_context)
