@@ -9,6 +9,8 @@
 #include <cstring>
 #include <iostream>
 
+constexpr auto latest_rev = EVMC_ISTANBUL;
+
 
 inline std::ostream& operator<<(std::ostream& os, const evmc_address& addr)
 {
@@ -230,7 +232,7 @@ fuzz_input populate_input(const uint8_t* data, size_t data_size) noexcept
     if (data_size < input_size_16bits)  // Not enough data for input.
         return in;
 
-    in.rev = rev_4bits > EVMC_PETERSBURG ? EVMC_PETERSBURG : static_cast<evmc_revision>(rev_4bits);
+    in.rev = rev_4bits > latest_rev ? latest_rev : static_cast<evmc_revision>(rev_4bits);
 
     // The message king should not matter but this 1 bit was free.
     in.msg.kind = kind_1bit ? EVMC_CREATE : EVMC_CALL;
