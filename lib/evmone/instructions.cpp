@@ -802,8 +802,9 @@ const instruction* op_return(const instruction*, execution_state& state) noexcep
     if (!check_memory(state, offset, size))
         return nullptr;
 
-    state.output_offset = static_cast<size_t>(offset);
     state.output_size = static_cast<size_t>(size);
+    if (state.output_size != 0)
+        state.output_offset = static_cast<size_t>(offset);
     return state.exit(status_code);
 }
 
