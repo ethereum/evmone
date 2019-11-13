@@ -95,6 +95,10 @@ https://hub.docker.com/r/ethereum/evmone.
 docker run ethereum/evmone --vm.evm=libevmone.so
 ```
 
+## References
+
+1. [Efficient gas calculation algorithm for EVM](docs/efficient_gas_calculation_algorithm.md)
+
 ## Maintainer
 
 Paweł Bylica [@chfast]
