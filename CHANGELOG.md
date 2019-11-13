@@ -6,7 +6,9 @@ The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
 
-## [0.3.0] - unreleased
+## [0.3.0] — unreleased
+
+This release of evmone adds changes for **Istanbul** EVM revision.
 
 ### Added
 
@@ -16,14 +18,22 @@ and this project adheres to [Semantic Versioning].
   [#190](https://github.com/ethereum/evmone/pull/190)
 - Implementation of SELFBALANCE instruction from the **Istanbul** EVM revision ([EIP-1884]).
   [#24](https://github.com/ethereum/evmone/pull/24)
+- Implementation of new cost model for SSTORE from the **Istanbul** EVM revision ([EIP-2200]).
+  [#142](https://github.com/ethereum/evmone/pull/142)
+
+### Changed
+
+- [EVMC] has been upgraded to version [7.0.0][EVMC 7.0.0].
+  [#204](https://github.com/ethereum/evmone/pull/204)
 
 
-## [0.2.0] - 2019-09-24
+## [0.2.0] — 2019-09-24
 
 This release of evmone is binary compatible with 0.1 and delivers big performance improvements
 – both code preprocessing and execution is **~66%** faster (needs ~40% less time).
 
 ### Added
+
 - **evm-test** – the testing tool for [EVMC]-compatible EVM implementations.
   [#85](https://github.com/ethereum/evmone/pull/85)
 - **evmone-fuzzer** – the testing tool that fuzzes evmone execution against [aleth-interpreter][Aleth] execution.
@@ -98,8 +108,10 @@ This release of evmone is binary compatible with 0.1 and delivers big performanc
   [#120](https://github.com/ethereum/evmone/pull/120)
 
 
-## [0.1.1] - 2019-09-11
+## [0.1.1] — 2019-09-11
+
 ### Changed
+
 - [EVMC] upgraded to version 6.3.1 (still ABI-compatible with evmone 0.1.0).
   [#171](https://github.com/ethereum/evmone/pull/171)
 - Changes to the **evmone-bench** tool backported from 0.2. 
@@ -108,12 +120,13 @@ This release of evmone is binary compatible with 0.1 and delivers big performanc
   [#172](https://github.com/ethereum/evmone/pull/172)
 
 
-## [0.1.0] - 2019-06-19
+## [0.1.0] — 2019-06-19
 
 The first release of the evmone project. 
 It delivers fully-compatible and high-speed EVM implementation.
 
 ### Added
+
 - Support for all current EVM revisions up to Petersburg.
 - Exposes [EVMC] 6 ABI.
 - The [intx 0.2.0](https://github.com/chfast/intx/releases/tag/v0.2.0) library is used for 256-bit precision arithmetic. 
@@ -127,7 +140,9 @@ It delivers fully-compatible and high-speed EVM implementation.
 [Aleth]: https://github.com/ethereum/aleth
 [EIP-1884]: https://eips.ethereum.org/EIPS/eip-1884
 [EIP-1344]: https://eips.ethereum.org/EIPS/eip-1344
+[EIP-2200]: https://eips.ethereum.org/EIPS/eip-2200
 [EVMC]: https://github.com/ethereum/evmc
+[EVMC 7.0.0]: https://github.com/ethereum/evmc/releases/tag/v7.0.0
 [intx]: https://github.com/chfast/intx
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
 [Semantic Versioning]: https://semver.org
