@@ -793,30 +793,19 @@ const instruction* op_invalid(const instruction*, execution_state& state) noexce
     return state.exit(EVMC_INVALID_INSTRUCTION);
 }
 
+template <evmc_status_code status_code>
 const instruction* op_return(const instruction*, execution_state& state) noexcept
 {
-    auto offset = state.stack[0];
-    auto size = state.stack[1];
+    const auto offset = state.stack[0];
+    const auto size = state.stack[1];
 
     if (!check_memory(state, offset, size))
         return nullptr;
 
-    state.output_offset = static_cast<size_t>(offset);
     state.output_size = static_cast<size_t>(size);
-    return state.exit(EVMC_SUCCESS);
-}
-
-const instruction* op_revert(const instruction*, execution_state& state) noexcept
-{
-    auto offset = state.stack[0];
-    auto size = state.stack[1];
-
-    if (!check_memory(state, offset, size))
-        return nullptr;
-
-    state.output_offset = static_cast<size_t>(offset);
-    state.output_size = static_cast<size_t>(size);
-    return state.exit(EVMC_REVERT);
+    if (state.output_size != 0)
+        state.output_offset = static_cast<size_t>(offset);
+    return state.exit(status_code);
 }
 
 template <evmc_call_kind kind>
@@ -1357,7 +1346,7 @@ constexpr op_table create_op_table_frontier() noexcept
     table[OP_CREATE] = {op_create, 32000, 3, -2};
     table[OP_CALL] = {op_call<EVMC_CALL>, 40, 7, -6};
     table[OP_CALLCODE] = {op_call<EVMC_CALLCODE>, 40, 7, -6};
-    table[OP_RETURN] = {op_return, 0, 2, -2};
+    table[OP_RETURN] = {op_return<EVMC_SUCCESS>, 0, 2, -2};
     table[OP_INVALID] = {op_invalid, 0, 0, 0};
     table[OP_SELFDESTRUCT] = {op_selfdestruct, 0, 1, -1};
     return table;
@@ -1390,7 +1379,7 @@ constexpr op_table create_op_table_byzantium() noexcept
     table[OP_RETURNDATASIZE] = {op_returndatasize, 2, 0, 1};
     table[OP_RETURNDATACOPY] = {op_returndatacopy, 3, 3, -3};
     table[OP_STATICCALL] = {op_staticcall, 700, 6, -5};
-    table[OP_REVERT] = {op_revert, 0, 2, -2};
+    table[OP_REVERT] = {op_return<EVMC_REVERT>, 0, 2, -2};
     return table;
 }
 

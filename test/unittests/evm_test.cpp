@@ -616,6 +616,18 @@ TEST_F(evm, revert)
     EXPECT_EQ(result.output_data[1], 0xee);
 }
 
+TEST_F(evm, return_empty_buffer_at_high_offset)
+{
+    host.tx_context.block_difficulty =
+        0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff1_bytes32;
+
+    execute(push(0) + OP_DIFFICULTY + OP_RETURN);
+    EXPECT_STATUS(EVMC_SUCCESS);
+
+    execute(push(0) + OP_DIFFICULTY + OP_REVERT);
+    EXPECT_STATUS(EVMC_REVERT);
+}
+
 TEST_F(evm, shl)
 {
     auto code = "600560011b6000526001601ff3";
