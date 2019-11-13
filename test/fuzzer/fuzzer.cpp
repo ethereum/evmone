@@ -9,6 +9,8 @@
 #include <cstring>
 #include <iostream>
 
+constexpr auto latest_rev = EVMC_ISTANBUL;
+
 
 inline std::ostream& operator<<(std::ostream& os, const evmc_address& addr)
 {
@@ -53,15 +55,15 @@ template <typename T1, typename T2>
 
 static auto print_input = std::getenv("PRINT");
 
-extern "C" evmc_instance* evmc_create_interpreter() noexcept;
+extern "C" evmc_vm* evmc_create_aleth_interpreter() noexcept;
 
 /// The reference VM.
-static auto ref_vm = evmc::vm{evmc_create_evmone()};
+static auto ref_vm = evmc::VM{evmc_create_evmone()};
 
 #pragma clang diagnostic ignored "-Wzero-length-array"
-static evmc::vm external_vms[] = {
+static evmc::VM external_vms[] = {
 #if ALETH
-    evmc::vm{evmc_create_interpreter()},
+    evmc::VM{evmc_create_aleth_interpreter()},
 #endif
 };
 
@@ -192,7 +194,7 @@ fuzz_input populate_input(const uint8_t* data, size_t data_size) noexcept
 {
     auto in = fuzz_input{};
 
-    constexpr auto min_required_size = 23;
+    constexpr auto min_required_size = 24;
     if (data_size < min_required_size)
         return in;
 
@@ -214,15 +216,16 @@ fuzz_input populate_input(const uint8_t* data, size_t data_size) noexcept
     const auto block_timestamp_8bits = data[14];
     const auto block_gas_limit_8bits = data[15];
     const auto block_difficulty_8bits = data[16];
+    const auto chainid_8bits = data[17];
 
-    const auto account_balance_8bits = data[17];
-    const auto account_storage_key1_8bits = data[18];
-    const auto account_storage_key2_8bits = data[19];
-    const auto account_codehash_8bits = data[20];
+    const auto account_balance_8bits = data[18];
+    const auto account_storage_key1_8bits = data[19];
+    const auto account_storage_key2_8bits = data[20];
+    const auto account_codehash_8bits = data[21];
     // TODO: Add another account?
 
-    const auto call_result_status_4bits = data[21] >> 4;
-    const auto call_result_gas_left_factor_4bits = uint8_t(data[22] & 0b1111);
+    const auto call_result_status_4bits = data[22] >> 4;
+    const auto call_result_gas_left_factor_4bits = uint8_t(data[23] & 0b1111);
 
     data += min_required_size;
     data_size -= min_required_size;
@@ -230,7 +233,7 @@ fuzz_input populate_input(const uint8_t* data, size_t data_size) noexcept
     if (data_size < input_size_16bits)  // Not enough data for input.
         return in;
 
-    in.rev = rev_4bits > EVMC_PETERSBURG ? EVMC_PETERSBURG : static_cast<evmc_revision>(rev_4bits);
+    in.rev = rev_4bits > latest_rev ? latest_rev : static_cast<evmc_revision>(rev_4bits);
 
     // The message king should not matter but this 1 bit was free.
     in.msg.kind = kind_1bit ? EVMC_CREATE : EVMC_CALL;
@@ -262,6 +265,7 @@ fuzz_input populate_input(const uint8_t* data, size_t data_size) noexcept
     in.host.tx_context.block_timestamp = expand_block_timestamp(block_timestamp_8bits);
     in.host.tx_context.block_gas_limit = expand_block_gas_limit(block_gas_limit_8bits);
     in.host.tx_context.block_difficulty = generate_interesting_value(block_difficulty_8bits);
+    in.host.tx_context.chain_id = generate_interesting_value(chainid_8bits);
 
     auto& account = in.host.accounts[in.msg.destination];
     account.balance = generate_interesting_value(account_balance_8bits);
@@ -324,6 +328,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
         std::cout << "coinbase: " << in.host.tx_context.block_coinbase << "\n";
         std::cout << "difficulty: " << in.host.tx_context.block_difficulty << "\n";
         std::cout << "timestamp: " << in.host.tx_context.block_timestamp << "\n";
+        std::cout << "chainid: " << in.host.tx_context.chain_id << "\n";
     }
 
     const auto ref_res = ref_vm.execute(ref_host, in.rev, in.msg, code.data(), code.size());
