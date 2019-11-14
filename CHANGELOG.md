@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
 
-## [0.3.0] — unreleased
+## [0.3.0] — 2019-11-14
 
 This release of evmone adds changes for **Istanbul** EVM revision.
 
