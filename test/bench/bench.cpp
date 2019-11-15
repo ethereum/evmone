@@ -19,8 +19,8 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 #else
-#include "filesystem.hpp"
-namespace fs = ghc::filesystem;
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
 #endif
 
 using namespace benchmark;
