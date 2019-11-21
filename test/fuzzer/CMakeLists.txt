@@ -15,7 +15,7 @@ else()
 endif()
 
 add_executable(evmone-fuzzer fuzzer.cpp)
-target_link_libraries(evmone-fuzzer PRIVATE evmone testutils)
+target_link_libraries(evmone-fuzzer PRIVATE evmone testutils evmc::mocked_host)
 
 if(NOT fuzzing_coverage)
     # TODO: Aleth reports undefined behaviors, disable it for fuzzing.

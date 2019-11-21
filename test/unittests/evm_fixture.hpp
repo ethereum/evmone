@@ -4,10 +4,11 @@
 #pragma once
 
 #include "vm_loader.hpp"
+
+#include <evmc/mocked_host.hpp>
 #include <gtest/gtest.h>
 #include <intx/intx.hpp>
 #include <test/utils/bytecode.hpp>
-#include <test/utils/host_mock.hpp>
 
 #define EXPECT_STATUS(STATUS_CODE)                                           \
     EXPECT_EQ(result.status_code, STATUS_CODE);                              \
@@ -56,7 +57,7 @@ protected:
     /// The total amount of gas used during execution.
     int64_t gas_used = 0;
 
-    MockedHost host;
+    evmc::MockedHost host;
 
     evm() noexcept : vm{get_vm()} {}
 
