@@ -177,38 +177,36 @@ auto op_signextend(const instruction* pc, execution_state& state) noexcept
 
 const instruction* op_lt(const instruction* instr, execution_state& state) noexcept
 {
-    // OPT: Have single function implementing all comparisons.
-    state.stack[1] = state.stack[0] < state.stack[1];
-    state.stack.pop();
+    const auto x = state.stack.pop();
+    state.stack[0] = x < state.stack[0];
     return ++instr;
 }
 
 const instruction* op_gt(const instruction* instr, execution_state& state) noexcept
 {
-    state.stack[1] = state.stack[1] < state.stack[0];
-    state.stack.pop();
+    const auto x = state.stack.pop();
+    state.stack[0] = state.stack[0] < x;  // TODO: Using < is faster than >.
     return ++instr;
 }
 
 const instruction* op_slt(const instruction* instr, execution_state& state) noexcept
 {
-    auto x = state.stack[0];
-    auto y = state.stack[1];
-    auto x_neg = static_cast<bool>(x >> 255);
-    auto y_neg = static_cast<bool>(y >> 255);
-    state.stack[1] = (x_neg ^ y_neg) ? x_neg : x < y;
-    state.stack.pop();
+    // TODO: Move this to intx.
+    const auto x = state.stack.pop();
+    auto& y = state.stack[0];
+    const auto x_neg = x.hi.hi >> 63;
+    const auto y_neg = y.hi.hi >> 63;
+    y = ((x_neg ^ y_neg) != 0) ? x_neg : x < y;
     return ++instr;
 }
 
 const instruction* op_sgt(const instruction* instr, execution_state& state) noexcept
 {
-    auto x = state.stack[0];
-    auto y = state.stack[1];
-    auto x_neg = static_cast<bool>(x >> 255);
-    auto y_neg = static_cast<bool>(y >> 255);
-    state.stack[1] = (x_neg ^ y_neg) ? y_neg : y < x;
-    state.stack.pop();
+    const auto x = state.stack.pop();
+    auto& y = state.stack[0];
+    const auto x_neg = x.hi.hi >> 63;
+    const auto y_neg = y.hi.hi >> 63;
+    y = ((x_neg ^ y_neg) != 0) ? y_neg : y < x;
     return ++instr;
 }
 
