@@ -2,13 +2,13 @@
 // Copyright 2019 The evmone Authors.
 // Licensed under the Apache License, Version 2.0.
 
+#include <benchmark/benchmark.h>
 #include <evmc/evmc.hpp>
 #include <evmc/loader.h>
 #include <evmone/analysis.hpp>
 #include <evmone/evmone.h>
-
-#include <benchmark/benchmark.h>
 #include <test/utils/utils.hpp>
+
 #include <cctype>
 #include <fstream>
 #include <iostream>
@@ -195,23 +195,49 @@ void load_benchmarks_from_dir(const fs::path& path, const std::string& name_pref
 /// The number tries to be different from EVMC loading error codes.
 constexpr auto cli_parsing_error = -3;
 
+
+/// Parses evmone-bench CLI arguments and registers benchmark cases.
+///
+/// The following variants of number arguments are supported (including argv[0]):
+///
+/// 2: evmone-bench benchmarks_dir
+///    Uses evmone VM, loads all benchmarks from benchmarks_dir.
+/// 3: evmone-bench evmc_config benchmarks_dir
+///    The same as (2) but loads custom EVMC VM.
+/// 4: evmone-bench code_hex_file input_hex expected_output_hex.
+///    Uses evmone VM, registers custom benchmark with the code from the given file,
+///    and the given input. The benchmark will compare the output with the provided
+///    expected one.
 int parseargs(int argc, char** argv)
 {
-    if (argc == 2 || argc == 4)
-    {
-        vm = evmc::VM{evmc_create_evmone()};
-        std::cout << "Benchmarking evmone\n\n";
-    }
+    // Arguments' placeholders:
+    const char* evmc_config{};
+    const char* benchmarks_dir{};
+    const char* code_hex_file{};
+    const char* input_hex{};
+    const char* expected_output_hex{};
 
     if (argc == 2)
     {
-        load_benchmarks_from_dir(argv[1]);
-        return 0;
+        benchmarks_dir = argv[1];
     }
-
-    if (argc == 3)
+    else if (argc == 3)
     {
-        const auto evmc_config = argv[1];
+        evmc_config = argv[1];
+        benchmarks_dir = argv[2];
+    }
+    else if (argc == 4)
+    {
+        code_hex_file = argv[1];
+        input_hex = argv[2];
+        expected_output_hex = argv[3];
+    }
+    else
+        return cli_parsing_error;  // Incorrect number of arguments.
+
+
+    if (evmc_config)
+    {
         auto ec = evmc_loader_error_code{};
         vm = evmc::VM{evmc_load_and_configure(evmc_config, &ec)};
 
@@ -225,24 +251,32 @@ int parseargs(int argc, char** argv)
         }
 
         std::cout << "Benchmarking " << evmc_config << "\n\n";
-        load_benchmarks_from_dir(argv[2]);
-        return 0;
+    }
+    else
+    {
+        vm = evmc::VM{evmc_create_evmone()};
+        std::cout << "Benchmarking evmone\n\n";
     }
 
-    if (argc != 4)
-        return cli_parsing_error;
+    if (benchmarks_dir)
+    {
+        load_benchmarks_from_dir(benchmarks_dir);
+    }
+    else
+    {
+        std::ifstream file{code_hex_file};
+        std::string code_hex{
+            std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
+        code_hex.erase(std::remove_if(code_hex.begin(), code_hex.end(),
+                           [](auto x) { return std::isspace(x); }),
+            code_hex.end());
 
-    std::ifstream file{argv[1]};
-    std::string code_hex{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
-    code_hex.erase(
-        std::remove_if(code_hex.begin(), code_hex.end(), [](auto x) { return std::isspace(x); }),
-        code_hex.end());
-
-    auto b = benchmark_case{};
-    b.code = std::make_shared<bytes>(from_hex(code_hex));
-    b.input = from_hex(argv[2]);
-    b.expected_output = from_hex(argv[3]);
-    RegisterBenchmark("external_evm_code", b)->Unit(kMicrosecond);
+        auto b = benchmark_case{};
+        b.code = std::make_shared<bytes>(from_hex(code_hex));
+        b.input = from_hex(input_hex);
+        b.expected_output = from_hex(expected_output_hex);
+        RegisterBenchmark(code_hex_file, b)->Unit(kMicrosecond);
+    }
     return 0;
 }
 }  // namespace
