@@ -101,6 +101,9 @@ endif()
 if(TARGET evm-test)
     list(APPEND install_targets evm-test)
 endif()
+if(TARGET evmone-bench)
+    list(APPEND install_targets evmone-bench)
+endif()
 
 set_target_properties(
     ${install_targets} PROPERTIES
