@@ -197,10 +197,14 @@ constexpr auto cli_parsing_error = -3;
 
 int parseargs(int argc, char** argv)
 {
-    if (argc == 2)
+    if (argc == 2 || argc == 4)
     {
         vm = evmc::VM{evmc_create_evmone()};
         std::cout << "Benchmarking evmone\n\n";
+    }
+
+    if (argc == 2)
+    {
         load_benchmarks_from_dir(argv[1]);
         return 0;
     }
