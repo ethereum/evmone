@@ -199,12 +199,12 @@ struct code_analysis
     /// The offsets of JUMPDESTs in the original code.
     /// These are values that JUMP/JUMPI receives as an argument.
     /// The elements are sorted.
-    std::vector<int16_t> jumpdest_offsets;
+    std::vector<int32_t> jumpdest_offsets;
 
     /// The indexes of the instructions in the generated instruction table
     /// matching the elements from jumdest_offsets.
     /// This is value to which the next instruction pointer must be set in JUMP/JUMPI.
-    std::vector<int16_t> jumpdest_targets;
+    std::vector<int32_t> jumpdest_targets;
 };
 
 inline int find_jumpdest(const code_analysis& analysis, int offset) noexcept

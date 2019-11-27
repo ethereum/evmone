@@ -61,9 +61,9 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
         {
             // The JUMPDEST is always the first instruction in the block.
             // We don't have to insert anything to the instruction table.
-            analysis.jumpdest_offsets.emplace_back(static_cast<int16_t>(code_pos - code - 1));
+            analysis.jumpdest_offsets.emplace_back(static_cast<int32_t>(code_pos - code - 1));
             analysis.jumpdest_targets.emplace_back(
-                static_cast<int16_t>(analysis.instrs.size() - 1));
+                static_cast<int32_t>(analysis.instrs.size() - 1));
         }
         else
             analysis.instrs.emplace_back(opcode_info.fn);
