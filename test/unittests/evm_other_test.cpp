@@ -8,6 +8,7 @@
 /// - evmone's internal tests.
 
 #include "evm_fixture.hpp"
+
 #include <evmone/limits.hpp>
 
 using evm_other = evm;
@@ -55,4 +56,16 @@ TEST_F(evm_other, loop_full_of_jumpdests)
 
     execute(code);
     EXPECT_GAS_USED(EVMC_SUCCESS, 7987882);
+}
+
+TEST_F(evm_other, jumpdest_with_high_offset)
+{
+    for (auto offset : {3u, 16383u, 16384u, 32767u, 32768u, 65535u, 65536u})
+    {
+        auto code = push(offset) + OP_JUMP;
+        code.resize(offset, OP_INVALID);
+        code.push_back(OP_JUMPDEST);
+        execute(code);
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS) << "JUMPDEST at " << offset;
+    }
 }
