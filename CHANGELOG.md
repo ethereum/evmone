@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
 
+## [0.4.0] — unreleased
+
+### Changed
+
+- [EVMC] has been upgraded to version [7.1.0][EVMC 7.1.0].
+  [#212](https://github.com/ethereum/evmone/pull/212)
+
 ## [0.3.0] — 2019-11-14
 
 This release of evmone adds changes for **Istanbul** EVM revision.
@@ -132,6 +139,7 @@ It delivers fully-compatible and high-speed EVM implementation.
 - The [intx 0.2.0](https://github.com/chfast/intx/releases/tag/v0.2.0) library is used for 256-bit precision arithmetic. 
 
 
+[0.4.0]: https://github.com/ethereum/evmone/compare/v0.3.0...master
 [0.3.0]: https://github.com/ethereum/evmone/releases/tag/v0.3.0
 [0.2.0]: https://github.com/ethereum/evmone/releases/tag/v0.2.0
 [0.1.1]: https://github.com/ethereum/evmone/releases/tag/v0.1.1
@@ -142,6 +150,7 @@ It delivers fully-compatible and high-speed EVM implementation.
 [EIP-1344]: https://eips.ethereum.org/EIPS/eip-1344
 [EIP-2200]: https://eips.ethereum.org/EIPS/eip-2200
 [EVMC]: https://github.com/ethereum/evmc
+[EVMC 7.1.0]: https://github.com/ethereum/evmc/releases/tag/v7.1.0
 [EVMC 7.0.0]: https://github.com/ethereum/evmc/releases/tag/v7.0.0
 [intx]: https://github.com/chfast/intx
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
