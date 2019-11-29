@@ -540,7 +540,7 @@ TEST_F(evm_state, selfdestruct_with_balance)
 
 TEST_F(evm_state, blockhash)
 {
-    host.blockhash.bytes[13] = 0x13;
+    host.block_hash.bytes[13] = 0x13;
 
     host.tx_context.block_number = 0;
     auto code = "60004060005260206000f3";

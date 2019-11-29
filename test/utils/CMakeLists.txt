@@ -6,7 +6,6 @@ find_package(intx CONFIG REQUIRED)
 
 add_library(testutils STATIC
     bytecode.hpp
-    host_mock.hpp
     utils.cpp
     utils.hpp
 )

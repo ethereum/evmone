@@ -2,10 +2,11 @@
 // Copyright 2019 The evmone Authors.
 // Licensed under the Apache License, Version 2.0.
 
+#include <evmc/mocked_host.hpp>
 #include <evmone/evmone.h>
 #include <test/utils/bytecode.hpp>
-#include <test/utils/host_mock.hpp>
 #include <test/utils/utils.hpp>
+
 #include <cstring>
 #include <iostream>
 
@@ -68,7 +69,7 @@ static evmc::VM external_vms[] = {
 };
 
 
-class FuzzHost : public MockedHost
+class FuzzHost : public evmc::MockedHost
 {
 public:
     uint8_t gas_left_factor = 0;

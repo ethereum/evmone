@@ -3,6 +3,7 @@
 # Licensed under the Apache License, Version 2.0.
 
 include(GoogleTest)
+include(${PROJECT_SOURCE_DIR}/evmc/cmake/EVMC.cmake)
 
 set(evmone_private_include_dir ${PROJECT_SOURCE_DIR}/lib)
 
