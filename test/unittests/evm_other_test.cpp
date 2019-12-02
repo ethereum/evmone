@@ -35,6 +35,32 @@ TEST_F(evm_other, evmone_block_stack_req_overflow)
     EXPECT_STATUS(EVMC_STACK_UNDERFLOW);
 }
 
+TEST_F(evm_other, evmone_block_max_stack_growth_overflow)
+{
+    // This tests constructs a code with single basic block which stack max growth is > int16 max.
+    // Such basic block can cause int16_t overflow during analysis.
+
+    constexpr auto test_max_code_size = 1024 * 1024u + 1;
+
+    bytes code_buffer(test_max_code_size, uint8_t{OP_MSIZE});
+
+    for (auto max_stack_growth : {32767u, 32768u, 65535u, 65536u, test_max_code_size - 1})
+    {
+        execute({code_buffer.data(), max_stack_growth});
+        EXPECT_STATUS(EVMC_STACK_OVERFLOW);
+
+        code_buffer[max_stack_growth] = OP_JUMPDEST;
+        execute({code_buffer.data(), max_stack_growth + 1});
+        EXPECT_STATUS(EVMC_STACK_OVERFLOW);
+
+        code_buffer[max_stack_growth] = OP_STOP;
+        execute({code_buffer.data(), max_stack_growth + 1});
+        EXPECT_STATUS(EVMC_STACK_OVERFLOW);
+
+        code_buffer[max_stack_growth] = OP_MSIZE;  // Restore original opcode.
+    }
+}
+
 TEST_F(evm_other, loop_full_of_jumpdests)
 {
     // The code is a simple loop with a counter taken from the input or a constant (325) if the
