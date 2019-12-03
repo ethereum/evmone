@@ -61,6 +61,57 @@ TEST_F(evm_other, evmone_block_max_stack_growth_overflow)
     }
 }
 
+TEST_F(evm_other, evmone_block_gas_cost_overflow_create)
+{
+    // The goal is to build bytecode with as many CREATE instructions (the most expensive one)
+    // as possible but with having balanced stack.
+    // The runtime values of arguments are not important.
+
+    constexpr auto gas_max = std::numeric_limits<uint32_t>::max();
+    constexpr auto n = gas_max / 32006 + 1;
+
+    auto code = bytecode{OP_MSIZE};
+    code.reserve(3 * n);
+    for (uint32_t i = 0; i < n; ++i)
+    {
+        code.push_back(OP_DUP1);
+        code.push_back(OP_DUP1);
+        code.push_back(OP_CREATE);
+    }
+    EXPECT_EQ(code.size(), 402'580);
+
+    execute(0, code);
+    EXPECT_STATUS(EVMC_OUT_OF_GAS);
+    EXPECT_TRUE(host.recorded_calls.empty());
+    host.recorded_calls.clear();
+
+    execute(gas_max - 1, code);
+    EXPECT_STATUS(EVMC_OUT_OF_GAS);
+    EXPECT_TRUE(host.recorded_calls.empty());
+}
+
+TEST_F(evm_other, evmone_block_gas_cost_overflow_balance)
+{
+    // Here we build single-block bytecode with as many BALANCE instructions as possible.
+
+    rev = EVMC_ISTANBUL;  // Here BALANCE costs 700.
+
+    constexpr auto gas_max = std::numeric_limits<uint32_t>::max();
+    constexpr auto n = gas_max / 700 + 2;
+    auto code = bytecode{bytes(n, OP_BALANCE)};
+    code[0] = OP_ADDRESS;
+    EXPECT_EQ(code.size(), 6'135'669);
+
+    execute(0, code);
+    EXPECT_STATUS(EVMC_OUT_OF_GAS);
+    EXPECT_TRUE(host.recorded_account_accesses.empty());
+    host.recorded_account_accesses.clear();
+
+    execute(gas_max - 1, code);
+    EXPECT_STATUS(EVMC_OUT_OF_GAS);
+    EXPECT_TRUE(host.recorded_account_accesses.empty());
+}
+
 TEST_F(evm_other, loop_full_of_jumpdests)
 {
     // The code is a simple loop with a counter taken from the input or a constant (325) if the
