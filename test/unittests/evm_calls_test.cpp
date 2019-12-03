@@ -11,7 +11,7 @@ using evm_calls = evm;
 
 TEST_F(evm_calls, delegatecall)
 {
-    auto code = std::string{};
+    auto code = bytecode{};
     code += "6001600003600052";              // m[0] = 0xffffff...
     code += "600560046003600260016103e8f4";  // DELEGATECALL(1000, 0x01, ...)
     code += "60086000f3";
@@ -58,7 +58,7 @@ TEST_F(evm_calls, create)
     host.call_result.output_size = call_output.size();
     host.call_result.create_address.bytes[10] = 0xcc;
     host.call_result.gas_left = 200000;
-    execute(300000, "602060006001f0600155");
+    execute(300000, bytecode{"602060006001f0600155"});
 
     EXPECT_EQ(gas_used, 115816);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
@@ -239,7 +239,7 @@ TEST_F(evm_calls, call_with_value_depth_limit)
     host.accounts[call_dst] = {};
 
     msg.depth = 1024;
-    execute("60ff600060ff6000600160aa618000f150");
+    execute(bytecode{"60ff600060ff6000600160aa618000f150"});
     EXPECT_EQ(gas_used, 7447);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(host.recorded_calls.size(), 0);

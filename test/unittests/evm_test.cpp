@@ -14,7 +14,7 @@ using namespace intx;
 
 TEST_F(evm, empty)
 {
-    execute(0, "");
+    execute(0, bytes_view{});
     EXPECT_GAS_USED(EVMC_SUCCESS, 0);
 }
 
@@ -45,13 +45,13 @@ TEST_F(evm, stack_underflow)
     execute(13, push(1) + OP_POP + push(1) + OP_POP + OP_POP);
     EXPECT_STATUS(EVMC_STACK_UNDERFLOW);
 
-    execute(OP_NOT);
+    execute(bytecode{OP_NOT});
     EXPECT_STATUS(EVMC_STACK_UNDERFLOW);
 }
 
 TEST_F(evm, add)
 {
-    execute(25, "6007600d0160005260206000f3");
+    execute(25, bytecode{"6007600d0160005260206000f3"});
     EXPECT_GAS_USED(EVMC_SUCCESS, 24);
     EXPECT_OUTPUT_INT(20);
 }
@@ -826,7 +826,7 @@ TEST_F(evm, max_code_size_push1)
     execute(code);
     EXPECT_STATUS(EVMC_STACK_OVERFLOW);
 
-    execute(code.substr(0, code.size() - 1));
+    execute({code.data(), code.size() - 1});
     EXPECT_STATUS(EVMC_STACK_OVERFLOW);
 }
 

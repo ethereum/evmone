@@ -69,7 +69,7 @@ protected:
     /// @param input_hex  The hex encoded EVM "calldata" input.
     /// The execution result will be available in the `result` field.
     /// The `gas_used` field  will be updated accordingly.
-    void execute(int64_t gas, const bytecode& code, std::string_view input_hex = {}) noexcept
+    void execute(int64_t gas, bytes_view code, std::string_view input_hex = {}) noexcept
     {
         const auto input = from_hex(input_hex);
         msg.input_data = input.data();
@@ -81,14 +81,24 @@ protected:
         gas_used = msg.gas - result.gas_left;
     }
 
+    void execute(int64_t gas, const bytecode& code, std::string_view input_hex = {}) noexcept
+    {
+        execute(gas, {code.data(), code.size()}, input_hex);
+    }
+
     /// Executes the supplied code.
     ///
     /// @param code       The EVM bytecode.
     /// @param input_hex  The hex encoded EVM "calldata" input.
     /// The execution result will be available in the `result` field.
     /// The `gas_used` field  will be updated accordingly.
-    void execute(const bytecode& code, std::string_view input_hex = {}) noexcept
+    void execute(bytes_view code, std::string_view input_hex = {}) noexcept
     {
         execute(std::numeric_limits<int64_t>::max(), code, input_hex);
+    }
+
+    void execute(const bytecode& code, std::string_view input_hex = {}) noexcept
+    {
+        execute({code.data(), code.size()}, input_hex);
     }
 };

@@ -13,12 +13,11 @@ using evm_state = evm;
 TEST_F(evm_state, code)
 {
     // CODESIZE 2 0 CODECOPY RETURN(0,9)
-    auto s = "38600260003960096000f3";
+    const auto s = bytecode{"38600260003960096000f3"};
     execute(s);
     EXPECT_EQ(gas_used, 23);
     ASSERT_EQ(result.output_size, 9);
-    auto a = from_hex({&s[4], 18});
-    EXPECT_EQ(bytes(&result.output_data[0], 9), a);
+    EXPECT_EQ(bytes_view(&result.output_data[0], 9), bytes_view(&s[2], 9));
 }
 
 TEST_F(evm_state, codecopy_combinations)
@@ -71,7 +70,7 @@ TEST_F(evm_state, storage)
 TEST_F(evm_state, sstore_pop_stack)
 {
     host.accounts[msg.destination] = {};
-    execute(100000, "60008060015560005360016000f3");
+    execute(100000, bytecode{"60008060015560005360016000f3"});
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 0);
@@ -81,7 +80,7 @@ TEST_F(evm_state, sload_cost_pre_tangerine_whistle)
 {
     rev = EVMC_HOMESTEAD;
     const auto& account = host.accounts[msg.destination];
-    execute(56, "60008054");
+    execute(56, bytecode{"60008054"});
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 0);
     EXPECT_EQ(account.storage.size(), 0);
