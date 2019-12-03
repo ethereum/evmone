@@ -23,13 +23,15 @@ struct block_analysis
     explicit block_analysis(size_t index) noexcept : begin_block_index{index} {}
 
     /// Close the current block by producing compressed information about the block.
-    block_info close() const noexcept
+    [[nodiscard]] block_info close() const noexcept
     {
-        static constexpr auto stack_req_max = std::numeric_limits<int16_t>::max();
+        static constexpr auto stack_param_max = std::numeric_limits<int16_t>::max();
 
         const auto final_stack_req =
-            stack_req <= stack_req_max ? static_cast<int16_t>(stack_req) : stack_req_max;
-        const auto final_stack_max_growth = static_cast<int16_t>(stack_max_growth);
+            stack_req <= stack_param_max ? static_cast<int16_t>(stack_req) : stack_param_max;
+        const auto final_stack_max_growth = stack_max_growth <= stack_param_max ?
+                                                static_cast<int16_t>(stack_max_growth) :
+                                                stack_param_max;
         return {gas_cost, final_stack_req, final_stack_max_growth};
     }
 };
