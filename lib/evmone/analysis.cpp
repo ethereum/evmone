@@ -147,7 +147,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
             break;
 
         case OP_PC:
-            instr.arg.number = static_cast<int>(code_pos - code - 1);
+            instr.arg.number = code_pos - code - 1;
             break;
         }
 

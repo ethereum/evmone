@@ -146,7 +146,7 @@ struct execution_state
 
 union instruction_argument
 {
-    int number;
+    int64_t number;
     const intx::uint256* push_value;
     uint64_t small_push_value;
     block_info block{};
