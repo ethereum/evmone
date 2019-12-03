@@ -163,7 +163,7 @@ jobs:
       - run:
           name: "Upload coverage data"
           command: |
-            codecov --required --gcov-root ~/build
+            codecov --gcov-root ~/build
 
   gcc-32bit:
     executor: linux-gcc-9
