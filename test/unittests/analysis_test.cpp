@@ -30,7 +30,7 @@ TEST(analysis, example1)
     EXPECT_EQ(analysis.instrs[7].fn, op_tbl[OP_STOP].fn);
 
     const auto& block = analysis.instrs[0].arg.block;
-    EXPECT_EQ(block.gas_cost, 14);
+    EXPECT_EQ(block.gas_cost, 14u);
     EXPECT_EQ(block.stack_req, 0);
     EXPECT_EQ(block.stack_max_growth, 2);
 }
@@ -48,7 +48,7 @@ TEST(analysis, stack_up_and_down)
     EXPECT_EQ(analysis.instrs[18].fn, op_tbl[OP_PUSH1].fn);
 
     const auto& block = analysis.instrs[0].arg.block;
-    EXPECT_EQ(block.gas_cost, 7 * 3 + 10 * 2 + 3);
+    EXPECT_EQ(block.gas_cost, uint32_t{7 * 3 + 10 * 2 + 3});
     EXPECT_EQ(block.stack_req, 3);
     EXPECT_EQ(block.stack_max_growth, 7);
 }
