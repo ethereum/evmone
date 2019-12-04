@@ -88,11 +88,15 @@ evm-test ./evmone.so
 
 ### Docker
 
-Docker images with evmone and modified geth are available on Docker Hub:
+Docker images with evmone are available on Docker Hub:
 https://hub.docker.com/r/ethereum/evmone.
 
+Having the evmone shared library inside a docker is not very useful on its own,
+but the image can be used as the base of another one or you can run benchmarks 
+with it.
+
 ```bash
-docker run ethereum/evmone --vm.evm=libevmone.so
+docker run --entrypoint evmone-bench ethereum/evmone /src/test/benchmarks
 ```
 
 ## References
