@@ -8,6 +8,14 @@
 
 namespace evmone
 {
+/// Clamps x to the max value of To type.
+template <typename To, typename T>
+inline constexpr To clamp(T x) noexcept
+{
+    constexpr auto max = std::numeric_limits<To>::max();
+    return x <= max ? static_cast<To>(x) : max;
+}
+
 struct block_analysis
 {
     int64_t gas_cost = 0;
@@ -25,19 +33,9 @@ struct block_analysis
     /// Close the current block by producing compressed information about the block.
     [[nodiscard]] block_info close() const noexcept
     {
-        using gas_cost_type = decltype(block_info{}.gas_cost);
-        static constexpr auto gas_cost_max = std::numeric_limits<gas_cost_type>::max();
-        static constexpr auto stack_param_max = std::numeric_limits<int16_t>::max();
-
-
-        const auto final_gas_cost =
-            gas_cost <= gas_cost_max ? static_cast<gas_cost_type>(gas_cost) : gas_cost_max;
-        const auto final_stack_req =
-            stack_req <= stack_param_max ? static_cast<int16_t>(stack_req) : stack_param_max;
-        const auto final_stack_max_growth = stack_max_growth <= stack_param_max ?
-                                                static_cast<int16_t>(stack_max_growth) :
-                                                stack_param_max;
-        return {final_gas_cost, final_stack_req, final_stack_max_growth};
+        return {clamp<decltype(block_info{}.gas_cost)>(gas_cost),
+            clamp<decltype(block_info{}.stack_req)>(stack_req),
+            clamp<decltype(block_info{}.stack_max_growth)>(stack_max_growth)};
     }
 };
 
