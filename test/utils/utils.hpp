@@ -16,7 +16,14 @@ inline std::string hex(uint8_t b) noexcept
     return {hex_chars[b >> 4], hex_chars[b & 0xf]};
 }
 
+/// Decodes hex encoded string to bytes.
+///
+/// Exceptions:
+/// - std::length_error when the input has invalid length (must be even).
+/// - std::out_of_range when invalid hex digit encountered.
 bytes from_hex(std::string_view hex);
+
+/// Encodes bytes as hex string.
 std::string hex(bytes_view bs);
 
 /// Decodes the hexx encoded string.
