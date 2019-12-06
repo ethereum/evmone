@@ -35,7 +35,7 @@ bytes from_hex(std::string_view hex)
     return bs;
 }
 
-std::string to_hex(bytes_view bs)
+std::string hex(bytes_view bs)
 {
     std::string str;
     str.reserve(bs.size() * 2);

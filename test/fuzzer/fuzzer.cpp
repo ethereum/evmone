@@ -15,17 +15,17 @@ constexpr auto latest_rev = EVMC_ISTANBUL;
 
 inline std::ostream& operator<<(std::ostream& os, const evmc_address& addr)
 {
-    return os << to_hex({addr.bytes, sizeof(addr.bytes)});
+    return os << hex({addr.bytes, sizeof(addr.bytes)});
 }
 
 inline std::ostream& operator<<(std::ostream& os, const evmc_bytes32& v)
 {
-    return os << to_hex({v.bytes, sizeof(v.bytes)});
+    return os << hex({v.bytes, sizeof(v.bytes)});
 }
 
 inline std::ostream& operator<<(std::ostream& os, const bytes_view& v)
 {
-    return os << to_hex(v);
+    return os << hex(v);
 }
 
 [[clang::always_inline]] inline void assert_true(
@@ -294,7 +294,7 @@ fuzz_input populate_input(const uint8_t* data, size_t data_size) noexcept
 
 inline auto hex(const evmc_address& addr) noexcept
 {
-    return to_hex({addr.bytes, sizeof(addr)});
+    return hex({addr.bytes, sizeof(addr)});
 }
 
 inline evmc_status_code check_and_normalize(evmc_status_code status) noexcept
@@ -318,9 +318,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
     {
         std::cout << "rev: " << int{in.rev} << "\n";
         std::cout << "depth: " << int{in.msg.depth} << "\n";
-        std::cout << "code: " << to_hex(code) << "\n";
+        std::cout << "code: " << hex(code) << "\n";
         std::cout << "decoded: " << decode(code, in.rev) << "\n";
-        std::cout << "input: " << to_hex({in.msg.input_data, in.msg.input_size}) << "\n";
+        std::cout << "input: " << hex({in.msg.input_data, in.msg.input_size}) << "\n";
         std::cout << "account: " << hex(in.msg.destination) << "\n";
         std::cout << "caller: " << hex(in.msg.sender) << "\n";
         std::cout << "value: " << in.msg.value << "\n";

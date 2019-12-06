@@ -17,7 +17,7 @@ inline std::string hex(uint8_t b) noexcept
 }
 
 bytes from_hex(std::string_view hex);
-std::string to_hex(bytes_view bytes);
+std::string hex(bytes_view bs);
 
 /// Decodes the hexx encoded string.
 ///

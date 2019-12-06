@@ -44,7 +44,7 @@ inline bool operator==(const bytecode& a, const bytecode& b) noexcept
 
 inline std::ostream& operator<<(std::ostream& os, const bytecode& c)
 {
-    return os << to_hex(c);
+    return os << hex(c);
 }
 
 inline bytecode operator*(int n, bytecode c)
@@ -300,7 +300,7 @@ inline std::string decode(bytes_view bytecode, evmc_revision rev)
                         static_cast<std::size_t>(bytecode.end() - push_data_start));
                 if (push_data_size != 0)
                 {
-                    s += " + \"" + to_hex({&*push_data_start, push_data_size}) + '"';
+                    s += " + \"" + hex({&*push_data_start, push_data_size}) + '"';
                     it += push_data_size;
                 }
             }
