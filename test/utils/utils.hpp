@@ -3,9 +3,7 @@
 // Licensed under the Apache License, Version 2.0.
 #pragma once
 
-#include <evmc/instructions.h>
 #include <cstdint>
-#include <stdexcept>
 #include <string>
 
 using bytes = std::basic_string<uint8_t>;

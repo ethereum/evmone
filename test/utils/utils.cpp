@@ -3,10 +3,8 @@
 // Licensed under the Apache License, Version 2.0.
 
 #include <test/utils/utils.hpp>
-
-#include <iomanip>
-#include <iostream>
 #include <regex>
+#include <stdexcept>
 
 bytes from_hex(std::string_view hex)
 {

@@ -3,6 +3,7 @@
 // Licensed under the Apache License, Version 2.0.
 #pragma once
 
+#include <evmc/instructions.h>
 #include <test/utils/utils.hpp>
 #include <algorithm>
 
