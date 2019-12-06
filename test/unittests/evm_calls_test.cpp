@@ -496,7 +496,7 @@ TEST_F(evm_calls, staticcall_input)
     const auto& call_msg = host.recorded_calls.back();
     EXPECT_EQ(call_msg.gas, 0xee);
     EXPECT_EQ(call_msg.input_size, 3);
-    EXPECT_EQ(to_hex(bytes_view(call_msg.input_data, call_msg.input_size)), "010203");
+    EXPECT_EQ(hex(bytes_view(call_msg.input_data, call_msg.input_size)), "010203");
 }
 
 TEST_F(evm_calls, call_with_value_low_gas)

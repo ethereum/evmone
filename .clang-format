@@ -20,6 +20,7 @@ BreakBeforeBraces: Custom
 BreakBeforeTernaryOperators: false
 ColumnLimit:     100
 ConstructorInitializerIndentWidth: 2
+IncludeBlocks: Preserve
 IncludeCategories:
   - Regex:           '^".*'
     Priority:        1

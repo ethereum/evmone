@@ -8,7 +8,7 @@
 TEST(bytecode, push)
 {
     auto code = push("0102") + OP_POP + push("010203040506070809") + "50";
-    EXPECT_EQ(to_hex(code), "610102506801020304050607080950");
+    EXPECT_EQ(hex(code), "610102506801020304050607080950");
 
     EXPECT_THROW(push(""), std::invalid_argument);
     auto data = bytes(33, '\x00');

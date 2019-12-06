@@ -22,10 +22,10 @@
     EXPECT_EQ(result.status_code, STATUS_CODE); \
     EXPECT_EQ(gas_used, GAS_USED)
 
-#define EXPECT_OUTPUT_INT(X)                                    \
-    ASSERT_EQ(result.output_size, sizeof(intx::uint256));       \
-    EXPECT_EQ(to_hex({result.output_data, result.output_size}), \
-        to_hex({intx::be::store<evmc_bytes32>(intx::uint256{X}).bytes, sizeof(evmc_bytes32)}))
+#define EXPECT_OUTPUT_INT(X)                                 \
+    ASSERT_EQ(result.output_size, sizeof(intx::uint256));    \
+    EXPECT_EQ(hex({result.output_data, result.output_size}), \
+        hex({intx::be::store<evmc_bytes32>(intx::uint256{X}).bytes, sizeof(evmc_bytes32)}))
 
 /// The "evm" test fixture with generic unit tests for EVMC-compatible VM implementations.
 class evm : public testing::Test

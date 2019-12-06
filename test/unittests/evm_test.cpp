@@ -600,7 +600,7 @@ TEST_F(evm, sha3_empty)
     execute(code);
     ASSERT_EQ(result.output_size, 32);
     auto keccak256_empty = "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
-    EXPECT_EQ(to_hex({result.output_data, result.output_size}), keccak256_empty);
+    EXPECT_EQ(hex({result.output_data, result.output_size}), keccak256_empty);
 }
 
 TEST_F(evm, revert)
@@ -857,7 +857,7 @@ TEST_F(evm, reverse_16_stack_items)
 
     EXPECT_STATUS(EVMC_SUCCESS);
     ASSERT_EQ(result.output_size, n);
-    EXPECT_EQ(to_hex({result.output_data, result.output_size}), "0102030405060708090a0b0c0d0e0f10");
+    EXPECT_EQ(hex({result.output_data, result.output_size}), "0102030405060708090a0b0c0d0e0f10");
 }
 
 struct memory_access_opcode

@@ -3,10 +3,8 @@
 // Licensed under the Apache License, Version 2.0.
 
 #include <test/utils/utils.hpp>
-
-#include <iomanip>
-#include <iostream>
 #include <regex>
+#include <stdexcept>
 
 bytes from_hex(std::string_view hex)
 {
@@ -14,10 +12,11 @@ bytes from_hex(std::string_view hex)
         throw std::length_error{"the length of the input is odd"};
 
     bytes bs;
+    bs.reserve(hex.length() / 2);
     int b = 0;
     for (size_t i = 0; i < hex.size(); ++i)
     {
-        auto h = hex[i];
+        const auto h = hex[i];
         int v;
         if (h >= '0' && h <= '9')
             v = h - '0';
@@ -36,7 +35,7 @@ bytes from_hex(std::string_view hex)
     return bs;
 }
 
-std::string to_hex(bytes_view bs)
+std::string hex(bytes_view bs)
 {
     std::string str;
     str.reserve(bs.size() * 2);

@@ -89,8 +89,7 @@ struct benchmark_case
                 auto output = bytes_view{r.output_data, r.output_size};
                 if (output != expected_output)
                 {
-                    auto error =
-                        "got: " + to_hex(output) + "  expected: " + to_hex(expected_output);
+                    auto error = "got: " + hex(output) + "  expected: " + hex(expected_output);
                     state.SkipWithError(error.c_str());
                     return;
                 }

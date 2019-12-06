@@ -5,10 +5,10 @@
 #include <gtest/gtest.h>
 #include <test/utils/utils.hpp>
 
-TEST(utils, to_hex)
+TEST(utils, hex)
 {
     auto data = bytes{0x0, 0x1, 0xa, 0xf, 0x1f, 0xa0, 0xff, 0xf0};
-    EXPECT_EQ(to_hex(data), "00010a0f1fa0fff0");
+    EXPECT_EQ(hex(data), "00010a0f1fa0fff0");
 }
 
 TEST(utils, from_hex_empty)
@@ -41,18 +41,18 @@ TEST(utils, hex_byte)
 
 TEST(utils, from_hexx)
 {
-    EXPECT_EQ(to_hex(from_hexx("")), "");
+    EXPECT_EQ(hex(from_hexx("")), "");
 
-    EXPECT_EQ(to_hex(from_hexx("(0xca)")), "");
-    EXPECT_EQ(to_hex(from_hexx("(1xca)")), "ca");
-    EXPECT_EQ(to_hex(from_hexx("(5xca)")), "cacacacaca");
+    EXPECT_EQ(hex(from_hexx("(0xca)")), "");
+    EXPECT_EQ(hex(from_hexx("(1xca)")), "ca");
+    EXPECT_EQ(hex(from_hexx("(5xca)")), "cacacacaca");
 
-    EXPECT_EQ(to_hex(from_hexx("01(0x3a)02")), "0102");
-    EXPECT_EQ(to_hex(from_hexx("01(1x3a)02")), "013a02");
-    EXPECT_EQ(to_hex(from_hexx("01(2x3a)02")), "013a3a02");
+    EXPECT_EQ(hex(from_hexx("01(0x3a)02")), "0102");
+    EXPECT_EQ(hex(from_hexx("01(1x3a)02")), "013a02");
+    EXPECT_EQ(hex(from_hexx("01(2x3a)02")), "013a3a02");
 
-    EXPECT_EQ(to_hex(from_hexx("01(2x333)02(2x4444)03")), "01333333024444444403");
-    EXPECT_EQ(to_hex(from_hexx("01(4x333)02(4x4)03")), "0133333333333302444403");
+    EXPECT_EQ(hex(from_hexx("01(2x333)02(2x4444)03")), "01333333024444444403");
+    EXPECT_EQ(hex(from_hexx("01(4x333)02(4x4)03")), "0133333333333302444403");
 
-    EXPECT_EQ(to_hex(from_hexx("00")), "00");
+    EXPECT_EQ(hex(from_hexx("00")), "00");
 }
