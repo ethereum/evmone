@@ -12,10 +12,11 @@ bytes from_hex(std::string_view hex)
         throw std::length_error{"the length of the input is odd"};
 
     bytes bs;
+    bs.reserve(hex.length() / 2);
     int b = 0;
     for (size_t i = 0; i < hex.size(); ++i)
     {
-        auto h = hex[i];
+        const auto h = hex[i];
         int v;
         if (h >= '0' && h <= '9')
             v = h - '0';
