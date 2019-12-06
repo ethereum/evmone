@@ -8,9 +8,17 @@
 
 namespace evmone
 {
+/// Clamps x to the max value of To type.
+template <typename To, typename T>
+inline constexpr To clamp(T x) noexcept
+{
+    constexpr auto max = std::numeric_limits<To>::max();
+    return x <= max ? static_cast<To>(x) : max;
+}
+
 struct block_analysis
 {
-    int gas_cost = 0;
+    int64_t gas_cost = 0;
 
     int stack_req = 0;
     int stack_max_growth = 0;
@@ -25,14 +33,9 @@ struct block_analysis
     /// Close the current block by producing compressed information about the block.
     [[nodiscard]] block_info close() const noexcept
     {
-        static constexpr auto stack_param_max = std::numeric_limits<int16_t>::max();
-
-        const auto final_stack_req =
-            stack_req <= stack_param_max ? static_cast<int16_t>(stack_req) : stack_param_max;
-        const auto final_stack_max_growth = stack_max_growth <= stack_param_max ?
-                                                static_cast<int16_t>(stack_max_growth) :
-                                                stack_param_max;
-        return {gas_cost, final_stack_req, final_stack_max_growth};
+        return {clamp<decltype(block_info{}.gas_cost)>(gas_cost),
+            clamp<decltype(block_info{}.stack_req)>(stack_req),
+            clamp<decltype(block_info{}.stack_max_growth)>(stack_max_growth)};
     }
 };
 
@@ -147,7 +150,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
             break;
 
         case OP_PC:
-            instr.arg.number = static_cast<int>(code_pos - code - 1);
+            instr.arg.number = code_pos - code - 1;
             break;
         }
 

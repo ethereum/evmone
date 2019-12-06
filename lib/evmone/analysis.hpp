@@ -89,7 +89,7 @@ struct block_info
 {
     /// The total base gas cost of all instructions in the block.
     /// This cannot overflow, see the static_assert() below.
-    int32_t gas_cost = 0;
+    uint32_t gas_cost = 0;
 
     static_assert(
         max_code_size * max_instruction_base_cost < std::numeric_limits<decltype(gas_cost)>::max(),
@@ -122,9 +122,8 @@ struct execution_state
 
     /// The gas cost of the current block.
     ///
-    /// This is only needed to correctly calculate remaining gas for GAS instruction.
-    /// TODO: Maybe this should be precomputed in analysis.
-    int32_t current_block_cost = 0;
+    /// This is only needed to correctly calculate the "current gas left" value.
+    uint32_t current_block_cost = 0;
 
     struct code_analysis* analysis = nullptr;
     bytes return_data;
@@ -146,7 +145,7 @@ struct execution_state
 
 union instruction_argument
 {
-    int number;
+    int64_t number;
     const intx::uint256* push_value;
     uint64_t small_push_value;
     block_info block{};
