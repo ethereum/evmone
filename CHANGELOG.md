@@ -6,7 +6,22 @@ The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
 
-## [0.4.0] — unreleased
+## [0.4.0] — 2019-12-09
+
+### Fixed
+
+- In previous versions evmone incorrectly assumed that code size cannot exceed
+  24576 bytes (0x6000) — the limit introduced for the size of newly deployed
+  contracts by [EIP-170] in [Spurious Dragon]. The limit do not apply to
+  contract creating init code (i.e. in context of "create" transaction or CREATE
+  instruction). Therefore, the pre-processing phase in evmone has been reworked
+  to raise the technical limits or eliminated them entirely. From now on, only
+  blocks of instruction with total base gas cost exceeding 4294967295 (2³² - 1)
+  combined with execution gas limit also above this value can cause issues.
+  [#217](https://github.com/ethereum/evmone/pull/217)
+  [#218](https://github.com/ethereum/evmone/pull/218)
+  [#219](https://github.com/ethereum/evmone/pull/219)
+  [#221](https://github.com/ethereum/evmone/pull/221)
 
 ### Changed
 
@@ -139,16 +154,18 @@ It delivers fully-compatible and high-speed EVM implementation.
 - The [intx 0.2.0](https://github.com/chfast/intx/releases/tag/v0.2.0) library is used for 256-bit precision arithmetic. 
 
 
-[0.4.0]: https://github.com/ethereum/evmone/compare/v0.3.0...master
+[0.4.0]: https://github.com/ethereum/evmone/releases/tag/v0.4.0
 [0.3.0]: https://github.com/ethereum/evmone/releases/tag/v0.3.0
 [0.2.0]: https://github.com/ethereum/evmone/releases/tag/v0.2.0
 [0.1.1]: https://github.com/ethereum/evmone/releases/tag/v0.1.1
 [0.1.0]: https://github.com/ethereum/evmone/releases/tag/v0.1.0
 
 [Aleth]: https://github.com/ethereum/aleth
+[EIP-170]: https://eips.ethereum.org/EIPS/eip-170
 [EIP-1884]: https://eips.ethereum.org/EIPS/eip-1884
 [EIP-1344]: https://eips.ethereum.org/EIPS/eip-1344
 [EIP-2200]: https://eips.ethereum.org/EIPS/eip-2200
+[Spurious Dragon]: https://eips.ethereum.org/EIPS/eip-607
 [EVMC]: https://github.com/ethereum/evmc
 [EVMC 7.1.0]: https://github.com/ethereum/evmc/releases/tag/v7.1.0
 [EVMC 7.0.0]: https://github.com/ethereum/evmc/releases/tag/v7.0.0
