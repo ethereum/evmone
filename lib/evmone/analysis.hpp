@@ -117,7 +117,7 @@ struct execution_state
     evm_stack stack;
     evm_memory memory;
 
-    std::stack<int, array<int, 1024> return_stack;
+    std::stack<int, array<int, 1024>> return_stack;
 
     size_t output_offset = 0;
     size_t output_size = 0;
