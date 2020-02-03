@@ -72,6 +72,23 @@ const instruction* op_stop(const instruction*, execution_state& state) noexcept
     return state.exit(EVMC_SUCCESS);
 }
 
+const instruction* op_jumpsub(const instruction* instr, execution_state& state) noexcept
+{
+    try {
+        state.return_stack.push(instr);
+    } catch (...) {
+        state.exit(EVMC_OUT_OF_GAS);
+    }
+    instr = state.stack.pop();
+    return instr;
+}
+
+const instruction* op_returnsub(const instruction* instr, execution_state& state) noexcept
+{
+    instr = state.return_stack.pop();
+    return ++instr;
+}
+
 const instruction* op_add(const instruction* instr, execution_state& state) noexcept
 {
     state.stack.top() += state.stack.pop();
