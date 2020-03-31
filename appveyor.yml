@@ -26,7 +26,7 @@ install:
 
 before_build:
   - call "%ProgramFiles(x86)%\Microsoft Visual Studio\2017\Community\Common7\Tools\vsdevcmd" -arch=amd64
-  - cmake -S . -B build -DEVMONE_TESTING=ON -DNATIVE=ON -Wno-dev -G "%GENERATOR%" -DCMAKE_INSTALL_PREFIX=C:\install
+  - cmake -S . -B build -DEVMONE_TESTING=ON -Wno-dev -G "%GENERATOR%" -DCMAKE_INSTALL_PREFIX=C:\install
 
 build_script:
   - cmake --build build --target package
