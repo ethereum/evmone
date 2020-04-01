@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
 
+## [0.4.1] — unreleased
+
+### Fixed
+
+- The release binaries for Windows are now built without AVX instruction set
+  enabled. That was never intended and is consistent with binaries for other 
+  operating systems.
+  [#230](https://github.com/ethereum/evmone/pull/230)
+
 ## [0.4.0] — 2019-12-09
 
 ### Fixed
