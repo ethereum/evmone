@@ -33,6 +33,10 @@ build_script:
   - mkdir package
   - mv build/evmone-* package
 
+artifacts:
+  - path: package/*
+    name: package
+
 test_script:
   - cd build && ctest -j4 --output-on-failure --schedule-random
 
