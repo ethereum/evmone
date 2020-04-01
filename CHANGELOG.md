@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
 
-## [0.4.1] — unreleased
+## [0.4.1] — 2020-04-01
 
 ### Fixed
 
@@ -163,6 +163,7 @@ It delivers fully-compatible and high-speed EVM implementation.
 - The [intx 0.2.0](https://github.com/chfast/intx/releases/tag/v0.2.0) library is used for 256-bit precision arithmetic. 
 
 
+[0.4.1]: https://github.com/ethereum/evmone/releases/tag/v0.4.1
 [0.4.0]: https://github.com/ethereum/evmone/releases/tag/v0.4.0
 [0.3.0]: https://github.com/ethereum/evmone/releases/tag/v0.3.0
 [0.2.0]: https://github.com/ethereum/evmone/releases/tag/v0.2.0
