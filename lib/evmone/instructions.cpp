@@ -1250,6 +1250,14 @@ const instruction* op_submod384(const instruction* instr, execution_state& state
     return ++instr;
 }
 
+#define BIGINT_BITS 384
+#define LIMB_BITS 64
+#define LIMB_BITS_OVERFLOW 128
+#include "bigint.h"
+#undef BIGINT_BITS
+#undef LIMB_BITS
+#undef LIMB_BITS_OVERFLOW
+
 const instruction* op_mulmodmont384(const instruction* instr, execution_state& state) noexcept
 {
     const auto x_offset = state.stack.pop();
@@ -1269,7 +1277,13 @@ const instruction* op_mulmodmont384(const instruction* instr, execution_state& s
     const auto y = &state.memory[static_cast<size_t>(y_offset)];
     const auto m = &state.memory[static_cast<size_t>(m_offset)];
 
-    // TODO: implement
+    montmul384_64bitlimbs(
+        reinterpret_cast<uint64_t*>(x),
+        reinterpret_cast<uint64_t*>(x),
+        reinterpret_cast<uint64_t*>(y),
+        reinterpret_cast<uint64_t*>(m),
+        static_cast<uint64_t>(inv)
+    );
 
     return ++instr;
 }

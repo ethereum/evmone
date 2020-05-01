@@ -4,6 +4,8 @@
 
 include(LibraryTools)
 
+add_compile_options(-Wno-unused-function)
+
 hunter_add_package(intx)
 find_package(intx CONFIG REQUIRED)
 
