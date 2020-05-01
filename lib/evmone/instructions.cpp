@@ -1234,6 +1234,46 @@ const instruction* opx_beginblock(const instruction* instr, execution_state& sta
     return ++instr;
 }
 
+const instruction* op_addmod384(const instruction* instr, execution_state& state) noexcept
+{
+    // TODO: implement
+
+    (void)state;
+    return ++instr;
+}
+
+const instruction* op_submod384(const instruction* instr, execution_state& state) noexcept
+{
+    // TODO: implement
+
+    (void)state;
+    return ++instr;
+}
+
+const instruction* op_mulmodmont384(const instruction* instr, execution_state& state) noexcept
+{
+    const auto x_offset = state.stack.pop();
+    const auto y_offset = state.stack.pop();
+    const auto m_offset = state.stack.pop();
+    const auto inv = state.stack.pop();
+
+    if (inv > std::numeric_limits<uint64_t>::max())
+        return state.exit(EVMC_OUT_OF_GAS);
+
+    const auto max_memory_index = std::max(std::max(x_offset, y_offset), m_offset);
+
+    if (!check_memory(state, max_memory_index, 48))
+         return nullptr;
+
+    const auto x = &state.memory[static_cast<size_t>(x_offset)];
+    const auto y = &state.memory[static_cast<size_t>(y_offset)];
+    const auto m = &state.memory[static_cast<size_t>(m_offset)];
+
+    // TODO: implement
+
+    return ++instr;
+}
+
 constexpr op_table create_op_table_frontier() noexcept
 {
     auto table = op_table{};
@@ -1402,6 +1442,10 @@ constexpr op_table create_op_table_istanbul() noexcept
     table[OP_EXTCODEHASH] = {op_extcodehash, 700, 1, 0};
     table[OP_SELFBALANCE] = {op_selfbalance, 5, 0, 1};
     table[OP_SLOAD] = {op_sload, 800, 1, 0};
+
+    table[0xc0] = {op_addmod384, 8, 3, -3};
+    table[0xc1] = {op_submod384, 8, 3, -3};
+    table[0xc2] = {op_mulmodmont384, 24, 4, -4};
     return table;
 }
 
