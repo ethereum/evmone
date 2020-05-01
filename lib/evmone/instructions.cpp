@@ -1269,9 +1269,26 @@ const instruction* op_addmod384(const instruction* instr, execution_state& state
 
 const instruction* op_submod384(const instruction* instr, execution_state& state) noexcept
 {
-    // TODO: implement
+    const auto x_offset = state.stack.pop();
+    const auto y_offset = state.stack.pop();
+    const auto m_offset = state.stack.pop();
 
-    (void)state;
+    const auto max_memory_index = std::max(std::max(x_offset, y_offset), m_offset);
+
+    if (!check_memory(state, max_memory_index, 48))
+         return nullptr;
+
+    const auto x = &state.memory[static_cast<size_t>(x_offset)];
+    const auto y = &state.memory[static_cast<size_t>(y_offset)];
+    const auto m = &state.memory[static_cast<size_t>(m_offset)];
+
+    subtractmod384_64bitlimbs(
+        reinterpret_cast<uint64_t*>(x),
+        reinterpret_cast<uint64_t*>(x),
+        reinterpret_cast<uint64_t*>(y),
+        reinterpret_cast<uint64_t*>(m)
+    );
+
     return ++instr;
 }
 
