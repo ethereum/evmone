@@ -155,7 +155,15 @@ const instruction* op_exp(const instruction* instr, execution_state& state) noex
     if ((state.gas_left -= additional_cost) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
 
-    exponent = intx::exp(base, exponent);
+    if (base == 2 && exponent < 256)
+    {
+        auto exp_bytes = as_bytes(exponent);
+        uint8_t bit_to_set = exp_bytes[0];
+        exp_bytes[0] = 0;
+        exp_bytes[bit_to_set>>3] = uint8_t(uint8_t(1) << (bit_to_set&7));
+    } else {
+        exponent = intx::exp(base, exponent);
+    }
     return ++instr;
 }
 
