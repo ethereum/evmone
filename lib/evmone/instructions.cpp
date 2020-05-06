@@ -1244,21 +1244,23 @@ const instruction* opx_beginblock(const instruction* instr, execution_state& sta
 
 const instruction* op_addmod384(const instruction* instr, execution_state& state) noexcept
 {
+    const auto out_offset = state.stack.pop();
     const auto x_offset = state.stack.pop();
     const auto y_offset = state.stack.pop();
     const auto m_offset = state.stack.pop();
 
-    const auto max_memory_index = std::max(std::max(x_offset, y_offset), m_offset);
+    const auto max_memory_index = std::max(std::max(x_offset, y_offset), std::max(m_offset, out_offset));
 
     if (!check_memory(state, max_memory_index, 48))
          return nullptr;
 
+    const auto out = &state.memory[static_cast<size_t>(out_offset)];
     const auto x = &state.memory[static_cast<size_t>(x_offset)];
     const auto y = &state.memory[static_cast<size_t>(y_offset)];
     const auto m = &state.memory[static_cast<size_t>(m_offset)];
 
     addmod384_64bitlimbs(
-        reinterpret_cast<uint64_t*>(x),
+        reinterpret_cast<uint64_t*>(out),
         reinterpret_cast<uint64_t*>(x),
         reinterpret_cast<uint64_t*>(y),
         reinterpret_cast<uint64_t*>(m)
@@ -1269,21 +1271,23 @@ const instruction* op_addmod384(const instruction* instr, execution_state& state
 
 const instruction* op_submod384(const instruction* instr, execution_state& state) noexcept
 {
+    const auto out_offset = state.stack.pop();
     const auto x_offset = state.stack.pop();
     const auto y_offset = state.stack.pop();
     const auto m_offset = state.stack.pop();
 
-    const auto max_memory_index = std::max(std::max(x_offset, y_offset), m_offset);
+    const auto max_memory_index = std::max(std::max(x_offset, y_offset), std::max(m_offset, out_offset));
 
     if (!check_memory(state, max_memory_index, 48))
          return nullptr;
 
+    const auto out = &state.memory[static_cast<size_t>(out_offset)];
     const auto x = &state.memory[static_cast<size_t>(x_offset)];
     const auto y = &state.memory[static_cast<size_t>(y_offset)];
     const auto m = &state.memory[static_cast<size_t>(m_offset)];
 
     subtractmod384_64bitlimbs(
-        reinterpret_cast<uint64_t*>(x),
+        reinterpret_cast<uint64_t*>(out),
         reinterpret_cast<uint64_t*>(x),
         reinterpret_cast<uint64_t*>(y),
         reinterpret_cast<uint64_t*>(m)
@@ -1294,6 +1298,7 @@ const instruction* op_submod384(const instruction* instr, execution_state& state
 
 const instruction* op_mulmodmont384(const instruction* instr, execution_state& state) noexcept
 {
+    const auto out_offset = state.stack.pop();
     const auto x_offset = state.stack.pop();
     const auto y_offset = state.stack.pop();
     const auto m_offset = state.stack.pop();
@@ -1302,17 +1307,18 @@ const instruction* op_mulmodmont384(const instruction* instr, execution_state& s
     if (inv > std::numeric_limits<uint64_t>::max())
         return state.exit(EVMC_OUT_OF_GAS);
 
-    const auto max_memory_index = std::max(std::max(x_offset, y_offset), m_offset);
+    const auto max_memory_index = std::max(std::max(x_offset, y_offset), std::max(m_offset, out_offset));
 
     if (!check_memory(state, max_memory_index, 48))
          return nullptr;
 
+    const auto out = &state.memory[static_cast<size_t>(out_offset)];
     const auto x = &state.memory[static_cast<size_t>(x_offset)];
     const auto y = &state.memory[static_cast<size_t>(y_offset)];
     const auto m = &state.memory[static_cast<size_t>(m_offset)];
 
     montmul384_64bitlimbs(
-        reinterpret_cast<uint64_t*>(x),
+        reinterpret_cast<uint64_t*>(out),
         reinterpret_cast<uint64_t*>(x),
         reinterpret_cast<uint64_t*>(y),
         reinterpret_cast<uint64_t*>(m),
@@ -1491,9 +1497,9 @@ constexpr op_table create_op_table_istanbul() noexcept
     table[OP_SELFBALANCE] = {op_selfbalance, 5, 0, 1};
     table[OP_SLOAD] = {op_sload, 800, 1, 0};
 
-    table[0xc0] = {op_addmod384, 8, 3, -3};
-    table[0xc1] = {op_submod384, 8, 3, -3};
-    table[0xc2] = {op_mulmodmont384, 24, 4, -4};
+    table[0xc0] = {op_addmod384, 8, 4, -4};
+    table[0xc1] = {op_submod384, 8, 4, -4};
+    table[0xc2] = {op_mulmodmont384, 24, 5, -5};
     return table;
 }
 
