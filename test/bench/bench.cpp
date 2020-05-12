@@ -38,7 +38,7 @@ inline evmc::result execute(bytes_view code, bytes_view input) noexcept
     msg.gas = gas_limit;
     msg.input_data = input.data();
     msg.input_size = input.size();
-    return vm.execute(EVMC_CONSTANTINOPLE, msg, code.data(), code.size());
+    return vm.execute(EVMC_ISTANBUL, msg, code.data(), code.size());
 }
 
 void execute(State& state, bytes_view code, bytes_view input) noexcept
@@ -60,7 +60,7 @@ void analyse(State& state, bytes_view code) noexcept
     auto bytes_analysed = uint64_t{0};
     for (auto _ : state)
     {
-        auto r = evmone::analyze(EVMC_PETERSBURG, code.data(), code.size());
+        auto r = evmone::analyze(EVMC_ISTANBUL, code.data(), code.size());
         DoNotOptimize(r);
         bytes_analysed += code.size();
     }
