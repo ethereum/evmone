@@ -18,6 +18,7 @@ evmc_result execute(evmc_vm* /*unused*/, const evmc_host_interface* host, evmc_h
     state->msg = msg;
     state->code = code;
     state->code_size = code_size;
+    state->return_stack.push(code_size);
     state->host = evmc::HostContext{*host, ctx};
     state->gas_left = msg->gas;
     state->rev = rev;
