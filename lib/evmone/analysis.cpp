@@ -118,8 +118,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
             const auto push_end = code_pos + push_size;
 
             auto& push_value = analysis.push_values.emplace_back();
-            // TODO: Add as_bytes() helper to intx.
-            const auto push_value_bytes = reinterpret_cast<uint8_t*>(intx::as_words(push_value));
+            const auto push_value_bytes = intx::as_bytes(push_value);
             auto insert_pos = &push_value_bytes[push_size - 1];
 
             // Copy bytes to the deticated storage in the order to match native endianness.
