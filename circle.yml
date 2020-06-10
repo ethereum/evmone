@@ -191,14 +191,11 @@ jobs:
             codecov --gcov-root ~/build
 
   gcc-32bit:
-    executor: linux-gcc-9
+    docker:
+      - image: ethereum/cpp-build-env:14-gcc-10-multilib
     environment:
       TOOLCHAIN: cxx17-32bit
     steps:
-      - run:
-          name: "Install GCC 32-bit"
-          command: |
-            sudo apt -q update && sudo apt -qy install g++-multilib
       - build
       - test
 
