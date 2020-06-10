@@ -106,13 +106,13 @@ void load_benchmark(const fs::path& path, const std::string& name_prefix)
     const auto base_name = name_prefix + path.stem().string();
 
     std::ifstream file{path};
-    std::string code_hex{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
+    std::string code_hexx{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
 
-    code_hex.erase(
-        std::remove_if(code_hex.begin(), code_hex.end(), [](auto x) { return std::isspace(x); }),
-        code_hex.end());
+    code_hexx.erase(
+        std::remove_if(code_hexx.begin(), code_hexx.end(), [](auto x) { return std::isspace(x); }),
+        code_hexx.end());
 
-    auto code = std::make_shared<bytes>(from_hex(code_hex));
+    auto code = std::make_shared<bytes>(from_hexx(code_hexx));
 
     RegisterBenchmark((base_name + "/analysis").c_str(), [code](State& state) {
         analyse(state, *code);
