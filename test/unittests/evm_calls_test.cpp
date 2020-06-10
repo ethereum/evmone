@@ -151,7 +151,7 @@ TEST_F(evm_calls, create_balance_too_low)
 
 TEST_F(evm_calls, create_failure)
 {
-    host.call_result.create_address = evmc::address{{0xce}};
+    host.call_result.create_address = 0x00000000000000000000000000000000000000ce_address;
     const auto create_address =
         bytes_view{host.call_result.create_address.bytes, sizeof(host.call_result.create_address)};
     rev = EVMC_CONSTANTINOPLE;
@@ -333,7 +333,7 @@ TEST_F(evm_calls, call_value_zero_to_nonexistent_account)
 
 TEST_F(evm_calls, call_new_account_creation_cost)
 {
-    const auto call_dst = evmc::address{{0xad}};
+    constexpr auto call_dst = 0x00000000000000000000000000000000000000ad_address;
     const auto code = 4 * push(0) + calldataload(0) + push({call_dst.bytes, sizeof(call_dst)}) +
                       push(0) + OP_CALL + ret_top();
     msg.destination = evmc_address{{3}};
