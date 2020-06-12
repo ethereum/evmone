@@ -1,5 +1,5 @@
 # evmone: Fast Ethereum Virtual Machine implementation
-# Copyright 2018-2019 The evmone Authors.
+# Copyright 2018-2020 The evmone Authors.
 # Licensed under the Apache License, Version 2.0.
 
 set(HUNTER_CONFIGURATION_TYPES Release CACHE STRING "Build type of Hunter packages")
@@ -7,7 +7,7 @@ set(HUNTER_CONFIGURATION_TYPES Release CACHE STRING "Build type of Hunter packag
 include(HunterGate)
 
 HunterGate(
-    URL "https://github.com/ruslo/hunter/archive/v0.23.190.tar.gz"
-    SHA1 "bc7da329d2493201de28f0c2a5fcd4de1415c477"
+    URL https://github.com/cpp-pm/hunter/archive/v0.23.239.tar.gz
+    SHA1 135567a8493ab3499187bce1f2a8df9b449febf3
     LOCAL
 )
