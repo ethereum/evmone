@@ -366,7 +366,7 @@ TEST_F(evm_state, selfdestruct)
 
 TEST_F(evm_state, selfdestruct_with_balance)
 {
-    const auto beneficiary = evmc::address{{0xbe}};
+    constexpr auto beneficiary = 0x00000000000000000000000000000000000000be_address;
     const auto code = push({beneficiary.bytes, sizeof(beneficiary)}) + OP_SELFDESTRUCT;
     msg.destination = evmc_address{{0x5e}};
 
