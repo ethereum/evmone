@@ -2,10 +2,21 @@
 # Copyright 2019 Pawel Bylica.
 # Licensed under the Apache License, Version 2.0.
 
+include(FetchContent)
 include(LibraryTools)
 
-hunter_add_package(intx)
-find_package(intx CONFIG REQUIRED)
+set(FETCHCONTENT_QUIET FALSE)
+FetchContent_Declare(
+    intx
+    URL https://github.com/chfast/intx/archive/9846d5f1ffa2e919115bb25fdf17dd237712c3a9.tar.gz
+    URL_HASH SHA256=ec5c1adf32aef849d45e4687e9339b2f310a832ccc9f34ee2b025288110e49f2
+    DOWNLOAD_DIR ${CMAKE_SOURCE_DIR}/deps/download
+    SOURCE_DIR ${CMAKE_SOURCE_DIR}/deps/intx
+)
+FetchContent_MakeAvailable(intx)
+
+#hunter_add_package(intx)
+#find_package(intx CONFIG REQUIRED)
 
 add_library(evmone
     ${include_dir}/evmone/evmone.h
