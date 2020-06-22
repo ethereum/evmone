@@ -1,11 +1,14 @@
 # evmone: Fast Ethereum Virtual Machine implementation
-# Copyright 2019 The evmone Authors.
+# Copyright 2019-2020 The evmone Authors.
 # Licensed under the Apache License, Version 2.0.
 
 include(GoogleTest)
 include(${PROJECT_SOURCE_DIR}/evmc/cmake/EVMC.cmake)
 
 set(evmone_private_include_dir ${PROJECT_SOURCE_DIR}/lib)
+
+hunter_add_package(benchmark)
+find_package(benchmark CONFIG REQUIRED)
 
 add_subdirectory(utils)
 add_subdirectory(bench)
