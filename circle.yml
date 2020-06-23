@@ -162,7 +162,10 @@ jobs:
           command: curl -L https://github.com/ethereum/aleth/releases/download/v$ALETH_REV/aleth-$ALETH_REV-linux-x86_64.tar.gz | tar xz
       - run:
           name: "Download tests"
-          command: git clone --depth=1 --single-branch --branch $TESTS_REV https://github.com/ethereum/tests
+          command: |
+            git clone --depth=1 --single-branch --branch $TESTS_REV https://github.com/ethereum/tests
+            mkdir tests/GeneralStateTests/stEWASMTests
+            mkdir tests/src/GeneralStateTestsFiller/stEWASMTests
       - run:
           name: "Run State Tests"
           command: bin/testeth -t GeneralStateTests -- --testpath tests --vm lib/libevmone.so
