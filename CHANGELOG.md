@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
 
+## [0.5.0] — unreleased
+
+### Changed
+
+- [intx] upgraded to version [0.5.0][intx 0.5.0], small performance increase for
+  `ADDMOD` and `MULMOD` instructions expected.
+  [#239](https://github.com/ethereum/evmone/pull/239)
+- [EVMC] upgraded to version [7.4.0][EVMC 7.4.0].
+  [#243](https://github.com/ethereum/evmone/pull/243)
+- C++ exception handling and Run-Time Type Information (RTTI) have been disabled
+  for the evmone library (in GCC and Clang compilers).
+  [#244](https://github.com/ethereum/evmone/pull/244)
+
+
 ## [0.4.1] — 2020-04-01
 
 ### Fixed
@@ -177,8 +191,10 @@ It delivers fully-compatible and high-speed EVM implementation.
 [EIP-2200]: https://eips.ethereum.org/EIPS/eip-2200
 [Spurious Dragon]: https://eips.ethereum.org/EIPS/eip-607
 [EVMC]: https://github.com/ethereum/evmc
+[EVMC 7.4.0]: https://github.com/ethereum/evmc/releases/tag/v7.4.0
 [EVMC 7.1.0]: https://github.com/ethereum/evmc/releases/tag/v7.1.0
 [EVMC 7.0.0]: https://github.com/ethereum/evmc/releases/tag/v7.0.0
 [intx]: https://github.com/chfast/intx
+[intx 0.5.0]: https://github.com/chfast/intx/releases/tag/v0.5.0
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
 [Semantic Versioning]: https://semver.org
