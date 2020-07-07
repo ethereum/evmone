@@ -11,6 +11,8 @@ add_library(evmone
     ${include_dir}/evmone/evmone.h
     analysis.cpp
     analysis.hpp
+    baseline.cpp
+    baseline.hpp
     evmone.cpp
     execution.cpp
     execution.hpp
