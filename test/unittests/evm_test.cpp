@@ -16,6 +16,9 @@ TEST_F(evm, empty)
 {
     execute(0, bytes_view{});
     EXPECT_GAS_USED(EVMC_SUCCESS, 0);
+
+    execute(1, bytes_view{});
+    EXPECT_GAS_USED(EVMC_SUCCESS, 0);
 }
 
 TEST_F(evm, push_and_pop)
@@ -37,6 +40,7 @@ TEST_F(evm, push_implicit_data)
     {
         code.back() = op;
         execute(code);
+        EXPECT_GAS_USED(EVMC_SUCCESS, 307);
     }
 }
 
@@ -108,7 +112,7 @@ TEST_F(evm, swapsn_jumpdest)
 
     rev = EVMC_PETERSBURG;
     execute(code);
-    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 30);
 
     rev = EVMC_ISTANBUL;
     execute(code);
@@ -265,9 +269,8 @@ TEST_F(evm, jumpi)
 
 TEST_F(evm, jumpi_else)
 {
-    execute(15, dup1(OP_COINBASE) + OP_JUMPI);
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    EXPECT_EQ(result.gas_left, 0);
+    execute(16, dup1(OP_COINBASE) + OP_JUMPI);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 15);
     EXPECT_EQ(result.output_size, 0);
 }
 
