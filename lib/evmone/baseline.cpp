@@ -164,6 +164,10 @@ evmc_result baseline_execute(evmc_vm* /*vm*/, const evmc_host_interface* host,
             sar(state->stack);
             break;
 
+
+        case OP_POP:
+            pop(state->stack);
+            break;
         case OP_MLOAD:
         {
             const auto status_code = mload(*state);
@@ -290,6 +294,104 @@ evmc_result baseline_execute(evmc_vm* /*vm*/, const evmc_host_interface* host,
         case OP_PUSH32:
             pc = load_push<32>(*state, pc + 1, code_end);
             continue;
+
+        case OP_DUP1:
+            dup<1>(state->stack);
+            break;
+        case OP_DUP2:
+            dup<2>(state->stack);
+            break;
+        case OP_DUP3:
+            dup<3>(state->stack);
+            break;
+        case OP_DUP4:
+            dup<4>(state->stack);
+            break;
+        case OP_DUP5:
+            dup<5>(state->stack);
+            break;
+        case OP_DUP6:
+            dup<6>(state->stack);
+            break;
+        case OP_DUP7:
+            dup<7>(state->stack);
+            break;
+        case OP_DUP8:
+            dup<8>(state->stack);
+            break;
+        case OP_DUP9:
+            dup<9>(state->stack);
+            break;
+        case OP_DUP10:
+            dup<10>(state->stack);
+            break;
+        case OP_DUP11:
+            dup<11>(state->stack);
+            break;
+        case OP_DUP12:
+            dup<12>(state->stack);
+            break;
+        case OP_DUP13:
+            dup<13>(state->stack);
+            break;
+        case OP_DUP14:
+            dup<14>(state->stack);
+            break;
+        case OP_DUP15:
+            dup<15>(state->stack);
+            break;
+        case OP_DUP16:
+            dup<16>(state->stack);
+            break;
+
+        case OP_SWAP1:
+            swap<1>(state->stack);
+            break;
+        case OP_SWAP2:
+            swap<2>(state->stack);
+            break;
+        case OP_SWAP3:
+            swap<3>(state->stack);
+            break;
+        case OP_SWAP4:
+            swap<4>(state->stack);
+            break;
+        case OP_SWAP5:
+            swap<5>(state->stack);
+            break;
+        case OP_SWAP6:
+            swap<6>(state->stack);
+            break;
+        case OP_SWAP7:
+            swap<7>(state->stack);
+            break;
+        case OP_SWAP8:
+            swap<8>(state->stack);
+            break;
+        case OP_SWAP9:
+            swap<9>(state->stack);
+            break;
+        case OP_SWAP10:
+            swap<10>(state->stack);
+            break;
+        case OP_SWAP11:
+            swap<11>(state->stack);
+            break;
+        case OP_SWAP12:
+            swap<12>(state->stack);
+            break;
+        case OP_SWAP13:
+            swap<13>(state->stack);
+            break;
+        case OP_SWAP14:
+            swap<14>(state->stack);
+            break;
+        case OP_SWAP15:
+            swap<15>(state->stack);
+            break;
+        case OP_SWAP16:
+            swap<16>(state->stack);
+            break;
 
         case OP_RETURN:
             op_return<EVMC_SUCCESS>(*state);
