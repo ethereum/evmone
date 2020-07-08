@@ -117,6 +117,16 @@ evmc_result baseline_execute(evmc_vm* /*vm*/, const evmc_host_interface* host,
         case OP_MULMOD:
             mulmod(state->stack);
             break;
+        case OP_EXP:
+        {
+            const auto status_code = exp(*state);
+            if (status_code != EVMC_SUCCESS)
+            {
+                state->status = status_code;
+                goto exit;
+            }
+            break;
+        }
         case OP_SIGNEXTEND:
             signextend(state->stack);
             break;
