@@ -4,6 +4,7 @@
 
 #include "baseline.hpp"
 #include "execution_state.hpp"
+#include "instructions.hpp"
 #include <evmc/instructions.h>
 #include <memory>
 
@@ -58,6 +59,78 @@ evmc_result baseline_execute(evmc_vm* /*vm*/, const evmc_host_interface* host,
         {
         case OP_STOP:
             goto exit;
+        case OP_ADD:
+            add(state->stack);
+            break;
+        case OP_MUL:
+            mul(state->stack);
+            break;
+        case OP_SUB:
+            sub(state->stack);
+            break;
+        case OP_DIV:
+            div(state->stack);
+            break;
+        case OP_SDIV:
+            sdiv(state->stack);
+            break;
+        case OP_MOD:
+            mod(state->stack);
+            break;
+        case OP_SMOD:
+            smod(state->stack);
+            break;
+        case OP_ADDMOD:
+            addmod(state->stack);
+            break;
+        case OP_MULMOD:
+            mulmod(state->stack);
+            break;
+        case OP_SIGNEXTEND:
+            signextend(state->stack);
+            break;
+
+        case OP_LT:
+            lt(state->stack);
+            break;
+        case OP_GT:
+            gt(state->stack);
+            break;
+        case OP_SLT:
+            slt(state->stack);
+            break;
+        case OP_SGT:
+            sgt(state->stack);
+            break;
+        case OP_EQ:
+            eq(state->stack);
+            break;
+        case OP_ISZERO:
+            iszero(state->stack);
+            break;
+        case OP_AND:
+            and_(state->stack);
+            break;
+        case OP_OR:
+            or_(state->stack);
+            break;
+        case OP_XOR:
+            xor_(state->stack);
+            break;
+        case OP_NOT:
+            not_(state->stack);
+            break;
+        case OP_BYTE:
+            byte(state->stack);
+            break;
+        case OP_SHL:
+            shl(state->stack);
+            break;
+        case OP_SHR:
+            shr(state->stack);
+            break;
+        case OP_SAR:
+            sar(state->stack);
         }
 
         ++pc;
