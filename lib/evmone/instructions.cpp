@@ -159,7 +159,7 @@ const instruction* op_exp(const instruction* instr, execution_state& state) noex
     return ++instr;
 }
 
-auto op_signextend(const instruction* pc, execution_state& state) noexcept
+const instruction* op_signextend(const instruction* instr, execution_state& state) noexcept
 {
     const auto ext = state.stack.pop();
     auto& x = state.stack.top();
@@ -172,7 +172,7 @@ auto op_signextend(const instruction* pc, execution_state& state) noexcept
         auto is_neg = (x & sign_mask) != 0;
         x = is_neg ? x | ~value_mask : x & value_mask;
     }
-    return ++pc;
+    return ++instr;
 }
 
 const instruction* op_lt(const instruction* instr, execution_state& state) noexcept
