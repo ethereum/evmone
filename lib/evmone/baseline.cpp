@@ -528,6 +528,57 @@ evmc_result baseline_execute(evmc_vm* /*vm*/, const evmc_host_interface* host,
             swap<16>(state->stack);
             break;
 
+        case OP_LOG0:
+        {
+            const auto status_code = log(*state, 0);
+            if (status_code != EVMC_SUCCESS)
+            {
+                state->status = status_code;
+                goto exit;
+            }
+            break;
+        }
+        case OP_LOG1:
+        {
+            const auto status_code = log(*state, 1);
+            if (status_code != EVMC_SUCCESS)
+            {
+                state->status = status_code;
+                goto exit;
+            }
+            break;
+        }
+        case OP_LOG2:
+        {
+            const auto status_code = log(*state, 2);
+            if (status_code != EVMC_SUCCESS)
+            {
+                state->status = status_code;
+                goto exit;
+            }
+            break;
+        }
+        case OP_LOG3:
+        {
+            const auto status_code = log(*state, 3);
+            if (status_code != EVMC_SUCCESS)
+            {
+                state->status = status_code;
+                goto exit;
+            }
+            break;
+        }
+        case OP_LOG4:
+        {
+            const auto status_code = log(*state, 4);
+            if (status_code != EVMC_SUCCESS)
+            {
+                state->status = status_code;
+                goto exit;
+            }
+            break;
+        }
+
         case OP_RETURN:
             op_return<EVMC_SUCCESS>(*state);
             goto exit;
