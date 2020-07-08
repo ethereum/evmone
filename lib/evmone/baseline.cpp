@@ -185,6 +185,108 @@ evmc_result baseline_execute(evmc_vm* /*vm*/, const evmc_host_interface* host,
             break;
         }
 
+        case OP_ADDRESS:
+            address(*state);
+            break;
+        case OP_BALANCE:
+            balance(*state);
+            break;
+        case OP_ORIGIN:
+            origin(*state);
+            break;
+        case OP_CALLER:
+            caller(*state);
+            break;
+        case OP_CALLVALUE:
+            callvalue(*state);
+            break;
+        case OP_CALLDATALOAD:
+            calldataload(*state);
+            break;
+        case OP_CALLDATASIZE:
+            calldatasize(*state);
+            break;
+        case OP_CALLDATACOPY:
+        {
+            const auto status_code = calldatacopy(*state);
+            if (status_code != EVMC_SUCCESS)
+            {
+                state->status = status_code;
+                goto exit;
+            }
+            break;
+        }
+        case OP_CODESIZE:
+            state->stack.push(code_size);
+            break;
+        case OP_CODECOPY:
+        {
+            const auto status_code = codecopy(*state);
+            if (status_code != EVMC_SUCCESS)
+            {
+                state->status = status_code;
+                goto exit;
+            }
+            break;
+        }
+        case OP_GASPRICE:
+            gasprice(*state);
+            break;
+        case OP_EXTCODESIZE:
+            extcodesize(*state);
+            break;
+        case OP_EXTCODECOPY:
+        {
+            const auto status_code = extcodecopy(*state);
+            if (status_code != EVMC_SUCCESS)
+            {
+                state->status = status_code;
+                goto exit;
+            }
+            break;
+        }
+        case OP_RETURNDATASIZE:
+            returndatasize(*state);
+            break;
+        case OP_RETURNDATACOPY:
+        {
+            const auto status_code = returndatacopy(*state);
+            if (status_code != EVMC_SUCCESS)
+            {
+                state->status = status_code;
+                goto exit;
+            }
+            break;
+        }
+        case OP_EXTCODEHASH:
+            extcodehash(*state);
+            break;
+
+        case OP_BLOCKHASH:
+            blockhash(*state);
+            break;
+        case OP_COINBASE:
+            coinbase(*state);
+            break;
+        case OP_TIMESTAMP:
+            timestamp(*state);
+            break;
+        case OP_NUMBER:
+            number(*state);
+            break;
+        case OP_DIFFICULTY:
+            difficulty(*state);
+            break;
+        case OP_GASLIMIT:
+            gaslimit(*state);
+            break;
+        case OP_CHAINID:
+            chainid(*state);
+            break;
+        case OP_SELFBALANCE:
+            selfbalance(*state);
+            break;
+
         case OP_POP:
             pop(state->stack);
             break;
