@@ -17,10 +17,17 @@ const instruction* op(const instruction* instr, execution_state& state) noexcept
     return ++instr;
 }
 
+template <void InstrFn(execution_state&)>
+const instruction* op(const instruction* instr, execution_state& state) noexcept
+{
+    InstrFn(state);
+    return ++instr;
+}
+
 template <evmc_status_code InstrFn(execution_state&)>
 const instruction* op(const instruction* instr, execution_state& state) noexcept
 {
-    const auto status_code =InstrFn(state);
+    const auto status_code = InstrFn(state);
     if (status_code != EVMC_SUCCESS)
         return state.exit(status_code);
     return ++instr;
@@ -185,41 +192,6 @@ const instruction* op_codecopy(const instruction* instr, execution_state& state)
     return ++instr;
 }
 
-const instruction* op_mload(const instruction* instr, execution_state& state) noexcept
-{
-    auto& index = state.stack.top();
-
-    if (!check_memory(state, index, 32))
-        return nullptr;
-
-    index = intx::be::unsafe::load<uint256>(&state.memory[static_cast<size_t>(index)]);
-    return ++instr;
-}
-
-const instruction* op_mstore(const instruction* instr, execution_state& state) noexcept
-{
-    const auto index = state.stack.pop();
-    const auto value = state.stack.pop();
-
-    if (!check_memory(state, index, 32))
-        return nullptr;
-
-    intx::be::unsafe::store(&state.memory[static_cast<size_t>(index)], value);
-    return ++instr;
-}
-
-const instruction* op_mstore8(const instruction* instr, execution_state& state) noexcept
-{
-    const auto index = state.stack.pop();
-    const auto value = state.stack.pop();
-
-    if (!check_memory(state, index, 1))
-        return nullptr;
-
-    state.memory[static_cast<size_t>(index)] = static_cast<uint8_t>(value);
-    return ++instr;
-}
-
 const instruction* op_sload(const instruction* instr, execution_state& state) noexcept
 {
     auto& x = state.stack.top();
@@ -310,12 +282,6 @@ const instruction* op_jumpi(const instruction* instr, execution_state& state) no
 const instruction* op_pc(const instruction* instr, execution_state& state) noexcept
 {
     state.stack.push(instr->arg.number);
-    return ++instr;
-}
-
-const instruction* op_msize(const instruction* instr, execution_state& state) noexcept
-{
-    state.stack.push(state.memory.size());
     return ++instr;
 }
 
@@ -821,15 +787,15 @@ constexpr op_table create_op_table_frontier() noexcept
     table[OP_DIFFICULTY] = {op_difficulty, 2, 0, 1};
     table[OP_GASLIMIT] = {op_gaslimit, 2, 0, 1};
     table[OP_POP] = {op_pop, 2, 1, -1};
-    table[OP_MLOAD] = {op_mload, 3, 1, 0};
-    table[OP_MSTORE] = {op_mstore, 3, 2, -2};
-    table[OP_MSTORE8] = {op_mstore8, 3, 2, -2};
+    table[OP_MLOAD] = {op<mload>, 3, 1, 0};
+    table[OP_MSTORE] = {op<mstore>, 3, 2, -2};
+    table[OP_MSTORE8] = {op<mstore8>, 3, 2, -2};
     table[OP_SLOAD] = {op_sload, 50, 1, 0};
     table[OP_SSTORE] = {op_sstore, 0, 2, -2};
     table[OP_JUMP] = {op_jump, 8, 1, -1};
     table[OP_JUMPI] = {op_jumpi, 10, 2, -2};
     table[OP_PC] = {op_pc, 2, 0, 1};
-    table[OP_MSIZE] = {op_msize, 2, 0, 1};
+    table[OP_MSIZE] = {op<msize>, 2, 0, 1};
     table[OP_GAS] = {op_gas, 2, 0, 1};
     table[OPX_BEGINBLOCK] = {opx_beginblock, 1, 0, 0};  // Replaces JUMPDEST.
 

@@ -259,4 +259,45 @@ inline void sar(evm_stack& stack) noexcept
 
     stack.pop();
 }
+
+
+inline evmc_status_code mload(execution_state& state) noexcept
+{
+    auto& index = state.stack.top();
+
+    if (!check_memory(state, index, 32))
+        return EVMC_OUT_OF_GAS;
+
+    index = intx::be::unsafe::load<uint256>(&state.memory[static_cast<size_t>(index)]);
+    return EVMC_SUCCESS;
+}
+
+inline evmc_status_code mstore(execution_state& state) noexcept
+{
+    const auto index = state.stack.pop();
+    const auto value = state.stack.pop();
+
+    if (!check_memory(state, index, 32))
+        return EVMC_OUT_OF_GAS;
+
+    intx::be::unsafe::store(&state.memory[static_cast<size_t>(index)], value);
+    return EVMC_SUCCESS;
+}
+
+inline evmc_status_code mstore8(execution_state& state) noexcept
+{
+    const auto index = state.stack.pop();
+    const auto value = state.stack.pop();
+
+    if (!check_memory(state, index, 1))
+        return EVMC_OUT_OF_GAS;
+
+    state.memory[static_cast<size_t>(index)] = static_cast<uint8_t>(value);
+    return EVMC_SUCCESS;
+}
+
+inline void msize(execution_state& state) noexcept
+{
+    state.stack.push(state.memory.size());
+}
 }  // namespace evmone
