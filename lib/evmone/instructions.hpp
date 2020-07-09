@@ -63,4 +63,185 @@ inline bool check_memory(
 
     return check_memory(state, offset, static_cast<uint64_t>(size));
 }
+
+inline void add(evm_stack& stack) noexcept
+{
+    stack.top() += stack.pop();
+}
+
+inline void mul(evm_stack& stack) noexcept
+{
+    stack.top() *= stack.pop();
+}
+
+inline void sub(evm_stack& stack) noexcept
+{
+    stack[1] = stack[0] - stack[1];
+    stack.pop();
+}
+
+inline void div(evm_stack& stack) noexcept
+{
+    auto& v = stack[1];
+    v = v != 0 ? stack[0] / v : 0;
+    stack.pop();
+}
+
+inline void sdiv(evm_stack& stack) noexcept
+{
+    auto& v = stack[1];
+    v = v != 0 ? intx::sdivrem(stack[0], v).quot : 0;
+    stack.pop();
+}
+
+inline void mod(evm_stack& stack) noexcept
+{
+    auto& v = stack[1];
+    v = v != 0 ? stack[0] % v : 0;
+    stack.pop();
+}
+
+inline void smod(evm_stack& stack) noexcept
+{
+    auto& v = stack[1];
+    v = v != 0 ? intx::sdivrem(stack[0], v).rem : 0;
+    stack.pop();
+}
+
+inline void addmod(evm_stack& stack) noexcept
+{
+    const auto x = stack.pop();
+    const auto y = stack.pop();
+    auto& m = stack.top();
+    m = m != 0 ? intx::addmod(x, y, m) : 0;
+}
+
+inline void mulmod(evm_stack& stack) noexcept
+{
+    const auto x = stack.pop();
+    const auto y = stack.pop();
+    auto& m = stack.top();
+    m = m != 0 ? intx::mulmod(x, y, m) : 0;
+}
+
+
+inline void signextend(evm_stack& stack) noexcept
+{
+    const auto ext = stack.pop();
+    auto& x = stack.top();
+
+    if (ext < 31)
+    {
+        auto sign_bit = static_cast<int>(ext) * 8 + 7;
+        auto sign_mask = uint256{1} << sign_bit;
+        auto value_mask = sign_mask - 1;
+        auto is_neg = (x & sign_mask) != 0;
+        x = is_neg ? x | ~value_mask : x & value_mask;
+    }
+}
+
+inline void lt(evm_stack& stack) noexcept
+{
+    const auto x = stack.pop();
+    stack[0] = x < stack[0];
+}
+
+inline void gt(evm_stack& stack) noexcept
+{
+    const auto x = stack.pop();
+    stack[0] = stack[0] < x;  // TODO: Using < is faster than >.
+}
+
+inline void slt(evm_stack& stack) noexcept
+{
+    // TODO: Move this to intx.
+    const auto x = stack.pop();
+    auto& y = stack[0];
+    const auto x_neg = x.hi.hi >> 63;
+    const auto y_neg = y.hi.hi >> 63;
+    y = ((x_neg ^ y_neg) != 0) ? x_neg : x < y;
+}
+
+inline void sgt(evm_stack& stack) noexcept
+{
+    const auto x = stack.pop();
+    auto& y = stack[0];
+    const auto x_neg = x.hi.hi >> 63;
+    const auto y_neg = y.hi.hi >> 63;
+    y = ((x_neg ^ y_neg) != 0) ? y_neg : y < x;
+}
+
+inline void eq(evm_stack& stack) noexcept
+{
+    stack[1] = stack[0] == stack[1];
+    stack.pop();
+}
+
+inline void iszero(evm_stack& stack) noexcept
+{
+    stack.top() = stack.top() == 0;
+}
+
+inline void and_(evm_stack& stack) noexcept
+{
+    stack.top() &= stack.pop();
+}
+
+inline void or_(evm_stack& stack) noexcept
+{
+    stack.top() |= stack.pop();
+}
+
+inline void xor_(evm_stack& stack) noexcept
+{
+    stack.top() ^= stack.pop();
+}
+
+inline void not_(evm_stack& stack) noexcept
+{
+    stack.top() = ~stack.top();
+}
+
+inline void byte(evm_stack& stack) noexcept
+{
+    const auto n = stack.pop();
+    auto& x = stack.top();
+
+    if (n > 31)
+        x = 0;
+    else
+    {
+        auto sh = (31 - static_cast<unsigned>(n)) * 8;
+        auto y = x >> sh;
+        x = y & 0xff;
+    }
+}
+
+inline void shl(evm_stack& stack) noexcept
+{
+    stack.top() <<= stack.pop();
+}
+
+inline void shr(evm_stack& stack) noexcept
+{
+    stack.top() >>= stack.pop();
+}
+
+inline void sar(evm_stack& stack) noexcept
+{
+    if ((stack[1] & (uint256{1} << 255)) == 0)
+        return shr(stack);
+
+    constexpr auto allones = ~uint256{};
+
+    if (stack[0] >= 256)
+        stack[1] = allones;
+    else
+    {
+        const auto shift = static_cast<unsigned>(stack[0]);
+        stack[1] = (stack[1] >> shift) | (allones << (256 - shift));
+    }
+
+    stack.pop();
+}
 }  // namespace evmone

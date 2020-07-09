@@ -10,80 +10,16 @@ namespace evmone
 {
 namespace
 {
+template <void InstrFn(evm_stack&)>
+const instruction* op(const instruction* instr, execution_state& state) noexcept
+{
+    InstrFn(state.stack);
+    return ++instr;
+}
+
 const instruction* op_stop(const instruction*, execution_state& state) noexcept
 {
     return state.exit(EVMC_SUCCESS);
-}
-
-const instruction* op_add(const instruction* instr, execution_state& state) noexcept
-{
-    state.stack.top() += state.stack.pop();
-    return ++instr;
-}
-
-const instruction* op_mul(const instruction* instr, execution_state& state) noexcept
-{
-    state.stack.top() *= state.stack.pop();
-    return ++instr;
-}
-
-const instruction* op_sub(const instruction* instr, execution_state& state) noexcept
-{
-    state.stack[1] = state.stack[0] - state.stack[1];
-    state.stack.pop();
-    return ++instr;
-}
-
-const instruction* op_div(const instruction* instr, execution_state& state) noexcept
-{
-    auto& v = state.stack[1];
-    v = v != 0 ? state.stack[0] / v : 0;
-    state.stack.pop();
-    return ++instr;
-}
-
-const instruction* op_sdiv(const instruction* instr, execution_state& state) noexcept
-{
-    auto& v = state.stack[1];
-    v = v != 0 ? intx::sdivrem(state.stack[0], v).quot : 0;
-    state.stack.pop();
-    return ++instr;
-}
-
-const instruction* op_mod(const instruction* instr, execution_state& state) noexcept
-{
-    auto& v = state.stack[1];
-    v = v != 0 ? state.stack[0] % v : 0;
-    state.stack.pop();
-    return ++instr;
-}
-
-const instruction* op_smod(const instruction* instr, execution_state& state) noexcept
-{
-    auto& v = state.stack[1];
-    v = v != 0 ? intx::sdivrem(state.stack[0], v).rem : 0;
-    state.stack.pop();
-    return ++instr;
-}
-
-const instruction* op_addmod(const instruction* instr, execution_state& state) noexcept
-{
-    const auto x = state.stack.pop();
-    const auto y = state.stack.pop();
-    auto& m = state.stack.top();
-
-    m = m != 0 ? intx::addmod(x, y, m) : 0;
-    return ++instr;
-}
-
-const instruction* op_mulmod(const instruction* instr, execution_state& state) noexcept
-{
-    const auto x = state.stack.pop();
-    const auto y = state.stack.pop();
-    auto& m = state.stack.top();
-
-    m = m != 0 ? intx::mulmod(x, y, m) : 0;
-    return ++instr;
 }
 
 const instruction* op_exp(const instruction* instr, execution_state& state) noexcept
@@ -99,141 +35,6 @@ const instruction* op_exp(const instruction* instr, execution_state& state) noex
         return state.exit(EVMC_OUT_OF_GAS);
 
     exponent = intx::exp(base, exponent);
-    return ++instr;
-}
-
-const instruction* op_signextend(const instruction* instr, execution_state& state) noexcept
-{
-    const auto ext = state.stack.pop();
-    auto& x = state.stack.top();
-
-    if (ext < 31)
-    {
-        auto sign_bit = static_cast<int>(ext) * 8 + 7;
-        auto sign_mask = uint256{1} << sign_bit;
-        auto value_mask = sign_mask - 1;
-        auto is_neg = (x & sign_mask) != 0;
-        x = is_neg ? x | ~value_mask : x & value_mask;
-    }
-    return ++instr;
-}
-
-const instruction* op_lt(const instruction* instr, execution_state& state) noexcept
-{
-    const auto x = state.stack.pop();
-    state.stack[0] = x < state.stack[0];
-    return ++instr;
-}
-
-const instruction* op_gt(const instruction* instr, execution_state& state) noexcept
-{
-    const auto x = state.stack.pop();
-    state.stack[0] = state.stack[0] < x;  // TODO: Using < is faster than >.
-    return ++instr;
-}
-
-const instruction* op_slt(const instruction* instr, execution_state& state) noexcept
-{
-    // TODO: Move this to intx.
-    const auto x = state.stack.pop();
-    auto& y = state.stack[0];
-    const auto x_neg = x.hi.hi >> 63;
-    const auto y_neg = y.hi.hi >> 63;
-    y = ((x_neg ^ y_neg) != 0) ? x_neg : x < y;
-    return ++instr;
-}
-
-const instruction* op_sgt(const instruction* instr, execution_state& state) noexcept
-{
-    const auto x = state.stack.pop();
-    auto& y = state.stack[0];
-    const auto x_neg = x.hi.hi >> 63;
-    const auto y_neg = y.hi.hi >> 63;
-    y = ((x_neg ^ y_neg) != 0) ? y_neg : y < x;
-    return ++instr;
-}
-
-const instruction* op_eq(const instruction* instr, execution_state& state) noexcept
-{
-    state.stack[1] = state.stack[0] == state.stack[1];
-    state.stack.pop();
-    return ++instr;
-}
-
-const instruction* op_iszero(const instruction* instr, execution_state& state) noexcept
-{
-    state.stack.top() = state.stack.top() == 0;
-    return ++instr;
-}
-
-const instruction* op_and(const instruction* instr, execution_state& state) noexcept
-{
-    state.stack.top() &= state.stack.pop();
-    return ++instr;
-}
-
-const instruction* op_or(const instruction* instr, execution_state& state) noexcept
-{
-    state.stack.top() |= state.stack.pop();
-    return ++instr;
-}
-
-const instruction* op_xor(const instruction* instr, execution_state& state) noexcept
-{
-    state.stack.top() ^= state.stack.pop();
-    return ++instr;
-}
-
-const instruction* op_not(const instruction* instr, execution_state& state) noexcept
-{
-    state.stack.top() = ~state.stack.top();
-    return ++instr;
-}
-
-const instruction* op_byte(const instruction* instr, execution_state& state) noexcept
-{
-    const auto n = state.stack.pop();
-    auto& x = state.stack.top();
-
-    if (n > 31)
-        x = 0;
-    else
-    {
-        auto sh = (31 - static_cast<unsigned>(n)) * 8;
-        auto y = x >> sh;
-        x = y & 0xff;
-    }
-    return ++instr;
-}
-
-const instruction* op_shl(const instruction* instr, execution_state& state) noexcept
-{
-    state.stack.top() <<= state.stack.pop();
-    return ++instr;
-}
-
-const instruction* op_shr(const instruction* instr, execution_state& state) noexcept
-{
-    state.stack.top() >>= state.stack.pop();
-    return ++instr;
-}
-
-const instruction* op_sar(const instruction* instr, execution_state& state) noexcept
-{
-    if ((state.stack[1] & (uint256{1} << 255)) == 0)
-        return op_shr(instr, state);
-
-    constexpr auto allones = ~uint256{};
-
-    if (state.stack[0] >= 256)
-        state.stack[1] = allones;
-    else
-    {
-        const auto shift = static_cast<unsigned>(state.stack[0]);
-        state.stack[1] = (state.stack[1] >> shift) | (allones << (256 - shift));
-    }
-
-    state.stack.pop();
     return ++instr;
 }
 
@@ -984,28 +785,28 @@ constexpr op_table create_op_table_frontier() noexcept
         t = {op_undefined, 0, 0, 0};
 
     table[OP_STOP] = {op_stop, 0, 0, 0};
-    table[OP_ADD] = {op_add, 3, 2, -1};
-    table[OP_MUL] = {op_mul, 5, 2, -1};
-    table[OP_SUB] = {op_sub, 3, 2, -1};
-    table[OP_DIV] = {op_div, 5, 2, -1};
-    table[OP_SDIV] = {op_sdiv, 5, 2, -1};
-    table[OP_MOD] = {op_mod, 5, 2, -1};
-    table[OP_SMOD] = {op_smod, 5, 2, -1};
-    table[OP_ADDMOD] = {op_addmod, 8, 3, -2};
-    table[OP_MULMOD] = {op_mulmod, 8, 3, -2};
+    table[OP_ADD] = {op<add>, 3, 2, -1};
+    table[OP_MUL] = {op<mul>, 5, 2, -1};
+    table[OP_SUB] = {op<sub>, 3, 2, -1};
+    table[OP_DIV] = {op<div>, 5, 2, -1};
+    table[OP_SDIV] = {op<sdiv>, 5, 2, -1};
+    table[OP_MOD] = {op<mod>, 5, 2, -1};
+    table[OP_SMOD] = {op<smod>, 5, 2, -1};
+    table[OP_ADDMOD] = {op<addmod>, 8, 3, -2};
+    table[OP_MULMOD] = {op<mulmod>, 8, 3, -2};
     table[OP_EXP] = {op_exp, 10, 2, -1};
-    table[OP_SIGNEXTEND] = {op_signextend, 5, 2, -1};
-    table[OP_LT] = {op_lt, 3, 2, -1};
-    table[OP_GT] = {op_gt, 3, 2, -1};
-    table[OP_SLT] = {op_slt, 3, 2, -1};
-    table[OP_SGT] = {op_sgt, 3, 2, -1};
-    table[OP_EQ] = {op_eq, 3, 2, -1};
-    table[OP_ISZERO] = {op_iszero, 3, 1, 0};
-    table[OP_AND] = {op_and, 3, 2, -1};
-    table[OP_OR] = {op_or, 3, 2, -1};
-    table[OP_XOR] = {op_xor, 3, 2, -1};
-    table[OP_NOT] = {op_not, 3, 1, 0};
-    table[OP_BYTE] = {op_byte, 3, 2, -1};
+    table[OP_SIGNEXTEND] = {op<signextend>, 5, 2, -1};
+    table[OP_LT] = {op<lt>, 3, 2, -1};
+    table[OP_GT] = {op<gt>, 3, 2, -1};
+    table[OP_SLT] = {op<slt>, 3, 2, -1};
+    table[OP_SGT] = {op<sgt>, 3, 2, -1};
+    table[OP_EQ] = {op<eq>, 3, 2, -1};
+    table[OP_ISZERO] = {op<iszero>, 3, 1, 0};
+    table[OP_AND] = {op<and_>, 3, 2, -1};
+    table[OP_OR] = {op<or_>, 3, 2, -1};
+    table[OP_XOR] = {op<xor_>, 3, 2, -1};
+    table[OP_NOT] = {op<not_>, 3, 1, 0};
+    table[OP_BYTE] = {op<byte>, 3, 2, -1};
     table[OP_SHA3] = {op_sha3, 30, 2, -1};
     table[OP_ADDRESS] = {op_address, 2, 0, 1};
     table[OP_BALANCE] = {op_balance, 20, 1, 0};
@@ -1127,9 +928,9 @@ constexpr op_table create_op_table_byzantium() noexcept
 constexpr op_table create_op_table_constantinople() noexcept
 {
     auto table = create_op_table_byzantium();
-    table[OP_SHL] = {op_shl, 3, 2, -1};
-    table[OP_SHR] = {op_shr, 3, 2, -1};
-    table[OP_SAR] = {op_sar, 3, 2, -1};
+    table[OP_SHL] = {op<shl>, 3, 2, -1};
+    table[OP_SHR] = {op<shr>, 3, 2, -1};
+    table[OP_SAR] = {op<sar>, 3, 2, -1};
     table[OP_EXTCODEHASH] = {op_extcodehash, 400, 1, 0};
     table[OP_CREATE2] = {op_create<EVMC_CREATE2>, 32000, 4, -3};
     return table;
