@@ -17,25 +17,18 @@ const instruction* op(const instruction* instr, execution_state& state) noexcept
     return ++instr;
 }
 
+template <evmc_status_code InstrFn(execution_state&)>
+const instruction* op(const instruction* instr, execution_state& state) noexcept
+{
+    const auto status_code =InstrFn(state);
+    if (status_code != EVMC_SUCCESS)
+        return state.exit(status_code);
+    return ++instr;
+}
+
 const instruction* op_stop(const instruction*, execution_state& state) noexcept
 {
     return state.exit(EVMC_SUCCESS);
-}
-
-const instruction* op_exp(const instruction* instr, execution_state& state) noexcept
-{
-    const auto base = state.stack.pop();
-    auto& exponent = state.stack.top();
-
-    const auto exponent_significant_bytes =
-        static_cast<int>(intx::count_significant_words<uint8_t>(exponent));
-    const auto exponent_cost = state.rev >= EVMC_SPURIOUS_DRAGON ? 50 : 10;
-    const auto additional_cost = exponent_significant_bytes * exponent_cost;
-    if ((state.gas_left -= additional_cost) < 0)
-        return state.exit(EVMC_OUT_OF_GAS);
-
-    exponent = intx::exp(base, exponent);
-    return ++instr;
 }
 
 const instruction* op_sha3(const instruction* instr, execution_state& state) noexcept
@@ -794,7 +787,7 @@ constexpr op_table create_op_table_frontier() noexcept
     table[OP_SMOD] = {op<smod>, 5, 2, -1};
     table[OP_ADDMOD] = {op<addmod>, 8, 3, -2};
     table[OP_MULMOD] = {op<mulmod>, 8, 3, -2};
-    table[OP_EXP] = {op_exp, 10, 2, -1};
+    table[OP_EXP] = {op<exp>, 10, 2, -1};
     table[OP_SIGNEXTEND] = {op<signextend>, 5, 2, -1};
     table[OP_LT] = {op<lt>, 3, 2, -1};
     table[OP_GT] = {op<gt>, 3, 2, -1};

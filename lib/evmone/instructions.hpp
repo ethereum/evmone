@@ -124,6 +124,21 @@ inline void mulmod(evm_stack& stack) noexcept
     m = m != 0 ? intx::mulmod(x, y, m) : 0;
 }
 
+inline evmc_status_code exp(execution_state& state) noexcept
+{
+    const auto base = state.stack.pop();
+    auto& exponent = state.stack.top();
+
+    const auto exponent_significant_bytes =
+        static_cast<int>(intx::count_significant_words<uint8_t>(exponent));
+    const auto exponent_cost = state.rev >= EVMC_SPURIOUS_DRAGON ? 50 : 10;
+    const auto additional_cost = exponent_significant_bytes * exponent_cost;
+    if ((state.gas_left -= additional_cost) < 0)
+        return EVMC_OUT_OF_GAS;
+
+    exponent = intx::exp(base, exponent);
+    return EVMC_SUCCESS;
+}
 
 inline void signextend(evm_stack& stack) noexcept
 {
