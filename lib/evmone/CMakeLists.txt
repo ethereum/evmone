@@ -15,6 +15,7 @@ add_library(evmone
     execution.cpp
     execution.hpp
     instructions.cpp
+    instructions.hpp
     limits.hpp
     opcodes_helpers.h
 )

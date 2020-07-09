@@ -87,7 +87,10 @@ TEST_F(evm_other, evmone_block_gas_cost_overflow_create)
 
     execute(gas_max - 1, code);
     EXPECT_STATUS(EVMC_OUT_OF_GAS);
-    EXPECT_TRUE(host.recorded_calls.empty());
+    if (!host.recorded_calls.empty())  // turbo
+    {
+        EXPECT_EQ(host.recorded_calls.size(), 3);  // baseline
+    }
 }
 
 TEST_F(evm_other, evmone_block_gas_cost_overflow_balance)
@@ -109,7 +112,10 @@ TEST_F(evm_other, evmone_block_gas_cost_overflow_balance)
 
     execute(gas_max - 1, code);
     EXPECT_STATUS(EVMC_OUT_OF_GAS);
-    EXPECT_TRUE(host.recorded_account_accesses.empty());
+    if (!host.recorded_account_accesses.empty())  // turbo
+    {
+        EXPECT_EQ(host.recorded_account_accesses.size(), 200);  // baseline
+    }
 }
 
 TEST_F(evm_other, loop_full_of_jumpdests)
