@@ -1,6 +1,6 @@
 # evmone: Fast Ethereum Virtual Machine implementation
 # Copyright 2018-2020 The evmone Authors.
-# Licensed under the Apache License, Version 2.0.
+# SPDX-License-Identifier: Apache-2.0
 
 set(HUNTER_CONFIGURATION_TYPES Release CACHE STRING "Build type of Hunter packages")
 
