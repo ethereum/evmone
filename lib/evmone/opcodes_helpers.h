@@ -1,6 +1,6 @@
 // evmone: Fast Ethereum Virtual Machine implementation
-// Copyright 2019 Pawel Bylica.
-// Licensed under the Apache License, Version 2.0.
+// Copyright 2019 The evmone Authors.
+// SPDX-License-Identifier: Apache-2.0
 #pragma once
 
 #define ANY_SMALL_PUSH \
