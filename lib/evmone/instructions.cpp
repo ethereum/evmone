@@ -164,39 +164,14 @@ const instruction* op_push_full(const instruction* instr, execution_state& state
     return ++instr;
 }
 
-const instruction* op_log(
-    const instruction* instr, execution_state& state, size_t num_topics) noexcept
-{
-    if (state.msg->flags & EVMC_STATIC)
-        return state.exit(EVMC_STATIC_MODE_VIOLATION);
-
-    const auto offset = state.stack.pop();
-    const auto size = state.stack.pop();
-
-    if (!check_memory(state, offset, size))
-        return nullptr;
-
-    const auto o = static_cast<size_t>(offset);
-    const auto s = static_cast<size_t>(size);
-
-    const auto cost = int64_t(s) * 8;
-    if ((state.gas_left -= cost) < 0)
-        return state.exit(EVMC_OUT_OF_GAS);
-
-    auto topics = std::array<evmc::bytes32, 4>{};
-    for (size_t i = 0; i < num_topics; ++i)
-        topics[i] = intx::be::store<evmc::bytes32>(state.stack.pop());
-
-    const auto data = s != 0 ? &state.memory[o] : nullptr;
-    state.host.emit_log(state.msg->destination, data, s, topics.data(), num_topics);
-    return ++instr;
-}
-
 template <evmc_opcode LogOp>
 const instruction* op_log(const instruction* instr, execution_state& state) noexcept
 {
     constexpr auto num_topics = LogOp - OP_LOG0;
-    return op_log(instr, state, num_topics);
+    const auto status_code = log(state, num_topics);
+    if (status_code != EVMC_SUCCESS)
+        return state.exit(status_code);
+    return ++instr;
 }
 
 const instruction* op_invalid(const instruction*, execution_state& state) noexcept

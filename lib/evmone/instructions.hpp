@@ -584,4 +584,32 @@ inline void swap(evm_stack& stack) noexcept
     constexpr auto index = SwapOp - OP_SWAP1 + 1;
     std::swap(stack.top(), stack[index]);
 }
+
+
+inline evmc_status_code log(execution_state& state, size_t num_topics) noexcept
+{
+    if (state.msg->flags & EVMC_STATIC)
+        return EVMC_STATIC_MODE_VIOLATION;
+
+    const auto offset = state.stack.pop();
+    const auto size = state.stack.pop();
+
+    if (!check_memory(state, offset, size))
+        return EVMC_OUT_OF_GAS;
+
+    const auto o = static_cast<size_t>(offset);
+    const auto s = static_cast<size_t>(size);
+
+    const auto cost = int64_t(s) * 8;
+    if ((state.gas_left -= cost) < 0)
+        return EVMC_OUT_OF_GAS;
+
+    auto topics = std::array<evmc::bytes32, 4>{};
+    for (size_t i = 0; i < num_topics; ++i)
+        topics[i] = intx::be::store<evmc::bytes32>(state.stack.pop());
+
+    const auto data = s != 0 ? &state.memory[o] : nullptr;
+    state.host.emit_log(state.msg->destination, data, s, topics.data(), num_topics);
+    return EVMC_SUCCESS;
+}
 }  // namespace evmone
