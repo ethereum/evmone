@@ -51,14 +51,6 @@ const instruction* op_codecopy(const instruction* instr, execution_state& state)
     return ++instr;
 }
 
-const instruction* op_sload(const instruction* instr, execution_state& state) noexcept
-{
-    auto& x = state.stack.top();
-    x = intx::be::load<uint256>(
-        state.host.get_storage(state.msg->destination, intx::be::store<evmc::bytes32>(x)));
-    return ++instr;
-}
-
 const instruction* op_sstore(const instruction* instr, execution_state& state) noexcept
 {
     // TODO: Implement static mode violation in analysis.
@@ -475,7 +467,7 @@ constexpr op_table create_op_table_frontier() noexcept
     table[OP_MLOAD] = {op<mload>, 3, 1, 0};
     table[OP_MSTORE] = {op<mstore>, 3, 2, -2};
     table[OP_MSTORE8] = {op<mstore8>, 3, 2, -2};
-    table[OP_SLOAD] = {op_sload, 50, 1, 0};
+    table[OP_SLOAD] = {op<sload>, 50, 1, 0};
     table[OP_SSTORE] = {op_sstore, 0, 2, -2};
     table[OP_JUMP] = {op_jump, 8, 1, -1};
     table[OP_JUMPI] = {op_jumpi, 10, 2, -2};
@@ -587,7 +579,7 @@ constexpr op_table create_op_table_istanbul() noexcept
     table[OP_CHAINID] = {op<chainid>, 2, 0, 1};
     table[OP_EXTCODEHASH] = {op<extcodehash>, 700, 1, 0};
     table[OP_SELFBALANCE] = {op<selfbalance>, 5, 0, 1};
-    table[OP_SLOAD] = {op_sload, 800, 1, 0};
+    table[OP_SLOAD] = {op<sload>, 800, 1, 0};
     return table;
 }
 

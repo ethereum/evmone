@@ -556,6 +556,13 @@ inline evmc_status_code mstore8(execution_state& state) noexcept
     return EVMC_SUCCESS;
 }
 
+inline void sload(execution_state& state) noexcept
+{
+    auto& x = state.stack.top();
+    x = intx::be::load<uint256>(
+        state.host.get_storage(state.msg->destination, intx::be::store<evmc::bytes32>(x)));
+}
+
 inline void msize(execution_state& state) noexcept
 {
     state.stack.push(state.memory.size());
