@@ -26,6 +26,23 @@ inline const uint8_t* load_push(
     return code + Len;
 }
 
+template <evmc_status_code StatusCode>
+inline void op_return(ExecutionState& state) noexcept
+{
+    const auto offset = state.stack[0];
+    const auto size = state.stack[1];
+
+    if (!check_memory(state, offset, size))
+    {
+        state.status = EVMC_OUT_OF_GAS;
+        return;
+    }
+
+    state.output_offset = static_cast<size_t>(offset);  // Can be garbage if size is 0.
+    state.output_size = static_cast<size_t>(size);
+    state.status = StatusCode;
+}
+
 inline evmc_status_code check_requirements(const char* const* instruction_names,
     const evmc_instruction_metrics* instruction_metrics, ExecutionState& state, uint8_t op) noexcept
 {
@@ -273,6 +290,13 @@ evmc_result baseline_execute(evmc_vm* /*vm*/, const evmc_host_interface* host,
         case OP_PUSH32:
             pc = load_push<32>(*state, pc + 1, code_end);
             continue;
+
+        case OP_RETURN:
+            op_return<EVMC_SUCCESS>(*state);
+            goto exit;
+        case OP_REVERT:
+            op_return<EVMC_REVERT>(*state);
+            goto exit;
         }
 
         ++pc;
