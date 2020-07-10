@@ -164,28 +164,6 @@ const instruction* op_push_full(const instruction* instr, execution_state& state
     return ++instr;
 }
 
-const instruction* op_pop(const instruction* instr, execution_state& state) noexcept
-{
-    state.stack.pop();
-    return ++instr;
-}
-
-template <evmc_opcode DupOp>
-const instruction* op_dup(const instruction* instr, execution_state& state) noexcept
-{
-    constexpr auto index = DupOp - OP_DUP1;
-    state.stack.push(state.stack[index]);
-    return ++instr;
-}
-
-template <evmc_opcode SwapOp>
-const instruction* op_swap(const instruction* instr, execution_state& state) noexcept
-{
-    constexpr auto index = SwapOp - OP_SWAP1 + 1;
-    std::swap(state.stack.top(), state.stack[index]);
-    return ++instr;
-}
-
 const instruction* op_log(
     const instruction* instr, execution_state& state, size_t num_topics) noexcept
 {
@@ -518,7 +496,7 @@ constexpr op_table create_op_table_frontier() noexcept
     table[OP_NUMBER] = {op<number>, 2, 0, 1};
     table[OP_DIFFICULTY] = {op<difficulty>, 2, 0, 1};
     table[OP_GASLIMIT] = {op<gaslimit>, 2, 0, 1};
-    table[OP_POP] = {op_pop, 2, 1, -1};
+    table[OP_POP] = {op<pop>, 2, 1, -1};
     table[OP_MLOAD] = {op<mload>, 3, 1, 0};
     table[OP_MSTORE] = {op<mstore>, 3, 2, -2};
     table[OP_MSTORE8] = {op<mstore8>, 3, 2, -2};
@@ -536,39 +514,39 @@ constexpr op_table create_op_table_frontier() noexcept
     for (auto op = size_t{OP_PUSH9}; op <= OP_PUSH32; ++op)
         table[op] = {op_push_full, 3, 0, 1};
 
-    table[OP_DUP1] = {op_dup<OP_DUP1>, 3, 1, 1};
-    table[OP_DUP2] = {op_dup<OP_DUP2>, 3, 2, 1};
-    table[OP_DUP3] = {op_dup<OP_DUP3>, 3, 3, 1};
-    table[OP_DUP4] = {op_dup<OP_DUP4>, 3, 4, 1};
-    table[OP_DUP5] = {op_dup<OP_DUP5>, 3, 5, 1};
-    table[OP_DUP6] = {op_dup<OP_DUP6>, 3, 6, 1};
-    table[OP_DUP7] = {op_dup<OP_DUP7>, 3, 7, 1};
-    table[OP_DUP8] = {op_dup<OP_DUP8>, 3, 8, 1};
-    table[OP_DUP9] = {op_dup<OP_DUP9>, 3, 9, 1};
-    table[OP_DUP10] = {op_dup<OP_DUP10>, 3, 10, 1};
-    table[OP_DUP11] = {op_dup<OP_DUP11>, 3, 11, 1};
-    table[OP_DUP12] = {op_dup<OP_DUP12>, 3, 12, 1};
-    table[OP_DUP13] = {op_dup<OP_DUP13>, 3, 13, 1};
-    table[OP_DUP14] = {op_dup<OP_DUP14>, 3, 14, 1};
-    table[OP_DUP15] = {op_dup<OP_DUP15>, 3, 15, 1};
-    table[OP_DUP16] = {op_dup<OP_DUP16>, 3, 16, 1};
+    table[OP_DUP1] = {op<dup<OP_DUP1>>, 3, 1, 1};
+    table[OP_DUP2] = {op<dup<OP_DUP2>>, 3, 2, 1};
+    table[OP_DUP3] = {op<dup<OP_DUP3>>, 3, 3, 1};
+    table[OP_DUP4] = {op<dup<OP_DUP4>>, 3, 4, 1};
+    table[OP_DUP5] = {op<dup<OP_DUP5>>, 3, 5, 1};
+    table[OP_DUP6] = {op<dup<OP_DUP6>>, 3, 6, 1};
+    table[OP_DUP7] = {op<dup<OP_DUP7>>, 3, 7, 1};
+    table[OP_DUP8] = {op<dup<OP_DUP8>>, 3, 8, 1};
+    table[OP_DUP9] = {op<dup<OP_DUP9>>, 3, 9, 1};
+    table[OP_DUP10] = {op<dup<OP_DUP10>>, 3, 10, 1};
+    table[OP_DUP11] = {op<dup<OP_DUP11>>, 3, 11, 1};
+    table[OP_DUP12] = {op<dup<OP_DUP12>>, 3, 12, 1};
+    table[OP_DUP13] = {op<dup<OP_DUP13>>, 3, 13, 1};
+    table[OP_DUP14] = {op<dup<OP_DUP14>>, 3, 14, 1};
+    table[OP_DUP15] = {op<dup<OP_DUP15>>, 3, 15, 1};
+    table[OP_DUP16] = {op<dup<OP_DUP16>>, 3, 16, 1};
 
-    table[OP_SWAP1] = {op_swap<OP_SWAP1>, 3, 2, 0};
-    table[OP_SWAP2] = {op_swap<OP_SWAP2>, 3, 3, 0};
-    table[OP_SWAP3] = {op_swap<OP_SWAP3>, 3, 4, 0};
-    table[OP_SWAP4] = {op_swap<OP_SWAP4>, 3, 5, 0};
-    table[OP_SWAP5] = {op_swap<OP_SWAP5>, 3, 6, 0};
-    table[OP_SWAP6] = {op_swap<OP_SWAP6>, 3, 7, 0};
-    table[OP_SWAP7] = {op_swap<OP_SWAP7>, 3, 8, 0};
-    table[OP_SWAP8] = {op_swap<OP_SWAP8>, 3, 9, 0};
-    table[OP_SWAP9] = {op_swap<OP_SWAP9>, 3, 10, 0};
-    table[OP_SWAP10] = {op_swap<OP_SWAP10>, 3, 11, 0};
-    table[OP_SWAP11] = {op_swap<OP_SWAP11>, 3, 12, 0};
-    table[OP_SWAP12] = {op_swap<OP_SWAP12>, 3, 13, 0};
-    table[OP_SWAP13] = {op_swap<OP_SWAP13>, 3, 14, 0};
-    table[OP_SWAP14] = {op_swap<OP_SWAP14>, 3, 15, 0};
-    table[OP_SWAP15] = {op_swap<OP_SWAP15>, 3, 16, 0};
-    table[OP_SWAP16] = {op_swap<OP_SWAP16>, 3, 17, 0};
+    table[OP_SWAP1] = {op<swap<OP_SWAP1>>, 3, 2, 0};
+    table[OP_SWAP2] = {op<swap<OP_SWAP2>>, 3, 3, 0};
+    table[OP_SWAP3] = {op<swap<OP_SWAP3>>, 3, 4, 0};
+    table[OP_SWAP4] = {op<swap<OP_SWAP4>>, 3, 5, 0};
+    table[OP_SWAP5] = {op<swap<OP_SWAP5>>, 3, 6, 0};
+    table[OP_SWAP6] = {op<swap<OP_SWAP6>>, 3, 7, 0};
+    table[OP_SWAP7] = {op<swap<OP_SWAP7>>, 3, 8, 0};
+    table[OP_SWAP8] = {op<swap<OP_SWAP8>>, 3, 9, 0};
+    table[OP_SWAP9] = {op<swap<OP_SWAP9>>, 3, 10, 0};
+    table[OP_SWAP10] = {op<swap<OP_SWAP10>>, 3, 11, 0};
+    table[OP_SWAP11] = {op<swap<OP_SWAP11>>, 3, 12, 0};
+    table[OP_SWAP12] = {op<swap<OP_SWAP12>>, 3, 13, 0};
+    table[OP_SWAP13] = {op<swap<OP_SWAP13>>, 3, 14, 0};
+    table[OP_SWAP14] = {op<swap<OP_SWAP14>>, 3, 15, 0};
+    table[OP_SWAP15] = {op<swap<OP_SWAP15>>, 3, 16, 0};
+    table[OP_SWAP16] = {op<swap<OP_SWAP16>>, 3, 17, 0};
 
     table[OP_LOG0] = {op_log<OP_LOG0>, 1 * 375, 2, -2};
     table[OP_LOG1] = {op_log<OP_LOG1>, 2 * 375, 3, -3};

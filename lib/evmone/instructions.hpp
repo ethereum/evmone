@@ -525,6 +525,11 @@ inline void selfbalance(execution_state& state) noexcept
 }
 
 
+inline void pop(evm_stack& stack) noexcept
+{
+    stack.pop();
+}
+
 inline evmc_status_code mload(execution_state& state) noexcept
 {
     auto& index = state.stack.top();
@@ -563,5 +568,20 @@ inline evmc_status_code mstore8(execution_state& state) noexcept
 inline void msize(execution_state& state) noexcept
 {
     state.stack.push(state.memory.size());
+}
+
+
+template <evmc_opcode DupOp>
+inline void dup(evm_stack& stack) noexcept
+{
+    constexpr auto index = DupOp - OP_DUP1;
+    stack.push(stack[index]);
+}
+
+template <evmc_opcode SwapOp>
+inline void swap(evm_stack& stack) noexcept
+{
+    constexpr auto index = SwapOp - OP_SWAP1 + 1;
+    std::swap(stack.top(), stack[index]);
 }
 }  // namespace evmone
