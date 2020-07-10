@@ -23,10 +23,7 @@ inline constexpr int64_t num_words(uint64_t size_in_bytes) noexcept
 inline bool check_memory(execution_state& state, const uint256& offset, uint64_t size) noexcept
 {
     if (offset > max_buffer_size)
-    {
-        state.exit(EVMC_OUT_OF_GAS);
         return false;
-    }
 
     const auto new_size = static_cast<uint64_t>(offset) + size;
     const auto current_size = state.memory.size();
@@ -39,10 +36,7 @@ inline bool check_memory(execution_state& state, const uint256& offset, uint64_t
         const auto cost = new_cost - current_cost;
 
         if ((state.gas_left -= cost) < 0)
-        {
-            state.exit(EVMC_OUT_OF_GAS);
             return false;
-        }
 
         state.memory.resize(static_cast<size_t>(new_words * word_size));
     }
@@ -57,10 +51,7 @@ inline bool check_memory(
         return true;
 
     if (size > max_buffer_size)
-    {
-        state.exit(EVMC_OUT_OF_GAS);
         return false;
-    }
 
     return check_memory(state, offset, static_cast<uint64_t>(size));
 }
