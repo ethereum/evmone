@@ -4,7 +4,6 @@
 
 #include "instructions.hpp"
 #include "analysis.hpp"
-#include <ethash/keccak.hpp>
 
 namespace evmone
 {
@@ -36,26 +35,6 @@ const instruction* op(const instruction* instr, execution_state& state) noexcept
 const instruction* op_stop(const instruction*, execution_state& state) noexcept
 {
     return state.exit(EVMC_SUCCESS);
-}
-
-const instruction* op_sha3(const instruction* instr, execution_state& state) noexcept
-{
-    const auto index = state.stack.pop();
-    auto& size = state.stack.top();
-
-    if (!check_memory(state, index, size))
-        return nullptr;
-
-    const auto i = static_cast<size_t>(index);
-    const auto s = static_cast<size_t>(size);
-    const auto w = num_words(s);
-    const auto cost = w * 6;
-    if ((state.gas_left -= cost) < 0)
-        return state.exit(EVMC_OUT_OF_GAS);
-
-    auto data = s != 0 ? &state.memory[i] : nullptr;
-    size = intx::be::load<uint256>(ethash::keccak256(data, s));
-    return ++instr;
 }
 
 const instruction* op_address(const instruction* instr, execution_state& state) noexcept
@@ -766,7 +745,7 @@ constexpr op_table create_op_table_frontier() noexcept
     table[OP_XOR] = {op<xor_>, 3, 2, -1};
     table[OP_NOT] = {op<not_>, 3, 1, 0};
     table[OP_BYTE] = {op<byte>, 3, 2, -1};
-    table[OP_SHA3] = {op_sha3, 30, 2, -1};
+    table[OP_SHA3] = {op<sha3>, 30, 2, -1};
     table[OP_ADDRESS] = {op_address, 2, 0, 1};
     table[OP_BALANCE] = {op_balance, 20, 1, 0};
     table[OP_ORIGIN] = {op_origin, 2, 0, 1};

@@ -4,6 +4,7 @@
 #pragma once
 
 #include "analysis.hpp"
+#include <ethash/keccak.hpp>
 
 namespace evmone
 {
@@ -258,6 +259,27 @@ inline void sar(evm_stack& stack) noexcept
     }
 
     stack.pop();
+}
+
+
+inline evmc_status_code sha3(execution_state& state) noexcept
+{
+    const auto index = state.stack.pop();
+    auto& size = state.stack.top();
+
+    if (!check_memory(state, index, size))
+        return EVMC_OUT_OF_GAS;
+
+    const auto i = static_cast<size_t>(index);
+    const auto s = static_cast<size_t>(size);
+    const auto w = num_words(s);
+    const auto cost = w * 6;
+    if ((state.gas_left -= cost) < 0)
+        return EVMC_OUT_OF_GAS;
+
+    auto data = s != 0 ? &state.memory[i] : nullptr;
+    size = intx::be::load<uint256>(ethash::keccak256(data, s));
+    return EVMC_SUCCESS;
 }
 
 
