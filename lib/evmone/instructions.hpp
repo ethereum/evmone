@@ -283,6 +283,248 @@ inline evmc_status_code sha3(execution_state& state) noexcept
 }
 
 
+inline void address(execution_state& state) noexcept
+{
+    state.stack.push(intx::be::load<uint256>(state.msg->destination));
+}
+
+inline void balance(execution_state& state) noexcept
+{
+    auto& x = state.stack.top();
+    x = intx::be::load<uint256>(state.host.get_balance(intx::be::trunc<evmc::address>(x)));
+}
+
+inline void origin(execution_state& state) noexcept
+{
+    state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().tx_origin));
+}
+
+inline void caller(execution_state& state) noexcept
+{
+    state.stack.push(intx::be::load<uint256>(state.msg->sender));
+}
+
+inline void callvalue(execution_state& state) noexcept
+{
+    state.stack.push(intx::be::load<uint256>(state.msg->value));
+}
+
+inline void calldataload(execution_state& state) noexcept
+{
+    auto& index = state.stack.top();
+
+    if (state.msg->input_size < index)
+        index = 0;
+    else
+    {
+        const auto begin = static_cast<size_t>(index);
+        const auto end = std::min(begin + 32, state.msg->input_size);
+
+        uint8_t data[32] = {};
+        for (size_t i = 0; i < (end - begin); ++i)
+            data[i] = state.msg->input_data[begin + i];
+
+        index = intx::be::load<uint256>(data);
+    }
+}
+
+inline void calldatasize(execution_state& state) noexcept
+{
+    state.stack.push(state.msg->input_size);
+}
+
+inline evmc_status_code calldatacopy(execution_state& state) noexcept
+{
+    const auto mem_index = state.stack.pop();
+    const auto input_index = state.stack.pop();
+    const auto size = state.stack.pop();
+
+    if (!check_memory(state, mem_index, size))
+        return EVMC_OUT_OF_GAS;
+
+    auto dst = static_cast<size_t>(mem_index);
+    auto src = state.msg->input_size < input_index ? state.msg->input_size :
+                                                     static_cast<size_t>(input_index);
+    auto s = static_cast<size_t>(size);
+    auto copy_size = std::min(s, state.msg->input_size - src);
+
+    const auto copy_cost = num_words(s) * 3;
+    if ((state.gas_left -= copy_cost) < 0)
+        return EVMC_OUT_OF_GAS;
+
+    if (copy_size > 0)
+        std::memcpy(&state.memory[dst], &state.msg->input_data[src], copy_size);
+
+    if (s - copy_size > 0)
+        std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
+
+    return EVMC_SUCCESS;
+}
+
+inline evmc_status_code codecopy(
+    execution_state& state, const uint8_t* code, size_t code_size) noexcept
+{
+    // TODO: Similar to calldatacopy().
+
+    const auto mem_index = state.stack.pop();
+    const auto input_index = state.stack.pop();
+    const auto size = state.stack.pop();
+
+    if (!check_memory(state, mem_index, size))
+        return EVMC_OUT_OF_GAS;
+
+    auto dst = static_cast<size_t>(mem_index);
+    auto src = code_size < input_index ? code_size : static_cast<size_t>(input_index);
+    auto s = static_cast<size_t>(size);
+    auto copy_size = std::min(s, code_size - src);
+
+    const auto copy_cost = num_words(s) * 3;
+    if ((state.gas_left -= copy_cost) < 0)
+        return EVMC_OUT_OF_GAS;
+
+    // TODO: Add unit tests for each combination of conditions.
+    if (copy_size > 0)
+        std::memcpy(&state.memory[dst], &code[src], copy_size);
+
+    if (s - copy_size > 0)
+        std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
+
+    return EVMC_SUCCESS;
+}
+
+
+inline void gasprice(execution_state& state) noexcept
+{
+    state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().tx_gas_price));
+}
+
+inline void extcodesize(execution_state& state) noexcept
+{
+    auto& x = state.stack.top();
+    x = state.host.get_code_size(intx::be::trunc<evmc::address>(x));
+}
+
+inline evmc_status_code extcodecopy(execution_state& state) noexcept
+{
+    const auto addr = intx::be::trunc<evmc::address>(state.stack.pop());
+    const auto mem_index = state.stack.pop();
+    const auto input_index = state.stack.pop();
+    const auto size = state.stack.pop();
+
+    if (!check_memory(state, mem_index, size))
+        return EVMC_OUT_OF_GAS;
+
+    auto dst = static_cast<size_t>(mem_index);
+    auto src = max_buffer_size < input_index ? max_buffer_size : static_cast<size_t>(input_index);
+    auto s = static_cast<size_t>(size);
+
+    const auto copy_cost = num_words(s) * 3;
+    if ((state.gas_left -= copy_cost) < 0)
+        return EVMC_OUT_OF_GAS;
+
+    auto data = s != 0 ? &state.memory[dst] : nullptr;
+    auto num_bytes_copied = state.host.copy_code(addr, src, data, s);
+    if (s - num_bytes_copied > 0)
+        std::memset(&state.memory[dst + num_bytes_copied], 0, s - num_bytes_copied);
+
+    return EVMC_SUCCESS;
+}
+
+inline void returndatasize(execution_state& state) noexcept
+{
+    state.stack.push(state.return_data.size());
+}
+
+inline evmc_status_code returndatacopy(execution_state& state) noexcept
+{
+    const auto mem_index = state.stack.pop();
+    const auto input_index = state.stack.pop();
+    const auto size = state.stack.pop();
+
+    if (!check_memory(state, mem_index, size))
+        return EVMC_OUT_OF_GAS;
+
+    auto dst = static_cast<size_t>(mem_index);
+    auto s = static_cast<size_t>(size);
+
+    if (state.return_data.size() < input_index)
+        return EVMC_INVALID_MEMORY_ACCESS;
+    auto src = static_cast<size_t>(input_index);
+
+    if (src + s > state.return_data.size())
+        return EVMC_INVALID_MEMORY_ACCESS;
+
+    const auto copy_cost = num_words(s) * 3;
+    if ((state.gas_left -= copy_cost) < 0)
+        return EVMC_OUT_OF_GAS;
+
+    if (s > 0)
+        std::memcpy(&state.memory[dst], &state.return_data[src], s);
+
+    return EVMC_SUCCESS;
+}
+
+inline void extcodehash(execution_state& state) noexcept
+{
+    auto& x = state.stack.top();
+    x = intx::be::load<uint256>(state.host.get_code_hash(intx::be::trunc<evmc::address>(x)));
+}
+
+
+inline void blockhash(execution_state& state) noexcept
+{
+    auto& number = state.stack.top();
+
+    const auto upper_bound = state.host.get_tx_context().block_number;
+    const auto lower_bound = std::max(upper_bound - 256, decltype(upper_bound){0});
+    const auto n = static_cast<int64_t>(number);
+    const auto header =
+        (number < upper_bound && n >= lower_bound) ? state.host.get_block_hash(n) : evmc::bytes32{};
+    number = intx::be::load<uint256>(header);
+}
+
+inline void coinbase(execution_state& state) noexcept
+{
+    state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().block_coinbase));
+}
+
+inline void timestamp(execution_state& state) noexcept
+{
+    // TODO: Add tests for negative timestamp?
+    const auto timestamp = static_cast<uint64_t>(state.host.get_tx_context().block_timestamp);
+    state.stack.push(timestamp);
+}
+
+inline void number(execution_state& state) noexcept
+{
+    // TODO: Add tests for negative block number?
+    const auto block_number = static_cast<uint64_t>(state.host.get_tx_context().block_number);
+    state.stack.push(block_number);
+}
+
+inline void difficulty(execution_state& state) noexcept
+{
+    state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().block_difficulty));
+}
+
+inline void gaslimit(execution_state& state) noexcept
+{
+    const auto block_gas_limit = static_cast<uint64_t>(state.host.get_tx_context().block_gas_limit);
+    state.stack.push(block_gas_limit);
+}
+
+inline void chainid(execution_state& state) noexcept
+{
+    state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().chain_id));
+}
+
+inline void selfbalance(execution_state& state) noexcept
+{
+    // TODO: introduce selfbalance in EVMC?
+    state.stack.push(intx::be::load<uint256>(state.host.get_balance(state.msg->destination)));
+}
+
+
 inline evmc_status_code mload(execution_state& state) noexcept
 {
     auto& index = state.stack.top();

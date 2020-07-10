@@ -37,105 +37,6 @@ const instruction* op_stop(const instruction*, execution_state& state) noexcept
     return state.exit(EVMC_SUCCESS);
 }
 
-const instruction* op_address(const instruction* instr, execution_state& state) noexcept
-{
-    // TODO: Might be generalized using pointers to class member.
-    state.stack.push(intx::be::load<uint256>(state.msg->destination));
-    return ++instr;
-}
-
-const instruction* op_balance(const instruction* instr, execution_state& state) noexcept
-{
-    auto& x = state.stack.top();
-    x = intx::be::load<uint256>(state.host.get_balance(intx::be::trunc<evmc::address>(x)));
-    return ++instr;
-}
-
-const instruction* op_chainid(const instruction* instr, execution_state& state) noexcept
-{
-    state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().chain_id));
-    return ++instr;
-}
-
-const instruction* op_selfbalance(const instruction* instr, execution_state& state) noexcept
-{
-    // TODO: introduce selfbalance in EVMC?
-    state.stack.push(intx::be::load<uint256>(state.host.get_balance(state.msg->destination)));
-    return ++instr;
-}
-
-const instruction* op_origin(const instruction* instr, execution_state& state) noexcept
-{
-    state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().tx_origin));
-    return ++instr;
-}
-
-const instruction* op_caller(const instruction* instr, execution_state& state) noexcept
-{
-    // TODO: Might be generalized using pointers to class member.
-    state.stack.push(intx::be::load<uint256>(state.msg->sender));
-    return ++instr;
-}
-
-const instruction* op_callvalue(const instruction* instr, execution_state& state) noexcept
-{
-    state.stack.push(intx::be::load<uint256>(state.msg->value));
-    return ++instr;
-}
-
-const instruction* op_calldataload(const instruction* instr, execution_state& state) noexcept
-{
-    auto& index = state.stack.top();
-
-    if (state.msg->input_size < index)
-        index = 0;
-    else
-    {
-        const auto begin = static_cast<size_t>(index);
-        const auto end = std::min(begin + 32, state.msg->input_size);
-
-        uint8_t data[32] = {};
-        for (size_t i = 0; i < (end - begin); ++i)
-            data[i] = state.msg->input_data[begin + i];
-
-        index = intx::be::load<uint256>(data);
-    }
-    return ++instr;
-}
-
-const instruction* op_calldatasize(const instruction* instr, execution_state& state) noexcept
-{
-    state.stack.push(state.msg->input_size);
-    return ++instr;
-}
-
-const instruction* op_calldatacopy(const instruction* instr, execution_state& state) noexcept
-{
-    const auto mem_index = state.stack.pop();
-    const auto input_index = state.stack.pop();
-    const auto size = state.stack.pop();
-
-    if (!check_memory(state, mem_index, size))
-        return nullptr;
-
-    auto dst = static_cast<size_t>(mem_index);
-    auto src = state.msg->input_size < input_index ? state.msg->input_size :
-                                                     static_cast<size_t>(input_index);
-    auto s = static_cast<size_t>(size);
-    auto copy_size = std::min(s, state.msg->input_size - src);
-
-    const auto copy_cost = num_words(s) * 3;
-    if ((state.gas_left -= copy_cost) < 0)
-        return state.exit(EVMC_OUT_OF_GAS);
-
-    if (copy_size > 0)
-        std::memcpy(&state.memory[dst], &state.msg->input_data[src], copy_size);
-
-    if (s - copy_size > 0)
-        std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
-    return ++instr;
-}
-
 const instruction* op_codesize(const instruction* instr, execution_state& state) noexcept
 {
     state.stack.push(state.code_size);
@@ -144,30 +45,9 @@ const instruction* op_codesize(const instruction* instr, execution_state& state)
 
 const instruction* op_codecopy(const instruction* instr, execution_state& state) noexcept
 {
-    // TODO: Similar to op_calldatacopy().
-
-    const auto mem_index = state.stack.pop();
-    const auto input_index = state.stack.pop();
-    const auto size = state.stack.pop();
-
-    if (!check_memory(state, mem_index, size))
-        return nullptr;
-
-    auto dst = static_cast<size_t>(mem_index);
-    auto src = state.code_size < input_index ? state.code_size : static_cast<size_t>(input_index);
-    auto s = static_cast<size_t>(size);
-    auto copy_size = std::min(s, state.code_size - src);
-
-    const auto copy_cost = num_words(s) * 3;
-    if ((state.gas_left -= copy_cost) < 0)
-        return state.exit(EVMC_OUT_OF_GAS);
-
-    // TODO: Add unit tests for each combination of conditions.
-    if (copy_size > 0)
-        std::memcpy(&state.memory[dst], &state.code[src], copy_size);
-
-    if (s - copy_size > 0)
-        std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
+    const auto status_code = codecopy(state, state.code, state.code_size);
+    if (status_code != EVMC_SUCCESS)
+        return state.exit(status_code);
     return ++instr;
 }
 
@@ -269,133 +149,6 @@ const instruction* op_gas(const instruction* instr, execution_state& state) noex
     const auto correction = state.current_block_cost - instr->arg.number;
     const auto gas = static_cast<uint64_t>(state.gas_left + correction);
     state.stack.push(gas);
-    return ++instr;
-}
-
-const instruction* op_gasprice(const instruction* instr, execution_state& state) noexcept
-{
-    state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().tx_gas_price));
-    return ++instr;
-}
-
-const instruction* op_extcodesize(const instruction* instr, execution_state& state) noexcept
-{
-    auto& x = state.stack.top();
-    x = state.host.get_code_size(intx::be::trunc<evmc::address>(x));
-    return ++instr;
-}
-
-const instruction* op_extcodecopy(const instruction* instr, execution_state& state) noexcept
-{
-    const auto addr = intx::be::trunc<evmc::address>(state.stack.pop());
-    const auto mem_index = state.stack.pop();
-    const auto input_index = state.stack.pop();
-    const auto size = state.stack.pop();
-
-    if (!check_memory(state, mem_index, size))
-        return nullptr;
-
-    auto dst = static_cast<size_t>(mem_index);
-    auto src = max_buffer_size < input_index ? max_buffer_size : static_cast<size_t>(input_index);
-    auto s = static_cast<size_t>(size);
-
-    const auto copy_cost = num_words(s) * 3;
-    if ((state.gas_left -= copy_cost) < 0)
-        return state.exit(EVMC_OUT_OF_GAS);
-
-    auto data = s != 0 ? &state.memory[dst] : nullptr;
-    auto num_bytes_copied = state.host.copy_code(addr, src, data, s);
-    if (s - num_bytes_copied > 0)
-        std::memset(&state.memory[dst + num_bytes_copied], 0, s - num_bytes_copied);
-    return ++instr;
-}
-
-const instruction* op_returndatasize(const instruction* instr, execution_state& state) noexcept
-{
-    state.stack.push(state.return_data.size());
-    return ++instr;
-}
-
-const instruction* op_returndatacopy(const instruction* instr, execution_state& state) noexcept
-{
-    const auto mem_index = state.stack.pop();
-    const auto input_index = state.stack.pop();
-    const auto size = state.stack.pop();
-
-    if (!check_memory(state, mem_index, size))
-        return nullptr;
-
-    auto dst = static_cast<size_t>(mem_index);
-    auto s = static_cast<size_t>(size);
-
-    if (state.return_data.size() < input_index)
-        return state.exit(EVMC_INVALID_MEMORY_ACCESS);
-    auto src = static_cast<size_t>(input_index);
-
-    if (src + s > state.return_data.size())
-        return state.exit(EVMC_INVALID_MEMORY_ACCESS);
-
-    const auto copy_cost = num_words(s) * 3;
-    if ((state.gas_left -= copy_cost) < 0)
-        return state.exit(EVMC_OUT_OF_GAS);
-
-    if (s > 0)
-        std::memcpy(&state.memory[dst], &state.return_data[src], s);
-    return ++instr;
-}
-
-const instruction* op_extcodehash(const instruction* instr, execution_state& state) noexcept
-{
-    auto& x = state.stack.top();
-    x = intx::be::load<uint256>(state.host.get_code_hash(intx::be::trunc<evmc::address>(x)));
-    return ++instr;
-}
-
-const instruction* op_blockhash(const instruction* instr, execution_state& state) noexcept
-{
-    auto& number = state.stack.top();
-
-    const auto upper_bound = state.host.get_tx_context().block_number;
-    const auto lower_bound = std::max(upper_bound - 256, decltype(upper_bound){0});
-    const auto n = static_cast<int64_t>(number);
-    const auto header =
-        (number < upper_bound && n >= lower_bound) ? state.host.get_block_hash(n) : evmc::bytes32{};
-    number = intx::be::load<uint256>(header);
-    return ++instr;
-}
-
-const instruction* op_coinbase(const instruction* instr, execution_state& state) noexcept
-{
-    state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().block_coinbase));
-    return ++instr;
-}
-
-const instruction* op_timestamp(const instruction* instr, execution_state& state) noexcept
-{
-    // TODO: Add tests for negative timestamp?
-    const auto timestamp = static_cast<uint64_t>(state.host.get_tx_context().block_timestamp);
-    state.stack.push(timestamp);
-    return ++instr;
-}
-
-const instruction* op_number(const instruction* instr, execution_state& state) noexcept
-{
-    // TODO: Add tests for negative block number?
-    const auto block_number = static_cast<uint64_t>(state.host.get_tx_context().block_number);
-    state.stack.push(block_number);
-    return ++instr;
-}
-
-const instruction* op_difficulty(const instruction* instr, execution_state& state) noexcept
-{
-    state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().block_difficulty));
-    return ++instr;
-}
-
-const instruction* op_gaslimit(const instruction* instr, execution_state& state) noexcept
-{
-    const auto block_gas_limit = static_cast<uint64_t>(state.host.get_tx_context().block_gas_limit);
-    state.stack.push(block_gas_limit);
     return ++instr;
 }
 
@@ -746,25 +499,25 @@ constexpr op_table create_op_table_frontier() noexcept
     table[OP_NOT] = {op<not_>, 3, 1, 0};
     table[OP_BYTE] = {op<byte>, 3, 2, -1};
     table[OP_SHA3] = {op<sha3>, 30, 2, -1};
-    table[OP_ADDRESS] = {op_address, 2, 0, 1};
-    table[OP_BALANCE] = {op_balance, 20, 1, 0};
-    table[OP_ORIGIN] = {op_origin, 2, 0, 1};
-    table[OP_CALLER] = {op_caller, 2, 0, 1};
-    table[OP_CALLVALUE] = {op_callvalue, 2, 0, 1};
-    table[OP_CALLDATALOAD] = {op_calldataload, 3, 1, 0};
-    table[OP_CALLDATASIZE] = {op_calldatasize, 2, 0, 1};
-    table[OP_CALLDATACOPY] = {op_calldatacopy, 3, 3, -3};
+    table[OP_ADDRESS] = {op<address>, 2, 0, 1};
+    table[OP_BALANCE] = {op<balance>, 20, 1, 0};
+    table[OP_ORIGIN] = {op<origin>, 2, 0, 1};
+    table[OP_CALLER] = {op<caller>, 2, 0, 1};
+    table[OP_CALLVALUE] = {op<callvalue>, 2, 0, 1};
+    table[OP_CALLDATALOAD] = {op<calldataload>, 3, 1, 0};
+    table[OP_CALLDATASIZE] = {op<calldatasize>, 2, 0, 1};
+    table[OP_CALLDATACOPY] = {op<calldatacopy>, 3, 3, -3};
     table[OP_CODESIZE] = {op_codesize, 2, 0, 1};
     table[OP_CODECOPY] = {op_codecopy, 3, 3, -3};
-    table[OP_GASPRICE] = {op_gasprice, 2, 0, 1};
-    table[OP_EXTCODESIZE] = {op_extcodesize, 20, 1, 0};
-    table[OP_EXTCODECOPY] = {op_extcodecopy, 20, 4, -4};
-    table[OP_BLOCKHASH] = {op_blockhash, 20, 1, 0};
-    table[OP_COINBASE] = {op_coinbase, 2, 0, 1};
-    table[OP_TIMESTAMP] = {op_timestamp, 2, 0, 1};
-    table[OP_NUMBER] = {op_number, 2, 0, 1};
-    table[OP_DIFFICULTY] = {op_difficulty, 2, 0, 1};
-    table[OP_GASLIMIT] = {op_gaslimit, 2, 0, 1};
+    table[OP_GASPRICE] = {op<gasprice>, 2, 0, 1};
+    table[OP_EXTCODESIZE] = {op<extcodesize>, 20, 1, 0};
+    table[OP_EXTCODECOPY] = {op<extcodecopy>, 20, 4, -4};
+    table[OP_BLOCKHASH] = {op<blockhash>, 20, 1, 0};
+    table[OP_COINBASE] = {op<coinbase>, 2, 0, 1};
+    table[OP_TIMESTAMP] = {op<timestamp>, 2, 0, 1};
+    table[OP_NUMBER] = {op<number>, 2, 0, 1};
+    table[OP_DIFFICULTY] = {op<difficulty>, 2, 0, 1};
+    table[OP_GASLIMIT] = {op<gaslimit>, 2, 0, 1};
     table[OP_POP] = {op_pop, 2, 1, -1};
     table[OP_MLOAD] = {op<mload>, 3, 1, 0};
     table[OP_MSTORE] = {op<mstore>, 3, 2, -2};
@@ -856,8 +609,8 @@ constexpr op_table create_op_table_tangerine_whistle() noexcept
 constexpr op_table create_op_table_byzantium() noexcept
 {
     auto table = create_op_table_tangerine_whistle();
-    table[OP_RETURNDATASIZE] = {op_returndatasize, 2, 0, 1};
-    table[OP_RETURNDATACOPY] = {op_returndatacopy, 3, 3, -3};
+    table[OP_RETURNDATASIZE] = {op<returndatasize>, 2, 0, 1};
+    table[OP_RETURNDATACOPY] = {op<returndatacopy>, 3, 3, -3};
     table[OP_STATICCALL] = {op_call<EVMC_CALL, true>, 700, 6, -5};
     table[OP_REVERT] = {op_return<EVMC_REVERT>, 0, 2, -2};
     return table;
@@ -869,7 +622,7 @@ constexpr op_table create_op_table_constantinople() noexcept
     table[OP_SHL] = {op<shl>, 3, 2, -1};
     table[OP_SHR] = {op<shr>, 3, 2, -1};
     table[OP_SAR] = {op<sar>, 3, 2, -1};
-    table[OP_EXTCODEHASH] = {op_extcodehash, 400, 1, 0};
+    table[OP_EXTCODEHASH] = {op<extcodehash>, 400, 1, 0};
     table[OP_CREATE2] = {op_create<EVMC_CREATE2>, 32000, 4, -3};
     return table;
 }
@@ -877,10 +630,10 @@ constexpr op_table create_op_table_constantinople() noexcept
 constexpr op_table create_op_table_istanbul() noexcept
 {
     auto table = create_op_table_constantinople();
-    table[OP_BALANCE] = {op_balance, 700, 1, 0};
-    table[OP_CHAINID] = {op_chainid, 2, 0, 1};
-    table[OP_EXTCODEHASH] = {op_extcodehash, 700, 1, 0};
-    table[OP_SELFBALANCE] = {op_selfbalance, 5, 0, 1};
+    table[OP_BALANCE] = {op<balance>, 700, 1, 0};
+    table[OP_CHAINID] = {op<chainid>, 2, 0, 1};
+    table[OP_EXTCODEHASH] = {op<extcodehash>, 700, 1, 0};
+    table[OP_SELFBALANCE] = {op<selfbalance>, 5, 0, 1};
     table[OP_SLOAD] = {op_sload, 800, 1, 0};
     return table;
 }
