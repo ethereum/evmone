@@ -16,14 +16,14 @@ const instruction* op(const instruction* instr, execution_state& state) noexcept
     return ++instr;
 }
 
-template <void InstrFn(execution_state&)>
+template <void InstrFn(ExecutionState&)>
 const instruction* op(const instruction* instr, execution_state& state) noexcept
 {
     InstrFn(state);
     return ++instr;
 }
 
-template <evmc_status_code InstrFn(execution_state&)>
+template <evmc_status_code InstrFn(ExecutionState&)>
 const instruction* op(const instruction* instr, execution_state& state) noexcept
 {
     const auto status_code = InstrFn(state);
