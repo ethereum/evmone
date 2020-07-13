@@ -263,6 +263,26 @@ TEST_F(evm_state, balance)
     EXPECT_EQ(result.output_data[5], 0x01);
 }
 
+TEST_F(evm_state, account_info_homestead)
+{
+    rev = EVMC_HOMESTEAD;
+    host.accounts[msg.destination].set_balance(1);
+    host.accounts[msg.destination].code = bytes{1};
+
+    execute(bytecode{} + OP_ADDRESS + OP_BALANCE + ret_top());
+    EXPECT_GAS_USED(EVMC_SUCCESS, 37);
+    EXPECT_OUTPUT_INT(1);
+
+    execute(bytecode{} + OP_ADDRESS + OP_EXTCODESIZE + ret_top());
+    EXPECT_GAS_USED(EVMC_SUCCESS, 37);
+    EXPECT_OUTPUT_INT(1);
+
+    execute(bytecode{} + push(1) + push(0) + push(0) + OP_ADDRESS + OP_EXTCODECOPY + ret(0, 1));
+    EXPECT_GAS_USED(EVMC_SUCCESS, 43);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 1);
+}
+
 TEST_F(evm_state, selfbalance)
 {
     host.accounts[msg.destination].set_balance(0x0504030201);
