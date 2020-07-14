@@ -89,7 +89,7 @@ jobs:
 
   lint:
     docker:
-    - image: ethereum/cpp-build-env:11
+    - image: ethereum/cpp-build-env:14-lint
     steps:
     - checkout
     - run:
@@ -99,7 +99,7 @@ jobs:
           find include lib test -name '*.hpp' -o -name '*.cpp' -o -name '*.h' -o -name '*.c' | xargs clang-format -i
           git diff --color --exit-code
     - run:
-        name: "Run codespell"
+        name: "Check spelling"
         command: |
           codespell --quiet-level=4
 
