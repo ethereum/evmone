@@ -749,26 +749,20 @@ const instruction* op_return(const instruction*, execution_state& state) noexcep
     return state.exit(status_code);
 }
 
-template <evmc_call_kind kind>
+template <evmc_call_kind Kind>
 const instruction* op_call(const instruction* instr, execution_state& state) noexcept
 {
     const auto gas_left_correction = state.current_block_cost - instr->arg.number;
 
-    auto gas = state.stack[0];
-    const auto dst = intx::be::trunc<evmc::address>(state.stack[1]);
-    auto value = state.stack[2];
-    auto input_offset = state.stack[3];
-    auto input_size = state.stack[4];
-    auto output_offset = state.stack[5];
-    auto output_size = state.stack[6];
+    auto gas = state.stack.pop();
+    const auto dst = intx::be::trunc<evmc::address>(state.stack.pop());
+    const auto value = state.stack.pop();
+    const auto input_offset = state.stack.pop();
+    const auto input_size = state.stack.pop();
+    const auto output_offset = state.stack.pop();
+    const auto output_size = state.stack.pop();
 
-    state.stack.pop();
-    state.stack.pop();
-    state.stack.pop();
-    state.stack.pop();
-    state.stack.pop();
-    state.stack.pop();
-    state.stack[0] = 0;
+    state.stack.push(0);  // Assume failure.
 
     if (!check_memory(state, input_offset, input_size))
         return nullptr;
@@ -776,9 +770,8 @@ const instruction* op_call(const instruction* instr, execution_state& state) noe
     if (!check_memory(state, output_offset, output_size))
         return nullptr;
 
-
     auto msg = evmc_message{};
-    msg.kind = kind;
+    msg.kind = Kind;
     msg.flags = state.msg->flags;
     msg.value = intx::be::store<evmc::uint256be>(value);
 
@@ -789,7 +782,7 @@ const instruction* op_call(const instruction* instr, execution_state& state) noe
     if (has_value)
         cost += 9000;
 
-    if constexpr (kind == EVMC_CALL)
+    if constexpr (Kind == EVMC_CALL)
     {
         if (has_value && state.msg->flags & EVMC_STATIC)
             return state.exit(EVMC_STATIC_MODE_VIOLATION);
@@ -855,8 +848,7 @@ const instruction* op_call(const instruction* instr, execution_state& state) noe
     auto result = state.host.call(msg);
     state.return_data.assign(result.output_data, result.output_size);
 
-
-    state.stack[0] = result.status_code == EVMC_SUCCESS;
+    state.stack.top() = result.status_code == EVMC_SUCCESS;
 
     if (auto copy_size = std::min(size_t(output_size), result.output_size); copy_size > 0)
         std::memcpy(&state.memory[size_t(output_offset)], result.output_data, copy_size);
@@ -875,19 +867,14 @@ const instruction* op_delegatecall(const instruction* instr, execution_state& st
 {
     const auto gas_left_correction = state.current_block_cost - instr->arg.number;
 
-    auto gas = state.stack[0];
-    const auto dst = intx::be::trunc<evmc::address>(state.stack[1]);
-    auto input_offset = state.stack[2];
-    auto input_size = state.stack[3];
-    auto output_offset = state.stack[4];
-    auto output_size = state.stack[5];
+    auto gas = state.stack.pop();
+    const auto dst = intx::be::trunc<evmc::address>(state.stack.pop());
+    const auto input_offset = state.stack.pop();
+    const auto input_size = state.stack.pop();
+    const auto output_offset = state.stack.pop();
+    const auto output_size = state.stack.pop();
 
-    state.stack.pop();
-    state.stack.pop();
-    state.stack.pop();
-    state.stack.pop();
-    state.stack.pop();
-    state.stack[0] = 0;
+    state.stack.push(0);  // Assume failure.
 
     if (!check_memory(state, input_offset, input_size))
         return nullptr;
@@ -900,18 +887,14 @@ const instruction* op_delegatecall(const instruction* instr, execution_state& st
 
     auto gas_left = state.gas_left + gas_left_correction;
 
-    // TEST: Gas saturation for big gas values.
     msg.gas = std::numeric_limits<int64_t>::max();
     if (gas < msg.gas)
         msg.gas = static_cast<int64_t>(gas);
 
     if (state.rev >= EVMC_TANGERINE_WHISTLE)
         msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
-    else if (msg.gas > gas_left)  // TEST: gas_left vs state.gas_left.
+    else if (msg.gas > gas_left)
         return state.exit(EVMC_OUT_OF_GAS);
-
-    if (state.msg->depth >= 1024)
-        return ++instr;
 
     msg.depth = state.msg->depth + 1;
     msg.flags = state.msg->flags;
@@ -925,10 +908,12 @@ const instruction* op_delegatecall(const instruction* instr, execution_state& st
         msg.input_size = size_t(input_size);
     }
 
+    if (state.msg->depth >= 1024)
+        return ++instr;
+
     auto result = state.host.call(msg);
     state.return_data.assign(result.output_data, result.output_size);
-
-    state.stack[0] = result.status_code == EVMC_SUCCESS;
+    state.stack.top() = result.status_code == EVMC_SUCCESS;
 
     if (const auto copy_size = std::min(size_t(output_size), result.output_size); copy_size > 0)
         std::memcpy(&state.memory[size_t(output_offset)], result.output_data, copy_size);
@@ -944,28 +929,20 @@ const instruction* op_staticcall(const instruction* instr, execution_state& stat
 {
     const auto gas_left_correction = state.current_block_cost - instr->arg.number;
 
-    auto gas = state.stack[0];
-    const auto dst = intx::be::trunc<evmc::address>(state.stack[1]);
-    auto input_offset = state.stack[2];
-    auto input_size = state.stack[3];
-    auto output_offset = state.stack[4];
-    auto output_size = state.stack[5];
+    auto gas = state.stack.pop();
+    const auto dst = intx::be::trunc<evmc::address>(state.stack.pop());
+    const auto input_offset = state.stack.pop();
+    const auto input_size = state.stack.pop();
+    const auto output_offset = state.stack.pop();
+    const auto output_size = state.stack.pop();
 
-    state.stack.pop();
-    state.stack.pop();
-    state.stack.pop();
-    state.stack.pop();
-    state.stack.pop();
-    state.stack[0] = 0;
+    state.stack.push(0);  // Assume failure.
 
     if (!check_memory(state, input_offset, input_size))
         return nullptr;
 
     if (!check_memory(state, output_offset, output_size))
         return nullptr;
-
-    if (state.msg->depth >= 1024)
-        return ++instr;
 
     auto msg = evmc_message{};
     msg.kind = EVMC_CALL;
@@ -990,9 +967,12 @@ const instruction* op_staticcall(const instruction* instr, execution_state& stat
         msg.input_size = size_t(input_size);
     }
 
+    if (state.msg->depth >= 1024)
+        return ++instr;
+
     auto result = state.host.call(msg);
     state.return_data.assign(result.output_data, result.output_size);
-    state.stack[0] = result.status_code == EVMC_SUCCESS;
+    state.stack.top() = result.status_code == EVMC_SUCCESS;
 
     if (auto copy_size = std::min(size_t(output_size), result.output_size); copy_size > 0)
         std::memcpy(&state.memory[size_t(output_offset)], result.output_data, copy_size);
@@ -1020,7 +1000,7 @@ const instruction* op_create(const instruction* instr, execution_state& state) n
         return nullptr;
 
     auto salt = uint256{};
-    if constexpr(Kind == EVMC_CREATE2)
+    if constexpr (Kind == EVMC_CREATE2)
     {
         salt = state.stack[3];
         auto salt_cost = num_words(static_cast<size_t>(init_code_size)) * 6;
