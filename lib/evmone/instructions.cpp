@@ -752,7 +752,8 @@ const instruction* op_return(const instruction*, execution_state& state) noexcep
 template <evmc_call_kind kind>
 const instruction* op_call(const instruction* instr, execution_state& state) noexcept
 {
-    const auto arg = instr->arg;
+    const auto gas_left_correction = state.current_block_cost - instr->arg.number;
+
     auto gas = state.stack[0];
     const auto dst = intx::be::trunc<evmc::address>(state.stack[1]);
     auto value = state.stack[2];
@@ -781,9 +782,7 @@ const instruction* op_call(const instruction* instr, execution_state& state) noe
     msg.flags = state.msg->flags;
     msg.value = intx::be::store<evmc::uint256be>(value);
 
-    auto correction = state.current_block_cost - arg.number;
-    auto gas_left = state.gas_left + correction;
-
+    auto gas_left = state.gas_left + gas_left_correction;
     auto cost = 0;
     auto has_value = value != 0;
 
@@ -874,7 +873,8 @@ const instruction* op_call(const instruction* instr, execution_state& state) noe
 
 const instruction* op_delegatecall(const instruction* instr, execution_state& state) noexcept
 {
-    const auto arg = instr->arg;
+    const auto gas_left_correction = state.current_block_cost - instr->arg.number;
+
     auto gas = state.stack[0];
     const auto dst = intx::be::trunc<evmc::address>(state.stack[1]);
     auto input_offset = state.stack[2];
@@ -898,8 +898,7 @@ const instruction* op_delegatecall(const instruction* instr, execution_state& st
     auto msg = evmc_message{};
     msg.kind = EVMC_DELEGATECALL;
 
-    auto correction = state.current_block_cost - arg.number;
-    auto gas_left = state.gas_left + correction;
+    auto gas_left = state.gas_left + gas_left_correction;
 
     // TEST: Gas saturation for big gas values.
     msg.gas = std::numeric_limits<int64_t>::max();
@@ -943,7 +942,8 @@ const instruction* op_delegatecall(const instruction* instr, execution_state& st
 
 const instruction* op_staticcall(const instruction* instr, execution_state& state) noexcept
 {
-    const auto arg = instr->arg;
+    const auto gas_left_correction = state.current_block_cost - instr->arg.number;
+
     auto gas = state.stack[0];
     const auto dst = intx::be::trunc<evmc::address>(state.stack[1]);
     auto input_offset = state.stack[2];
@@ -973,8 +973,7 @@ const instruction* op_staticcall(const instruction* instr, execution_state& stat
 
     msg.depth = state.msg->depth + 1;
 
-    auto correction = state.current_block_cost - arg.number;
-    auto gas_left = state.gas_left + correction;
+    auto gas_left = state.gas_left + gas_left_correction;
 
     msg.gas = std::numeric_limits<int64_t>::max();
     if (gas < msg.gas)
@@ -1007,10 +1006,11 @@ const instruction* op_staticcall(const instruction* instr, execution_state& stat
 
 const instruction* op_create(const instruction* instr, execution_state& state) noexcept
 {
+    const auto gas_left_correction = state.current_block_cost - instr->arg.number;
+
     if (state.msg->flags & EVMC_STATIC)
         return state.exit(EVMC_STATIC_MODE_VIOLATION);
 
-    const auto arg = instr->arg;
     auto endowment = state.stack[0];
     auto init_code_offset = state.stack[1];
     auto init_code_size = state.stack[2];
@@ -1036,9 +1036,7 @@ const instruction* op_create(const instruction* instr, execution_state& state) n
     }
 
     auto msg = evmc_message{};
-
-    auto correction = state.current_block_cost - arg.number;
-    msg.gas = state.gas_left + correction;
+    msg.gas = state.gas_left + gas_left_correction;
     if (state.rev >= EVMC_TANGERINE_WHISTLE)
         msg.gas = msg.gas - msg.gas / 64;
 
@@ -1066,10 +1064,11 @@ const instruction* op_create(const instruction* instr, execution_state& state) n
 
 const instruction* op_create2(const instruction* instr, execution_state& state) noexcept
 {
+    const auto gas_left_correction = state.current_block_cost - instr->arg.number;
+
     if (state.msg->flags & EVMC_STATIC)
         return state.exit(EVMC_STATIC_MODE_VIOLATION);
 
-    const auto arg = instr->arg;
     auto endowment = state.stack[0];
     auto init_code_offset = state.stack[1];
     auto init_code_size = state.stack[2];
@@ -1102,9 +1101,7 @@ const instruction* op_create2(const instruction* instr, execution_state& state) 
     }
 
     auto msg = evmc_message{};
-
-    auto correction = state.current_block_cost - arg.number;
-    auto gas = state.gas_left + correction;
+    auto gas = state.gas_left + gas_left_correction;
     msg.gas = gas - gas / 64;
 
     msg.kind = EVMC_CREATE2;
