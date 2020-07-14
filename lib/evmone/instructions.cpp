@@ -1004,6 +1004,7 @@ const instruction* op_staticcall(const instruction* instr, execution_state& stat
     return ++instr;
 }
 
+template <evmc_call_kind Kind>
 const instruction* op_create(const instruction* instr, execution_state& state) noexcept
 {
     const auto gas_left_correction = state.current_block_cost - instr->arg.number;
@@ -1017,6 +1018,17 @@ const instruction* op_create(const instruction* instr, execution_state& state) n
 
     if (!check_memory(state, init_code_offset, init_code_size))
         return nullptr;
+
+    auto salt = uint256{};
+    if constexpr(Kind == EVMC_CREATE2)
+    {
+        salt = state.stack[3];
+        auto salt_cost = num_words(static_cast<size_t>(init_code_size)) * 6;
+        state.gas_left -= salt_cost;
+        if (state.gas_left < 0)
+            return state.exit(EVMC_OUT_OF_GAS);
+        state.stack.pop();
+    }
 
     state.stack.pop();
     state.stack.pop();
@@ -1040,69 +1052,7 @@ const instruction* op_create(const instruction* instr, execution_state& state) n
     if (state.rev >= EVMC_TANGERINE_WHISTLE)
         msg.gas = msg.gas - msg.gas / 64;
 
-    msg.kind = EVMC_CREATE;
-    if (size_t(init_code_size) > 0)
-    {
-        msg.input_data = &state.memory[size_t(init_code_offset)];
-        msg.input_size = size_t(init_code_size);
-    }
-    msg.sender = state.msg->destination;
-    msg.depth = state.msg->depth + 1;
-    msg.value = intx::be::store<evmc::uint256be>(endowment);
-
-    auto result = state.host.call(msg);
-    state.return_data.assign(result.output_data, result.output_size);
-    if (result.status_code == EVMC_SUCCESS)
-        state.stack[0] = intx::be::load<uint256>(result.create_address);
-
-    if ((state.gas_left -= msg.gas - result.gas_left) < 0)
-        return state.exit(EVMC_OUT_OF_GAS);
-    return ++instr;
-}
-
-const instruction* op_create2(const instruction* instr, execution_state& state) noexcept
-{
-    const auto gas_left_correction = state.current_block_cost - instr->arg.number;
-
-    if (state.msg->flags & EVMC_STATIC)
-        return state.exit(EVMC_STATIC_MODE_VIOLATION);
-
-    auto endowment = state.stack[0];
-    auto init_code_offset = state.stack[1];
-    auto init_code_size = state.stack[2];
-
-    if (!check_memory(state, init_code_offset, init_code_size))
-        return nullptr;
-
-    auto salt = state.stack[3];
-    auto salt_cost = num_words(static_cast<size_t>(init_code_size)) * 6;
-    state.gas_left -= salt_cost;
-    if (state.gas_left < 0)
-        return state.exit(EVMC_OUT_OF_GAS);
-    state.stack.pop();
-
-    state.stack.pop();
-    state.stack.pop();
-    state.stack[0] = 0;
-
-    state.return_data.clear();
-
-    if (state.msg->depth >= 1024)
-        return ++instr;
-
-    if (endowment != 0)
-    {
-        const auto balance =
-            intx::be::load<uint256>(state.host.get_balance(state.msg->destination));
-        if (balance < endowment)
-            return ++instr;
-    }
-
-    auto msg = evmc_message{};
-    auto gas = state.gas_left + gas_left_correction;
-    msg.gas = gas - gas / 64;
-
-    msg.kind = EVMC_CREATE2;
+    msg.kind = Kind;
     if (size_t(init_code_size) > 0)
     {
         msg.input_data = &state.memory[size_t(init_code_offset)];
@@ -1279,7 +1229,7 @@ constexpr op_table create_op_table_frontier() noexcept
     table[OP_LOG3] = {op_log<OP_LOG3>, 4 * 375, 5, -5};
     table[OP_LOG4] = {op_log<OP_LOG4>, 5 * 375, 6, -6};
 
-    table[OP_CREATE] = {op_create, 32000, 3, -2};
+    table[OP_CREATE] = {op_create<EVMC_CREATE>, 32000, 3, -2};
     table[OP_CALL] = {op_call<EVMC_CALL>, 40, 7, -6};
     table[OP_CALLCODE] = {op_call<EVMC_CALLCODE>, 40, 7, -6};
     table[OP_RETURN] = {op_return<EVMC_SUCCESS>, 0, 2, -2};
@@ -1326,7 +1276,7 @@ constexpr op_table create_op_table_constantinople() noexcept
     table[OP_SHR] = {op_shr, 3, 2, -1};
     table[OP_SAR] = {op_sar, 3, 2, -1};
     table[OP_EXTCODEHASH] = {op_extcodehash, 400, 1, 0};
-    table[OP_CREATE2] = {op_create2, 32000, 4, -3};
+    table[OP_CREATE2] = {op_create<EVMC_CREATE2>, 32000, 4, -3};
     return table;
 }
 
