@@ -5,17 +5,22 @@ AccessModifierOffset: -4
 AlignAfterOpenBracket: DontAlign
 BinPackParameters: true
 BraceWrapping:
-  AfterClass:      true
+  AfterCaseLabel:        true
+  AfterClass:            true
   AfterControlStatement: true
-  AfterEnum:       true
-  AfterFunction:   true
-  AfterNamespace:  true
-  AfterObjCDeclaration: true
-  AfterStruct:     true
-  AfterUnion:      true
-  BeforeCatch:     true
-  BeforeElse:      true
-  SplitEmptyFunction: false
+  AfterEnum:             true
+  AfterFunction:         true
+  AfterNamespace:        true
+  AfterStruct:           true
+  AfterUnion:            true
+  # AfterExternBlock:      true
+  BeforeCatch:           true
+  BeforeElse:            true
+  # BeforeLambdaBody:      true
+  # BeforeWhile:           true
+  SplitEmptyFunction:    false
+  SplitEmptyRecord:      false
+  SplitEmptyNamespace:   false
 BreakBeforeBraces: Custom
 BreakBeforeTernaryOperators: false
 ColumnLimit:     100
@@ -34,6 +39,7 @@ IncludeCategories:
     Priority:        4
 IncludeIsMainRegex: '(Test)?$'
 IndentCaseLabels: false
+# IndentExternBlock: NoIndent
 IndentWidth:     4
 MaxEmptyLinesToKeep: 2
 PenaltyBreakAssignment: 1
