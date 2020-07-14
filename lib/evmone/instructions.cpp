@@ -1015,12 +1015,12 @@ const instruction* op_create(const instruction* instr, execution_state& state) n
     auto init_code_offset = state.stack[1];
     auto init_code_size = state.stack[2];
 
+    if (!check_memory(state, init_code_offset, init_code_size))
+        return nullptr;
+
     state.stack.pop();
     state.stack.pop();
     state.stack[0] = 0;
-
-    if (!check_memory(state, init_code_offset, init_code_size))
-        return nullptr;
 
     state.return_data.clear();
 
@@ -1041,13 +1041,11 @@ const instruction* op_create(const instruction* instr, execution_state& state) n
         msg.gas = msg.gas - msg.gas / 64;
 
     msg.kind = EVMC_CREATE;
-
     if (size_t(init_code_size) > 0)
     {
         msg.input_data = &state.memory[size_t(init_code_offset)];
         msg.input_size = size_t(init_code_size);
     }
-
     msg.sender = state.msg->destination;
     msg.depth = state.msg->depth + 1;
     msg.value = intx::be::store<evmc::uint256be>(endowment);
@@ -1072,20 +1070,20 @@ const instruction* op_create2(const instruction* instr, execution_state& state) 
     auto endowment = state.stack[0];
     auto init_code_offset = state.stack[1];
     auto init_code_size = state.stack[2];
-    auto salt = state.stack[3];
-
-    state.stack.pop();
-    state.stack.pop();
-    state.stack.pop();
-    state.stack[0] = 0;
 
     if (!check_memory(state, init_code_offset, init_code_size))
         return nullptr;
 
+    auto salt = state.stack[3];
     auto salt_cost = num_words(static_cast<size_t>(init_code_size)) * 6;
     state.gas_left -= salt_cost;
     if (state.gas_left < 0)
         return state.exit(EVMC_OUT_OF_GAS);
+    state.stack.pop();
+
+    state.stack.pop();
+    state.stack.pop();
+    state.stack[0] = 0;
 
     state.return_data.clear();
 
