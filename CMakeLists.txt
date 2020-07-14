@@ -18,7 +18,6 @@ include(CableCompilerSettings)
 include(CablePackage)
 include(CableToolchains)
 include(CMakePackageConfigHelpers)
-include(GNUInstallDirs)
 
 cable_configure_toolchain(DEFAULT cxx17-pic)
 cable_set_build_type(DEFAULT Release CONFIGURATION_TYPES Release Debug)
@@ -61,6 +60,8 @@ endif()
 set(CMAKE_C_VISIBILITY_PRESET hidden)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN YES)
+
+include(GNUInstallDirs)
 
 if(EVMONE_FUZZING)
     if(NOT ${CMAKE_CXX_COMPILER_ID} MATCHES Clang OR ${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS 8)
