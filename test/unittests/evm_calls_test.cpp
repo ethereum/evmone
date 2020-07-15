@@ -48,6 +48,20 @@ TEST_F(evm_calls, delegatecall_static)
     EXPECT_GAS_USED(EVMC_SUCCESS, 719);
 }
 
+TEST_F(evm_calls, delegatecall_oog_depth_limit)
+{
+    rev = EVMC_HOMESTEAD;
+    msg.depth = 1024;
+    const auto code = bytecode{} + delegatecall(0).gas(16) + ret_top();
+
+    execute(code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 73);
+    EXPECT_OUTPUT_INT(0);
+
+    execute(73, code);
+    EXPECT_STATUS(EVMC_OUT_OF_GAS);
+}
+
 TEST_F(evm_calls, create)
 {
     auto& account = host.accounts[{}];
