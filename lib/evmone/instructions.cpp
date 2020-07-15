@@ -749,14 +749,14 @@ const instruction* op_return(const instruction*, execution_state& state) noexcep
     return state.exit(status_code);
 }
 
-template <evmc_call_kind Kind>
+template <evmc_call_kind Kind, bool Static = false>
 const instruction* op_call(const instruction* instr, execution_state& state) noexcept
 {
     const auto gas_left_correction = state.current_block_cost - instr->arg.number;
 
     auto gas = state.stack.pop();
     const auto dst = intx::be::trunc<evmc::address>(state.stack.pop());
-    const auto value = state.stack.pop();
+    const auto value = (Static || Kind == EVMC_DELEGATECALL) ? uint256{0} : state.stack.pop();
     const auto input_offset = state.stack.pop();
     const auto input_size = state.stack.pop();
     const auto output_offset = state.stack.pop();
@@ -772,13 +772,23 @@ const instruction* op_call(const instruction* instr, execution_state& state) noe
 
     auto msg = evmc_message{};
     msg.kind = Kind;
-    msg.flags = state.msg->flags;
-    msg.value = intx::be::store<evmc::uint256be>(value);
+    msg.flags = Static ? uint32_t{EVMC_STATIC} : state.msg->flags;
+    msg.depth = state.msg->depth + 1;
+    msg.destination = dst;
+    msg.sender = (Kind == EVMC_DELEGATECALL) ? state.msg->sender : state.msg->destination;
+    msg.value =
+        (Kind == EVMC_DELEGATECALL) ? state.msg->value : intx::be::store<evmc::uint256be>(value);
+
+    if (size_t(input_size) > 0)
+    {
+        msg.input_data = &state.memory[size_t(input_offset)];
+        msg.input_size = size_t(input_size);
+    }
 
     auto gas_left = state.gas_left + gas_left_correction;
-    auto cost = 0;
-    auto has_value = value != 0;
 
+    auto cost = 0;
+    const auto has_value = value != 0;
     if (has_value)
         cost += 9000;
 
@@ -801,7 +811,7 @@ const instruction* op_call(const instruction* instr, execution_state& state) noe
     if (gas < msg.gas)
         msg.gas = static_cast<int64_t>(gas);
 
-    if (state.rev >= EVMC_TANGERINE_WHISTLE)
+    if (state.rev >= EVMC_TANGERINE_WHISTLE)  // TODO: Always true for STATICCALL.
         msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
     else if (msg.gas > gas_left)
         return state.exit(EVMC_OUT_OF_GAS);
@@ -818,18 +828,6 @@ const instruction* op_call(const instruction* instr, execution_state& state) noe
         return ++instr;
     }
 
-    msg.destination = dst;
-    msg.sender = state.msg->destination;
-    msg.value = intx::be::store<evmc::uint256be>(value);
-
-    if (size_t(input_size) > 0)
-    {
-        msg.input_data = &state.memory[size_t(input_offset)];
-        msg.input_size = size_t(input_size);
-    }
-
-    msg.depth = state.msg->depth + 1;
-
     if (has_value)
     {
         const auto balance =
@@ -845,81 +843,7 @@ const instruction* op_call(const instruction* instr, execution_state& state) noe
         msg.gas += 2300;  // Add stipend.
     }
 
-    auto result = state.host.call(msg);
-    state.return_data.assign(result.output_data, result.output_size);
-
-    state.stack.top() = result.status_code == EVMC_SUCCESS;
-
-    if (auto copy_size = std::min(size_t(output_size), result.output_size); copy_size > 0)
-        std::memcpy(&state.memory[size_t(output_offset)], result.output_data, copy_size);
-
-    auto gas_used = msg.gas - result.gas_left;
-
-    if (has_value)
-        gas_used -= 2300;
-
-    if ((state.gas_left -= gas_used) < 0)
-        return state.exit(EVMC_OUT_OF_GAS);
-    return ++instr;
-}
-
-template <evmc_call_kind Kind, bool Static = false>
-const instruction* op_delegatecall(const instruction* instr, execution_state& state) noexcept
-{
-    const auto gas_left_correction = state.current_block_cost - instr->arg.number;
-
-    auto gas = state.stack.pop();
-    const auto dst = intx::be::trunc<evmc::address>(state.stack.pop());
-    const auto input_offset = state.stack.pop();
-    const auto input_size = state.stack.pop();
-    const auto output_offset = state.stack.pop();
-    const auto output_size = state.stack.pop();
-
-    state.stack.push(0);  // Assume failure.
-
-    if (!check_memory(state, input_offset, input_size))
-        return nullptr;
-
-    if (!check_memory(state, output_offset, output_size))
-        return nullptr;
-
-    auto msg = evmc_message{};
-    msg.kind = Kind;
-    msg.flags = Static ? uint32_t{EVMC_STATIC} : state.msg->flags;
-    msg.depth = state.msg->depth + 1;
-    msg.destination = dst;
-    msg.sender = Static ? state.msg->destination : state.msg->sender;
-    if constexpr (!Static)
-        msg.value = state.msg->value;
-
-    if (size_t(input_size) > 0)
-    {
-        msg.input_data = &state.memory[size_t(input_offset)];
-        msg.input_size = size_t(input_size);
-    }
-
-    auto gas_left = state.gas_left + gas_left_correction;
-
-    msg.gas = std::numeric_limits<int64_t>::max();
-    if (gas < msg.gas)
-        msg.gas = static_cast<int64_t>(gas);
-
-    if constexpr (Static)
-    {
-        msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
-    }
-    else
-    {
-        if (state.rev >= EVMC_TANGERINE_WHISTLE)
-            msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
-        else if (msg.gas > gas_left)
-            return state.exit(EVMC_OUT_OF_GAS);
-    }
-
-    if (state.msg->depth >= 1024)
-        return ++instr;
-
-    auto result = state.host.call(msg);
+    const auto result = state.host.call(msg);
     state.return_data.assign(result.output_data, result.output_size);
     state.stack.top() = result.status_code == EVMC_SUCCESS;
 
@@ -927,6 +851,8 @@ const instruction* op_delegatecall(const instruction* instr, execution_state& st
         std::memcpy(&state.memory[size_t(output_offset)], result.output_data, copy_size);
 
     auto gas_used = msg.gas - result.gas_left;
+    if (has_value)
+        gas_used -= 2300;
 
     if ((state.gas_left -= gas_used) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
@@ -1170,7 +1096,7 @@ constexpr op_table create_op_table_frontier() noexcept
 constexpr op_table create_op_table_homestead() noexcept
 {
     auto table = create_op_table_frontier();
-    table[OP_DELEGATECALL] = {op_delegatecall<EVMC_DELEGATECALL>, 40, 6, -5};
+    table[OP_DELEGATECALL] = {op_call<EVMC_DELEGATECALL>, 40, 6, -5};
     return table;
 }
 
@@ -1193,7 +1119,7 @@ constexpr op_table create_op_table_byzantium() noexcept
     auto table = create_op_table_tangerine_whistle();
     table[OP_RETURNDATASIZE] = {op_returndatasize, 2, 0, 1};
     table[OP_RETURNDATACOPY] = {op_returndatacopy, 3, 3, -3};
-    table[OP_STATICCALL] = {op_delegatecall<EVMC_CALL, true>, 700, 6, -5};
+    table[OP_STATICCALL] = {op_call<EVMC_CALL, true>, 700, 6, -5};
     table[OP_REVERT] = {op_return<EVMC_REVERT>, 0, 2, -2};
     return table;
 }
