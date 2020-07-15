@@ -863,7 +863,7 @@ const instruction* op_call(const instruction* instr, execution_state& state) noe
     return ++instr;
 }
 
-template <bool Static>
+template <evmc_call_kind Kind, bool Static = false>
 const instruction* op_delegatecall(const instruction* instr, execution_state& state) noexcept
 {
     const auto gas_left_correction = state.current_block_cost - instr->arg.number;
@@ -884,7 +884,7 @@ const instruction* op_delegatecall(const instruction* instr, execution_state& st
         return nullptr;
 
     auto msg = evmc_message{};
-    msg.kind = Static ? EVMC_CALL : EVMC_DELEGATECALL;
+    msg.kind = Kind;
     msg.flags = Static ? uint32_t{EVMC_STATIC} : state.msg->flags;
     msg.depth = state.msg->depth + 1;
     msg.destination = dst;
@@ -1170,7 +1170,7 @@ constexpr op_table create_op_table_frontier() noexcept
 constexpr op_table create_op_table_homestead() noexcept
 {
     auto table = create_op_table_frontier();
-    table[OP_DELEGATECALL] = {op_delegatecall<false>, 40, 6, -5};
+    table[OP_DELEGATECALL] = {op_delegatecall<EVMC_DELEGATECALL>, 40, 6, -5};
     return table;
 }
 
@@ -1193,7 +1193,7 @@ constexpr op_table create_op_table_byzantium() noexcept
     auto table = create_op_table_tangerine_whistle();
     table[OP_RETURNDATASIZE] = {op_returndatasize, 2, 0, 1};
     table[OP_RETURNDATACOPY] = {op_returndatacopy, 3, 3, -3};
-    table[OP_STATICCALL] = {op_delegatecall<true>, 700, 6, -5};
+    table[OP_STATICCALL] = {op_delegatecall<EVMC_CALL, true>, 700, 6, -5};
     table[OP_REVERT] = {op_return<EVMC_REVERT>, 0, 2, -2};
     return table;
 }
