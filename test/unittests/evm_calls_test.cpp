@@ -21,6 +21,8 @@ TEST_F(evm_calls, delegatecall)
     host.call_result.output_size = call_output.size();
     host.call_result.gas_left = 1;
 
+    msg.value.bytes[17] = 0xfe;
+
     execute(1700, code);
 
     EXPECT_EQ(gas_used, 1690);
@@ -31,6 +33,7 @@ TEST_F(evm_calls, delegatecall)
     const auto& call_msg = host.recorded_calls.back();
     EXPECT_EQ(call_msg.gas, gas_left - gas_left / 64);
     EXPECT_EQ(call_msg.input_size, 3);
+    EXPECT_EQ(call_msg.value.bytes[17], 0xfe);
 
     ASSERT_EQ(result.output_size, 8);
     EXPECT_EQ(output, (bytes{0xff, 0xff, 0xff, 0xff, 0xa, 0xb, 0xc, 0xff}));
