@@ -230,11 +230,13 @@ TEST_F(evm_calls, call_failing_with_value)
 
 TEST_F(evm_calls, call_with_value)
 {
-    auto code = "60ff600060ff6000600160aa618000f150";
+    constexpr auto code = "60ff600060ff6000600160aa618000f150";
 
-    host.accounts[{}].set_balance(1);
-    auto call_dst = evmc::address{};
-    call_dst.bytes[19] = 0xaa;
+    constexpr auto call_sender = 0x5e4d00000000000000000000000000000000d4e5_address;
+    constexpr auto call_dst = 0x00000000000000000000000000000000000000aa_address;
+
+    msg.destination = call_sender;
+    host.accounts[msg.destination].set_balance(1);
     host.accounts[call_dst] = {};
     host.call_result.gas_left = 1;
 
@@ -247,6 +249,7 @@ TEST_F(evm_calls, call_with_value)
     EXPECT_EQ(call_msg.depth, 1);
     EXPECT_EQ(call_msg.gas, 32083);
     EXPECT_EQ(call_msg.destination, call_dst);
+    EXPECT_EQ(call_msg.sender, call_sender);
 }
 
 TEST_F(evm_calls, call_with_value_depth_limit)
@@ -416,9 +419,11 @@ TEST_F(evm_calls, call_new_account_creation_cost)
 
 TEST_F(evm_calls, callcode_new_account_create)
 {
-    auto code = "60008080806001600061c350f250";
+    constexpr auto code = "60008080806001600061c350f250";
+    constexpr auto call_sender = 0x5e4d00000000000000000000000000000000d4e5_address;
 
-    host.accounts[{}].set_balance(1);
+    msg.destination = call_sender;
+    host.accounts[msg.destination].set_balance(1);
     host.call_result.gas_left = 1;
     execute(100000, code);
     EXPECT_EQ(gas_used, 59722);
@@ -428,6 +433,7 @@ TEST_F(evm_calls, callcode_new_account_create)
     EXPECT_EQ(call_msg.kind, EVMC_CALLCODE);
     EXPECT_EQ(call_msg.depth, 1);
     EXPECT_EQ(call_msg.gas, 52300);
+    EXPECT_EQ(call_msg.sender, call_sender);
 }
 
 TEST_F(evm_calls, call_then_oog)
