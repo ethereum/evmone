@@ -1,5 +1,5 @@
 // evmone: Fast Ethereum Virtual Machine implementation
-// Copyright 2019 The evmone Authors.
+// Copyright 2019-2020 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
 #include "execution.hpp"
@@ -13,14 +13,8 @@ evmc_result execute(evmc_vm* /*unused*/, const evmc_host_interface* host, evmc_h
 {
     auto analysis = analyze(rev, code, code_size);
 
-    auto state = std::make_unique<execution_state>();
+    auto state = std::make_unique<execution_state>(*msg, rev, *host, ctx, code, code_size);
     state->analysis = &analysis;
-    state->msg = msg;
-    state->code = code;
-    state->code_size = code_size;
-    state->host = evmc::HostContext{*host, ctx};
-    state->gas_left = msg->gas;
-    state->rev = rev;
 
     const auto* instr = &state->analysis->instrs[0];
     while (instr != nullptr)
