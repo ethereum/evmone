@@ -37,20 +37,6 @@ const instruction* op_stop(const instruction*, execution_state& state) noexcept
     return state.exit(EVMC_SUCCESS);
 }
 
-const instruction* op_codesize(const instruction* instr, execution_state& state) noexcept
-{
-    state.stack.push(state.code_size);
-    return ++instr;
-}
-
-const instruction* op_codecopy(const instruction* instr, execution_state& state) noexcept
-{
-    const auto status_code = codecopy(state, state.code, state.code_size);
-    if (status_code != EVMC_SUCCESS)
-        return state.exit(status_code);
-    return ++instr;
-}
-
 const instruction* op_sstore(const instruction* instr, execution_state& state) noexcept
 {
     // TODO: Implement static mode violation in analysis.
@@ -452,8 +438,8 @@ constexpr op_table create_op_table_frontier() noexcept
     table[OP_CALLDATALOAD] = {op<calldataload>, 3, 1, 0};
     table[OP_CALLDATASIZE] = {op<calldatasize>, 2, 0, 1};
     table[OP_CALLDATACOPY] = {op<calldatacopy>, 3, 3, -3};
-    table[OP_CODESIZE] = {op_codesize, 2, 0, 1};
-    table[OP_CODECOPY] = {op_codecopy, 3, 3, -3};
+    table[OP_CODESIZE] = {op<codesize>, 2, 0, 1};
+    table[OP_CODECOPY] = {op<codecopy>, 3, 3, -3};
     table[OP_GASPRICE] = {op<gasprice>, 2, 0, 1};
     table[OP_EXTCODESIZE] = {op<extcodesize>, 20, 1, 0};
     table[OP_EXTCODECOPY] = {op<extcodecopy>, 20, 4, -4};

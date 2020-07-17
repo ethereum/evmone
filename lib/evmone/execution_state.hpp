@@ -11,8 +11,8 @@
 namespace evmone
 {
 using uint256 = intx::uint256;
-
 using bytes = std::basic_string<uint8_t>;
+using bytes_view = std::basic_string_view<uint8_t>;
 
 
 /// The stack for 256-bit EVM words.
@@ -88,5 +88,6 @@ struct ExecutionState
     evmc::HostContext host;
     evmc_revision rev = {};
     bytes return_data;
+    bytes_view code;
 };
 }  // namespace evmone

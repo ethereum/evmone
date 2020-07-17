@@ -352,8 +352,12 @@ inline evmc_status_code calldatacopy(ExecutionState& state) noexcept
     return EVMC_SUCCESS;
 }
 
-inline evmc_status_code codecopy(
-    ExecutionState& state, const uint8_t* code, size_t code_size) noexcept
+inline void codesize(ExecutionState& state) noexcept
+{
+    state.stack.push(state.code.size());
+}
+
+inline evmc_status_code codecopy(ExecutionState& state) noexcept
 {
     // TODO: Similar to calldatacopy().
 
@@ -364,10 +368,11 @@ inline evmc_status_code codecopy(
     if (!check_memory(state, mem_index, size))
         return EVMC_OUT_OF_GAS;
 
-    auto dst = static_cast<size_t>(mem_index);
-    auto src = code_size < input_index ? code_size : static_cast<size_t>(input_index);
-    auto s = static_cast<size_t>(size);
-    auto copy_size = std::min(s, code_size - src);
+    const auto code_size = state.code.size();
+    const auto dst = static_cast<size_t>(mem_index);
+    const auto src = code_size < input_index ? code_size : static_cast<size_t>(input_index);
+    const auto s = static_cast<size_t>(size);
+    const auto copy_size = std::min(s, code_size - src);
 
     const auto copy_cost = num_words(s) * 3;
     if ((state.gas_left -= copy_cost) < 0)
@@ -375,7 +380,7 @@ inline evmc_status_code codecopy(
 
     // TODO: Add unit tests for each combination of conditions.
     if (copy_size > 0)
-        std::memcpy(&state.memory[dst], &code[src], copy_size);
+        std::memcpy(&state.memory[dst], &state.code[src], copy_size);
 
     if (s - copy_size > 0)
         std::memset(&state.memory[dst + copy_size], 0, s - copy_size);

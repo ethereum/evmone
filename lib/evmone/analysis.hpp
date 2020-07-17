@@ -54,8 +54,6 @@ struct execution_state : ExecutionState
     uint32_t current_block_cost = 0;
 
     struct code_analysis* analysis = nullptr;
-    const uint8_t* code = nullptr;
-    size_t code_size = 0;
 
     /// Terminates the execution with the given status code.
     const instruction* exit(evmc_status_code status_code) noexcept
