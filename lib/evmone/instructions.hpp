@@ -276,7 +276,7 @@ inline evmc_status_code sha3(ExecutionState& state) noexcept
 
 inline void address(ExecutionState& state) noexcept
 {
-    state.stack.push(intx::be::load<uint256>(state.msg->destination));
+    state.stack.push(intx::be::load<uint256>(state.msg.destination));
 }
 
 inline void balance(ExecutionState& state) noexcept
@@ -292,28 +292,28 @@ inline void origin(ExecutionState& state) noexcept
 
 inline void caller(ExecutionState& state) noexcept
 {
-    state.stack.push(intx::be::load<uint256>(state.msg->sender));
+    state.stack.push(intx::be::load<uint256>(state.msg.sender));
 }
 
 inline void callvalue(ExecutionState& state) noexcept
 {
-    state.stack.push(intx::be::load<uint256>(state.msg->value));
+    state.stack.push(intx::be::load<uint256>(state.msg.value));
 }
 
 inline void calldataload(ExecutionState& state) noexcept
 {
     auto& index = state.stack.top();
 
-    if (state.msg->input_size < index)
+    if (state.msg.input_size < index)
         index = 0;
     else
     {
         const auto begin = static_cast<size_t>(index);
-        const auto end = std::min(begin + 32, state.msg->input_size);
+        const auto end = std::min(begin + 32, state.msg.input_size);
 
         uint8_t data[32] = {};
         for (size_t i = 0; i < (end - begin); ++i)
-            data[i] = state.msg->input_data[begin + i];
+            data[i] = state.msg.input_data[begin + i];
 
         index = intx::be::load<uint256>(data);
     }
@@ -321,7 +321,7 @@ inline void calldataload(ExecutionState& state) noexcept
 
 inline void calldatasize(ExecutionState& state) noexcept
 {
-    state.stack.push(state.msg->input_size);
+    state.stack.push(state.msg.input_size);
 }
 
 inline evmc_status_code calldatacopy(ExecutionState& state) noexcept
@@ -334,17 +334,17 @@ inline evmc_status_code calldatacopy(ExecutionState& state) noexcept
         return EVMC_OUT_OF_GAS;
 
     auto dst = static_cast<size_t>(mem_index);
-    auto src = state.msg->input_size < input_index ? state.msg->input_size :
-                                                     static_cast<size_t>(input_index);
+    auto src = state.msg.input_size < input_index ? state.msg.input_size :
+                                                    static_cast<size_t>(input_index);
     auto s = static_cast<size_t>(size);
-    auto copy_size = std::min(s, state.msg->input_size - src);
+    auto copy_size = std::min(s, state.msg.input_size - src);
 
     const auto copy_cost = num_words(s) * 3;
     if ((state.gas_left -= copy_cost) < 0)
         return EVMC_OUT_OF_GAS;
 
     if (copy_size > 0)
-        std::memcpy(&state.memory[dst], &state.msg->input_data[src], copy_size);
+        std::memcpy(&state.memory[dst], &state.msg.input_data[src], copy_size);
 
     if (s - copy_size > 0)
         std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
@@ -517,7 +517,7 @@ inline void chainid(ExecutionState& state) noexcept
 inline void selfbalance(ExecutionState& state) noexcept
 {
     // TODO: introduce selfbalance in EVMC?
-    state.stack.push(intx::be::load<uint256>(state.host.get_balance(state.msg->destination)));
+    state.stack.push(intx::be::load<uint256>(state.host.get_balance(state.msg.destination)));
 }
 
 
@@ -565,7 +565,7 @@ inline void sload(ExecutionState& state) noexcept
 {
     auto& x = state.stack.top();
     x = intx::be::load<uint256>(
-        state.host.get_storage(state.msg->destination, intx::be::store<evmc::bytes32>(x)));
+        state.host.get_storage(state.msg.destination, intx::be::store<evmc::bytes32>(x)));
 }
 
 inline void msize(ExecutionState& state) noexcept
@@ -591,7 +591,7 @@ inline void swap(evm_stack& stack) noexcept
 
 inline evmc_status_code log(ExecutionState& state, size_t num_topics) noexcept
 {
-    if (state.msg->flags & EVMC_STATIC)
+    if (state.msg.flags & EVMC_STATIC)
         return EVMC_STATIC_MODE_VIOLATION;
 
     const auto offset = state.stack.pop();
@@ -612,7 +612,7 @@ inline evmc_status_code log(ExecutionState& state, size_t num_topics) noexcept
         topics[i] = intx::be::store<evmc::bytes32>(state.stack.pop());
 
     const auto data = s != 0 ? &state.memory[o] : nullptr;
-    state.host.emit_log(state.msg->destination, data, s, topics.data(), num_topics);
+    state.host.emit_log(state.msg.destination, data, s, topics.data(), num_topics);
     return EVMC_SUCCESS;
 }
 }  // namespace evmone

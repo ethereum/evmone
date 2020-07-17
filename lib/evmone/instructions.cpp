@@ -40,7 +40,7 @@ const instruction* op_stop(const instruction*, execution_state& state) noexcept
 const instruction* op_sstore(const instruction* instr, execution_state& state) noexcept
 {
     // TODO: Implement static mode violation in analysis.
-    if (state.msg->flags & EVMC_STATIC)
+    if (state.msg.flags & EVMC_STATIC)
         return state.exit(EVMC_STATIC_MODE_VIOLATION);
 
     if (state.rev >= EVMC_ISTANBUL)
@@ -53,7 +53,7 @@ const instruction* op_sstore(const instruction* instr, execution_state& state) n
 
     const auto key = intx::be::store<evmc::bytes32>(state.stack.pop());
     const auto value = intx::be::store<evmc::bytes32>(state.stack.pop());
-    auto status = state.host.set_storage(state.msg->destination, key, value);
+    auto status = state.host.set_storage(state.msg.destination, key, value);
     int cost = 0;
     switch (status)
     {
@@ -195,12 +195,12 @@ const instruction* op_call(const instruction* instr, execution_state& state) noe
 
     auto msg = evmc_message{};
     msg.kind = Kind;
-    msg.flags = Static ? uint32_t{EVMC_STATIC} : state.msg->flags;
-    msg.depth = state.msg->depth + 1;
+    msg.flags = Static ? uint32_t{EVMC_STATIC} : state.msg.flags;
+    msg.depth = state.msg.depth + 1;
     msg.destination = dst;
-    msg.sender = (Kind == EVMC_DELEGATECALL) ? state.msg->sender : state.msg->destination;
+    msg.sender = (Kind == EVMC_DELEGATECALL) ? state.msg.sender : state.msg.destination;
     msg.value =
-        (Kind == EVMC_DELEGATECALL) ? state.msg->value : intx::be::store<evmc::uint256be>(value);
+        (Kind == EVMC_DELEGATECALL) ? state.msg.value : intx::be::store<evmc::uint256be>(value);
 
     if (size_t(input_size) > 0)
     {
@@ -217,7 +217,7 @@ const instruction* op_call(const instruction* instr, execution_state& state) noe
 
     if constexpr (Kind == EVMC_CALL)
     {
-        if (has_value && state.msg->flags & EVMC_STATIC)
+        if (has_value && state.msg.flags & EVMC_STATIC)
             return state.exit(EVMC_STATIC_MODE_VIOLATION);
 
         if (has_value || state.rev < EVMC_SPURIOUS_DRAGON)
@@ -242,7 +242,7 @@ const instruction* op_call(const instruction* instr, execution_state& state) noe
     state.return_data.clear();
 
     state.gas_left -= cost;
-    if (state.msg->depth >= 1024)
+    if (state.msg.depth >= 1024)
     {
         if (has_value)
             state.gas_left += 2300;  // Return unused stipend.
@@ -253,8 +253,7 @@ const instruction* op_call(const instruction* instr, execution_state& state) noe
 
     if (has_value)
     {
-        const auto balance =
-            intx::be::load<uint256>(state.host.get_balance(state.msg->destination));
+        const auto balance = intx::be::load<uint256>(state.host.get_balance(state.msg.destination));
         if (balance < value)
         {
             state.gas_left += 2300;  // Return unused stipend.
@@ -287,7 +286,7 @@ const instruction* op_create(const instruction* instr, execution_state& state) n
 {
     const auto gas_left_correction = state.current_block_cost - instr->arg.number;
 
-    if (state.msg->flags & EVMC_STATIC)
+    if (state.msg.flags & EVMC_STATIC)
         return state.exit(EVMC_STATIC_MODE_VIOLATION);
 
     auto endowment = state.stack[0];
@@ -314,13 +313,12 @@ const instruction* op_create(const instruction* instr, execution_state& state) n
 
     state.return_data.clear();
 
-    if (state.msg->depth >= 1024)
+    if (state.msg.depth >= 1024)
         return ++instr;
 
     if (endowment != 0)
     {
-        const auto balance =
-            intx::be::load<uint256>(state.host.get_balance(state.msg->destination));
+        const auto balance = intx::be::load<uint256>(state.host.get_balance(state.msg.destination));
         if (balance < endowment)
             return ++instr;
     }
@@ -336,8 +334,8 @@ const instruction* op_create(const instruction* instr, execution_state& state) n
         msg.input_data = &state.memory[size_t(init_code_offset)];
         msg.input_size = size_t(init_code_size);
     }
-    msg.sender = state.msg->destination;
-    msg.depth = state.msg->depth + 1;
+    msg.sender = state.msg.destination;
+    msg.depth = state.msg.depth + 1;
     msg.create2_salt = intx::be::store<evmc::bytes32>(salt);
     msg.value = intx::be::store<evmc::uint256be>(endowment);
 
@@ -358,14 +356,14 @@ const instruction* op_undefined(const instruction*, execution_state& state) noex
 
 const instruction* op_selfdestruct(const instruction*, execution_state& state) noexcept
 {
-    if (state.msg->flags & EVMC_STATIC)
+    if (state.msg.flags & EVMC_STATIC)
         return state.exit(EVMC_STATIC_MODE_VIOLATION);
 
     const auto addr = intx::be::trunc<evmc::address>(state.stack[0]);
 
     if (state.rev >= EVMC_TANGERINE_WHISTLE)
     {
-        if (state.rev == EVMC_TANGERINE_WHISTLE || state.host.get_balance(state.msg->destination))
+        if (state.rev == EVMC_TANGERINE_WHISTLE || state.host.get_balance(state.msg.destination))
         {
             // After TANGERINE_WHISTLE apply additional cost of
             // sending value to a non-existing account.
@@ -377,7 +375,7 @@ const instruction* op_selfdestruct(const instruction*, execution_state& state) n
         }
     }
 
-    state.host.selfdestruct(state.msg->destination, addr);
+    state.host.selfdestruct(state.msg.destination, addr);
     return state.exit(EVMC_SUCCESS);
 }
 
