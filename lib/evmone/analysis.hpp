@@ -43,6 +43,8 @@ static_assert(sizeof(block_info) == 8);
 
 struct execution_state : ExecutionState
 {
+    using ExecutionState::ExecutionState;
+
     evmc_status_code status = EVMC_SUCCESS;
 
     size_t output_offset = 0;

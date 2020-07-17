@@ -86,8 +86,18 @@ struct ExecutionState
     evm_memory memory;
     const evmc_message* msg = nullptr;
     evmc::HostContext host;
-    evmc_revision rev = {};
+    const evmc_revision rev = {};
     bytes return_data;
-    bytes_view code;
+    const bytes_view code;
+
+    ExecutionState(const evmc_message& message, evmc_revision revision,
+        const evmc_host_interface& host_interface, evmc_host_context* host_ctx,
+        const uint8_t* code_ptr, size_t code_size) noexcept
+      : gas_left{message.gas},
+        msg{&message},
+        host{host_interface, host_ctx},
+        rev{revision},
+        code{code_ptr, code_size}
+    {}
 };
 }  // namespace evmone
