@@ -1,6 +1,6 @@
 // evmone: Fast Ethereum Virtual Machine implementation
 // Copyright 2019 The evmone Authors.
-// Licensed under the Apache License, Version 2.0.
+// SPDX-License-Identifier: Apache-2.0
 
 #include <benchmark/benchmark.h>
 #include <array>
@@ -85,14 +85,12 @@ struct map_builder
 };
 
 template <typename T>
-const std::array<std::pair<T, T>, jumpdest_map_size> map_builder<T>::map = []() noexcept
-{
+const std::array<std::pair<T, T>, jumpdest_map_size> map_builder<T>::map = []() noexcept {
     auto m = std::array<std::pair<T, T>, jumpdest_map_size>{};
     for (size_t i = 0; i < m.size(); ++i)
         m[i] = {static_cast<T>(2 * i + 1), static_cast<T>(2 * i + 2)};
     return m;
-}
-();
+}();
 
 template <typename T, T (*F)(const std::pair<T, T>*, size_t, T) noexcept>
 void find_jumpdest(benchmark::State& state)
@@ -195,8 +193,7 @@ struct split_map_builder
 };
 
 template <typename T>
-const split_map<T> split_map_builder<T>::map = []() noexcept
-{
+const split_map<T> split_map_builder<T>::map = []() noexcept {
     auto m = split_map<T>{};
     for (size_t i = 0; i < m.key.size(); ++i)
     {
@@ -204,8 +201,7 @@ const split_map<T> split_map_builder<T>::map = []() noexcept
         m.value[i] = static_cast<T>(2 * i + 2);
     }
     return m;
-}
-();
+}();
 
 template <typename T>
 inline T lower_bound(const T* begin, const T* values, size_t size, T offset) noexcept

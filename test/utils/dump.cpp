@@ -1,6 +1,6 @@
 // evmone: Fast Ethereum Virtual Machine implementation
 // Copyright 2018-2019 The evmone Authors.
-// Licensed under the Apache License, Version 2.0.
+// SPDX-License-Identifier: Apache-2.0
 
 #include "dump.hpp"
 #include <evmc/instructions.h>
@@ -30,8 +30,7 @@ void dump(const evmone::code_analysis& analysis)
         {
             block = &instr.arg.block;
 
-            const auto get_jumpdest_offset = [&analysis](size_t index) noexcept
-            {
+            const auto get_jumpdest_offset = [&analysis](size_t index) noexcept {
                 for (size_t t = 0; t < analysis.jumpdest_targets.size(); ++t)
                 {
                     if (static_cast<size_t>(analysis.jumpdest_targets[t]) == index)

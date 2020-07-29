@@ -1,6 +1,6 @@
 # evmone: Fast Ethereum Virtual Machine implementation
-# Copyright 2019 Pawel Bylica.
-# Licensed under the Apache License, Version 2.0.
+# Copyright 2019-2020 The evmone Authors.
+# SPDX-License-Identifier: Apache-2.0
 
 include(LibraryTools)
 
@@ -15,6 +15,7 @@ add_library(evmone
     execution.cpp
     execution.hpp
     instructions.cpp
+    instructions.hpp
     limits.hpp
     opcodes_helpers.h
 )
@@ -22,6 +23,9 @@ target_link_libraries(evmone PUBLIC evmc::evmc PRIVATE intx::intx ethash::keccak
 target_include_directories(evmone PUBLIC
     $<BUILD_INTERFACE:${include_dir}>$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
+if(CABLE_COMPILER_GNULIKE)
+    target_compile_options(evmone PRIVATE -fno-exceptions -fno-rtti)
+endif()
 set_target_properties(
     evmone
     PROPERTIES

@@ -1,10 +1,10 @@
 # evmone: Ethereum Virtual Machine
-# Copyright 2019 Pawel Bylica.
-# Licensed under the Apache License, Version 2.0.
+# Copyright 2019 The evmone Authors.
+# SPDX-License-Identifier: Apache-2.0
 
 cmake_minimum_required(VERSION 3.13)
 
-if(NOT EXISTS ${CMAKE_SOURCE_DIR}/evmc/.git)
+if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/evmc/.git)
     message(FATAL_ERROR "Git submodules not initialized, execute:\n  git submodule update --init")
 endif()
 
@@ -18,7 +18,6 @@ include(CableCompilerSettings)
 include(CablePackage)
 include(CableToolchains)
 include(CMakePackageConfigHelpers)
-include(GNUInstallDirs)
 
 cable_configure_toolchain(DEFAULT cxx17-pic)
 cable_set_build_type(DEFAULT Release CONFIGURATION_TYPES Release Debug)
@@ -26,7 +25,7 @@ cable_set_build_type(DEFAULT Release CONFIGURATION_TYPES Release Debug)
 include(Hunter/init)
 
 project(evmone LANGUAGES CXX)
-set(PROJECT_VERSION 0.5.0-dev)
+set(PROJECT_VERSION 0.6.0-dev)
 
 string(REGEX MATCH "([0-9]+)\\.([0-9]+)" _ ${PROJECT_VERSION})
 set(PROJECT_VERSION_MAJOR ${CMAKE_MATCH_1})
@@ -61,6 +60,8 @@ endif()
 set(CMAKE_C_VISIBILITY_PRESET hidden)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN YES)
+
+include(GNUInstallDirs)
 
 if(EVMONE_FUZZING)
     if(NOT ${CMAKE_CXX_COMPILER_ID} MATCHES Clang OR ${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS 8)

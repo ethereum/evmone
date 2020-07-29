@@ -89,7 +89,7 @@ jobs:
 
   lint:
     docker:
-    - image: ethereum/cpp-build-env:11
+    - image: ethereum/cpp-build-env:14-lint
     steps:
     - checkout
     - run:
@@ -99,7 +99,7 @@ jobs:
           find include lib test -name '*.hpp' -o -name '*.cpp' -o -name '*.h' -o -name '*.c' | xargs clang-format -i
           git diff --color --exit-code
     - run:
-        name: "Run codespell"
+        name: "Check spelling"
         command: |
           codespell --quiet-level=4
 
@@ -162,7 +162,10 @@ jobs:
           command: curl -L https://github.com/ethereum/aleth/releases/download/v$ALETH_REV/aleth-$ALETH_REV-linux-x86_64.tar.gz | tar xz
       - run:
           name: "Download tests"
-          command: git clone --depth=1 --single-branch --branch $TESTS_REV https://github.com/ethereum/tests
+          command: |
+            git clone --depth=1 --single-branch --branch $TESTS_REV https://github.com/ethereum/tests
+            mkdir tests/GeneralStateTests/stEWASMTests
+            mkdir tests/src/GeneralStateTestsFiller/stEWASMTests
       - run:
           name: "Run State Tests"
           command: bin/testeth -t GeneralStateTests -- --testpath tests --vm lib/libevmone.so
