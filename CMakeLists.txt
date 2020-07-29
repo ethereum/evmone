@@ -8,8 +8,8 @@ if(NOT EXISTS ${CMAKE_SOURCE_DIR}/evmc/.git)
     message(FATAL_ERROR "Git submodules not initialized, execute:\n  git submodule update --init")
 endif()
 
-option(BUILD_SHARED_LIBS "Build evmone as a shared library" ON)
-option(EVMONE_TESTING "Build tests and test tools" OFF)
+option(BUILD_SHARED_LIBS "Build evmone as a shared library" OFF)
+option(EVMONE_TESTING "Build tests and test tools" ON)
 option(EVMONE_FUZZING "Instrument libraries and build fuzzing tools" OFF)
 
 include(cmake/cable/bootstrap.cmake)

@@ -8,11 +8,16 @@ include(${PROJECT_SOURCE_DIR}/evmc/cmake/EVMC.cmake)
 set(evmone_private_include_dir ${PROJECT_SOURCE_DIR}/lib)
 
 add_subdirectory(utils)
-add_subdirectory(bench)
-add_subdirectory(internal_benchmarks)
-add_subdirectory(unittests)
+#add_subdirectory(bench)
+#add_subdirectory(internal_benchmarks)
+#add_subdirectory(unittests)
 
-set(targets evm-test evmone-bench evmone-bench-internal evmone-unittests testutils)
+set(targets 
+#    evm-test 
+#    evmone-bench 
+#    evmone-bench-internal 
+#    evmone-unittests 
+    testutils)
 
 if(EVMONE_FUZZING)
     add_subdirectory(fuzzer)
