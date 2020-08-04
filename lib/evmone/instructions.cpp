@@ -511,6 +511,10 @@ constexpr op_table create_op_table_frontier() noexcept
     table[OP_RETURN] = {op_return<EVMC_SUCCESS>, 0, 2, -2};
     table[OP_INVALID] = {op_invalid, 0, 0, 0};
     table[OP_SELFDESTRUCT] = {op_selfdestruct, 0, 1, -1};
+
+    // Instructions for Cortex
+    table[OP_INFER] = {op_infer, 40, 2, -1};
+    table[OP_INFERARRAY] = {op_infer_array, 40, 2, -1};
     return table;
 }
 
