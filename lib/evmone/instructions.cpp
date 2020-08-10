@@ -340,9 +340,16 @@ const instruction* op_create(const instruction* instr, execution_state& state) n
     msg.value = intx::be::store<evmc::uint256be>(endowment);
 
     auto result = state.host.call(msg);
-    state.return_data.assign(result.output_data, result.output_size);
+
     if (result.status_code == EVMC_SUCCESS)
+    {
         state.stack[0] = intx::be::load<uint256>(result.create_address);
+        state.return_data.clear();
+    }
+    else
+    {
+        state.return_data.assign(result.output_data, result.output_size);
+    }
 
     if ((state.gas_left -= msg.gas - result.gas_left) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
