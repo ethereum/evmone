@@ -3,6 +3,7 @@
 // Licensed under the Apache License, Version 2.0.
 
 #include "analysis.hpp"
+#include "bigint384.h"
 #include <ethash/keccak.hpp>
 
 namespace evmone
@@ -1233,14 +1234,6 @@ const instruction* opx_beginblock(const instruction* instr, execution_state& sta
     state.current_block_cost = block.gas_cost;
     return ++instr;
 }
-
-#define BIGINT_BITS 384
-#define LIMB_BITS 64
-#define LIMB_BITS_OVERFLOW 128
-#include "bigint.h"
-#undef BIGINT_BITS
-#undef LIMB_BITS
-#undef LIMB_BITS_OVERFLOW
 
 const instruction* op_addmod384(const instruction* instr, execution_state& state) noexcept
 {
