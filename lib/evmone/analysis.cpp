@@ -72,7 +72,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
         block.gas_cost += opcode_info.gas_cost;
 
         // Optimize away heavy operations discarded by POP
-        if (code_pos != code_end && *code_pos == OP_POP && opcode_info.stack_req >= 1 &&
+        if (code_pos != code_end && *code_pos == OP_POP && opcode_info.stack_req == 1 &&
             opcode_info.stack_change == 0)
         {
             bool read_only_and_const_cost = false;
