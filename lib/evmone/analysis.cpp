@@ -71,11 +71,14 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
 
         block.gas_cost += opcode_info.gas_cost;
 
-        // Optimize away heavy operations discarded by POP
+        // Potentially optimize away heavy operations whose result is immediately discarded by POP.
+        // Only operations that take 1 element from the stack and put 1 element back are considered.
+        // This change speeds up the execution of certain Shanghai attack blocks
+        // that called EXTCODESIZE and immediately discarded it by POP.
         if (code_pos != code_end && *code_pos == OP_POP && opcode_info.stack_req == 1 &&
             opcode_info.stack_change == 0)
         {
-            bool read_only_and_const_cost = false;
+            bool pure_and_const_cost = false;
             switch (opcode)
             {
             case OP_BALANCE:
@@ -83,11 +86,15 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
             case OP_EXTCODEHASH:
             case OP_BLOCKHASH:
             case OP_SLOAD:
-                read_only_and_const_cost = true;
+                pure_and_const_cost = true;
             }
 
-            if (read_only_and_const_cost)
+            if (pure_and_const_cost)
             {
+                // Warning: we can only replace discarded instruction with a no-op
+                // if it's pure (has no side effects) and its cost is constant.
+                // For example, an operation that can add an account to the touch set (EIP-161)
+                // cannot be considered pure and optimized away.
                 analysis.instrs.emplace_back(noop);
                 continue;
             }
