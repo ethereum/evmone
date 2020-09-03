@@ -95,7 +95,7 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
                 // if it's pure (has no side effects) and its cost is constant.
                 // For example, an operation that can add an account to the touch set (EIP-161)
                 // cannot be considered pure and optimized away.
-                continue; // skip the instruction
+                continue;  // skip the instruction
             }
         }
 
