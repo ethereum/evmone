@@ -125,12 +125,6 @@ struct instruction
     explicit constexpr instruction(instruction_exec_fn f) noexcept : fn{f}, arg{} {};
 };
 
-// Do-nothing instruction
-inline const instruction* noop(const instruction* instr, execution_state&) noexcept
-{
-    return ++instr;
-}
-
 struct code_analysis
 {
     std::vector<instruction> instrs;

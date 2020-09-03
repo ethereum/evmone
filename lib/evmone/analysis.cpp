@@ -91,12 +91,11 @@ code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) 
 
             if (pure_and_const_cost)
             {
-                // Warning: we can only replace discarded instruction with a no-op
+                // Warning: we can only discard an instruction
                 // if it's pure (has no side effects) and its cost is constant.
                 // For example, an operation that can add an account to the touch set (EIP-161)
                 // cannot be considered pure and optimized away.
-                analysis.instrs.emplace_back(noop);
-                continue;
+                continue; // skip the instruction
             }
         }
 
