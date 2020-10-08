@@ -615,4 +615,8 @@ inline evmc_status_code log(ExecutionState& state, size_t num_topics) noexcept
     state.host.emit_log(state.msg.destination, data, s, topics.data(), num_topics);
     return EVMC_SUCCESS;
 }
+
+
+template <evmc_call_kind Kind, bool Static = false>
+evmc_status_code call(ExecutionState& state) noexcept;
 }  // namespace evmone
