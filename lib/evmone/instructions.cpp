@@ -192,66 +192,14 @@ const instruction* op_create(const instruction* instr, execution_state& state) n
 {
     const auto gas_left_correction = state.current_block_cost - instr->arg.number;
 
-    if (state.msg.flags & EVMC_STATIC)
-        return state.exit(EVMC_STATIC_MODE_VIOLATION);
+    state.gas_left += gas_left_correction;
+    const auto status = create<Kind>(state);
+    if (status != EVMC_SUCCESS)
+        return state.exit(status);
 
-    auto endowment = state.stack[0];
-    auto init_code_offset = state.stack[1];
-    auto init_code_size = state.stack[2];
-
-    if (!check_memory(state, init_code_offset, init_code_size))
+    if ((state.gas_left -= gas_left_correction) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
 
-    auto salt = uint256{};
-    if constexpr (Kind == EVMC_CREATE2)
-    {
-        salt = state.stack[3];
-        auto salt_cost = num_words(static_cast<size_t>(init_code_size)) * 6;
-        state.gas_left -= salt_cost;
-        if (state.gas_left < 0)
-            return state.exit(EVMC_OUT_OF_GAS);
-        state.stack.pop();
-    }
-
-    state.stack.pop();
-    state.stack.pop();
-    state.stack[0] = 0;
-
-    state.return_data.clear();
-
-    if (state.msg.depth >= 1024)
-        return ++instr;
-
-    if (endowment != 0)
-    {
-        const auto balance = intx::be::load<uint256>(state.host.get_balance(state.msg.destination));
-        if (balance < endowment)
-            return ++instr;
-    }
-
-    auto msg = evmc_message{};
-    msg.gas = state.gas_left + gas_left_correction;
-    if (state.rev >= EVMC_TANGERINE_WHISTLE)
-        msg.gas = msg.gas - msg.gas / 64;
-
-    msg.kind = Kind;
-    if (size_t(init_code_size) > 0)
-    {
-        msg.input_data = &state.memory[size_t(init_code_offset)];
-        msg.input_size = size_t(init_code_size);
-    }
-    msg.sender = state.msg.destination;
-    msg.depth = state.msg.depth + 1;
-    msg.create2_salt = intx::be::store<evmc::bytes32>(salt);
-    msg.value = intx::be::store<evmc::uint256be>(endowment);
-
-    auto result = state.host.call(msg);
-    state.return_data.assign(result.output_data, result.output_size);
-    if (result.status_code == EVMC_SUCCESS)
-        state.stack[0] = intx::be::load<uint256>(result.create_address);
-
-    if ((state.gas_left -= msg.gas - result.gas_left) < 0)
-        return state.exit(EVMC_OUT_OF_GAS);
     return ++instr;
 }
 

@@ -619,4 +619,7 @@ inline evmc_status_code log(ExecutionState& state, size_t num_topics) noexcept
 
 template <evmc_call_kind Kind, bool Static = false>
 evmc_status_code call(ExecutionState& state) noexcept;
+
+template <evmc_call_kind Kind>
+evmc_status_code create(ExecutionState& state) noexcept;
 }  // namespace evmone
