@@ -39,52 +39,16 @@ const instruction* op_stop(const instruction*, execution_state& state) noexcept
 
 const instruction* op_sstore(const instruction* instr, execution_state& state) noexcept
 {
-    // TODO: Implement static mode violation in analysis.
-    if (state.msg.flags & EVMC_STATIC)
-        return state.exit(EVMC_STATIC_MODE_VIOLATION);
+    const auto gas_left_correction = state.current_block_cost - instr->arg.number;
+    state.gas_left += gas_left_correction;
 
-    if (state.rev >= EVMC_ISTANBUL)
-    {
-        const auto correction = state.current_block_cost - instr->arg.number;
-        const auto gas_left = state.gas_left + correction;
-        if (gas_left <= 2300)
-            return state.exit(EVMC_OUT_OF_GAS);
-    }
+    const auto status = sstore(state);
+    if (status != EVMC_SUCCESS)
+        return state.exit(status);
 
-    const auto key = intx::be::store<evmc::bytes32>(state.stack.pop());
-    const auto value = intx::be::store<evmc::bytes32>(state.stack.pop());
-    auto status = state.host.set_storage(state.msg.destination, key, value);
-    int cost = 0;
-    switch (status)
-    {
-    case EVMC_STORAGE_UNCHANGED:
-        if (state.rev >= EVMC_ISTANBUL)
-            cost = 800;
-        else if (state.rev == EVMC_CONSTANTINOPLE)
-            cost = 200;
-        else
-            cost = 5000;
-        break;
-    case EVMC_STORAGE_MODIFIED:
-        cost = 5000;
-        break;
-    case EVMC_STORAGE_MODIFIED_AGAIN:
-        if (state.rev >= EVMC_ISTANBUL)
-            cost = 800;
-        else if (state.rev == EVMC_CONSTANTINOPLE)
-            cost = 200;
-        else
-            cost = 5000;
-        break;
-    case EVMC_STORAGE_ADDED:
-        cost = 20000;
-        break;
-    case EVMC_STORAGE_DELETED:
-        cost = 5000;
-        break;
-    }
-    if ((state.gas_left -= cost) < 0)
+    if ((state.gas_left -= gas_left_correction) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
+
     return ++instr;
 }
 
@@ -177,6 +141,7 @@ const instruction* op_call(const instruction* instr, execution_state& state) noe
 {
     const auto gas_left_correction = state.current_block_cost - instr->arg.number;
     state.gas_left += gas_left_correction;
+
     const auto status = call<Kind, Static>(state);
     if (status != EVMC_SUCCESS)
         return state.exit(status);
@@ -191,8 +156,8 @@ template <evmc_call_kind Kind>
 const instruction* op_create(const instruction* instr, execution_state& state) noexcept
 {
     const auto gas_left_correction = state.current_block_cost - instr->arg.number;
-
     state.gas_left += gas_left_correction;
+
     const auto status = create<Kind>(state);
     if (status != EVMC_SUCCESS)
         return state.exit(status);
