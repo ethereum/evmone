@@ -1,5 +1,5 @@
 # evmone-fuzzer: LibFuzzer based testing tool for EVMC-compatible EVM implementations.
-# Copyright 2019 The evmone Authors.
+# Copyright 2019-2020 The evmone Authors.
 # SPDX-License-Identifier: Apache-2.0
 include(ExternalProject)
 
@@ -21,7 +21,7 @@ if(NOT fuzzing_coverage)
     # TODO: Aleth reports undefined behaviors, disable it for fuzzing.
     string(REPLACE undefined "" aleth_fuzzing_flags ${fuzzing_flags})
 
-    set(aleth_git_tag v1.7.0-rc.1)
+    set(aleth_git_tag v1.8.0)
     if(NOT aleth_git_tag STREQUAL "${aleth_current_git_tag}")
         message(STATUS "Aleth git tag has changed: ${aleth_current_git_tag} -> ${aleth_git_tag}")
         set(aleth_current_git_tag ${aleth_git_tag} CACHE INTERNAL "Current Aleth git tag" FORCE)
