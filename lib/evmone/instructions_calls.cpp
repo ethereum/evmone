@@ -9,9 +9,10 @@ namespace evmone
 template <evmc_call_kind Kind, bool Static>
 evmc_status_code call(ExecutionState& state) noexcept
 {
-    auto gas = state.stack.pop();
+    const auto gas = state.stack.pop();
     const auto dst = intx::be::trunc<evmc::address>(state.stack.pop());
-    const auto value = (Static || Kind == EVMC_DELEGATECALL) ? uint256{0} : state.stack.pop();
+    const auto value = (Static || Kind == EVMC_DELEGATECALL) ? 0 : state.stack.pop();
+    const auto has_value = value != 0;
     const auto input_offset = state.stack.pop();
     const auto input_size = state.stack.pop();
     const auto output_offset = state.stack.pop();
@@ -40,21 +41,15 @@ evmc_status_code call(ExecutionState& state) noexcept
         msg.input_size = size_t(input_size);
     }
 
-    auto cost = 0;
-    const auto has_value = value != 0;
-    if (has_value)
-        cost += 9000;
+    auto cost = has_value ? 9000 : 0;
 
     if constexpr (Kind == EVMC_CALL)
     {
         if (has_value && state.msg.flags & EVMC_STATIC)
             return EVMC_STATIC_MODE_VIOLATION;
 
-        if (has_value || state.rev < EVMC_SPURIOUS_DRAGON)
-        {
-            if (!state.host.account_exists(dst))
-                cost += 25000;
-        }
+        if ((has_value || state.rev < EVMC_SPURIOUS_DRAGON) && !state.host.account_exists(dst))
+            cost += 25000;
     }
 
     if ((state.gas_left -= cost) < 0)
@@ -69,30 +64,19 @@ evmc_status_code call(ExecutionState& state) noexcept
     else if (msg.gas > state.gas_left)
         return EVMC_OUT_OF_GAS;
 
+    if (has_value)
+    {
+        msg.gas += 2300;  // Add stipend.
+        state.gas_left += 2300;
+    }
+
     state.return_data.clear();
 
     if (state.msg.depth >= 1024)
-    {
-        if (has_value)
-            state.gas_left += 2300;  // Return unused stipend.
-        if (state.gas_left < 0)
-            return EVMC_OUT_OF_GAS;
         return EVMC_SUCCESS;
-    }
 
-    if (has_value)
-    {
-        const auto balance = intx::be::load<uint256>(state.host.get_balance(state.msg.destination));
-        if (balance < value)
-        {
-            state.gas_left += 2300;  // Return unused stipend.
-            if (state.gas_left < 0)
-                return EVMC_OUT_OF_GAS;
-            return EVMC_SUCCESS;
-        }
-
-        msg.gas += 2300;  // Add stipend.
-    }
+    if (has_value && intx::be::load<uint256>(state.host.get_balance(state.msg.destination)) < value)
+        return EVMC_SUCCESS;
 
     const auto result = state.host.call(msg);
     state.return_data.assign(result.output_data, result.output_size);
@@ -101,12 +85,8 @@ evmc_status_code call(ExecutionState& state) noexcept
     if (const auto copy_size = std::min(size_t(output_size), result.output_size); copy_size > 0)
         std::memcpy(&state.memory[size_t(output_offset)], result.output_data, copy_size);
 
-    auto gas_used = msg.gas - result.gas_left;
-    if (has_value)
-        gas_used -= 2300;
-
-    if ((state.gas_left -= gas_used) < 0)
-        return EVMC_OUT_OF_GAS;
+    const auto gas_used = msg.gas - result.gas_left;
+    state.gas_left -= gas_used;
     return EVMC_SUCCESS;
 }
 
