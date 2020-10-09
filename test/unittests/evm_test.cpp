@@ -93,6 +93,16 @@ TEST_F(evm, dup_stack_overflow)
     EXPECT_STATUS(EVMC_STACK_OVERFLOW);
 }
 
+TEST_F(evm, dup_stack_underflow)
+{
+    for (int i = 0; i < 16; ++i)
+    {
+        const auto op = evmc_opcode(OP_DUP1 + i);
+        execute((i * push(0)) + op);
+        EXPECT_STATUS(EVMC_STACK_UNDERFLOW);
+    }
+}
+
 TEST_F(evm, sub_and_swap)
 {
     execute(33, "600180810380829052602090f3");
