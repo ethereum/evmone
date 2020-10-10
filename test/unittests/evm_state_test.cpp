@@ -86,6 +86,31 @@ TEST_F(evm_state, sload_cost_pre_tangerine_whistle)
     EXPECT_EQ(account.storage.size(), 0);
 }
 
+TEST_F(evm_state, sstore_out_of_block_gas)
+{
+    const auto code = push(0) + sstore(0, 1) + OP_POP;
+
+    // Barely enough gas to execute successfully.
+    host.accounts[msg.destination] = {};  // Reset contract account.
+    execute(20011, code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 20011);
+
+    // Out of block gas - 1 too low.
+    host.accounts[msg.destination] = {};  // Reset contract account.
+    execute(20010, code);
+    EXPECT_STATUS(EVMC_OUT_OF_GAS);
+
+    // Out of block gas - 2 too low.
+    host.accounts[msg.destination] = {};  // Reset contract account.
+    execute(20009, code);
+    EXPECT_STATUS(EVMC_OUT_OF_GAS);
+
+    // SSTORE instructions out of gas.
+    host.accounts[msg.destination] = {};  // Reset contract account.
+    execute(20008, code);
+    EXPECT_STATUS(EVMC_OUT_OF_GAS);
+}
+
 TEST_F(evm_state, sstore_cost)
 {
     auto& storage = host.accounts[msg.destination].storage;
