@@ -12,6 +12,20 @@ namespace evmone
 {
 namespace
 {
+template <size_t Len>
+inline const uint8_t* load_push(
+    ExecutionState& state, const uint8_t* code, const uint8_t* code_end) noexcept
+{
+    // TODO: Also last full push can be ignored.
+    if (code + Len > code_end)  // Trimmed push data can be ignored.
+        return code_end;
+
+    uint8_t buffer[Len];
+    std::memcpy(buffer, code, Len);
+    state.stack.push(intx::be::load<intx::uint256>(buffer));
+    return code + Len;
+}
+
 inline evmc_status_code check_requirements(const char* const* instruction_names,
     const evmc_instruction_metrics* instruction_metrics, ExecutionState& state, uint8_t op) noexcept
 {
@@ -163,6 +177,102 @@ evmc_result baseline_execute(evmc_vm* /*vm*/, const evmc_host_interface* host,
             }
             break;
         }
+        case OP_PUSH1:
+            pc = load_push<1>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH2:
+            pc = load_push<2>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH3:
+            pc = load_push<3>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH4:
+            pc = load_push<4>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH5:
+            pc = load_push<5>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH6:
+            pc = load_push<6>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH7:
+            pc = load_push<7>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH8:
+            pc = load_push<8>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH9:
+            pc = load_push<9>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH10:
+            pc = load_push<10>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH11:
+            pc = load_push<11>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH12:
+            pc = load_push<12>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH13:
+            pc = load_push<13>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH14:
+            pc = load_push<14>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH15:
+            pc = load_push<15>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH16:
+            pc = load_push<16>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH17:
+            pc = load_push<17>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH18:
+            pc = load_push<18>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH19:
+            pc = load_push<19>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH20:
+            pc = load_push<20>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH21:
+            pc = load_push<21>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH22:
+            pc = load_push<22>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH23:
+            pc = load_push<23>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH24:
+            pc = load_push<24>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH25:
+            pc = load_push<25>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH26:
+            pc = load_push<26>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH27:
+            pc = load_push<27>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH28:
+            pc = load_push<28>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH29:
+            pc = load_push<29>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH30:
+            pc = load_push<30>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH31:
+            pc = load_push<31>(*state, pc + 1, code_end);
+            continue;
+        case OP_PUSH32:
+            pc = load_push<32>(*state, pc + 1, code_end);
+            continue;
         }
 
         ++pc;
