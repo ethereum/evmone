@@ -176,108 +176,14 @@ template <evmc_call_kind Kind, bool Static = false>
 const instruction* op_call(const instruction* instr, execution_state& state) noexcept
 {
     const auto gas_left_correction = state.current_block_cost - instr->arg.number;
+    state.gas_left += gas_left_correction;
+    const auto status = call<Kind, Static>(state);
+    if (status != EVMC_SUCCESS)
+        return state.exit(status);
 
-    auto gas = state.stack.pop();
-    const auto dst = intx::be::trunc<evmc::address>(state.stack.pop());
-    const auto value = (Static || Kind == EVMC_DELEGATECALL) ? uint256{0} : state.stack.pop();
-    const auto input_offset = state.stack.pop();
-    const auto input_size = state.stack.pop();
-    const auto output_offset = state.stack.pop();
-    const auto output_size = state.stack.pop();
-
-    state.stack.push(0);  // Assume failure.
-
-    if (!check_memory(state, input_offset, input_size))
+    if ((state.gas_left -= gas_left_correction) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
 
-    if (!check_memory(state, output_offset, output_size))
-        return state.exit(EVMC_OUT_OF_GAS);
-
-    auto msg = evmc_message{};
-    msg.kind = Kind;
-    msg.flags = Static ? uint32_t{EVMC_STATIC} : state.msg.flags;
-    msg.depth = state.msg.depth + 1;
-    msg.destination = dst;
-    msg.sender = (Kind == EVMC_DELEGATECALL) ? state.msg.sender : state.msg.destination;
-    msg.value =
-        (Kind == EVMC_DELEGATECALL) ? state.msg.value : intx::be::store<evmc::uint256be>(value);
-
-    if (size_t(input_size) > 0)
-    {
-        msg.input_data = &state.memory[size_t(input_offset)];
-        msg.input_size = size_t(input_size);
-    }
-
-    auto gas_left = state.gas_left + gas_left_correction;
-
-    auto cost = 0;
-    const auto has_value = value != 0;
-    if (has_value)
-        cost += 9000;
-
-    if constexpr (Kind == EVMC_CALL)
-    {
-        if (has_value && state.msg.flags & EVMC_STATIC)
-            return state.exit(EVMC_STATIC_MODE_VIOLATION);
-
-        if (has_value || state.rev < EVMC_SPURIOUS_DRAGON)
-        {
-            if (!state.host.account_exists(dst))
-                cost += 25000;
-        }
-    }
-
-    if ((gas_left -= cost) < 0)
-        return state.exit(EVMC_OUT_OF_GAS);
-
-    msg.gas = std::numeric_limits<int64_t>::max();
-    if (gas < msg.gas)
-        msg.gas = static_cast<int64_t>(gas);
-
-    if (state.rev >= EVMC_TANGERINE_WHISTLE)  // TODO: Always true for STATICCALL.
-        msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
-    else if (msg.gas > gas_left)
-        return state.exit(EVMC_OUT_OF_GAS);
-
-    state.return_data.clear();
-
-    state.gas_left -= cost;
-    if (state.msg.depth >= 1024)
-    {
-        if (has_value)
-            state.gas_left += 2300;  // Return unused stipend.
-        if (state.gas_left < 0)
-            return state.exit(EVMC_OUT_OF_GAS);
-        return ++instr;
-    }
-
-    if (has_value)
-    {
-        const auto balance = intx::be::load<uint256>(state.host.get_balance(state.msg.destination));
-        if (balance < value)
-        {
-            state.gas_left += 2300;  // Return unused stipend.
-            if (state.gas_left < 0)
-                return state.exit(EVMC_OUT_OF_GAS);
-            return ++instr;
-        }
-
-        msg.gas += 2300;  // Add stipend.
-    }
-
-    const auto result = state.host.call(msg);
-    state.return_data.assign(result.output_data, result.output_size);
-    state.stack.top() = result.status_code == EVMC_SUCCESS;
-
-    if (const auto copy_size = std::min(size_t(output_size), result.output_size); copy_size > 0)
-        std::memcpy(&state.memory[size_t(output_offset)], result.output_data, copy_size);
-
-    auto gas_used = msg.gas - result.gas_left;
-    if (has_value)
-        gas_used -= 2300;
-
-    if ((state.gas_left -= gas_used) < 0)
-        return state.exit(EVMC_OUT_OF_GAS);
     return ++instr;
 }
 
@@ -286,66 +192,14 @@ const instruction* op_create(const instruction* instr, execution_state& state) n
 {
     const auto gas_left_correction = state.current_block_cost - instr->arg.number;
 
-    if (state.msg.flags & EVMC_STATIC)
-        return state.exit(EVMC_STATIC_MODE_VIOLATION);
+    state.gas_left += gas_left_correction;
+    const auto status = create<Kind>(state);
+    if (status != EVMC_SUCCESS)
+        return state.exit(status);
 
-    auto endowment = state.stack[0];
-    auto init_code_offset = state.stack[1];
-    auto init_code_size = state.stack[2];
-
-    if (!check_memory(state, init_code_offset, init_code_size))
+    if ((state.gas_left -= gas_left_correction) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
 
-    auto salt = uint256{};
-    if constexpr (Kind == EVMC_CREATE2)
-    {
-        salt = state.stack[3];
-        auto salt_cost = num_words(static_cast<size_t>(init_code_size)) * 6;
-        state.gas_left -= salt_cost;
-        if (state.gas_left < 0)
-            return state.exit(EVMC_OUT_OF_GAS);
-        state.stack.pop();
-    }
-
-    state.stack.pop();
-    state.stack.pop();
-    state.stack[0] = 0;
-
-    state.return_data.clear();
-
-    if (state.msg.depth >= 1024)
-        return ++instr;
-
-    if (endowment != 0)
-    {
-        const auto balance = intx::be::load<uint256>(state.host.get_balance(state.msg.destination));
-        if (balance < endowment)
-            return ++instr;
-    }
-
-    auto msg = evmc_message{};
-    msg.gas = state.gas_left + gas_left_correction;
-    if (state.rev >= EVMC_TANGERINE_WHISTLE)
-        msg.gas = msg.gas - msg.gas / 64;
-
-    msg.kind = Kind;
-    if (size_t(init_code_size) > 0)
-    {
-        msg.input_data = &state.memory[size_t(init_code_offset)];
-        msg.input_size = size_t(init_code_size);
-    }
-    msg.sender = state.msg.destination;
-    msg.depth = state.msg.depth + 1;
-    msg.create2_salt = intx::be::store<evmc::bytes32>(salt);
-    msg.value = intx::be::store<evmc::uint256be>(endowment);
-
-    auto result = state.host.call(msg);
-    state.return_data.assign(result.output_data, result.output_size);
-    if (result.status_code == EVMC_SUCCESS)
-        state.stack[0] = intx::be::load<uint256>(result.create_address);
-
-    if ((state.gas_left -= msg.gas - result.gas_left) < 0)
-        return state.exit(EVMC_OUT_OF_GAS);
     return ++instr;
 }
 
