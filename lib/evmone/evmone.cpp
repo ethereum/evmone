@@ -23,6 +23,19 @@ constexpr evmc_capabilities_flagset get_capabilities(evmc_vm* /*vm*/) noexcept
 {
     return EVMC_CAPABILITY_EVM1;
 }
+
+evmc_set_option_result set_option(evmc_vm* /*vm*/, char const* name, char const* value) noexcept
+{
+    if (name[0] == 'O' && name[1] == '\0')
+    {
+        if (value[0] == '2' && value[1] == '\0')  // O=2
+        {
+            return EVMC_SET_OPTION_SUCCESS;
+        }
+        return EVMC_SET_OPTION_INVALID_VALUE;
+    }
+    return EVMC_SET_OPTION_INVALID_NAME;
+}
 }  // namespace
 }  // namespace evmone
 
@@ -36,7 +49,7 @@ EVMC_EXPORT evmc_vm* evmc_create_evmone() noexcept
         evmone::destroy,
         evmone::execute,
         evmone::get_capabilities,
-        /* set_option(): */ nullptr,
+        evmone::set_option,
     };
 }
 }
