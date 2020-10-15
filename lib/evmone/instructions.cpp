@@ -175,27 +175,7 @@ const instruction* op_undefined(const instruction*, execution_state& state) noex
 
 const instruction* op_selfdestruct(const instruction*, execution_state& state) noexcept
 {
-    if (state.msg.flags & EVMC_STATIC)
-        return state.exit(EVMC_STATIC_MODE_VIOLATION);
-
-    const auto addr = intx::be::trunc<evmc::address>(state.stack[0]);
-
-    if (state.rev >= EVMC_TANGERINE_WHISTLE)
-    {
-        if (state.rev == EVMC_TANGERINE_WHISTLE || state.host.get_balance(state.msg.destination))
-        {
-            // After TANGERINE_WHISTLE apply additional cost of
-            // sending value to a non-existing account.
-            if (!state.host.account_exists(addr))
-            {
-                if ((state.gas_left -= 25000) < 0)
-                    return state.exit(EVMC_OUT_OF_GAS);
-            }
-        }
-    }
-
-    state.host.selfdestruct(state.msg.destination, addr);
-    return state.exit(EVMC_SUCCESS);
+    return state.exit(selfdestruct(state));
 }
 
 const instruction* opx_beginblock(const instruction* instr, execution_state& state) noexcept
