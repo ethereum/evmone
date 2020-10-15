@@ -45,11 +45,6 @@ struct execution_state : ExecutionState
 {
     using ExecutionState::ExecutionState;
 
-    evmc_status_code status = EVMC_SUCCESS;
-
-    size_t output_offset = 0;
-    size_t output_size = 0;
-
     /// The gas cost of the current block.
     ///
     /// This is only needed to correctly calculate the "current gas left" value.

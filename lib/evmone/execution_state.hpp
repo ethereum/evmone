@@ -89,6 +89,9 @@ struct ExecutionState
     const evmc_revision rev = {};
     bytes return_data;
     const bytes_view code;
+    evmc_status_code status = EVMC_SUCCESS;
+    size_t output_offset = 0;
+    size_t output_size = 0;
 
     ExecutionState(const evmc_message& message, evmc_revision revision,
         const evmc_host_interface& host_interface, evmc_host_context* host_ctx,
