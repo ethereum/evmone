@@ -637,9 +637,69 @@ evmc_result baseline_execute(evmc_vm* /*vm*/, const evmc_host_interface* host,
             break;
         }
 
+        case OP_CREATE:
+        {
+            const auto status_code = create<EVMC_CREATE>(*state);
+            if (status_code != EVMC_SUCCESS)
+            {
+                state->status = status_code;
+                goto exit;
+            }
+            break;
+        }
+        case OP_CALL:
+        {
+            const auto status_code = call<EVMC_CALL>(*state);
+            if (status_code != EVMC_SUCCESS)
+            {
+                state->status = status_code;
+                goto exit;
+            }
+            break;
+        }
+        case OP_CALLCODE:
+        {
+            const auto status_code = call<EVMC_CALLCODE>(*state);
+            if (status_code != EVMC_SUCCESS)
+            {
+                state->status = status_code;
+                goto exit;
+            }
+            break;
+        }
         case OP_RETURN:
             op_return<EVMC_SUCCESS>(*state);
             goto exit;
+        case OP_DELEGATECALL:
+        {
+            const auto status_code = call<EVMC_DELEGATECALL>(*state);
+            if (status_code != EVMC_SUCCESS)
+            {
+                state->status = status_code;
+                goto exit;
+            }
+            break;
+        }
+        case OP_STATICCALL:
+        {
+            const auto status_code = call<EVMC_CALL, true>(*state);
+            if (status_code != EVMC_SUCCESS)
+            {
+                state->status = status_code;
+                goto exit;
+            }
+            break;
+        }
+        case OP_CREATE2:
+        {
+            const auto status_code = create<EVMC_CREATE2>(*state);
+            if (status_code != EVMC_SUCCESS)
+            {
+                state->status = status_code;
+                goto exit;
+            }
+            break;
+        }
         case OP_REVERT:
             op_return<EVMC_REVERT>(*state);
             goto exit;
