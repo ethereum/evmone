@@ -13,9 +13,10 @@ namespace evmone
 {
 namespace
 {
-void destroy(evmc_vm* /*vm*/) noexcept
+void destroy(evmc_vm* vm) noexcept
 {
-    // Do nothing as evmone instance is singleton.
+    // TODO: Mark function with [[gnu:nonnull]] or add CHECK().
+    delete vm;
 }
 
 constexpr evmc_capabilities_flagset get_capabilities(evmc_vm* /*vm*/) noexcept
@@ -28,7 +29,7 @@ constexpr evmc_capabilities_flagset get_capabilities(evmc_vm* /*vm*/) noexcept
 extern "C" {
 EVMC_EXPORT evmc_vm* evmc_create_evmone() noexcept
 {
-    static auto instance = evmc_vm{
+    return new evmc_vm{
         EVMC_ABI_VERSION,
         "evmone",
         PROJECT_VERSION,
@@ -37,6 +38,5 @@ EVMC_EXPORT evmc_vm* evmc_create_evmone() noexcept
         evmone::get_capabilities,
         /* set_option(): */ nullptr,
     };
-    return &instance;
 }
 }
