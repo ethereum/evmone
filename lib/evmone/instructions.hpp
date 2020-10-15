@@ -668,4 +668,30 @@ evmc_status_code call(ExecutionState& state) noexcept;
 
 template <evmc_call_kind Kind>
 evmc_status_code create(ExecutionState& state) noexcept;
+
+
+inline evmc_status_code selfdestruct(ExecutionState& state) noexcept
+{
+    if (state.msg.flags & EVMC_STATIC)
+        return EVMC_STATIC_MODE_VIOLATION;
+
+    const auto beneficiary = intx::be::trunc<evmc::address>(state.stack[0]);
+
+    if (state.rev >= EVMC_TANGERINE_WHISTLE)
+    {
+        if (state.rev == EVMC_TANGERINE_WHISTLE || state.host.get_balance(state.msg.destination))
+        {
+            // After TANGERINE_WHISTLE apply additional cost of
+            // sending value to a non-existing account.
+            if (!state.host.account_exists(beneficiary))
+            {
+                if ((state.gas_left -= 25000) < 0)
+                    return EVMC_OUT_OF_GAS;
+            }
+        }
+    }
+
+    state.host.selfdestruct(state.msg.destination, beneficiary);
+    return EVMC_SUCCESS;
+}
 }  // namespace evmone
