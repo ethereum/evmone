@@ -1,5 +1,5 @@
 // evmone: Fast Ethereum Virtual Machine implementation
-// Copyright 2018-2019 The evmone Authors.
+// Copyright 2018-2020 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
 /// @file
@@ -9,21 +9,32 @@
 #include "execution.hpp"
 #include <evmone/evmone.h>
 
+namespace evmone
+{
+namespace
+{
+void destroy(evmc_vm* /*vm*/) noexcept
+{
+    // Do nothing as evmone instance is singleton.
+}
+
+constexpr evmc_capabilities_flagset get_capabilities(evmc_vm* /*vm*/) noexcept
+{
+    return EVMC_CAPABILITY_EVM1;
+}
+}  // namespace
+}  // namespace evmone
+
 extern "C" {
 EVMC_EXPORT evmc_vm* evmc_create_evmone() noexcept
 {
-    static constexpr auto destroy = [](evmc_vm*) noexcept {};
-    static constexpr auto get_capabilities = [](evmc_vm*) noexcept {
-        return evmc_capabilities_flagset{EVMC_CAPABILITY_EVM1};
-    };
-
     static auto instance = evmc_vm{
         EVMC_ABI_VERSION,
         "evmone",
         PROJECT_VERSION,
-        destroy,
+        evmone::destroy,
         evmone::execute,
-        get_capabilities,
+        evmone::get_capabilities,
         /* set_option(): */ nullptr,
     };
     return &instance;
