@@ -7,9 +7,9 @@
 #include "evm_fixture.hpp"
 
 using namespace evmc::literals;
-using evm_calls = evmone::test::evm;
+using evmone::test::evm;
 
-TEST_F(evm_calls, delegatecall)
+TEST_P(evm, delegatecall)
 {
     auto code = bytecode{};
     code += "6001600003600052";              // m[0] = 0xffffff...
@@ -39,7 +39,7 @@ TEST_F(evm_calls, delegatecall)
     EXPECT_EQ(output, (bytes{0xff, 0xff, 0xff, 0xff, 0xa, 0xb, 0xc, 0xff}));
 }
 
-TEST_F(evm_calls, delegatecall_static)
+TEST_P(evm, delegatecall_static)
 {
     // Checks if DELEGATECALL forwards the "static" flag.
     msg.flags = EVMC_STATIC;
@@ -51,7 +51,7 @@ TEST_F(evm_calls, delegatecall_static)
     EXPECT_GAS_USED(EVMC_SUCCESS, 719);
 }
 
-TEST_F(evm_calls, delegatecall_oog_depth_limit)
+TEST_P(evm, delegatecall_oog_depth_limit)
 {
     rev = EVMC_HOMESTEAD;
     msg.depth = 1024;
@@ -65,7 +65,7 @@ TEST_F(evm_calls, delegatecall_oog_depth_limit)
     EXPECT_STATUS(EVMC_OUT_OF_GAS);
 }
 
-TEST_F(evm_calls, create)
+TEST_P(evm, create)
 {
     auto& account = host.accounts[{}];
     account.set_balance(1);
@@ -89,7 +89,7 @@ TEST_F(evm_calls, create)
     EXPECT_EQ(call_msg.input_size, 0x20);
 }
 
-TEST_F(evm_calls, create_gas)
+TEST_P(evm, create_gas)
 {
     auto c = size_t{0};
     for (auto r : {EVMC_HOMESTEAD, EVMC_TANGERINE_WHISTLE})
@@ -104,7 +104,7 @@ TEST_F(evm_calls, create_gas)
     }
 }
 
-TEST_F(evm_calls, create2)
+TEST_P(evm, create2)
 {
     rev = EVMC_CONSTANTINOPLE;
     auto& account = host.accounts[{}];
@@ -134,7 +134,7 @@ TEST_F(evm_calls, create2)
     EXPECT_EQ(call_msg.input_size, 0x41);
 }
 
-TEST_F(evm_calls, create2_salt_cost)
+TEST_P(evm, create2_salt_cost)
 {
     rev = EVMC_CONSTANTINOPLE;
     auto code = "600060208180f5";
@@ -153,7 +153,7 @@ TEST_F(evm_calls, create2_salt_cost)
     EXPECT_EQ(host.recorded_calls.size(), 1);  // No another CREATE2.
 }
 
-TEST_F(evm_calls, create_balance_too_low)
+TEST_P(evm, create_balance_too_low)
 {
     rev = EVMC_CONSTANTINOPLE;
     host.accounts[{}].set_balance(1);
@@ -166,7 +166,7 @@ TEST_F(evm_calls, create_balance_too_low)
     }
 }
 
-TEST_F(evm_calls, create_failure)
+TEST_P(evm, create_failure)
 {
     host.call_result.create_address = 0x00000000000000000000000000000000000000ce_address;
     const auto create_address =
@@ -203,7 +203,7 @@ TEST_F(evm_calls, create_failure)
     }
 }
 
-TEST_F(evm_calls, call_failing_with_value)
+TEST_P(evm, call_failing_with_value)
 {
     host.accounts[0x00000000000000000000000000000000000000aa_address] = {};
     for (auto op : {OP_CALL, OP_CALLCODE})
@@ -228,7 +228,7 @@ TEST_F(evm_calls, call_failing_with_value)
     }
 }
 
-TEST_F(evm_calls, call_with_value)
+TEST_P(evm, call_with_value)
 {
     constexpr auto code = "60ff600060ff6000600160aa618000f150";
 
@@ -252,7 +252,7 @@ TEST_F(evm_calls, call_with_value)
     EXPECT_EQ(call_msg.sender, call_sender);
 }
 
-TEST_F(evm_calls, call_with_value_depth_limit)
+TEST_P(evm, call_with_value_depth_limit)
 {
     auto call_dst = evmc_address{};
     call_dst.bytes[19] = 0xaa;
@@ -265,7 +265,7 @@ TEST_F(evm_calls, call_with_value_depth_limit)
     EXPECT_EQ(host.recorded_calls.size(), 0);
 }
 
-TEST_F(evm_calls, call_depth_limit)
+TEST_P(evm, call_depth_limit)
 {
     rev = EVMC_CONSTANTINOPLE;
     msg.depth = 1024;
@@ -280,7 +280,7 @@ TEST_F(evm_calls, call_depth_limit)
     }
 }
 
-TEST_F(evm_calls, call_output)
+TEST_P(evm, call_output)
 {
     static bool result_is_correct = false;
     static uint8_t call_output[] = {0xa, 0xb};
@@ -319,7 +319,7 @@ TEST_F(evm_calls, call_output)
     }
 }
 
-TEST_F(evm_calls, call_high_gas)
+TEST_P(evm, call_high_gas)
 {
     rev = EVMC_HOMESTEAD;
     auto call_dst = evmc_address{};
@@ -333,7 +333,7 @@ TEST_F(evm_calls, call_high_gas)
     }
 }
 
-TEST_F(evm_calls, call_value_zero_to_nonexistent_account)
+TEST_P(evm, call_value_zero_to_nonexistent_account)
 {
     constexpr auto call_gas = 6000;
     host.call_result.gas_left = 1000;
@@ -351,7 +351,7 @@ TEST_F(evm_calls, call_value_zero_to_nonexistent_account)
     EXPECT_EQ(call_msg.gas, 6000);
 }
 
-TEST_F(evm_calls, call_new_account_creation_cost)
+TEST_P(evm, call_new_account_creation_cost)
 {
     constexpr auto call_dst = 0x00000000000000000000000000000000000000ad_address;
     const auto code = 4 * push(0) + calldataload(0) + push({call_dst.bytes, sizeof(call_dst)}) +
@@ -417,7 +417,7 @@ TEST_F(evm_calls, call_new_account_creation_cost)
     host.recorded_calls.clear();
 }
 
-TEST_F(evm_calls, callcode_new_account_create)
+TEST_P(evm, callcode_new_account_create)
 {
     constexpr auto code = "60008080806001600061c350f250";
     constexpr auto call_sender = 0x5e4d00000000000000000000000000000000d4e5_address;
@@ -436,7 +436,7 @@ TEST_F(evm_calls, callcode_new_account_create)
     EXPECT_EQ(call_msg.sender, call_sender);
 }
 
-TEST_F(evm_calls, call_then_oog)
+TEST_P(evm, call_then_oog)
 {
     // Performs a CALL then OOG in the same code block.
     auto call_dst = evmc_address{};
@@ -457,7 +457,7 @@ TEST_F(evm_calls, call_then_oog)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
-TEST_F(evm_calls, callcode_then_oog)
+TEST_P(evm, callcode_then_oog)
 {
     // Performs a CALLCODE then OOG in the same code block.
     host.call_result.status_code = EVMC_FAILURE;
@@ -473,7 +473,7 @@ TEST_F(evm_calls, callcode_then_oog)
     EXPECT_EQ(call_msg.gas, 100);
 }
 
-TEST_F(evm_calls, delegatecall_then_oog)
+TEST_P(evm, delegatecall_then_oog)
 {
     // Performs a CALL then OOG in the same code block.
     auto call_dst = evmc_address{};
@@ -490,7 +490,7 @@ TEST_F(evm_calls, delegatecall_then_oog)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
-TEST_F(evm_calls, staticcall_then_oog)
+TEST_P(evm, staticcall_then_oog)
 {
     // Performs a STATICCALL then OOG in the same code block.
     auto call_dst = evmc_address{};
@@ -511,7 +511,7 @@ TEST_F(evm_calls, staticcall_then_oog)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
-TEST_F(evm_calls, staticcall_input)
+TEST_P(evm, staticcall_input)
 {
     const auto code = mstore(3, 0x010203) + staticcall(0).gas(0xee).input(32, 3);
     execute(code);
@@ -522,7 +522,7 @@ TEST_F(evm_calls, staticcall_input)
     EXPECT_EQ(hex(bytes_view(call_msg.input_data, call_msg.input_size)), "010203");
 }
 
-TEST_F(evm_calls, call_with_value_low_gas)
+TEST_P(evm, call_with_value_low_gas)
 {
     // Create the call destination account.
     host.accounts[0x0000000000000000000000000000000000000000_address] = {};
@@ -535,7 +535,7 @@ TEST_F(evm_calls, call_with_value_low_gas)
     }
 }
 
-TEST_F(evm_calls, call_oog_after_balance_check)
+TEST_P(evm, call_oog_after_balance_check)
 {
     // Create the call destination account.
     host.accounts[0x0000000000000000000000000000000000000000_address] = {};
@@ -547,7 +547,7 @@ TEST_F(evm_calls, call_oog_after_balance_check)
     }
 }
 
-TEST_F(evm_calls, call_oog_after_depth_check)
+TEST_P(evm, call_oog_after_depth_check)
 {
     // Create the call destination account.
     host.accounts[0x0000000000000000000000000000000000000000_address] = {};
@@ -569,7 +569,7 @@ TEST_F(evm_calls, call_oog_after_depth_check)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
-TEST_F(evm_calls, create_oog_after)
+TEST_P(evm, create_oog_after)
 {
     rev = EVMC_CONSTANTINOPLE;
     for (auto op : {OP_CREATE, OP_CREATE2})
@@ -580,7 +580,7 @@ TEST_F(evm_calls, create_oog_after)
     }
 }
 
-TEST_F(evm_calls, returndatasize_before_call)
+TEST_P(evm, returndatasize_before_call)
 {
     execute("3d60005360016000f3");
     EXPECT_EQ(gas_used, 17);
@@ -588,7 +588,7 @@ TEST_F(evm_calls, returndatasize_before_call)
     EXPECT_EQ(result.output_data[0], 0);
 }
 
-TEST_F(evm_calls, returndatasize)
+TEST_P(evm, returndatasize)
 {
     uint8_t call_output[13];
     host.call_result.output_size = std::size(call_output);
@@ -615,7 +615,7 @@ TEST_F(evm_calls, returndatasize)
     EXPECT_EQ(result.output_data[0], 0);
 }
 
-TEST_F(evm_calls, returndatacopy)
+TEST_P(evm, returndatacopy)
 {
     uint8_t call_output[32] = {1, 2, 3, 4, 5, 6, 7};
     host.call_result.output_size = std::size(call_output);
@@ -632,7 +632,7 @@ TEST_F(evm_calls, returndatacopy)
     EXPECT_EQ(result.output_data[7], 0);
 }
 
-TEST_F(evm_calls, returndatacopy_empty)
+TEST_P(evm, returndatacopy_empty)
 {
     auto code = "600080808060aa60fff4600080803e60016000f3";
     execute(code);
@@ -641,7 +641,7 @@ TEST_F(evm_calls, returndatacopy_empty)
     EXPECT_EQ(result.output_data[0], 0);
 }
 
-TEST_F(evm_calls, returndatacopy_cost)
+TEST_P(evm, returndatacopy_cost)
 {
     auto call_output = uint8_t{};
     host.call_result.output_data = &call_output;
@@ -653,7 +653,7 @@ TEST_F(evm_calls, returndatacopy_cost)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
-TEST_F(evm_calls, returndatacopy_outofrange)
+TEST_P(evm, returndatacopy_outofrange)
 {
     auto call_output = uint8_t{};
     host.call_result.output_data = &call_output;
