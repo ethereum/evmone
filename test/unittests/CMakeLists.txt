@@ -9,6 +9,7 @@ find_package(GTest CONFIG REQUIRED)
 add_executable(evmone-unittests
     analysis_test.cpp
     bytecode_test.cpp
+    evm_fixture.cpp
     evm_fixture.hpp
     evm_test.cpp
     evm_calls_test.cpp
@@ -17,7 +18,6 @@ add_executable(evmone-unittests
     evmone_test.cpp
     op_table_test.cpp
     utils_test.cpp
-    vm_loader_evmone.cpp
 )
 target_link_libraries(evmone-unittests PRIVATE evmone testutils evmc::instructions GTest::gtest GTest::gtest_main)
 target_include_directories(evmone-unittests PRIVATE ${evmone_private_include_dir})
