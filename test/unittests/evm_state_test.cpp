@@ -8,9 +8,9 @@
 #include "evm_fixture.hpp"
 
 using namespace evmc::literals;
-using evm_state = evmone::test::evm;
+using evmone::test::evm;
 
-TEST_F(evm_state, code)
+TEST_P(evm, code)
 {
     // CODESIZE 2 0 CODECOPY RETURN(0,9)
     const auto s = bytecode{"38600260003960096000f3"};
@@ -20,7 +20,7 @@ TEST_F(evm_state, code)
     EXPECT_EQ(bytes_view(&result.output_data[0], 9), bytes_view(&s[2], 9));
 }
 
-TEST_F(evm_state, codecopy_combinations)
+TEST_P(evm, codecopy_combinations)
 {
     // The CODECOPY arguments are provided in calldata: first byte is index, second byte is size.
     // The whole copied code is returned.
@@ -56,7 +56,7 @@ TEST_F(evm_state, codecopy_combinations)
     EXPECT_EQ(output, code.substr(0x12, 1));
 }
 
-TEST_F(evm_state, storage)
+TEST_P(evm, storage)
 {
     host.accounts[msg.destination] = {};
     const auto code = sstore(0xee, 0xff) + sload(0xee) + mstore8(0) + ret(0, 1);
@@ -67,7 +67,7 @@ TEST_F(evm_state, storage)
     EXPECT_EQ(result.output_data[0], 0xff);
 }
 
-TEST_F(evm_state, sstore_pop_stack)
+TEST_P(evm, sstore_pop_stack)
 {
     host.accounts[msg.destination] = {};
     execute(100000, bytecode{"60008060015560005360016000f3"});
@@ -76,7 +76,7 @@ TEST_F(evm_state, sstore_pop_stack)
     EXPECT_EQ(result.output_data[0], 0);
 }
 
-TEST_F(evm_state, sload_cost_pre_tangerine_whistle)
+TEST_P(evm, sload_cost_pre_tangerine_whistle)
 {
     rev = EVMC_HOMESTEAD;
     const auto& account = host.accounts[msg.destination];
@@ -86,7 +86,7 @@ TEST_F(evm_state, sload_cost_pre_tangerine_whistle)
     EXPECT_EQ(account.storage.size(), 0);
 }
 
-TEST_F(evm_state, sstore_out_of_block_gas)
+TEST_P(evm, sstore_out_of_block_gas)
 {
     const auto code = push(0) + sstore(0, 1) + OP_POP;
 
@@ -111,7 +111,7 @@ TEST_F(evm_state, sstore_out_of_block_gas)
     EXPECT_STATUS(EVMC_OUT_OF_GAS);
 }
 
-TEST_F(evm_state, sstore_cost)
+TEST_P(evm, sstore_cost)
 {
     auto& storage = host.accounts[msg.destination].storage;
 
@@ -223,7 +223,7 @@ TEST_F(evm_state, sstore_cost)
     }
 }
 
-TEST_F(evm_state, sstore_below_stipend)
+TEST_P(evm, sstore_below_stipend)
 {
     const auto code = sstore(0, 0);
 
@@ -243,7 +243,7 @@ TEST_F(evm_state, sstore_below_stipend)
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
 }
 
-TEST_F(evm_state, tx_context)
+TEST_P(evm, tx_context)
 {
     rev = EVMC_ISTANBUL;
 
@@ -273,7 +273,7 @@ TEST_F(evm_state, tx_context)
     EXPECT_EQ(result.output_data[1], 0xdd);
 }
 
-TEST_F(evm_state, balance)
+TEST_P(evm, balance)
 {
     host.accounts[msg.destination].set_balance(0x0504030201);
     auto code = bytecode{} + OP_ADDRESS + OP_BALANCE + mstore(0) + ret(32 - 6, 6);
@@ -288,7 +288,7 @@ TEST_F(evm_state, balance)
     EXPECT_EQ(result.output_data[5], 0x01);
 }
 
-TEST_F(evm_state, account_info_homestead)
+TEST_P(evm, account_info_homestead)
 {
     rev = EVMC_HOMESTEAD;
     host.accounts[msg.destination].set_balance(1);
@@ -308,7 +308,7 @@ TEST_F(evm_state, account_info_homestead)
     EXPECT_EQ(result.output_data[0], 1);
 }
 
-TEST_F(evm_state, selfbalance)
+TEST_P(evm, selfbalance)
 {
     host.accounts[msg.destination].set_balance(0x0504030201);
     // NOTE: adding push here to balance out the stack pre-Istanbul (needed to get undefined
@@ -331,7 +331,7 @@ TEST_F(evm_state, selfbalance)
     EXPECT_EQ(result.output_data[5], 0x01);
 }
 
-TEST_F(evm_state, log)
+TEST_P(evm, log)
 {
     for (auto op : {OP_LOG0, OP_LOG1, OP_LOG2, OP_LOG3, OP_LOG4})
     {
@@ -354,7 +354,7 @@ TEST_F(evm_state, log)
     }
 }
 
-TEST_F(evm_state, log0_empty)
+TEST_P(evm, log0_empty)
 {
     auto code = push(0) + OP_DUP1 + OP_LOG0;
     execute(code);
@@ -364,7 +364,7 @@ TEST_F(evm_state, log0_empty)
     EXPECT_EQ(last_log.data.size(), 0);
 }
 
-TEST_F(evm_state, log_data_cost)
+TEST_P(evm, log_data_cost)
 {
     for (auto op : {OP_LOG0, OP_LOG1, OP_LOG2, OP_LOG3, OP_LOG4})
     {
@@ -385,7 +385,7 @@ TEST_F(evm_state, log_data_cost)
     }
 }
 
-TEST_F(evm_state, selfdestruct)
+TEST_P(evm, selfdestruct)
 {
     rev = EVMC_SPURIOUS_DRAGON;
     execute("6009ff");
@@ -409,7 +409,7 @@ TEST_F(evm_state, selfdestruct)
     EXPECT_EQ(host.recorded_selfdestructs.back().beneficiary.bytes[19], 8);
 }
 
-TEST_F(evm_state, selfdestruct_with_balance)
+TEST_P(evm, selfdestruct_with_balance)
 {
     constexpr auto beneficiary = 0x00000000000000000000000000000000000000be_address;
     const auto code = push({beneficiary.bytes, sizeof(beneficiary)}) + OP_SELFDESTRUCT;
@@ -582,7 +582,7 @@ TEST_F(evm_state, selfdestruct_with_balance)
 }
 
 
-TEST_F(evm_state, blockhash)
+TEST_P(evm, blockhash)
 {
     host.block_hash.bytes[13] = 0x13;
 
@@ -613,7 +613,7 @@ TEST_F(evm_state, blockhash)
     EXPECT_EQ(host.recorded_blockhashes.back(), 0);
 }
 
-TEST_F(evm_state, extcode)
+TEST_P(evm, extcode)
 {
     auto addr = evmc_address{};
     std::fill(std::begin(addr.bytes), std::end(addr.bytes), uint8_t{0xff});
@@ -636,7 +636,7 @@ TEST_F(evm_state, extcode)
     EXPECT_EQ(host.recorded_account_accesses[1].bytes[19], 0xfe);
 }
 
-TEST_F(evm_state, extcodesize)
+TEST_P(evm, extcodesize)
 {
     constexpr auto addr = 0x0000000000000000000000000000000000000002_address;
     host.accounts[addr].code = {'\0'};
@@ -644,7 +644,7 @@ TEST_F(evm_state, extcodesize)
     EXPECT_OUTPUT_INT(1);
 }
 
-TEST_F(evm_state, extcodecopy_big_index)
+TEST_P(evm, extcodecopy_big_index)
 {
     constexpr auto index = uint64_t{std::numeric_limits<uint32_t>::max()} + 1;
     const auto code = dup1(1) + push(index) + dup1(0) + OP_EXTCODECOPY + ret(0, {});
@@ -652,7 +652,7 @@ TEST_F(evm_state, extcodecopy_big_index)
     EXPECT_EQ(output, from_hex("00"));
 }
 
-TEST_F(evm_state, extcodehash)
+TEST_P(evm, extcodehash)
 {
     auto& hash = host.accounts[{}].codehash;
     std::fill(std::begin(hash.bytes), std::end(hash.bytes), uint8_t{0xee});
@@ -672,21 +672,21 @@ TEST_F(evm_state, extcodehash)
         bytes_view(std::begin(hash.bytes), std::size(hash.bytes)));
 }
 
-TEST_F(evm_state, codecopy_empty)
+TEST_P(evm, codecopy_empty)
 {
     execute(push(0) + 2 * OP_DUP1 + OP_CODECOPY + OP_MSIZE + ret_top());
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(std::count(result.output_data, result.output_data + result.output_size, 0), 32);
 }
 
-TEST_F(evm_state, extcodecopy_empty)
+TEST_P(evm, extcodecopy_empty)
 {
     execute(push(0) + 3 * OP_DUP1 + OP_EXTCODECOPY + OP_MSIZE + ret_top());
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(std::count(result.output_data, result.output_data + result.output_size, 0), 32);
 }
 
-TEST_F(evm_state, codecopy_memory_cost)
+TEST_P(evm, codecopy_memory_cost)
 {
     auto code = push(1) + push(0) + push(0) + OP_CODECOPY;
     execute(18, code);
@@ -695,7 +695,7 @@ TEST_F(evm_state, codecopy_memory_cost)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
-TEST_F(evm_state, extcodecopy_memory_cost)
+TEST_P(evm, extcodecopy_memory_cost)
 {
     auto code = push(1) + push(0) + 2 * OP_DUP1 + OP_EXTCODECOPY;
     execute(718, code);
@@ -704,7 +704,7 @@ TEST_F(evm_state, extcodecopy_memory_cost)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
-TEST_F(evm_state, extcodecopy_nonzero_index)
+TEST_P(evm, extcodecopy_nonzero_index)
 {
     constexpr auto addr = 0x000000000000000000000000000000000000000a_address;
     constexpr auto index = 15;
@@ -723,7 +723,7 @@ TEST_F(evm_state, extcodecopy_nonzero_index)
     EXPECT_EQ(host.recorded_account_accesses.back().bytes[19], 0xa);
 }
 
-TEST_F(evm_state, extcodecopy_fill_tail)
+TEST_P(evm, extcodecopy_fill_tail)
 {
     auto addr = evmc_address{};
     addr.bytes[19] = 0xa;
@@ -741,7 +741,7 @@ TEST_F(evm_state, extcodecopy_fill_tail)
     EXPECT_EQ(result.output_data[1], 0);
 }
 
-TEST_F(evm_state, extcodecopy_buffer_overflow)
+TEST_P(evm, extcodecopy_buffer_overflow)
 {
     const auto code = bytecode{} + OP_NUMBER + OP_TIMESTAMP + OP_CALLDATASIZE + OP_ADDRESS +
                       OP_EXTCODECOPY + ret(OP_CALLDATASIZE, OP_NUMBER);

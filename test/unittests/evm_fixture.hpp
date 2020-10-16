@@ -28,10 +28,8 @@
 
 namespace evmone::test
 {
-evmc::VM& get_vm() noexcept;
-
 /// The "evm" test fixture with generic unit tests for EVMC-compatible VM implementations.
-class evm : public testing::Test
+class evm : public testing::TestWithParam<evmc::VM*>
 {
 protected:
     /// The VM handle.
@@ -57,7 +55,7 @@ protected:
 
     evmc::MockedHost host;
 
-    evm() noexcept : vm{get_vm()} {}
+    evm() noexcept : vm{*GetParam()} {}
 
 
     /// Executes the supplied code.
