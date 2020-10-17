@@ -4,6 +4,10 @@
 
 include(LibraryTools)
 
+enable_language(ASM)
+
+add_compile_options(-Wno-unused-function)
+
 hunter_add_package(intx)
 find_package(intx CONFIG REQUIRED)
 
@@ -21,6 +25,8 @@ add_library(evmone
     instructions.hpp
     instructions_calls.cpp
     limits.hpp
+    mulx_mont_384.h
+    mulx_mont_384-x86_64.s
     opcodes_helpers.h
 )
 target_link_libraries(evmone PUBLIC evmc::evmc PRIVATE intx::intx evmc::instructions ethash::keccak)
@@ -43,5 +49,6 @@ if(NOT SANITIZE)
 endif()
 
 set_source_files_properties(evmone.cpp PROPERTIES COMPILE_DEFINITIONS PROJECT_VERSION="${PROJECT_VERSION}")
+set_source_files_properties(mulx_mont_384-x86_64.s PROPERTIES COMPILE_FLAGS -Wno-unused-command-line-argument)
 
 add_standalone_library(evmone)

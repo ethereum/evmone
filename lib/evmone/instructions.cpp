@@ -5,6 +5,7 @@
 #include "instructions.hpp"
 #include "analysis.hpp"
 #include "instruction_traits.hpp"
+#include "instructions_evm384.hpp"
 
 namespace evmone
 {
@@ -196,7 +197,6 @@ const instruction* opx_beginblock(const instruction* instr, execution_state& sta
     return ++instr;
 }
 
-
 constexpr std::array<instruction_exec_fn, 256> instruction_implementations = []() noexcept {
     std::array<instruction_exec_fn, 256> table{};
 
@@ -322,6 +322,10 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
     table[OP_CHAINID] = op<chainid>;
     table[OP_EXTCODEHASH] = op<extcodehash>;
     table[OP_SELFBALANCE] = op<selfbalance>;
+
+    table[OP_ADDMOD384] = op<addmod384>;
+    table[OP_SUBMOD384] = op<submod384>;
+    table[OP_MULMODMONT384] = op<mulmodmont384>;
 
     return table;
 }();

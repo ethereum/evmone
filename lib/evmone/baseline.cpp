@@ -4,7 +4,9 @@
 
 #include "baseline.hpp"
 #include "execution_state.hpp"
+#include "instruction_traits.hpp"
 #include "instructions.hpp"
+#include "instructions_evm384.hpp"
 #include <evmc/instructions.h>
 #include <memory>
 
@@ -635,6 +637,37 @@ evmc_result baseline_execute(evmc_vm* /*vm*/, const evmc_host_interface* host,
         case OP_LOG4:
         {
             const auto status_code = log(*state, 4);
+            if (status_code != EVMC_SUCCESS)
+            {
+                state->status = status_code;
+                goto exit;
+            }
+            break;
+        }
+
+        case OP_ADDMOD384:
+        {
+            const auto status_code = addmod384(*state);
+            if (status_code != EVMC_SUCCESS)
+            {
+                state->status = status_code;
+                goto exit;
+            }
+            break;
+        }
+        case OP_SUBMOD384:
+        {
+            const auto status_code = submod384(*state);
+            if (status_code != EVMC_SUCCESS)
+            {
+                state->status = status_code;
+                goto exit;
+            }
+            break;
+        }
+        case OP_MULMODMONT384:
+        {
+            const auto status_code = mulmodmont384(*state);
             if (status_code != EVMC_SUCCESS)
             {
                 state->status = status_code;

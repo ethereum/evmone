@@ -5,6 +5,13 @@
 #include <evmc/instructions.h>
 #include <array>
 
+enum evm386_opcodes
+{
+    OP_ADDMOD384 = 0xc0,
+    OP_SUBMOD384 = 0xc1,
+    OP_MULMODMONT384 = 0xc2,
+};
+
 namespace evmone::instr
 {
 /// The EVM instruction traits.
@@ -165,6 +172,10 @@ constexpr inline std::array<Traits, 256> traits = []() noexcept {
     table[OP_LOG2] = {"LOG2", 4, -4};
     table[OP_LOG3] = {"LOG3", 5, -5};
     table[OP_LOG4] = {"LOG4", 6, -6};
+
+    table[OP_ADDMOD384] = {"ADDMOD384", 1, -1};
+    table[OP_SUBMOD384] = {"SUBMOD384", 1, -1};
+    table[OP_MULMODMONT384] = {"MULMODMONT384", 1, -1};
 
     table[OP_CREATE] = {"CREATE", 3, -2};
     table[OP_CALL] = {"CALL", 7, -6};
@@ -329,6 +340,10 @@ constexpr inline std::array<int16_t, 256> gas_costs<EVMC_ISTANBUL> = []() noexce
     table[OP_EXTCODEHASH] = 700;
     table[OP_SELFBALANCE] = 5;
     table[OP_SLOAD] = 800;
+
+    table[OP_ADDMOD384] = 8;
+    table[OP_SUBMOD384] = 8;
+    table[OP_MULMODMONT384] = 24;
     return table;
 }();
 

@@ -1,3 +1,4 @@
+#pragma GCC diagnostic ignored "-Wconversion"
 
 #if !WASM
 #include <stdint.h>
