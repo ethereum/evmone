@@ -630,6 +630,12 @@ TEST_P(evm, revert)
     EXPECT_EQ(result.output_data[1], 0xee);
 }
 
+TEST_P(evm, return_empty_buffer_at_offset_0)
+{
+    execute(dup1(OP_MSIZE) + OP_RETURN);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 5);
+}
+
 TEST_P(evm, return_empty_buffer_at_high_offset)
 {
     host.tx_context.block_difficulty =
