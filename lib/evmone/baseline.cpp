@@ -706,6 +706,11 @@ evmc_result baseline_execute(evmc_vm* /*vm*/, const evmc_host_interface* host,
         case OP_INVALID:
             state->status = EVMC_INVALID_INSTRUCTION;
             goto exit;
+        case OP_SELFDESTRUCT:
+            state->status = selfdestruct(*state);
+            goto exit;
+        default:
+            INTX_UNREACHABLE();
         }
 
         ++pc;
