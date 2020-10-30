@@ -145,7 +145,7 @@ jobs:
 
   state-tests:
     environment:
-      TESTS_REV: develop
+      TESTS_REV: ac8cf2cd8ba326d67101183060272e7f7b1eaa92
       ALETH_REV: 1.8.0
     docker:
       - image: cimg/base:stable
@@ -163,9 +163,10 @@ jobs:
       - run:
           name: "Download tests"
           command: |
-            git clone --depth=1 --single-branch --branch $TESTS_REV https://github.com/ethereum/tests
-            mkdir tests/GeneralStateTests/stEWASMTests
-            mkdir tests/src/GeneralStateTestsFiller/stEWASMTests
+            mkdir tests && cd tests
+            curl -L https://github.com/ethereum/tests/archive/$TESTS_REV.tar.gz | tar -xz --strip=1
+            mkdir GeneralStateTests/stEWASMTests
+            mkdir src/GeneralStateTestsFiller/stEWASMTests
       - run:
           name: "Run State Tests"
           command: bin/testeth -t GeneralStateTests -- --testpath tests --vm lib/libevmone.so
