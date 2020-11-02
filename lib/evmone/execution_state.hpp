@@ -110,5 +110,23 @@ struct ExecutionState
         rev{revision},
         code{code_ptr, code_size}
     {}
+
+    /// Resets the contents of the ExecutionState so that it could be reused.
+    void reset(const evmc_message& message, evmc_revision revision,
+        const evmc_host_interface& host_interface, evmc_host_context* host_ctx,
+        const uint8_t* code_ptr, size_t code_size) noexcept
+    {
+        gas_left = message.gas;
+        stack.clear();
+        memory.clear();
+        msg = &message;
+        host = {host_interface, host_ctx};
+        rev = revision;
+        return_data.clear();
+        code = {code_ptr, code_size};
+        status = EVMC_SUCCESS;
+        output_offset = 0;
+        output_size = 0;
+    }
 };
 }  // namespace evmone
