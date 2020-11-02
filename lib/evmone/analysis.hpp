@@ -58,6 +58,14 @@ struct execution_state : ExecutionState
         status = status_code;
         return nullptr;
     }
+
+    /// Clears the execution_state so that it could be reused.
+    void clear() noexcept
+    {
+        ExecutionState::clear();
+        current_block_cost = 0;
+        analysis = nullptr;
+    }
 };
 
 union instruction_argument

@@ -110,5 +110,21 @@ struct ExecutionState
         rev{revision},
         code{code_ptr, code_size}
     {}
+
+    /// Clears the ExecutionState so that it could be reused.
+    void clear() noexcept
+    {
+        gas_left = 0;
+        stack.clear();
+        memory.clear();
+        msg = nullptr;
+        host = {};
+        rev = {};
+        return_data.clear();
+        code = {};
+        status = {};
+        output_offset = 0;
+        output_size = 0;
+    }
 };
 }  // namespace evmone

@@ -77,6 +77,57 @@ TEST(execution_state, default_construct_advanced)
     EXPECT_EQ(st.analysis, nullptr);
 }
 
+TEST(execution_state, clear_advanced)
+{
+    const evmc_message msg{};
+    const uint8_t code[]{0xff};
+    evmone::code_analysis analysis;
+
+    evmone::execution_state st;
+    st.gas_left = 1;
+    st.stack.push({});
+    st.memory.resize(2);
+    st.msg = &msg;
+    st.rev = EVMC_BYZANTIUM;
+    st.return_data.push_back('0');
+    st.code = {code, std::size(code)};
+    st.status = EVMC_FAILURE;
+    st.output_offset = 3;
+    st.output_size = 4;
+    st.current_block_cost = 5;
+    st.analysis = &analysis;
+
+    EXPECT_EQ(st.gas_left, 1);
+    EXPECT_EQ(st.stack.size(), 1);
+    EXPECT_EQ(st.memory.size(), 2);
+    EXPECT_EQ(st.msg, &msg);
+    EXPECT_EQ(st.rev, EVMC_BYZANTIUM);
+    EXPECT_EQ(st.return_data.size(), 1);
+    EXPECT_EQ(st.code.data(), &code[0]);
+    EXPECT_EQ(st.code.size(), 1);
+    EXPECT_EQ(st.status, EVMC_FAILURE);
+    EXPECT_EQ(st.output_offset, 3);
+    EXPECT_EQ(st.output_size, 4u);
+    EXPECT_EQ(st.current_block_cost, 5u);
+    EXPECT_EQ(st.analysis, &analysis);
+
+    st.clear();
+
+    EXPECT_EQ(st.gas_left, 0);
+    EXPECT_EQ(st.stack.size(), 0);
+    EXPECT_EQ(st.memory.size(), 0);
+    EXPECT_EQ(st.msg, nullptr);
+    EXPECT_EQ(st.rev, EVMC_FRONTIER);
+    EXPECT_EQ(st.return_data.size(), 0);
+    EXPECT_EQ(st.code.data(), nullptr);
+    EXPECT_EQ(st.code.size(), 0);
+    EXPECT_EQ(st.status, EVMC_SUCCESS);
+    EXPECT_EQ(st.output_offset, 0);
+    EXPECT_EQ(st.output_size, 0);
+    EXPECT_EQ(st.current_block_cost, 0u);
+    EXPECT_EQ(st.analysis, nullptr);
+}
+
 TEST(execution_state, stack_clear)
 {
     evmone::evm_stack stack;
