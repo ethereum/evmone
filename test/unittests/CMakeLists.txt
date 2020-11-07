@@ -15,6 +15,7 @@ add_executable(evmone-unittests
     evm_calls_test.cpp
     evm_state_test.cpp
     evm_other_test.cpp
+    evm384_test.cpp
     evmone_test.cpp
     execution_state_test.cpp
     op_table_test.cpp

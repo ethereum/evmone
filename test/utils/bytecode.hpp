@@ -198,6 +198,11 @@ inline bytecode calldataload(bytecode index)
     return index + OP_CALLDATALOAD;
 }
 
+inline bytecode calldatacopy(bytecode memory_index, bytecode calldata_index, bytecode size)
+{
+    return size + calldata_index + memory_index + OP_CALLDATACOPY;
+}
+
 inline bytecode sstore(bytecode index, bytecode value)
 {
     return value + index + OP_SSTORE;
