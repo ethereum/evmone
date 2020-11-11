@@ -4,6 +4,7 @@
 
 add_executable(
     evmone-bench-internal
+    analysis_bench.cpp
     evmmax_bench.cpp
     find_jumpdest_bench.cpp
     memory_allocation.cpp
