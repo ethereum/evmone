@@ -27,7 +27,7 @@ inline int find_first_push_opt1(const uint8_t* code) noexcept
     __builtin_memcpy(&b, code, sizeof(b));
     b = __builtin_bswap64(b);
 
-    const auto d = (b << 1) & (b << 2) & 0x8080808080808080;
+    const auto d = (~b) & (b << 1) & (b << 2) & 0x8080808080808080;
 
     if (d == 0)
         return -1;
@@ -46,7 +46,8 @@ inline int find_first_push_opt2(const uint8_t* code) noexcept
 
     auto e2 = b << 2;
     auto f2 = b << 1;
-    auto d1 = e2 & f2 & mask;
+    auto g2 = ~b;
+    auto d1 = e2 & f2 & g2 & mask;
 
     if (d1 == 0)
         return -1;
@@ -61,7 +62,7 @@ inline int find_first_push_opt3(const uint8_t* code) noexcept
     uint64_t b;
     __builtin_memcpy(&b, code, sizeof(b));
 
-    const auto d = (b >> 5) & (b >> 6) & 0x0101010101010101;
+    const auto d = (b >> 5) & (b >> 6) & (~b >> 7) & 0x0101010101010101;
 
     if (d == 0)
         return -1;
