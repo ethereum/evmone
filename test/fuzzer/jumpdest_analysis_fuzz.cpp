@@ -26,7 +26,7 @@ inline bool is_jumpdest(const JumpdestMap& a, size_t index) noexcept
     return (index < a.size() && a[index]);
 }
 
-inline bool is_jumpdest(const code_analysis& a, size_t index) noexcept
+[[maybe_unused]] inline bool is_jumpdest(const code_analysis& a, size_t index) noexcept
 {
     return find_jumpdest(a, static_cast<int>(index)) >= 0;
 }
@@ -38,6 +38,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
     const auto a1 = analyze(EVMC_FRONTIER, data, data_size);
     const auto a2 = build_jumpdest_map_vec1(data, data_size);
     const auto a3 = build_jumpdest_map_bitset1(data, data_size);
+    const auto a4 = build_internal_code_v1(data, data_size);
 
     for (size_t i = 0; i < data_size + tail_code_padding; ++i)
     {
@@ -45,6 +46,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
         expect_eq(is_jumpdest(a1, i), expected);
         expect_eq(is_jumpdest(a2, i), expected);
         expect_eq(is_jumpdest(a3, i), expected);
+        expect_eq(is_jumpdest(a4.get(), data_size, i), expected);
     }
 
 
