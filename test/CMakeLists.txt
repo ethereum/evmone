@@ -35,7 +35,7 @@ set(targets evmone-bench evmone-bench-internal evmone-eofparse evmone-blockchain
 if(EVMONE_FUZZING)
     add_subdirectory(eofparsefuzz)
     add_subdirectory(fuzzer)
-    list(APPEND targets evmone-eofparsefuzz evmone-fuzzer)
+    list(APPEND targets evmone-eofparsefuzz evmone-fuzzer jumpdest-fuzzer)
 endif()
 
 set_target_properties(
