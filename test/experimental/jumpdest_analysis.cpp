@@ -72,12 +72,18 @@ std::unique_ptr<uint8_t[]> build_internal_code_v2(const uint8_t* code, size_t co
     long push_data = 0;
     for (size_t i = 0; i < code_size; ++i)
     {
-        const auto in_push_data = push_data > 0;
-        --push_data;
-        const auto op = code[i];
-        m[i] = !in_push_data ? op : 0;
-        if (!in_push_data && is_push(op))
-            push_data = static_cast<long>(get_push_data_size(op));
+        if (push_data != 0) [[unlikely]]
+        {
+            --push_data;
+            m[i] = 0;
+        }
+        else
+        {
+            const auto op = code[i];
+            m[i] = op;
+            if (is_push(op))
+                push_data = static_cast<long>(get_push_data_size(op));
+        }
     }
     std::memset(&m[code_size], 0, padding);
     return m;
