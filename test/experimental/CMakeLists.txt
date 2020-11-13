@@ -5,8 +5,8 @@
 add_library(evmone-experimental STATIC)
 add_library(evmone::experimental ALIAS evmone-experimental)
 
-target_include_directories(evmone-experimental PUBLIC ${PROJECT_SOURCE_DIR})
-target_link_libraries(evmone-experimental PRIVATE evmc::instructions)
+target_include_directories(evmone-experimental PUBLIC ${PROJECT_SOURCE_DIR} ${evmone_private_include_dir})
+target_link_libraries(evmone-experimental PRIVATE evmone evmc::instructions)
 target_sources(
     evmone-experimental PRIVATE
     jumpdest_analysis.cpp

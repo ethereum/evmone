@@ -143,7 +143,7 @@ enum : uint8_t
     OP_PUSH32 = 0x7f,
 };
 
-[[gnu::noinline]] auto build(const uint8_t* code, size_t code_size)
+[[gnu::noinline]] auto build_bitset2(const uint8_t* code, size_t code_size)
 {
     evmone::bitset m(code_size);
     for (size_t i = 0; i < code_size; ++i)
@@ -428,7 +428,8 @@ void build_jumpdest(benchmark::State& state)
 }  // namespace
 
 BENCHMARK_TEMPLATE(build_jumpdest, evmone::bitset, evmone::build_jumpdest_map);
-BENCHMARK_TEMPLATE(build_jumpdest, evmone::bitset, build);
+BENCHMARK_TEMPLATE(build_jumpdest, evmone::bitset, evmone::experimental::build_jumpdest_map_bitset1);
+BENCHMARK_TEMPLATE(build_jumpdest, evmone::bitset, build_bitset2);
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, build_vec);
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, evmone::experimental::build_jumpdest_map_vec1);
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, build_vec3);
