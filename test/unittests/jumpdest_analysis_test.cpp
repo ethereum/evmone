@@ -41,12 +41,14 @@ TEST(jumpdest_analysis, compare_implementations)
         const auto a0 = build_jumpdest_map(t.data(), t.size());
         const auto a1 = analyze(EVMC_FRONTIER, t.data(), t.size());
         const auto a2 = build_jumpdest_map_vec1(t.data(), t.size());
+        const auto a3 = build_jumpdest_map_bitset1(t.data(), t.size());
 
         for (size_t i = 0; i < t.size() + tail_code_padding; ++i)
         {
             const bool expected = is_jumpdest(a0, i);
             EXPECT_EQ(is_jumpdest(a1, i), expected);
             EXPECT_EQ(is_jumpdest(a2, i), expected);
+            EXPECT_EQ(is_jumpdest(a3, i), expected);
         }
     }
 }
