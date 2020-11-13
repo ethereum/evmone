@@ -1,0 +1,48 @@
+// evmone: Fast Ethereum Virtual Machine implementation
+// Copyright 2020 The evmone Authors.
+// SPDX-License-Identifier: Apache-2.0
+
+#include "test/utils/bytecode.hpp"
+#include <evmone/analysis.hpp>
+#include <evmone/baseline.hpp>
+#include <gtest/gtest.h>
+
+using namespace evmone;
+
+namespace
+{
+constexpr auto tail_code_padding = 100;
+
+inline bool is_jumpdest(const JumpdestMap& a, size_t index) noexcept
+{
+    return (index < a.size() && a[index]);
+}
+
+inline bool is_jumpdest(const code_analysis& a, size_t index) noexcept
+{
+    return find_jumpdest(a, static_cast<int>(index)) >= 0;
+}
+
+const bytecode bytecode_test_cases[]{
+    {},
+    OP_JUMPDEST,
+    push(0),
+    push(0x5b),
+    push(0x5b) + OP_JUMPDEST,
+};
+}  // namespace
+
+TEST(jumpdest_analysis, compare_implementations)
+{
+    for (const auto& t : bytecode_test_cases)
+    {
+        const auto a0 = build_jumpdest_map(t.data(), t.size());
+        const auto a1 = analyze(EVMC_FRONTIER, t.data(), t.size());
+
+        for (size_t i = 0; i < t.size() + tail_code_padding; ++i)
+        {
+            const bool expected = is_jumpdest(a0, i);
+            EXPECT_EQ(is_jumpdest(a1, i), expected);
+        }
+    }
+}

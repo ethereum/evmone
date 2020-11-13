@@ -82,6 +82,7 @@ target_sources(
     statetest_logs_hash_test.cpp
     statetest_withdrawals_test.cpp
     tracing_test.cpp
+    jumpdest_analysis_test.cpp
     op_table_test.cpp
     opcode_manip_test.cpp
     utils_test.cpp
