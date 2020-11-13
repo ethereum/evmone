@@ -397,6 +397,8 @@ BENCHMARK_TEMPLATE(
     build_jumpdest, std::unique_ptr<uint8_t[]>, evmone::experimental::build_internal_code_v2);
 BENCHMARK_TEMPLATE(
     build_jumpdest, std::unique_ptr<uint8_t[]>, evmone::experimental::build_internal_code_v3);
+BENCHMARK_TEMPLATE(
+    build_jumpdest, std::unique_ptr<uint8_t[]>, evmone::experimental::build_internal_code_v8);
 BENCHMARK_TEMPLATE(build_jumpdest, std::unique_ptr<uint8_t[]>, build_shadow_code2p);
 BENCHMARK_TEMPLATE(build_jumpdest, std::unique_ptr<uint8_t[]>, build_shadow_code3p);
 BENCHMARK_TEMPLATE(build_jumpdest, std::unique_ptr<uint8_t[]>, build_shadow_code4);
