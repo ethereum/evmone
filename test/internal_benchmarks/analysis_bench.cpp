@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "evmone/baseline.hpp"
-#include "test/utils/utils.hpp"
 #include "test/experimental/jumpdest_analysis.hpp"
+#include "test/utils/utils.hpp"
 #include <benchmark/benchmark.h>
 
 
@@ -204,7 +204,7 @@ inline bool is_push(uint8_t op)
     std::vector<bool> m(code_size);
     const auto code_beg = code;
     const auto code_end = code + code_size;
-    for (;code < code_end; ++code)
+    for (; code < code_end; ++code)
     {
         const auto op = *code;
         if (op == OP_JUMPDEST)
@@ -272,23 +272,6 @@ inline bool is_push(uint8_t op)
             m[i] = true;
         else if (op >= OP_PUSH1 && op <= OP_PUSH32)
             i += static_cast<size_t>(op - OP_PUSH1 + 1);
-    }
-    return m;
-}
-
-[[gnu::noinline]] auto build_shadow_code(const uint8_t* code, size_t code_size)
-{
-    std::unique_ptr<uint8_t[]> m{new uint8_t[code_size + 32]};
-    for (size_t i = 0; i < code_size; ++i)
-    {
-        const auto op = code[i];
-        m[i] = op;
-        if (op >= OP_PUSH1 && op <= OP_PUSH32)
-        {
-            const auto s = static_cast<size_t>(op - OP_PUSH1 + 1);
-            std::memset(&m[i + 1], 0, s);
-            i += s;
-        }
     }
     return m;
 }
@@ -428,17 +411,20 @@ void build_jumpdest(benchmark::State& state)
 }  // namespace
 
 BENCHMARK_TEMPLATE(build_jumpdest, evmone::bitset, evmone::build_jumpdest_map);
-BENCHMARK_TEMPLATE(build_jumpdest, evmone::bitset, evmone::experimental::build_jumpdest_map_bitset1);
+BENCHMARK_TEMPLATE(
+    build_jumpdest, evmone::bitset, evmone::experimental::build_jumpdest_map_bitset1);
 BENCHMARK_TEMPLATE(build_jumpdest, evmone::bitset, build_bitset2);
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, build_vec);
-BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, evmone::experimental::build_jumpdest_map_vec1);
+BENCHMARK_TEMPLATE(
+    build_jumpdest, std::vector<bool>, evmone::experimental::build_jumpdest_map_vec1);
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, build_vec3);
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, build_vec4);
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, build_vec5);
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, build_vec6);
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, build_vec7);
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<uint8_t>, build_bytes);
-BENCHMARK_TEMPLATE(build_jumpdest, std::unique_ptr<uint8_t[]>, build_shadow_code);
+BENCHMARK_TEMPLATE(
+    build_jumpdest, std::unique_ptr<uint8_t[]>, evmone::experimental::build_internal_code_v1);
 BENCHMARK_TEMPLATE(build_jumpdest, std::unique_ptr<uint8_t[]>, build_shadow_code2);
 BENCHMARK_TEMPLATE(build_jumpdest, std::unique_ptr<uint8_t[]>, build_shadow_code2p);
 BENCHMARK_TEMPLATE(build_jumpdest, std::unique_ptr<uint8_t[]>, build_shadow_code3);
