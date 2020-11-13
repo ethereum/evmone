@@ -26,6 +26,7 @@ inline bool is_jumpdest(const code_analysis& a, size_t index) noexcept
 }
 
 const bytecode bytecode_test_cases[]{
+    push(0x60) + OP_JUMPDEST,
     {},
     OP_JUMPDEST,
     push(0),
@@ -44,6 +45,8 @@ TEST(jumpdest_analysis, compare_implementations)
         const auto a2 = build_jumpdest_map_vec1(t.data(), t.size());
         const auto a3 = build_jumpdest_map_bitset1(t.data(), t.size());
         const auto a4 = build_internal_code_v1(t.data(), t.size());
+        const auto a5 = build_internal_code_v2(t.data(), t.size());
+        const auto a6 = build_internal_code_v3(t.data(), t.size());
 
         for (size_t i = 0; i < t.size() + tail_code_padding; ++i)
         {
@@ -53,6 +56,8 @@ TEST(jumpdest_analysis, compare_implementations)
             EXPECT_EQ(is_jumpdest(a2, i), expected);
             EXPECT_EQ(is_jumpdest(a3, i), expected);
             EXPECT_EQ(is_jumpdest(a4.get(), t.size(), i), expected);
+            EXPECT_EQ(is_jumpdest(a5.get(), t.size(), i), expected);
+            EXPECT_EQ(is_jumpdest(a6.get(), t.size(), i), expected);
         }
     }
 }

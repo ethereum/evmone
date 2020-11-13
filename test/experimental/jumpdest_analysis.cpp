@@ -46,9 +46,10 @@ JumpdestMap build_jumpdest_map_bitset1(const uint8_t* code, size_t code_size)
     return m;
 }
 
+static constexpr size_t padding = 33;
+
 std::unique_ptr<uint8_t[]> build_internal_code_v1(const uint8_t* code, size_t code_size)
 {
-    static constexpr size_t padding = 33;
     std::unique_ptr<uint8_t[]> m{new uint8_t[code_size + padding]};
     for (size_t i = 0; i < code_size; ++i)
     {
@@ -64,4 +65,40 @@ std::unique_ptr<uint8_t[]> build_internal_code_v1(const uint8_t* code, size_t co
     std::memset(&m[code_size], 0, padding);
     return m;
 }
+
+std::unique_ptr<uint8_t[]> build_internal_code_v2(const uint8_t* code, size_t code_size)
+{
+    std::unique_ptr<uint8_t[]> m{new uint8_t[code_size + padding]};
+    long push_data = 0;
+    for (size_t i = 0; i < code_size; ++i)
+    {
+        const auto in_push_data = push_data > 0;
+        --push_data;
+        const auto op = code[i];
+        m[i] = !in_push_data ? op : 0;
+        if (!in_push_data && is_push(op))
+            push_data = static_cast<long>(get_push_data_size(op));
+    }
+    std::memset(&m[code_size], 0, padding);
+    return m;
+}
+
+std::unique_ptr<uint8_t[]> build_internal_code_v3(const uint8_t* code, size_t code_size)
+{
+    std::unique_ptr<uint8_t[]> m{new uint8_t[code_size + padding]};
+    std::memcpy(&m[0], code, code_size);
+    std::memset(&m[code_size], 0, padding);
+    for (size_t i = 0; i < code_size; ++i)
+    {
+        const auto op = m[i];
+        if (is_push(op))
+        {
+            const auto s = get_push_data_size(op);
+            std::memset(&m[i + 1], 0, s);
+            i += s;
+        }
+    }
+    return m;
+}
+
 }  // namespace evmone::experimental

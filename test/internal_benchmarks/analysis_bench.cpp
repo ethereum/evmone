@@ -276,21 +276,6 @@ inline bool is_push(uint8_t op)
     return m;
 }
 
-[[gnu::noinline]] auto build_shadow_code2(const uint8_t* code, size_t code_size)
-{
-    std::unique_ptr<uint8_t[]> m{new uint8_t[code_size + 32]};
-    long push_data = 0;
-    for (size_t i = 0; i < code_size; ++i)
-    {
-        const auto op = code[i];
-        m[i] = push_data <= 0 ? op : 0;
-        --push_data;
-        if (op >= OP_PUSH1 && op <= OP_PUSH32)
-            push_data = op - OP_PUSH1 + 1;
-    }
-    return m;
-}
-
 [[gnu::noinline]] auto build_shadow_code2p(const uint8_t* code, size_t code_size)
 {
     std::unique_ptr<uint8_t[]> m{new uint8_t[code_size + 32]};
@@ -306,23 +291,6 @@ inline bool is_push(uint8_t op)
             push_data = op - OP_PUSH1 + 1;
         ++p;
         ++code;
-    }
-    return m;
-}
-
-[[gnu::noinline]] auto build_shadow_code3(const uint8_t* code, size_t code_size)
-{
-    std::unique_ptr<uint8_t[]> m{new uint8_t[code_size + 32]};
-    std::memcpy(m.get(), code, code_size);
-    for (size_t i = 0; i < code_size; ++i)
-    {
-        const auto op = m[i];
-        if ((op >> 5) == 0b11)
-        {
-            const size_t s = static_cast<size_t>((op & 0b11111) + 1);
-            std::memset(&m[i + 1], 0, s);
-            i += s;
-        }
     }
     return m;
 }
@@ -425,9 +393,11 @@ BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, build_vec7);
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<uint8_t>, build_bytes);
 BENCHMARK_TEMPLATE(
     build_jumpdest, std::unique_ptr<uint8_t[]>, evmone::experimental::build_internal_code_v1);
-BENCHMARK_TEMPLATE(build_jumpdest, std::unique_ptr<uint8_t[]>, build_shadow_code2);
+BENCHMARK_TEMPLATE(
+    build_jumpdest, std::unique_ptr<uint8_t[]>, evmone::experimental::build_internal_code_v2);
+BENCHMARK_TEMPLATE(
+    build_jumpdest, std::unique_ptr<uint8_t[]>, evmone::experimental::build_internal_code_v3);
 BENCHMARK_TEMPLATE(build_jumpdest, std::unique_ptr<uint8_t[]>, build_shadow_code2p);
-BENCHMARK_TEMPLATE(build_jumpdest, std::unique_ptr<uint8_t[]>, build_shadow_code3);
 BENCHMARK_TEMPLATE(build_jumpdest, std::unique_ptr<uint8_t[]>, build_shadow_code3p);
 BENCHMARK_TEMPLATE(build_jumpdest, std::unique_ptr<uint8_t[]>, build_shadow_code4);
 BENCHMARK_TEMPLATE(build_jumpdest, std::unique_ptr<uint8_t[]>, copy_by1);
