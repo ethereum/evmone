@@ -4,6 +4,7 @@
 
 #include "evmone/baseline.hpp"
 #include "test/utils/utils.hpp"
+#include "test/experimental/jumpdest_analysis.hpp"
 #include <benchmark/benchmark.h>
 
 
@@ -183,20 +184,6 @@ inline bool is_push(uint8_t op)
 //{
 //    return (x & 0b11111);
 //}
-
-[[gnu::noinline]] auto build_vec2(const uint8_t* code, size_t code_size)
-{
-    std::vector<bool> m(code_size);
-    for (size_t i = 0; i < code_size; ++i)
-    {
-        const auto op = code[i];
-        if (op == OP_JUMPDEST)
-            m[i] = true;
-        else if (is_push(op))
-            i += static_cast<size_t>(op - OP_PUSH1 + 1);
-    }
-    return m;
-}
 
 [[gnu::noinline]] auto build_vec3(const uint8_t* code, size_t code_size)
 {
@@ -443,7 +430,7 @@ void build_jumpdest(benchmark::State& state)
 BENCHMARK_TEMPLATE(build_jumpdest, evmone::bitset, evmone::build_jumpdest_map);
 BENCHMARK_TEMPLATE(build_jumpdest, evmone::bitset, build);
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, build_vec);
-BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, build_vec2);
+BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, evmone::experimental::build_jumpdest_map_vec1);
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, build_vec3);
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, build_vec4);
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, build_vec5);
