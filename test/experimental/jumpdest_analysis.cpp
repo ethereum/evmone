@@ -103,6 +103,35 @@ std::unique_ptr<uint8_t[]> build_internal_code_v3(const uint8_t* code, size_t co
     return m;
 }
 
+std::unique_ptr<uint8_t[]> build_internal_code_v4(const uint8_t* code, size_t code_size)
+{
+    std::unique_ptr<uint8_t[]> m{new uint8_t[code_size + padding]};
+    auto p = m.get();
+    const auto end = p + code_size;
+
+    std::memcpy(p, code, code_size);
+    std::memset(end, OP_PUSH1, padding);
+
+    while (true)
+    {
+        const auto op = *p++;
+        if (is_push(op))
+        {
+            if (p > end)
+                break;
+            const auto s = get_push_data_size(op);
+            for (size_t i = 0; i < s; ++i)
+            {
+                if (*p == OP_JUMPDEST)
+                    *p = 0;
+                ++p;
+            }
+        }
+    }
+    std::memset(end, 0, padding);
+    return m;
+}
+
 std::unique_ptr<uint8_t[]> build_internal_code_v8(const uint8_t* code, size_t code_size)
 {
     std::unique_ptr<uint8_t[]> m{new uint8_t[code_size + padding]};
