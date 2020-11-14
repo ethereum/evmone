@@ -24,5 +24,6 @@ bitset build_jumpdest_map_bitset1(const uint8_t* code, size_t code_size);
 std::unique_ptr<uint8_t[]> build_internal_code_v1(const uint8_t* code, size_t code_size);
 std::unique_ptr<uint8_t[]> build_internal_code_v2(const uint8_t* code, size_t code_size);
 std::unique_ptr<uint8_t[]> build_internal_code_v3(const uint8_t* code, size_t code_size);
+std::unique_ptr<uint8_t[]> build_internal_code_v4(const uint8_t* code, size_t code_size);
 std::unique_ptr<uint8_t[]> build_internal_code_v8(const uint8_t* code, size_t code_size);
 }  // namespace evmone::experimental
