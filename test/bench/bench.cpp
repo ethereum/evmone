@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "helpers.hpp"
+#include "synthetic_benchmarks.hpp"
 #include <benchmark/benchmark.h>
 #include <evmc/evmc.hpp>
 #include <evmc/loader.h>
@@ -287,6 +288,7 @@ int main(int argc, char** argv)
         registered_vms["advanced"] = evmc::VM{evmc_create_evmone(), {{"O", "2"}}};
         registered_vms["baseline"] = evmc::VM{evmc_create_evmone(), {{"O", "0"}}};
         register_benchmarks(benchmark_cases);
+        register_synthetic_benchmarks();
         RunSpecifiedBenchmarks();
         return 0;
     }
