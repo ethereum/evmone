@@ -2,14 +2,11 @@
 // Copyright 2019 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+#include "helpers.hpp"
 #include <benchmark/benchmark.h>
 #include <evmc/evmc.hpp>
 #include <evmc/loader.h>
-#include <evmone/analysis.hpp>
 #include <evmone/evmone.h>
-#include <test/utils/utils.hpp>
-
-#include <cctype>
 #include <fstream>
 #include <iostream>
 
@@ -23,6 +20,10 @@ namespace fs = ghc::filesystem;
 #endif
 
 using namespace benchmark;
+
+namespace evmone::test
+{
+std::map<std::string_view, evmc::VM> registered_vms;
 
 namespace
 {
@@ -51,68 +52,8 @@ struct BenchmarkCase
     {}
 };
 
-constexpr auto gas_limit = std::numeric_limits<int64_t>::max();
+
 constexpr auto inputs_extension = ".inputs";
-
-std::map<std::string_view, evmc::VM> registered_vms;
-
-
-void analyse(State& state, bytes_view code) noexcept
-{
-    auto bytes_analysed = uint64_t{0};
-    for (auto _ : state)
-    {
-        auto r = evmone::analyze(EVMC_ISTANBUL, code.data(), code.size());
-        DoNotOptimize(r);
-        bytes_analysed += code.size();
-    }
-    state.counters["size"] = Counter(static_cast<double>(code.size()));
-    state.counters["rate"] = Counter(static_cast<double>(bytes_analysed), Counter::kIsRate);
-}
-
-inline evmc::result execute(evmc::VM& vm, bytes_view code, bytes_view input) noexcept
-{
-    auto msg = evmc_message{};
-    msg.gas = gas_limit;
-    msg.input_data = input.data();
-    msg.input_size = input.size();
-    return vm.execute(EVMC_ISTANBUL, msg, code.data(), code.size());
-}
-
-void execute(State& state, evmc::VM& vm, bytes_view code, bytes_view input,
-    bytes_view expected_output) noexcept
-{
-    {  // Test run.
-        const auto r = execute(vm, code, input);
-        if (r.status_code != EVMC_SUCCESS)
-        {
-            state.SkipWithError(("failure: " + std::to_string(r.status_code)).c_str());
-            return;
-        }
-
-        if (!expected_output.empty())
-        {
-            const auto output = bytes_view{r.output_data, r.output_size};
-            if (output != expected_output)
-            {
-                auto error = "got: " + hex(output) + "  expected: " + hex(expected_output);
-                state.SkipWithError(error.c_str());
-                return;
-            }
-        }
-    }
-
-    auto total_gas_used = int64_t{0};
-    auto iteration_gas_used = int64_t{0};
-    for (auto _ : state)
-    {
-        auto r = execute(vm, code, input);
-        iteration_gas_used = gas_limit - r.gas_left;
-        total_gas_used += iteration_gas_used;
-    }
-    state.counters["gas_used"] = Counter(static_cast<double>(iteration_gas_used));
-    state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
-}
 
 /// Loads the benchmark case's inputs from the inputs file at the given path.
 std::vector<BenchmarkCase::Input> load_inputs(const fs::path& path)
@@ -221,7 +162,7 @@ void register_benchmarks(const std::vector<BenchmarkCase>& benchmark_cases)
         if (registered_vms.count("advanced"))
         {
             RegisterBenchmark(("advanced/analyse/" + b.name).c_str(), [&b](State& state) {
-                analyse(state, b.code);
+                analyse(state, default_revision, b.code);
             })->Unit(kMicrosecond);
         }
 
@@ -322,9 +263,11 @@ std::tuple<int, std::vector<BenchmarkCase>> parseargs(int argc, char** argv)
     }
 }
 }  // namespace
+}  // namespace evmone::test
 
 int main(int argc, char** argv)
 {
+    using namespace evmone::test;
     try
     {
         Initialize(&argc, argv);
