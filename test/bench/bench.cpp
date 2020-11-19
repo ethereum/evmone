@@ -114,7 +114,7 @@ void load_benchmark(const fs::path& path, const std::string& name_prefix)
 
     auto code = std::make_shared<bytes>(from_hexx(code_hexx));
 
-    RegisterBenchmark((base_name + "/analysis").c_str(), [code](State& state) {
+    RegisterBenchmark(("analyse/" + base_name).c_str(), [code](State& state) {
         analyse(state, *code);
     })->Unit(kMicrosecond);
 
@@ -127,12 +127,13 @@ void load_benchmark(const fs::path& path, const std::string& name_prefix)
 
     auto base = benchmark_case{};
     base.code = std::move(code);
+    const auto execute_name = "execute/" + base_name;
 
     auto inputs_path = path;
     inputs_path.replace_extension(inputs_extension);
     if (!fs::exists(inputs_path))
     {
-        RegisterBenchmark(base_name.c_str(), base)->Unit(kMicrosecond);
+        RegisterBenchmark(execute_name.c_str(), base)->Unit(kMicrosecond);
     }
     else
     {
@@ -148,7 +149,7 @@ void load_benchmark(const fs::path& path, const std::string& name_prefix)
                 if (l.empty())
                     continue;
                 input = base;
-                name = base_name + '/' + std::move(l);
+                name = execute_name + '/' + std::move(l);
                 st = state::input;
                 break;
 
