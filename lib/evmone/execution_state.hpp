@@ -33,7 +33,7 @@ struct evm_stack
     alignas(sizeof(intx::uint256)) intx::uint256 storage[limit];
 
     /// Default constructor. Sets the top_item pointer to below the stack bottom.
-    [[clang::no_sanitize("bounds")]] evm_stack() noexcept : top_item{storage - 1} {}
+    evm_stack() noexcept { clear(); }
 
     /// The current number of items on the stack.
     [[nodiscard]] int size() const noexcept { return static_cast<int>(top_item + 1 - storage); }
@@ -49,6 +49,10 @@ struct evm_stack
 
     /// Returns an item popped from the top of the stack.
     intx::uint256 pop() noexcept { return *top_item--; }
+
+    /// Clears the stack by resetting its size to 0 (sets the top_item pointer to below the stack
+    /// bottom).
+    [[clang::no_sanitize("bounds")]] void clear() noexcept { top_item = storage - 1; }
 };
 
 /// The EVM memory.

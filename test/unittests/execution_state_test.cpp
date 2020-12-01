@@ -77,3 +77,24 @@ TEST(execution_state, default_construct_advanced)
     EXPECT_EQ(st.current_block_cost, 0u);
     EXPECT_EQ(st.analysis, nullptr);
 }
+
+TEST(execution_state, stack_clear)
+{
+    evmone::evm_stack stack;
+
+    stack.clear();
+    EXPECT_EQ(stack.size(), 0);
+    EXPECT_EQ(stack.top_item + 1, stack.storage);
+
+    stack.push({});
+    EXPECT_EQ(stack.size(), 1);
+    EXPECT_EQ(stack.top_item, stack.storage);
+
+    stack.clear();
+    EXPECT_EQ(stack.size(), 0);
+    EXPECT_EQ(stack.top_item + 1, stack.storage);
+
+    stack.clear();
+    EXPECT_EQ(stack.size(), 0);
+    EXPECT_EQ(stack.top_item + 1, stack.storage);
+}
