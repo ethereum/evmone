@@ -31,7 +31,7 @@ TEST(execution_state, construct)
     EXPECT_EQ(st.gas_left, -1);
     EXPECT_EQ(st.stack.size(), 0);
     EXPECT_EQ(st.memory.size(), 0);
-    EXPECT_EQ(&st.msg, &msg);
+    EXPECT_EQ(st.msg, &msg);
     EXPECT_EQ(st.rev, EVMC_MAX_REVISION);
     EXPECT_EQ(st.return_data.size(), 0);
     EXPECT_EQ(st.code.data(), &code[0]);
