@@ -93,6 +93,8 @@ struct ExecutionState
     size_t output_offset = 0;
     size_t output_size = 0;
 
+    ExecutionState() noexcept = default;
+
     ExecutionState(const evmc_message& message, evmc_revision revision,
         const evmc_host_interface& host_interface, evmc_host_context* host_ctx,
         const uint8_t* code_ptr, size_t code_size) noexcept
