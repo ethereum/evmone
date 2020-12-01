@@ -36,13 +36,13 @@ struct evm_stack
     [[clang::no_sanitize("bounds")]] evm_stack() noexcept : top_item{storage - 1} {}
 
     /// The current number of items on the stack.
-    int size() noexcept { return static_cast<int>(top_item + 1 - storage); }
+    [[nodiscard]] int size() const noexcept { return static_cast<int>(top_item + 1 - storage); }
 
     /// Returns the reference to the top item.
-    intx::uint256& top() noexcept { return *top_item; }
+    [[nodiscard]] intx::uint256& top() noexcept { return *top_item; }
 
     /// Returns the reference to the stack item on given position from the stack top.
-    intx::uint256& operator[](int index) noexcept { return *(top_item - index); }
+    [[nodiscard]] intx::uint256& operator[](int index) noexcept { return *(top_item - index); }
 
     /// Pushes an item on the stack. The stack limit is not checked.
     void push(const intx::uint256& item) noexcept { *++top_item = item; }
