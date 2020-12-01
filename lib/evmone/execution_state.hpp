@@ -80,6 +80,8 @@ public:
     [[nodiscard]] size_t size() const noexcept { return m_memory.size(); }
 
     void resize(size_t new_size) { m_memory.resize(new_size); }
+
+    void clear() noexcept { m_memory.clear(); }
 };
 
 /// Generic execution state for generic instructions implementations.
