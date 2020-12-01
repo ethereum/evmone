@@ -84,11 +84,11 @@ struct ExecutionState
     int64_t gas_left = 0;
     evm_stack stack;
     evm_memory memory;
-    const evmc_message& msg;
+    const evmc_message* msg = nullptr;
     evmc::HostContext host;
-    const evmc_revision rev = {};
+    evmc_revision rev = {};
     bytes return_data;
-    const bytes_view code;
+    bytes_view code;
     evmc_status_code status = EVMC_SUCCESS;
     size_t output_offset = 0;
     size_t output_size = 0;
@@ -97,7 +97,7 @@ struct ExecutionState
         const evmc_host_interface& host_interface, evmc_host_context* host_ctx,
         const uint8_t* code_ptr, size_t code_size) noexcept
       : gas_left{message.gas},
-        msg{message},
+        msg{&message},
         host{host_interface, host_ctx},
         rev{revision},
         code{code_ptr, code_size}
