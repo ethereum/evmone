@@ -1,10 +1,8 @@
-/* ethash: C/C++ implementation of Ethash, the Ethereum Proof of Work algorithm.
- * Copyright 2018-2019 Pawel Bylica.
- * Licensed under the Apache License, Version 2.0.
- */
+// ethash: C/C++ implementation of Ethash, the Ethereum Proof of Work algorithm.
+// Copyright 2018-2019 Pawel Bylica.
+// Licensed under the Apache License, Version 2.0.
 
 #include <ethash/keccak.h>
-
 #include "../support/attributes.h"
 
 #if _MSC_VER
@@ -31,7 +29,7 @@
 
 
 /** Loads 64-bit integer from given memory location as little-endian number. */
-static INLINE ALWAYS_INLINE uint64_t load_le(const uint8_t* data)
+static inline ALWAYS_INLINE uint64_t load_le(const uint8_t* data)
 {
     /* memcpy is the best way of expressing the intention. Every compiler will
        optimize is to single load instruction if the target architecture
@@ -43,7 +41,7 @@ static INLINE ALWAYS_INLINE uint64_t load_le(const uint8_t* data)
     return to_le64(word);
 }
 
-static INLINE ALWAYS_INLINE void keccak(
+static inline ALWAYS_INLINE void keccak(
     uint64_t* out, size_t bits, const uint8_t* data, size_t size)
 {
     static const size_t word_size = sizeof(uint64_t);
