@@ -11,10 +11,10 @@ namespace evmone
 evmc_result execute(evmc_vm* /*unused*/, const evmc_host_interface* host, evmc_host_context* ctx,
     evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
 {
-    auto analysis = analyze(rev, code, code_size);
+    const auto analysis = analyze(rev, code, code_size);
 
-    auto state = std::make_unique<execution_state>(*msg, rev, *host, ctx, code, code_size);
-    state->analysis = &analysis;
+    auto state =
+        std::make_unique<execution_state>(*msg, rev, *host, ctx, code, code_size, analysis);
 
     const auto* instr = &state->analysis->instrs[0];
     while (instr != nullptr)
