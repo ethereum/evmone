@@ -1,5 +1,5 @@
 version: "{build}"
-image: Visual Studio 2017
+image: Visual Studio 2019
 
 branches:
   only:
@@ -14,7 +14,7 @@ environment:
   GITHUB_TOKEN:
     secure: OE3TGKRyt/hvk5Gt3DLXvs3Y+F1NLDQAL/bHplDffR+hY2aFg6HrapThKjYo/XX2
   matrix:
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       GENERATOR: "Ninja"
 
 cache:
@@ -25,7 +25,7 @@ install:
   - git submodule update --init --recursive
 
 before_build:
-  - call "%ProgramFiles(x86)%\Microsoft Visual Studio\2017\Community\Common7\Tools\vsdevcmd" -arch=amd64
+  - call "%ProgramFiles(x86)%\Microsoft Visual Studio\2019\Community\Common7\Tools\VsDevCmd" -arch=amd64
   - cmake -S . -B build -DEVMONE_TESTING=ON -Wno-dev -G "%GENERATOR%" -DCMAKE_INSTALL_PREFIX=C:\install
 
 build_script:
