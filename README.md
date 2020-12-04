@@ -46,34 +46,35 @@ geth --vm.evm=./libevmone.so
 ### Building from source
 To build the evmone EVMC module (shared library), test, and benchmark:
 
-1. Clone the repo and create a ```build``` directory:
-```
-git clone --recursive https://github.com/ethereum/evmone
-cd evmone
-mkdir build
-cd build
-```
+1. Fetch the source code:
+   ```
+   git clone --recursive https://github.com/ethereum/evmone
+   cd evmone
+   ```
 
-2. Build dependencies and (on Windows) generate a Visual Studio solution, then build the source:
-#### Linux / OSX
-```
-cmake .. -DEVMONE_TESTING=ON
-cmake --build . -- -j
-```
+2. Configure the project build and dependencies:
+   ##### Linux / OSX
+   ```
+   cmake -S . -B build -DEVMONE_TESTING=ON
+   ```
 
-#### Windows
-*Note: >= Visual Studio 2017 is required since EVMOne makes heavy use of C++17*
-* **Visual Studio 2017**: ```cmake .. -DEVMONE_TESTING=ON -G "Visual Studio 15 2017 Win64"```
-* **Visual Studio 2019**: ```cmake .. -DEVMONE_TESTING=ON -G "Visual Studio 16 2019" -A x64```
-```
-cmake --build .
-```
+   ##### Windows
+   *Note: >= Visual Studio 2019 is required since evmone makes heavy use of C++17*
+   ```
+   cmake -S . -B build -DEVMONE_TESTING=ON -G "Visual Studio 16 2019" -A x64
+   ```
+   
+3. Build:
+   ```
+   cmake --build build --parallel
+   ```
+
 
 3. Run the unit tests or benchmarking tool:
-```
-bin/evmone-unittests
-bin/evmone-bench
-```
+   ```
+   build/bin/evmone-unittests
+   build/bin/evmone-bench test/benchmarks
+   ```
 ### Tools
 
 #### evm-test
