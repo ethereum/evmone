@@ -41,22 +41,42 @@ struct block_info
 };
 static_assert(sizeof(block_info) == 8);
 
+struct code_analysis;
+
 struct execution_state : ExecutionState
 {
-    using ExecutionState::ExecutionState;
-
     /// The gas cost of the current block.
     ///
     /// This is only needed to correctly calculate the "current gas left" value.
     uint32_t current_block_cost = 0;
 
-    struct code_analysis* analysis = nullptr;
+    /// Pointer to code analysis.
+    const code_analysis* analysis = nullptr;
+
+    execution_state() = default;
+
+    execution_state(const evmc_message& message, evmc_revision revision,
+        const evmc_host_interface& host_interface, evmc_host_context* host_ctx,
+        const uint8_t* code_ptr, size_t code_size, const code_analysis& a) noexcept
+      : ExecutionState{message, revision, host_interface, host_ctx, code_ptr, code_size},
+        analysis{&a}
+    {}
 
     /// Terminates the execution with the given status code.
     const instruction* exit(evmc_status_code status_code) noexcept
     {
         status = status_code;
         return nullptr;
+    }
+
+    /// Resets the contents of the execution_state so that it could be reused.
+    void reset(const evmc_message& message, evmc_revision revision,
+        const evmc_host_interface& host_interface, evmc_host_context* host_ctx,
+        const uint8_t* code_ptr, size_t code_size, const code_analysis& a) noexcept
+    {
+        ExecutionState::reset(message, revision, host_interface, host_ctx, code_ptr, code_size);
+        current_block_cost = 0;
+        analysis = &a;
     }
 };
 

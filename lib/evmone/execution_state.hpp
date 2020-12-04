@@ -33,22 +33,26 @@ struct evm_stack
     alignas(sizeof(intx::uint256)) intx::uint256 storage[limit];
 
     /// Default constructor. Sets the top_item pointer to below the stack bottom.
-    [[clang::no_sanitize("bounds")]] evm_stack() noexcept : top_item{storage - 1} {}
+    evm_stack() noexcept { clear(); }
 
     /// The current number of items on the stack.
-    int size() noexcept { return static_cast<int>(top_item + 1 - storage); }
+    [[nodiscard]] int size() const noexcept { return static_cast<int>(top_item + 1 - storage); }
 
     /// Returns the reference to the top item.
-    intx::uint256& top() noexcept { return *top_item; }
+    [[nodiscard]] intx::uint256& top() noexcept { return *top_item; }
 
     /// Returns the reference to the stack item on given position from the stack top.
-    intx::uint256& operator[](int index) noexcept { return *(top_item - index); }
+    [[nodiscard]] intx::uint256& operator[](int index) noexcept { return *(top_item - index); }
 
     /// Pushes an item on the stack. The stack limit is not checked.
     void push(const intx::uint256& item) noexcept { *++top_item = item; }
 
     /// Returns an item popped from the top of the stack.
     intx::uint256 pop() noexcept { return *top_item--; }
+
+    /// Clears the stack by resetting its size to 0 (sets the top_item pointer to below the stack
+    /// bottom).
+    [[clang::no_sanitize("bounds")]] void clear() noexcept { top_item = storage - 1; }
 };
 
 /// The EVM memory.
@@ -76,6 +80,8 @@ public:
     [[nodiscard]] size_t size() const noexcept { return m_memory.size(); }
 
     void resize(size_t new_size) { m_memory.resize(new_size); }
+
+    void clear() noexcept { m_memory.clear(); }
 };
 
 /// Generic execution state for generic instructions implementations.
@@ -84,23 +90,43 @@ struct ExecutionState
     int64_t gas_left = 0;
     evm_stack stack;
     evm_memory memory;
-    const evmc_message& msg;
+    const evmc_message* msg = nullptr;
     evmc::HostContext host;
-    const evmc_revision rev = {};
+    evmc_revision rev = {};
     bytes return_data;
-    const bytes_view code;
+    bytes_view code;
     evmc_status_code status = EVMC_SUCCESS;
     size_t output_offset = 0;
     size_t output_size = 0;
+
+    ExecutionState() noexcept = default;
 
     ExecutionState(const evmc_message& message, evmc_revision revision,
         const evmc_host_interface& host_interface, evmc_host_context* host_ctx,
         const uint8_t* code_ptr, size_t code_size) noexcept
       : gas_left{message.gas},
-        msg{message},
+        msg{&message},
         host{host_interface, host_ctx},
         rev{revision},
         code{code_ptr, code_size}
     {}
+
+    /// Resets the contents of the ExecutionState so that it could be reused.
+    void reset(const evmc_message& message, evmc_revision revision,
+        const evmc_host_interface& host_interface, evmc_host_context* host_ctx,
+        const uint8_t* code_ptr, size_t code_size) noexcept
+    {
+        gas_left = message.gas;
+        stack.clear();
+        memory.clear();
+        msg = &message;
+        host = {host_interface, host_ctx};
+        rev = revision;
+        return_data.clear();
+        code = {code_ptr, code_size};
+        status = EVMC_SUCCESS;
+        output_offset = 0;
+        output_size = 0;
+    }
 };
 }  // namespace evmone

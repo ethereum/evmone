@@ -28,12 +28,12 @@ evmc_status_code call(ExecutionState& state) noexcept
 
     auto msg = evmc_message{};
     msg.kind = Kind;
-    msg.flags = Static ? uint32_t{EVMC_STATIC} : state.msg.flags;
-    msg.depth = state.msg.depth + 1;
+    msg.flags = Static ? uint32_t{EVMC_STATIC} : state.msg->flags;
+    msg.depth = state.msg->depth + 1;
     msg.destination = dst;
-    msg.sender = (Kind == EVMC_DELEGATECALL) ? state.msg.sender : state.msg.destination;
+    msg.sender = (Kind == EVMC_DELEGATECALL) ? state.msg->sender : state.msg->destination;
     msg.value =
-        (Kind == EVMC_DELEGATECALL) ? state.msg.value : intx::be::store<evmc::uint256be>(value);
+        (Kind == EVMC_DELEGATECALL) ? state.msg->value : intx::be::store<evmc::uint256be>(value);
 
     if (size_t(input_size) > 0)
     {
@@ -45,7 +45,7 @@ evmc_status_code call(ExecutionState& state) noexcept
 
     if constexpr (Kind == EVMC_CALL)
     {
-        if (has_value && state.msg.flags & EVMC_STATIC)
+        if (has_value && state.msg->flags & EVMC_STATIC)
             return EVMC_STATIC_MODE_VIOLATION;
 
         if ((has_value || state.rev < EVMC_SPURIOUS_DRAGON) && !state.host.account_exists(dst))
@@ -72,10 +72,11 @@ evmc_status_code call(ExecutionState& state) noexcept
 
     state.return_data.clear();
 
-    if (state.msg.depth >= 1024)
+    if (state.msg->depth >= 1024)
         return EVMC_SUCCESS;
 
-    if (has_value && intx::be::load<uint256>(state.host.get_balance(state.msg.destination)) < value)
+    if (has_value &&
+        intx::be::load<uint256>(state.host.get_balance(state.msg->destination)) < value)
         return EVMC_SUCCESS;
 
     const auto result = state.host.call(msg);
@@ -99,7 +100,7 @@ template evmc_status_code call<EVMC_CALLCODE>(ExecutionState& state) noexcept;
 template <evmc_call_kind Kind>
 evmc_status_code create(ExecutionState& state) noexcept
 {
-    if (state.msg.flags & EVMC_STATIC)
+    if (state.msg->flags & EVMC_STATIC)
         return EVMC_STATIC_MODE_VIOLATION;
 
     const auto endowment = state.stack.pop();
@@ -121,11 +122,11 @@ evmc_status_code create(ExecutionState& state) noexcept
     state.stack.push(0);
     state.return_data.clear();
 
-    if (state.msg.depth >= 1024)
+    if (state.msg->depth >= 1024)
         return EVMC_SUCCESS;
 
     if (endowment != 0 &&
-        intx::be::load<uint256>(state.host.get_balance(state.msg.destination)) < endowment)
+        intx::be::load<uint256>(state.host.get_balance(state.msg->destination)) < endowment)
         return EVMC_SUCCESS;
 
     auto msg = evmc_message{};
@@ -139,8 +140,8 @@ evmc_status_code create(ExecutionState& state) noexcept
         msg.input_data = &state.memory[size_t(init_code_offset)];
         msg.input_size = size_t(init_code_size);
     }
-    msg.sender = state.msg.destination;
-    msg.depth = state.msg.depth + 1;
+    msg.sender = state.msg->destination;
+    msg.depth = state.msg->depth + 1;
     msg.create2_salt = intx::be::store<evmc::bytes32>(salt);
     msg.value = intx::be::store<evmc::uint256be>(endowment);
 
