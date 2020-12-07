@@ -19,6 +19,11 @@
 extern "C" {
 #endif
 
+typedef void (*ethash_keccakf1600_func)(uint64_t[25]);
+
+/// The pointer to the Keccak-f[1600] function implementation.
+extern ethash_keccakf1600_func ethash_keccakf1600;
+
 /**
  * The Keccak-f[1600] function.
  *
@@ -27,7 +32,7 @@ extern "C" {
  *
  * @param state  The state of 25 64-bit words on which the permutation is to be performed.
  */
-void ethash_keccakf1600(uint64_t state[25]) NOEXCEPT;
+void ethash_keccakf1600_generic(uint64_t state[25]) NOEXCEPT;
 
 /// Variant of ethash_keccakf1600() with additional optimization provided by BMI and BMI2
 /// instruction set extensions. May only be used on hardware supporting these extensions.
