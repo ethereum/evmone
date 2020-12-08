@@ -5,26 +5,15 @@
 #include "../support/attributes.h"
 #include <ethash/keccak.h>
 
-#if _MSC_VER
+#if defined(_MSC_VER)
 #include <string.h>
 #define __builtin_memcpy memcpy
 #endif
 
-#if _WIN32
-/* On Windows assume little endian. */
-#define __LITTLE_ENDIAN 1234
-#define __BIG_ENDIAN 4321
-#define __BYTE_ORDER __LITTLE_ENDIAN
-#elif __APPLE__
-#include <machine/endian.h>
-#else
-#include <endian.h>
-#endif
-
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-#define to_le64(X) X
-#else
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
 #define to_le64(X) __builtin_bswap64(X)
+#else
+#define to_le64(X) X
 #endif
 
 /// Loads 64-bit integer from given memory location as little-endian number.
