@@ -1,6 +1,6 @@
 // ethash: C/C++ implementation of Ethash, the Ethereum Proof of Work algorithm.
-// Copyright 2018-2019 Pawel Bylica.
-// Licensed under the Apache License, Version 2.0.
+// Copyright 2018 Pawel Bylica.
+// SPDX-License-Identifier: Apache-2.0
 
 #include <ethash/keccak.h>
 #include "../support/attributes.h"
@@ -28,7 +28,7 @@
 #endif
 
 
-/** Loads 64-bit integer from given memory location as little-endian number. */
+/// Loads 64-bit integer from given memory location as little-endian number.
 static inline ALWAYS_INLINE uint64_t load_le(const uint8_t* data)
 {
     /* memcpy is the best way of expressing the intention. Every compiler will
