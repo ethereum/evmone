@@ -286,7 +286,13 @@ __attribute__((target("bmi,bmi2"))) static void keccakf1600_bmi(uint64_t state[2
 
 __attribute__((constructor)) static void select_keccakf1600_implementation()
 {
-    if (__builtin_cpu_supports("bmi2"))
+    // Init CPU information.
+    // This is needed on macOS because of the bug: https://bugs.llvm.org/show_bug.cgi?id=48459.
+    __builtin_cpu_init();
+
+    // Check if both BMI and BMI2 are supported. Some CPUs like Intel E5-2697 v2 incorrectly
+    // report BMI2 but not BMI being available.
+    if (__builtin_cpu_supports("bmi") && __builtin_cpu_supports("bmi2"))
         keccakf1600_best = keccakf1600_bmi;
 }
 #endif
