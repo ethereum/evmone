@@ -4,6 +4,7 @@
 
 #include <evmc/instructions.h>
 #include <evmone/analysis.hpp>
+#include <evmone/instruction_traits.hpp>
 #include <gtest/gtest.h>
 #include <test/utils/bytecode.hpp>
 
@@ -31,5 +32,14 @@ TEST(op_table, compare_with_evmc_instruction_tables)
             EXPECT_EQ(metrics.stack_req, ref_metrics.stack_height_required) << case_descr(i);
             EXPECT_EQ(metrics.stack_change, ref_metrics.stack_height_change) << case_descr(i);
         }
+    }
+}
+
+TEST(op_table, compare_with_evmc_instruction_names)
+{
+    const auto* evmc_tbl = evmc_get_instruction_names_table(EVMC_MAX_REVISION);
+    for (size_t i = 0; i < evmone::instr::traits.size(); ++i)
+    {
+        EXPECT_STREQ(evmone::instr::traits[i].name, evmc_tbl[i]);
     }
 }
