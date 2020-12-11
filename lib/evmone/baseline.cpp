@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "baseline.hpp"
+#include "baseline_instruction_table.hpp"
 #include "execution_state.hpp"
 #include "instructions.hpp"
 #include "vm.hpp"
@@ -84,12 +85,12 @@ inline void op_return(ExecutionState& state) noexcept
     state.status = StatusCode;
 }
 
-inline evmc_status_code check_requirements(const char* const* instruction_names,
-    const evmc_instruction_metrics* instruction_metrics, ExecutionState& state, uint8_t op) noexcept
+inline evmc_status_code check_requirements(
+    const InstructionTable& instruction_table, ExecutionState& state, uint8_t op) noexcept
 {
-    const auto metrics = instruction_metrics[op];
+    const auto metrics = instruction_table[op];
 
-    if (instruction_names[op] == nullptr)
+    if (metrics.gas_cost == instr::undefined)
         return EVMC_UNDEFINED_INSTRUCTION;
 
     if ((state.gas_left -= metrics.gas_cost) < 0)
@@ -98,7 +99,7 @@ inline evmc_status_code check_requirements(const char* const* instruction_names,
     const auto stack_size = state.stack.size();
     if (stack_size < metrics.stack_height_required)
         return EVMC_STACK_UNDERFLOW;
-    if (stack_size + metrics.stack_height_change > Stack::limit)
+    if (stack_size == Stack::limit && metrics.can_overflow_stack)
         return EVMC_STACK_OVERFLOW;
 
     return EVMC_SUCCESS;
@@ -114,8 +115,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     if constexpr (TracingEnabled)
         tracer->notify_execution_start(state.rev, *state.msg, state.code);
 
-    const auto instruction_names = evmc_get_instruction_names_table(state.rev);
-    const auto instruction_metrics = evmc_get_instruction_metrics_table(state.rev);
+    const auto& instruction_table = get_baseline_instruction_table(state.rev);
 
     const auto* const code = state.code.data();
     auto pc = code;
@@ -129,7 +129,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
         }
 
         const auto op = *pc;
-        const auto status = check_requirements(instruction_names, instruction_metrics, state, op);
+        const auto status = check_requirements(instruction_table, state, op);
         if (status != EVMC_SUCCESS)
         {
             state.status = status;
