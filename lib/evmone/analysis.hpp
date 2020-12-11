@@ -122,7 +122,7 @@ struct instruction
     instruction_exec_fn fn = nullptr;
     instruction_argument arg;
 
-    explicit constexpr instruction(instruction_exec_fn f) noexcept : fn{f}, arg{} {};
+    explicit constexpr instruction(instruction_exec_fn f) noexcept : fn{f}, arg{} {}
 };
 
 struct code_analysis

@@ -45,7 +45,18 @@ add_subdirectory(evmc)
 
 cable_configure_compiler()
 if(CABLE_COMPILER_GNULIKE)
-    add_compile_options(-Wno-attributes)  # Allow using unknown attributes.
+    add_compile_options(
+        -Wmissing-declarations
+        -Wno-attributes  # Allow using unknown attributes.
+    )
+    cable_add_cxx_compiler_flag_if_supported(-Wduplicated-cond)
+    cable_add_cxx_compiler_flag_if_supported(-Wduplicate-enum)
+    cable_add_cxx_compiler_flag_if_supported(-Wextra-semi)
+    cable_add_cxx_compiler_flag_if_supported(-Wfinal-dtor-non-final-class)
+    cable_add_cxx_compiler_flag_if_supported(-Wlogical-op)
+    cable_add_cxx_compiler_flag_if_supported(-Wnewline-eof)
+    cable_add_cxx_compiler_flag_if_supported(-Wsuggest-destructor-override)
+    cable_add_cxx_compiler_flag_if_supported(-Wunreachable-code-break)
 
     if(CABLE_COMPILER_CLANG)
         set(CMAKE_CXX_FLAGS_COVERAGE "-fprofile-instr-generate -fcoverage-mapping")
