@@ -24,7 +24,7 @@ cable_set_build_type(DEFAULT Release CONFIGURATION_TYPES Release Debug)
 
 include(Hunter/init)
 
-project(evmone LANGUAGES CXX)
+project(evmone LANGUAGES CXX C)
 set(PROJECT_VERSION 0.6.0-dev)
 
 string(REGEX MATCH "([0-9]+)\\.([0-9]+)" _ ${PROJECT_VERSION})
