@@ -1,4 +1,2 @@
 comment:
-  layout: "diff"
-ignore:
-  - "test/.*"
+  layout: "diff, flags, files"

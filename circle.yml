@@ -1,18 +1,15 @@
 version: 2.1
 
 executors:
-  linux:
+  linux-gcc-latest:
     docker:
-      - image: ethereum/cpp-build-env:11
-  linux-gcc-9:
-    docker:
-      - image: ethereum/cpp-build-env:12-gcc-9
+      - image: ethereum/cpp-build-env:16-gcc-10
   linux-gcc-7:
     docker:
       - image: ethereum/cpp-build-env:12-gcc-7
-  linux-clang-9:
+  linux-clang-latest:
     docker:
-      - image: ethereum/cpp-build-env:12-clang-9
+      - image: ethereum/cpp-build-env:16-clang-11
   macos:
     macos:
       xcode: 11.1.0
@@ -70,6 +67,39 @@ commands:
         working_directory: ~/build
         command: ctest -R ${TESTS_FILTER:-'.*'} -j4 --schedule-random --output-on-failure
 
+  collect_coverage_gcc:
+    description: "Collect coverage data (GCC)"
+    steps:
+      - run:
+          name: "Collect coverage data (GCC)"
+          working_directory: ~/build
+          command: |
+            lcov --capture --directory . --output-file coverage.lcov --exclude='/usr/*' --exclude="$HOME/.hunter/*" --exclude="$PWD/_deps/*"
+            lcov --zerocounters --directory .
+            rm -rf coverage
+            genhtml coverage.lcov --output-directory coverage --title $CIRCLE_PROJECT_REPONAME
+
+  upload_coverage:
+    description: "Upload coverage data"
+    parameters:
+      flags:
+        type: string
+    steps:
+      - run:
+          name: "Upgrade codecov"
+          command: sudo pip3 install --upgrade --quiet --no-cache-dir codecov
+      - run:
+          name: "Upload to Codecov"
+          command: |
+            # Convert to relative paths
+            sed -i 's|$(pwd)/||' ~/build/coverage.lcov
+            counter=1
+            until codecov --flags <<parameters.flags>> --required --file ~/build/coverage.lcov -X gcov || [ $counter = 5 ]; do
+              counter=$((counter+1))
+              sleep 1
+              echo "Try #$counter..."
+            done
+
   package:
     description: "Make package"
     steps:
@@ -104,7 +134,7 @@ jobs:
           codespell --quiet-level=4
 
   release-linux:
-    executor: linux-gcc-9
+    executor: linux-gcc-latest
     environment:
       BUILD_TYPE: Release
     steps:
@@ -179,24 +209,20 @@ jobs:
       - test
 
   gcc-latest-coverage:
-    executor: linux-gcc-9
+    executor: linux-gcc-latest
     environment:
       BUILD_TYPE: Coverage
+      TESTS_FILTER: unittests
     steps:
       - build
-      - run:
-          name: "Run unit tests"
-          working_directory: ~/build
-          command: |
-            bin/evmone-unittests
-      - run:
-          name: "Upload coverage data"
-          command: |
-            codecov --gcov-root ~/build
+      - test
+      - collect_coverage_gcc
+      - upload_coverage:
+          flags: unittests
 
   gcc-32bit:
     docker:
-      - image: ethereum/cpp-build-env:14-gcc-10-multilib
+      - image: ethereum/cpp-build-env:15-gcc-10-multilib
     environment:
       TOOLCHAIN: cxx17-32bit
     steps:
@@ -204,7 +230,7 @@ jobs:
       - test
 
   clang-latest-ubsan:
-    executor: linux-clang-9
+    executor: linux-clang-latest
     environment:
       CMAKE_OPTIONS: -DSANITIZE=undefined,implicit-conversion,nullability
       UBSAN_OPTIONS: halt_on_error=1
@@ -215,7 +241,7 @@ jobs:
       - test
 
   clang-latest-coverage:
-    executor: linux-clang-9
+    executor: linux-clang-latest
     environment:
       BUILD_TYPE: Coverage
       TESTS_FILTER: unittests
