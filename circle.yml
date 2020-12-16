@@ -67,6 +67,39 @@ commands:
         working_directory: ~/build
         command: ctest -R ${TESTS_FILTER:-'.*'} -j4 --schedule-random --output-on-failure
 
+  collect_coverage_gcc:
+    description: "Collect coverage data (GCC)"
+    steps:
+      - run:
+          name: "Collect coverage data (GCC)"
+          working_directory: ~/build
+          command: |
+            lcov --capture --directory . --output-file coverage.lcov --exclude='/usr/*' --exclude="$HOME/.hunter/*" --exclude="$PWD/_deps/*"
+            lcov --zerocounters --directory .
+            rm -rf coverage
+            genhtml coverage.lcov --output-directory coverage --title $CIRCLE_PROJECT_REPONAME
+
+  upload_coverage:
+    description: "Upload coverage data"
+    parameters:
+      flags:
+        type: string
+    steps:
+      - run:
+          name: "Upgrade codecov"
+          command: sudo pip3 install --upgrade --quiet --no-cache-dir codecov
+      - run:
+          name: "Upload to Codecov"
+          command: |
+            # Convert to relative paths
+            sed -i 's|$(pwd)/||' ~/build/coverage.lcov
+            counter=1
+            until codecov --flags <<parameters.flags>> --required --file ~/build/coverage.lcov -X gcov || [ $counter = 5 ]; do
+              counter=$((counter+1))
+              sleep 1
+              echo "Try #$counter..."
+            done
+
   package:
     description: "Make package"
     steps:
@@ -179,17 +212,13 @@ jobs:
     executor: linux-gcc-latest
     environment:
       BUILD_TYPE: Coverage
+      TESTS_FILTER: unittests
     steps:
       - build
-      - run:
-          name: "Run unit tests"
-          working_directory: ~/build
-          command: |
-            bin/evmone-unittests
-      - run:
-          name: "Upload coverage data"
-          command: |
-            codecov --gcov-root ~/build
+      - test
+      - collect_coverage_gcc
+      - upload_coverage:
+          flags: unittests
 
   gcc-32bit:
     docker:
