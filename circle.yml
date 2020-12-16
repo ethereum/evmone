@@ -1,18 +1,15 @@
 version: 2.1
 
 executors:
-  linux:
+  linux-gcc-latest:
     docker:
-      - image: ethereum/cpp-build-env:11
-  linux-gcc-9:
-    docker:
-      - image: ethereum/cpp-build-env:12-gcc-9
+      - image: ethereum/cpp-build-env:16-gcc-10
   linux-gcc-7:
     docker:
       - image: ethereum/cpp-build-env:12-gcc-7
-  linux-clang-9:
+  linux-clang-latest:
     docker:
-      - image: ethereum/cpp-build-env:12-clang-9
+      - image: ethereum/cpp-build-env:16-clang-11
   macos:
     macos:
       xcode: 11.1.0
@@ -104,7 +101,7 @@ jobs:
           codespell --quiet-level=4
 
   release-linux:
-    executor: linux-gcc-9
+    executor: linux-gcc-latest
     environment:
       BUILD_TYPE: Release
     steps:
@@ -179,7 +176,7 @@ jobs:
       - test
 
   gcc-latest-coverage:
-    executor: linux-gcc-9
+    executor: linux-gcc-latest
     environment:
       BUILD_TYPE: Coverage
     steps:
@@ -196,7 +193,7 @@ jobs:
 
   gcc-32bit:
     docker:
-      - image: ethereum/cpp-build-env:14-gcc-10-multilib
+      - image: ethereum/cpp-build-env:15-gcc-10-multilib
     environment:
       TOOLCHAIN: cxx17-32bit
     steps:
@@ -204,7 +201,7 @@ jobs:
       - test
 
   clang-latest-ubsan:
-    executor: linux-clang-9
+    executor: linux-clang-latest
     environment:
       CMAKE_OPTIONS: -DSANITIZE=undefined,implicit-conversion,nullability
       UBSAN_OPTIONS: halt_on_error=1
@@ -215,7 +212,7 @@ jobs:
       - test
 
   clang-latest-coverage:
-    executor: linux-clang-9
+    executor: linux-clang-latest
     environment:
       BUILD_TYPE: Coverage
       TESTS_FILTER: unittests
