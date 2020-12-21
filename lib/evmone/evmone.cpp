@@ -6,6 +6,7 @@
 /// EVMC instance and entry point of evmone is defined here.
 /// The file name matches the evmone.h public header.
 
+#include "baseline.hpp"
 #include "execution.hpp"
 #include <evmone/evmone.h>
 
@@ -24,12 +25,18 @@ constexpr evmc_capabilities_flagset get_capabilities(evmc_vm* /*vm*/) noexcept
     return EVMC_CAPABILITY_EVM1;
 }
 
-evmc_set_option_result set_option(evmc_vm* /*vm*/, char const* name, char const* value) noexcept
+evmc_set_option_result set_option(evmc_vm* vm, char const* name, char const* value) noexcept
 {
     if (name[0] == 'O' && name[1] == '\0')
     {
-        if (value[0] == '2' && value[1] == '\0')  // O=2
+        if (value[0] == '0' && value[1] == '\0')  // O=0
         {
+            vm->execute = evmone::baseline_execute;
+            return EVMC_SET_OPTION_SUCCESS;
+        }
+        else if (value[0] == '2' && value[1] == '\0')  // O=2
+        {
+            vm->execute = evmone::execute;
             return EVMC_SET_OPTION_SUCCESS;
         }
         return EVMC_SET_OPTION_INVALID_VALUE;

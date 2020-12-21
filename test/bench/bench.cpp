@@ -336,6 +336,7 @@ int main(int argc, char** argv)
             return ec;
 
         registered_vms["advanced"] = evmc::VM{evmc_create_evmone(), {{"O", "2"}}};
+        registered_vms["baseline"] = evmc::VM{evmc_create_evmone(), {{"O", "0"}}};
         register_benchmarks(benchmark_cases);
         RunSpecifiedBenchmarks();
         return 0;
