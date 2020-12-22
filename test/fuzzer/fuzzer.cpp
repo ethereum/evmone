@@ -61,8 +61,8 @@ extern "C" evmc_vm* evmc_create_aleth_interpreter() noexcept;
 /// The reference VM.
 static auto ref_vm = evmc::VM{evmc_create_evmone()};
 
-#pragma clang diagnostic ignored "-Wzero-length-array"
 static evmc::VM external_vms[] = {
+    evmc::VM{evmc_create_evmone(), {{"O", "0"}}},
 #if ALETH
     evmc::VM{evmc_create_aleth_interpreter()},
 #endif
@@ -309,10 +309,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
     if (!in)
         return 0;
 
-    auto& ref_host = in.host;
+    auto ref_host = in.host;  // Copy Host.
     const auto& code = ref_host.accounts[in.msg.destination].code;
-
-    auto host = ref_host;  // Copy Host.
 
     if (print_input)
     {
@@ -339,6 +337,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
 
     for (auto& vm : external_vms)
     {
+        auto host = in.host;  // Copy Host.
         const auto res = vm.execute(host, in.rev, in.msg, code.data(), code.size());
 
         const auto status = check_and_normalize(res.status_code);
@@ -371,6 +370,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
             ASSERT(std::equal(ref_host.recorded_logs.begin(), ref_host.recorded_logs.end(),
                 host.recorded_logs.begin(), host.recorded_logs.end()));
 
+            ASSERT_EQ(ref_host.recorded_blockhashes.size(), host.recorded_blockhashes.size());
             ASSERT(std::equal(ref_host.recorded_blockhashes.begin(),
                 ref_host.recorded_blockhashes.end(), host.recorded_blockhashes.begin(),
                 host.recorded_blockhashes.end()));
