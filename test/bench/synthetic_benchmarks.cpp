@@ -25,6 +25,7 @@ enum class Mode
 
 enum class InstructionKind : char
 {
+    nullop = 'n',
     unop = 'u',
     binop = 'b',
     push = 'p',
@@ -37,6 +38,8 @@ constexpr InstructionKind get_instruction_kind(evmc_opcode opcode) noexcept
     const auto trait = instr::traits[opcode];
     if (opcode >= OP_PUSH1 && opcode <= OP_PUSH32)
         return InstructionKind::push;
+    else if (trait.stack_height_required == 0 && trait.stack_height_change == 0)
+        return InstructionKind::nullop;
     else if (trait.stack_height_required == 1 && trait.stack_height_change == 0)
         return InstructionKind::unop;
     else if (trait.stack_height_required == 2 && trait.stack_height_change == -1)
@@ -60,6 +63,8 @@ bytecode generate_loop_inner_code(evmc_opcode opcode, Mode mode)
             return stack_limit * (push(opcode, {}) + OP_POP);
         case InstructionKind::producer:
             return stack_limit * (bytecode{opcode} + OP_POP);
+        case InstructionKind::nullop:
+            return stack_limit * 2 * bytecode{opcode};
         case InstructionKind::unop:
             return OP_DUP1 + stack_limit * 2 * bytecode{opcode} + OP_POP;
         case InstructionKind::binop:
@@ -106,7 +111,9 @@ bytes_view generate_code(evmc_opcode opcode, Mode mode)
 
 void register_synthetic_benchmarks()
 {
-    std::vector<evmc_opcode> opcodes{// binops:
+    std::vector opcodes{OP_JUMPDEST,
+
+        // binops:
         OP_ADD, OP_MUL, OP_SUB, OP_SIGNEXTEND, OP_LT, OP_GT, OP_SLT, OP_SGT, OP_EQ, OP_AND, OP_OR,
         OP_XOR, OP_BYTE, OP_SHL, OP_SHR, OP_SAR,
 
@@ -136,7 +143,8 @@ void register_synthetic_benchmarks()
 
         for (const auto mode : {Mode::min_stack, Mode::full_stack})
         {
-            if (mode == Mode::full_stack && kind == InstructionKind::unop)
+            if (mode == Mode::full_stack &&
+                (kind == InstructionKind::unop || kind == InstructionKind::nullop))
                 continue;
 
             const auto name_suffix =
