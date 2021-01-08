@@ -44,14 +44,16 @@ evmc_result execute_measure_each_time(const evmc_host_interface* host, evmc_host
 
     const auto* instr = &state->analysis->instrs[0];
     unsigned int instruction_counter = 0;
+
+    std::chrono::steady_clock::time_point start_time, end_time;
+    start_time = std::chrono::steady_clock::now();
     while (instr != nullptr) {
-        std::chrono::steady_clock::time_point start_time, end_time;
-        start_time = std::chrono::steady_clock::now();
         instr = instr->fn(instr, *state);
         end_time = std::chrono::steady_clock::now();
         std::chrono::nanoseconds elapsed_nanoseconds = end_time - start_time;
         std::cout << run_id << ","<< instruction_counter << "," << elapsed_nanoseconds.count() << "," << std::endl;
         ++instruction_counter;
+        start_time = std::chrono::steady_clock::now();
     }
     const auto gas_left =
         (state->status == EVMC_SUCCESS || state->status == EVMC_REVERT) ? state->gas_left : 0;
