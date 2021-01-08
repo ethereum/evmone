@@ -20,10 +20,11 @@ evmc_result execute_measure_collective_time(const evmc_host_interface* host,
     state->analysis = &analysis;
 
     const auto* instr = &state->analysis->instrs[0];
-    std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
+    std::chrono::steady_clock::time_point start_time, end_time;
+    start_time = std::chrono::steady_clock::now();
     while (instr != nullptr)
         instr = instr->fn(instr, *state);
-    std::chrono::steady_clock::time_point end_time = std::chrono::steady_clock::now();
+    end_time = std::chrono::steady_clock::now();
     std::chrono::nanoseconds elapsed_nanoseconds = end_time - start_time;
     std::cout << "Collective time: " << elapsed_nanoseconds.count() << std::endl;
     const auto gas_left =
@@ -44,9 +45,10 @@ evmc_result execute_measure_each_time(const evmc_host_interface* host, evmc_host
     const auto* instr = &state->analysis->instrs[0];
     unsigned int instruction_counter = 0;
     while (instr != nullptr) {
-        std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
+        std::chrono::steady_clock::time_point start_time, end_time;
+        start_time = std::chrono::steady_clock::now();
         instr = instr->fn(instr, *state);
-        std::chrono::steady_clock::time_point end_time = std::chrono::steady_clock::now();
+        end_time = std::chrono::steady_clock::now();
         std::chrono::nanoseconds elapsed_nanoseconds = end_time - start_time;
         std::cout << run_id << ","<< instruction_counter << "," << elapsed_nanoseconds.count() << "," << std::endl;
         ++instruction_counter;
@@ -103,9 +105,10 @@ evmc_result execute_measure_one_time(const evmc_host_interface* host, evmc_host_
     unsigned int instruction_counter = 1;
     while (instr != nullptr) {
         if (instruction_counter == instruction_to_measure) {
-            std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
+            std::chrono::steady_clock::time_point start_time, end_time;
+            start_time = std::chrono::steady_clock::now();
             instr = instr->fn(instr, *state);
-            std::chrono::steady_clock::time_point end_time = std::chrono::steady_clock::now();
+            end_time = std::chrono::steady_clock::now();
             std::chrono::nanoseconds elapsed_seconds = end_time - start_time;
             std::cout << "Instruction: "<< instruction_counter << ", time: " << elapsed_seconds.count() << std::endl;
         }
