@@ -619,19 +619,22 @@ inline void msize(ExecutionState& state) noexcept
     state.stack.push(state.memory.size());
 }
 
-
-template <evmc_opcode DupOp>
+/// DUP instruction implementation.
+/// @tparam N  The number as in the instruction definition, e.g. DUP3 is dup<3>.
+template <size_t N>
 inline void dup(evm_stack& stack) noexcept
 {
-    constexpr auto index = DupOp - OP_DUP1;
-    stack.push(stack[index]);
+    static_assert(N >= 1 && N <= 16);
+    stack.push(stack[N - 1]);
 }
 
-template <evmc_opcode SwapOp>
+/// SWAP instruction implementation.
+/// @tparam N  The number as in the instruction definition, e.g. SWAP3 is swap<3>.
+template <size_t N>
 inline void swap(evm_stack& stack) noexcept
 {
-    constexpr auto index = SwapOp - OP_SWAP1 + 1;
-    std::swap(stack.top(), stack[index]);
+    static_assert(N >= 1 && N <= 16);
+    std::swap(stack.top(), stack[N]);
 }
 
 
