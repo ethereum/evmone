@@ -29,6 +29,8 @@ enum class InstructionKind : char
     unop = 'u',
     binop = 'b',
     push = 'p',
+    swap = 's',
+    dup = 'd',
     producer = 'a',
     unknown = 'X',
 };
@@ -38,6 +40,10 @@ constexpr InstructionKind get_instruction_kind(evmc_opcode opcode) noexcept
     const auto trait = instr::traits[opcode];
     if (opcode >= OP_PUSH1 && opcode <= OP_PUSH32)
         return InstructionKind::push;
+    else if (opcode >= OP_SWAP1 && opcode <= OP_SWAP16)
+        return InstructionKind::swap;
+    else if (opcode >= OP_DUP1 && opcode <= OP_DUP16)
+        return InstructionKind::dup;
     else if (trait.stack_height_required == 0 && trait.stack_height_change == 0)
         return InstructionKind::nullop;
     else if (trait.stack_height_required == 1 && trait.stack_height_change == 0)
@@ -80,6 +86,16 @@ bytecode generate_loop_inner_code(CodeParams params)
         {
         case InstructionKind::push:
             return stack_limit * (push(opcode, {}) + OP_POP);
+        case InstructionKind::swap:
+        {
+            const auto n = opcode - OP_SWAP1 + 1;
+            return n * OP_DUP1 + stack_limit * 2 * bytecode{opcode} + n * OP_POP;
+        }
+        case InstructionKind::dup:
+        {
+            const auto n = opcode - OP_DUP1;
+            return n * OP_DUP1 + stack_limit * (bytecode{opcode} + OP_POP) + n * OP_POP;
+        }
         case InstructionKind::producer:
             return stack_limit * (bytecode{opcode} + OP_POP);
         case InstructionKind::nullop:
@@ -89,8 +105,9 @@ bytecode generate_loop_inner_code(CodeParams params)
         case InstructionKind::binop:
             return OP_DUP1 + (stack_limit - 1) * (OP_DUP1 + bytecode{opcode}) + OP_POP;
         default:
-            INTX_UNREACHABLE();
+            break;
         }
+        break;
     case Mode::full_stack:
         switch (kind)
         {
@@ -101,13 +118,12 @@ bytecode generate_loop_inner_code(CodeParams params)
         case InstructionKind::binop:
             return stack_limit * OP_DUP1 + (stack_limit - 1) * opcode + OP_POP;
         default:
-            INTX_UNREACHABLE();
+            break;
         }
-    default:
-        INTX_UNREACHABLE();
+        break;
     }
 
-    return {};  // Make old compilers happy.
+    return {};
 }
 
 
@@ -152,6 +168,14 @@ void register_synthetic_benchmarks()
     for (auto opcode = OP_PUSH1; opcode <= OP_PUSH32; opcode = static_cast<evmc_opcode>(opcode + 1))
         params_list.insert(
             params_list.end(), {{opcode, Mode::min_stack}, {opcode, Mode::full_stack}});
+
+    // SWAP.
+    for (auto opcode = OP_SWAP1; opcode <= OP_SWAP16; opcode = static_cast<evmc_opcode>(opcode + 1))
+        params_list.insert(params_list.end(), {{opcode, Mode::min_stack}});
+
+    // DUP.
+    for (auto opcode = OP_DUP1; opcode <= OP_DUP16; opcode = static_cast<evmc_opcode>(opcode + 1))
+        params_list.insert(params_list.end(), {{opcode, Mode::min_stack}});
 
 
     for (auto& [vm_name, vm] : registered_vms)
