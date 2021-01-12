@@ -50,9 +50,28 @@ constexpr InstructionKind get_instruction_kind(evmc_opcode opcode) noexcept
         return InstructionKind::unknown;
 }
 
-/// Generates the EVM benchmarking loop inner code for the given opcode and "mode".
-bytecode generate_loop_inner_code(evmc_opcode opcode, Mode mode)
+struct CodeParams
 {
+    evmc_opcode opcode;
+    Mode mode;
+};
+
+inline constexpr bool operator<(const CodeParams& a, const CodeParams& b) noexcept
+{
+    return std::tuple(a.opcode, a.mode) < std::tuple(b.opcode, b.mode);
+}
+
+std::string to_string(const CodeParams& params)
+{
+    return std::string{instr::traits[params.opcode].name} + '/' +
+           static_cast<char>(get_instruction_kind(params.opcode)) +
+           std::to_string(static_cast<int>(params.mode));
+}
+
+/// Generates the EVM benchmarking loop inner code for the given opcode and "mode".
+bytecode generate_loop_inner_code(CodeParams params)
+{
+    const auto [opcode, mode] = params;
     const auto kind = get_instruction_kind(opcode);
     switch (mode)
     {
@@ -96,36 +115,44 @@ const auto loop_prefix = push(255) + OP_JUMPDEST;
 const auto loop_suffix = push("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff") +
                          OP_ADD + OP_DUP1 + push(2) + OP_JUMPI;
 
-bytes_view generate_code(evmc_opcode opcode, Mode mode)
+bytes_view generate_code(CodeParams params)
 {
-    static bytes cache[256][2]{};
+    static std::map<CodeParams, bytecode> cache;
 
-    auto& code = cache[opcode][static_cast<int>(mode)];
+    auto& code = cache[params];
     if (!code.empty())
         return code;
 
-    code = loop_prefix + generate_loop_inner_code(opcode, mode) + loop_suffix;  // Cache it.
+    code = loop_prefix + generate_loop_inner_code(params) + loop_suffix;  // Cache it.
     return code;
 }
 }  // namespace
 
 void register_synthetic_benchmarks()
 {
-    std::vector opcodes{OP_JUMPDEST,
+    std::vector<CodeParams> params_list;
 
-        // binops:
-        OP_ADD, OP_MUL, OP_SUB, OP_SIGNEXTEND, OP_LT, OP_GT, OP_SLT, OP_SGT, OP_EQ, OP_AND, OP_OR,
-        OP_XOR, OP_BYTE, OP_SHL, OP_SHR, OP_SAR,
+    // Nullops & unops.
+    for (const auto opcode : {OP_JUMPDEST, OP_ISZERO, OP_NOT})
+        params_list.push_back({opcode, Mode::min_stack});
 
-        // unops:
-        OP_ISZERO, OP_NOT,
+    // Binops.
+    for (const auto opcode : {OP_ADD, OP_MUL, OP_SUB, OP_SIGNEXTEND, OP_LT, OP_GT, OP_SLT, OP_SGT,
+             OP_EQ, OP_AND, OP_OR, OP_XOR, OP_BYTE, OP_SHL, OP_SHR, OP_SAR})
+        params_list.insert(
+            params_list.end(), {{opcode, Mode::min_stack}, {opcode, Mode::full_stack}});
 
-        // producers:
-        OP_ADDRESS, OP_CALLER, OP_CALLVALUE, OP_CALLDATASIZE, OP_CODESIZE, OP_RETURNDATASIZE, OP_PC,
-        OP_MSIZE, OP_GAS};
+    // Producers.
+    for (const auto opcode : {OP_ADDRESS, OP_CALLER, OP_CALLVALUE, OP_CALLDATASIZE, OP_CODESIZE,
+             OP_RETURNDATASIZE, OP_PC, OP_MSIZE, OP_GAS})
+        params_list.insert(
+            params_list.end(), {{opcode, Mode::min_stack}, {opcode, Mode::full_stack}});
 
-    for (int i = OP_PUSH1; i <= OP_PUSH32; ++i)
-        opcodes.push_back(static_cast<evmc_opcode>(i));
+    // PUSH.
+    for (auto opcode = OP_PUSH1; opcode <= OP_PUSH32; opcode = static_cast<evmc_opcode>(opcode + 1))
+        params_list.insert(
+            params_list.end(), {{opcode, Mode::min_stack}, {opcode, Mode::full_stack}});
+
 
     for (auto& [vm_name, vm] : registered_vms)
     {
@@ -137,30 +164,15 @@ void register_synthetic_benchmarks()
             ->Unit(kMicrosecond);
     }
 
-    for (const auto opcode : opcodes)
+    for (const auto params : params_list)
     {
-        const auto kind = get_instruction_kind(opcode);
-
-        for (const auto mode : {Mode::min_stack, Mode::full_stack})
+        for (auto& [vm_name, vm] : registered_vms)
         {
-            if (mode == Mode::full_stack &&
-                (kind == InstructionKind::unop || kind == InstructionKind::nullop))
-                continue;
-
-            const auto name_suffix =
-                std::string{'/', static_cast<char>(kind)} + std::to_string(static_cast<int>(mode));
-
-            for (auto& [vm_name, vm] : registered_vms)
-            {
-                RegisterBenchmark((std::string{vm_name} + "/execute/synth/" +
-                                      instr::traits[opcode].name + name_suffix)
-                                      .c_str(),
-                    [&vm = vm, opcode, mode](
-                        State& state) { execute(state, vm, generate_code(opcode, mode)); })
-                    ->Unit(kMicrosecond);
-            }
+            RegisterBenchmark(
+                (std::string{vm_name} + "/execute/synth/" + to_string(params)).c_str(),
+                [&vm = vm, params](State& state) { execute(state, vm, generate_code(params)); })
+                ->Unit(kMicrosecond);
         }
     }
 }
-
 }  // namespace evmone::test
