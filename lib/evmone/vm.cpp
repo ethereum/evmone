@@ -10,10 +10,20 @@
 #include "execution.hpp"
 #include <evmone/evmone.h>
 
+#include "instruction_traits.hpp"
+#include <evmc/instructions.h>
+#include <cstdio>
+#include <cstring>
+
 namespace evmone
 {
 namespace
 {
+void basic_trace(evmc_opcode opcode) noexcept
+{
+    std::puts(instr::traits[opcode].name);
+}
+
 void destroy(evmc_vm* vm) noexcept
 {
     assert(vm != nullptr);
@@ -40,6 +50,11 @@ evmc_set_option_result set_option(evmc_vm* vm, char const* name, char const* val
             return EVMC_SET_OPTION_SUCCESS;
         }
         return EVMC_SET_OPTION_INVALID_VALUE;
+    }
+    else if (std::strcmp(name, "trace") == 0)
+    {
+        static_cast<VM*>(vm)->tracing_fn = basic_trace;
+        return EVMC_SET_OPTION_SUCCESS;
     }
     return EVMC_SET_OPTION_INVALID_NAME;
 }

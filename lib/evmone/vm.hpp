@@ -4,6 +4,7 @@
 #pragma once
 
 #include <evmc/evmc.h>
+#include <evmc/instructions.h>
 
 namespace evmone
 {
@@ -11,6 +12,10 @@ namespace evmone
 class VM : public evmc_vm
 {
 public:
+    using TracingFn = void (*)(evmc_opcode opcode) noexcept;
+
+    TracingFn tracing_fn = nullptr;
+
     inline constexpr VM() noexcept;
 };
 }  // namespace evmone
