@@ -10,14 +10,24 @@
 #include "execution.hpp"
 #include <evmone/evmone.h>
 
+#include "instruction_traits.hpp"
+#include <evmc/instructions.h>
+#include <cstdio>
+#include <cstring>
+
 namespace evmone
 {
 namespace
 {
+void basic_trace(evmc_opcode opcode) noexcept
+{
+    std::puts(instr::traits[opcode].name);
+}
+
 void destroy(evmc_vm* vm) noexcept
 {
     // TODO: Mark function with [[gnu:nonnull]] or add CHECK().
-    delete vm;
+    delete static_cast<VM*>(vm);
 }
 
 constexpr evmc_capabilities_flagset get_capabilities(evmc_vm* /*vm*/) noexcept
@@ -41,15 +51,19 @@ evmc_set_option_result set_option(evmc_vm* vm, char const* name, char const* val
         }
         return EVMC_SET_OPTION_INVALID_VALUE;
     }
+    else if (std::strcmp(name, "trace") == 0)
+    {
+        static_cast<VM*>(vm)->tracing_fn = basic_trace;
+        return EVMC_SET_OPTION_SUCCESS;
+    }
     return EVMC_SET_OPTION_INVALID_NAME;
 }
-}  // namespace
-}  // namespace evmone
 
-extern "C" {
-EVMC_EXPORT evmc_vm* evmc_create_evmone() noexcept
-{
-    return new evmc_vm{
+}  // namespace
+
+
+inline constexpr VM::VM() noexcept
+  : evmc_vm{
         EVMC_ABI_VERSION,
         "evmone",
         PROJECT_VERSION,
@@ -57,6 +71,14 @@ EVMC_EXPORT evmc_vm* evmc_create_evmone() noexcept
         evmone::execute,
         evmone::get_capabilities,
         evmone::set_option,
-    };
+    }
+{}
+
+}  // namespace evmone
+
+extern "C" {
+EVMC_EXPORT evmc_vm* evmc_create_evmone() noexcept
+{
+    return new evmone::VM{};
 }
 }

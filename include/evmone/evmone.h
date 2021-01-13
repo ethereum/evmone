@@ -16,6 +16,21 @@ EVMC_EXPORT struct evmc_vm* evmc_create_evmone(void) EVMC_NOEXCEPT;
 
 #if __cplusplus
 }
+
+#include <evmc/instructions.h>
+
+namespace evmone
+{
+using TracingFn = void (*)(evmc_opcode opcode) noexcept;
+
+struct VM : evmc_vm
+{
+    TracingFn tracing_fn = nullptr;
+
+    inline constexpr VM() noexcept;
+};
+}  // namespace evmone
+
 #endif
 
 #endif  // EVMONE_H
