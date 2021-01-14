@@ -85,24 +85,31 @@ bytecode generate_loop_inner_code(CodeParams params)
         switch (kind)
         {
         case InstructionKind::push:
+            // PUSH1 POP PUSH1 POP ...
             return stack_limit * (push(opcode, {}) + OP_POP);
         case InstructionKind::swap:
         {
             const auto n = opcode - OP_SWAP1 + 1;
+            // DUP1 SWAP1 SWAP1 ... POP
             return n * OP_DUP1 + stack_limit * 2 * bytecode{opcode} + n * OP_POP;
         }
         case InstructionKind::dup:
         {
             const auto n = opcode - OP_DUP1;
+            // DUP1 DUP1 POP DUP1 POP ... POP
             return n * OP_DUP1 + stack_limit * (bytecode{opcode} + OP_POP) + n * OP_POP;
         }
         case InstructionKind::producer:
+            // CALLER POP CALLER POP ...
             return stack_limit * (bytecode{opcode} + OP_POP);
         case InstructionKind::nullop:
+            // JUMPDEST JUMPDEST ...
             return stack_limit * 2 * bytecode{opcode};
         case InstructionKind::unop:
+            // DUP1 NOT NOT ... POP
             return OP_DUP1 + stack_limit * 2 * bytecode{opcode} + OP_POP;
         case InstructionKind::binop:
+            // DUP1 DUP1 ADD DUP1 ADD DUP1 ADD ... POP
             return OP_DUP1 + (stack_limit - 1) * (OP_DUP1 + bytecode{opcode}) + OP_POP;
         default:
             break;
@@ -112,10 +119,13 @@ bytecode generate_loop_inner_code(CodeParams params)
         switch (kind)
         {
         case InstructionKind::push:
+            // PUSH1 PUSH1 PUSH1 ... POP POP POP ...
             return stack_limit * push(opcode, {}) + stack_limit * OP_POP;
         case InstructionKind::producer:
+            // CALLER CALLER ... POP POP ...
             return stack_limit * opcode + stack_limit * OP_POP;
         case InstructionKind::binop:
+            // DUP1 DUP1 DUP1 ... ADD ADD ADD ... POP
             return stack_limit * OP_DUP1 + (stack_limit - 1) * opcode + OP_POP;
         default:
             break;
