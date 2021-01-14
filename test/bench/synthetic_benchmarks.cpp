@@ -121,6 +121,12 @@ bytecode generate_loop_inner_code(CodeParams params)
         case InstructionKind::push:
             // PUSH1 PUSH1 PUSH1 ... POP POP POP ...
             return stack_limit * push(opcode, {}) + stack_limit * OP_POP;
+        case InstructionKind::dup:
+        {
+            const auto n = opcode - OP_DUP1;
+            // DUP1 DUP1 POP DUP1 POP ... POP
+            return n * OP_DUP1 + (stack_limit - n) * bytecode{opcode} + stack_limit * OP_POP;
+        }
         case InstructionKind::producer:
             // CALLER CALLER ... POP POP ...
             return stack_limit * opcode + stack_limit * OP_POP;
@@ -185,7 +191,8 @@ void register_synthetic_benchmarks()
 
     // DUP.
     for (auto opcode = OP_DUP1; opcode <= OP_DUP16; opcode = static_cast<evmc_opcode>(opcode + 1))
-        params_list.insert(params_list.end(), {{opcode, Mode::min_stack}});
+        params_list.insert(
+            params_list.end(), {{opcode, Mode::min_stack}, {opcode, Mode::full_stack}});
 
 
     for (auto& [vm_name, vm] : registered_vms)
