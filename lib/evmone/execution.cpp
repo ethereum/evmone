@@ -125,6 +125,22 @@ evmc_result execute_measure_one_time(const evmc_host_interface* host, evmc_host_
         state->status, gas_left, &state->memory[state->output_offset], state->output_size);
 }
 
+void measure_timer_overheads() {
+    int n = 200000;
+	long times[200000];
+    std::chrono::steady_clock::time_point start_time, end_time;
+    for (int i = 0; i < n; ++i) {
+        start_time = std::chrono::steady_clock::now();
+        end_time = std::chrono::steady_clock::now();
+        std::chrono::nanoseconds elapsed_nanoseconds = end_time - start_time;
+        //std::cout << elapsed_nanoseconds.count() << std::endl;
+        times[i] = elapsed_nanoseconds.count();
+    }
+    for (int i = 0; i < n; ++i) {
+		std::cout << times[i] << std::endl;
+	}
+}
+
 
 evmc_result execute(evmc_vm* /*unused*/, const evmc_host_interface* host, evmc_host_context* ctx,
     evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size, unsigned int repeat,
