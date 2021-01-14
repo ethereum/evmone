@@ -15,7 +15,6 @@ add_library(evmone
     baseline.hpp
     evmone.cpp
     execution.cpp
-    execution.hpp
     instruction_traits.hpp
     instructions.cpp
     instructions.hpp

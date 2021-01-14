@@ -7,7 +7,6 @@
 /// The file name matches the evmone.h public header.
 
 #include "baseline.hpp"
-#include "execution.hpp"
 #include <evmone/evmone.h>
 
 namespace evmone
