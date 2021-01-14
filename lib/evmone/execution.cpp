@@ -46,14 +46,18 @@ evmc_result execute_measure_each_time(const evmc_host_interface* host, evmc_host
     unsigned int instruction_counter = 0;
 
     std::chrono::steady_clock::time_point start_time, end_time;
+    long times[200000];
     start_time = std::chrono::steady_clock::now();
     while (instr != nullptr) {
         instr = instr->fn(instr, *state);
         end_time = std::chrono::steady_clock::now();
         std::chrono::nanoseconds elapsed_nanoseconds = end_time - start_time;
-        std::cout << run_id << ","<< instruction_counter << "," << elapsed_nanoseconds.count() << "," << std::endl;
+        times[instruction_counter] = elapsed_nanoseconds.count();
         ++instruction_counter;
         start_time = std::chrono::steady_clock::now();
+    }
+    for (unsigned int i = 0; i < instruction_counter; ++i) {
+        std::cout << run_id << ","<< i << "," << times[i] << "," << std::endl;
     }
     const auto gas_left =
         (state->status == EVMC_SUCCESS || state->status == EVMC_REVERT) ? state->gas_left : 0;
@@ -127,7 +131,7 @@ evmc_result execute_measure_one_time(const evmc_host_interface* host, evmc_host_
 
 void measure_timer_overheads() {
     int n = 200000;
-	long times[200000];
+    long times[200000];
     std::chrono::steady_clock::time_point start_time, end_time;
     for (int i = 0; i < n; ++i) {
         start_time = std::chrono::steady_clock::now();
@@ -137,8 +141,8 @@ void measure_timer_overheads() {
         times[i] = elapsed_nanoseconds.count();
     }
     for (int i = 0; i < n; ++i) {
-		std::cout << times[i] << std::endl;
-	}
+        std::cout << times[i] << std::endl;
+    }
 }
 
 
