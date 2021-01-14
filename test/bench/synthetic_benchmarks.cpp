@@ -14,7 +14,7 @@ namespace evmone::test
 {
 namespace
 {
-/// Stack limit inside the EVM benchmarking loop (one stack item is used for the loop count).
+/// Stack limit inside the EVM benchmarking loop (one stack item is used for the loop counter).
 constexpr auto stack_limit = 1023;
 
 enum class Mode
@@ -142,10 +142,32 @@ bytecode generate_loop_inner_code(CodeParams params)
     return {};
 }
 
+/// Generates a benchmarking loop with given inner code.
+///
+/// This generates do-while loop with 256 iterations and is starts with PUSH1 of 255 as the loop
+/// counter. The while check is done as `(counter += -1) != 0`. The SUB is avoided because it
+/// consumes arguments in unnatural order and additional SWAP would be required.
+///
+/// The loop counter stays on the stack top. The inner code is allowed to duplicate it, but must not
+/// modify it.
+bytecode generate_loop_v1(bytecode inner_code)
+{
+    return push(255) + OP_JUMPDEST + inner_code +
+           push("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff") + OP_ADD +
+           OP_DUP1 + push(2) + OP_JUMPI;
+}
 
-const auto loop_prefix = push(255) + OP_JUMPDEST;
-const auto loop_suffix = push("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff") +
-                         OP_ADD + OP_DUP1 + push(2) + OP_JUMPI;
+/// Generates a benchmarking loop with given inner code.
+///
+/// This is improved variant of v1. It has exactly the same instructions and consumes the same
+/// amount of gas, but according to performed benchmarks (see "loop_v1" and "loop_v2") it runs
+/// faster. And we want the lowest possible loop overhead.
+/// The change is to set the loop counter to -255 and check `(counter += 1) != 0`.
+bytecode generate_loop_v2(bytecode inner_code)
+{
+    return push("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff01") + OP_JUMPDEST +
+           inner_code + push(1) + OP_ADD + OP_DUP1 + push(33) + OP_JUMPI;
+}
 
 bytes_view generate_code(CodeParams params)
 {
@@ -155,7 +177,7 @@ bytes_view generate_code(CodeParams params)
     if (!code.empty())
         return code;
 
-    code = loop_prefix + generate_loop_inner_code(params) + loop_suffix;  // Cache it.
+    code = generate_loop_v2(generate_loop_inner_code(params));  // Cache it.
     return code;
 }
 }  // namespace
@@ -197,12 +219,10 @@ void register_synthetic_benchmarks()
 
     for (auto& [vm_name, vm] : registered_vms)
     {
-        RegisterBenchmark((std::string{vm_name} + "/execute/synth/loop").c_str(),
-            [&vm = vm](State& state) {
-                const auto code = loop_prefix + loop_suffix;
-                execute(state, vm, code);
-            })
-            ->Unit(kMicrosecond);
+        RegisterBenchmark((std::string{vm_name} + "/execute/synth/loop_v1").c_str(),
+            [&vm = vm](State& state) { execute(state, vm, generate_loop_v1({})); });
+        RegisterBenchmark((std::string{vm_name} + "/execute/synth/loop_v2").c_str(),
+            [&vm = vm](State& state) { execute(state, vm, generate_loop_v2({})); });
     }
 
     for (const auto params : params_list)
