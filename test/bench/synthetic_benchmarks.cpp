@@ -62,7 +62,8 @@ struct CodeParams
     Mode mode;
 };
 
-inline constexpr bool operator<(const CodeParams& a, const CodeParams& b) noexcept
+/// The less-than comparison operator. Needed for std::map.
+[[maybe_unused]] inline constexpr bool operator<(const CodeParams& a, const CodeParams& b) noexcept
 {
     return std::tuple(a.opcode, a.mode) < std::tuple(b.opcode, b.mode);
 }
@@ -150,7 +151,7 @@ bytecode generate_loop_inner_code(CodeParams params)
 ///
 /// The loop counter stays on the stack top. The inner code is allowed to duplicate it, but must not
 /// modify it.
-bytecode generate_loop_v1(bytecode inner_code)
+bytecode generate_loop_v1(const bytecode& inner_code)
 {
     return push(255) + OP_JUMPDEST + inner_code +
            push("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff") + OP_ADD +
@@ -163,7 +164,7 @@ bytecode generate_loop_v1(bytecode inner_code)
 /// amount of gas, but according to performed benchmarks (see "loop_v1" and "loop_v2") it runs
 /// faster. And we want the lowest possible loop overhead.
 /// The change is to set the loop counter to -255 and check `(counter += 1) != 0`.
-bytecode generate_loop_v2(bytecode inner_code)
+bytecode generate_loop_v2(const bytecode& inner_code)
 {
     return push("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff01") + OP_JUMPDEST +
            inner_code + push(1) + OP_ADD + OP_DUP1 + push(33) + OP_JUMPI;
