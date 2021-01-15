@@ -98,7 +98,7 @@ bytecode generate_loop_inner_code(CodeParams params)
         {
             const auto n = opcode - OP_DUP1;
             // DUP1 DUP1 POP DUP1 POP ... POP
-            return n * OP_DUP1 + stack_limit * (bytecode{opcode} + OP_POP) + n * OP_POP;
+            return n * OP_DUP1 + (stack_limit - n) * (bytecode{opcode} + OP_POP) + n * OP_POP;
         }
         case InstructionKind::producer:
             // CALLER POP CALLER POP ...
