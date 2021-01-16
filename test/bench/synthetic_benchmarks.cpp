@@ -23,16 +23,17 @@ enum class Mode
     full_stack = 1,  ///< The code fills the stack up to its limit.
 };
 
+/// The instruction grouping by EVM stack requirements.
 enum class InstructionKind : char
 {
-    nullop = 'n',
-    unop = 'u',
-    binop = 'b',
-    push = 'p',
-    swap = 's',
-    dup = 'd',
-    producer = 'a',
-    unknown = 'X',
+    nop = 'n',      ///< No-op instruction.
+    nullop = 'a',   ///< Nullary operator - produces a result without any stack input.
+    unop = 'u',     ///< Unary operator.
+    binop = 'b',    ///< Binary operator.
+    push = 'p',     ///< PUSH instruction.
+    dup = 'd',      ///< DUP instruction.
+    swap = 's',     ///< SWAP instruction.
+    unknown = 'X',  ///< Unknown.
 };
 
 constexpr InstructionKind get_instruction_kind(evmc_opcode opcode) noexcept
@@ -45,13 +46,13 @@ constexpr InstructionKind get_instruction_kind(evmc_opcode opcode) noexcept
     else if (opcode >= OP_DUP1 && opcode <= OP_DUP16)
         return InstructionKind::dup;
     else if (trait.stack_height_required == 0 && trait.stack_height_change == 0)
+        return InstructionKind::nop;
+    else if (trait.stack_height_required == 0 && trait.stack_height_change == 1)
         return InstructionKind::nullop;
     else if (trait.stack_height_required == 1 && trait.stack_height_change == 0)
         return InstructionKind::unop;
     else if (trait.stack_height_required == 2 && trait.stack_height_change == -1)
         return InstructionKind::binop;
-    else if (trait.stack_height_required == 0 && trait.stack_height_change == 1)
-        return InstructionKind::producer;
     else
         return InstructionKind::unknown;
 }
@@ -100,10 +101,10 @@ bytecode generate_loop_inner_code(CodeParams params)
             // DUP1 DUP1 POP DUP1 POP ... POP
             return n * OP_DUP1 + (stack_limit - n) * (bytecode{opcode} + OP_POP) + n * OP_POP;
         }
-        case InstructionKind::producer:
+        case InstructionKind::nullop:
             // CALLER POP CALLER POP ...
             return stack_limit * (bytecode{opcode} + OP_POP);
-        case InstructionKind::nullop:
+        case InstructionKind::nop:
             // JUMPDEST JUMPDEST ...
             return stack_limit * 2 * bytecode{opcode};
         case InstructionKind::unop:
@@ -128,7 +129,7 @@ bytecode generate_loop_inner_code(CodeParams params)
             // DUP1 DUP1 POP DUP1 POP ... POP
             return n * OP_DUP1 + (stack_limit - n) * bytecode{opcode} + stack_limit * OP_POP;
         }
-        case InstructionKind::producer:
+        case InstructionKind::nullop:
             // CALLER CALLER ... POP POP ...
             return stack_limit * opcode + stack_limit * OP_POP;
         case InstructionKind::binop:
@@ -197,7 +198,7 @@ void register_synthetic_benchmarks()
         params_list.insert(
             params_list.end(), {{opcode, Mode::min_stack}, {opcode, Mode::full_stack}});
 
-    // Producers.
+    // Nullops.
     for (const auto opcode : {OP_ADDRESS, OP_CALLER, OP_CALLVALUE, OP_CALLDATASIZE, OP_CODESIZE,
              OP_RETURNDATASIZE, OP_PC, OP_MSIZE, OP_GAS})
         params_list.insert(
