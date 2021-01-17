@@ -92,14 +92,20 @@ bytecode generate_loop_inner_code(CodeParams params)
         case InstructionCategory::swap:
         {
             const auto n = opcode - OP_SWAP1 + 1;
-            // DUP1 SWAP1 SWAP1 ... POP
-            return n * OP_DUP1 + stack_limit * 2 * bytecode{opcode} + n * OP_POP;
+            // DUP1 ...  SWAPn SWAPn ...  POP ...
+            // \  n   /                   \  n  /
+            return n * OP_DUP1 +                         // Required stack height for SWAPn.
+                   stack_limit * 2 * bytecode{opcode} +  // Multiple SWAPns.
+                   n * OP_POP;                           // Pop initially duplicated values.
         }
         case InstructionCategory::dup:
         {
-            const auto n = opcode - OP_DUP1;
-            // DUP1 DUP1 POP DUP1 POP ... POP
-            return n * OP_DUP1 + (stack_limit - n) * (bytecode{opcode} + OP_POP) + n * OP_POP;
+            const auto k = opcode - OP_DUP1;  // For DUPn, k = n-1.
+            // DUP1 ...  DUPn POP DUPn POP ...  POP ...
+            // \ n-1  /                         \ n-1 /
+            return k * OP_DUP1 +  // Required stack height for DUPn.
+                   (stack_limit - k) * (bytecode{opcode} + OP_POP) +  // Multiple DUPn POP pairs.
+                   k * OP_POP;  // Pop initially duplicated values.
         }
         case InstructionCategory::nullop:
             // CALLER POP CALLER POP ...
@@ -125,9 +131,12 @@ bytecode generate_loop_inner_code(CodeParams params)
             return stack_limit * push(opcode, {}) + stack_limit * OP_POP;
         case InstructionCategory::dup:
         {
-            const auto n = opcode - OP_DUP1;
-            // DUP1 DUP1 POP DUP1 POP ... POP
-            return n * OP_DUP1 + (stack_limit - n) * bytecode{opcode} + stack_limit * OP_POP;
+            const auto k = opcode - OP_DUP1;  // For DUPn, k = n-1.
+            // DUP1 ...  DUPn DUPn ...  POP POP ...
+            // \ n-1  /  \   S-n+1   /  \    S    /
+            return k * OP_DUP1 +                           // Required stack height for DUPn.
+                   (stack_limit - k) * bytecode{opcode} +  // Fill the stack with DUPn.
+                   stack_limit * OP_POP;                   // Clear whole stack.
         }
         case InstructionCategory::nullop:
             // CALLER CALLER ... POP POP ...
@@ -154,9 +163,12 @@ bytecode generate_loop_inner_code(CodeParams params)
 /// modify it.
 bytecode generate_loop_v1(const bytecode& inner_code)
 {
-    return push(255) + OP_JUMPDEST + inner_code +
-           push("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff") + OP_ADD +
-           OP_DUP1 + push(2) + OP_JUMPI;
+    const auto counter = push(255);
+    const auto jumpdest_offset = counter.size();
+    return counter + OP_JUMPDEST + inner_code +  // loop label + inner code
+           push("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff") +  // -1
+           OP_ADD + OP_DUP1 +                 // counter += (-1)
+           push(jumpdest_offset) + OP_JUMPI;  // jump to jumpdest_offset if counter != 0
 }
 
 /// Generates a benchmark loop with given inner code.
@@ -167,8 +179,12 @@ bytecode generate_loop_v1(const bytecode& inner_code)
 /// The change is to set the loop counter to -255 and check `(counter += 1) != 0`.
 bytecode generate_loop_v2(const bytecode& inner_code)
 {
-    return push("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff01") + OP_JUMPDEST +
-           inner_code + push(1) + OP_ADD + OP_DUP1 + push(33) + OP_JUMPI;
+    const auto counter =
+        push("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff01");  // -255
+    const auto jumpdest_offset = counter.size();
+    return counter + OP_JUMPDEST + inner_code +  // loop label + inner code
+           push(1) + OP_ADD + OP_DUP1 +          // counter += 1
+           push(jumpdest_offset) + OP_JUMPI;     // jump to jumpdest_offset if counter != 0
 }
 
 bytes_view generate_code(CodeParams params)
@@ -188,7 +204,7 @@ void register_synthetic_benchmarks()
 {
     std::vector<CodeParams> params_list;
 
-    // Nullops & unops.
+    // Nops & unops.
     for (const auto opcode : {OP_JUMPDEST, OP_ISZERO, OP_NOT})
         params_list.push_back({opcode, Mode::min_stack});
 
