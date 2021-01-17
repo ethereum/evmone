@@ -24,37 +24,37 @@ enum class Mode
 };
 
 /// The instruction grouping by EVM stack requirements.
-enum class InstructionKind : char
+enum class InstructionCategory : char
 {
-    nop = 'n',      ///< No-op instruction.
-    nullop = 'a',   ///< Nullary operator - produces a result without any stack input.
-    unop = 'u',     ///< Unary operator.
-    binop = 'b',    ///< Binary operator.
-    push = 'p',     ///< PUSH instruction.
-    dup = 'd',      ///< DUP instruction.
-    swap = 's',     ///< SWAP instruction.
-    unknown = 'X',  ///< Unknown.
+    nop = 'n',     ///< No-op instruction.
+    nullop = 'a',  ///< Nullary operator - produces a result without any stack input.
+    unop = 'u',    ///< Unary operator.
+    binop = 'b',   ///< Binary operator.
+    push = 'p',    ///< PUSH instruction.
+    dup = 'd',     ///< DUP instruction.
+    swap = 's',    ///< SWAP instruction.
+    other = 'X',   ///< Not any of the categories above.
 };
 
-constexpr InstructionKind get_instruction_kind(evmc_opcode opcode) noexcept
+constexpr InstructionCategory get_instruction_category(evmc_opcode opcode) noexcept
 {
     const auto trait = instr::traits[opcode];
     if (opcode >= OP_PUSH1 && opcode <= OP_PUSH32)
-        return InstructionKind::push;
+        return InstructionCategory::push;
     else if (opcode >= OP_SWAP1 && opcode <= OP_SWAP16)
-        return InstructionKind::swap;
+        return InstructionCategory::swap;
     else if (opcode >= OP_DUP1 && opcode <= OP_DUP16)
-        return InstructionKind::dup;
+        return InstructionCategory::dup;
     else if (trait.stack_height_required == 0 && trait.stack_height_change == 0)
-        return InstructionKind::nop;
+        return InstructionCategory::nop;
     else if (trait.stack_height_required == 0 && trait.stack_height_change == 1)
-        return InstructionKind::nullop;
+        return InstructionCategory::nullop;
     else if (trait.stack_height_required == 1 && trait.stack_height_change == 0)
-        return InstructionKind::unop;
+        return InstructionCategory::unop;
     else if (trait.stack_height_required == 2 && trait.stack_height_change == -1)
-        return InstructionKind::binop;
+        return InstructionCategory::binop;
     else
-        return InstructionKind::unknown;
+        return InstructionCategory::other;
 }
 
 struct CodeParams
@@ -72,7 +72,7 @@ struct CodeParams
 std::string to_string(const CodeParams& params)
 {
     return std::string{instr::traits[params.opcode].name} + '/' +
-           static_cast<char>(get_instruction_kind(params.opcode)) +
+           static_cast<char>(get_instruction_category(params.opcode)) +
            std::to_string(static_cast<int>(params.mode));
 }
 
@@ -80,37 +80,37 @@ std::string to_string(const CodeParams& params)
 bytecode generate_loop_inner_code(CodeParams params)
 {
     const auto [opcode, mode] = params;
-    const auto kind = get_instruction_kind(opcode);
+    const auto category = get_instruction_category(opcode);
     switch (mode)
     {
     case Mode::min_stack:
-        switch (kind)
+        switch (category)
         {
-        case InstructionKind::push:
+        case InstructionCategory::push:
             // PUSH1 POP PUSH1 POP ...
             return stack_limit * (push(opcode, {}) + OP_POP);
-        case InstructionKind::swap:
+        case InstructionCategory::swap:
         {
             const auto n = opcode - OP_SWAP1 + 1;
             // DUP1 SWAP1 SWAP1 ... POP
             return n * OP_DUP1 + stack_limit * 2 * bytecode{opcode} + n * OP_POP;
         }
-        case InstructionKind::dup:
+        case InstructionCategory::dup:
         {
             const auto n = opcode - OP_DUP1;
             // DUP1 DUP1 POP DUP1 POP ... POP
             return n * OP_DUP1 + (stack_limit - n) * (bytecode{opcode} + OP_POP) + n * OP_POP;
         }
-        case InstructionKind::nullop:
+        case InstructionCategory::nullop:
             // CALLER POP CALLER POP ...
             return stack_limit * (bytecode{opcode} + OP_POP);
-        case InstructionKind::nop:
+        case InstructionCategory::nop:
             // JUMPDEST JUMPDEST ...
             return stack_limit * 2 * bytecode{opcode};
-        case InstructionKind::unop:
+        case InstructionCategory::unop:
             // DUP1 NOT NOT ... POP
             return OP_DUP1 + stack_limit * 2 * bytecode{opcode} + OP_POP;
-        case InstructionKind::binop:
+        case InstructionCategory::binop:
             // DUP1 DUP1 ADD DUP1 ADD DUP1 ADD ... POP
             return OP_DUP1 + (stack_limit - 1) * (OP_DUP1 + bytecode{opcode}) + OP_POP;
         default:
@@ -118,21 +118,21 @@ bytecode generate_loop_inner_code(CodeParams params)
         }
         break;
     case Mode::full_stack:
-        switch (kind)
+        switch (category)
         {
-        case InstructionKind::push:
+        case InstructionCategory::push:
             // PUSH1 PUSH1 PUSH1 ... POP POP POP ...
             return stack_limit * push(opcode, {}) + stack_limit * OP_POP;
-        case InstructionKind::dup:
+        case InstructionCategory::dup:
         {
             const auto n = opcode - OP_DUP1;
             // DUP1 DUP1 POP DUP1 POP ... POP
             return n * OP_DUP1 + (stack_limit - n) * bytecode{opcode} + stack_limit * OP_POP;
         }
-        case InstructionKind::nullop:
+        case InstructionCategory::nullop:
             // CALLER CALLER ... POP POP ...
             return stack_limit * opcode + stack_limit * OP_POP;
-        case InstructionKind::binop:
+        case InstructionCategory::binop:
             // DUP1 DUP1 DUP1 ... ADD ADD ADD ... POP
             return stack_limit * OP_DUP1 + (stack_limit - 1) * opcode + OP_POP;
         default:
