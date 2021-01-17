@@ -14,7 +14,7 @@ namespace evmone::test
 {
 namespace
 {
-/// Stack limit inside the EVM benchmarking loop (one stack item is used for the loop counter).
+/// Stack limit inside the EVM benchmark loop (one stack item is used for the loop counter).
 constexpr auto stack_limit = 1023;
 
 enum class Mode
@@ -76,7 +76,7 @@ std::string to_string(const CodeParams& params)
            std::to_string(static_cast<int>(params.mode));
 }
 
-/// Generates the EVM benchmarking loop inner code for the given opcode and "mode".
+/// Generates the EVM benchmark loop inner code for the given opcode and "mode".
 bytecode generate_loop_inner_code(CodeParams params)
 {
     const auto [opcode, mode] = params;
@@ -144,9 +144,9 @@ bytecode generate_loop_inner_code(CodeParams params)
     return {};
 }
 
-/// Generates a benchmarking loop with given inner code.
+/// Generates a benchmark loop with given inner code.
 ///
-/// This generates do-while loop with 256 iterations and is starts with PUSH1 of 255 as the loop
+/// This generates do-while loop with 255 iterations and it starts with PUSH1 of 255 as the loop
 /// counter. The while check is done as `(counter += -1) != 0`. The SUB is avoided because it
 /// consumes arguments in unnatural order and additional SWAP would be required.
 ///
@@ -159,7 +159,7 @@ bytecode generate_loop_v1(const bytecode& inner_code)
            OP_DUP1 + push(2) + OP_JUMPI;
 }
 
-/// Generates a benchmarking loop with given inner code.
+/// Generates a benchmark loop with given inner code.
 ///
 /// This is improved variant of v1. It has exactly the same instructions and consumes the same
 /// amount of gas, but according to performed benchmarks (see "loop_v1" and "loop_v2") it runs
