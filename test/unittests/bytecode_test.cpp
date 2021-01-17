@@ -26,6 +26,26 @@ TEST(bytecode, push_int)
     EXPECT_EQ(push(0xffffffffffffffff), "67ffffffffffffffff");
 }
 
+TEST(bytecode, push_explicit_opcode)
+{
+    EXPECT_THROW(push(OP_JUMPDEST, {}), std::invalid_argument);
+    EXPECT_THROW(push(OP_DUP1, {}), std::invalid_argument);
+
+    EXPECT_THROW(push(OP_PUSH1, "0000"), std::invalid_argument);
+
+    EXPECT_EQ(push(OP_PUSH1, {}), "6000");
+    EXPECT_EQ(push(OP_PUSH1, "ff"), "60ff");
+    EXPECT_EQ(push(OP_PUSH2, ""), "610000");
+    EXPECT_EQ(push(OP_PUSH2, "01"), "610001");
+    EXPECT_EQ(push(OP_PUSH2, "8001"), "618001");
+    EXPECT_EQ(
+        push(OP_PUSH32, ""), "7f0000000000000000000000000000000000000000000000000000000000000000");
+    EXPECT_EQ(push(OP_PUSH32, "ab"),
+        "7f00000000000000000000000000000000000000000000000000000000000000ab");
+    EXPECT_EQ(push(OP_PUSH32, "fe000000000000000000000000000000000000000000000000000000000000ef"),
+        "7ffe000000000000000000000000000000000000000000000000000000000000ef");
+}
+
 TEST(bytecode, add)
 {
     auto e = "6007600d0160005260206000f3";

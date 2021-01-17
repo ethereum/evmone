@@ -140,7 +140,7 @@ TEST_P(evm, swapsn_push)
     // EIP-663 variants B and C.
     // When SWAPSN is implemented execution will succeed, considering PUSH an argument of SWAPSN.
     const auto swapsn = "b3";
-    const auto code = push(5) + OP_JUMP + swapsn + push(OP_JUMPDEST) + push(0) + ret_top();
+    const auto code = push(5) + OP_JUMP + swapsn + push(uint8_t{OP_JUMPDEST}) + push(0) + ret_top();
 
     rev = EVMC_PETERSBURG;
     execute(code);

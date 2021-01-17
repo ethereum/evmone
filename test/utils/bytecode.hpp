@@ -6,6 +6,7 @@
 #include <evmc/instructions.h>
 #include <test/utils/utils.hpp>
 #include <algorithm>
+#include <ostream>
 #include <stdexcept>
 
 struct bytecode;
@@ -76,6 +77,20 @@ inline bytecode push(std::string_view hex_data)
     return push(from_hex(hex_data));
 }
 
+bytecode push(evmc_opcode opcode) = delete;
+
+inline bytecode push(evmc_opcode opcode, const bytecode& data)
+{
+    if (opcode < OP_PUSH1 || opcode > OP_PUSH32)
+        throw std::invalid_argument{"invalid push opcode " + std::to_string(opcode)};
+
+    const auto num_instr_bytes = static_cast<size_t>(opcode) - OP_PUSH1 + 1;
+    if (data.size() > num_instr_bytes)
+        throw std::invalid_argument{"push data too long"};
+
+    const auto instr_bytes = bytes(num_instr_bytes - data.size(), 0) + bytes{data};
+    return opcode + instr_bytes;
+}
 
 inline bytecode push(uint64_t n)
 {
