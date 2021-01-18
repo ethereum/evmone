@@ -75,11 +75,17 @@ inline evmc_status_code check_requirements(const char* const* instruction_names,
     const evmc_instruction_metrics* instruction_metrics, ExecutionState& state, uint8_t op) noexcept
 {
     const auto metrics = instruction_metrics[op];
+    auto gas_cost = metrics.gas_cost;
 
     if (instruction_names[op] == nullptr)
-        return EVMC_UNDEFINED_INSTRUCTION;
+    {
+        if ((op >= 0xc0 && op <= 0xc2) && instr::gas_costs<EVMC_ISTANBUL>[op] > 0)
+            gas_cost = instr::gas_costs<EVMC_ISTANBUL>[op];
+        else
+            return EVMC_UNDEFINED_INSTRUCTION;
+    }
 
-    if ((state.gas_left -= metrics.gas_cost) < 0)
+    if ((state.gas_left -= gas_cost) < 0)
         return EVMC_OUT_OF_GAS;
 
     const auto stack_size = state.stack.size();
