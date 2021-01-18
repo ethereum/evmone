@@ -33,13 +33,19 @@ enum class InstructionCategory : char
     push = 'p',    ///< PUSH instruction.
     dup = 'd',     ///< DUP instruction.
     swap = 's',    ///< SWAP instruction.
-    other = 'X',   ///< Not any of the categories above.
+    mload = 'l',
+    mstore = 't',
+    other = 'X',  ///< Not any of the categories above.
 };
 
 constexpr InstructionCategory get_instruction_category(evmc_opcode opcode) noexcept
 {
     const auto trait = instr::traits[opcode];
-    if (opcode >= OP_PUSH1 && opcode <= OP_PUSH32)
+    if (opcode == OP_MLOAD)
+        return InstructionCategory::mload;
+    else if (opcode == OP_MSTORE)
+        return InstructionCategory::mstore;
+    else if (opcode >= OP_PUSH1 && opcode <= OP_PUSH32)
         return InstructionCategory::push;
     else if (opcode >= OP_SWAP1 && opcode <= OP_SWAP16)
         return InstructionCategory::swap;
@@ -86,6 +92,11 @@ bytecode generate_loop_inner_code(CodeParams params)
     case Mode::min_stack:
         switch (category)
         {
+        case InstructionCategory::mload:
+            return push(0) + stack_limit * 2 * bytecode{opcode} + OP_POP;
+        case InstructionCategory::mstore:
+            return push(0) + stack_limit * (bytecode{OP_DUP1} + OP_DUP1 + bytecode{opcode}) +
+                   OP_POP;
         case InstructionCategory::push:
             // PUSH1 POP PUSH1 POP ...
             return stack_limit * (push(opcode, {}) + OP_POP);
@@ -205,7 +216,7 @@ void register_synthetic_benchmarks()
     std::vector<CodeParams> params_list;
 
     // Nops & unops.
-    for (const auto opcode : {OP_JUMPDEST, OP_ISZERO, OP_NOT})
+    for (const auto opcode : {OP_JUMPDEST, OP_ISZERO, OP_NOT, OP_MLOAD, OP_MSTORE})
         params_list.push_back({opcode, Mode::min_stack});
 
     // Binops.
