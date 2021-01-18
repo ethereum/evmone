@@ -69,7 +69,7 @@ Warning: LIMB_BITS corresponds to the uint*_t type, and multiplication requires 
 // add two numbers using two's complement for overflow, returning an overflow bit
 // algorithm 14.7, Handbook of Applied Cryptography, http://cacr.uwaterloo.ca/hac/about/chap14.pdf
 //   except we ignore the final carry in step 3 since we assume that there is no extra limb
-UINT FUNCNAME(add)(UINT* const out, const UINT* const x, const UINT* const y){
+inline UINT FUNCNAME(add)(UINT* const out, const UINT* const x, const UINT* const y){
   UINT c=0;
   #pragma unroll
   for (int i=0; i<NUM_LIMBS; i++){
@@ -84,7 +84,7 @@ UINT FUNCNAME(add)(UINT* const out, const UINT* const x, const UINT* const y){
 // algorithm 14.9, Handbook of Applied Cryptography, http://cacr.uwaterloo.ca/hac/about/chap14.pdf
 // the book says it computes x-y for x>=y, but actually it computes the 2's complement for x<y
 // note: algorithm 14.9 allow adding c=-1, but we just subtract c=1 instead
-UINT FUNCNAME(subtract)(UINT* const out, const UINT* const x, const UINT* const y){
+inline UINT FUNCNAME(subtract)(UINT* const out, const UINT* const x, const UINT* const y){
   UINT c=0;
   #pragma unroll
   for (int i=0; i<NUM_LIMBS; i++){
@@ -97,7 +97,7 @@ UINT FUNCNAME(subtract)(UINT* const out, const UINT* const x, const UINT* const 
 
 
 // checks whether x<y
-uint8_t FUNCNAME(less_than)(const UINT* const x, const UINT* const y){
+inline uint8_t FUNCNAME(less_than)(const UINT* const x, const UINT* const y){
   for (int i=NUM_LIMBS-1;i>=0;i--){
     if (x[i]>y[i])
       return 0;
@@ -109,7 +109,7 @@ uint8_t FUNCNAME(less_than)(const UINT* const x, const UINT* const y){
 }
 
 // checks whether x<=y
-uint8_t FUNCNAME(less_than_or_equal)(const UINT* const x, const UINT* const y){
+inline uint8_t FUNCNAME(less_than_or_equal)(const UINT* const x, const UINT* const y){
   for (int i=NUM_LIMBS-1;i>=0;i--){
     if (x[i]>y[i])
       return 0;
@@ -124,7 +124,7 @@ uint8_t FUNCNAME(less_than_or_equal)(const UINT* const x, const UINT* const y){
 // algorithm 14.20, Handbook of Applied Cryptography, http://cacr.uwaterloo.ca/hac/about/chap14.pdf
 // but assume they both have the same number of limbs
 // this implementation is naive
-void FUNCNAME(div)(UINT* const outq, UINT* const outr, const UINT* const x, const UINT* const y){
+inline void FUNCNAME(div)(UINT* const outq, UINT* const outr, const UINT* const x, const UINT* const y){
   (void)outq;
   UINT q[NUM_LIMBS];
   UINT one[NUM_LIMBS];
@@ -149,7 +149,7 @@ void FUNCNAME(div)(UINT* const outq, UINT* const outr, const UINT* const x, cons
 // but assume they both have the same number of limbs, this can be changed
 // out should have double the number of limbs as the inputs
 // num_limbs corresponds to n+1 in the book
-void FUNCNAME(mul)(UINT* const out, const UINT* const x, const UINT* const y){
+inline void FUNCNAME(mul)(UINT* const out, const UINT* const x, const UINT* const y){
   UINT w[NUM_LIMBS*2];
   for (int i=0; i<2*NUM_LIMBS; i++)
     w[i]=0;
@@ -172,7 +172,7 @@ void FUNCNAME(mul)(UINT* const out, const UINT* const x, const UINT* const y){
 // algorithm 14.16, Handbook of Applied Cryptography, http://cacr.uwaterloo.ca/hac/about/chap14.pdf
 // NUM_LIMBS is t (number of limbs) in the book, and the base is UINT*, usually uint32_t or uint64_t
 // output out should have double the limbs of input x
-void FUNCNAME(square)(UINT* const out, const UINT* const x){
+inline void FUNCNAME(square)(UINT* const out, const UINT* const x){
   UINT w[NUM_LIMBS*2];
   for (int i=0; i< 2*NUM_LIMBS; i++)
     w[i]=0;
@@ -218,7 +218,7 @@ void FUNCNAME(square)(UINT* const out, const UINT* const x){
 
 // compute a+b (mod m), where x,y < m
 // algorithm 14.27, Handbook of Applied Cryptography, http://cacr.uwaterloo.ca/hac/about/chap14.pdf
-void FUNCNAME(addmod)(UINT* const out, const UINT* const x, const UINT* const y, const UINT* const m){
+inline void FUNCNAME(addmod)(UINT* const out, const UINT* const x, const UINT* const y, const UINT* const m){
   UINT carry = FUNCNAME(add)(out,x,y);
   // In textbook 14.27, says addmod is add and an extra step: subtract m iff x+y>=m
   if (carry || FUNCNAME(less_than_or_equal)(m,out)){
@@ -229,7 +229,7 @@ void FUNCNAME(addmod)(UINT* const out, const UINT* const x, const UINT* const y,
 
 // compute x-y (mod m) for x,y < m
 // uses fact 14.27, Handbook of Applied Cryptography, http://cacr.uwaterloo.ca/hac/about/chap14.pdf
-void FUNCNAME(subtractmod)(UINT* const out, const UINT* const x, const UINT* const y, const UINT* const m){
+inline void FUNCNAME(subtractmod)(UINT* const out, const UINT* const x, const UINT* const y, const UINT* const m){
   UINT c = FUNCNAME(subtract)(out,x,y);
   // if c, then x<y, so result is negative, need to get it's magnitude and subtract it from m 
   if (c){
@@ -246,7 +246,7 @@ void FUNCNAME(subtractmod)(UINT* const out, const UINT* const x, const UINT* con
 // returns (aR * bR) % m, where aR and bR are in Montgomery form
 // algorithm 14.32, Handbook of Applied Cryptography, http://cacr.uwaterloo.ca/hac/about/chap14.pdf
 // T has 2*NUM_LIMBS limbs, otherwise pad most significant bits with zeros
-void FUNCNAME(montreduce)(UINT* const out, UINT* const T, const UINT* const m, const UINT inv){
+inline void FUNCNAME(montreduce)(UINT* const out, UINT* const T, const UINT* const m, const UINT inv){
 
   UINT A[NUM_LIMBS*2+1];
   for (int i=0; i<2*NUM_LIMBS; i++)
@@ -284,7 +284,7 @@ void FUNCNAME(montreduce)(UINT* const out, UINT* const T, const UINT* const m, c
 
 // algorithm 14.16 followed by 14.32
 // this might be faster than algorithm 14.36, as described in remark 14.40
-void FUNCNAME(montsquare)(UINT* const out, const UINT* const x, const UINT* const m, const UINT inv){
+inline void FUNCNAME(montsquare)(UINT* const out, const UINT* const x, const UINT* const m, const UINT inv){
   UINT out_internal[NUM_LIMBS*2];
   FUNCNAME(square)(out_internal, x);
   FUNCNAME(montreduce)(out, out_internal, m, inv);
@@ -292,14 +292,14 @@ void FUNCNAME(montsquare)(UINT* const out, const UINT* const x, const UINT* cons
 
 // algorithm 14.12 followed by 14.32
 // this might be slower than algorithm 14.36, which interleaves these steps
-void FUNCNAME(montmul_noninterleaved)(UINT* const out, const UINT* const x, const UINT* const y, const UINT* const m, const UINT inv){
+inline void FUNCNAME(montmul_noninterleaved)(UINT* const out, const UINT* const x, const UINT* const y, const UINT* const m, const UINT inv){
   UINT out_internal[NUM_LIMBS*2];
   FUNCNAME(mul)(out_internal, x, y);
   FUNCNAME(montreduce)(out, out_internal, m, inv);
 }
 
 // algorithm 14.36, Handbook of Applied Cryptography, http://cacr.uwaterloo.ca/hac/about/chap14.pdf
-void FUNCNAME(montmul)(UINT* const out, const UINT* const x, const UINT* const y, const UINT* const m, const UINT inv){
+inline void FUNCNAME(montmul)(UINT* const out, const UINT* const x, const UINT* const y, const UINT* const m, const UINT inv){
   UINT A[NUM_LIMBS*2+1];
   for (int i=0;i<NUM_LIMBS*2+1;i++)
     A[i]=0;
@@ -342,7 +342,7 @@ void FUNCNAME(montmul)(UINT* const out, const UINT* const x, const UINT* const y
 }
 
 // like montmul, but with two of the args hard-coded
-void FUNCNAME(montmul_3args_)(UINT* const out, const UINT* const x, const UINT* const y){
+inline void FUNCNAME(montmul_3args_)(UINT* const out, const UINT* const x, const UINT* const y){
   UINT* m = (UINT*)4444444;    // hard-code m or address to m here
   UINT inv = 6666666;  // hard-code inv here
   FUNCNAME(montmul)(out, x, y, m, inv);
