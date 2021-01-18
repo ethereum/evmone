@@ -261,7 +261,8 @@ void register_synthetic_benchmarks()
             RegisterBenchmark(
                 (std::string{vm_name} + "/execute/synth/" + to_string(params)).c_str(),
                 [&vm = vm, params](State& state) { execute(state, vm, generate_code(params)); })
-                ->Unit(kMicrosecond);
+                ->Unit(kMicrosecond)
+                ->Iterations(1000);
         }
     }
 }
