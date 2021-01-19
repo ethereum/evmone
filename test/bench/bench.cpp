@@ -191,12 +191,14 @@ constexpr auto cli_parsing_error = -3;
 ///
 /// The following variants of number arguments are supported (including argv[0]):
 ///
+/// 1: evmone-bench
+///    Uses evmone VMs, only synthetic benchmarks are available.
 /// 2: evmone-bench benchmarks_dir
-///    Uses evmone VM, loads all benchmarks from benchmarks_dir.
+///    Uses evmone VMs, loads all benchmarks from benchmarks_dir.
 /// 3: evmone-bench evmc_config benchmarks_dir
-///    The same as (2) but loads custom EVMC VM.
+///    The same as (2) but loads additional custom EVMC VM.
 /// 4: evmone-bench code_hex_file input_hex expected_output_hex.
-///    Uses evmone VM, registers custom benchmark with the code from the given file,
+///    Uses evmone VMs, registers custom benchmark with the code from the given file,
 ///    and the given input. The benchmark will compare the output with the provided
 ///    expected one.
 std::tuple<int, std::vector<BenchmarkCase>> parseargs(int argc, char** argv)
@@ -211,8 +213,8 @@ std::tuple<int, std::vector<BenchmarkCase>> parseargs(int argc, char** argv)
     switch (argc)
     {
     case 1:
-        std::cerr << "DIR argument (path to a directory with benchmarks) missing\n";
-        return {cli_parsing_error, {}};
+        // Run with built-in synthetic benchmarks only.
+        break;
     case 2:
         benchmarks_dir = argv[1];
         break;
