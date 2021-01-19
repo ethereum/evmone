@@ -207,24 +207,23 @@ std::tuple<int, std::vector<BenchmarkCase>> parseargs(int argc, char** argv)
     const char* input_hex{};
     const char* expected_output_hex{};
 
-    if (argc == 2)
+    switch (argc)
     {
+    case 2:
         benchmarks_dir = argv[1];
-    }
-    else if (argc == 3)
-    {
+        break;
+    case 3:
         evmc_config = argv[1];
         benchmarks_dir = argv[2];
-    }
-    else if (argc == 4)
-    {
+        break;
+    case 4:
         code_hex_file = argv[1];
         input_hex = argv[2];
         expected_output_hex = argv[3];
-    }
-    else
+        break;
+    default:
         return {cli_parsing_error, {}};  // Incorrect number of arguments.
-
+    }
 
     if (evmc_config)
     {
