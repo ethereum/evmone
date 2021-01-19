@@ -4,10 +4,14 @@
 
 include(CheckIncludeFileCXX)
 
-add_executable(evmone-bench bench.cpp)
-
+add_executable(evmone-bench)
 target_include_directories(evmone-bench PRIVATE ${evmone_private_include_dir})
 target_link_libraries(evmone-bench PRIVATE evmone testutils evmc::loader benchmark::benchmark)
+target_sources(
+    evmone-bench PRIVATE
+    bench.cpp
+    helpers.hpp
+)
 
 set(HAVE_STD_FILESYSTEM 0)
 
@@ -16,7 +20,7 @@ if(NOT APPLE)
     # For macos assume not available. XCode 11 provides the header, but it can only be used
     # when building for macos 10.15.
     check_include_file_cxx(filesystem have_filesystem_include)
-    if (have_filesystem_include)
+    if(have_filesystem_include)
         set(HAVE_STD_FILESYSTEM 1)
     endif()
 endif()
