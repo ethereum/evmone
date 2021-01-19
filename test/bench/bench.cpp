@@ -201,35 +201,38 @@ constexpr auto cli_parsing_error = -3;
 std::tuple<int, std::vector<BenchmarkCase>> parseargs(int argc, char** argv)
 {
     // Arguments' placeholders:
-    const char* evmc_config{};
-    const char* benchmarks_dir{};
-    const char* code_hex_file{};
-    const char* input_hex{};
-    const char* expected_output_hex{};
+    std::string evmc_config;
+    std::string benchmarks_dir;
+    std::string code_hex_file;
+    std::string input_hex;
+    std::string expected_output_hex;
 
-    if (argc == 2)
+    switch (argc)
     {
+    case 1:
+        std::cerr << "DIR argument (path to a directory with benchmarks) missing\n";
+        return {cli_parsing_error, {}};
+    case 2:
         benchmarks_dir = argv[1];
-    }
-    else if (argc == 3)
-    {
+        break;
+    case 3:
         evmc_config = argv[1];
         benchmarks_dir = argv[2];
-    }
-    else if (argc == 4)
-    {
+        break;
+    case 4:
         code_hex_file = argv[1];
         input_hex = argv[2];
         expected_output_hex = argv[3];
+        break;
+    default:
+        std::cerr << "Too many arguments\n";
+        return {cli_parsing_error, {}};
     }
-    else
-        return {cli_parsing_error, {}};  // Incorrect number of arguments.
 
-
-    if (evmc_config)
+    if (!evmc_config.empty())
     {
         auto ec = evmc_loader_error_code{};
-        registered_vms["external"] = evmc::VM{evmc_load_and_configure(evmc_config, &ec)};
+        registered_vms["external"] = evmc::VM{evmc_load_and_configure(evmc_config.c_str(), &ec)};
 
         if (ec != EVMC_LOADER_SUCCESS)
         {
@@ -243,11 +246,12 @@ std::tuple<int, std::vector<BenchmarkCase>> parseargs(int argc, char** argv)
         std::cout << "External VM: " << evmc_config << "\n";
     }
 
-    if (benchmarks_dir)
+    if (!benchmarks_dir.empty())
     {
         return {0, load_benchmarks_from_dir(benchmarks_dir)};
     }
-    else
+
+    if (!code_hex_file.empty())
     {
         std::ifstream file{code_hex_file};
         std::string code_hex{
@@ -261,6 +265,8 @@ std::tuple<int, std::vector<BenchmarkCase>> parseargs(int argc, char** argv)
 
         return {0, {std::move(b)}};
     }
+
+    return {0, {}};
 }
 }  // namespace
 }  // namespace evmone::test
@@ -270,7 +276,7 @@ int main(int argc, char** argv)
     using namespace evmone::test;
     try
     {
-        Initialize(&argc, argv);
+        Initialize(&argc, argv);  // Consumes --benchmark_ options.
         const auto [ec, benchmark_cases] = parseargs(argc, argv);
         if (ec == cli_parsing_error && ReportUnrecognizedArguments(argc, argv))
             return ec;
