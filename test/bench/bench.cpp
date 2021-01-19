@@ -209,6 +209,9 @@ std::tuple<int, std::vector<BenchmarkCase>> parseargs(int argc, char** argv)
 
     switch (argc)
     {
+    case 1:
+        std::cerr << "DIR argument (path to a directory with benchmarks) missing\n";
+        return {cli_parsing_error, {}};
     case 2:
         benchmarks_dir = argv[1];
         break;
@@ -222,7 +225,8 @@ std::tuple<int, std::vector<BenchmarkCase>> parseargs(int argc, char** argv)
         expected_output_hex = argv[3];
         break;
     default:
-        return {cli_parsing_error, {}};  // Incorrect number of arguments.
+        std::cerr << "Too many arguments\n";
+        return {cli_parsing_error, {}};
     }
 
     if (evmc_config)
@@ -269,7 +273,7 @@ int main(int argc, char** argv)
     using namespace evmone::test;
     try
     {
-        Initialize(&argc, argv);
+        Initialize(&argc, argv);  // Consumes --benchmark_ options.
         const auto [ec, benchmark_cases] = parseargs(argc, argv);
         if (ec == cli_parsing_error && ReportUnrecognizedArguments(argc, argv))
             return ec;
