@@ -201,11 +201,11 @@ constexpr auto cli_parsing_error = -3;
 std::tuple<int, std::vector<BenchmarkCase>> parseargs(int argc, char** argv)
 {
     // Arguments' placeholders:
-    const char* evmc_config{};
-    const char* benchmarks_dir{};
-    const char* code_hex_file{};
-    const char* input_hex{};
-    const char* expected_output_hex{};
+    std::string evmc_config;
+    std::string benchmarks_dir;
+    std::string code_hex_file;
+    std::string input_hex;
+    std::string expected_output_hex;
 
     switch (argc)
     {
@@ -229,10 +229,10 @@ std::tuple<int, std::vector<BenchmarkCase>> parseargs(int argc, char** argv)
         return {cli_parsing_error, {}};
     }
 
-    if (evmc_config)
+    if (!evmc_config.empty())
     {
         auto ec = evmc_loader_error_code{};
-        registered_vms["external"] = evmc::VM{evmc_load_and_configure(evmc_config, &ec)};
+        registered_vms["external"] = evmc::VM{evmc_load_and_configure(evmc_config.c_str(), &ec)};
 
         if (ec != EVMC_LOADER_SUCCESS)
         {
@@ -246,11 +246,12 @@ std::tuple<int, std::vector<BenchmarkCase>> parseargs(int argc, char** argv)
         std::cout << "External VM: " << evmc_config << "\n";
     }
 
-    if (benchmarks_dir)
+    if (!benchmarks_dir.empty())
     {
         return {0, load_benchmarks_from_dir(benchmarks_dir)};
     }
-    else
+
+    if (!code_hex_file.empty())
     {
         std::ifstream file{code_hex_file};
         std::string code_hex{
@@ -264,6 +265,8 @@ std::tuple<int, std::vector<BenchmarkCase>> parseargs(int argc, char** argv)
 
         return {0, {std::move(b)}};
     }
+
+    return {0, {}};
 }
 }  // namespace
 }  // namespace evmone::test
