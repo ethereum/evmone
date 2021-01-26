@@ -96,7 +96,9 @@ inline evmc_status_code check_requirements(const char* const* instruction_names,
 evmc_result baseline_execute(evmc_vm* vm, const evmc_host_interface* host, evmc_host_context* ctx,
     evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
 {
-    const auto tracing_fn = static_cast<VM*>(vm)->tracing_fn;
+    const auto& tracer = static_cast<VM*>(vm)->tracer;
+    if (tracer)
+        tracer->onBeginExecution();
 
     const auto instruction_names = evmc_get_instruction_names_table(rev);
     const auto instruction_metrics = evmc_get_instruction_metrics_table(rev);
@@ -110,8 +112,8 @@ evmc_result baseline_execute(evmc_vm* vm, const evmc_host_interface* host, evmc_
     {
         const auto op = *pc;
 
-        if (INTX_UNLIKELY(tracing_fn != nullptr))
-            tracing_fn(static_cast<evmc_opcode>(op));
+        if (INTX_UNLIKELY(tracer))
+            tracer->onOpcode(static_cast<evmc_opcode>(op));
 
         const auto status = check_requirements(instruction_names, instruction_metrics, *state, op);
         if (status != EVMC_SUCCESS)
@@ -724,6 +726,9 @@ evmc_result baseline_execute(evmc_vm* vm, const evmc_host_interface* host, evmc_
 exit:
     const auto gas_left =
         (state->status == EVMC_SUCCESS || state->status == EVMC_REVERT) ? state->gas_left : 0;
+
+    if (tracer)
+        tracer->onEndExecution();
 
     return evmc::make_result(state->status, gas_left,
         state->output_size != 0 ? &state->memory[state->output_offset] : nullptr,

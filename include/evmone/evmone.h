@@ -7,6 +7,7 @@
 
 #include <evmc/evmc.h>
 #include <evmc/utils.h>
+#include <memory>
 
 #if __cplusplus
 extern "C" {
@@ -21,11 +22,18 @@ EVMC_EXPORT struct evmc_vm* evmc_create_evmone(void) EVMC_NOEXCEPT;
 
 namespace evmone
 {
-using TracingFn = void (*)(evmc_opcode opcode) noexcept;
+struct VMTracer
+{
+    virtual ~VMTracer() {}
+
+    virtual void onBeginExecution() noexcept = 0;
+    virtual void onOpcode(evmc_opcode opcode) noexcept = 0;
+    virtual void onEndExecution() noexcept = 0;
+};
 
 struct VM : evmc_vm
 {
-    TracingFn tracing_fn = nullptr;
+    std::unique_ptr<VMTracer> tracer;
 
     inline constexpr VM() noexcept;
 };

@@ -14,15 +14,31 @@
 #include <evmc/instructions.h>
 #include <cstdio>
 #include <cstring>
+#include <map>
 
 namespace evmone
 {
 namespace
 {
-void basic_trace(evmc_opcode opcode) noexcept
+struct BasicTracer : VMTracer
 {
-    std::puts(instr::traits[opcode].name);
-}
+    std::map<evmc_opcode, int> opcode_counter;
+
+    void onBeginExecution() noexcept final { opcode_counter.clear(); }
+
+    void onOpcode(evmc_opcode opcode) noexcept final
+    {
+        std::puts(instr::traits[opcode].name);
+        ++opcode_counter[opcode];
+    }
+
+    void onEndExecution() noexcept final
+    {
+        std::puts("\nTotal:");
+        for (const auto [opcode, count] : opcode_counter)
+            printf("%s,%d\n", instr::traits[opcode].name, count);
+    }
+};
 
 void destroy(evmc_vm* vm) noexcept
 {
@@ -53,7 +69,7 @@ evmc_set_option_result set_option(evmc_vm* vm, char const* name, char const* val
     }
     else if (std::strcmp(name, "trace") == 0)
     {
-        static_cast<VM*>(vm)->tracing_fn = basic_trace;
+        static_cast<VM*>(vm)->tracer = std::make_unique<BasicTracer>();
         return EVMC_SET_OPTION_SUCCESS;
     }
     return EVMC_SET_OPTION_INVALID_NAME;
