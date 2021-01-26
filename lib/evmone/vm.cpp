@@ -22,14 +22,53 @@ namespace
 {
 struct BasicTracer : VMTracer
 {
-    std::map<evmc_opcode, int> opcode_counter;
+    std::unique_ptr<VMTracer> next_tracer;
 
-    void onBeginExecution() noexcept final { opcode_counter.clear(); }
+    BasicTracer(std::unique_ptr<VMTracer> _next_tracer = nullptr)
+      : next_tracer{std::move(_next_tracer)}
+    {}
+
+    void onBeginExecution() noexcept final
+    {
+        if (next_tracer)
+            next_tracer->onBeginExecution();
+    }
 
     void onOpcode(evmc_opcode opcode) noexcept final
     {
         std::puts(instr::traits[opcode].name);
+        if (next_tracer)
+            next_tracer->onOpcode(opcode);
+    }
+
+    void onEndExecution() noexcept final
+    {
+        if (next_tracer)
+            next_tracer->onEndExecution();
+    }
+};
+
+struct HistogramTracer : VMTracer
+{
+    std::unique_ptr<VMTracer> next_tracer;
+    std::map<evmc_opcode, int> opcode_counter;
+
+    HistogramTracer(std::unique_ptr<VMTracer> _next_tracer = nullptr)
+      : next_tracer{std::move(_next_tracer)}
+    {}
+
+    void onBeginExecution() noexcept final
+    {
+        opcode_counter.clear();
+        if (next_tracer)
+            next_tracer->onBeginExecution();
+    }
+
+    void onOpcode(evmc_opcode opcode) noexcept final
+    {
         ++opcode_counter[opcode];
+        if (next_tracer)
+            next_tracer->onOpcode(opcode);
     }
 
     void onEndExecution() noexcept final
@@ -37,6 +76,8 @@ struct BasicTracer : VMTracer
         std::puts("\nTotal:");
         for (const auto [opcode, count] : opcode_counter)
             printf("%s,%d\n", instr::traits[opcode].name, count);
+        if (next_tracer)
+            next_tracer->onEndExecution();
     }
 };
 
@@ -72,7 +113,12 @@ evmc_set_option_result set_option(evmc_vm* c_vm, char const* name, char const* v
     }
     else if (std::strcmp(name, "trace") == 0)
     {
-        vm.tracer = std::make_unique<BasicTracer>();
+        vm.tracer = std::make_unique<BasicTracer>(std::move(vm.tracer));
+        return EVMC_SET_OPTION_SUCCESS;
+    }
+    else if (std::strcmp(name, "histogram") == 0)
+    {
+        vm.tracer = std::make_unique<HistogramTracer>(std::move(vm.tracer));
         return EVMC_SET_OPTION_SUCCESS;
     }
     return EVMC_SET_OPTION_INVALID_NAME;
