@@ -5,16 +5,24 @@
 
 #include <evmc/evmc.h>
 #include <evmc/instructions.h>
+#include <memory>
 
 namespace evmone
 {
+struct VMTracer
+{
+    virtual ~VMTracer() {}
+
+    virtual void onBeginExecution() noexcept = 0;
+    virtual void onOpcode(evmc_opcode opcode) noexcept = 0;
+    virtual void onEndExecution() noexcept = 0;
+};
+
 /// The evmone EVMC instance.
 class VM : public evmc_vm
 {
 public:
-    using TracingFn = void (*)(evmc_opcode opcode) noexcept;
-
-    TracingFn tracing_fn = nullptr;
+    std::unique_ptr<VMTracer> tracer;
 
     inline constexpr VM() noexcept;
 };
