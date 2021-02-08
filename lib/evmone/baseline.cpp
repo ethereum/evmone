@@ -6,6 +6,7 @@
 #include "execution_state.hpp"
 #include "instructions.hpp"
 #include <evmc/instructions.h>
+#include <evmone/evmone.h>
 #include <memory>
 
 namespace evmone
@@ -92,10 +93,13 @@ inline evmc_status_code check_requirements(const char* const* instruction_names,
 }
 }  // namespace
 
-evmc_result baseline_execute(evmc_vm* /*vm*/, const evmc_host_interface* host,
-    evmc_host_context* ctx, evmc_revision rev, const evmc_message* msg, const uint8_t* code,
-    size_t code_size) noexcept
+evmc_result baseline_execute(evmc_vm* vm, const evmc_host_interface* host, evmc_host_context* ctx,
+    evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
 {
+    const auto& tracer = static_cast<VM*>(vm)->tracer;
+    if (tracer)
+        tracer->onBeginExecution();
+
     const auto instruction_names = evmc_get_instruction_names_table(rev);
     const auto instruction_metrics = evmc_get_instruction_metrics_table(rev);
     const auto jumpdest_map = build_jumpdest_map(code, code_size);
@@ -107,6 +111,9 @@ evmc_result baseline_execute(evmc_vm* /*vm*/, const evmc_host_interface* host,
     while (pc != code_end)
     {
         const auto op = *pc;
+
+        if (INTX_UNLIKELY(tracer))
+            tracer->onOpcode(static_cast<evmc_opcode>(op));
 
         const auto status = check_requirements(instruction_names, instruction_metrics, *state, op);
         if (status != EVMC_SUCCESS)
@@ -719,6 +726,9 @@ evmc_result baseline_execute(evmc_vm* /*vm*/, const evmc_host_interface* host,
 exit:
     const auto gas_left =
         (state->status == EVMC_SUCCESS || state->status == EVMC_REVERT) ? state->gas_left : 0;
+
+    if (tracer)
+        tracer->onEndExecution();
 
     return evmc::make_result(state->status, gas_left,
         state->output_size != 0 ? &state->memory[state->output_offset] : nullptr,
