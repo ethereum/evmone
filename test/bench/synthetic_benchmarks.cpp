@@ -8,6 +8,9 @@
 #include <evmc/instructions.h>
 #include <evmone/instructions_traits.hpp>
 
+#include <iostream>
+#include <fstream>
+
 using namespace benchmark;
 
 namespace evmone::test
@@ -271,6 +274,18 @@ void register_synthetic_benchmarks()
                 [&vm = vm, params](
                     State& state) { bench_evmc_execute(state, vm, generate_code(params)); })
                 ->Unit(kMicrosecond);
+        }
+    }
+
+    if (std::getenv("BENCH_DUMP"))
+    {
+        for (const auto params : params_list)
+        {
+            auto filename = to_string(params);
+            std::replace(filename.begin(), filename.end(), '/', '_');
+            std::ofstream f{filename};
+            const auto code = generate_code(params);
+            std::copy(code.begin(), code.end(), std::ostreambuf_iterator(f));
         }
     }
 }
