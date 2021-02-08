@@ -73,9 +73,14 @@ struct HistogramTracer : VMTracer
 
     void onEndExecution() noexcept final
     {
-        std::puts("\nTotal:");
+        std::puts("\nHistogram:");
+        int all = 0;
         for (const auto [opcode, count] : opcode_counter)
+        {
             printf("%s,%d\n", instr::traits[opcode].name, count);
+            all += count;
+        }
+        printf("all,%d\n", all);
         if (next_tracer)
             next_tracer->onEndExecution();
     }
