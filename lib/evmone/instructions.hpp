@@ -561,11 +561,22 @@ inline evmc_status_code mstore8(ExecutionState& state) noexcept
     return EVMC_SUCCESS;
 }
 
-inline void sload(ExecutionState& state) noexcept
+inline evmc_status_code sload(ExecutionState& state) noexcept
 {
     auto& x = state.stack.top();
-    x = intx::be::load<uint256>(
-        state.host.get_storage(state.msg->destination, intx::be::store<evmc::bytes32>(x)));
+    const auto key = intx::be::store<evmc::bytes32>(x);
+
+    if (state.rev >= EVMC_BERLIN &&
+        state.host.access_storage(state.msg->destination, key) == EVMC_ACCESS_COLD)
+    {
+        // EIP-2929: COLD_SLOAD_COST - WARM_STORAGE_READ_COST = 2000
+        if ((state.gas_left -= 2000) < 0)
+            return EVMC_OUT_OF_GAS;
+    }
+
+    x = intx::be::load<uint256>(state.host.get_storage(state.msg->destination, key));
+
+    return EVMC_SUCCESS;
 }
 
 inline evmc_status_code sstore(ExecutionState& state) noexcept
@@ -578,12 +589,26 @@ inline evmc_status_code sstore(ExecutionState& state) noexcept
 
     const auto key = intx::be::store<evmc::bytes32>(state.stack.pop());
     const auto value = intx::be::store<evmc::bytes32>(state.stack.pop());
-    const auto status = state.host.set_storage(state.msg->destination, key, value);
+
+    // EIP-2929
+    static constexpr int COLD_SLOAD_COST = 2100;
+    static constexpr int WARM_STORAGE_READ_COST = 100;
     int cost = 0;
+    if (state.rev >= EVMC_BERLIN &&
+        state.host.access_storage(state.msg->destination, key) == EVMC_ACCESS_COLD)
+    {
+        cost = COLD_SLOAD_COST;
+    }
+
+    const auto status = state.host.set_storage(state.msg->destination, key, value);
+
     switch (status)
     {
     case EVMC_STORAGE_UNCHANGED:
-        if (state.rev >= EVMC_ISTANBUL)
+    case EVMC_STORAGE_MODIFIED_AGAIN:
+        if (state.rev >= EVMC_BERLIN)
+            cost += WARM_STORAGE_READ_COST;
+        else if (state.rev == EVMC_ISTANBUL)
             cost = 800;
         else if (state.rev == EVMC_CONSTANTINOPLE)
             cost = 200;
@@ -591,21 +616,14 @@ inline evmc_status_code sstore(ExecutionState& state) noexcept
             cost = 5000;
         break;
     case EVMC_STORAGE_MODIFIED:
-        cost = 5000;
-        break;
-    case EVMC_STORAGE_MODIFIED_AGAIN:
-        if (state.rev >= EVMC_ISTANBUL)
-            cost = 800;
-        else if (state.rev == EVMC_CONSTANTINOPLE)
-            cost = 200;
+    case EVMC_STORAGE_DELETED:
+        if (state.rev >= EVMC_BERLIN)
+            cost += 5000 - COLD_SLOAD_COST;
         else
             cost = 5000;
         break;
     case EVMC_STORAGE_ADDED:
-        cost = 20000;
-        break;
-    case EVMC_STORAGE_DELETED:
-        cost = 5000;
+        cost += 20000;
         break;
     }
     if ((state.gas_left -= cost) < 0)
