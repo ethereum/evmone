@@ -335,7 +335,19 @@ constexpr inline std::array<int16_t, 256> gas_costs<EVMC_ISTANBUL> = []() noexce
 template <>
 constexpr inline std::array<int16_t, 256> gas_costs<EVMC_BERLIN> = []() noexcept {
     auto table = gas_costs<EVMC_ISTANBUL>;
-    table[OP_SLOAD] = 100; // EIP-2929 WARM_STORAGE_READ_COST
+
+    // EIP-2929 WARM_STORAGE_READ_COST
+    table[OP_EXTCODESIZE] = 100;
+    table[OP_EXTCODECOPY] = 100;
+    table[OP_EXTCODEHASH] = 100;
+    table[OP_BALANCE] = 100;
+    table[OP_CALL] = 100;
+    table[OP_CALLCODE] = 100;
+    table[OP_DELEGATECALL] = 100;
+    table[OP_STATICCALL] = 100;
+    table[OP_SLOAD] = 100;
+
     return table;
 }();
+
 }  // namespace evmone::instr
