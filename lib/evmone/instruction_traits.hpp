@@ -1,12 +1,18 @@
 // evmone: Fast Ethereum Virtual Machine implementation
 // Copyright 2020 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
+#pragma once
 
 #include <evmc/instructions.h>
 #include <array>
 
 namespace evmone::instr
 {
+/// EIP-2929 constants (https://eips.ethereum.org/EIPS/eip-2929).
+inline constexpr auto cold_sload_cost = 2100;
+inline constexpr auto cold_account_access_cost = 2600;
+inline constexpr auto warm_storage_read_cost = 100;
+
 /// The EVM instruction traits.
 struct Traits
 {
@@ -333,5 +339,18 @@ constexpr inline std::array<int16_t, 256> gas_costs<EVMC_ISTANBUL> = []() noexce
 }();
 
 template <>
-constexpr inline auto gas_costs<EVMC_BERLIN> = gas_costs<EVMC_ISTANBUL>;
+constexpr inline std::array<int16_t, 256> gas_costs<EVMC_BERLIN> = []() noexcept {
+    auto table = gas_costs<EVMC_ISTANBUL>;
+    table[OP_EXTCODESIZE] = warm_storage_read_cost;
+    table[OP_EXTCODECOPY] = warm_storage_read_cost;
+    table[OP_EXTCODEHASH] = warm_storage_read_cost;
+    table[OP_BALANCE] = warm_storage_read_cost;
+    table[OP_CALL] = warm_storage_read_cost;
+    table[OP_CALLCODE] = warm_storage_read_cost;
+    table[OP_DELEGATECALL] = warm_storage_read_cost;
+    table[OP_STATICCALL] = warm_storage_read_cost;
+    table[OP_SLOAD] = warm_storage_read_cost;
+    return table;
+}();
+
 }  // namespace evmone::instr
