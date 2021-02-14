@@ -9,9 +9,18 @@
 namespace evmone::instr
 {
 /// EIP-2929 constants (https://eips.ethereum.org/EIPS/eip-2929).
+/// @{
 inline constexpr auto cold_sload_cost = 2100;
 inline constexpr auto cold_account_access_cost = 2600;
 inline constexpr auto warm_storage_read_cost = 100;
+
+/// Additional cold account access cost.
+///
+/// The warm access cost is unconditionally applied for every account access instruction.
+/// If the access turns out to be cold, this cost must be applied additionally.
+inline constexpr auto additional_cold_account_access_cost =
+    cold_account_access_cost - warm_storage_read_cost;
+/// @}
 
 /// The EVM instruction traits.
 struct Traits
