@@ -279,10 +279,19 @@ inline void address(ExecutionState& state) noexcept
     state.stack.push(intx::be::load<uint256>(state.msg->destination));
 }
 
-inline void balance(ExecutionState& state) noexcept
+inline evmc_status_code balance(ExecutionState& state) noexcept
 {
     auto& x = state.stack.top();
-    x = intx::be::load<uint256>(state.host.get_balance(intx::be::trunc<evmc::address>(x)));
+    const auto addr = intx::be::trunc<evmc::address>(x);
+
+    if (state.rev >= EVMC_BERLIN && state.host.access_account(addr) == EVMC_ACCESS_COLD)
+    {
+        if ((state.gas_left -= instr::additional_cold_account_access_cost) < 0)
+            return EVMC_OUT_OF_GAS;
+    }
+
+    x = intx::be::load<uint256>(state.host.get_balance(addr));
+    return EVMC_SUCCESS;
 }
 
 inline void origin(ExecutionState& state) noexcept
@@ -394,10 +403,19 @@ inline void gasprice(ExecutionState& state) noexcept
     state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().tx_gas_price));
 }
 
-inline void extcodesize(ExecutionState& state) noexcept
+inline evmc_status_code extcodesize(ExecutionState& state) noexcept
 {
     auto& x = state.stack.top();
-    x = state.host.get_code_size(intx::be::trunc<evmc::address>(x));
+    const auto addr = intx::be::trunc<evmc::address>(x);
+
+    if (state.rev >= EVMC_BERLIN && state.host.access_account(addr) == EVMC_ACCESS_COLD)
+    {
+        if ((state.gas_left -= instr::additional_cold_account_access_cost) < 0)
+            return EVMC_OUT_OF_GAS;
+    }
+
+    x = state.host.get_code_size(addr);
+    return EVMC_SUCCESS;
 }
 
 inline evmc_status_code extcodecopy(ExecutionState& state) noexcept
@@ -417,6 +435,12 @@ inline evmc_status_code extcodecopy(ExecutionState& state) noexcept
     const auto copy_cost = num_words(s) * 3;
     if ((state.gas_left -= copy_cost) < 0)
         return EVMC_OUT_OF_GAS;
+
+    if (state.rev >= EVMC_BERLIN && state.host.access_account(addr) == EVMC_ACCESS_COLD)
+    {
+        if ((state.gas_left -= instr::additional_cold_account_access_cost) < 0)
+            return EVMC_OUT_OF_GAS;
+    }
 
     auto data = s != 0 ? &state.memory[dst] : nullptr;
     auto num_bytes_copied = state.host.copy_code(addr, src, data, s);
@@ -460,10 +484,19 @@ inline evmc_status_code returndatacopy(ExecutionState& state) noexcept
     return EVMC_SUCCESS;
 }
 
-inline void extcodehash(ExecutionState& state) noexcept
+inline evmc_status_code extcodehash(ExecutionState& state) noexcept
 {
     auto& x = state.stack.top();
-    x = intx::be::load<uint256>(state.host.get_code_hash(intx::be::trunc<evmc::address>(x)));
+    const auto addr = intx::be::trunc<evmc::address>(x);
+
+    if (state.rev >= EVMC_BERLIN && state.host.access_account(addr) == EVMC_ACCESS_COLD)
+    {
+        if ((state.gas_left -= instr::additional_cold_account_access_cost) < 0)
+            return EVMC_OUT_OF_GAS;
+    }
+
+    x = intx::be::load<uint256>(state.host.get_code_hash(addr));
+    return EVMC_SUCCESS;
 }
 
 
