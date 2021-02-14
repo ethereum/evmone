@@ -316,7 +316,7 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
     table[OP_SHL] = op<shl>;
     table[OP_SHR] = op<shr>;
     table[OP_SAR] = op<sar>;
-    table[OP_EXTCODEHASH] = op<extcodehash>;
+
     table[OP_CREATE2] = op_create<EVMC_CREATE2>;
 
     table[OP_CHAINID] = op<chainid>;
