@@ -20,6 +20,13 @@ evmc_status_code call(ExecutionState& state) noexcept
 
     state.stack.push(0);  // Assume failure.
 
+    if (state.rev >= EVMC_BERLIN && state.host.access_account(dst) == EVMC_ACCESS_COLD)
+    {
+        // EIP-2929: COLD_ACCOUNT_ACCESS_COST - WARM_STORAGE_READ_COST = 2500
+        if ((state.gas_left -= 2500) < 0)
+            return EVMC_OUT_OF_GAS;
+    }
+
     if (!check_memory(state, input_offset, input_size))
         return EVMC_OUT_OF_GAS;
 
