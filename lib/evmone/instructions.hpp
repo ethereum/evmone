@@ -729,6 +729,12 @@ inline evmc_status_code selfdestruct(ExecutionState& state) noexcept
 
     const auto beneficiary = intx::be::trunc<evmc::address>(state.stack[0]);
 
+    if (state.rev >= EVMC_BERLIN && state.host.access_account(beneficiary) == EVMC_ACCESS_COLD)
+    {
+        if ((state.gas_left -= instr::cold_account_access_cost) < 0)
+            return EVMC_OUT_OF_GAS;
+    }
+
     if (state.rev >= EVMC_TANGERINE_WHISTLE)
     {
         if (state.rev == EVMC_TANGERINE_WHISTLE || state.host.get_balance(state.msg->destination))
