@@ -96,12 +96,19 @@ evmc_result baseline_execute(evmc_vm* /*vm*/, const evmc_host_interface* host,
     evmc_host_context* ctx, evmc_revision rev, const evmc_message* msg, const uint8_t* code,
     size_t code_size) noexcept
 {
+    auto state = std::make_unique<ExecutionState>(*msg, rev, *host, ctx, code, code_size);
+    return baseline_execute(*state);
+}
+
+evmc_result baseline_execute(ExecutionState& state) noexcept
+{
+    const auto rev = state.rev;
+    const auto code = state.code.data();
+    const auto code_size = state.code.size();
+
     const auto instruction_names = evmc_get_instruction_names_table(rev);
     const auto instruction_metrics = evmc_get_instruction_metrics_table(rev);
     const auto jumpdest_map = build_jumpdest_map(code, code_size);
-
-    auto state_alloc = std::make_unique<ExecutionState>(*msg, rev, *host, ctx, code, code_size);
-    auto& state = *state_alloc;
 
     const auto code_end = code + code_size;
     auto* pc = code;
