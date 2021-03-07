@@ -763,3 +763,33 @@ TEST_P(evm, extcodecopy_buffer_overflow)
         }
     }
 }
+
+TEST_P(evm, undefined_revert_homestead_tangerine_spurious)
+{
+    auto revs = {EVMC_HOMESTEAD, EVMC_TANGERINE_WHISTLE, EVMC_SPURIOUS_DRAGON};
+    for (auto r : revs)
+    {
+        rev = r;
+        auto code = std::string{};
+        code = "700400000000000000000000000000000001";   // PUSH17
+        code += "700400000000000000000000000000000001";  // PUSH17
+        code += "fd";                                    // REVERT
+        execute(code);
+        EXPECT_EQ(result.status_code, EVMC_REVERT);
+    }
+}
+
+TEST_P(evm, revert_ge_byzantium)
+{
+    auto revs = {EVMC_BYZANTIUM, EVMC_CONSTANTINOPLE, EVMC_PETERSBURG, EVMC_ISTANBUL, EVMC_BERLIN};
+    for (auto r : revs)
+    {
+        rev = r;
+        auto code = std::string{};
+        code = "700400000000000000000000000000000001";   // PUSH17
+        code += "700400000000000000000000000000000001";  // PUSH17
+        code += "fd";                                    // REVERT
+        execute(code);
+        EXPECT_EQ(result.status_code, EVMC_REVERT);
+    }
+}
