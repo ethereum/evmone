@@ -775,7 +775,7 @@ TEST_P(evm, undefined_revert_homestead_tangerine_spurious)
         code += "700400000000000000000000000000000001";  // PUSH17
         code += "fd";                                    // REVERT
         execute(code);
-        EXPECT_EQ(result.status_code, EVMC_REVERT);
+        EXPECT_STATUS(EVMC_OUT_OF_GAS);
     }
 }
 
@@ -790,6 +790,6 @@ TEST_P(evm, revert_ge_byzantium)
         code += "700400000000000000000000000000000001";  // PUSH17
         code += "fd";                                    // REVERT
         execute(code);
-        EXPECT_EQ(result.status_code, EVMC_REVERT);
+        EXPECT_STATUS(EVMC_OUT_OF_GAS);
     }
 }
