@@ -19,7 +19,7 @@ commands:
     steps:
       - restore_cache:
           name: "Restore Silkworm cache"
-          key: &silkworm-cache-key silkworm-v1
+          key: &silkworm-cache-key silkworm-20210407
       - run:
           name: "Check Silkworm cache"
           command: |
@@ -38,11 +38,11 @@ commands:
           working_directory: ~/silkworm/src
           command: |
             [ "$SILKWORM_BUILD" = true ] || exit 0
-            git clone --no-checkout --single-branch https://github.com/torquem-ch/silkworm.git .
-            git checkout 614fabfcf19b8e06f0dcbe3e9af2345dcf748f3e
+            git clone --no-checkout --single-branch --branch eip2929_update https://github.com/torquem-ch/silkworm.git .
+            git checkout b083086cd4692b2a7f54af06644324a833fb4d3e
             git submodule init
             git submodule deinit tests
-            git submodule update --recursive --depth=1 --progress
+            git submodule update --init --recursive --depth=1 --progress
       - run:
           name: "Configure Silkworm"
           working_directory: ~/silkworm
@@ -239,40 +239,15 @@ jobs:
             ghr -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME -n "$name" $prerelease_flag $CIRCLE_TAG ~/package
 
   consensus-tests:
-    environment:
-      TESTS_REV: v7.0.0
     executor: linux-gcc-latest
     steps:
       - build_silkworm
       - unpack_package
       - download_consensus_tests:
-          rev: v7.0.0
+          rev: 8.0.2
       - run:
           name: "Silkworm-driven consensus tests"
           command: ~/silkworm/consensus --evm ~/package/lib/libevmone.so --tests ~/tests
-
-  state-tests:
-    environment:
-      TESTS_REV: ac8cf2cd8ba326d67101183060272e7f7b1eaa92
-      ALETH_REV: 1.8.0
-    docker:
-      - image: cimg/base:stable
-    steps:
-      - unpack_package
-      - run:
-          name: "Download Aleth"
-          background: true
-          command: curl -L https://github.com/ethereum/aleth/releases/download/v$ALETH_REV/aleth-$ALETH_REV-linux-x86_64.tar.gz | tar xz
-      - download_consensus_tests:
-          rev: ac8cf2cd8ba326d67101183060272e7f7b1eaa92
-      - run:
-          name: "Fixup consensus tests"
-          command: |
-            mkdir -p ~/tests/GeneralStateTests/stEWASMTests
-            mkdir -p ~/tests/src/GeneralStateTestsFiller/stEWASMTests
-      - run:
-          name: "Run State Tests"
-          command: bin/testeth -t GeneralStateTests -- --testpath ~/tests --vm ~/package/lib/libevmone.so
 
 
   gcc-min:
@@ -380,9 +355,6 @@ workflows:
             tags:
               only: /^v[0-9].*/
       - consensus-tests:
-          requires:
-            - release-linux
-      - state-tests:
           requires:
             - release-linux
       - gcc-min
