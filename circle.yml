@@ -19,7 +19,7 @@ commands:
     steps:
       - restore_cache:
           name: "Restore Silkworm cache"
-          key: &silkworm-cache-key silkworm-v1
+          key: &silkworm-cache-key silkworm-20210407
       - run:
           name: "Check Silkworm cache"
           command: |
@@ -38,11 +38,11 @@ commands:
           working_directory: ~/silkworm/src
           command: |
             [ "$SILKWORM_BUILD" = true ] || exit 0
-            git clone --no-checkout --single-branch https://github.com/torquem-ch/silkworm.git .
-            git checkout 614fabfcf19b8e06f0dcbe3e9af2345dcf748f3e
+            git clone --no-checkout --single-branch --branch eip2929_update https://github.com/torquem-ch/silkworm.git .
+            git checkout b083086cd4692b2a7f54af06644324a833fb4d3e
             git submodule init
             git submodule deinit tests
-            git submodule update --recursive --depth=1 --progress
+            git submodule update --init --recursive --depth=1 --progress
       - run:
           name: "Configure Silkworm"
           working_directory: ~/silkworm
@@ -247,7 +247,7 @@ jobs:
       - build
       - build_silkworm
       - download_consensus_tests:
-          rev: v7.0.0
+          rev: 8.0.3
       - run:
           name: "Silkworm-driven consensus tests"
           working_directory: ~/build
