@@ -2,14 +2,16 @@
 // Copyright 2019-2020 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-#include "execution.hpp"
 #include "analysis.hpp"
+#include <evmone/evmone.h>
+#include <iostream>
 #include <memory>
 
 namespace evmone
 {
-evmc_result execute(evmc_vm* /*unused*/, const evmc_host_interface* host, evmc_host_context* ctx,
-    evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
+EVMC_EXPORT evmc_result execute(evmc_vm* /*unused*/, const evmc_host_interface* host,
+    evmc_host_context* ctx, evmc_revision rev, const evmc_message* msg, const uint8_t* code,
+    size_t code_size) noexcept
 {
     const auto analysis = analyze(rev, code, code_size);
 

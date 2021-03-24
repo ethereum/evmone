@@ -18,4 +18,11 @@ EVMC_EXPORT struct evmc_vm* evmc_create_evmone(void) EVMC_NOEXCEPT;
 }
 #endif
 
+namespace evmone
+{
+EVMC_EXPORT evmc_result execute(evmc_vm* vm, const evmc_host_interface* host,
+    evmc_host_context* ctx, evmc_revision rev, const evmc_message* msg, const uint8_t* code,
+    size_t code_size) noexcept;
+}  // namespace evmone
+
 #endif  // EVMONE_H
