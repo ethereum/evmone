@@ -10,7 +10,7 @@ add_library(testutils STATIC
     utils.hpp
 )
 
-target_link_libraries(testutils PRIVATE evmc::instructions)
+target_link_libraries(testutils PRIVATE evmc::instructions evmc::hex)
 target_include_directories(testutils PUBLIC ${PROJECT_SOURCE_DIR})
 
 add_library(testutils-dump STATIC dump.cpp dump.hpp)
