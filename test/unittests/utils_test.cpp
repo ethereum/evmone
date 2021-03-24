@@ -5,40 +5,6 @@
 #include <gtest/gtest.h>
 #include <test/utils/utils.hpp>
 
-TEST(utils, hex)
-{
-    auto data = bytes{0x0, 0x1, 0xa, 0xf, 0x1f, 0xa0, 0xff, 0xf0};
-    EXPECT_EQ(hex(data), "00010a0f1fa0fff0");
-}
-
-TEST(utils, from_hex_empty)
-{
-    EXPECT_TRUE(from_hex({}).empty());
-}
-
-TEST(utils, from_hex_odd_input_length)
-{
-    EXPECT_THROW(from_hex("0"), std::length_error);
-}
-
-TEST(utils, from_hex_capital_letters)
-{
-    EXPECT_EQ(from_hex("ABCDEF"), (bytes{0xab, 0xcd, 0xef}));
-}
-
-TEST(utils, from_hex_invalid_encoding)
-{
-    EXPECT_THROW(from_hex({"\0\0", 2}), std::out_of_range);
-}
-
-TEST(utils, hex_byte)
-{
-    auto b = uint8_t{};
-    EXPECT_EQ(hex(b), "00");
-    b = 0xaa;
-    EXPECT_EQ(hex(b), "aa");
-}
-
 TEST(utils, from_hexx)
 {
     EXPECT_EQ(hex(from_hexx("")), "");
