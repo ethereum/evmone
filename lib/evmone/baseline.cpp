@@ -124,7 +124,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     const auto* const code = state.code.data();
     const auto* const code_end = code + state.code.size();
     auto pc = code;
-    while (pc != code_end)
+    while (true)  // Guaranteed to terminate because padded code ends with STOP.
     {
         if constexpr (TracingEnabled)
         {
