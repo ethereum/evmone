@@ -8,6 +8,30 @@ and this project adheres to [Semantic Versioning].
 
 ## [0.6.0] — unreleased
 
+### Added
+
+- New experimental **Baseline** interpreter has been added to the project.
+  It provides relatively straight-forward EVM implementation and
+  can be enabled with `O=0` option.
+  [#261](https://github.com/ethereum/evmone/pull/261)
+  [#280](https://github.com/ethereum/evmone/pull/280)
+- A set of EVM synthetic benchmarks stressing individual
+  low-level EVM instructions.
+  [#278](https://github.com/ethereum/evmone/pull/278)
+- [Silkworm]-driven integration and Ethereum consensus testing.
+  [#290](https://github.com/ethereum/evmone/pull/290)
+
+### Changed
+
+- [EVMC] upgraded to version [7.5.0][EVMC 7.5.0].
+  [#294](https://github.com/ethereum/evmone/pull/294)
+- `evmone-bench` tool under-the-hood improvements.
+  [#286](https://github.com/ethereum/evmone/pull/286)
+  [#287](https://github.com/ethereum/evmone/pull/287)
+  [#288](https://github.com/ethereum/evmone/pull/288)
+- A lot of instructions implementation refactoring to allow code sharing
+  between Baseline and Advanced interpreters.
+
 
 ## [0.5.0] — 2020-06-24
 
@@ -196,10 +220,12 @@ It delivers fully-compatible and high-speed EVM implementation.
 [EIP-2200]: https://eips.ethereum.org/EIPS/eip-2200
 [Spurious Dragon]: https://eips.ethereum.org/EIPS/eip-607
 [EVMC]: https://github.com/ethereum/evmc
+[EVMC 7.5.0]: https://github.com/ethereum/evmc/releases/tag/v7.5.0
 [EVMC 7.4.0]: https://github.com/ethereum/evmc/releases/tag/v7.4.0
 [EVMC 7.1.0]: https://github.com/ethereum/evmc/releases/tag/v7.1.0
 [EVMC 7.0.0]: https://github.com/ethereum/evmc/releases/tag/v7.0.0
 [intx]: https://github.com/chfast/intx
 [intx 0.5.0]: https://github.com/chfast/intx/releases/tag/v0.5.0
+[Silkworm]: https://github.com/torquem-ch/silkworm
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
 [Semantic Versioning]: https://semver.org
