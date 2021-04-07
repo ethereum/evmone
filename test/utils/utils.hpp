@@ -6,20 +6,9 @@
 #include <evmc/hex.hpp>
 
 using evmc::bytes;
+using evmc::bytes_view;
+using evmc::from_hex;
 using evmc::hex;
-using bytes_view = std::basic_string_view<uint8_t>;
-
-/// Decodes hex encoded string to bytes.
-inline bytes from_hex(std::string_view hex)
-{
-    return evmc::from_hex(std::string{hex});
-}
-
-/// Encodes bytes as hex string.
-inline std::string hex(bytes_view bs)
-{
-    return evmc::hex(bs.data(), bs.size());
-}
 
 /// Decodes the hexx encoded string.
 ///
