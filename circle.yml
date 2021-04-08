@@ -239,17 +239,22 @@ jobs:
             ghr -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME -n "$name" $prerelease_flag $CIRCLE_TAG ~/package
 
   consensus-tests:
-    environment:
-      TESTS_REV: v7.0.0
     executor: linux-gcc-latest
+    environment:
+      BUILD_TYPE: Coverage
+      CMAKE_OPTIONS: -DEVMONE_TESTING=OFF
     steps:
+      - build
       - build_silkworm
-      - unpack_package
       - download_consensus_tests:
           rev: v7.0.0
       - run:
           name: "Silkworm-driven consensus tests"
-          command: ~/silkworm/consensus --evm ~/package/lib/libevmone.so --tests ~/tests
+          working_directory: ~/build
+          command: ~/silkworm/consensus --evm lib/libevmone.so --tests ~/tests
+      - collect_coverage_gcc
+      - upload_coverage:
+          flags: consensus
 
   state-tests:
     environment:
@@ -379,9 +384,7 @@ workflows:
               ignore: /.*/
             tags:
               only: /^v[0-9].*/
-      - consensus-tests:
-          requires:
-            - release-linux
+      - consensus-tests
       - state-tests:
           requires:
             - release-linux
