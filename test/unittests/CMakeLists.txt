@@ -13,6 +13,7 @@ add_executable(evmone-unittests
     evm_fixture.hpp
     evm_test.cpp
     evm_calls_test.cpp
+    evm_eip2929_test.cpp
     evm_state_test.cpp
     evm_other_test.cpp
     evmone_test.cpp
