@@ -223,7 +223,12 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
     table[OP_XOR] = op<xor_>;
     table[OP_NOT] = op<not_>;
     table[OP_BYTE] = op<byte>;
+    table[OP_SHL] = op<shl>;
+    table[OP_SHR] = op<shr>;
+    table[OP_SAR] = op<sar>;
+
     table[OP_SHA3] = op<sha3>;
+
     table[OP_ADDRESS] = op<address>;
     table[OP_BALANCE] = op<balance>;
     table[OP_ORIGIN] = op<origin>;
@@ -239,12 +244,16 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
     table[OP_EXTCODECOPY] = op<extcodecopy>;
     table[OP_RETURNDATASIZE] = op<returndatasize>;
     table[OP_RETURNDATACOPY] = op<returndatacopy>;
+    table[OP_EXTCODEHASH] = op<extcodehash>;
     table[OP_BLOCKHASH] = op<blockhash>;
     table[OP_COINBASE] = op<coinbase>;
     table[OP_TIMESTAMP] = op<timestamp>;
     table[OP_NUMBER] = op<number>;
     table[OP_DIFFICULTY] = op<difficulty>;
     table[OP_GASLIMIT] = op<gaslimit>;
+    table[OP_CHAINID] = op<chainid>;
+    table[OP_SELFBALANCE] = op<selfbalance>;
+
     table[OP_POP] = op<pop>;
     table[OP_MLOAD] = op<mload>;
     table[OP_MSTORE] = op<mstore>;
@@ -308,20 +317,11 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
     table[OP_CALLCODE] = op_call<EVMC_CALLCODE>;
     table[OP_RETURN] = op_return<EVMC_SUCCESS>;
     table[OP_DELEGATECALL] = op_call<EVMC_DELEGATECALL>;
+    table[OP_CREATE2] = op_create<EVMC_CREATE2>;
     table[OP_STATICCALL] = op_call<EVMC_CALL, true>;
     table[OP_REVERT] = op_return<EVMC_REVERT>;
     table[OP_INVALID] = op_invalid;
     table[OP_SELFDESTRUCT] = op_selfdestruct;
-
-    table[OP_SHL] = op<shl>;
-    table[OP_SHR] = op<shr>;
-    table[OP_SAR] = op<sar>;
-    table[OP_EXTCODEHASH] = op<extcodehash>;
-    table[OP_CREATE2] = op_create<EVMC_CREATE2>;
-
-    table[OP_CHAINID] = op<chainid>;
-    table[OP_EXTCODEHASH] = op<extcodehash>;
-    table[OP_SELFBALANCE] = op<selfbalance>;
 
     return table;
 }();
