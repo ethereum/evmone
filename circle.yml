@@ -19,7 +19,7 @@ commands:
     steps:
       - restore_cache:
           name: "Restore Silkworm cache"
-          key: &silkworm-cache-key silkworm-20210407
+          key: &silkworm-cache-key silkworm-20210413
       - run:
           name: "Check Silkworm cache"
           command: |
@@ -38,10 +38,8 @@ commands:
           working_directory: ~/silkworm/src
           command: |
             [ "$SILKWORM_BUILD" = true ] || exit 0
-            git clone --no-checkout --single-branch --branch eip2929_update https://github.com/torquem-ch/silkworm.git .
-            git checkout b083086cd4692b2a7f54af06644324a833fb4d3e
-            git submodule init
-            git submodule deinit tests
+            git clone --no-checkout --single-branch https://github.com/torquem-ch/silkworm.git .
+            git checkout 3388d3ef7ba37ca440707a96a7d2886989073a59
             git submodule update --init --recursive --depth=1 --progress
       - run:
           name: "Configure Silkworm"
@@ -249,9 +247,13 @@ jobs:
       - download_consensus_tests:
           rev: 8.0.3
       - run:
-          name: "Silkworm-driven consensus tests"
+          name: "Silkworm-driven consensus tests (Advanced)"
           working_directory: ~/build
-          command: ~/silkworm/consensus --evm lib/libevmone.so --tests ~/tests
+          command: ~/silkworm/consensus --evm lib/libevmone.so,O=2 --tests ~/tests
+      - run:
+          name: "Silkworm-driven consensus tests (Baseline)"
+          working_directory: ~/build
+          command: ~/silkworm/consensus --evm lib/libevmone.so,O=0 --tests ~/tests
       - collect_coverage_gcc
       - upload_coverage:
           flags: consensus
