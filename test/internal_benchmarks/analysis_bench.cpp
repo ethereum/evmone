@@ -6,6 +6,9 @@
 #include "test/experimental/jumpdest_analysis.hpp"
 #include "test/utils/utils.hpp"
 #include <benchmark/benchmark.h>
+#include <numeric>
+
+#include <iostream>
 
 
 namespace
@@ -179,6 +182,45 @@ inline bool is_push(uint8_t op)
     //    return (op & uint8_t{0b11100000}) == 0b01100000;
     //    return (x & 0b1100000) != 0;
 }
+
+[[maybe_unused]] bool x = []() noexcept {
+    size_t last_push = size_t(-1);
+    std::vector<int> dists;
+    for (size_t i = 0; i < test_bytecode.size();)
+    {
+        const auto op = test_bytecode[i];
+
+        if (is_push(op))
+        {
+            if (last_push != size_t(-1))
+                dists.push_back(static_cast<int>(i - last_push));
+            last_push = i;
+        }
+
+        i += is_push(op) ? static_cast<size_t>(op - OP_PUSH1 + 2) : 1;
+    }
+
+    auto sum = std::accumulate(dists.begin(), dists.end(), 0);
+    std::sort(dists.begin(), dists.end());
+
+    std::cerr << "AVG: " << double(sum) / double(dists.size()) << "\n";
+    std::cerr << "MED: " << dists[dists.size() / 2] << "\n";
+
+    int last = 0;
+    int count = 0;
+    for (auto d : dists)
+    {
+        if (d == last)
+            ++count;
+        else
+        {
+            std::cerr << last << " x" << count << "\n";
+            count = 1;
+            last = d;
+        }
+    }
+    return true;
+}();
 
 // uint8_t get_push_size(uint8_t x)
 //{
