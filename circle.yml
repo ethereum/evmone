@@ -247,9 +247,13 @@ jobs:
       - download_consensus_tests:
           rev: 8.0.3
       - run:
-          name: "Silkworm-driven consensus tests"
+          name: "Silkworm-driven consensus tests (Advanced)"
           working_directory: ~/build
-          command: ~/silkworm/consensus --evm lib/libevmone.so --tests ~/tests
+          command: ~/silkworm/consensus --evm lib/libevmone.so,O=2 --tests ~/tests
+      - run:
+          name: "Silkworm-driven consensus tests (Baseline)"
+          working_directory: ~/build
+          command: ~/silkworm/consensus --evm lib/libevmone.so,O=0 --tests ~/tests
       - collect_coverage_gcc
       - upload_coverage:
           flags: consensus
