@@ -256,30 +256,6 @@ jobs:
       - upload_coverage:
           flags: consensus
 
-  state-tests:
-    environment:
-      TESTS_REV: ac8cf2cd8ba326d67101183060272e7f7b1eaa92
-      ALETH_REV: 1.8.0
-    docker:
-      - image: cimg/base:stable
-    steps:
-      - unpack_package
-      - run:
-          name: "Download Aleth"
-          background: true
-          command: curl -L https://github.com/ethereum/aleth/releases/download/v$ALETH_REV/aleth-$ALETH_REV-linux-x86_64.tar.gz | tar xz
-      - download_consensus_tests:
-          rev: ac8cf2cd8ba326d67101183060272e7f7b1eaa92
-      - run:
-          name: "Fixup consensus tests"
-          command: |
-            mkdir -p ~/tests/GeneralStateTests/stEWASMTests
-            mkdir -p ~/tests/src/GeneralStateTestsFiller/stEWASMTests
-      - run:
-          name: "Run State Tests"
-          command: bin/testeth -t GeneralStateTests -- --testpath ~/tests --vm ~/package/lib/libevmone.so
-
-
   gcc-min:
     executor: linux-gcc-7
     steps:
@@ -385,9 +361,6 @@ workflows:
             tags:
               only: /^v[0-9].*/
       - consensus-tests
-      - state-tests:
-          requires:
-            - release-linux
       - gcc-min
       - gcc-latest-coverage
       - clang-latest-ubsan
