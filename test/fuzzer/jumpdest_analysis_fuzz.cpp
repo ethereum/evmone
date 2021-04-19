@@ -16,7 +16,7 @@ template <typename T1, typename T2>
 inline void expect_eq(T1 a, T2 b) noexcept
 {
     if (a != b)
-        __builtin_trap();
+        __builtin_unreachable();
 }
 
 constexpr auto tail_code_padding = 100;
@@ -43,6 +43,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
     const auto a6 = build_internal_code_v3(data, data_size);
     const auto ic4 = build_internal_code_v4(data, data_size);
     const auto ic8 = build_internal_code_v8(data, data_size);
+    const auto s1 = build_jumpdest_map_simd1(data, data_size);
 
     for (size_t i = 0; i < data_size + tail_code_padding; ++i)
     {
@@ -55,6 +56,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
         expect_eq(is_jumpdest(a6.get(), data_size, i), expected);
         expect_eq(is_jumpdest(ic4.get(), data_size, i), expected);
         expect_eq(is_jumpdest(ic8.get(), data_size, i), expected);
+        expect_eq(is_jumpdest(s1, i), expected);
     }
 
 

@@ -42,6 +42,39 @@ JumpdestMap build_jumpdest_map_bitset1(const uint8_t* code, size_t code_size)
     return m;
 }
 
+std::vector<bool> build_jumpdest_map_simd1(const uint8_t* code, size_t code_size)
+{
+    std::vector<uint8_t> push_map;
+    push_map.resize(code_size);
+
+    std::vector<bool> jumpdest_map;
+    jumpdest_map.resize(code_size + 33);
+
+    for (size_t i = 0; i < code_size; ++i)
+    {
+        const auto c = code[i];
+        if (is_push(c))
+            push_map[i] = static_cast<uint8_t>(get_push_data_size(c));
+
+        if (c == OP_JUMPDEST)
+            jumpdest_map[i] = true;
+    }
+
+    for (size_t i = 0; i < code_size; ++i)
+    {
+        const auto p = push_map[i];
+        if (p > 0)
+        {
+            for (size_t j = i + 1; j <= i + p; ++j)
+                jumpdest_map[j] = false;
+            i += p;
+        }
+    }
+
+    jumpdest_map.resize(code_size);
+    return jumpdest_map;
+}
+
 static constexpr size_t padding = 33;
 
 std::unique_ptr<uint8_t[]> build_internal_code_v1(const uint8_t* code, size_t code_size)
