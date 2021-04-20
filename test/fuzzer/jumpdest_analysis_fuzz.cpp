@@ -26,6 +26,11 @@ inline bool is_jumpdest(const JumpdestMap& a, size_t index) noexcept
     return (index < a.size() && a[index]);
 }
 
+inline bool is_jumpdest(const bitset32& a, size_t index) noexcept
+{
+    return (index < a.size() && a[index]);
+}
+
 [[maybe_unused]] inline bool is_jumpdest(const code_analysis& a, size_t index) noexcept
 {
     return find_jumpdest(a, static_cast<int>(index)) >= 0;
