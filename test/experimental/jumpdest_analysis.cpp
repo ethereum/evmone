@@ -92,8 +92,18 @@ bitset32 build_jumpdest_map_simd1(const uint8_t* code, size_t code_size)
         const auto p = push_map[i];
         if (p > 0)
         {
-            for (size_t j = i + 1; j <= i + p; ++j)
-                jumpdest_map.unset(j);
+            const auto s = i + 1;
+            const auto v = s / 32;
+            const auto u = s % 32;
+            uint64_t dw = (uint64_t{jumpdest_map.words_[v + 1]} << 32) | jumpdest_map.words_[v];
+
+            uint64_t mask = ~uint64_t{0};
+            mask >>= (64 - p);
+            mask <<= u;
+            dw &= ~mask;
+
+            jumpdest_map.words_[v] = static_cast<uint32_t>(dw);
+            jumpdest_map.words_[v + 1] = static_cast<uint32_t>(dw >> 32);
             i += p;
         }
     }
