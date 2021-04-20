@@ -7,6 +7,8 @@
 #include <evmc/instructions.h>
 #include <evmone/baseline.hpp>
 
+#include <x86intrin.h>
+
 namespace evmone::experimental
 {
 inline constexpr size_t get_push_data_size(uint8_t op) noexcept
@@ -56,14 +58,24 @@ bitset build_jumpdest_map_simd1(const uint8_t* code, size_t code_size)
     for (size_t v = 0; v < v_code_size; ++v)
     {
         const auto v_begin = v * v_size;
+        const auto* p = &code[v_begin];
+
+        const auto v1 = _mm256_loadu_si256((const __m256i*)p);
+        const auto v_jmpd = _mm256_set1_epi8(OP_JUMPDEST);
+        const auto v_eq = _mm256_cmpeq_epi8(v1, v_jmpd);
+        const auto mask = _mm256_movemask_epi8(v_eq);
+
+        for (size_t i = 0; i < 32; ++i)
+        {
+            if ((mask >> i) & 1)
+                jumpdest_map.set(v_begin + i);
+        }
+
         for (size_t j = v_begin; j < v_begin + v_size; ++j)
         {
             const auto c = code[j];
             if (is_push(c))
                 push_map[j] = static_cast<uint8_t>(get_push_data_size(c));
-
-            if (c == OP_JUMPDEST)
-                jumpdest_map.set(j);
         }
     }
 
