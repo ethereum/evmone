@@ -79,7 +79,7 @@ bitset build_jumpdest_map_simd1(const uint8_t* code, size_t code_size)
         }
     }
 
-    for (size_t i = v_code_size; i < code_size; ++i)
+    for (size_t i = v_code_size * v_size; i < code_size; ++i)
     {
         const auto c = code[i];
         if (is_push(c))
