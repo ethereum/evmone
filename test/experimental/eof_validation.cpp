@@ -1,9 +1,12 @@
 
 #include <doctest/doctest.h>
 #include <evmc/hex.hpp>
+#include <variant>
+#include <vector>
 
 namespace eof
 {
+using bytes = std::basic_string<uint8_t>;
 using bytes_view = std::basic_string_view<uint8_t>;
 
 constexpr uint8_t FORMAT = 0xef;
@@ -27,11 +30,35 @@ enum class error_code
     section_headers_not_terminated,
     invalid_section_bodies_size,
 
+    initcode_failure,
     impossible,
 };
 
+struct ExecutionMock
+{
+    std::variant<bytes, error_code> execution_result;
+
+    std::variant<bytes, error_code> execute([[maybe_unused]] bytes_view code)
+    {
+        return execution_result;
+    }
+};
+
+int determine_eof_version(bytes_view code);
 error_code validate(bytes_view code, int expected_version);
 error_code validate_eof1(bytes_view code_without_prefix);
+std::variant<bytes, error_code> execute_create_tx_v1(ExecutionMock& ee, bytes_view initcode);
+std::variant<bytes, error_code> execute_create_tx_v2(ExecutionMock& ee, bytes_view initcode);
+
+/// Determine the EOF version of the code by inspecting code's EOF prefix.
+/// If the prefix is missing or invalid, the 0 is returned meaning legacy code.
+int determine_eof_version(bytes_view code)
+{
+    if (code.size() >= 4 && code[0] == FORMAT && code[1] == MAGIC[0] && code[2] == MAGIC[1])
+        return code[3];
+
+    return 0;
+}
 
 error_code validate(bytes_view code, int expected_version)
 {
@@ -131,6 +158,49 @@ error_code validate_eof1(bytes_view code_without_prefix)
 
     return error_code::success;
 }
+
+std::variant<bytes, error_code> execute_create_tx_v1(ExecutionMock& ee, bytes_view initcode)
+{
+    const auto eof_version = determine_eof_version(initcode);
+    const auto err1 = validate(initcode, eof_version);
+    if (err1 != error_code::success)
+        return err1;
+
+    const auto result = ee.execute(initcode);
+    if (auto err2 = std::get_if<error_code>(&result))
+        return *err2;
+
+    const auto code = std::get<bytes>(result);
+    const auto err3 = validate(code, eof_version);
+    if (err3 != error_code::success)
+        return err3;
+
+    return code;
+}
+
+std::variant<bytes, error_code> execute_create_tx_v2(ExecutionMock& ee, bytes_view initcode)
+{
+    const auto eof_version = determine_eof_version(initcode);
+
+    if (eof_version > 0)
+    {
+        // initcode validation is only required for EOF1+.
+        const auto err1 = validate(initcode, eof_version);
+        if (err1 != error_code::success)
+            return err1;
+    }
+
+    const auto result = ee.execute(initcode);
+    if (auto err2 = std::get_if<error_code>(&result))
+        return *err2;
+
+    const auto code = std::get<bytes>(result);
+    const auto err3 = validate(code, eof_version);
+    if (err3 != error_code::success)
+        return err3;
+
+    return code;
+}
 }  // namespace eof
 
 using namespace eof;
@@ -188,4 +258,137 @@ TEST_CASE("EOF1 code section missing")
 {
     CHECK(validate(from_hex("EFA61C01 00"), 1) == error_code::code_section_missing);
     CHECK(validate(from_hex("EFA61C01 020001 DA"), 1) == error_code::code_section_missing);
+}
+
+TEST_CASE("legacy create transaction - success")
+{
+    const auto initcode = bytes{0};
+    ExecutionMock mock;
+    mock.execution_result = bytes{0};
+
+    CHECK(std::get<bytes>(execute_create_tx_v1(mock, initcode)) == bytes{0});
+    CHECK(std::get<bytes>(execute_create_tx_v2(mock, initcode)) == bytes{0});
+}
+
+TEST_CASE("legacy create transaction - initcode failure")
+{
+    const auto initcode = bytes{0};
+    ExecutionMock mock;
+    mock.execution_result = error_code::initcode_failure;
+
+    CHECK(
+        std::get<error_code>(execute_create_tx_v1(mock, initcode)) == error_code::initcode_failure);
+    CHECK(
+        std::get<error_code>(execute_create_tx_v2(mock, initcode)) == error_code::initcode_failure);
+}
+
+TEST_CASE("legacy create transaction - code starts with FORMAT")
+{
+    const auto initcode = bytes{0};
+    ExecutionMock mock;
+    mock.execution_result = bytes{FORMAT, 0};
+
+    CHECK(std::get<error_code>(execute_create_tx_v1(mock, initcode)) ==
+          error_code::starts_with_format);
+    CHECK(std::get<error_code>(execute_create_tx_v2(mock, initcode)) ==
+          error_code::starts_with_format);
+}
+
+TEST_CASE("legacy create transaction - initcode starts with FORMAT")
+{
+    const auto initcode = bytes{FORMAT};
+    ExecutionMock mock;
+    mock.execution_result = error_code::initcode_failure;  // FORMAT opcode aborts execution.
+
+    // Here we have different error codes depending on initcode being validated or not.
+    // But the end results is the same: create transaction fails.
+    CHECK(std::get<error_code>(execute_create_tx_v1(mock, initcode)) ==
+          error_code::starts_with_format);
+    CHECK(
+        std::get<error_code>(execute_create_tx_v2(mock, initcode)) == error_code::initcode_failure);
+}
+
+TEST_CASE("legacy create transaction - EOF version mismatch")
+{
+    const auto initcode = bytes{};
+    ExecutionMock mock;
+    mock.execution_result = from_hex("EFA61C01 010001 00 FE");  // EOF1 code.
+
+    CHECK(std::get<error_code>(execute_create_tx_v1(mock, initcode)) ==
+          error_code::starts_with_format);
+    CHECK(std::get<error_code>(execute_create_tx_v2(mock, initcode)) ==
+          error_code::starts_with_format);
+}
+
+TEST_CASE("EOF1 create transaction - success")
+{
+    const auto eof1_code = from_hex("EFA61C01 010001 00 FE");
+    ExecutionMock mock;
+    mock.execution_result = eof1_code;
+
+    CHECK(std::get<bytes>(execute_create_tx_v1(mock, eof1_code)) == eof1_code);
+    CHECK(std::get<bytes>(execute_create_tx_v2(mock, eof1_code)) == eof1_code);
+}
+
+TEST_CASE("EOF1 create transaction - invalid initcode")
+{
+    const auto eof2_code = from_hex("EFA61C02");
+    const auto eof1_code = from_hex("EFA61C01 010001 00 FE");
+    ExecutionMock mock;
+    mock.execution_result = eof1_code;
+
+    CHECK(std::get<error_code>(execute_create_tx_v1(mock, eof2_code)) ==
+          error_code::eof_version_unknown);
+    CHECK(std::get<error_code>(execute_create_tx_v2(mock, eof2_code)) ==
+          error_code::eof_version_unknown);
+}
+
+TEST_CASE("EOF1 create transaction - initcode failure")
+{
+    const auto eof1_code = from_hex("EFA61C01 010001 00 FE");
+    ExecutionMock mock;
+    mock.execution_result = error_code::initcode_failure;
+
+    CHECK(std::get<error_code>(execute_create_tx_v1(mock, eof1_code)) ==
+          error_code::initcode_failure);
+    CHECK(std::get<error_code>(execute_create_tx_v2(mock, eof1_code)) ==
+          error_code::initcode_failure);
+}
+
+TEST_CASE("EOF1 create transaction - EOF version mismatch")
+{
+    const auto eof2_code = from_hex("EFA61C02");
+    const auto eof1_code = from_hex("EFA61C01 010001 00 FE");
+    ExecutionMock mock;
+    mock.execution_result = eof2_code;
+
+    CHECK(std::get<error_code>(execute_create_tx_v1(mock, eof1_code)) ==
+          error_code::eof_version_mismatch);
+    CHECK(std::get<error_code>(execute_create_tx_v2(mock, eof1_code)) ==
+          error_code::eof_version_mismatch);
+}
+
+TEST_CASE("EOF1 create transaction - legacy code")
+{
+    const auto eof1_code = from_hex("EFA61C01 010001 00 FE");
+    ExecutionMock mock;
+    mock.execution_result = bytes{};  // Legacy code
+
+    CHECK(std::get<error_code>(execute_create_tx_v1(mock, eof1_code)) ==
+          error_code::invalid_eof_prefix);
+    CHECK(std::get<error_code>(execute_create_tx_v2(mock, eof1_code)) ==
+          error_code::invalid_eof_prefix);
+}
+
+TEST_CASE("EOF1 create transaction - invalid code")
+{
+    const auto eof1_code = from_hex("EFA61C01 010001 00 FE");
+    const auto eof1_code_invalid = from_hex("EFA61C01");
+    ExecutionMock mock;
+    mock.execution_result = eof1_code_invalid;
+
+    CHECK(std::get<error_code>(execute_create_tx_v1(mock, eof1_code)) ==
+          error_code::section_headers_not_terminated);
+    CHECK(std::get<error_code>(execute_create_tx_v2(mock, eof1_code)) ==
+          error_code::section_headers_not_terminated);
 }
