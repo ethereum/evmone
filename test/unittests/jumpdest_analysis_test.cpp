@@ -20,6 +20,11 @@ inline bool is_jumpdest(const JumpdestMap& a, size_t index) noexcept
     return (index < a.size() && a[index]);
 }
 
+inline bool is_jumpdest(const bitset32& a, size_t index) noexcept
+{
+    return (index < a.size() && a[index]);
+}
+
 inline bool is_jumpdest(const code_analysis& a, size_t index) noexcept
 {
     return find_jumpdest(a, static_cast<int>(index)) >= 0;
@@ -32,6 +37,7 @@ const bytecode bytecode_test_cases[]{
     push(0),
     push(0x5b) + OP_JUMPDEST,
     push(0x60) + OP_JUMPDEST,
+    "5b00000000000000000000000000000000000000000000000000000000000060",
 };
 }  // namespace
 
@@ -49,6 +55,8 @@ TEST(jumpdest_analysis, compare_implementations)
         const auto a6 = build_internal_code_v3(t.data(), t.size());
         const auto ic4 = build_internal_code_v4(t.data(), t.size());
         const auto ic8 = build_internal_code_v8(t.data(), t.size());
+        const auto s1 = build_jumpdest_map_simd1(t.data(), t.size());
+        const auto s2 = build_jumpdest_map_simd2(t.data(), t.size());
 
         for (size_t i = 0; i < t.size() + tail_code_padding; ++i)
         {
@@ -62,6 +70,8 @@ TEST(jumpdest_analysis, compare_implementations)
             EXPECT_EQ(is_jumpdest(a6.get(), t.size(), i), expected);
             EXPECT_EQ(is_jumpdest(ic4.get(), t.size(), i), expected);
             EXPECT_EQ(is_jumpdest(ic8.get(), t.size(), i), expected);
+            EXPECT_EQ(is_jumpdest(s1, i), expected);
+            EXPECT_EQ(is_jumpdest(s2, i), expected);
         }
     }
 }
