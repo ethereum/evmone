@@ -49,6 +49,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
     const auto ic4 = build_internal_code_v4(data, data_size);
     const auto ic8 = build_internal_code_v8(data, data_size);
     const auto s1 = build_jumpdest_map_simd1(data, data_size);
+    const auto s2 = build_jumpdest_map_simd2(data, data_size);
 
     for (size_t i = 0; i < data_size + tail_code_padding; ++i)
     {
@@ -62,6 +63,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
         expect_eq(is_jumpdest(ic4.get(), data_size, i), expected);
         expect_eq(is_jumpdest(ic8.get(), data_size, i), expected);
         expect_eq(is_jumpdest(s1, i), expected);
+        expect_eq(is_jumpdest(s2, i), expected);
     }
 
 
