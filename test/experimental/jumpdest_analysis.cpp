@@ -44,14 +44,14 @@ JumpdestMap build_jumpdest_map_bitset1(const uint8_t* code, size_t code_size)
     return m;
 }
 
-bitset build_jumpdest_map_simd1(const uint8_t* code, size_t code_size)
+bitset32 build_jumpdest_map_simd1(const uint8_t* code, size_t code_size)
 {
     constexpr auto v_size = 32;
 
     std::vector<uint8_t> push_map;
     push_map.resize(code_size);
 
-    bitset jumpdest_map(code_size + 33);
+    bitset32 jumpdest_map(code_size);
 
     const auto v_code_size = code_size / v_size;
 
@@ -63,13 +63,9 @@ bitset build_jumpdest_map_simd1(const uint8_t* code, size_t code_size)
         const auto v1 = _mm256_loadu_si256((const __m256i*)p);
         const auto v_jmpd = _mm256_set1_epi8(OP_JUMPDEST);
         const auto v_eq = _mm256_cmpeq_epi8(v1, v_jmpd);
-        const auto mask = _mm256_movemask_epi8(v_eq);
+        const auto mask = static_cast<uint32_t>(_mm256_movemask_epi8(v_eq));
 
-        for (size_t i = 0; i < 32; ++i)
-        {
-            if ((mask >> i) & 1)
-                jumpdest_map.set(v_begin + i);
-        }
+        jumpdest_map.words_[v] = mask;
 
         for (size_t j = v_begin; j < v_begin + v_size; ++j)
         {
@@ -79,15 +75,17 @@ bitset build_jumpdest_map_simd1(const uint8_t* code, size_t code_size)
         }
     }
 
+    uint32_t w = 0;
     for (size_t i = v_code_size * v_size; i < code_size; ++i)
     {
         const auto c = code[i];
+        if (c == OP_JUMPDEST)
+            w |= (1u << (i - v_code_size * v_size));
+
         if (is_push(c))
             push_map[i] = static_cast<uint8_t>(get_push_data_size(c));
-
-        if (c == OP_JUMPDEST)
-            jumpdest_map.set(i);
     }
+    jumpdest_map.words_[v_code_size] = w;
 
     for (size_t i = 0; i < code_size; ++i)
     {
@@ -100,7 +98,6 @@ bitset build_jumpdest_map_simd1(const uint8_t* code, size_t code_size)
         }
     }
 
-    jumpdest_map.set_size(code_size);
     return jumpdest_map;
 }
 
