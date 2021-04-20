@@ -47,6 +47,10 @@ struct ExecutionMock
 int determine_eof_version(bytes_view code);
 error_code validate(bytes_view code, int expected_version);
 error_code validate_eof1(bytes_view code_without_prefix);
+std::variant<bytes, error_code> create_contract_v1(
+    ExecutionMock& ee, bytes_view initcode, int eof_version);
+std::variant<bytes, error_code> create_contract_v2(
+    ExecutionMock& ee, bytes_view initcode, int eof_version);
 std::variant<bytes, error_code> execute_create_tx_v1(ExecutionMock& ee, bytes_view initcode);
 std::variant<bytes, error_code> execute_create_tx_v2(ExecutionMock& ee, bytes_view initcode);
 
@@ -159,9 +163,13 @@ error_code validate_eof1(bytes_view code_without_prefix)
     return error_code::success;
 }
 
-std::variant<bytes, error_code> execute_create_tx_v1(ExecutionMock& ee, bytes_view initcode)
+/// The core implementation of CREATE/CREATE2 instructions.
+/// This is "generic/abstract" variant where initcode is always validated, including legacy code.
+/// This is fine for EOF0 because there initcode starting with FORMAT is invalid, but the
+/// execution would fail anyway.
+std::variant<bytes, error_code> create_contract_v1(
+    ExecutionMock& ee, bytes_view initcode, int eof_version)
 {
-    const auto eof_version = determine_eof_version(initcode);
     const auto err1 = validate(initcode, eof_version);
     if (err1 != error_code::success)
         return err1;
@@ -178,10 +186,11 @@ std::variant<bytes, error_code> execute_create_tx_v1(ExecutionMock& ee, bytes_vi
     return code;
 }
 
-std::variant<bytes, error_code> execute_create_tx_v2(ExecutionMock& ee, bytes_view initcode)
+/// The core implementation of CREATE/CREATE2 instructions.
+/// This is "minimal" variant where initcode is only validated for EOF1+.
+std::variant<bytes, error_code> create_contract_v2(
+    ExecutionMock& ee, bytes_view initcode, int eof_version)
 {
-    const auto eof_version = determine_eof_version(initcode);
-
     if (eof_version > 0)
     {
         // initcode validation is only required for EOF1+.
@@ -200,6 +209,16 @@ std::variant<bytes, error_code> execute_create_tx_v2(ExecutionMock& ee, bytes_vi
         return err3;
 
     return code;
+}
+
+std::variant<bytes, error_code> execute_create_tx_v1(ExecutionMock& ee, bytes_view initcode)
+{
+    return create_contract_v1(ee, initcode, determine_eof_version(initcode));
+}
+
+std::variant<bytes, error_code> execute_create_tx_v2(ExecutionMock& ee, bytes_view initcode)
+{
+    return create_contract_v2(ee, initcode, determine_eof_version(initcode));
 }
 }  // namespace eof
 
@@ -258,6 +277,16 @@ TEST_CASE("EOF1 code section missing")
 {
     CHECK(validate(from_hex("EFA61C01 00"), 1) == error_code::code_section_missing);
     CHECK(validate(from_hex("EFA61C01 020001 DA"), 1) == error_code::code_section_missing);
+}
+
+TEST_CASE("create legacy contract - success")
+{
+    const auto initcode = bytes{0};
+    ExecutionMock mock;
+    mock.execution_result = bytes{0};
+
+    CHECK(std::get<bytes>(create_contract_v1(mock, initcode, 0)) == bytes{0});
+    CHECK(std::get<bytes>(create_contract_v2(mock, initcode, 0)) == bytes{0});
 }
 
 TEST_CASE("legacy create transaction - success")
