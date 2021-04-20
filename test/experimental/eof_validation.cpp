@@ -19,7 +19,6 @@ enum class error_code
 {
     success,
     starts_with_format,
-    invalid_eof_prefix,
     eof_version_mismatch,
     eof_version_unknown,
 
@@ -46,6 +45,7 @@ struct ExecutionMock
 
 int determine_eof_version(bytes_view code);
 error_code validate(bytes_view code, int expected_version);
+error_code validate_eof0(bytes_view code);
 error_code validate_eof1(bytes_view code_without_prefix);
 std::variant<bytes, error_code> create_contract_v1(
     ExecutionMock& ee, bytes_view initcode, int eof_version);
@@ -58,25 +58,14 @@ std::variant<bytes, error_code> execute_create_tx_v2(ExecutionMock& ee, bytes_vi
 /// If the prefix is missing or invalid, the 0 is returned meaning legacy code.
 int determine_eof_version(bytes_view code)
 {
-    if (code.size() >= 4 && code[0] == FORMAT && code[1] == MAGIC[0] && code[2] == MAGIC[1])
-        return code[3];
-
-    return 0;
+    return (code.size() >= 4 && code[0] == FORMAT && code[1] == MAGIC[0] && code[2] == MAGIC[1]) ?
+               code[3] :
+               0;
 }
 
 error_code validate(bytes_view code, int expected_version)
 {
-    if (expected_version == 0)
-        return (code.empty() || code[0] != FORMAT) ? error_code::success :
-                                                     error_code::starts_with_format;
-
-    if (code.size() < 4)
-        return error_code::invalid_eof_prefix;
-
-    if (code[0] != FORMAT || code[1] != MAGIC[0] || code[2] != MAGIC[1])
-        return error_code::invalid_eof_prefix;
-
-    const auto version = code[3];
+    const auto version = determine_eof_version(code);
     if (version != expected_version)
         return error_code::eof_version_mismatch;
 
@@ -86,9 +75,17 @@ error_code validate(bytes_view code, int expected_version)
     {
     default:
         return error_code::eof_version_unknown;
+    case 0:
+        return validate_eof0(code);
     case 1:
         return validate_eof1(code_without_prefix);
     }
+}
+
+error_code validate_eof0(bytes_view code)
+{
+    return (code.empty() || code[0] != FORMAT) ? error_code::success :
+                                                 error_code::starts_with_format;
 }
 
 error_code validate_eof1(bytes_view code_without_prefix)
@@ -228,8 +225,8 @@ using evmc::from_hex;
 TEST_CASE("validate empty code")
 {
     CHECK(validate({}, 0) == error_code::success);
-    CHECK(validate({}, 1) == error_code::invalid_eof_prefix);
-    CHECK(validate({}, 2) == error_code::invalid_eof_prefix);
+    CHECK(validate({}, 1) == error_code::eof_version_mismatch);
+    CHECK(validate({}, 2) == error_code::eof_version_mismatch);
 }
 
 TEST_CASE("reject code starting with FORMAT in intermediate period")
@@ -243,14 +240,14 @@ TEST_CASE("validate EOF prefix")
 {
     CHECK(validate(from_hex("EFA61C01"), 1) == error_code::section_headers_not_terminated);
 
-    CHECK(validate(from_hex(""), 1) == error_code::invalid_eof_prefix);
-    CHECK(validate(from_hex("EF"), 1) == error_code::invalid_eof_prefix);
-    CHECK(validate(from_hex("EFA6"), 1) == error_code::invalid_eof_prefix);
-    CHECK(validate(from_hex("EFA61C"), 1) == error_code::invalid_eof_prefix);
+    CHECK(validate(from_hex(""), 1) == error_code::eof_version_mismatch);
+    CHECK(validate(from_hex("EF"), 1) == error_code::eof_version_mismatch);
+    CHECK(validate(from_hex("EFA6"), 1) == error_code::eof_version_mismatch);
+    CHECK(validate(from_hex("EFA61C"), 1) == error_code::eof_version_mismatch);
 
-    CHECK(validate(from_hex("EEA61C01"), 1) == error_code::invalid_eof_prefix);
-    CHECK(validate(from_hex("EFA71C01"), 1) == error_code::invalid_eof_prefix);
-    CHECK(validate(from_hex("EFA61D01"), 1) == error_code::invalid_eof_prefix);
+    CHECK(validate(from_hex("EEA61C01"), 1) == error_code::eof_version_mismatch);
+    CHECK(validate(from_hex("EFA71C01"), 1) == error_code::eof_version_mismatch);
+    CHECK(validate(from_hex("EFA61D01"), 1) == error_code::eof_version_mismatch);
 }
 
 TEST_CASE("validate EOF version")
@@ -344,9 +341,9 @@ TEST_CASE("legacy create transaction - EOF version mismatch")
     mock.execution_result = from_hex("EFA61C01 010001 00 FE");  // EOF1 code.
 
     CHECK(std::get<error_code>(execute_create_tx_v1(mock, initcode)) ==
-          error_code::starts_with_format);
+          error_code::eof_version_mismatch);
     CHECK(std::get<error_code>(execute_create_tx_v2(mock, initcode)) ==
-          error_code::starts_with_format);
+          error_code::eof_version_mismatch);
 }
 
 TEST_CASE("EOF1 create transaction - success")
@@ -404,9 +401,9 @@ TEST_CASE("EOF1 create transaction - legacy code")
     mock.execution_result = bytes{};  // Legacy code
 
     CHECK(std::get<error_code>(execute_create_tx_v1(mock, eof1_code)) ==
-          error_code::invalid_eof_prefix);
+          error_code::eof_version_mismatch);
     CHECK(std::get<error_code>(execute_create_tx_v2(mock, eof1_code)) ==
-          error_code::invalid_eof_prefix);
+          error_code::eof_version_mismatch);
 }
 
 TEST_CASE("EOF1 create transaction - invalid code")
