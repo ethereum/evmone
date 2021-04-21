@@ -57,6 +57,7 @@ TEST(jumpdest_analysis, compare_implementations)
         const auto ic8 = build_internal_code_v8(t.data(), t.size());
         const auto s1 = build_jumpdest_map_simd1(t.data(), t.size());
         const auto s2 = build_jumpdest_map_simd2(t.data(), t.size());
+        const auto s3 = build_jumpdest_map_simd3(t.data(), t.size());
 
         for (size_t i = 0; i < t.size() + tail_code_padding; ++i)
         {

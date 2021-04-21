@@ -111,8 +111,72 @@ bitset32 build_jumpdest_map_simd1(const uint8_t* code, size_t code_size)
     return jumpdest_map;
 }
 
-
 bitset32 build_jumpdest_map_simd2(const uint8_t* code, size_t code_size)
+{
+    constexpr auto v_size = 32;
+
+    bitset32 jumpdest_map(code_size);
+
+    const auto v_code_size = code_size / v_size;
+    const auto v_tail_size = code_size % v_size;
+
+    uint32_t clear_next = 0;
+    for (size_t v = 0; v < v_code_size; ++v)
+    {
+        const auto v_begin = v * v_size;
+        const auto* ptr = &code[v_begin];
+
+        const auto v1 = _mm256_loadu_si256((const __m256i*)ptr);
+        const auto v_jmpd = _mm256_set1_epi8(OP_JUMPDEST);
+        const auto v_eq = _mm256_cmpeq_epi8(v1, v_jmpd);
+        auto j_mask = static_cast<uint32_t>(_mm256_movemask_epi8(v_eq));
+
+        uint64_t clear_mask = clear_next;
+        const auto skip = clear_next ? 32 - size_t(__builtin_clz(clear_next)) : 0;
+        for (size_t j = skip; j < v_size; ++j)
+        {
+            const auto c = code[v_begin + j];
+            if (is_push(c))
+            {
+                const auto p = get_push_data_size(c);
+
+                uint64_t mask = ~uint64_t{0};
+                mask >>= (64 - p);
+                mask <<= ((j + 1) % 64);
+
+                clear_mask |= mask;
+
+                j += p;
+            }
+        }
+
+        clear_next = static_cast<uint32_t>(clear_mask >> 32);
+
+        j_mask &= ~static_cast<uint32_t>(clear_mask);
+        jumpdest_map.words_[v] = j_mask;
+    }
+
+    uint32_t j_mask = 0;
+    const auto skip = clear_next ? 32 - size_t(__builtin_clz(clear_next)) : 0;
+    for (size_t j = skip; j < v_tail_size; ++j)
+    {
+        const auto base = code_size - v_tail_size;
+        const auto c = code[base + j];
+        if (c == OP_JUMPDEST)
+            j_mask |= (1u << j);
+
+        if (is_push(c))
+        {
+            const auto p = get_push_data_size(c);
+            j += p;
+        }
+    }
+    jumpdest_map.words_[v_code_size] = j_mask;
+
+    return jumpdest_map;
+}
+
+bitset32 build_jumpdest_map_simd3(const uint8_t* code, size_t code_size)
 {
     constexpr auto v_size = 32;
 
@@ -153,28 +217,6 @@ bitset32 build_jumpdest_map_simd2(const uint8_t* code, size_t code_size)
             clear_mask |= mask;
             push_locs &= ~clear_mask;
         }
-
-        // const auto skip = clear_next ? 32 - size_t(__builtin_clz(clear_next)) : 0;
-        // for (size_t j = skip; j < v_size; ++j)
-        // {
-        //     const auto c = code[v_begin + j];
-        //
-        //     if (((push_locs >> j) & 1) != is_push(c))
-        //         __builtin_trap();
-        //
-        //     if (is_push(c))
-        //     {
-        //         const auto p = get_push_data_size(c);
-        //
-        //         uint64_t mask = ~uint64_t{0};
-        //         mask >>= (64 - p);
-        //         mask <<= ((j + 1) % 64);
-        //
-        //         clear_mask |= mask;
-        //
-        //         j += p;
-        //     }
-        // }
 
         clear_next = static_cast<uint32_t>(clear_mask >> 32);
 
