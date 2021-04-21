@@ -8,7 +8,8 @@ namespace evmone::experimental
 {
 inline constexpr bool is_push(uint8_t op) noexcept
 {
-    return (op >> 5) == 0b11;
+    return (op & 0xe0) == 0x60;
+    // TODO: check what is better. return (op >> 5) == 0b11;
 }
 
 inline constexpr int find_first_push(const uint8_t* code) noexcept
