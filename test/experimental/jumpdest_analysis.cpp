@@ -134,25 +134,24 @@ bitset32 build_jumpdest_map_simd2(const uint8_t* code, size_t code_size)
         const auto v_eq = _mm256_cmpeq_epi8(v_code, v_jmpd);
         auto j_mask = static_cast<uint32_t>(_mm256_movemask_epi8(v_eq));
 
-        const auto v_push_locs = _mm256_cmpeq_epi8(_mm256_and_si256(v_code, v_push_mask), v_push_pattern);
+        const auto v_push_locs =
+            _mm256_cmpeq_epi8(_mm256_and_si256(v_code, v_push_mask), v_push_pattern);
         auto push_locs = static_cast<uint32_t>(_mm256_movemask_epi8(v_push_locs));
 
         push_locs &= ~clear_next;
         uint64_t clear_mask = clear_next;
 
-        for (size_t j = 0; j < 32; ++j)
+        while (push_locs)
         {
-            if ((push_locs >> j) & 1) {
-                const auto p = get_push_data_size(code[v_begin + j]);
+            const size_t j = static_cast<size_t>(__builtin_ctz(push_locs));
+            const auto p = get_push_data_size(code[v_begin + j]);
 
-                uint64_t mask = ~uint64_t{0};
-                mask >>= (64 - p);
-                mask <<= ((j + 1) % 64);
+            uint64_t mask = ~uint64_t{0};
+            mask >>= (64 - (p + 1));
+            mask <<= j;
 
-                clear_mask |= mask;
-
-                j += p;
-            }
+            clear_mask |= mask;
+            push_locs &= ~clear_mask;
         }
 
         // const auto skip = clear_next ? 32 - size_t(__builtin_clz(clear_next)) : 0;
