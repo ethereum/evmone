@@ -178,9 +178,8 @@ enum : uint8_t
 inline bool is_push(uint8_t op)
 {
     //    return op >= OP_PUSH1 && op <= OP_PUSH32;
-    return (op >> 5) == 0b11;
-    //    return (op & uint8_t{0b11100000}) == 0b01100000;
-    //    return (x & 0b1100000) != 0;
+    // return (op >> 5) == 0b11;
+    return (op & uint8_t{0b11100000}) == 0b01100000;
 }
 
 [[maybe_unused]] bool x = []() noexcept {
