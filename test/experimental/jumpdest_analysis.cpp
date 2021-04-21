@@ -22,7 +22,7 @@ std::vector<bool> build_jumpdest_map_vec1(const uint8_t* code, size_t code_size)
     for (size_t i = 0; i < code_size; ++i)
     {
         const auto op = code[i];
-        if (op == OP_JUMPDEST)
+        if (__builtin_expect(op == OP_JUMPDEST, false))
             m[i] = true;
         else if (is_push(op))
             i += get_push_data_size(op);
@@ -36,7 +36,7 @@ JumpdestMap build_jumpdest_map_bitset1(const uint8_t* code, size_t code_size)
     for (size_t i = 0; i < code_size; ++i)
     {
         const auto op = code[i];
-        if (op == OP_JUMPDEST)
+        if (__builtin_expect(op == OP_JUMPDEST, false))
             m.set(i);
         else if (is_push(op))
             i += get_push_data_size(op);
@@ -270,7 +270,7 @@ std::unique_ptr<uint8_t[]> build_internal_code_v2(const uint8_t* code, size_t co
     long push_data = 0;
     for (size_t i = 0; i < code_size; ++i)
     {
-        if (push_data != 0) [[unlikely]]
+        if (push_data != 0)
         {
             --push_data;
             m[i] = 0;

@@ -167,7 +167,7 @@ enum : uint8_t
     for (size_t i = 0; i < code_size; ++i)
     {
         const auto op = code[i];
-        if (op == OP_JUMPDEST)
+        if (__builtin_expect(op == OP_JUMPDEST, false))
             m[i] = true;
         else if (op >= OP_PUSH1 && op <= OP_PUSH32)
             i += static_cast<size_t>(op - OP_PUSH1 + 1);
@@ -232,7 +232,7 @@ inline bool is_push(uint8_t op)
     for (size_t i = 0; i < code_size;)
     {
         const auto op = code[i];
-        if (op == OP_JUMPDEST)
+        if (__builtin_expect(op == OP_JUMPDEST, false))
             m[i] = true;
 
         i += is_push(op) ? static_cast<size_t>(op - OP_PUSH1 + 2) : 1;
@@ -248,7 +248,7 @@ inline bool is_push(uint8_t op)
     for (; code < code_end; ++code)
     {
         const auto op = *code;
-        if (op == OP_JUMPDEST)
+        if (__builtin_expect(op == OP_JUMPDEST, false))
             m[size_t(code - code_beg)] = true;
         else if (is_push(op))
             code += static_cast<size_t>(op - OP_PUSH1 + 1);
@@ -263,7 +263,7 @@ inline bool is_push(uint8_t op)
     {
         const auto op = code[i];
         const auto s = size_t(op - OP_PUSH1);
-        if (op == OP_JUMPDEST)
+        if (__builtin_expect(op == OP_JUMPDEST, false))
             m[i] = true;
         else if (s <= 31)
             i += s + 1;
@@ -278,7 +278,7 @@ inline bool is_push(uint8_t op)
     {
         const auto op = code[i];
         const auto s = size_t(op - OP_PUSH1);
-        if (op == OP_JUMPDEST)
+        if (__builtin_expect(op == OP_JUMPDEST, false))
             m[i] = true;
 
         i += (s <= 31) ? s + 1 : 1;
@@ -293,7 +293,7 @@ inline bool is_push(uint8_t op)
     {
         const auto op = code[i];
         const auto s = size_t(op - OP_PUSH1);
-        if (op == OP_JUMPDEST)
+        if (__builtin_expect(op == OP_JUMPDEST, false))
             m[i] = true;
 
         const auto a = (s <= 31) ? s : 0;
@@ -309,7 +309,7 @@ inline bool is_push(uint8_t op)
     for (size_t i = 0; i < code_size; ++i)
     {
         const auto op = code[i];
-        if (op == OP_JUMPDEST)
+        if (__builtin_expect(op == OP_JUMPDEST, false))
             m[i] = true;
         else if (op >= OP_PUSH1 && op <= OP_PUSH32)
             i += static_cast<size_t>(op - OP_PUSH1 + 1);
