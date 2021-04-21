@@ -60,7 +60,7 @@ bitset32 build_jumpdest_map_simd1(const uint8_t* code, size_t code_size)
         const auto v_begin = v * v_size;
         const auto* p = &code[v_begin];
 
-        const auto v1 = _mm256_loadu_si256((const __m256i*)p);
+        const auto v1 = _mm256_load_si256((const __m256i*)p);
         const auto v_jmpd = _mm256_set1_epi8(OP_JUMPDEST);
         const auto v_eq = _mm256_cmpeq_epi8(v1, v_jmpd);
         const auto mask = static_cast<uint32_t>(_mm256_movemask_epi8(v_eq));
@@ -127,7 +127,7 @@ bitset32 build_jumpdest_map_simd2(const uint8_t* code, size_t code_size)
         const auto v_begin = v * v_size;
         const auto* ptr = &code[v_begin];
 
-        const auto v1 = _mm256_loadu_si256((const __m256i*)ptr);
+        const auto v1 = _mm256_load_si256((const __m256i*)ptr);
         const auto v_jmpd = _mm256_set1_epi8(OP_JUMPDEST);
         const auto v_eq = _mm256_cmpeq_epi8(v1, v_jmpd);
         auto j_mask = static_cast<uint32_t>(_mm256_movemask_epi8(v_eq));
