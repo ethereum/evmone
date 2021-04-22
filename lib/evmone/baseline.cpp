@@ -10,10 +10,6 @@
 
 namespace evmone
 {
-namespace
-{
-using JumpdestMap = std::vector<bool>;
-
 JumpdestMap build_jumpdest_map(const uint8_t* code, size_t code_size)
 {
     JumpdestMap m(code_size);
@@ -23,11 +19,13 @@ JumpdestMap build_jumpdest_map(const uint8_t* code, size_t code_size)
         if (op == OP_JUMPDEST)
             m[i] = true;
         else if (op >= OP_PUSH1 && op <= OP_PUSH32)
-            i += static_cast<size_t>(op - OP_PUSH1 + 1);
+            i += op - size_t{OP_PUSH1 - 1};
     }
     return m;
 }
 
+namespace
+{
 const uint8_t* op_jump(ExecutionState& state, const JumpdestMap& jumpdest_map) noexcept
 {
     const auto dst = state.stack.pop();
@@ -96,11 +94,12 @@ evmc_result baseline_execute(evmc_vm* /*vm*/, const evmc_host_interface* host,
     evmc_host_context* ctx, evmc_revision rev, const evmc_message* msg, const uint8_t* code,
     size_t code_size) noexcept
 {
+    const auto jumpdest_map = build_jumpdest_map(code, code_size);
     auto state = std::make_unique<ExecutionState>(*msg, rev, *host, ctx, code, code_size);
-    return baseline_execute(*state);
+    return baseline_execute(*state, jumpdest_map);
 }
 
-evmc_result baseline_execute(ExecutionState& state) noexcept
+evmc_result baseline_execute(ExecutionState& state, const JumpdestMap& jumpdest_map) noexcept
 {
     const auto rev = state.rev;
     const auto code = state.code.data();
@@ -108,7 +107,6 @@ evmc_result baseline_execute(ExecutionState& state) noexcept
 
     const auto instruction_names = evmc_get_instruction_names_table(rev);
     const auto instruction_metrics = evmc_get_instruction_metrics_table(rev);
-    const auto jumpdest_map = build_jumpdest_map(code, code_size);
 
     const auto code_end = code + code_size;
     auto* pc = code;
