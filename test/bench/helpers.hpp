@@ -7,6 +7,7 @@
 #include <benchmark/benchmark.h>
 #include <evmc/evmc.hpp>
 #include <evmone/analysis.hpp>
+#include <evmone/baseline.hpp>
 
 namespace evmone::test
 {
@@ -21,6 +22,21 @@ inline void analyse(benchmark::State& state, evmc_revision rev, bytes_view code)
     for (auto _ : state)
     {
         auto r = evmone::analyze(rev, code.data(), code.size());
+        benchmark::DoNotOptimize(r);
+        bytes_analysed += code.size();
+    }
+
+    using benchmark::Counter;
+    state.counters["size"] = Counter(static_cast<double>(code.size()));
+    state.counters["rate"] = Counter(static_cast<double>(bytes_analysed), Counter::kIsRate);
+}
+
+inline void build_jumpdest_map(benchmark::State& state, bytes_view code) noexcept
+{
+    auto bytes_analysed = uint64_t{0};
+    for (auto _ : state)
+    {
+        auto r = evmone::build_jumpdest_map(code.data(), code.size());
         benchmark::DoNotOptimize(r);
         bytes_analysed += code.size();
     }

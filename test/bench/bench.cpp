@@ -13,6 +13,7 @@
 
 
 #if HAVE_STD_FILESYSTEM
+#include <evmone/baseline.hpp>
 #include <filesystem>
 namespace fs = std::filesystem;
 #else
@@ -164,6 +165,13 @@ void register_benchmarks(const std::vector<BenchmarkCase>& benchmark_cases)
         {
             RegisterBenchmark(("advanced/analyse/" + b.name).c_str(), [&b](State& state) {
                 analyse(state, default_revision, b.code);
+            })->Unit(kMicrosecond);
+        }
+
+        if (registered_vms.count("baseline"))
+        {
+            RegisterBenchmark(("baseline/analyse/" + b.name).c_str(), [&b](State& state) {
+                build_jumpdest_map(state, b.code);
             })->Unit(kMicrosecond);
         }
 
