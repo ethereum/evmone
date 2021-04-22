@@ -12,16 +12,21 @@ namespace evmone
 {
 JumpdestMap build_jumpdest_map(const uint8_t* code, size_t code_size)
 {
-    JumpdestMap m(code_size);
+    // Bitmask for PUSH opcode identification.
+    // It clears the lower 5 bits of a byte.
+    // The opcode is PUSH iff remaining byte value is 0x60 (OP_PUSH1).
+    constexpr auto push_op_mask = 0xE0;
+
+    JumpdestMap map(code_size);  // Allocate and init bitmap with zeros.
     for (size_t i = 0; i < code_size; ++i)
     {
         const auto op = code[i];
-        if (op == OP_JUMPDEST)
-            m[i] = true;
-        else if (op >= OP_PUSH1 && op <= OP_PUSH32)
-            i += op - size_t{OP_PUSH1 - 1};
+        if ((op & push_op_mask) == OP_PUSH1)  // If any PUSH opcode.
+            i += op - size_t{OP_PUSH1 - 1};   // Skip PUSH data.
+        else if (INTX_UNLIKELY(op == OP_JUMPDEST))
+            map[i] = true;
     }
-    return m;
+    return map;
 }
 
 namespace
