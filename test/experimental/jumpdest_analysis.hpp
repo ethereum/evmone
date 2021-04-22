@@ -52,6 +52,7 @@ public:
 };
 
 std::vector<bool> build_jumpdest_map_vec1(const uint8_t* code, size_t code_size);
+std::vector<bool> build_jumpdest_map_vec2(const uint8_t* code, size_t code_size);
 bitset32 build_jumpdest_map_simd1(const uint8_t* code, size_t code_size);
 bitset32 build_jumpdest_map_simd2(const uint8_t* code, size_t code_size);
 bitset32 build_jumpdest_map_simd3(const uint8_t* code, size_t code_size);
