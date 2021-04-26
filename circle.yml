@@ -245,7 +245,7 @@ jobs:
       - build
       - build_silkworm
       - download_consensus_tests:
-          rev: 8.0.3
+          rev: 8.0.4
       - run:
           name: "Silkworm-driven consensus tests (Advanced)"
           working_directory: ~/build
