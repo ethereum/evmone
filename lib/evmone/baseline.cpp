@@ -216,7 +216,7 @@ evmc_result baseline_execute(ExecutionState& state, const JumpdestMap& jumpdest_
 
         case OP_KECCAK256:
         {
-            const auto status_code = sha3(state);
+            const auto status_code = keccak256(state);
             if (status_code != EVMC_SUCCESS)
             {
                 state.status = status_code;

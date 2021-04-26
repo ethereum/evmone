@@ -253,7 +253,7 @@ inline void sar(evm_stack& stack) noexcept
 }
 
 
-inline evmc_status_code sha3(ExecutionState& state) noexcept
+inline evmc_status_code keccak256(ExecutionState& state) noexcept
 {
     const auto index = state.stack.pop();
     auto& size = state.stack.top();

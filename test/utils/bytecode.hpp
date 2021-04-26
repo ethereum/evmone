@@ -188,7 +188,7 @@ inline bytecode ret(bytecode c)
     return c + ret_top();
 }
 
-inline bytecode sha3(bytecode index, bytecode size)
+inline bytecode keccak256(bytecode index, bytecode size)
 {
     return size + index + OP_KECCAK256;
 }

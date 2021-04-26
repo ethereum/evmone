@@ -598,7 +598,7 @@ TEST_P(evm, invalid)
     EXPECT_EQ(result.gas_left, 0);
 }
 
-TEST_P(evm, sha3)
+TEST_P(evm, keccak256)
 {
     execute("6108006103ff2060005260206000f3");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
@@ -608,7 +608,7 @@ TEST_P(evm, sha3)
     EXPECT_EQ(bytes(&result.output_data[0], 32), hash);
 }
 
-TEST_P(evm, sha3_empty)
+TEST_P(evm, keccak256_empty)
 {
     auto code = push(0) + OP_DUP1 + OP_KECCAK256 + ret_top();
     execute(code);
@@ -820,11 +820,11 @@ TEST_P(evm, mstore8_memory_cost)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
-TEST_P(evm, sha3_memory_cost)
+TEST_P(evm, keccak256_memory_cost)
 {
-    execute(45, sha3(0, 1));
+    execute(45, keccak256(0, 1));
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    execute(44, sha3(0, 1));
+    execute(44, keccak256(0, 1));
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
