@@ -45,6 +45,55 @@ std::vector<bool> build_jumpdest_map_vec2(const uint8_t* code, size_t code_size)
     return m;
 }
 
+std::vector<bool> build_jumpdest_map_sttni(const uint8_t* code, size_t code_size)
+{
+    std::vector<bool> m(code_size);
+
+    __m128i match_ranges{};
+    match_ranges = _mm_insert_epi8(match_ranges, OP_PUSH1, 0);
+    match_ranges = _mm_insert_epi8(match_ranges, OP_PUSH32, 1);
+    match_ranges = _mm_insert_epi8(match_ranges, OP_JUMPDEST, 2);
+    match_ranges = _mm_insert_epi8(match_ranges, OP_JUMPDEST, 3);
+
+    const auto match_imm = _SIDD_UBYTE_OPS | _SIDD_CMP_RANGES;
+
+
+    size_t v_code_size = code_size >= 16 ? code_size - 15 : 0;
+    size_t i = 0;
+    for (; i < v_code_size;)
+    {
+        const auto data = _mm_loadu_si128((const __m128i*)&code[i]);
+        const auto first_match = (unsigned)_mm_cmpestri(match_ranges, 4, data, 16, match_imm);
+
+        if (first_match == 16)
+        {
+            i += first_match;
+            continue;
+        }
+
+        i += first_match;
+
+        const auto op = code[i];
+        const auto potential_push_data_len = get_push_data_size(op);
+        if (__builtin_expect(potential_push_data_len <= 32, true))
+            i += potential_push_data_len;
+        else
+            m[i] = true;
+        ++i;
+    }
+
+    for (; i < code_size; ++i)
+    {
+        const auto op = code[i];
+        const auto potential_push_data_len = get_push_data_size(op);
+        if (potential_push_data_len <= 32)
+            i += potential_push_data_len;
+        else if (__builtin_expect(op == OP_JUMPDEST, false))
+            m[i] = true;
+    }
+    return m;
+}
+
 JumpdestMap build_jumpdest_map_bitset1(const uint8_t* code, size_t code_size)
 {
     JumpdestMap m(code_size);
@@ -230,7 +279,7 @@ bitset32 build_jumpdest_map_simd3(const uint8_t* code, size_t code_size)
             mask <<= j;
 
             clear_mask |= mask;
-            push_locs &= ~clear_mask;
+            push_locs &= static_cast<uint32_t>(~clear_mask);
         }
 
         clear_next = static_cast<uint32_t>(clear_mask >> 32);
