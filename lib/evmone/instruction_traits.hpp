@@ -67,7 +67,7 @@ constexpr inline std::array<Traits, 256> traits = []() noexcept {
     table[OP_SHR] = {"SHR", 2, -1};
     table[OP_SAR] = {"SAR", 2, -1};
 
-    table[OP_SHA3] = {"SHA3", 2, -1};
+    table[OP_KECCAK256] = {"KECCAK256", 2, -1};
 
     table[OP_ADDRESS] = {"ADDRESS", 0, 1};
     table[OP_BALANCE] = {"BALANCE", 1, 0};
@@ -233,7 +233,7 @@ constexpr inline std::array<int16_t, 256> gas_costs<EVMC_FRONTIER> = []() noexce
     table[OP_XOR] = 3;
     table[OP_NOT] = 3;
     table[OP_BYTE] = 3;
-    table[OP_SHA3] = 30;
+    table[OP_KECCAK256] = 30;
     table[OP_ADDRESS] = 2;
     table[OP_BALANCE] = 20;
     table[OP_ORIGIN] = 2;

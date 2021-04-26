@@ -214,7 +214,7 @@ evmc_result baseline_execute(ExecutionState& state, const JumpdestMap& jumpdest_
             sar(state.stack);
             break;
 
-        case OP_SHA3:
+        case OP_KECCAK256:
         {
             const auto status_code = sha3(state);
             if (status_code != EVMC_SUCCESS)

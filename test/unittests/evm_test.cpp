@@ -610,7 +610,7 @@ TEST_P(evm, sha3)
 
 TEST_P(evm, sha3_empty)
 {
-    auto code = push(0) + OP_DUP1 + OP_SHA3 + ret_top();
+    auto code = push(0) + OP_DUP1 + OP_KECCAK256 + ret_top();
     execute(code);
     ASSERT_EQ(result.output_size, 32);
     auto keccak256_empty = "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
@@ -894,7 +894,7 @@ struct memory_access_params
 };
 
 memory_access_opcode memory_access_opcodes[] = {
-    {OP_SHA3, 0, 1},
+    {OP_KECCAK256, 0, 1},
     {OP_CALLDATACOPY, 0, 2},
     {OP_CODECOPY, 0, 2},
     {OP_MLOAD, 0, -1},

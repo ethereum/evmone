@@ -190,7 +190,7 @@ inline bytecode ret(bytecode c)
 
 inline bytecode sha3(bytecode index, bytecode size)
 {
-    return size + index + OP_SHA3;
+    return size + index + OP_KECCAK256;
 }
 
 inline bytecode calldataload(bytecode index)
