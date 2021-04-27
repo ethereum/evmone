@@ -8,6 +8,26 @@ and this project adheres to [Semantic Versioning].
 
 ## [0.7.0] — unreleased
 
+### Added
+
+- Full support for **Berlin** EVMC revision and [EIP-2929].
+  [#289](https://github.com/ethereum/evmone/pull/289)
+  [#301](https://github.com/ethereum/evmone/pull/301)
+
+### Changed
+
+- [EVMC] has been upgraded to version [8.0.0][EVMC 8.0.0]. This ABI breaking
+  change has been required to support **Berlin** revision.
+  [#309](https://github.com/ethereum/evmone/pull/309)
+- Optimizations to basic `JUMPDEST` analysis used by Baseline interpreter.
+  [#306](https://github.com/ethereum/evmone/pull/306)
+  [#308](https://github.com/ethereum/evmone/pull/308)
+- The Baseline interpreter API has been modified to allow caching
+  of the `JUMPDEST` analysis.
+  [#305](https://github.com/ethereum/evmone/pull/305)
+- The consensus testing is now driven by [Silkworm] as a replacement of 
+  the unmaintained [Aleth]. The Ethereum Consensus Tests [8.0.4][tests 8.0.4] are currently being used.
+
 
 ## [0.6.0] — 2021-04-07
 
@@ -222,8 +242,10 @@ It delivers fully-compatible and high-speed EVM implementation.
 [EIP-1884]: https://eips.ethereum.org/EIPS/eip-1884
 [EIP-1344]: https://eips.ethereum.org/EIPS/eip-1344
 [EIP-2200]: https://eips.ethereum.org/EIPS/eip-2200
+[EIP-2929]: https://eips.ethereum.org/EIPS/eip-2929
 [Spurious Dragon]: https://eips.ethereum.org/EIPS/eip-607
 [EVMC]: https://github.com/ethereum/evmc
+[EVMC 8.0.0]: https://github.com/ethereum/evmc/releases/tag/v8.0.0
 [EVMC 7.5.0]: https://github.com/ethereum/evmc/releases/tag/v7.5.0
 [EVMC 7.4.0]: https://github.com/ethereum/evmc/releases/tag/v7.4.0
 [EVMC 7.1.0]: https://github.com/ethereum/evmc/releases/tag/v7.1.0
@@ -231,5 +253,6 @@ It delivers fully-compatible and high-speed EVM implementation.
 [intx]: https://github.com/chfast/intx
 [intx 0.5.0]: https://github.com/chfast/intx/releases/tag/v0.5.0
 [Silkworm]: https://github.com/torquem-ch/silkworm
+[tests 8.0.4]: https://github.com/ethereum/tests/releases/tag/8.0.4
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
 [Semantic Versioning]: https://semver.org
