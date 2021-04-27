@@ -53,6 +53,7 @@ TEST(jumpdest_analysis, compare_implementations)
         const auto a2 = build_jumpdest_map_vec1(t.data(), t.size());
         const auto v2 = build_jumpdest_map_vec2(t.data(), t.size());
         const auto v3 = build_jumpdest_map_sttni(t.data(), t.size());
+        const auto v4 = build_jumpdest_map_str_avx2(t.data(), t.size());
         const auto a3 = build_jumpdest_map_bitset1(t.data(), t.size());
         const auto a4 = build_internal_code_v1(t.data(), t.size());
         const auto a5 = build_internal_code_v2(t.data(), t.size());
@@ -71,6 +72,7 @@ TEST(jumpdest_analysis, compare_implementations)
             EXPECT_EQ(is_jumpdest(a2, i), expected);
             EXPECT_EQ(is_jumpdest(v2, i), expected);
             EXPECT_EQ(is_jumpdest(v3, i), expected);
+            EXPECT_EQ(is_jumpdest(v4, i), expected);
             EXPECT_EQ(is_jumpdest(a3, i), expected);
             EXPECT_EQ(is_jumpdest(a4.get(), t.size(), i), expected);
             EXPECT_EQ(is_jumpdest(a5.get(), t.size(), i), expected);
