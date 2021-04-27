@@ -43,6 +43,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
     const auto a1 = analyze(EVMC_FRONTIER, data, data_size);
     const auto a2 = build_jumpdest_map_vec1(data, data_size);
     const auto v2 = build_jumpdest_map_vec2(data, data_size);
+    const auto x3 = build_jumpdest_map_vec3(data, data_size);
     const auto v3 = build_jumpdest_map_sttni(data, data_size);
     const auto v4 = build_jumpdest_map_str_avx2(data, data_size);
     const auto a3 = build_jumpdest_map_bitset1(data, data_size);
@@ -61,6 +62,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
         expect_eq(is_jumpdest(a1, i), expected);
         expect_eq(is_jumpdest(a2, i), expected);
         expect_eq(is_jumpdest(v2, i), expected);
+        expect_eq(is_jumpdest(x3, i), expected);
         expect_eq(is_jumpdest(v3, i), expected);
         expect_eq(is_jumpdest(v4, i), expected);
         expect_eq(is_jumpdest(a3, i), expected);

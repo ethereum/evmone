@@ -429,6 +429,8 @@ BENCHMARK_TEMPLATE(
 BENCHMARK_TEMPLATE(
     build_jumpdest, std::vector<bool>, evmone::experimental::build_jumpdest_map_vec2);
 BENCHMARK_TEMPLATE(
+    build_jumpdest, std::vector<bool>, evmone::experimental::build_jumpdest_map_vec3);
+BENCHMARK_TEMPLATE(
     build_jumpdest, std::vector<bool>, evmone::experimental::build_jumpdest_map_sttni);
 BENCHMARK_TEMPLATE(
     build_jumpdest, std::vector<bool>, evmone::experimental::build_jumpdest_map_str_avx2);
