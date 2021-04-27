@@ -52,6 +52,7 @@ TEST(jumpdest_analysis, compare_implementations)
         const auto a1 = analyze(EVMC_FRONTIER, t.data(), t.size());
         const auto a2 = build_jumpdest_map_vec1(t.data(), t.size());
         const auto v2 = build_jumpdest_map_vec2(t.data(), t.size());
+        const auto x3 = build_jumpdest_map_vec3(t.data(), t.size());
         const auto v3 = build_jumpdest_map_sttni(t.data(), t.size());
         const auto v4 = build_jumpdest_map_str_avx2(t.data(), t.size());
         const auto a3 = build_jumpdest_map_bitset1(t.data(), t.size());
@@ -71,6 +72,7 @@ TEST(jumpdest_analysis, compare_implementations)
             EXPECT_EQ(is_jumpdest(a1, i), expected);
             EXPECT_EQ(is_jumpdest(a2, i), expected);
             EXPECT_EQ(is_jumpdest(v2, i), expected);
+            EXPECT_EQ(is_jumpdest(x3, i), expected);
             EXPECT_EQ(is_jumpdest(v3, i), expected);
             EXPECT_EQ(is_jumpdest(v4, i), expected);
             EXPECT_EQ(is_jumpdest(a3, i), expected);
