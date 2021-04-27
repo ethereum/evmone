@@ -12,17 +12,17 @@ namespace evmone
 {
 JumpdestMap build_jumpdest_map(const uint8_t* code, size_t code_size)
 {
-    // Bitmask for PUSH opcode identification.
-    // It clears the lower 5 bits of a byte.
-    // The opcode is PUSH iff remaining byte value is 0x60 (OP_PUSH1).
-    constexpr auto push_op_mask = 0xE0;
+    // To find if op is any PUSH opcode (OP_PUSH1 <= op <= OP_PUSH32)
+    // it can be noticed that OP_PUSH32 is INT8_MAX (0x7f) therefore
+    // static_cast<int8_t>(op) <= OP_PUSH32 is always true and can be skipped.
+    static_assert(OP_PUSH32 == std::numeric_limits<int8_t>::max());
 
     JumpdestMap map(code_size);  // Allocate and init bitmap with zeros.
     for (size_t i = 0; i < code_size; ++i)
     {
         const auto op = code[i];
-        if ((op & push_op_mask) == OP_PUSH1)  // If any PUSH opcode.
-            i += op - size_t{OP_PUSH1 - 1};   // Skip PUSH data.
+        if (static_cast<int8_t>(op) >= OP_PUSH1)  // If any PUSH opcode (see explanation above).
+            i += op - size_t{OP_PUSH1 - 1};       // Skip PUSH data.
         else if (INTX_UNLIKELY(op == OP_JUMPDEST))
             map[i] = true;
     }
