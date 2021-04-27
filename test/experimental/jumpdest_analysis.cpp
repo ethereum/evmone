@@ -170,20 +170,18 @@ std::vector<bool> build_jumpdest_map_str_avx2_mask(const uint8_t* code, size_t c
         while (true)
         {
             auto progress = (unsigned)__builtin_ctz(mask);
-            i += progress;
-            const auto op = code[i];
+            const auto op = code[i + progress];
             if (__builtin_expect(static_cast<int8_t>(op) >= OP_PUSH1, true))
             {
-                i += unsigned(get_push_data_size(op) + 1);
                 progress += unsigned(get_push_data_size(op) + 1);
             }
             else
             {
-                m[i] = true;
-                ++i;
+                m[i + progress] = true;
                 progress += 1;
             }
 
+            i += progress;
             if (i >= end)
                 break;
 
