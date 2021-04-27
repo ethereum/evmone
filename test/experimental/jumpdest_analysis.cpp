@@ -79,21 +79,15 @@ std::vector<bool> build_jumpdest_map_sttni(const uint8_t* code, size_t code_size
         const auto data = _mm_loadu_si128((const __m128i*)&code[i]);
         const auto first_match = (unsigned)_mm_cmpestri(match_ranges, 4, data, 16, match_imm);
 
-        if (first_match == 16)
-        {
-            i += first_match;
-            continue;
-        }
-
         i += first_match;
-
-        const auto op = code[i];
-        const auto potential_push_data_len = get_push_data_size(op);
-        if (__builtin_expect(potential_push_data_len <= 32, true))
-            i += potential_push_data_len;
-        else
-            m[i] = true;
-        ++i;
+        if (first_match < 16)
+        {
+            const auto op = code[i];
+            if (__builtin_expect(static_cast<int8_t>(op) >= OP_PUSH1, true))
+                i += get_push_data_size(op) + 1;
+            else
+                m[i++] = true;
+        }
     }
 
     for (; i < code_size; ++i)
@@ -124,23 +118,17 @@ std::vector<bool> build_jumpdest_map_str_avx2(const uint8_t* code, size_t code_s
         const auto is_jumpdest = _mm256_cmpeq_epi8(data, all_jumpdest);
         const auto is_interesting = _mm256_or_si256(is_push, is_jumpdest);
         const auto mask = (unsigned)_mm256_movemask_epi8(is_interesting);
-        const auto first_match = mask ? (unsigned)__builtin_ctz(mask) : 16;
-
-        if (first_match == 16)
-        {
-            i += first_match;
-            continue;
-        }
+        const auto first_match = mask ? (unsigned)__builtin_ctz(mask) : 32;
 
         i += first_match;
-
-        const auto op = code[i];
-        const auto potential_push_data_len = get_push_data_size(op);
-        if (__builtin_expect(potential_push_data_len <= 32, true))
-            i += potential_push_data_len;
-        else
-            m[i] = true;
-        ++i;
+        if (mask)
+        {
+            const auto op = code[i];
+            if (__builtin_expect(static_cast<int8_t>(op) >= OP_PUSH1, true))
+                i += get_push_data_size(op) + 1;
+            else
+                m[i++] = true;
+        }
     }
 
     for (; i < code_size; ++i)
