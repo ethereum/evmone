@@ -28,22 +28,20 @@ pushdata_info build_pushdata_mask(const uint8_t* code, uint32_t push_mask)
 
     while (push_mask)
     {
-        const auto a = static_cast<uint32_t>(__builtin_ctz(push_mask));
-        pos += a;
+        pos = static_cast<uint32_t>(__builtin_ctz(push_mask));
         const auto op = code[pos];
         const auto len = get_push_data_size(op);
-        const auto len_mask = ~uint32_t{0} >> (32 - len);
+        const auto len_mask = len <= 31 ? ~uint32_t{0} >> (31 - len) : ~uint32_t{0};
         const auto part_mask = len_mask << pos;
         pushdata_mask |= part_mask;
-        const auto step = a + 1 + len;
         pos += 1 + len;
         if (pos >= 32)
-            return {pushdata_mask << 1, pos};
+            return {pushdata_mask, pos};
 
-        push_mask >>= step;
+        push_mask &= ~part_mask;
     }
 
-    return {pushdata_mask << 1, 32};
+    return {pushdata_mask, 32};
 }
 
 std::vector<bool> build_jumpdest_map_vec1(const uint8_t* code, size_t code_size)
