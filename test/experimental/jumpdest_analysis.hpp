@@ -57,6 +57,7 @@ std::vector<bool> build_jumpdest_map_vec3(const uint8_t* code, size_t code_size)
 std::vector<bool> build_jumpdest_map_sttni(const uint8_t* code, size_t code_size);
 std::vector<bool> build_jumpdest_map_str_avx2(const uint8_t* code, size_t code_size);
 std::vector<bool> build_jumpdest_map_str_avx2_mask(const uint8_t* code, size_t code_size);
+std::vector<bool> build_jumpdest_map_str_avx2_mask2(const uint8_t* code, size_t code_size);
 bitset32 build_jumpdest_map_simd1(const uint8_t* code, size_t code_size);
 bitset32 build_jumpdest_map_simd2(const uint8_t* code, size_t code_size);
 bitset32 build_jumpdest_map_simd3(const uint8_t* code, size_t code_size);
