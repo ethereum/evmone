@@ -39,7 +39,14 @@ const bytecode bytecode_test_cases[]{
     push(0x60) + OP_JUMPDEST,
     "5b000000000000000000000000000000",
     "005b0000000000000000000000000000",
+    "605b00605b000000000000000000000000000000000000000000000000000000",
+    "5b14000000000000005badadad0000000000000000000000606060606060ff5b",
     "5b00000000000000000000000000000000000000000000000000000000000060",
+    "605b000000000000000000000000000000000000000000000000000000000000",
+    "0000000000000000000000000000000000000000000000000000000000007f5b",
+    "00605b000000000000000000000000000000000000000000000000000000605b",
+    "005b5b5b00000000000000000000000000000000000000000000000000000000",
+    "5b5b000000000000000000000000000000000000000000000000000000000000",
 };
 }  // namespace
 
@@ -56,7 +63,7 @@ TEST(jumpdest_analysis, compare_implementations)
         const auto v3 = build_jumpdest_map_sttni(t.data(), t.size());
         const auto v4 = build_jumpdest_map_str_avx2(t.data(), t.size());
         const auto v5 = build_jumpdest_map_str_avx2_mask(t.data(), t.size());
-        const auto v5 = build_jumpdest_map_str_avx2_mask2(t.data(), t.size());
+        const auto v6 = build_jumpdest_map_str_avx2_mask2(t.data(), t.size());
         const auto a3 = build_jumpdest_map_bitset1(t.data(), t.size());
         const auto a4 = build_internal_code_v1(t.data(), t.size());
         const auto a5 = build_internal_code_v2(t.data(), t.size());

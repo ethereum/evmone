@@ -16,6 +16,36 @@ inline constexpr size_t get_push_data_size(uint8_t op) noexcept
     return op - size_t{OP_PUSH1 - 1};
 }
 
+struct pushdata_info
+{
+    uint32_t mask;
+    size_t offset;
+};
+pushdata_info build_pushdata_mask(const uint8_t* code, uint32_t push_mask)
+{
+    size_t pos = 0;
+    uint32_t pushdata_mask = 0;
+
+    while (push_mask)
+    {
+        const auto a = static_cast<uint32_t>(__builtin_ctz(push_mask));
+        pos += a;
+        const auto op = code[pos];
+        const auto len = get_push_data_size(op);
+        const auto len_mask = ~uint32_t{0} >> (32 - len);
+        const auto part_mask = (pos < 31) ? len_mask << (pos + 1) : 0;
+        pushdata_mask |= part_mask;
+        const auto step = a + 1 + len;
+        pos += 1 + len;
+        if (pos >= 32)
+            return {pushdata_mask, pos};
+
+        push_mask >>= step;
+    }
+
+    return {pushdata_mask, 32};
+}
+
 std::vector<bool> build_jumpdest_map_vec1(const uint8_t* code, size_t code_size)
 {
     std::vector<bool> m(code_size);
@@ -223,51 +253,24 @@ std::vector<bool> build_jumpdest_map_str_avx2_mask2(const uint8_t* code, size_t 
         const auto is_jumpdest = _mm256_cmpeq_epi8(data, all_jumpdest);
         auto push_mask = (unsigned)_mm256_movemask_epi8(is_push);
         auto jumpdest_mask = (unsigned)_mm256_movemask_epi8(is_jumpdest);
-        auto mask = push_mask | jumpdest_mask;
 
-        if (!mask)
+        const auto [pushdata_mask, offset] = build_pushdata_mask(&code[i], push_mask);
+
+        jumpdest_mask &= ~pushdata_mask;
+
+        size_t pos = 0;
+        while (jumpdest_mask)
         {
-            i += 32;
-            continue;
+            const auto x = static_cast<uint32_t>(__builtin_ctz(jumpdest_mask));
+            pos += x;
+            m[i + pos] = true;
+            if (x >= 31)
+                break;
+            jumpdest_mask >>= x + 1;
+            pos += 1;
         }
 
-        // if (!push_mask && jumpdest_mask)
-        // {
-        //     unsigned pos = 0;
-        //     const auto mask_left = jumpdest_mask >> pos;
-        //     while (mask_left)
-        //     {
-        //         pos = (unsigned)__builtin_ctz(mask_left);
-        //         m[i + pos] = true;
-        //     }
-        // }
-
-        const auto end = i + 32;
-        while (true)
-        {
-            auto progress = (unsigned)__builtin_ctz(mask);
-            const auto op = code[i + progress];
-            if (__builtin_expect(static_cast<int8_t>(op) >= OP_PUSH1, true))
-            {
-                progress += unsigned(get_push_data_size(op) + 1);
-            }
-            else
-            {
-                m[i + progress] = true;
-                progress += 1;
-            }
-
-            i += progress;
-            if (i >= end)
-                break;
-
-            mask >>= progress;
-            if (!mask)
-            {
-                i = end;
-                break;
-            }
-        }
+        i += offset;
     }
 
     for (; i < code_size; ++i)
