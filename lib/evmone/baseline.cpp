@@ -8,16 +8,16 @@
 #include <evmc/instructions.h>
 #include <memory>
 
-namespace evmone
+namespace evmone::baseline
 {
-JumpdestMap build_jumpdest_map(const uint8_t* code, size_t code_size)
+CodeAnalysis analyze(const uint8_t* code, size_t code_size)
 {
     // To find if op is any PUSH opcode (OP_PUSH1 <= op <= OP_PUSH32)
     // it can be noticed that OP_PUSH32 is INT8_MAX (0x7f) therefore
     // static_cast<int8_t>(op) <= OP_PUSH32 is always true and can be skipped.
     static_assert(OP_PUSH32 == std::numeric_limits<int8_t>::max());
 
-    JumpdestMap map(code_size);  // Allocate and init bitmap with zeros.
+    CodeAnalysis::JumpdestMap map(code_size);  // Allocate and init bitmap with zeros.
     for (size_t i = 0; i < code_size; ++i)
     {
         const auto op = code[i];
@@ -26,12 +26,13 @@ JumpdestMap build_jumpdest_map(const uint8_t* code, size_t code_size)
         else if (INTX_UNLIKELY(op == OP_JUMPDEST))
             map[i] = true;
     }
-    return map;
+    return CodeAnalysis{std::move(map)};
 }
 
 namespace
 {
-const uint8_t* op_jump(ExecutionState& state, const JumpdestMap& jumpdest_map) noexcept
+const uint8_t* op_jump(
+    ExecutionState& state, const CodeAnalysis::JumpdestMap& jumpdest_map) noexcept
 {
     const auto dst = state.stack.pop();
     if (dst >= jumpdest_map.size() || !jumpdest_map[static_cast<size_t>(dst)])
@@ -95,16 +96,15 @@ inline evmc_status_code check_requirements(const char* const* instruction_names,
 }
 }  // namespace
 
-evmc_result baseline_execute(evmc_vm* /*vm*/, const evmc_host_interface* host,
-    evmc_host_context* ctx, evmc_revision rev, const evmc_message* msg, const uint8_t* code,
-    size_t code_size) noexcept
+evmc_result execute(evmc_vm* /*vm*/, const evmc_host_interface* host, evmc_host_context* ctx,
+    evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
 {
-    const auto jumpdest_map = build_jumpdest_map(code, code_size);
+    const auto jumpdest_map = analyze(code, code_size);
     auto state = std::make_unique<ExecutionState>(*msg, rev, *host, ctx, code, code_size);
-    return baseline_execute(*state, jumpdest_map);
+    return execute(*state, jumpdest_map);
 }
 
-evmc_result baseline_execute(ExecutionState& state, const JumpdestMap& jumpdest_map) noexcept
+evmc_result execute(ExecutionState& state, const CodeAnalysis& analysis) noexcept
 {
     const auto rev = state.rev;
     const auto code = state.code.data();
@@ -382,12 +382,12 @@ evmc_result baseline_execute(ExecutionState& state, const JumpdestMap& jumpdest_
         }
 
         case OP_JUMP:
-            pc = op_jump(state, jumpdest_map);
+            pc = op_jump(state, analysis.jumpdest_map);
             continue;
         case OP_JUMPI:
             if (state.stack[1] != 0)
             {
-                pc = op_jump(state, jumpdest_map);
+                pc = op_jump(state, analysis.jumpdest_map);
             }
             else
             {
@@ -761,4 +761,4 @@ exit:
     return evmc::make_result(state.status, gas_left,
         state.output_size != 0 ? &state.memory[state.output_offset] : nullptr, state.output_size);
 }
-}  // namespace evmone
+}  // namespace evmone::baseline

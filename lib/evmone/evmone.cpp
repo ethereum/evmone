@@ -31,7 +31,7 @@ evmc_set_option_result set_option(evmc_vm* vm, char const* name, char const* val
     {
         if (value[0] == '0' && value[1] == '\0')  // O=0
         {
-            vm->execute = evmone::baseline_execute;
+            vm->execute = evmone::baseline::execute;
             return EVMC_SET_OPTION_SUCCESS;
         }
         else if (value[0] == '2' && value[1] == '\0')  // O=2
