@@ -42,7 +42,7 @@ struct block_info
 };
 static_assert(sizeof(block_info) == 8);
 
-struct code_analysis;
+struct AdvancedCodeAnalysis;
 
 /// The execution state specialized for the Advanced interpreter.
 struct AdvancedExecutionState : ExecutionState
@@ -53,13 +53,13 @@ struct AdvancedExecutionState : ExecutionState
     uint32_t current_block_cost = 0;
 
     /// Pointer to code analysis.
-    const code_analysis* analysis = nullptr;
+    const AdvancedCodeAnalysis* analysis = nullptr;
 
     AdvancedExecutionState() = default;
 
     AdvancedExecutionState(const evmc_message& message, evmc_revision revision,
         const evmc_host_interface& host_interface, evmc_host_context* host_ctx,
-        const uint8_t* code_ptr, size_t code_size, const code_analysis& a) noexcept
+        const uint8_t* code_ptr, size_t code_size, const AdvancedCodeAnalysis& a) noexcept
       : ExecutionState{message, revision, host_interface, host_ctx, code_ptr, code_size},
         analysis{&a}
     {}
@@ -74,7 +74,7 @@ struct AdvancedExecutionState : ExecutionState
     /// Resets the contents of the execution_state so that it could be reused.
     void reset(const evmc_message& message, evmc_revision revision,
         const evmc_host_interface& host_interface, evmc_host_context* host_ctx,
-        const uint8_t* code_ptr, size_t code_size, const code_analysis& a) noexcept
+        const uint8_t* code_ptr, size_t code_size, const AdvancedCodeAnalysis& a) noexcept
     {
         ExecutionState::reset(message, revision, host_interface, host_ctx, code_ptr, code_size);
         current_block_cost = 0;
@@ -127,7 +127,7 @@ struct instruction
     explicit constexpr instruction(instruction_exec_fn f) noexcept : fn{f}, arg{} {}
 };
 
-struct code_analysis
+struct AdvancedCodeAnalysis
 {
     std::vector<instruction> instrs;
 
@@ -145,7 +145,7 @@ struct code_analysis
     std::vector<int32_t> jumpdest_targets;
 };
 
-inline int find_jumpdest(const code_analysis& analysis, int offset) noexcept
+inline int find_jumpdest(const AdvancedCodeAnalysis& analysis, int offset) noexcept
 {
     const auto begin = std::begin(analysis.jumpdest_offsets);
     const auto end = std::end(analysis.jumpdest_offsets);
@@ -155,7 +155,7 @@ inline int find_jumpdest(const code_analysis& analysis, int offset) noexcept
                -1;
 }
 
-EVMC_EXPORT code_analysis analyze(
+EVMC_EXPORT AdvancedCodeAnalysis analyze(
     evmc_revision rev, const uint8_t* code, size_t code_size) noexcept;
 
 EVMC_EXPORT const op_table& get_op_table(evmc_revision rev) noexcept;
