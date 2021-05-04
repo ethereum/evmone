@@ -171,7 +171,7 @@ void register_benchmarks(const std::vector<BenchmarkCase>& benchmark_cases)
         if (registered_vms.count("baseline"))
         {
             RegisterBenchmark(("baseline/analyse/" + b.name).c_str(), [&b](State& state) {
-                build_jumpdest_map(state, b.code);
+                baseline_analyze(state, b.code);
             })->Unit(kMicrosecond);
         }
 
