@@ -111,6 +111,9 @@ inline evmc_status_code check_requirements(const char* const* instruction_names,
 template <bool TracingEnabled>
 evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& analysis) noexcept
 {
+    // Use padded code.
+    state.code = {analysis.padded_code.get(), state.code.size()};
+
     auto* tracer = vm.get_tracer();
     if constexpr (TracingEnabled)
         tracer->notify_execution_start(state.rev, *state.msg, state.code);
@@ -124,7 +127,11 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     while (pc != code_end)
     {
         if constexpr (TracingEnabled)
-            tracer->notify_instruction_start(static_cast<uint32_t>(pc - code), state);
+        {
+            const auto offset = static_cast<uint32_t>(pc - code);
+            if (offset < state.code.size())  // Skip STOP from code padding.
+                tracer->notify_instruction_start(offset, state);
+        }
 
         const auto op = *pc;
         const auto status = check_requirements(instruction_names, instruction_metrics, state, op);
