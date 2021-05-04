@@ -8,7 +8,7 @@
 #include <evmc/instructions.h>
 #include <memory>
 
-namespace evmone
+namespace evmone::baseline
 {
 JumpdestMap build_jumpdest_map(const uint8_t* code, size_t code_size)
 {
@@ -95,16 +95,15 @@ inline evmc_status_code check_requirements(const char* const* instruction_names,
 }
 }  // namespace
 
-evmc_result baseline_execute(evmc_vm* /*vm*/, const evmc_host_interface* host,
-    evmc_host_context* ctx, evmc_revision rev, const evmc_message* msg, const uint8_t* code,
-    size_t code_size) noexcept
+evmc_result execute(evmc_vm* /*vm*/, const evmc_host_interface* host, evmc_host_context* ctx,
+    evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
 {
     const auto jumpdest_map = build_jumpdest_map(code, code_size);
     auto state = std::make_unique<ExecutionState>(*msg, rev, *host, ctx, code, code_size);
-    return baseline_execute(*state, jumpdest_map);
+    return execute(*state, jumpdest_map);
 }
 
-evmc_result baseline_execute(ExecutionState& state, const JumpdestMap& jumpdest_map) noexcept
+evmc_result execute(ExecutionState& state, const JumpdestMap& jumpdest_map) noexcept
 {
     const auto rev = state.rev;
     const auto code = state.code.data();
@@ -761,4 +760,4 @@ exit:
     return evmc::make_result(state.status, gas_left,
         state.output_size != 0 ? &state.memory[state.output_offset] : nullptr, state.output_size);
 }
-}  // namespace evmone
+}  // namespace evmone::baseline
