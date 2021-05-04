@@ -9,7 +9,7 @@
 #include <iomanip>
 #include <iostream>
 
-void dump(const evmone::code_analysis& analysis)
+void dump(const evmone::AdvancedCodeAnalysis& analysis)
 {
     using namespace evmone;
 

@@ -13,11 +13,11 @@ static_assert(!std::is_copy_constructible<evmone::ExecutionState>::value);
 static_assert(!std::is_move_assignable<evmone::ExecutionState>::value);
 static_assert(!std::is_copy_assignable<evmone::ExecutionState>::value);
 
-static_assert(std::is_default_constructible<evmone::execution_state>::value);
-static_assert(!std::is_move_constructible<evmone::execution_state>::value);
-static_assert(!std::is_copy_constructible<evmone::execution_state>::value);
-static_assert(!std::is_move_assignable<evmone::execution_state>::value);
-static_assert(!std::is_copy_assignable<evmone::execution_state>::value);
+static_assert(std::is_default_constructible<evmone::AdvancedExecutionState>::value);
+static_assert(!std::is_move_constructible<evmone::AdvancedExecutionState>::value);
+static_assert(!std::is_copy_constructible<evmone::AdvancedExecutionState>::value);
+static_assert(!std::is_move_assignable<evmone::AdvancedExecutionState>::value);
+static_assert(!std::is_copy_assignable<evmone::AdvancedExecutionState>::value);
 
 TEST(execution_state, construct)
 {
@@ -60,7 +60,7 @@ TEST(execution_state, default_construct)
 
 TEST(execution_state, default_construct_advanced)
 {
-    const evmone::execution_state st;
+    const evmone::AdvancedExecutionState st;
 
     EXPECT_EQ(st.gas_left, 0);
     EXPECT_EQ(st.stack.size(), 0);
@@ -82,9 +82,9 @@ TEST(execution_state, reset_advanced)
 {
     const evmc_message msg{};
     const uint8_t code[]{0xff};
-    evmone::code_analysis analysis;
+    evmone::AdvancedCodeAnalysis analysis;
 
-    evmone::execution_state st;
+    evmone::AdvancedExecutionState st;
     st.gas_left = 1;
     st.stack.push({});
     st.memory.resize(2);
@@ -117,7 +117,7 @@ TEST(execution_state, reset_advanced)
         msg2.gas = 13;
         const evmc_host_interface host_interface2{};
         const uint8_t code2[]{0x80, 0x81};
-        evmone::code_analysis analysis2;
+        evmone::AdvancedCodeAnalysis analysis2;
 
         st.reset(
             msg2, EVMC_HOMESTEAD, host_interface2, nullptr, code2, std::size(code2), analysis2);
