@@ -13,11 +13,11 @@ static_assert(!std::is_copy_constructible<evmone::ExecutionState>::value);
 static_assert(!std::is_move_assignable<evmone::ExecutionState>::value);
 static_assert(!std::is_copy_assignable<evmone::ExecutionState>::value);
 
-static_assert(std::is_default_constructible<evmone::execution_state>::value);
-static_assert(!std::is_move_constructible<evmone::execution_state>::value);
-static_assert(!std::is_copy_constructible<evmone::execution_state>::value);
-static_assert(!std::is_move_assignable<evmone::execution_state>::value);
-static_assert(!std::is_copy_assignable<evmone::execution_state>::value);
+static_assert(std::is_default_constructible<evmone::AdvancedExecutionState>::value);
+static_assert(!std::is_move_constructible<evmone::AdvancedExecutionState>::value);
+static_assert(!std::is_copy_constructible<evmone::AdvancedExecutionState>::value);
+static_assert(!std::is_move_assignable<evmone::AdvancedExecutionState>::value);
+static_assert(!std::is_copy_assignable<evmone::AdvancedExecutionState>::value);
 
 TEST(execution_state, construct)
 {
@@ -60,7 +60,7 @@ TEST(execution_state, default_construct)
 
 TEST(execution_state, default_construct_advanced)
 {
-    const evmone::execution_state st;
+    const evmone::AdvancedExecutionState st;
 
     EXPECT_EQ(st.gas_left, 0);
     EXPECT_EQ(st.stack.size(), 0);
@@ -84,7 +84,7 @@ TEST(execution_state, reset_advanced)
     const uint8_t code[]{0xff};
     evmone::code_analysis analysis;
 
-    evmone::execution_state st;
+    evmone::AdvancedExecutionState st;
     st.gas_left = 1;
     st.stack.push({});
     st.memory.resize(2);

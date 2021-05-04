@@ -17,6 +17,7 @@ namespace evmone
 {
 struct instruction;
 
+/// Compressed information about instruction basic block.
 struct block_info
 {
     /// The total base gas cost of all instructions in the block.
@@ -43,7 +44,8 @@ static_assert(sizeof(block_info) == 8);
 
 struct code_analysis;
 
-struct execution_state : ExecutionState
+/// The execution state specialized for the Advanced interpreter.
+struct AdvancedExecutionState : ExecutionState
 {
     /// The gas cost of the current block.
     ///
@@ -53,9 +55,9 @@ struct execution_state : ExecutionState
     /// Pointer to code analysis.
     const code_analysis* analysis = nullptr;
 
-    execution_state() = default;
+    AdvancedExecutionState() = default;
 
-    execution_state(const evmc_message& message, evmc_revision revision,
+    AdvancedExecutionState(const evmc_message& message, evmc_revision revision,
         const evmc_host_interface& host_interface, evmc_host_context* host_ctx,
         const uint8_t* code_ptr, size_t code_size, const code_analysis& a) noexcept
       : ExecutionState{message, revision, host_interface, host_ctx, code_ptr, code_size},
@@ -91,7 +93,7 @@ static_assert(
     sizeof(instruction_argument) == sizeof(uint64_t), "Incorrect size of instruction_argument");
 
 /// The pointer to function implementing an instruction execution.
-using instruction_exec_fn = const instruction* (*)(const instruction*, execution_state&);
+using instruction_exec_fn = const instruction* (*)(const instruction*, AdvancedExecutionState&);
 
 /// The evmone intrinsic opcodes.
 ///

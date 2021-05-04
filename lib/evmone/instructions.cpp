@@ -11,21 +11,21 @@ namespace evmone
 namespace
 {
 template <void InstrFn(evm_stack&)>
-const instruction* op(const instruction* instr, execution_state& state) noexcept
+const instruction* op(const instruction* instr, AdvancedExecutionState& state) noexcept
 {
     InstrFn(state.stack);
     return ++instr;
 }
 
 template <void InstrFn(ExecutionState&)>
-const instruction* op(const instruction* instr, execution_state& state) noexcept
+const instruction* op(const instruction* instr, AdvancedExecutionState& state) noexcept
 {
     InstrFn(state);
     return ++instr;
 }
 
 template <evmc_status_code InstrFn(ExecutionState&)>
-const instruction* op(const instruction* instr, execution_state& state) noexcept
+const instruction* op(const instruction* instr, AdvancedExecutionState& state) noexcept
 {
     const auto status_code = InstrFn(state);
     if (status_code != EVMC_SUCCESS)
@@ -33,12 +33,12 @@ const instruction* op(const instruction* instr, execution_state& state) noexcept
     return ++instr;
 }
 
-const instruction* op_stop(const instruction*, execution_state& state) noexcept
+const instruction* op_stop(const instruction*, AdvancedExecutionState& state) noexcept
 {
     return state.exit(EVMC_SUCCESS);
 }
 
-const instruction* op_sstore(const instruction* instr, execution_state& state) noexcept
+const instruction* op_sstore(const instruction* instr, AdvancedExecutionState& state) noexcept
 {
     const auto gas_left_correction = state.current_block_cost - instr->arg.number;
     state.gas_left += gas_left_correction;
@@ -53,7 +53,7 @@ const instruction* op_sstore(const instruction* instr, execution_state& state) n
     return ++instr;
 }
 
-const instruction* op_jump(const instruction*, execution_state& state) noexcept
+const instruction* op_jump(const instruction*, AdvancedExecutionState& state) noexcept
 {
     const auto dst = state.stack.pop();
     auto pc = -1;
@@ -64,7 +64,7 @@ const instruction* op_jump(const instruction*, execution_state& state) noexcept
     return &state.analysis->instrs[static_cast<size_t>(pc)];
 }
 
-const instruction* op_jumpi(const instruction* instr, execution_state& state) noexcept
+const instruction* op_jumpi(const instruction* instr, AdvancedExecutionState& state) noexcept
 {
     if (state.stack[1] != 0)
         instr = op_jump(instr, state);
@@ -81,13 +81,13 @@ const instruction* op_jumpi(const instruction* instr, execution_state& state) no
     return instr;
 }
 
-const instruction* op_pc(const instruction* instr, execution_state& state) noexcept
+const instruction* op_pc(const instruction* instr, AdvancedExecutionState& state) noexcept
 {
     state.stack.push(instr->arg.number);
     return ++instr;
 }
 
-const instruction* op_gas(const instruction* instr, execution_state& state) noexcept
+const instruction* op_gas(const instruction* instr, AdvancedExecutionState& state) noexcept
 {
     const auto correction = state.current_block_cost - instr->arg.number;
     const auto gas = static_cast<uint64_t>(state.gas_left + correction);
@@ -95,20 +95,20 @@ const instruction* op_gas(const instruction* instr, execution_state& state) noex
     return ++instr;
 }
 
-const instruction* op_push_small(const instruction* instr, execution_state& state) noexcept
+const instruction* op_push_small(const instruction* instr, AdvancedExecutionState& state) noexcept
 {
     state.stack.push(instr->arg.small_push_value);
     return ++instr;
 }
 
-const instruction* op_push_full(const instruction* instr, execution_state& state) noexcept
+const instruction* op_push_full(const instruction* instr, AdvancedExecutionState& state) noexcept
 {
     state.stack.push(*instr->arg.push_value);
     return ++instr;
 }
 
 template <evmc_opcode LogOp>
-const instruction* op_log(const instruction* instr, execution_state& state) noexcept
+const instruction* op_log(const instruction* instr, AdvancedExecutionState& state) noexcept
 {
     constexpr auto num_topics = LogOp - OP_LOG0;
     const auto status_code = log(state, num_topics);
@@ -117,13 +117,13 @@ const instruction* op_log(const instruction* instr, execution_state& state) noex
     return ++instr;
 }
 
-const instruction* op_invalid(const instruction*, execution_state& state) noexcept
+const instruction* op_invalid(const instruction*, AdvancedExecutionState& state) noexcept
 {
     return state.exit(EVMC_INVALID_INSTRUCTION);
 }
 
 template <evmc_status_code status_code>
-const instruction* op_return(const instruction*, execution_state& state) noexcept
+const instruction* op_return(const instruction*, AdvancedExecutionState& state) noexcept
 {
     const auto offset = state.stack[0];
     const auto size = state.stack[1];
@@ -138,7 +138,7 @@ const instruction* op_return(const instruction*, execution_state& state) noexcep
 }
 
 template <evmc_call_kind Kind, bool Static = false>
-const instruction* op_call(const instruction* instr, execution_state& state) noexcept
+const instruction* op_call(const instruction* instr, AdvancedExecutionState& state) noexcept
 {
     const auto gas_left_correction = state.current_block_cost - instr->arg.number;
     state.gas_left += gas_left_correction;
@@ -154,7 +154,7 @@ const instruction* op_call(const instruction* instr, execution_state& state) noe
 }
 
 template <evmc_call_kind Kind>
-const instruction* op_create(const instruction* instr, execution_state& state) noexcept
+const instruction* op_create(const instruction* instr, AdvancedExecutionState& state) noexcept
 {
     const auto gas_left_correction = state.current_block_cost - instr->arg.number;
     state.gas_left += gas_left_correction;
@@ -169,17 +169,17 @@ const instruction* op_create(const instruction* instr, execution_state& state) n
     return ++instr;
 }
 
-const instruction* op_undefined(const instruction*, execution_state& state) noexcept
+const instruction* op_undefined(const instruction*, AdvancedExecutionState& state) noexcept
 {
     return state.exit(EVMC_UNDEFINED_INSTRUCTION);
 }
 
-const instruction* op_selfdestruct(const instruction*, execution_state& state) noexcept
+const instruction* op_selfdestruct(const instruction*, AdvancedExecutionState& state) noexcept
 {
     return state.exit(selfdestruct(state));
 }
 
-const instruction* opx_beginblock(const instruction* instr, execution_state& state) noexcept
+const instruction* opx_beginblock(const instruction* instr, AdvancedExecutionState& state) noexcept
 {
     auto& block = instr->arg.block;
 

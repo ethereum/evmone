@@ -14,7 +14,7 @@ evmc_result execute(evmc_vm* /*unused*/, const evmc_host_interface* host, evmc_h
     const auto analysis = analyze(rev, code, code_size);
 
     auto state =
-        std::make_unique<execution_state>(*msg, rev, *host, ctx, code, code_size, analysis);
+        std::make_unique<AdvancedExecutionState>(*msg, rev, *host, ctx, code, code_size, analysis);
 
     const auto* instr = &state->analysis->instrs[0];
     while (instr != nullptr)
