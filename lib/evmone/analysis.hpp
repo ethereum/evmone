@@ -55,14 +55,7 @@ struct AdvancedExecutionState : ExecutionState
     /// Pointer to code analysis.
     const AdvancedCodeAnalysis* analysis = nullptr;
 
-    AdvancedExecutionState() = default;
-
-    AdvancedExecutionState(const evmc_message& message, evmc_revision revision,
-        const evmc_host_interface& host_interface, evmc_host_context* host_ctx,
-        const uint8_t* code_ptr, size_t code_size, const AdvancedCodeAnalysis& a) noexcept
-      : ExecutionState{message, revision, host_interface, host_ctx, code_ptr, code_size},
-        analysis{&a}
-    {}
+    using ExecutionState::ExecutionState;
 
     /// Terminates the execution with the given status code.
     const instruction* exit(evmc_status_code status_code) noexcept
@@ -74,11 +67,11 @@ struct AdvancedExecutionState : ExecutionState
     /// Resets the contents of the execution_state so that it could be reused.
     void reset(const evmc_message& message, evmc_revision revision,
         const evmc_host_interface& host_interface, evmc_host_context* host_ctx,
-        const uint8_t* code_ptr, size_t code_size, const AdvancedCodeAnalysis& a) noexcept
+        const uint8_t* code_ptr, size_t code_size) noexcept
     {
         ExecutionState::reset(message, revision, host_interface, host_ctx, code_ptr, code_size);
         current_block_cost = 0;
-        analysis = &a;
+        analysis = nullptr;
     }
 };
 
