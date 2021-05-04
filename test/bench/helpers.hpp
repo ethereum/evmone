@@ -23,7 +23,7 @@ inline void analyse(benchmark::State& state, evmc_revision rev, bytes_view code)
     for (auto _ : state)
     {
         auto r = evmone::analyze(rev, code.data(), code.size());
-        benchmark::DoNotOptimize(r);
+        benchmark::DoNotOptimize(&r);
         bytes_analysed += code.size();
     }
 
@@ -38,7 +38,7 @@ inline void baseline_analyze(benchmark::State& state, bytes_view code) noexcept
     for (auto _ : state)
     {
         auto r = evmone::baseline::analyze(code.data(), code.size());
-        benchmark::DoNotOptimize(r);
+        benchmark::DoNotOptimize(&r);
         bytes_analysed += code.size();
     }
 

@@ -19,15 +19,27 @@ CodeAnalysis analyze(const uint8_t* code, size_t code_size)
     static_assert(OP_PUSH32 == std::numeric_limits<int8_t>::max());
 
     CodeAnalysis::JumpdestMap map(code_size);  // Allocate and init bitmap with zeros.
-    for (size_t i = 0; i < code_size; ++i)
+    size_t i = 0;
+    while (i < code_size)
     {
         const auto op = code[i];
         if (static_cast<int8_t>(op) >= OP_PUSH1)  // If any PUSH opcode (see explanation above).
             i += op - size_t{OP_PUSH1 - 1};       // Skip PUSH data.
         else if (INTX_UNLIKELY(op == OP_JUMPDEST))
             map[i] = true;
+        ++i;
     }
-    return CodeAnalysis{std::move(map)};
+
+    // i is the needed code size including the last push data (can be bigger than code_size).
+    // Using "raw" new operator instead of std::make_unique() to get uninitialized array.
+    std::unique_ptr<uint8_t[]> padded_code{new uint8_t[i + 1]};  // +1 for the final STOP.
+    std::copy_n(code, code_size, padded_code.get());
+    padded_code[i] = OP_STOP;  // Set final STOP at the code end.
+
+    // TODO: Using fixed-size padding of 33, the padded code buffer and jumpdest bitmap can be
+    //       created with single allocation.
+
+    return CodeAnalysis{std::move(padded_code), std::move(map)};
 }
 
 namespace
