@@ -1,3 +1,6 @@
 [submodule "evmc"]
 	path = evmc
 	url = https://github.com/ethereum/evmc
+[submodule "go-ethereum"]
+	path = go-ethereum
+	url = https://github.com/jwasinger/go-ethereum
