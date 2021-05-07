@@ -6,6 +6,7 @@
 #include "execution_state.hpp"
 #include "instructions.hpp"
 #include <evmc/instructions.h>
+#include <evmone/evmone.h>
 #include <memory>
 
 namespace evmone::baseline
@@ -101,10 +102,20 @@ evmc_result execute(evmc_vm* /*vm*/, const evmc_host_interface* host, evmc_host_
 {
     const auto jumpdest_map = analyze(code, code_size);
     auto state = std::make_unique<ExecutionState>(*msg, rev, *host, ctx, code, code_size);
-    return execute(*state, jumpdest_map);
+    const auto& tracer = static_cast<VM*>(vm)->tracer;
+
+    if (tracer)
+        tracer->onBeginExecution();
+
+    result = execute(*state, tracer, jumpdest_map);
+
+    if (tracer)
+        tracer->onEndExecution();
+
+    return result;
 }
 
-evmc_result execute(ExecutionState& state, const CodeAnalysis& analysis) noexcept
+evmc_result execute(ExecutionState& state, tracer &VMTracer, const CodeAnalysis& analysis) noexcept
 {
     const auto rev = state.rev;
     const auto code = state.code.data();
@@ -119,12 +130,18 @@ evmc_result execute(ExecutionState& state, const CodeAnalysis& analysis) noexcep
     {
         const auto op = *pc;
 
-        const auto status = check_requirements(instruction_names, instruction_metrics, state, op);
+        if (INTX_UNLIKELY(tracer))
+            tracer->onOpcodeBefore(static_cast<evmc_opcode>(op), static_cast<uint64_t>(pc - code));
+
+        const auto status = check_requirements(instruction_names, instruction_metrics, *state, op);
         if (status != EVMC_SUCCESS)
         {
             state.status = status;
             goto exit;
         }
+
+        if (INTX_UNLIKELY(tracer))
+            tracer->onOpcodeAfter();
 
         switch (op)
         {
@@ -757,6 +774,9 @@ evmc_result execute(ExecutionState& state, const CodeAnalysis& analysis) noexcep
 exit:
     const auto gas_left =
         (state.status == EVMC_SUCCESS || state.status == EVMC_REVERT) ? state.gas_left : 0;
+
+    if (tracer)
+        tracer->onEndExecution();
 
     return evmc::make_result(state.status, gas_left,
         state.output_size != 0 ? &state.memory[state.output_offset] : nullptr, state.output_size);
