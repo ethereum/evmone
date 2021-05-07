@@ -97,17 +97,17 @@ inline evmc_status_code check_requirements(const char* const* instruction_names,
 }
 }  // namespace
 
-evmc_result execute(evmc_vm* /*vm*/, const evmc_host_interface* host, evmc_host_context* ctx,
+evmc_result execute(evmc_vm* vm, const evmc_host_interface* host, evmc_host_context* ctx,
     evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
 {
     const auto jumpdest_map = analyze(code, code_size);
-    auto state = std::make_unique<ExecutionState>(*msg, rev, *host, ctx, code, code_size);
-    const auto& tracer = static_cast<VM*>(vm)->tracer;
+    const auto state = std::make_unique<ExecutionState>(*msg, rev, *host, ctx, code, code_size);
+    std::unique_ptr<VMTracer>& tracer = static_cast<VM*>(vm)->tracer;
 
     if (tracer)
         tracer->onBeginExecution();
 
-    result = execute(*state, tracer, jumpdest_map);
+    auto result = execute(*state, tracer, jumpdest_map);
 
     if (tracer)
         tracer->onEndExecution();
@@ -115,7 +115,7 @@ evmc_result execute(evmc_vm* /*vm*/, const evmc_host_interface* host, evmc_host_
     return result;
 }
 
-evmc_result execute(ExecutionState& state, tracer &VMTracer, const CodeAnalysis& analysis) noexcept
+evmc_result execute(ExecutionState& state, std::unique_ptr<VMTracer>& tracer, const CodeAnalysis& analysis) noexcept
 {
     const auto rev = state.rev;
     const auto code = state.code.data();
@@ -133,7 +133,7 @@ evmc_result execute(ExecutionState& state, tracer &VMTracer, const CodeAnalysis&
         if (INTX_UNLIKELY(tracer))
             tracer->onOpcodeBefore(static_cast<evmc_opcode>(op), static_cast<uint64_t>(pc - code));
 
-        const auto status = check_requirements(instruction_names, instruction_metrics, *state, op);
+        const auto status = check_requirements(instruction_names, instruction_metrics, state, op);
         if (status != EVMC_SUCCESS)
         {
             state.status = status;

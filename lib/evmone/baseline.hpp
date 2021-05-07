@@ -7,6 +7,8 @@
 #include <evmc/evmc.h>
 #include <evmc/utils.h>
 #include <vector>
+#include <memory>
+#include <evmone/evmone.h>
 
 namespace evmone::baseline
 {
@@ -25,5 +27,5 @@ evmc_result execute(evmc_vm* vm, const evmc_host_interface* host, evmc_host_cont
     evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept;
 
 /// Executes in Baseline interpreter on the given external and initialized state.
-evmc_result execute(ExecutionState& state, const CodeAnalysis& analysis) noexcept;
+evmc_result execute(ExecutionState& state, std::unique_ptr<VMTracer>& tracer, const CodeAnalysis& analysis) noexcept;
 }  // namespace evmone::baseline
