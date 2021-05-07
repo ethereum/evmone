@@ -115,7 +115,8 @@ evmc_result execute(evmc_vm* vm, const evmc_host_interface* host, evmc_host_cont
     return result;
 }
 
-evmc_result execute(ExecutionState& state, std::unique_ptr<VMTracer>& tracer, const CodeAnalysis& analysis) noexcept
+evmc_result execute(
+    ExecutionState& state, std::unique_ptr<VMTracer>& tracer, const CodeAnalysis& analysis) noexcept
 {
     const auto rev = state.rev;
     const auto code = state.code.data();
