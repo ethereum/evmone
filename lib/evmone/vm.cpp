@@ -1,10 +1,9 @@
 // evmone: Fast Ethereum Virtual Machine implementation
-// Copyright 2018-2020 The evmone Authors.
+// Copyright 2018 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
 /// @file
 /// EVMC instance and entry point of evmone is defined here.
-/// The file name matches the evmone.h public header.
 
 #include "baseline.hpp"
 #include "execution.hpp"

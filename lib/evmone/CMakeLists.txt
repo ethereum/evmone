@@ -13,7 +13,6 @@ add_library(evmone
     analysis.hpp
     baseline.cpp
     baseline.hpp
-    evmone.cpp
     execution.cpp
     execution.hpp
     instruction_traits.hpp
@@ -22,6 +21,7 @@ add_library(evmone
     instructions_calls.cpp
     limits.hpp
     opcodes_helpers.h
+    vm.cpp
 )
 target_link_libraries(evmone PUBLIC evmc::evmc intx::intx PRIVATE evmc::instructions ethash::keccak)
 target_include_directories(evmone PUBLIC
@@ -42,6 +42,6 @@ if(NOT SANITIZE)
     target_link_options(evmone PRIVATE $<$<PLATFORM_ID:Linux>:LINKER:--no-undefined>)
 endif()
 
-set_source_files_properties(evmone.cpp PROPERTIES COMPILE_DEFINITIONS PROJECT_VERSION="${PROJECT_VERSION}")
+set_source_files_properties(vm.cpp PROPERTIES COMPILE_DEFINITIONS PROJECT_VERSION="${PROJECT_VERSION}")
 
 add_standalone_library(evmone)
