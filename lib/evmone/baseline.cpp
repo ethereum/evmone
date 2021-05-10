@@ -109,9 +109,9 @@ evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_co
 
 evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& analysis) noexcept
 {
-        const auto& tracer = vm.tracer;
+    auto* tracer = vm.get_tracer();
     if (tracer)
-        tracer->onBeginExecution();
+        tracer->notify_execution_start();
 
     const auto rev = state.rev;
     const auto code = state.code.data();
@@ -127,7 +127,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
         const auto op = *pc;
 
         if (INTX_UNLIKELY(tracer))
-            tracer->onOpcode(static_cast<evmc_opcode>(op));
+            tracer->notify_instruction_start(static_cast<evmc_opcode>(op));
 
         const auto status = check_requirements(instruction_names, instruction_metrics, state, op);
         if (status != EVMC_SUCCESS)
@@ -769,7 +769,7 @@ exit:
         (state.status == EVMC_SUCCESS || state.status == EVMC_REVERT) ? state.gas_left : 0;
 
     if (tracer)
-        tracer->onEndExecution();
+        tracer->notify_execution_end();
 
     return evmc::make_result(state.status, gas_left,
         state.output_size != 0 ? &state.memory[state.output_offset] : nullptr, state.output_size);
