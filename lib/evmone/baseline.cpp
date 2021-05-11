@@ -7,7 +7,6 @@
 #include "instructions.hpp"
 #include "vm.hpp"
 #include <evmc/instructions.h>
-#include <evmone/evmone.h>
 #include <memory>
 
 namespace evmone::baseline
@@ -110,7 +109,7 @@ evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_co
 evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& analysis) noexcept
 {
     auto* tracer = vm.get_tracer();
-    if (tracer)
+    if (INTX_UNLIKELY(tracer != nullptr))
         tracer->notify_execution_start();
 
     const auto rev = state.rev;
@@ -126,7 +125,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     {
         const auto op = *pc;
 
-        if (INTX_UNLIKELY(tracer))
+        if (INTX_UNLIKELY(tracer != nullptr))
             tracer->notify_instruction_start(static_cast<evmc_opcode>(op));
 
         const auto status = check_requirements(instruction_names, instruction_metrics, state, op);
@@ -768,7 +767,7 @@ exit:
     const auto gas_left =
         (state.status == EVMC_SUCCESS || state.status == EVMC_REVERT) ? state.gas_left : 0;
 
-    if (tracer)
+    if (INTX_UNLIKELY(tracer != nullptr))
         tracer->notify_execution_end();
 
     return evmc::make_result(state.status, gas_left,
