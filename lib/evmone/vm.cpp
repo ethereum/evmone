@@ -20,7 +20,7 @@ namespace evmone
 {
 namespace
 {
-struct BasicTracer : VMTracer
+class BasicTracer : public VMTracer
 {
     void onBeginExecution() noexcept final {}
 
@@ -29,7 +29,7 @@ struct BasicTracer : VMTracer
     void onEndExecution() noexcept final {}
 };
 
-struct HistogramTracer : VMTracer
+class HistogramTracer : public VMTracer
 {
     std::map<evmc_opcode, int> opcode_counter;
 

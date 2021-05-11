@@ -9,16 +9,22 @@
 namespace evmone
 {
 /// The evmone EVMC instance.
-class VM : public evmc_vm, TracerListNode
+class VM : public evmc_vm
 {
+    std::unique_ptr<VMTracer> m_first_tracer;
+
 public:
     inline constexpr VM() noexcept;
 
-    using TracerListNode::add_tracer;
-
-    [[nodiscard]] VMTracer* get_tracer() const noexcept
+    void add_tracer(std::unique_ptr<VMTracer> tracer) noexcept
     {
-        return TracerListNode::get_next_tracer();
+        // Find the first empty unique_ptr and assign the new tracer to it.
+        auto* end = &m_first_tracer;
+        while (*end)
+            end = &(*end)->m_next_tracer;
+        *end = std::move(tracer);
     }
+
+    [[nodiscard]] VMTracer* get_tracer() const noexcept { return m_first_tracer.get(); }
 };
 }  // namespace evmone
