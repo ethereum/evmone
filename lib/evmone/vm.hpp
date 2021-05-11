@@ -15,7 +15,7 @@ class TracerListNode
 {
     std::unique_ptr<VMTracer> m_next_tracer;
 
-public:
+protected:
     [[nodiscard]] VMTracer* get_next_tracer() const noexcept { return m_next_tracer.get(); }
 
     inline void add_tracer(std::unique_ptr<VMTracer> tracer) noexcept;
