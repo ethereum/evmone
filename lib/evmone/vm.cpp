@@ -33,15 +33,9 @@ struct HistogramTracer : VMTracer
 {
     std::map<evmc_opcode, int> opcode_counter;
 
-    void onBeginExecution() noexcept final
-    {
-        opcode_counter.clear();
-    }
+    void onBeginExecution() noexcept final { opcode_counter.clear(); }
 
-    void onOpcode(evmc_opcode opcode) noexcept final
-    {
-        ++opcode_counter[opcode];
-    }
+    void onOpcode(evmc_opcode opcode) noexcept final { ++opcode_counter[opcode]; }
 
     void onEndExecution() noexcept final
     {
