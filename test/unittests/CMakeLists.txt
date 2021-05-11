@@ -19,6 +19,7 @@ add_executable(evmone-unittests
     evmone_test.cpp
     execution_state_test.cpp
     op_table_test.cpp
+    tracing_test.cpp
     utils_test.cpp
 )
 target_link_libraries(evmone-unittests PRIVATE evmone testutils evmc::instructions GTest::gtest GTest::gtest_main)
