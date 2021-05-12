@@ -21,7 +21,9 @@ add_library(evmone
     instructions_calls.cpp
     limits.hpp
     opcodes_helpers.h
+    tracing.hpp
     vm.cpp
+    vm.hpp
 )
 target_link_libraries(evmone PUBLIC evmc::evmc intx::intx PRIVATE evmc::instructions ethash::keccak)
 target_include_directories(evmone PUBLIC
