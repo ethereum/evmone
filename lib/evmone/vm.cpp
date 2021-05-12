@@ -1,11 +1,11 @@
 // evmone: Fast Ethereum Virtual Machine implementation
-// Copyright 2018-2020 The evmone Authors.
+// Copyright 2018 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
 /// @file
-/// EVMC instance and entry point of evmone is defined here.
-/// The file name matches the evmone.h public header.
+/// EVMC instance (class VM) and entry point of evmone is defined here.
 
+#include "vm.hpp"
 #include "baseline.hpp"
 #include "execution.hpp"
 #include <evmone/evmone.h>
@@ -16,8 +16,8 @@ namespace
 {
 void destroy(evmc_vm* vm) noexcept
 {
-    // TODO: Mark function with [[gnu:nonnull]] or add CHECK().
-    delete vm;
+    assert(vm != nullptr);
+    delete static_cast<VM*>(vm);
 }
 
 constexpr evmc_capabilities_flagset get_capabilities(evmc_vm* /*vm*/) noexcept
@@ -43,13 +43,12 @@ evmc_set_option_result set_option(evmc_vm* vm, char const* name, char const* val
     }
     return EVMC_SET_OPTION_INVALID_NAME;
 }
-}  // namespace
-}  // namespace evmone
 
-extern "C" {
-EVMC_EXPORT evmc_vm* evmc_create_evmone() noexcept
-{
-    return new evmc_vm{
+}  // namespace
+
+
+inline constexpr VM::VM() noexcept
+  : evmc_vm{
         EVMC_ABI_VERSION,
         "evmone",
         PROJECT_VERSION,
@@ -57,6 +56,14 @@ EVMC_EXPORT evmc_vm* evmc_create_evmone() noexcept
         evmone::execute,
         evmone::get_capabilities,
         evmone::set_option,
-    };
+    }
+{}
+
+}  // namespace evmone
+
+extern "C" {
+EVMC_EXPORT evmc_vm* evmc_create_evmone() noexcept
+{
+    return new evmone::VM{};
 }
 }
