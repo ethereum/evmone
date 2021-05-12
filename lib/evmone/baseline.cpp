@@ -97,8 +97,12 @@ inline evmc_status_code check_requirements(const char* const* instruction_names,
 }
 }  // namespace
 
-evmc_result execute(const VM& /*vm*/, ExecutionState& state, const CodeAnalysis& analysis) noexcept
+evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& analysis) noexcept
 {
+    auto* tracer = vm.get_tracer();
+    if (INTX_UNLIKELY(tracer != nullptr))
+        tracer->notify_execution_start(state.rev, *state.msg, state.code);
+
     const auto rev = state.rev;
     const auto code = state.code.data();
     const auto code_size = state.code.size();
@@ -111,6 +115,9 @@ evmc_result execute(const VM& /*vm*/, ExecutionState& state, const CodeAnalysis&
     while (pc != code_end)
     {
         const auto op = *pc;
+
+        if (INTX_UNLIKELY(tracer != nullptr))
+            tracer->notify_instruction_start(static_cast<uint32_t>(pc - code));
 
         const auto status = check_requirements(instruction_names, instruction_metrics, state, op);
         if (status != EVMC_SUCCESS)
@@ -751,8 +758,13 @@ exit:
     const auto gas_left =
         (state.status == EVMC_SUCCESS || state.status == EVMC_REVERT) ? state.gas_left : 0;
 
-    return evmc::make_result(state.status, gas_left,
+    const auto result = evmc::make_result(state.status, gas_left,
         state.output_size != 0 ? &state.memory[state.output_offset] : nullptr, state.output_size);
+
+    if (INTX_UNLIKELY(tracer != nullptr))
+        tracer->notify_execution_end(result);
+
+    return result;
 }
 
 evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_context* ctx,
