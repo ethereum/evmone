@@ -97,15 +97,6 @@ inline evmc_status_code check_requirements(const char* const* instruction_names,
 }
 }  // namespace
 
-evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_context* ctx,
-    evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
-{
-    auto vm = static_cast<VM*>(c_vm);
-    const auto jumpdest_map = analyze(code, code_size);
-    auto state = std::make_unique<ExecutionState>(*msg, rev, *host, ctx, code, code_size);
-    return execute(*vm, *state, jumpdest_map);
-}
-
 evmc_result execute(const VM& /*vm*/, ExecutionState& state, const CodeAnalysis& analysis) noexcept
 {
     const auto rev = state.rev;
@@ -762,5 +753,14 @@ exit:
 
     return evmc::make_result(state.status, gas_left,
         state.output_size != 0 ? &state.memory[state.output_offset] : nullptr, state.output_size);
+}
+
+evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_context* ctx,
+    evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
+{
+    auto vm = static_cast<VM*>(c_vm);
+    const auto jumpdest_map = analyze(code, code_size);
+    auto state = std::make_unique<ExecutionState>(*msg, rev, *host, ctx, code, code_size);
+    return execute(*vm, *state, jumpdest_map);
 }
 }  // namespace evmone::baseline
