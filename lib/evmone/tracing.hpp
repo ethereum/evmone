@@ -5,6 +5,7 @@
 
 #include <evmc/instructions.h>
 #include <memory>
+#include <ostream>
 #include <string_view>
 
 namespace evmone
@@ -47,5 +48,12 @@ private:
     virtual void on_instruction_start(uint32_t pc) noexcept = 0;
     virtual void on_execution_end(const evmc_result& result) noexcept = 0;
 };
+
+/// Creates the "histogram" tracer which counts occurrences of individual opcodes during execution
+/// and reports this data in CSV format.
+///
+/// @param out  Report output stream.
+/// @return     Histogram tracer object.
+EVMC_EXPORT std::unique_ptr<Tracer> create_histogram_tracer(std::ostream& out);
 
 }  // namespace evmone

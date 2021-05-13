@@ -27,10 +27,11 @@ protected:
         vm{*static_cast<evmone::VM*>(m_baseline_vm.get_raw_pointer())}
     {}
 
-    std::string trace(bytes_view code)
+    std::string trace(bytes_view code, int32_t depth = 0)
     {
         evmc::MockedHost host;
         evmc_message msg{};
+        msg.depth = depth;
         msg.gas = 1000000;
         m_baseline_vm.execute(host, EVMC_BERLIN, msg, code.data(), code.size());
         auto result = trace_stream.str();
@@ -94,4 +95,43 @@ TEST_F(tracing, three_tracers)
     vm.add_tracer(std::make_unique<OpcodeTracer>(*this, "C"));
 
     EXPECT_EQ(trace(dup1(0)), "A0:PUSH1 B0:PUSH1 C0:PUSH1 A2:DUP1 B2:DUP1 C2:DUP1 ");
+}
+
+TEST_F(tracing, histogram)
+{
+    vm.add_tracer(evmone::create_histogram_tracer(trace_stream));
+
+    trace_stream << '\n';
+    EXPECT_EQ(trace(add(0, 0)), R"(
+--- # HISTOGRAM depth=0
+opcode,count
+ADD,1
+PUSH1,2
+)");
+}
+
+TEST_F(tracing, histogram_undefined_instruction)
+{
+    vm.add_tracer(evmone::create_histogram_tracer(trace_stream));
+
+    trace_stream << '\n';
+    EXPECT_EQ(trace(bytecode{"EF"}), R"(
+--- # HISTOGRAM depth=0
+opcode,count
+0xef,1
+)");
+}
+
+TEST_F(tracing, histogram_internal_call)
+{
+    vm.add_tracer(evmone::create_histogram_tracer(trace_stream));
+    trace_stream << '\n';
+    EXPECT_EQ(trace(push(0) + OP_DUP1 + OP_SWAP1 + OP_POP + OP_POP, 1), R"(
+--- # HISTOGRAM depth=1
+opcode,count
+POP,2
+PUSH1,1
+DUP1,1
+SWAP1,1
+)");
 }
