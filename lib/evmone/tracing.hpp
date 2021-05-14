@@ -12,6 +12,8 @@ namespace evmone
 {
 using bytes_view = std::basic_string_view<uint8_t>;
 
+struct ExecutionState;
+
 class Tracer
 {
     friend class VM;  // Has access the the m_next_tracer to traverse the list forward.
@@ -20,7 +22,7 @@ class Tracer
 public:
     virtual ~Tracer() = default;
 
-    void notify_execution_start(
+    void notify_execution_start(  // NOLINT(misc-no-recursion)
         evmc_revision rev, const evmc_message& msg, bytes_view code) noexcept
     {
         on_execution_start(rev, msg, code);
@@ -35,17 +37,18 @@ public:
             m_next_tracer->notify_execution_end(result);
     }
 
-    void notify_instruction_start(uint32_t pc) noexcept  // NOLINT(misc-no-recursion)
+    void notify_instruction_start(  // NOLINT(misc-no-recursion)
+        uint32_t pc, const ExecutionState& state) noexcept
     {
-        on_instruction_start(pc);
+        on_instruction_start(pc, state);
         if (m_next_tracer)
-            m_next_tracer->notify_instruction_start(pc);
+            m_next_tracer->notify_instruction_start(pc, state);
     }
 
 private:
     virtual void on_execution_start(
         evmc_revision rev, const evmc_message& msg, bytes_view code) noexcept = 0;
-    virtual void on_instruction_start(uint32_t pc) noexcept = 0;
+    virtual void on_instruction_start(uint32_t pc, const ExecutionState& state) noexcept = 0;
     virtual void on_execution_end(const evmc_result& result) noexcept = 0;
 };
 

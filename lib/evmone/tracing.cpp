@@ -40,7 +40,7 @@ class HistogramTracer : public Tracer
         m_contexts.emplace(msg.depth, code.data(), evmc_get_instruction_names_table(rev));
     }
 
-    void on_instruction_start(uint32_t pc) noexcept override
+    void on_instruction_start(uint32_t pc, const ExecutionState& /*state*/) noexcept override
     {
         auto& ctx = m_contexts.top();
         ++ctx.counts[ctx.code[pc]];

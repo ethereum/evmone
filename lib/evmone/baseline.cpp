@@ -115,7 +115,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     while (pc != code_end)
     {
         if constexpr (TracingEnabled)
-            tracer->notify_instruction_start(static_cast<uint32_t>(pc - code));
+            tracer->notify_instruction_start(static_cast<uint32_t>(pc - code), state);
 
         const auto op = *pc;
         const auto status = check_requirements(instruction_names, instruction_metrics, state, op);
