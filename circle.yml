@@ -268,7 +268,7 @@ jobs:
     executor: linux-gcc-latest
     environment:
       BUILD_TYPE: Coverage
-      TESTS_FILTER: unittests
+      TESTS_FILTER: unittests|integration
     steps:
       - build
       - test
@@ -290,8 +290,6 @@ jobs:
     environment:
       CMAKE_OPTIONS: -DSANITIZE=undefined,implicit-conversion,nullability
       UBSAN_OPTIONS: halt_on_error=1
-      # TODO: There is unresolved __ubsan_vptr_type_cache in evmone.so
-      TESTS_FILTER: unittests
     steps:
       - build
       - test
@@ -300,7 +298,7 @@ jobs:
     executor: linux-clang-latest
     environment:
       BUILD_TYPE: Coverage
-      TESTS_FILTER: unittests
+      TESTS_FILTER: unittests|integration
     steps:
       - build
       - run:
