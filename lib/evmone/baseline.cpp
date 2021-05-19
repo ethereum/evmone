@@ -32,6 +32,29 @@ CodeAnalysis analyze(const uint8_t* code, size_t code_size)
 
 namespace
 {
+template <unsigned ChunkSize>
+class CodeChuckAccessList
+{
+    std::vector<bool> m_access_map;
+
+public:
+    static constexpr auto cold_access_cost = 300;
+
+    size_t num_chunks(size_t code_size) { return (code_size + (ChunkSize - 1)) / ChunkSize; }
+
+    explicit CodeChuckAccessList(size_t code_size) { m_access_map.resize(num_chunks(code_size)); }
+
+    evmc_access_status access(const size_t offset) noexcept
+    {
+        const auto chunk_index = offset / ChunkSize;
+        if (m_access_map[chunk_index])
+            return EVMC_ACCESS_WARM;
+
+        m_access_map[chunk_index] = true;
+        return EVMC_ACCESS_COLD;
+    }
+};
+
 const uint8_t* op_jump(
     ExecutionState& state, const CodeAnalysis::JumpdestMap& jumpdest_map) noexcept
 {
@@ -99,6 +122,8 @@ inline evmc_status_code check_requirements(const char* const* instruction_names,
 template <bool TracingEnabled>
 evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& analysis) noexcept
 {
+    using CodeChuckAccessList = CodeChuckAccessList<32>;
+
     auto* tracer = vm.get_tracer();
     if constexpr (TracingEnabled)
         tracer->notify_execution_start(state.rev, *state.msg, state.code);
@@ -106,6 +131,8 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     const auto rev = state.rev;
     const auto code = state.code.data();
     const auto code_size = state.code.size();
+
+    CodeChuckAccessList ccal{code_size};
 
     const auto instruction_names = evmc_get_instruction_names_table(rev);
     const auto instruction_metrics = evmc_get_instruction_metrics_table(rev);
@@ -117,11 +144,20 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
         if constexpr (TracingEnabled)
             tracer->notify_instruction_start(static_cast<uint32_t>(pc - code));
 
+
         const auto op = *pc;
         const auto status = check_requirements(instruction_names, instruction_metrics, state, op);
         if (status != EVMC_SUCCESS)
         {
             state.status = status;
+            goto exit;
+        }
+
+        const auto code_offset = static_cast<size_t>(pc - code);
+        if (ccal.access(code_offset) == EVMC_ACCESS_COLD &&
+            ((state.gas_left -= CodeChuckAccessList::cold_access_cost) < 0))
+        {
+            state.status = EVMC_OUT_OF_GAS;
             goto exit;
         }
 
