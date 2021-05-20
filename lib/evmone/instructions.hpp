@@ -56,51 +56,51 @@ inline bool check_memory(ExecutionState& state, const uint256& offset, const uin
     return check_memory(state, offset, static_cast<uint64_t>(size));
 }
 
-inline void add(evm_stack& stack) noexcept
+inline void add(Stack& stack) noexcept
 {
     stack.top() += stack.pop();
 }
 
-inline void mul(evm_stack& stack) noexcept
+inline void mul(Stack& stack) noexcept
 {
     stack.top() *= stack.pop();
 }
 
-inline void sub(evm_stack& stack) noexcept
+inline void sub(Stack& stack) noexcept
 {
     stack[1] = stack[0] - stack[1];
     stack.pop();
 }
 
-inline void div(evm_stack& stack) noexcept
+inline void div(Stack& stack) noexcept
 {
     auto& v = stack[1];
     v = v != 0 ? stack[0] / v : 0;
     stack.pop();
 }
 
-inline void sdiv(evm_stack& stack) noexcept
+inline void sdiv(Stack& stack) noexcept
 {
     auto& v = stack[1];
     v = v != 0 ? intx::sdivrem(stack[0], v).quot : 0;
     stack.pop();
 }
 
-inline void mod(evm_stack& stack) noexcept
+inline void mod(Stack& stack) noexcept
 {
     auto& v = stack[1];
     v = v != 0 ? stack[0] % v : 0;
     stack.pop();
 }
 
-inline void smod(evm_stack& stack) noexcept
+inline void smod(Stack& stack) noexcept
 {
     auto& v = stack[1];
     v = v != 0 ? intx::sdivrem(stack[0], v).rem : 0;
     stack.pop();
 }
 
-inline void addmod(evm_stack& stack) noexcept
+inline void addmod(Stack& stack) noexcept
 {
     const auto x = stack.pop();
     const auto y = stack.pop();
@@ -108,7 +108,7 @@ inline void addmod(evm_stack& stack) noexcept
     m = m != 0 ? intx::addmod(x, y, m) : 0;
 }
 
-inline void mulmod(evm_stack& stack) noexcept
+inline void mulmod(Stack& stack) noexcept
 {
     const auto x = stack.pop();
     const auto y = stack.pop();
@@ -132,7 +132,7 @@ inline evmc_status_code exp(ExecutionState& state) noexcept
     return EVMC_SUCCESS;
 }
 
-inline void signextend(evm_stack& stack) noexcept
+inline void signextend(Stack& stack) noexcept
 {
     const auto ext = stack.pop();
     auto& x = stack.top();
@@ -147,19 +147,19 @@ inline void signextend(evm_stack& stack) noexcept
     }
 }
 
-inline void lt(evm_stack& stack) noexcept
+inline void lt(Stack& stack) noexcept
 {
     const auto x = stack.pop();
     stack[0] = x < stack[0];
 }
 
-inline void gt(evm_stack& stack) noexcept
+inline void gt(Stack& stack) noexcept
 {
     const auto x = stack.pop();
     stack[0] = stack[0] < x;  // TODO: Using < is faster than >.
 }
 
-inline void slt(evm_stack& stack) noexcept
+inline void slt(Stack& stack) noexcept
 {
     // TODO: Move this to intx.
     const auto x = stack.pop();
@@ -169,7 +169,7 @@ inline void slt(evm_stack& stack) noexcept
     y = ((x_neg ^ y_neg) != 0) ? x_neg : x < y;
 }
 
-inline void sgt(evm_stack& stack) noexcept
+inline void sgt(Stack& stack) noexcept
 {
     const auto x = stack.pop();
     auto& y = stack[0];
@@ -178,38 +178,38 @@ inline void sgt(evm_stack& stack) noexcept
     y = ((x_neg ^ y_neg) != 0) ? y_neg : y < x;
 }
 
-inline void eq(evm_stack& stack) noexcept
+inline void eq(Stack& stack) noexcept
 {
     stack[1] = stack[0] == stack[1];
     stack.pop();
 }
 
-inline void iszero(evm_stack& stack) noexcept
+inline void iszero(Stack& stack) noexcept
 {
     stack.top() = stack.top() == 0;
 }
 
-inline void and_(evm_stack& stack) noexcept
+inline void and_(Stack& stack) noexcept
 {
     stack.top() &= stack.pop();
 }
 
-inline void or_(evm_stack& stack) noexcept
+inline void or_(Stack& stack) noexcept
 {
     stack.top() |= stack.pop();
 }
 
-inline void xor_(evm_stack& stack) noexcept
+inline void xor_(Stack& stack) noexcept
 {
     stack.top() ^= stack.pop();
 }
 
-inline void not_(evm_stack& stack) noexcept
+inline void not_(Stack& stack) noexcept
 {
     stack.top() = ~stack.top();
 }
 
-inline void byte(evm_stack& stack) noexcept
+inline void byte(Stack& stack) noexcept
 {
     const auto n = stack.pop();
     auto& x = stack.top();
@@ -224,17 +224,17 @@ inline void byte(evm_stack& stack) noexcept
     }
 }
 
-inline void shl(evm_stack& stack) noexcept
+inline void shl(Stack& stack) noexcept
 {
     stack.top() <<= stack.pop();
 }
 
-inline void shr(evm_stack& stack) noexcept
+inline void shr(Stack& stack) noexcept
 {
     stack.top() >>= stack.pop();
 }
 
-inline void sar(evm_stack& stack) noexcept
+inline void sar(Stack& stack) noexcept
 {
     if ((stack[1] & (uint256{1} << 255)) == 0)
         return shr(stack);
@@ -554,7 +554,7 @@ inline void selfbalance(ExecutionState& state) noexcept
 }
 
 
-inline void pop(evm_stack& stack) noexcept
+inline void pop(Stack& stack) noexcept
 {
     stack.pop();
 }
@@ -671,7 +671,7 @@ inline void msize(ExecutionState& state) noexcept
 /// DUP instruction implementation.
 /// @tparam N  The number as in the instruction definition, e.g. DUP3 is dup<3>.
 template <size_t N>
-inline void dup(evm_stack& stack) noexcept
+inline void dup(Stack& stack) noexcept
 {
     static_assert(N >= 1 && N <= 16);
     stack.push(stack[N - 1]);
@@ -680,7 +680,7 @@ inline void dup(evm_stack& stack) noexcept
 /// SWAP instruction implementation.
 /// @tparam N  The number as in the instruction definition, e.g. SWAP3 is swap<3>.
 template <size_t N>
-inline void swap(evm_stack& stack) noexcept
+inline void swap(Stack& stack) noexcept
 {
     static_assert(N >= 1 && N <= 16);
     std::swap(stack.top(), stack[N]);

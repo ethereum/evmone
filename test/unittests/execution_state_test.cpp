@@ -140,7 +140,7 @@ TEST(execution_state, reset_advanced)
 
 TEST(execution_state, stack_clear)
 {
-    evmone::evm_stack stack;
+    evmone::Stack stack;
 
     stack.clear();
     EXPECT_EQ(stack.size(), 0);
@@ -157,4 +157,35 @@ TEST(execution_state, stack_clear)
     stack.clear();
     EXPECT_EQ(stack.size(), 0);
     EXPECT_EQ(stack.top_item + 1, stack.storage);
+}
+
+TEST(execution_state, const_stack)
+{
+    evmone::Stack stack;
+    stack.push(1);
+    stack.push(2);
+
+    const auto& cstack = stack;
+
+    EXPECT_EQ(cstack[0], 2);
+    EXPECT_EQ(cstack[1], 1);
+}
+
+TEST(execution_state, memory_view)
+{
+    evmone::Memory memory;
+    memory.resize(3);
+
+    evmone::bytes_view view{memory.data(), memory.size()};
+    ASSERT_EQ(view.size(), 3);
+    EXPECT_EQ(view[0], 0x00);
+    EXPECT_EQ(view[1], 0x00);
+    EXPECT_EQ(view[2], 0x00);
+
+    memory[0] = 0xc0;
+    memory[2] = 0xc2;
+    ASSERT_EQ(view.size(), 3);
+    EXPECT_EQ(view[0], 0xc0);
+    EXPECT_EQ(view[1], 0x00);
+    EXPECT_EQ(view[2], 0xc2);
 }
