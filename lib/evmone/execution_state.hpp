@@ -68,7 +68,7 @@ struct Stack
 /// Also std::basic_string<uint8_t> has been tried but not faster and we don't want SSO
 /// if initial_capacity is used.
 /// In future, transition to std::realloc() + std::free() planned.
-class evm_memory
+class Memory
 {
     /// The initial memory allocation.
     static constexpr size_t initial_capacity = 4 * 1024;
@@ -76,10 +76,10 @@ class evm_memory
     std::vector<uint8_t> m_memory;
 
 public:
-    evm_memory() noexcept { m_memory.reserve(initial_capacity); }
+    Memory() noexcept { m_memory.reserve(initial_capacity); }
 
-    evm_memory(const evm_memory&) = delete;
-    evm_memory& operator=(const evm_memory&) = delete;
+    Memory(const Memory&) = delete;
+    Memory& operator=(const Memory&) = delete;
 
     uint8_t& operator[](size_t index) noexcept { return m_memory[index]; }
 
@@ -95,7 +95,7 @@ struct ExecutionState
 {
     int64_t gas_left = 0;
     Stack stack;
-    evm_memory memory;
+    Memory memory;
     const evmc_message* msg = nullptr;
     evmc::HostContext host;
     evmc_revision rev = {};
