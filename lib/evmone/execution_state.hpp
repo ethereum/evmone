@@ -83,6 +83,7 @@ public:
 
     uint8_t& operator[](size_t index) noexcept { return m_memory[index]; }
 
+    [[nodiscard]] const uint8_t* data() const noexcept { return m_memory.data(); }
     [[nodiscard]] size_t size() const noexcept { return m_memory.size(); }
 
     void resize(size_t new_size) { m_memory.resize(new_size); }

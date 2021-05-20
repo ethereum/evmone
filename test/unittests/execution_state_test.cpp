@@ -170,3 +170,22 @@ TEST(execution_state, const_stack)
     EXPECT_EQ(cstack[0], 2);
     EXPECT_EQ(cstack[1], 1);
 }
+
+TEST(execution_state, memory_view)
+{
+    evmone::Memory memory;
+    memory.resize(3);
+
+    evmone::bytes_view view{memory.data(), memory.size()};
+    ASSERT_EQ(view.size(), 3);
+    EXPECT_EQ(view[0], 0x00);
+    EXPECT_EQ(view[1], 0x00);
+    EXPECT_EQ(view[2], 0x00);
+
+    memory[0] = 0xc0;
+    memory[2] = 0xc2;
+    ASSERT_EQ(view.size(), 3);
+    EXPECT_EQ(view[0], 0xc0);
+    EXPECT_EQ(view[1], 0x00);
+    EXPECT_EQ(view[2], 0xc2);
+}
