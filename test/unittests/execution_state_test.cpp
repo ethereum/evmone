@@ -158,3 +158,15 @@ TEST(execution_state, stack_clear)
     EXPECT_EQ(stack.size(), 0);
     EXPECT_EQ(stack.top_item + 1, stack.storage);
 }
+
+TEST(execution_state, const_stack)
+{
+    evmone::Stack stack;
+    stack.push(1);
+    stack.push(2);
+
+    const auto& cstack = stack;
+
+    EXPECT_EQ(cstack[0], 2);
+    EXPECT_EQ(cstack[1], 1);
+}

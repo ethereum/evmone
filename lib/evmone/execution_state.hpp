@@ -44,6 +44,12 @@ struct Stack
     /// Returns the reference to the stack item on given position from the stack top.
     [[nodiscard]] intx::uint256& operator[](int index) noexcept { return *(top_item - index); }
 
+    /// Returns the const reference to the stack item on given position from the stack top.
+    [[nodiscard]] const intx::uint256& operator[](int index) const noexcept
+    {
+        return *(top_item - index);
+    }
+
     /// Pushes an item on the stack. The stack limit is not checked.
     void push(const intx::uint256& item) noexcept { *++top_item = item; }
 
