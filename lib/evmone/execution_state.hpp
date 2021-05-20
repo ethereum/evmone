@@ -19,7 +19,7 @@ using bytes_view = std::basic_string_view<uint8_t>;
 ///
 /// This implementation reserves memory inplace for all possible stack items (1024),
 /// so this type is big. Make sure it is allocated on heap.
-struct evm_stack
+struct Stack
 {
     /// The maximum number of stack items.
     static constexpr auto limit = 1024;
@@ -33,7 +33,7 @@ struct evm_stack
     alignas(sizeof(intx::uint256)) intx::uint256 storage[limit];
 
     /// Default constructor. Sets the top_item pointer to below the stack bottom.
-    evm_stack() noexcept { clear(); }
+    Stack() noexcept { clear(); }
 
     /// The current number of items on the stack.
     [[nodiscard]] int size() const noexcept { return static_cast<int>(top_item + 1 - storage); }
@@ -88,7 +88,7 @@ public:
 struct ExecutionState
 {
     int64_t gas_left = 0;
-    evm_stack stack;
+    Stack stack;
     evm_memory memory;
     const evmc_message* msg = nullptr;
     evmc::HostContext host;

@@ -10,7 +10,7 @@ namespace evmone
 {
 namespace
 {
-template <void InstrFn(evm_stack&)>
+template <void InstrFn(Stack&)>
 const instruction* op(const instruction* instr, AdvancedExecutionState& state) noexcept
 {
     InstrFn(state.stack);
@@ -189,7 +189,7 @@ const instruction* opx_beginblock(const instruction* instr, AdvancedExecutionSta
     if (static_cast<int>(state.stack.size()) < block.stack_req)
         return state.exit(EVMC_STACK_UNDERFLOW);
 
-    if (static_cast<int>(state.stack.size()) + block.stack_max_growth > evm_stack::limit)
+    if (static_cast<int>(state.stack.size()) + block.stack_max_growth > Stack::limit)
         return state.exit(EVMC_STACK_OVERFLOW);
 
     state.current_block_cost = block.gas_cost;

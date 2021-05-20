@@ -140,7 +140,7 @@ TEST(execution_state, reset_advanced)
 
 TEST(execution_state, stack_clear)
 {
-    evmone::evm_stack stack;
+    evmone::Stack stack;
 
     stack.clear();
     EXPECT_EQ(stack.size(), 0);

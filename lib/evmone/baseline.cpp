@@ -90,7 +90,7 @@ inline evmc_status_code check_requirements(const char* const* instruction_names,
     const auto stack_size = state.stack.size();
     if (stack_size < metrics.stack_height_required)
         return EVMC_STACK_UNDERFLOW;
-    if (stack_size + metrics.stack_height_change > evm_stack::limit)
+    if (stack_size + metrics.stack_height_change > Stack::limit)
         return EVMC_STACK_OVERFLOW;
 
     return EVMC_SUCCESS;
