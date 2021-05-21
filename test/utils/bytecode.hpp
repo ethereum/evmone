@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
+#include <evmc/evmc.hpp>
 #include <evmc/instructions.h>
 #include <test/utils/utils.hpp>
 #include <algorithm>
@@ -101,6 +102,12 @@ inline bytecode push(uint64_t n)
     if (data.empty())
         data.push_back(0);
     return push(data);
+}
+
+inline bytecode push(evmc::bytes32 bs)
+{
+    bytes_view data{bs.bytes, sizeof(bs.bytes)};
+    return push(data.substr(std::min(data.find_first_not_of(uint8_t{0}), size_t{31})));
 }
 
 inline bytecode dup1(bytecode c)
