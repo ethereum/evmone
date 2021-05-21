@@ -9,6 +9,7 @@
 #include "baseline.hpp"
 #include "execution.hpp"
 #include <evmone/evmone.h>
+#include <iostream>
 
 namespace evmone
 {
@@ -25,21 +26,30 @@ constexpr evmc_capabilities_flagset get_capabilities(evmc_vm* /*vm*/) noexcept
     return EVMC_CAPABILITY_EVM1;
 }
 
-evmc_set_option_result set_option(evmc_vm* vm, char const* name, char const* value) noexcept
+evmc_set_option_result set_option(evmc_vm* c_vm, char const* c_name, char const* c_value) noexcept
 {
-    if (name[0] == 'O' && name[1] == '\0')
+    const auto name = (c_name != nullptr) ? std::string_view{c_name} : std::string_view{};
+    const auto value = (c_value != nullptr) ? std::string_view{c_value} : std::string_view{};
+    auto& vm = *static_cast<VM*>(c_vm);
+
+    if (name == "O")
     {
-        if (value[0] == '0' && value[1] == '\0')  // O=0
+        if (value == "0")
         {
-            vm->execute = evmone::baseline::execute;
+            c_vm->execute = evmone::baseline::execute;
             return EVMC_SET_OPTION_SUCCESS;
         }
-        else if (value[0] == '2' && value[1] == '\0')  // O=2
+        else if (value == "2")
         {
-            vm->execute = evmone::execute;
+            c_vm->execute = evmone::execute;
             return EVMC_SET_OPTION_SUCCESS;
         }
         return EVMC_SET_OPTION_INVALID_VALUE;
+    }
+    else if (name == "histogram")
+    {
+        vm.add_tracer(create_histogram_tracer(std::cerr));
+        return EVMC_SET_OPTION_SUCCESS;
     }
     return EVMC_SET_OPTION_INVALID_NAME;
 }

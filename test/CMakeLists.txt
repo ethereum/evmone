@@ -12,6 +12,7 @@ find_package(benchmark CONFIG REQUIRED)
 
 add_subdirectory(utils)
 add_subdirectory(bench)
+add_subdirectory(integration)
 add_subdirectory(internal_benchmarks)
 add_subdirectory(unittests)
 
