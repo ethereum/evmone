@@ -374,12 +374,12 @@ workflows:
               ignore: /.*/
             tags:
               only: /^v[0-9].*/
-      - consensus-tests
-      - gcc-min
-      - gcc-latest-coverage
-      - clang-latest-ubsan
-      - clang-latest-coverage
-      - macos-asan
-      - gcc-32bit
+#      - consensus-tests
+#      - gcc-min
+#      - gcc-latest-coverage
+#      - clang-latest-ubsan
+#      - clang-latest-coverage
+#      - macos-asan
+#      - gcc-32bit
       - wasi
 
