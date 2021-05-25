@@ -614,17 +614,17 @@ workflows:
               ignore: /.*/
             tags:
               only: /^v[0-9].*/
-      - state-tests
-      - blockchain-tests
-      - cmake-min
-      - gcc-min
-      - clang-min
-      - gcc-latest-coverage
-      - gcc-latest-memcheck
-      - clang-latest-sanitizers
-      - clang-latest-coverage
-      - macos-asan
-      - xcode-min
-      - gcc-32bit
-      - fuzzing
+#      - state-tests
+#      - blockchain-tests
+#      - cmake-min
+#      - gcc-min
+#      - clang-min
+3      - gcc-latest-coverage
+#      - gcc-latest-memcheck
+#      - clang-latest-sanitizers
+3      - clang-latest-coverage
+#      - macos-asan
+#      - xcode-min
+#      - gcc-32bit
+#      - fuzzing
       - wasi
