@@ -26,6 +26,7 @@ add_library(evmone
     vm.cpp
     vm.hpp
 )
+target_compile_features(evmone PUBLIC cxx_std_17)
 target_link_libraries(evmone PUBLIC evmc::evmc intx::intx PRIVATE evmc::instructions ethash::keccak)
 target_include_directories(evmone PUBLIC
     $<BUILD_INTERFACE:${include_dir}>$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
@@ -40,11 +41,11 @@ set_target_properties(
     SOVERSION ${PROJECT_SOVERSION}
 )
 
-if(NOT SANITIZE)
-    # On Linux, check if all symbols in evmone are resolved during linking.
-    target_link_options(evmone PRIVATE $<$<PLATFORM_ID:Linux>:LINKER:--no-undefined>)
-endif()
+#if(NOT SANITIZE)
+#    # On Linux, check if all symbols in evmone are resolved during linking.
+#    target_link_options(evmone PRIVATE $<$<PLATFORM_ID:Linux>:LINKER:--no-undefined>)
+#endif()
 
 set_source_files_properties(vm.cpp PROPERTIES COMPILE_DEFINITIONS PROJECT_VERSION="${PROJECT_VERSION}")
 
-add_standalone_library(evmone)
+#add_standalone_library(evmone)
