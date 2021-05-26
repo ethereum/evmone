@@ -43,7 +43,7 @@ option(EVMC_TOOLS "Build EVMC test tools" ${EVMONE_TESTING})
 option(EVMC_INSTALL "Install EVMC" OFF)
 add_subdirectory(evmc)
 
-cable_configure_compiler()
+cable_configure_compiler(NO_STACK_PROTECTION)
 if(CABLE_COMPILER_GNULIKE)
     add_compile_options(
         -Wmissing-declarations
