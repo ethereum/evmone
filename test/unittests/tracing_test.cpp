@@ -27,10 +27,11 @@ protected:
         vm{*static_cast<evmone::VM*>(m_baseline_vm.get_raw_pointer())}
     {}
 
-    std::string trace(bytes_view code, int32_t depth = 0)
+    std::string trace(bytes_view code, int32_t depth = 0, uint32_t flags = 0)
     {
         evmc::MockedHost host;
         evmc_message msg{};
+        msg.flags = flags;
         msg.depth = depth;
         msg.gas = 1000000;
         m_baseline_vm.execute(host, EVMC_BERLIN, msg, code.data(), code.size());
@@ -134,5 +135,123 @@ POP,2
 PUSH1,1
 DUP1,1
 SWAP1,1
+)");
+}
+
+TEST_F(tracing, trace)
+{
+    vm.add_tracer(evmone::create_instruction_tracer(trace_stream));
+
+    trace_stream << '\n';
+    EXPECT_EQ(trace(add(2, 3)), R"(
+{"depth":0,"rev":"Berlin","static":false}
+{"pc":0,"op":96,"opName":"PUSH1","gas":1000000,"stack":[],"memorySize":0}
+{"pc":2,"op":96,"opName":"PUSH1","gas":999997,"stack":["0x3"],"memorySize":0}
+{"pc":4,"op":1,"opName":"ADD","gas":999994,"stack":["0x3","0x2"],"memorySize":0}
+{"error":null,"gas":999991,"gasUsed":9,"output":""}
+)");
+}
+
+TEST_F(tracing, trace_stack)
+{
+    vm.add_tracer(evmone::create_instruction_tracer(trace_stream));
+
+    const auto code = push(1) + push(2) + push(3) + push(4) + OP_ADD + OP_ADD + OP_ADD;
+    trace_stream << '\n';
+    EXPECT_EQ(trace(code), R"(
+{"depth":0,"rev":"Berlin","static":false}
+{"pc":0,"op":96,"opName":"PUSH1","gas":1000000,"stack":[],"memorySize":0}
+{"pc":2,"op":96,"opName":"PUSH1","gas":999997,"stack":["0x1"],"memorySize":0}
+{"pc":4,"op":96,"opName":"PUSH1","gas":999994,"stack":["0x1","0x2"],"memorySize":0}
+{"pc":6,"op":96,"opName":"PUSH1","gas":999991,"stack":["0x1","0x2","0x3"],"memorySize":0}
+{"pc":8,"op":1,"opName":"ADD","gas":999988,"stack":["0x1","0x2","0x3","0x4"],"memorySize":0}
+{"pc":9,"op":1,"opName":"ADD","gas":999985,"stack":["0x1","0x2","0x7"],"memorySize":0}
+{"pc":10,"op":1,"opName":"ADD","gas":999982,"stack":["0x1","0x9"],"memorySize":0}
+{"error":null,"gas":999979,"gasUsed":21,"output":""}
+)");
+}
+
+TEST_F(tracing, trace_error)
+{
+    vm.add_tracer(evmone::create_instruction_tracer(trace_stream));
+
+    const auto code = bytecode{OP_POP};
+    trace_stream << '\n';
+    EXPECT_EQ(trace(code), R"(
+{"depth":0,"rev":"Berlin","static":false}
+{"pc":0,"op":80,"opName":"POP","gas":1000000,"stack":[],"memorySize":0}
+{"error":"stack underflow","gas":0,"gasUsed":1000000,"output":""}
+)");
+}
+
+TEST_F(tracing, trace_output)
+{
+    vm.add_tracer(evmone::create_instruction_tracer(trace_stream));
+
+    const auto code = push(0xabcdef) + ret_top();
+    trace_stream << '\n';
+    EXPECT_EQ(trace(code), R"(
+{"depth":0,"rev":"Berlin","static":false}
+{"pc":0,"op":98,"opName":"PUSH3","gas":1000000,"stack":[],"memorySize":0}
+{"pc":4,"op":96,"opName":"PUSH1","gas":999997,"stack":["0xabcdef"],"memorySize":0}
+{"pc":6,"op":82,"opName":"MSTORE","gas":999994,"stack":["0xabcdef","0x0"],"memorySize":0}
+{"pc":7,"op":96,"opName":"PUSH1","gas":999988,"stack":[],"memorySize":32}
+{"pc":9,"op":96,"opName":"PUSH1","gas":999985,"stack":["0x20"],"memorySize":32}
+{"pc":11,"op":243,"opName":"RETURN","gas":999982,"stack":["0x20","0x0"],"memorySize":32}
+{"error":null,"gas":999982,"gasUsed":18,"output":"0000000000000000000000000000000000000000000000000000000000abcdef"}
+)");
+}
+
+TEST_F(tracing, trace_revert)
+{
+    vm.add_tracer(evmone::create_instruction_tracer(trace_stream));
+
+    const auto code = mstore(0, 0x0e4404) + push(3) + push(29) + OP_REVERT;
+    trace_stream << '\n';
+    EXPECT_EQ(trace(code), R"(
+{"depth":0,"rev":"Berlin","static":false}
+{"pc":0,"op":98,"opName":"PUSH3","gas":1000000,"stack":[],"memorySize":0}
+{"pc":4,"op":96,"opName":"PUSH1","gas":999997,"stack":["0xe4404"],"memorySize":0}
+{"pc":6,"op":82,"opName":"MSTORE","gas":999994,"stack":["0xe4404","0x0"],"memorySize":0}
+{"pc":7,"op":96,"opName":"PUSH1","gas":999988,"stack":[],"memorySize":32}
+{"pc":9,"op":96,"opName":"PUSH1","gas":999985,"stack":["0x3"],"memorySize":32}
+{"pc":11,"op":253,"opName":"REVERT","gas":999982,"stack":["0x3","0x1d"],"memorySize":32}
+{"error":"revert","gas":999982,"gasUsed":18,"output":"0e4404"}
+)");
+}
+
+TEST_F(tracing, trace_create)
+{
+    vm.add_tracer(evmone::create_instruction_tracer(trace_stream));
+
+    trace_stream << '\n';
+    EXPECT_EQ(trace({}, 2), R"(
+{"depth":2,"rev":"Berlin","static":false}
+{"error":null,"gas":1000000,"gasUsed":0,"output":""}
+)");
+}
+
+TEST_F(tracing, trace_static)
+{
+    vm.add_tracer(evmone::create_instruction_tracer(trace_stream));
+
+    trace_stream << '\n';
+    EXPECT_EQ(trace({}, 2, EVMC_STATIC), R"(
+{"depth":2,"rev":"Berlin","static":true}
+{"error":null,"gas":1000000,"gasUsed":0,"output":""}
+)");
+}
+
+TEST_F(tracing, trace_undefined_instruction)
+{
+    vm.add_tracer(evmone::create_instruction_tracer(trace_stream));
+
+    const auto code = bytecode{} + OP_JUMPDEST + "EF";
+    trace_stream << '\n';
+    EXPECT_EQ(trace(code), R"(
+{"depth":0,"rev":"Berlin","static":false}
+{"pc":0,"op":91,"opName":"JUMPDEST","gas":1000000,"stack":[],"memorySize":0}
+{"pc":1,"op":239,"opName":"0xef","gas":999999,"stack":[],"memorySize":0}
+{"error":"undefined instruction","gas":0,"gasUsed":1000000,"output":""}
 )");
 }
