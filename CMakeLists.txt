@@ -40,8 +40,11 @@ hunter_add_package(ethash)
 find_package(ethash CONFIG REQUIRED)
 
 option(EVMC_TOOLS "Build EVMC test tools" ${EVMONE_TESTING})
+option(EVMC_TOOLING "Build EVMC test tools" ON)
 option(EVMC_INSTALL "Install EVMC" OFF)
 add_subdirectory(evmc)
+
+message("toooling: ${EVMC_TOOLING}")
 
 cable_configure_compiler(NO_STACK_PROTECTION)
 if(CABLE_COMPILER_GNULIKE)
@@ -97,6 +100,7 @@ endif()
 set(include_dir ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 add_subdirectory(lib)
+add_subdirectory(tools)
 
 if(EVMONE_TESTING)
     enable_testing()
