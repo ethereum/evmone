@@ -19,7 +19,7 @@ commands:
     steps:
       - restore_cache:
           name: "Restore Silkworm cache"
-          key: &silkworm-cache-key silkworm-20210413
+          key: &silkworm-cache-key silkworm-eip-3198-20210529
       - run:
           name: "Check Silkworm cache"
           command: |
@@ -38,8 +38,8 @@ commands:
           working_directory: ~/silkworm/src
           command: |
             [ "$SILKWORM_BUILD" = true ] || exit 0
-            git clone --no-checkout --single-branch https://github.com/torquem-ch/silkworm.git .
-            git checkout 3388d3ef7ba37ca440707a96a7d2886989073a59
+            git clone --no-checkout --single-branch https://github.com/torquem-ch/silkworm.git . --branch eip-3198
+            git checkout 07a4b7ab2849dc759249b204a455e309ab096412
             git submodule update --init --recursive --depth=1 --progress
       - run:
           name: "Configure Silkworm"

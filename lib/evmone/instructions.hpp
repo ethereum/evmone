@@ -403,6 +403,11 @@ inline void gasprice(ExecutionState& state) noexcept
     state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().tx_gas_price));
 }
 
+inline void basefee(ExecutionState& state) noexcept
+{
+    state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().block_base_fee));
+}
+
 inline evmc_status_code extcodesize(ExecutionState& state) noexcept
 {
     auto& x = state.stack.top();

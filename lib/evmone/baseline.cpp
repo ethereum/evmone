@@ -345,6 +345,9 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
         case OP_SELFBALANCE:
             selfbalance(state);
             break;
+        case OP_BASEFEE:
+            basefee(state);
+            break;
 
         case OP_POP:
             pop(state.stack);

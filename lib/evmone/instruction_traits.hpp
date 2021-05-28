@@ -94,6 +94,7 @@ constexpr inline std::array<Traits, 256> traits = []() noexcept {
     table[OP_GASLIMIT] = {"GASLIMIT", 0, 1};
     table[OP_CHAINID] = {"CHAINID", 0, 1};
     table[OP_SELFBALANCE] = {"SELFBALANCE", 0, 1};
+    table[OP_BASEFEE] = {"BASEFEE", 0, 1};
 
     table[OP_POP] = {"POP", 1, -1};
     table[OP_MLOAD] = {"MLOAD", 1, 0};
@@ -365,6 +366,7 @@ constexpr inline std::array<int16_t, 256> gas_costs<EVMC_BERLIN> = []() noexcept
 template <>
 constexpr inline std::array<int16_t, 256> gas_costs<EVMC_LONDON> = []() noexcept {
     auto table = gas_costs<EVMC_BERLIN>;
+    table[OP_BASEFEE] = 2;
     return table;
 }();
 

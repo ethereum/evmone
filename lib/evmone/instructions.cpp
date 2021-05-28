@@ -253,6 +253,7 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
     table[OP_GASLIMIT] = op<gaslimit>;
     table[OP_CHAINID] = op<chainid>;
     table[OP_SELFBALANCE] = op<selfbalance>;
+    table[OP_BASEFEE] = op<basefee>;
 
     table[OP_POP] = op<pop>;
     table[OP_MLOAD] = op<mload>;
