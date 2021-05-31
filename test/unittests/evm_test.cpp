@@ -333,7 +333,23 @@ TEST_P(evm, jump_over_jumpdest)
     EXPECT_GAS_USED(EVMC_SUCCESS, 3 + 8 + 1);
 }
 
-TEST_P(evm, pc)
+TEST_P(evm, pc_sum)
+{
+    const auto code = 4 * OP_PC + 3 * OP_ADD + ret_top();
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(6);
+}
+
+TEST_P(evm, pc_after_jump_1)
+{
+    const auto code = push(3) + OP_JUMP + OP_JUMPDEST + OP_PC + ret_top();
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(4);
+}
+
+TEST_P(evm, pc_after_jump_2)
 {
     const auto code = OP_CALLDATASIZE + push(9) + OP_JUMPI + push(12) + OP_PC + OP_SWAP1 + OP_JUMP +
                       OP_JUMPDEST + OP_GAS + OP_PC + OP_JUMPDEST + ret_top();
