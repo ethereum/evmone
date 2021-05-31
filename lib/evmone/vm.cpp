@@ -46,6 +46,11 @@ evmc_set_option_result set_option(evmc_vm* c_vm, char const* c_name, char const*
         }
         return EVMC_SET_OPTION_INVALID_VALUE;
     }
+    else if (name == "trace")
+    {
+        vm.add_tracer(create_instruction_tracer(std::cerr));
+        return EVMC_SET_OPTION_SUCCESS;
+    }
     else if (name == "histogram")
     {
         vm.add_tracer(create_histogram_tracer(std::cerr));
