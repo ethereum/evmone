@@ -263,7 +263,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
             break;
         }
         case OP_CODESIZE:
-            state.stack.push(code_size);
+            codesize(state);
             break;
         case OP_CODECOPY:
         {
