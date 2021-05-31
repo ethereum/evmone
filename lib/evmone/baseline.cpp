@@ -103,15 +103,12 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     if constexpr (TracingEnabled)
         tracer->notify_execution_start(state.rev, *state.msg, state.code);
 
-    const auto rev = state.rev;
-    const auto code = state.code.data();
-    const auto code_size = state.code.size();
+    const auto instruction_names = evmc_get_instruction_names_table(state.rev);
+    const auto instruction_metrics = evmc_get_instruction_metrics_table(state.rev);
 
-    const auto instruction_names = evmc_get_instruction_names_table(rev);
-    const auto instruction_metrics = evmc_get_instruction_metrics_table(rev);
-
-    const auto code_end = code + code_size;
-    auto* pc = code;
+    const auto* const code = state.code.data();
+    const auto* const code_end = code + state.code.size();
+    auto pc = code;
     while (pc != code_end)
     {
         if constexpr (TracingEnabled)
