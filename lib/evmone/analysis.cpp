@@ -87,6 +87,9 @@ AdvancedCodeAnalysis analyze(evmc_revision rev, const uint8_t* code, size_t code
         bool is_terminator = false;  // A flag whenever this is a block terminating instruction.
         switch (opcode)
         {
+        default:
+            break;
+
         case OP_JUMP:
         case OP_JUMPI:
         case OP_STOP:
