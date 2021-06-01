@@ -97,10 +97,13 @@ inline evmc_status_code check_requirements(
         return EVMC_OUT_OF_GAS;
 
     const auto stack_size = state.stack.size();
-    if (stack_size < metrics.stack_height_required)
+    if (INTX_UNLIKELY(stack_size == Stack::limit))
+    {
+        if (metrics.can_overflow_stack)
+            return EVMC_STACK_OVERFLOW;
+    }
+    else if (INTX_UNLIKELY(stack_size < metrics.stack_height_required))
         return EVMC_STACK_UNDERFLOW;
-    if (stack_size == Stack::limit && metrics.can_overflow_stack)
-        return EVMC_STACK_OVERFLOW;
 
     return EVMC_SUCCESS;
 }
