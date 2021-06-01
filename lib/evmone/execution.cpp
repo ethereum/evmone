@@ -20,7 +20,7 @@ evmc_result execute(AdvancedExecutionState& state, const AdvancedCodeAnalysis& a
         (state.status == EVMC_SUCCESS || state.status == EVMC_REVERT) ? state.gas_left : 0;
 
     return evmc::make_result(
-        state.status, gas_left, &state.memory[state.output_offset], state.output_size);
+        state.status, gas_left, state.memory.data() + state.output_offset, state.output_size);
 }
 
 evmc_result execute(evmc_vm* /*unused*/, const evmc_host_interface* host, evmc_host_context* ctx,
