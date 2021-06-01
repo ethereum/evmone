@@ -1,12 +1,27 @@
 // evmone: Fast Ethereum Virtual Machine implementation
 // Copyright 2020 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
+#pragma once
 
 #include <evmc/instructions.h>
 #include <array>
 
 namespace evmone::instr
 {
+/// EIP-2929 constants (https://eips.ethereum.org/EIPS/eip-2929).
+/// @{
+inline constexpr auto cold_sload_cost = 2100;
+inline constexpr auto cold_account_access_cost = 2600;
+inline constexpr auto warm_storage_read_cost = 100;
+
+/// Additional cold account access cost.
+///
+/// The warm access cost is unconditionally applied for every account access instruction.
+/// If the access turns out to be cold, this cost must be applied additionally.
+inline constexpr auto additional_cold_account_access_cost =
+    cold_account_access_cost - warm_storage_read_cost;
+/// @}
+
 /// The EVM instruction traits.
 struct Traits
 {
@@ -52,7 +67,7 @@ constexpr inline std::array<Traits, 256> traits = []() noexcept {
     table[OP_SHR] = {"SHR", 2, -1};
     table[OP_SAR] = {"SAR", 2, -1};
 
-    table[OP_SHA3] = {"SHA3", 2, -1};
+    table[OP_KECCAK256] = {"KECCAK256", 2, -1};
 
     table[OP_ADDRESS] = {"ADDRESS", 0, 1};
     table[OP_BALANCE] = {"BALANCE", 1, 0};
@@ -79,6 +94,7 @@ constexpr inline std::array<Traits, 256> traits = []() noexcept {
     table[OP_GASLIMIT] = {"GASLIMIT", 0, 1};
     table[OP_CHAINID] = {"CHAINID", 0, 1};
     table[OP_SELFBALANCE] = {"SELFBALANCE", 0, 1};
+    table[OP_BASEFEE] = {"BASEFEE", 0, 1};
 
     table[OP_POP] = {"POP", 1, -1};
     table[OP_MLOAD] = {"MLOAD", 1, 0};
@@ -218,7 +234,7 @@ constexpr inline std::array<int16_t, 256> gas_costs<EVMC_FRONTIER> = []() noexce
     table[OP_XOR] = 3;
     table[OP_NOT] = 3;
     table[OP_BYTE] = 3;
-    table[OP_SHA3] = 30;
+    table[OP_KECCAK256] = 30;
     table[OP_ADDRESS] = 2;
     table[OP_BALANCE] = 20;
     table[OP_ORIGIN] = 2;
@@ -333,5 +349,25 @@ constexpr inline std::array<int16_t, 256> gas_costs<EVMC_ISTANBUL> = []() noexce
 }();
 
 template <>
-constexpr inline auto gas_costs<EVMC_BERLIN> = gas_costs<EVMC_ISTANBUL>;
+constexpr inline std::array<int16_t, 256> gas_costs<EVMC_BERLIN> = []() noexcept {
+    auto table = gas_costs<EVMC_ISTANBUL>;
+    table[OP_EXTCODESIZE] = warm_storage_read_cost;
+    table[OP_EXTCODECOPY] = warm_storage_read_cost;
+    table[OP_EXTCODEHASH] = warm_storage_read_cost;
+    table[OP_BALANCE] = warm_storage_read_cost;
+    table[OP_CALL] = warm_storage_read_cost;
+    table[OP_CALLCODE] = warm_storage_read_cost;
+    table[OP_DELEGATECALL] = warm_storage_read_cost;
+    table[OP_STATICCALL] = warm_storage_read_cost;
+    table[OP_SLOAD] = warm_storage_read_cost;
+    return table;
+}();
+
+template <>
+constexpr inline std::array<int16_t, 256> gas_costs<EVMC_LONDON> = []() noexcept {
+    auto table = gas_costs<EVMC_BERLIN>;
+    table[OP_BASEFEE] = 2;
+    return table;
+}();
+
 }  // namespace evmone::instr

@@ -58,7 +58,6 @@ TEST_P(evm, codecopy_combinations)
 
 TEST_P(evm, storage)
 {
-    host.accounts[msg.destination] = {};
     const auto code = sstore(0xee, 0xff) + sload(0xee) + mstore8(0) + ret(0, 1);
     execute(100000, code);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
@@ -69,7 +68,6 @@ TEST_P(evm, storage)
 
 TEST_P(evm, sstore_pop_stack)
 {
-    host.accounts[msg.destination] = {};
     execute(100000, bytecode{"60008060015560005360016000f3"});
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     ASSERT_EQ(result.output_size, 1);

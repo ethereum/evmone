@@ -13,11 +13,11 @@ static_assert(!std::is_copy_constructible<evmone::ExecutionState>::value);
 static_assert(!std::is_move_assignable<evmone::ExecutionState>::value);
 static_assert(!std::is_copy_assignable<evmone::ExecutionState>::value);
 
-static_assert(std::is_default_constructible<evmone::execution_state>::value);
-static_assert(!std::is_move_constructible<evmone::execution_state>::value);
-static_assert(!std::is_copy_constructible<evmone::execution_state>::value);
-static_assert(!std::is_move_assignable<evmone::execution_state>::value);
-static_assert(!std::is_copy_assignable<evmone::execution_state>::value);
+static_assert(std::is_default_constructible<evmone::AdvancedExecutionState>::value);
+static_assert(!std::is_move_constructible<evmone::AdvancedExecutionState>::value);
+static_assert(!std::is_copy_constructible<evmone::AdvancedExecutionState>::value);
+static_assert(!std::is_move_assignable<evmone::AdvancedExecutionState>::value);
+static_assert(!std::is_copy_assignable<evmone::AdvancedExecutionState>::value);
 
 TEST(execution_state, construct)
 {
@@ -60,7 +60,7 @@ TEST(execution_state, default_construct)
 
 TEST(execution_state, default_construct_advanced)
 {
-    const evmone::execution_state st;
+    const evmone::AdvancedExecutionState st;
 
     EXPECT_EQ(st.gas_left, 0);
     EXPECT_EQ(st.stack.size(), 0);
@@ -82,9 +82,9 @@ TEST(execution_state, reset_advanced)
 {
     const evmc_message msg{};
     const uint8_t code[]{0xff};
-    evmone::code_analysis analysis;
+    evmone::AdvancedCodeAnalysis analysis;
 
-    evmone::execution_state st;
+    evmone::AdvancedExecutionState st;
     st.gas_left = 1;
     st.stack.push({});
     st.memory.resize(2);
@@ -117,10 +117,8 @@ TEST(execution_state, reset_advanced)
         msg2.gas = 13;
         const evmc_host_interface host_interface2{};
         const uint8_t code2[]{0x80, 0x81};
-        evmone::code_analysis analysis2;
 
-        st.reset(
-            msg2, EVMC_HOMESTEAD, host_interface2, nullptr, code2, std::size(code2), analysis2);
+        st.reset(msg2, EVMC_HOMESTEAD, host_interface2, nullptr, code2, std::size(code2));
 
         // TODO: We are not able to test HostContext with current API. It may require an execution
         //       test.
@@ -136,13 +134,13 @@ TEST(execution_state, reset_advanced)
         EXPECT_EQ(st.output_offset, 0);
         EXPECT_EQ(st.output_size, 0);
         EXPECT_EQ(st.current_block_cost, 0u);
-        EXPECT_EQ(st.analysis, &analysis2);
+        EXPECT_EQ(st.analysis, nullptr);
     }
 }
 
 TEST(execution_state, stack_clear)
 {
-    evmone::evm_stack stack;
+    evmone::Stack stack;
 
     stack.clear();
     EXPECT_EQ(stack.size(), 0);
@@ -159,4 +157,35 @@ TEST(execution_state, stack_clear)
     stack.clear();
     EXPECT_EQ(stack.size(), 0);
     EXPECT_EQ(stack.top_item + 1, stack.storage);
+}
+
+TEST(execution_state, const_stack)
+{
+    evmone::Stack stack;
+    stack.push(1);
+    stack.push(2);
+
+    const auto& cstack = stack;
+
+    EXPECT_EQ(cstack[0], 2);
+    EXPECT_EQ(cstack[1], 1);
+}
+
+TEST(execution_state, memory_view)
+{
+    evmone::Memory memory;
+    memory.resize(3);
+
+    evmone::bytes_view view{memory.data(), memory.size()};
+    ASSERT_EQ(view.size(), 3);
+    EXPECT_EQ(view[0], 0x00);
+    EXPECT_EQ(view[1], 0x00);
+    EXPECT_EQ(view[2], 0x00);
+
+    memory[0] = 0xc0;
+    memory[2] = 0xc2;
+    ASSERT_EQ(view.size(), 3);
+    EXPECT_EQ(view[0], 0xc0);
+    EXPECT_EQ(view[1], 0x00);
+    EXPECT_EQ(view[2], 0xc2);
 }

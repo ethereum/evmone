@@ -5,30 +5,35 @@
 #include "baseline.hpp"
 #include "execution_state.hpp"
 #include "instructions.hpp"
+#include "vm.hpp"
 #include <evmc/instructions.h>
 #include <memory>
 
-namespace evmone
+namespace evmone::baseline
 {
-namespace
+CodeAnalysis analyze(const uint8_t* code, size_t code_size)
 {
-using JumpdestMap = std::vector<bool>;
+    // To find if op is any PUSH opcode (OP_PUSH1 <= op <= OP_PUSH32)
+    // it can be noticed that OP_PUSH32 is INT8_MAX (0x7f) therefore
+    // static_cast<int8_t>(op) <= OP_PUSH32 is always true and can be skipped.
+    static_assert(OP_PUSH32 == std::numeric_limits<int8_t>::max());
 
-JumpdestMap build_jumpdest_map(const uint8_t* code, size_t code_size)
-{
-    JumpdestMap m(code_size);
+    CodeAnalysis::JumpdestMap map(code_size);  // Allocate and init bitmap with zeros.
     for (size_t i = 0; i < code_size; ++i)
     {
         const auto op = code[i];
-        if (op == OP_JUMPDEST)
-            m[i] = true;
-        else if (op >= OP_PUSH1 && op <= OP_PUSH32)
-            i += static_cast<size_t>(op - OP_PUSH1 + 1);
+        if (static_cast<int8_t>(op) >= OP_PUSH1)  // If any PUSH opcode (see explanation above).
+            i += op - size_t{OP_PUSH1 - 1};       // Skip PUSH data.
+        else if (INTX_UNLIKELY(op == OP_JUMPDEST))
+            map[i] = true;
     }
-    return m;
+    return CodeAnalysis{std::move(map)};
 }
 
-const uint8_t* op_jump(ExecutionState& state, const JumpdestMap& jumpdest_map) noexcept
+namespace
+{
+const uint8_t* op_jump(
+    ExecutionState& state, const CodeAnalysis::JumpdestMap& jumpdest_map) noexcept
 {
     const auto dst = state.stack.pop();
     if (dst >= jumpdest_map.size() || !jumpdest_map[static_cast<size_t>(dst)])
@@ -85,37 +90,31 @@ inline evmc_status_code check_requirements(const char* const* instruction_names,
     const auto stack_size = state.stack.size();
     if (stack_size < metrics.stack_height_required)
         return EVMC_STACK_UNDERFLOW;
-    if (stack_size + metrics.stack_height_change > evm_stack::limit)
+    if (stack_size + metrics.stack_height_change > Stack::limit)
         return EVMC_STACK_OVERFLOW;
 
     return EVMC_SUCCESS;
 }
-}  // namespace
 
-evmc_result baseline_execute(evmc_vm* /*vm*/, const evmc_host_interface* host,
-    evmc_host_context* ctx, evmc_revision rev, const evmc_message* msg, const uint8_t* code,
-    size_t code_size) noexcept
+template <bool TracingEnabled>
+evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& analysis) noexcept
 {
-    auto state = std::make_unique<ExecutionState>(*msg, rev, *host, ctx, code, code_size);
-    return baseline_execute(*state);
-}
+    auto* tracer = vm.get_tracer();
+    if constexpr (TracingEnabled)
+        tracer->notify_execution_start(state.rev, *state.msg, state.code);
 
-evmc_result baseline_execute(ExecutionState& state) noexcept
-{
-    const auto rev = state.rev;
-    const auto code = state.code.data();
-    const auto code_size = state.code.size();
+    const auto instruction_names = evmc_get_instruction_names_table(state.rev);
+    const auto instruction_metrics = evmc_get_instruction_metrics_table(state.rev);
 
-    const auto instruction_names = evmc_get_instruction_names_table(rev);
-    const auto instruction_metrics = evmc_get_instruction_metrics_table(rev);
-    const auto jumpdest_map = build_jumpdest_map(code, code_size);
-
-    const auto code_end = code + code_size;
-    auto* pc = code;
+    const auto* const code = state.code.data();
+    const auto* const code_end = code + state.code.size();
+    auto pc = code;
     while (pc != code_end)
     {
-        const auto op = *pc;
+        if constexpr (TracingEnabled)
+            tracer->notify_instruction_start(static_cast<uint32_t>(pc - code), state);
 
+        const auto op = *pc;
         const auto status = check_requirements(instruction_names, instruction_metrics, state, op);
         if (status != EVMC_SUCCESS)
         {
@@ -211,9 +210,9 @@ evmc_result baseline_execute(ExecutionState& state) noexcept
             sar(state.stack);
             break;
 
-        case OP_SHA3:
+        case OP_KECCAK256:
         {
-            const auto status_code = sha3(state);
+            const auto status_code = keccak256(state);
             if (status_code != EVMC_SUCCESS)
             {
                 state.status = status_code;
@@ -226,8 +225,15 @@ evmc_result baseline_execute(ExecutionState& state) noexcept
             address(state);
             break;
         case OP_BALANCE:
-            balance(state);
+        {
+            const auto status_code = balance(state);
+            if (status_code != EVMC_SUCCESS)
+            {
+                state.status = status_code;
+                goto exit;
+            }
             break;
+        }
         case OP_ORIGIN:
             origin(state);
             break;
@@ -254,7 +260,7 @@ evmc_result baseline_execute(ExecutionState& state) noexcept
             break;
         }
         case OP_CODESIZE:
-            state.stack.push(code_size);
+            codesize(state);
             break;
         case OP_CODECOPY:
         {
@@ -270,8 +276,15 @@ evmc_result baseline_execute(ExecutionState& state) noexcept
             gasprice(state);
             break;
         case OP_EXTCODESIZE:
-            extcodesize(state);
+        {
+            const auto status_code = extcodesize(state);
+            if (status_code != EVMC_SUCCESS)
+            {
+                state.status = status_code;
+                goto exit;
+            }
             break;
+        }
         case OP_EXTCODECOPY:
         {
             const auto status_code = extcodecopy(state);
@@ -296,9 +309,15 @@ evmc_result baseline_execute(ExecutionState& state) noexcept
             break;
         }
         case OP_EXTCODEHASH:
-            extcodehash(state);
+        {
+            const auto status_code = extcodehash(state);
+            if (status_code != EVMC_SUCCESS)
+            {
+                state.status = status_code;
+                goto exit;
+            }
             break;
-
+        }
         case OP_BLOCKHASH:
             blockhash(state);
             break;
@@ -322,6 +341,9 @@ evmc_result baseline_execute(ExecutionState& state) noexcept
             break;
         case OP_SELFBALANCE:
             selfbalance(state);
+            break;
+        case OP_BASEFEE:
+            basefee(state);
             break;
 
         case OP_POP:
@@ -359,12 +381,12 @@ evmc_result baseline_execute(ExecutionState& state) noexcept
         }
 
         case OP_JUMP:
-            pc = op_jump(state, jumpdest_map);
+            pc = op_jump(state, analysis.jumpdest_map);
             continue;
         case OP_JUMPI:
             if (state.stack[1] != 0)
             {
-                pc = op_jump(state, jumpdest_map);
+                pc = op_jump(state, analysis.jumpdest_map);
             }
             else
             {
@@ -381,8 +403,15 @@ evmc_result baseline_execute(ExecutionState& state) noexcept
             msize(state);
             break;
         case OP_SLOAD:
-            sload(state);
+        {
+            const auto status_code = sload(state);
+            if (status_code != EVMC_SUCCESS)
+            {
+                state.status = status_code;
+                goto exit;
+            }
             break;
+        }
         case OP_SSTORE:
         {
             const auto status_code = sstore(state);
@@ -728,7 +757,30 @@ exit:
     const auto gas_left =
         (state.status == EVMC_SUCCESS || state.status == EVMC_REVERT) ? state.gas_left : 0;
 
-    return evmc::make_result(state.status, gas_left,
+    const auto result = evmc::make_result(state.status, gas_left,
         state.output_size != 0 ? &state.memory[state.output_offset] : nullptr, state.output_size);
+
+    if constexpr (TracingEnabled)
+        tracer->notify_execution_end(result);
+
+    return result;
 }
-}  // namespace evmone
+}  // namespace
+
+evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& analysis) noexcept
+{
+    if (INTX_UNLIKELY(vm.get_tracer() != nullptr))
+        return execute<true>(vm, state, analysis);
+
+    return execute<false>(vm, state, analysis);
+}
+
+evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_context* ctx,
+    evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
+{
+    auto vm = static_cast<VM*>(c_vm);
+    const auto jumpdest_map = analyze(code, code_size);
+    auto state = std::make_unique<ExecutionState>(*msg, rev, *host, ctx, code, code_size);
+    return execute(*vm, *state, jumpdest_map);
+}
+}  // namespace evmone::baseline

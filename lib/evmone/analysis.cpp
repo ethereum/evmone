@@ -39,12 +39,12 @@ struct block_analysis
     }
 };
 
-code_analysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
+AdvancedCodeAnalysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
 {
     const auto& op_tbl = get_op_table(rev);
     const auto opx_beginblock_fn = op_tbl[OPX_BEGINBLOCK].fn;
 
-    code_analysis analysis;
+    AdvancedCodeAnalysis analysis;
 
     const auto max_instrs_size = code_size + 1;
     analysis.instrs.reserve(max_instrs_size);

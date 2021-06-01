@@ -5,13 +5,31 @@
 
 #include "execution_state.hpp"
 #include <evmc/evmc.h>
+#include <evmc/utils.h>
+#include <vector>
 
 namespace evmone
 {
+class VM;
+
+namespace baseline
+{
+struct CodeAnalysis
+{
+    using JumpdestMap = std::vector<bool>;
+
+    JumpdestMap jumpdest_map;
+};
+
+/// Analyze the code to build the bitmap of valid JUMPDEST locations.
+EVMC_EXPORT CodeAnalysis analyze(const uint8_t* code, size_t code_size);
+
 /// Executes in Baseline interpreter using EVMC-compatible parameters.
-evmc_result baseline_execute(evmc_vm* vm, const evmc_host_interface* host, evmc_host_context* ctx,
+evmc_result execute(evmc_vm* vm, const evmc_host_interface* host, evmc_host_context* ctx,
     evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept;
 
 /// Executes in Baseline interpreter on the given external and initialized state.
-evmc_result baseline_execute(ExecutionState& state) noexcept;
+evmc_result execute(const VM&, ExecutionState& state, const CodeAnalysis& analysis) noexcept;
+
+}  // namespace baseline
 }  // namespace evmone

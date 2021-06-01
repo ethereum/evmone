@@ -72,6 +72,12 @@ protected:
         msg.input_size = input.size();
         msg.gas = gas;
 
+        if (rev >= EVMC_BERLIN)  // Add EIP-2929 tweak.
+        {
+            host.access_account(msg.sender);
+            host.access_account(msg.destination);
+        }
+
         result = vm.execute(host, rev, msg, code.data(), code.size());
         output = {result.output_data, result.output_size};
         gas_used = msg.gas - result.gas_left;

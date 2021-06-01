@@ -19,7 +19,7 @@ using bytes_view = std::basic_string_view<uint8_t>;
 ///
 /// This implementation reserves memory inplace for all possible stack items (1024),
 /// so this type is big. Make sure it is allocated on heap.
-struct evm_stack
+struct Stack
 {
     /// The maximum number of stack items.
     static constexpr auto limit = 1024;
@@ -33,7 +33,7 @@ struct evm_stack
     alignas(sizeof(intx::uint256)) intx::uint256 storage[limit];
 
     /// Default constructor. Sets the top_item pointer to below the stack bottom.
-    evm_stack() noexcept { clear(); }
+    Stack() noexcept { clear(); }
 
     /// The current number of items on the stack.
     [[nodiscard]] int size() const noexcept { return static_cast<int>(top_item + 1 - storage); }
@@ -43,6 +43,12 @@ struct evm_stack
 
     /// Returns the reference to the stack item on given position from the stack top.
     [[nodiscard]] intx::uint256& operator[](int index) noexcept { return *(top_item - index); }
+
+    /// Returns the const reference to the stack item on given position from the stack top.
+    [[nodiscard]] const intx::uint256& operator[](int index) const noexcept
+    {
+        return *(top_item - index);
+    }
 
     /// Pushes an item on the stack. The stack limit is not checked.
     void push(const intx::uint256& item) noexcept { *++top_item = item; }
@@ -62,7 +68,7 @@ struct evm_stack
 /// Also std::basic_string<uint8_t> has been tried but not faster and we don't want SSO
 /// if initial_capacity is used.
 /// In future, transition to std::realloc() + std::free() planned.
-class evm_memory
+class Memory
 {
     /// The initial memory allocation.
     static constexpr size_t initial_capacity = 4 * 1024;
@@ -70,13 +76,14 @@ class evm_memory
     std::vector<uint8_t> m_memory;
 
 public:
-    evm_memory() noexcept { m_memory.reserve(initial_capacity); }
+    Memory() noexcept { m_memory.reserve(initial_capacity); }
 
-    evm_memory(const evm_memory&) = delete;
-    evm_memory& operator=(const evm_memory&) = delete;
+    Memory(const Memory&) = delete;
+    Memory& operator=(const Memory&) = delete;
 
     uint8_t& operator[](size_t index) noexcept { return m_memory[index]; }
 
+    [[nodiscard]] const uint8_t* data() const noexcept { return m_memory.data(); }
     [[nodiscard]] size_t size() const noexcept { return m_memory.size(); }
 
     void resize(size_t new_size) { m_memory.resize(new_size); }
@@ -88,8 +95,8 @@ public:
 struct ExecutionState
 {
     int64_t gas_left = 0;
-    evm_stack stack;
-    evm_memory memory;
+    Stack stack;
+    Memory memory;
     const evmc_message* msg = nullptr;
     evmc::HostContext host;
     evmc_revision rev = {};

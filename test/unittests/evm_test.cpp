@@ -333,7 +333,23 @@ TEST_P(evm, jump_over_jumpdest)
     EXPECT_GAS_USED(EVMC_SUCCESS, 3 + 8 + 1);
 }
 
-TEST_P(evm, pc)
+TEST_P(evm, pc_sum)
+{
+    const auto code = 4 * OP_PC + 3 * OP_ADD + ret_top();
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(6);
+}
+
+TEST_P(evm, pc_after_jump_1)
+{
+    const auto code = push(3) + OP_JUMP + OP_JUMPDEST + OP_PC + ret_top();
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(4);
+}
+
+TEST_P(evm, pc_after_jump_2)
 {
     const auto code = OP_CALLDATASIZE + push(9) + OP_JUMPI + push(12) + OP_PC + OP_SWAP1 + OP_JUMP +
                       OP_JUMPDEST + OP_GAS + OP_PC + OP_JUMPDEST + ret_top();
@@ -598,7 +614,7 @@ TEST_P(evm, invalid)
     EXPECT_EQ(result.gas_left, 0);
 }
 
-TEST_P(evm, sha3)
+TEST_P(evm, keccak256)
 {
     execute("6108006103ff2060005260206000f3");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
@@ -608,9 +624,9 @@ TEST_P(evm, sha3)
     EXPECT_EQ(bytes(&result.output_data[0], 32), hash);
 }
 
-TEST_P(evm, sha3_empty)
+TEST_P(evm, keccak256_empty)
 {
-    auto code = push(0) + OP_DUP1 + OP_SHA3 + ret_top();
+    auto code = push(0) + OP_DUP1 + OP_KECCAK256 + ret_top();
     execute(code);
     ASSERT_EQ(result.output_size, 32);
     auto keccak256_empty = "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
@@ -820,11 +836,11 @@ TEST_P(evm, mstore8_memory_cost)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
-TEST_P(evm, sha3_memory_cost)
+TEST_P(evm, keccak256_memory_cost)
 {
-    execute(45, sha3(0, 1));
+    execute(45, keccak256(0, 1));
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    execute(44, sha3(0, 1));
+    execute(44, keccak256(0, 1));
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
@@ -894,7 +910,7 @@ struct memory_access_params
 };
 
 memory_access_opcode memory_access_opcodes[] = {
-    {OP_SHA3, 0, 1},
+    {OP_KECCAK256, 0, 1},
     {OP_CALLDATACOPY, 0, 2},
     {OP_CODECOPY, 0, 2},
     {OP_MLOAD, 0, -1},

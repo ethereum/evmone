@@ -13,11 +13,14 @@ add_executable(evmone-unittests
     evm_fixture.hpp
     evm_test.cpp
     evm_calls_test.cpp
+    evm_eip2929_test.cpp
+    evm_eip3198_basefee_test.cpp
     evm_state_test.cpp
     evm_other_test.cpp
     evmone_test.cpp
     execution_state_test.cpp
     op_table_test.cpp
+    tracing_test.cpp
     utils_test.cpp
 )
 target_link_libraries(evmone-unittests PRIVATE evmone testutils evmc::instructions GTest::gtest GTest::gtest_main)

@@ -4,8 +4,8 @@
 #pragma once
 
 #include "execution_state.hpp"
+#include "instruction_traits.hpp"
 #include <ethash/keccak.hpp>
-#include <evmc/instructions.h>
 
 namespace evmone
 {
@@ -56,51 +56,51 @@ inline bool check_memory(ExecutionState& state, const uint256& offset, const uin
     return check_memory(state, offset, static_cast<uint64_t>(size));
 }
 
-inline void add(evm_stack& stack) noexcept
+inline void add(Stack& stack) noexcept
 {
     stack.top() += stack.pop();
 }
 
-inline void mul(evm_stack& stack) noexcept
+inline void mul(Stack& stack) noexcept
 {
     stack.top() *= stack.pop();
 }
 
-inline void sub(evm_stack& stack) noexcept
+inline void sub(Stack& stack) noexcept
 {
     stack[1] = stack[0] - stack[1];
     stack.pop();
 }
 
-inline void div(evm_stack& stack) noexcept
+inline void div(Stack& stack) noexcept
 {
     auto& v = stack[1];
     v = v != 0 ? stack[0] / v : 0;
     stack.pop();
 }
 
-inline void sdiv(evm_stack& stack) noexcept
+inline void sdiv(Stack& stack) noexcept
 {
     auto& v = stack[1];
     v = v != 0 ? intx::sdivrem(stack[0], v).quot : 0;
     stack.pop();
 }
 
-inline void mod(evm_stack& stack) noexcept
+inline void mod(Stack& stack) noexcept
 {
     auto& v = stack[1];
     v = v != 0 ? stack[0] % v : 0;
     stack.pop();
 }
 
-inline void smod(evm_stack& stack) noexcept
+inline void smod(Stack& stack) noexcept
 {
     auto& v = stack[1];
     v = v != 0 ? intx::sdivrem(stack[0], v).rem : 0;
     stack.pop();
 }
 
-inline void addmod(evm_stack& stack) noexcept
+inline void addmod(Stack& stack) noexcept
 {
     const auto x = stack.pop();
     const auto y = stack.pop();
@@ -108,7 +108,7 @@ inline void addmod(evm_stack& stack) noexcept
     m = m != 0 ? intx::addmod(x, y, m) : 0;
 }
 
-inline void mulmod(evm_stack& stack) noexcept
+inline void mulmod(Stack& stack) noexcept
 {
     const auto x = stack.pop();
     const auto y = stack.pop();
@@ -132,7 +132,7 @@ inline evmc_status_code exp(ExecutionState& state) noexcept
     return EVMC_SUCCESS;
 }
 
-inline void signextend(evm_stack& stack) noexcept
+inline void signextend(Stack& stack) noexcept
 {
     const auto ext = stack.pop();
     auto& x = stack.top();
@@ -147,19 +147,19 @@ inline void signextend(evm_stack& stack) noexcept
     }
 }
 
-inline void lt(evm_stack& stack) noexcept
+inline void lt(Stack& stack) noexcept
 {
     const auto x = stack.pop();
     stack[0] = x < stack[0];
 }
 
-inline void gt(evm_stack& stack) noexcept
+inline void gt(Stack& stack) noexcept
 {
     const auto x = stack.pop();
     stack[0] = stack[0] < x;  // TODO: Using < is faster than >.
 }
 
-inline void slt(evm_stack& stack) noexcept
+inline void slt(Stack& stack) noexcept
 {
     // TODO: Move this to intx.
     const auto x = stack.pop();
@@ -169,7 +169,7 @@ inline void slt(evm_stack& stack) noexcept
     y = ((x_neg ^ y_neg) != 0) ? x_neg : x < y;
 }
 
-inline void sgt(evm_stack& stack) noexcept
+inline void sgt(Stack& stack) noexcept
 {
     const auto x = stack.pop();
     auto& y = stack[0];
@@ -178,38 +178,38 @@ inline void sgt(evm_stack& stack) noexcept
     y = ((x_neg ^ y_neg) != 0) ? y_neg : y < x;
 }
 
-inline void eq(evm_stack& stack) noexcept
+inline void eq(Stack& stack) noexcept
 {
     stack[1] = stack[0] == stack[1];
     stack.pop();
 }
 
-inline void iszero(evm_stack& stack) noexcept
+inline void iszero(Stack& stack) noexcept
 {
     stack.top() = stack.top() == 0;
 }
 
-inline void and_(evm_stack& stack) noexcept
+inline void and_(Stack& stack) noexcept
 {
     stack.top() &= stack.pop();
 }
 
-inline void or_(evm_stack& stack) noexcept
+inline void or_(Stack& stack) noexcept
 {
     stack.top() |= stack.pop();
 }
 
-inline void xor_(evm_stack& stack) noexcept
+inline void xor_(Stack& stack) noexcept
 {
     stack.top() ^= stack.pop();
 }
 
-inline void not_(evm_stack& stack) noexcept
+inline void not_(Stack& stack) noexcept
 {
     stack.top() = ~stack.top();
 }
 
-inline void byte(evm_stack& stack) noexcept
+inline void byte(Stack& stack) noexcept
 {
     const auto n = stack.pop();
     auto& x = stack.top();
@@ -224,17 +224,17 @@ inline void byte(evm_stack& stack) noexcept
     }
 }
 
-inline void shl(evm_stack& stack) noexcept
+inline void shl(Stack& stack) noexcept
 {
     stack.top() <<= stack.pop();
 }
 
-inline void shr(evm_stack& stack) noexcept
+inline void shr(Stack& stack) noexcept
 {
     stack.top() >>= stack.pop();
 }
 
-inline void sar(evm_stack& stack) noexcept
+inline void sar(Stack& stack) noexcept
 {
     if ((stack[1] & (uint256{1} << 255)) == 0)
         return shr(stack);
@@ -253,7 +253,7 @@ inline void sar(evm_stack& stack) noexcept
 }
 
 
-inline evmc_status_code sha3(ExecutionState& state) noexcept
+inline evmc_status_code keccak256(ExecutionState& state) noexcept
 {
     const auto index = state.stack.pop();
     auto& size = state.stack.top();
@@ -279,10 +279,19 @@ inline void address(ExecutionState& state) noexcept
     state.stack.push(intx::be::load<uint256>(state.msg->destination));
 }
 
-inline void balance(ExecutionState& state) noexcept
+inline evmc_status_code balance(ExecutionState& state) noexcept
 {
     auto& x = state.stack.top();
-    x = intx::be::load<uint256>(state.host.get_balance(intx::be::trunc<evmc::address>(x)));
+    const auto addr = intx::be::trunc<evmc::address>(x);
+
+    if (state.rev >= EVMC_BERLIN && state.host.access_account(addr) == EVMC_ACCESS_COLD)
+    {
+        if ((state.gas_left -= instr::additional_cold_account_access_cost) < 0)
+            return EVMC_OUT_OF_GAS;
+    }
+
+    x = intx::be::load<uint256>(state.host.get_balance(addr));
+    return EVMC_SUCCESS;
 }
 
 inline void origin(ExecutionState& state) noexcept
@@ -394,10 +403,24 @@ inline void gasprice(ExecutionState& state) noexcept
     state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().tx_gas_price));
 }
 
-inline void extcodesize(ExecutionState& state) noexcept
+inline void basefee(ExecutionState& state) noexcept
+{
+    state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().block_base_fee));
+}
+
+inline evmc_status_code extcodesize(ExecutionState& state) noexcept
 {
     auto& x = state.stack.top();
-    x = state.host.get_code_size(intx::be::trunc<evmc::address>(x));
+    const auto addr = intx::be::trunc<evmc::address>(x);
+
+    if (state.rev >= EVMC_BERLIN && state.host.access_account(addr) == EVMC_ACCESS_COLD)
+    {
+        if ((state.gas_left -= instr::additional_cold_account_access_cost) < 0)
+            return EVMC_OUT_OF_GAS;
+    }
+
+    x = state.host.get_code_size(addr);
+    return EVMC_SUCCESS;
 }
 
 inline evmc_status_code extcodecopy(ExecutionState& state) noexcept
@@ -417,6 +440,12 @@ inline evmc_status_code extcodecopy(ExecutionState& state) noexcept
     const auto copy_cost = num_words(s) * 3;
     if ((state.gas_left -= copy_cost) < 0)
         return EVMC_OUT_OF_GAS;
+
+    if (state.rev >= EVMC_BERLIN && state.host.access_account(addr) == EVMC_ACCESS_COLD)
+    {
+        if ((state.gas_left -= instr::additional_cold_account_access_cost) < 0)
+            return EVMC_OUT_OF_GAS;
+    }
 
     auto data = s != 0 ? &state.memory[dst] : nullptr;
     auto num_bytes_copied = state.host.copy_code(addr, src, data, s);
@@ -460,10 +489,19 @@ inline evmc_status_code returndatacopy(ExecutionState& state) noexcept
     return EVMC_SUCCESS;
 }
 
-inline void extcodehash(ExecutionState& state) noexcept
+inline evmc_status_code extcodehash(ExecutionState& state) noexcept
 {
     auto& x = state.stack.top();
-    x = intx::be::load<uint256>(state.host.get_code_hash(intx::be::trunc<evmc::address>(x)));
+    const auto addr = intx::be::trunc<evmc::address>(x);
+
+    if (state.rev >= EVMC_BERLIN && state.host.access_account(addr) == EVMC_ACCESS_COLD)
+    {
+        if ((state.gas_left -= instr::additional_cold_account_access_cost) < 0)
+            return EVMC_OUT_OF_GAS;
+    }
+
+    x = intx::be::load<uint256>(state.host.get_code_hash(addr));
+    return EVMC_SUCCESS;
 }
 
 
@@ -521,7 +559,7 @@ inline void selfbalance(ExecutionState& state) noexcept
 }
 
 
-inline void pop(evm_stack& stack) noexcept
+inline void pop(Stack& stack) noexcept
 {
     stack.pop();
 }
@@ -561,11 +599,25 @@ inline evmc_status_code mstore8(ExecutionState& state) noexcept
     return EVMC_SUCCESS;
 }
 
-inline void sload(ExecutionState& state) noexcept
+inline evmc_status_code sload(ExecutionState& state) noexcept
 {
     auto& x = state.stack.top();
-    x = intx::be::load<uint256>(
-        state.host.get_storage(state.msg->destination, intx::be::store<evmc::bytes32>(x)));
+    const auto key = intx::be::store<evmc::bytes32>(x);
+
+    if (state.rev >= EVMC_BERLIN &&
+        state.host.access_storage(state.msg->destination, key) == EVMC_ACCESS_COLD)
+    {
+        // The warm storage access cost is already applied (from the cost table).
+        // Here we need to apply additional cold storage access cost.
+        constexpr auto additional_cold_sload_cost =
+            instr::cold_sload_cost - instr::warm_storage_read_cost;
+        if ((state.gas_left -= additional_cold_sload_cost) < 0)
+            return EVMC_OUT_OF_GAS;
+    }
+
+    x = intx::be::load<uint256>(state.host.get_storage(state.msg->destination, key));
+
+    return EVMC_SUCCESS;
 }
 
 inline evmc_status_code sstore(ExecutionState& state) noexcept
@@ -578,12 +630,21 @@ inline evmc_status_code sstore(ExecutionState& state) noexcept
 
     const auto key = intx::be::store<evmc::bytes32>(state.stack.pop());
     const auto value = intx::be::store<evmc::bytes32>(state.stack.pop());
-    const auto status = state.host.set_storage(state.msg->destination, key, value);
+
     int cost = 0;
+    if (state.rev >= EVMC_BERLIN &&
+        state.host.access_storage(state.msg->destination, key) == EVMC_ACCESS_COLD)
+        cost = instr::cold_sload_cost;
+
+    const auto status = state.host.set_storage(state.msg->destination, key, value);
+
     switch (status)
     {
     case EVMC_STORAGE_UNCHANGED:
-        if (state.rev >= EVMC_ISTANBUL)
+    case EVMC_STORAGE_MODIFIED_AGAIN:
+        if (state.rev >= EVMC_BERLIN)
+            cost += instr::warm_storage_read_cost;
+        else if (state.rev == EVMC_ISTANBUL)
             cost = 800;
         else if (state.rev == EVMC_CONSTANTINOPLE)
             cost = 200;
@@ -591,21 +652,14 @@ inline evmc_status_code sstore(ExecutionState& state) noexcept
             cost = 5000;
         break;
     case EVMC_STORAGE_MODIFIED:
-        cost = 5000;
-        break;
-    case EVMC_STORAGE_MODIFIED_AGAIN:
-        if (state.rev >= EVMC_ISTANBUL)
-            cost = 800;
-        else if (state.rev == EVMC_CONSTANTINOPLE)
-            cost = 200;
+    case EVMC_STORAGE_DELETED:
+        if (state.rev >= EVMC_BERLIN)
+            cost += 5000 - instr::cold_sload_cost;
         else
             cost = 5000;
         break;
     case EVMC_STORAGE_ADDED:
-        cost = 20000;
-        break;
-    case EVMC_STORAGE_DELETED:
-        cost = 5000;
+        cost += 20000;
         break;
     }
     if ((state.gas_left -= cost) < 0)
@@ -622,7 +676,7 @@ inline void msize(ExecutionState& state) noexcept
 /// DUP instruction implementation.
 /// @tparam N  The number as in the instruction definition, e.g. DUP3 is dup<3>.
 template <size_t N>
-inline void dup(evm_stack& stack) noexcept
+inline void dup(Stack& stack) noexcept
 {
     static_assert(N >= 1 && N <= 16);
     stack.push(stack[N - 1]);
@@ -631,7 +685,7 @@ inline void dup(evm_stack& stack) noexcept
 /// SWAP instruction implementation.
 /// @tparam N  The number as in the instruction definition, e.g. SWAP3 is swap<3>.
 template <size_t N>
-inline void swap(evm_stack& stack) noexcept
+inline void swap(Stack& stack) noexcept
 {
     static_assert(N >= 1 && N <= 16);
     std::swap(stack.top(), stack[N]);
@@ -679,6 +733,12 @@ inline evmc_status_code selfdestruct(ExecutionState& state) noexcept
         return EVMC_STATIC_MODE_VIOLATION;
 
     const auto beneficiary = intx::be::trunc<evmc::address>(state.stack[0]);
+
+    if (state.rev >= EVMC_BERLIN && state.host.access_account(beneficiary) == EVMC_ACCESS_COLD)
+    {
+        if ((state.gas_left -= instr::cold_account_access_cost) < 0)
+            return EVMC_OUT_OF_GAS;
+    }
 
     if (state.rev >= EVMC_TANGERINE_WHISTLE)
     {
