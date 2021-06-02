@@ -10,6 +10,7 @@ branches:
   - /v\d+\..+/
 configuration:
   - Release
+  - Debug
 environment:
   GITHUB_TOKEN:
     secure: OE3TGKRyt/hvk5Gt3DLXvs3Y+F1NLDQAL/bHplDffR+hY2aFg6HrapThKjYo/XX2
@@ -26,7 +27,7 @@ install:
 
 before_build:
   - call "%ProgramFiles(x86)%\Microsoft Visual Studio\2019\Community\Common7\Tools\VsDevCmd" -arch=amd64
-  - cmake -S . -B build -DEVMONE_TESTING=ON -Wno-dev -G "%GENERATOR%" -DCMAKE_INSTALL_PREFIX=C:\install
+  - cmake -S . -B build -DEVMONE_TESTING=ON -Wno-dev -G "%GENERATOR%" -DCMAKE_BUILD_TYPE=%CONFIGURATION% -DHUNTER_CONFIGURATION_TYPES=%CONFIGURATION% -DCMAKE_INSTALL_PREFIX=C:\install
 
 build_script:
   - cmake --build build --target package
