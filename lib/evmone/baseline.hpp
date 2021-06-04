@@ -6,6 +6,7 @@
 #include "execution_state.hpp"
 #include <evmc/evmc.h>
 #include <evmc/utils.h>
+#include <memory>
 #include <vector>
 
 namespace evmone
@@ -18,7 +19,8 @@ struct CodeAnalysis
 {
     using JumpdestMap = std::vector<bool>;
 
-    JumpdestMap jumpdest_map;
+    const std::unique_ptr<uint8_t[]> padded_code;
+    const JumpdestMap jumpdest_map;
 };
 
 /// Analyze the code to build the bitmap of valid JUMPDEST locations.
