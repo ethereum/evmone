@@ -170,6 +170,19 @@ TEST_P(evm, eip2929_sload_cold)
     EXPECT_GAS_USED(EVMC_OUT_OF_GAS, 2102);
 }
 
+TEST_P(evm, eip2929_sload_two_slots)
+{
+    rev = EVMC_BERLIN;
+    const evmc::bytes32 key0{0};
+    const evmc::bytes32 key1{1};
+    const auto code = push(key0) + OP_SLOAD + OP_POP + push(key1) + OP_SLOAD + OP_POP;
+
+    execute(30000, code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 4210);
+    EXPECT_EQ(host.accounts[msg.destination].storage[key0].access_status, EVMC_ACCESS_WARM);
+    EXPECT_EQ(host.accounts[msg.destination].storage[key1].access_status, EVMC_ACCESS_WARM);
+}
+
 TEST_P(evm, eip2929_sload_warm)
 {
     rev = EVMC_BERLIN;

@@ -26,6 +26,17 @@ TEST(bytecode, push_int)
     EXPECT_EQ(push(0xffffffffffffffff), "67ffffffffffffffff");
 }
 
+TEST(bytecode, push_bytes32)
+{
+    EXPECT_EQ(push(evmc::bytes32{{0xee, 0x00}}),
+        "7fee00000000000000000000000000000000000000000000000000000000000000");
+    EXPECT_EQ(push(evmc::bytes32{{0x00, 0xee}}),
+        "7eee000000000000000000000000000000000000000000000000000000000000");
+    EXPECT_EQ(push(evmc::bytes32{}), "6000");
+    EXPECT_EQ(push(evmc::bytes32{0xee}), "60ee");
+    EXPECT_EQ(push(evmc::bytes32{0xd0d1}), "61d0d1");
+}
+
 TEST(bytecode, push_explicit_opcode)
 {
     EXPECT_THROW(push(OP_JUMPDEST, {}), std::invalid_argument);
