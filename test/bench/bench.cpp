@@ -159,31 +159,56 @@ std::vector<BenchmarkCase> load_benchmarks_from_dir(
 
 void register_benchmarks(const std::vector<BenchmarkCase>& benchmark_cases)
 {
+    evmc::VM* advanced_vm = nullptr;
+    evmc::VM* baseline_vm = nullptr;
+    if (const auto it = registered_vms.find("advanced"); it != registered_vms.end())
+        advanced_vm = &it->second;
+    if (const auto it = registered_vms.find("baseline"); it != registered_vms.end())
+        baseline_vm = &it->second;
+
     for (const auto& b : benchmark_cases)
     {
-        if (registered_vms.count("advanced"))
+        if (advanced_vm)
         {
             RegisterBenchmark(("advanced/analyse/" + b.name).c_str(), [&b](State& state) {
-                analyse(state, default_revision, b.code);
+                bench_analyse<AdvancedCodeAnalysis, advanced_analyse>(
+                    state, default_revision, b.code);
             })->Unit(kMicrosecond);
         }
 
-        if (registered_vms.count("baseline"))
+        if (baseline_vm)
         {
             RegisterBenchmark(("baseline/analyse/" + b.name).c_str(), [&b](State& state) {
-                baseline_analyze(state, b.code);
+                bench_analyse<baseline::CodeAnalysis, baseline_analyse>(
+                    state, default_revision, b.code);
             })->Unit(kMicrosecond);
         }
 
         for (const auto& input : b.inputs)
         {
-            const auto case_name =
-                "/execute/" + b.name + (!input.name.empty() ? '/' + input.name : "");
+            const auto case_name = b.name + (!input.name.empty() ? '/' + input.name : "");
+
+            if (advanced_vm)
+            {
+                const auto name = "advanced/execute/" + case_name;
+                RegisterBenchmark(name.c_str(), [&vm = *advanced_vm, &b, &input](State& state) {
+                    bench_advanced_execute(state, vm, b.code, input.input, input.expected_output);
+                })->Unit(kMicrosecond);
+            }
+
+            if (baseline_vm)
+            {
+                const auto name = "baseline/execute/" + case_name;
+                RegisterBenchmark(name.c_str(), [&vm = *baseline_vm, &b, &input](State& state) {
+                    bench_baseline_execute(state, vm, b.code, input.input, input.expected_output);
+                })->Unit(kMicrosecond);
+            }
+
             for (auto& [vm_name, vm] : registered_vms)
             {
-                const auto name = std::string{vm_name} + case_name;
+                const auto name = std::string{vm_name} + "/total/" + case_name;
                 RegisterBenchmark(name.c_str(), [&vm = vm, &b, &input](State& state) {
-                    execute(state, vm, b.code, input.input, input.expected_output);
+                    bench_evmc_execute(state, vm, b.code, input.input, input.expected_output);
                 })->Unit(kMicrosecond);
             }
         }
