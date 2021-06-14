@@ -31,7 +31,8 @@ evmc_result execute(evmc_vm* vm, const evmc_host_interface* host, evmc_host_cont
     evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept;
 
 /// Executes in Baseline interpreter on the given external and initialized state.
-evmc_result execute(const VM&, ExecutionState& state, const CodeAnalysis& analysis) noexcept;
+EVMC_EXPORT evmc_result execute(
+    const VM&, ExecutionState& state, const CodeAnalysis& analysis) noexcept;
 
 }  // namespace baseline
 }  // namespace evmone
