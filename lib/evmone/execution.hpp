@@ -4,6 +4,7 @@
 #pragma once
 
 #include <evmc/evmc.h>
+#include <evmc/utils.h>
 
 namespace evmone
 {
@@ -11,7 +12,8 @@ struct AdvancedExecutionState;
 struct AdvancedCodeAnalysis;
 
 /// Execute the already analyzed code using the provided execution state.
-evmc_result execute(AdvancedExecutionState& state, const AdvancedCodeAnalysis& analysis) noexcept;
+EVMC_EXPORT evmc_result execute(
+    AdvancedExecutionState& state, const AdvancedCodeAnalysis& analysis) noexcept;
 
 /// EVMC-compatible execute() function.
 evmc_result execute(evmc_vm* vm, const evmc_host_interface* host, evmc_host_context* ctx,

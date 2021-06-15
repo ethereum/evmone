@@ -47,12 +47,12 @@ set(PREFIX evmone/bench)
 
 # Check if DIR argument works.
 add_test(NAME ${PREFIX}/dir COMMAND evmone-bench ${CMAKE_CURRENT_SOURCE_DIR}/../benchmarks --benchmark_list_tests)
-set_tests_properties(${PREFIX}/dir PROPERTIES PASS_REGULAR_EXPRESSION "execute/synth")
+set_tests_properties(${PREFIX}/dir PROPERTIES PASS_REGULAR_EXPRESSION "total/synth")
 
 # Omitting DIR is fine.
 add_test(NAME ${PREFIX}/no_dir COMMAND evmone-bench --benchmark_list_tests)
-set_tests_properties(${PREFIX}/no_dir PROPERTIES PASS_REGULAR_EXPRESSION "execute/synth")
+set_tests_properties(${PREFIX}/no_dir PROPERTIES PASS_REGULAR_EXPRESSION "total/synth")
 
 # Empty DIR name should list only built-in benchmarks
 add_test(NAME ${PREFIX}/dirname_empty COMMAND evmone-bench "" --benchmark_list_tests)
-set_tests_properties(${PREFIX}/dirname_empty PROPERTIES PASS_REGULAR_EXPRESSION "execute/synth")
+set_tests_properties(${PREFIX}/dirname_empty PROPERTIES PASS_REGULAR_EXPRESSION "total/synth")
