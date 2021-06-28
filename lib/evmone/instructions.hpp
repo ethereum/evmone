@@ -685,8 +685,11 @@ inline void swap(Stack& stack) noexcept
 }
 
 
-inline evmc_status_code log(ExecutionState& state, size_t num_topics) noexcept
+template <size_t NumTopics>
+inline evmc_status_code log(ExecutionState& state) noexcept
 {
+    static_assert(NumTopics >= 0 && NumTopics <= 4);
+
     if (state.msg->flags & EVMC_STATIC)
         return EVMC_STATIC_MODE_VIOLATION;
 
@@ -703,12 +706,12 @@ inline evmc_status_code log(ExecutionState& state, size_t num_topics) noexcept
     if ((state.gas_left -= cost) < 0)
         return EVMC_OUT_OF_GAS;
 
-    auto topics = std::array<evmc::bytes32, 4>{};
-    for (size_t i = 0; i < num_topics; ++i)
-        topics[i] = intx::be::store<evmc::bytes32>(state.stack.pop());
+    std::array<evmc::bytes32, NumTopics> topics;
+    for (auto& topic : topics)
+        topic = intx::be::store<evmc::bytes32>(state.stack.pop());
 
     const auto data = s != 0 ? &state.memory[o] : nullptr;
-    state.host.emit_log(state.msg->destination, data, s, topics.data(), num_topics);
+    state.host.emit_log(state.msg->destination, data, s, topics.data(), NumTopics);
     return EVMC_SUCCESS;
 }
 
@@ -719,6 +722,23 @@ evmc_status_code call(ExecutionState& state) noexcept;
 template <evmc_call_kind Kind>
 evmc_status_code create(ExecutionState& state) noexcept;
 
+
+template <evmc_status_code StatusCode>
+inline void return_(ExecutionState& state) noexcept
+{
+    const auto offset = state.stack[0];
+    const auto size = state.stack[1];
+
+    if (!check_memory(state, offset, size))
+    {
+        state.status = EVMC_OUT_OF_GAS;
+        return;
+    }
+
+    state.output_offset = static_cast<size_t>(offset);  // Can be garbage if size is 0.
+    state.output_size = static_cast<size_t>(size);
+    state.status = StatusCode;
+}
 
 inline evmc_status_code selfdestruct(ExecutionState& state) noexcept
 {

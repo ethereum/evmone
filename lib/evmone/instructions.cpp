@@ -107,16 +107,6 @@ const instruction* op_push_full(const instruction* instr, AdvancedExecutionState
     return ++instr;
 }
 
-template <evmc_opcode LogOp>
-const instruction* op_log(const instruction* instr, AdvancedExecutionState& state) noexcept
-{
-    constexpr auto num_topics = LogOp - OP_LOG0;
-    const auto status_code = log(state, num_topics);
-    if (status_code != EVMC_SUCCESS)
-        return state.exit(status_code);
-    return ++instr;
-}
-
 const instruction* op_invalid(const instruction*, AdvancedExecutionState& state) noexcept
 {
     return state.exit(EVMC_INVALID_INSTRUCTION);
@@ -307,11 +297,11 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
     table[OP_SWAP15] = op<swap<15>>;
     table[OP_SWAP16] = op<swap<16>>;
 
-    table[OP_LOG0] = op_log<OP_LOG0>;
-    table[OP_LOG1] = op_log<OP_LOG1>;
-    table[OP_LOG2] = op_log<OP_LOG2>;
-    table[OP_LOG3] = op_log<OP_LOG3>;
-    table[OP_LOG4] = op_log<OP_LOG4>;
+    table[OP_LOG0] = op<log<0>>;
+    table[OP_LOG1] = op<log<1>>;
+    table[OP_LOG2] = op<log<2>>;
+    table[OP_LOG3] = op<log<3>>;
+    table[OP_LOG4] = op<log<4>>;
 
     table[OP_CREATE] = op_create<EVMC_CREATE>;
     table[OP_CALL] = op_call<EVMC_CALL>;
