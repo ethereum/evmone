@@ -642,7 +642,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
 
         case OP_LOG0:
         {
-            const auto status_code = log(state, 0);
+            const auto status_code = log<0>(state);
             if (status_code != EVMC_SUCCESS)
             {
                 state.status = status_code;
@@ -652,7 +652,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
         }
         case OP_LOG1:
         {
-            const auto status_code = log(state, 1);
+            const auto status_code = log<1>(state);
             if (status_code != EVMC_SUCCESS)
             {
                 state.status = status_code;
@@ -662,7 +662,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
         }
         case OP_LOG2:
         {
-            const auto status_code = log(state, 2);
+            const auto status_code = log<2>(state);
             if (status_code != EVMC_SUCCESS)
             {
                 state.status = status_code;
@@ -672,7 +672,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
         }
         case OP_LOG3:
         {
-            const auto status_code = log(state, 3);
+            const auto status_code = log<3>(state);
             if (status_code != EVMC_SUCCESS)
             {
                 state.status = status_code;
@@ -682,7 +682,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
         }
         case OP_LOG4:
         {
-            const auto status_code = log(state, 4);
+            const auto status_code = log<4>(state);
             if (status_code != EVMC_SUCCESS)
             {
                 state.status = status_code;
