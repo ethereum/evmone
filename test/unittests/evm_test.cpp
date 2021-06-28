@@ -499,6 +499,22 @@ TEST_P(evm, exp)
     EXPECT_EQ(bytes(&result.output_data[0], 32), a);
 }
 
+TEST_P(evm, exp_1_0)
+{
+    const auto code = push(0) + push(1) + OP_EXP + ret_top();
+    execute(31, code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 31);
+    EXPECT_OUTPUT_INT(1);
+}
+
+TEST_P(evm, exp_0_0)
+{
+    const auto code = push(0) + push(0) + OP_EXP + ret_top();
+    execute(31, code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 31);
+    EXPECT_OUTPUT_INT(1);
+}
+
 TEST_P(evm, exp_oog)
 {
     auto code = "6001600003800a";
