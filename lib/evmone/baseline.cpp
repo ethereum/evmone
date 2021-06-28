@@ -68,23 +68,6 @@ inline const uint8_t* load_push(ExecutionState& state, const uint8_t* code) noex
     return code + Len;
 }
 
-template <evmc_status_code StatusCode>
-inline void op_return(ExecutionState& state) noexcept
-{
-    const auto offset = state.stack[0];
-    const auto size = state.stack[1];
-
-    if (!check_memory(state, offset, size))
-    {
-        state.status = EVMC_OUT_OF_GAS;
-        return;
-    }
-
-    state.output_offset = static_cast<size_t>(offset);  // Can be garbage if size is 0.
-    state.output_size = static_cast<size_t>(size);
-    state.status = StatusCode;
-}
-
 inline evmc_status_code check_requirements(
     const InstructionTable& instruction_table, ExecutionState& state, uint8_t op) noexcept
 {
@@ -722,7 +705,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
             break;
         }
         case OP_RETURN:
-            op_return<EVMC_SUCCESS>(state);
+            return_<EVMC_SUCCESS>(state);
             goto exit;
         case OP_DELEGATECALL:
         {
@@ -755,7 +738,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
             break;
         }
         case OP_REVERT:
-            op_return<EVMC_REVERT>(state);
+            return_<EVMC_REVERT>(state);
             goto exit;
         case OP_INVALID:
             state.status = EVMC_INVALID_INSTRUCTION;
