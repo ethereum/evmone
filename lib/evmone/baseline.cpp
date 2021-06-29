@@ -92,10 +92,12 @@ inline evmc_status_code check_requirements(
 }
 
 /// Dispatch the instruction currently pointed by "pc".
-#define DISPATCH() continue
+#define DISPATCH() break  // Break out of switch statement.
 
 /// Increment "pc" and dispatch the instruction.
-#define DISPATCH_NEXT() break
+#define DISPATCH_NEXT() \
+    ++pc;               \
+    DISPATCH()
 
 template <bool TracingEnabled>
 evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& analysis) noexcept
@@ -755,8 +757,6 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
         default:
             INTX_UNREACHABLE();
         }
-
-        ++pc;
     }
 
 exit:
