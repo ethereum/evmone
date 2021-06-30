@@ -10,24 +10,10 @@ namespace evmone
 {
 namespace
 {
-template <void InstrFn(Stack&)>
+template <InstrFn Fn>
 const instruction* op(const instruction* instr, AdvancedExecutionState& state) noexcept
 {
-    InstrFn(state.stack);
-    return ++instr;
-}
-
-template <void InstrFn(ExecutionState&)>
-const instruction* op(const instruction* instr, AdvancedExecutionState& state) noexcept
-{
-    InstrFn(state);
-    return ++instr;
-}
-
-template <evmc_status_code InstrFn(ExecutionState&)>
-const instruction* op(const instruction* instr, AdvancedExecutionState& state) noexcept
-{
-    const auto status_code = InstrFn(state);
+    const auto status_code = Fn(state);
     if (status_code != EVMC_SUCCESS)
         return state.exit(status_code);
     return ++instr;
