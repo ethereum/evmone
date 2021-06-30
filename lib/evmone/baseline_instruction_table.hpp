@@ -6,7 +6,7 @@
 #include <evmc/evmc.h>
 #include <array>
 
-namespace evmone
+namespace evmone::baseline
 {
 struct InstructionTableEntry
 {
@@ -18,4 +18,4 @@ struct InstructionTableEntry
 using InstructionTable = std::array<InstructionTableEntry, 256>;
 
 const InstructionTable& get_baseline_instruction_table(evmc_revision rev) noexcept;
-}  // namespace evmone
+}  // namespace evmone::baseline
