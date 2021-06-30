@@ -8,6 +8,9 @@
 
 namespace evmone::instr
 {
+/// The special gas cost value marking an EVM instruction as "undefined".
+constexpr int16_t undefined = -1;
+
 /// EIP-2929 constants (https://eips.ethereum.org/EIPS/eip-2929).
 /// @{
 inline constexpr auto cold_sload_cost = 2100;
@@ -21,6 +24,144 @@ inline constexpr auto warm_storage_read_cost = 100;
 inline constexpr auto additional_cold_account_access_cost =
     cold_account_access_cost - warm_storage_read_cost;
 /// @}
+
+
+/// The table of instruction gas costs per EVM revision.
+using GasCostTable = std::array<std::array<int16_t, 256>, EVMC_MAX_REVISION + 1>;
+
+/// The EVM revision specific table of EVM instructions gas costs. For instructions undefined
+/// in given EVM revision, the value is instr::undefined.
+constexpr inline GasCostTable gas_costs = []() noexcept {
+    GasCostTable table{};
+
+    for (auto& t : table[EVMC_FRONTIER])
+        t = undefined;
+    table[EVMC_FRONTIER][OP_STOP] = 0;
+    table[EVMC_FRONTIER][OP_ADD] = 3;
+    table[EVMC_FRONTIER][OP_MUL] = 5;
+    table[EVMC_FRONTIER][OP_SUB] = 3;
+    table[EVMC_FRONTIER][OP_DIV] = 5;
+    table[EVMC_FRONTIER][OP_SDIV] = 5;
+    table[EVMC_FRONTIER][OP_MOD] = 5;
+    table[EVMC_FRONTIER][OP_SMOD] = 5;
+    table[EVMC_FRONTIER][OP_ADDMOD] = 8;
+    table[EVMC_FRONTIER][OP_MULMOD] = 8;
+    table[EVMC_FRONTIER][OP_EXP] = 10;
+    table[EVMC_FRONTIER][OP_SIGNEXTEND] = 5;
+    table[EVMC_FRONTIER][OP_LT] = 3;
+    table[EVMC_FRONTIER][OP_GT] = 3;
+    table[EVMC_FRONTIER][OP_SLT] = 3;
+    table[EVMC_FRONTIER][OP_SGT] = 3;
+    table[EVMC_FRONTIER][OP_EQ] = 3;
+    table[EVMC_FRONTIER][OP_ISZERO] = 3;
+    table[EVMC_FRONTIER][OP_AND] = 3;
+    table[EVMC_FRONTIER][OP_OR] = 3;
+    table[EVMC_FRONTIER][OP_XOR] = 3;
+    table[EVMC_FRONTIER][OP_NOT] = 3;
+    table[EVMC_FRONTIER][OP_BYTE] = 3;
+    table[EVMC_FRONTIER][OP_KECCAK256] = 30;
+    table[EVMC_FRONTIER][OP_ADDRESS] = 2;
+    table[EVMC_FRONTIER][OP_BALANCE] = 20;
+    table[EVMC_FRONTIER][OP_ORIGIN] = 2;
+    table[EVMC_FRONTIER][OP_CALLER] = 2;
+    table[EVMC_FRONTIER][OP_CALLVALUE] = 2;
+    table[EVMC_FRONTIER][OP_CALLDATALOAD] = 3;
+    table[EVMC_FRONTIER][OP_CALLDATASIZE] = 2;
+    table[EVMC_FRONTIER][OP_CALLDATACOPY] = 3;
+    table[EVMC_FRONTIER][OP_CODESIZE] = 2;
+    table[EVMC_FRONTIER][OP_CODECOPY] = 3;
+    table[EVMC_FRONTIER][OP_GASPRICE] = 2;
+    table[EVMC_FRONTIER][OP_EXTCODESIZE] = 20;
+    table[EVMC_FRONTIER][OP_EXTCODECOPY] = 20;
+    table[EVMC_FRONTIER][OP_BLOCKHASH] = 20;
+    table[EVMC_FRONTIER][OP_COINBASE] = 2;
+    table[EVMC_FRONTIER][OP_TIMESTAMP] = 2;
+    table[EVMC_FRONTIER][OP_NUMBER] = 2;
+    table[EVMC_FRONTIER][OP_DIFFICULTY] = 2;
+    table[EVMC_FRONTIER][OP_GASLIMIT] = 2;
+    table[EVMC_FRONTIER][OP_POP] = 2;
+    table[EVMC_FRONTIER][OP_MLOAD] = 3;
+    table[EVMC_FRONTIER][OP_MSTORE] = 3;
+    table[EVMC_FRONTIER][OP_MSTORE8] = 3;
+    table[EVMC_FRONTIER][OP_SLOAD] = 50;
+    table[EVMC_FRONTIER][OP_SSTORE] = 0;
+    table[EVMC_FRONTIER][OP_JUMP] = 8;
+    table[EVMC_FRONTIER][OP_JUMPI] = 10;
+    table[EVMC_FRONTIER][OP_PC] = 2;
+    table[EVMC_FRONTIER][OP_MSIZE] = 2;
+    table[EVMC_FRONTIER][OP_GAS] = 2;
+    table[EVMC_FRONTIER][OP_JUMPDEST] = 1;
+    for (auto op = size_t{OP_PUSH1}; op <= OP_PUSH32; ++op)
+        table[EVMC_FRONTIER][op] = 3;
+    for (auto op = size_t{OP_DUP1}; op <= OP_DUP16; ++op)
+        table[EVMC_FRONTIER][op] = 3;
+    for (auto op = size_t{OP_SWAP1}; op <= OP_SWAP16; ++op)
+        table[EVMC_FRONTIER][op] = 3;
+    for (auto op = size_t{OP_LOG0}; op <= OP_LOG4; ++op)
+        table[EVMC_FRONTIER][op] = static_cast<int16_t>((op - OP_LOG0 + 1) * 375);
+    table[EVMC_FRONTIER][OP_CREATE] = 32000;
+    table[EVMC_FRONTIER][OP_CALL] = 40;
+    table[EVMC_FRONTIER][OP_CALLCODE] = 40;
+    table[EVMC_FRONTIER][OP_RETURN] = 0;
+    table[EVMC_FRONTIER][OP_INVALID] = 0;
+    table[EVMC_FRONTIER][OP_SELFDESTRUCT] = 0;
+
+    table[EVMC_HOMESTEAD] = table[EVMC_FRONTIER];
+    table[EVMC_HOMESTEAD][OP_DELEGATECALL] = 40;
+
+    table[EVMC_TANGERINE_WHISTLE] = table[EVMC_HOMESTEAD];
+    table[EVMC_TANGERINE_WHISTLE][OP_BALANCE] = 400;
+    table[EVMC_TANGERINE_WHISTLE][OP_EXTCODESIZE] = 700;
+    table[EVMC_TANGERINE_WHISTLE][OP_EXTCODECOPY] = 700;
+    table[EVMC_TANGERINE_WHISTLE][OP_SLOAD] = 200;
+    table[EVMC_TANGERINE_WHISTLE][OP_CALL] = 700;
+    table[EVMC_TANGERINE_WHISTLE][OP_CALLCODE] = 700;
+    table[EVMC_TANGERINE_WHISTLE][OP_DELEGATECALL] = 700;
+    table[EVMC_TANGERINE_WHISTLE][OP_SELFDESTRUCT] = 5000;
+
+    table[EVMC_SPURIOUS_DRAGON] = table[EVMC_TANGERINE_WHISTLE];
+
+    table[EVMC_BYZANTIUM] = table[EVMC_SPURIOUS_DRAGON];
+    table[EVMC_BYZANTIUM][OP_RETURNDATASIZE] = 2;
+    table[EVMC_BYZANTIUM][OP_RETURNDATACOPY] = 3;
+    table[EVMC_BYZANTIUM][OP_STATICCALL] = 700;
+    table[EVMC_BYZANTIUM][OP_REVERT] = 0;
+
+    table[EVMC_CONSTANTINOPLE] = table[EVMC_BYZANTIUM];
+    table[EVMC_CONSTANTINOPLE][OP_SHL] = 3;
+    table[EVMC_CONSTANTINOPLE][OP_SHR] = 3;
+    table[EVMC_CONSTANTINOPLE][OP_SAR] = 3;
+    table[EVMC_CONSTANTINOPLE][OP_EXTCODEHASH] = 400;
+    table[EVMC_CONSTANTINOPLE][OP_CREATE2] = 32000;
+
+    table[EVMC_PETERSBURG] = table[EVMC_CONSTANTINOPLE];
+
+    table[EVMC_ISTANBUL] = table[EVMC_PETERSBURG];
+    table[EVMC_ISTANBUL][OP_BALANCE] = 700;
+    table[EVMC_ISTANBUL][OP_CHAINID] = 2;
+    table[EVMC_ISTANBUL][OP_EXTCODEHASH] = 700;
+    table[EVMC_ISTANBUL][OP_SELFBALANCE] = 5;
+    table[EVMC_ISTANBUL][OP_SLOAD] = 800;
+
+    table[EVMC_BERLIN] = table[EVMC_ISTANBUL];
+    table[EVMC_BERLIN][OP_EXTCODESIZE] = warm_storage_read_cost;
+    table[EVMC_BERLIN][OP_EXTCODECOPY] = warm_storage_read_cost;
+    table[EVMC_BERLIN][OP_EXTCODEHASH] = warm_storage_read_cost;
+    table[EVMC_BERLIN][OP_BALANCE] = warm_storage_read_cost;
+    table[EVMC_BERLIN][OP_CALL] = warm_storage_read_cost;
+    table[EVMC_BERLIN][OP_CALLCODE] = warm_storage_read_cost;
+    table[EVMC_BERLIN][OP_DELEGATECALL] = warm_storage_read_cost;
+    table[EVMC_BERLIN][OP_STATICCALL] = warm_storage_read_cost;
+    table[EVMC_BERLIN][OP_SLOAD] = warm_storage_read_cost;
+
+    table[EVMC_LONDON] = table[EVMC_BERLIN];
+    table[EVMC_LONDON][OP_BASEFEE] = 2;
+
+    return table;
+}();
+
+static_assert(gas_costs[EVMC_MAX_REVISION][OP_ADD] > 0, "gas costs missing for a revision");
+
 
 /// The EVM instruction traits.
 struct Traits
@@ -193,180 +334,6 @@ constexpr inline std::array<Traits, 256> traits = []() noexcept {
     table[OP_INVALID] = {"INVALID", 0, 0};
     table[OP_SELFDESTRUCT] = {"SELFDESTRUCT", 1, -1};
 
-    return table;
-}();
-
-/// The special gas cost value marking an EVM instruction as "undefined".
-constexpr int16_t undefined = -1;
-
-/// The EVM revision specific table of EVM instructions gas costs. For instructions undefined
-/// in given EVM revision, the value is instr::undefined.
-template <evmc_revision>
-constexpr auto gas_costs = nullptr;
-
-
-template <>
-constexpr inline std::array<int16_t, 256> gas_costs<EVMC_FRONTIER> = []() noexcept {
-    std::array<int16_t, 256> table{};
-    for (auto& t : table)
-        t = undefined;
-
-    table[OP_STOP] = 0;
-    table[OP_ADD] = 3;
-    table[OP_MUL] = 5;
-    table[OP_SUB] = 3;
-    table[OP_DIV] = 5;
-    table[OP_SDIV] = 5;
-    table[OP_MOD] = 5;
-    table[OP_SMOD] = 5;
-    table[OP_ADDMOD] = 8;
-    table[OP_MULMOD] = 8;
-    table[OP_EXP] = 10;
-    table[OP_SIGNEXTEND] = 5;
-    table[OP_LT] = 3;
-    table[OP_GT] = 3;
-    table[OP_SLT] = 3;
-    table[OP_SGT] = 3;
-    table[OP_EQ] = 3;
-    table[OP_ISZERO] = 3;
-    table[OP_AND] = 3;
-    table[OP_OR] = 3;
-    table[OP_XOR] = 3;
-    table[OP_NOT] = 3;
-    table[OP_BYTE] = 3;
-    table[OP_KECCAK256] = 30;
-    table[OP_ADDRESS] = 2;
-    table[OP_BALANCE] = 20;
-    table[OP_ORIGIN] = 2;
-    table[OP_CALLER] = 2;
-    table[OP_CALLVALUE] = 2;
-    table[OP_CALLDATALOAD] = 3;
-    table[OP_CALLDATASIZE] = 2;
-    table[OP_CALLDATACOPY] = 3;
-    table[OP_CODESIZE] = 2;
-    table[OP_CODECOPY] = 3;
-    table[OP_GASPRICE] = 2;
-    table[OP_EXTCODESIZE] = 20;
-    table[OP_EXTCODECOPY] = 20;
-    table[OP_BLOCKHASH] = 20;
-    table[OP_COINBASE] = 2;
-    table[OP_TIMESTAMP] = 2;
-    table[OP_NUMBER] = 2;
-    table[OP_DIFFICULTY] = 2;
-    table[OP_GASLIMIT] = 2;
-    table[OP_POP] = 2;
-    table[OP_MLOAD] = 3;
-    table[OP_MSTORE] = 3;
-    table[OP_MSTORE8] = 3;
-    table[OP_SLOAD] = 50;
-    table[OP_SSTORE] = 0;
-    table[OP_JUMP] = 8;
-    table[OP_JUMPI] = 10;
-    table[OP_PC] = 2;
-    table[OP_MSIZE] = 2;
-
-    table[OP_GAS] = 2;
-    table[OP_JUMPDEST] = 1;
-
-    for (auto op = size_t{OP_PUSH1}; op <= OP_PUSH32; ++op)
-        table[op] = 3;
-
-    for (auto op = size_t{OP_DUP1}; op <= OP_DUP16; ++op)
-        table[op] = 3;
-
-    for (auto op = size_t{OP_SWAP1}; op <= OP_SWAP16; ++op)
-        table[op] = 3;
-
-    for (auto op = size_t{OP_LOG0}; op <= OP_LOG4; ++op)
-        table[op] = static_cast<int16_t>((op - OP_LOG0 + 1) * 375);
-
-    table[OP_CREATE] = 32000;
-    table[OP_CALL] = 40;
-    table[OP_CALLCODE] = 40;
-    table[OP_RETURN] = 0;
-    table[OP_INVALID] = 0;
-    table[OP_SELFDESTRUCT] = 0;
-    return table;
-}();
-
-template <>
-constexpr inline std::array<int16_t, 256> gas_costs<EVMC_HOMESTEAD> = []() noexcept {
-    auto table = gas_costs<EVMC_FRONTIER>;
-    table[OP_DELEGATECALL] = 40;
-    return table;
-}();
-
-template <>
-constexpr inline std::array<int16_t, 256> gas_costs<EVMC_TANGERINE_WHISTLE> = []() noexcept {
-    auto table = gas_costs<EVMC_HOMESTEAD>;
-    table[OP_BALANCE] = 400;
-    table[OP_EXTCODESIZE] = 700;
-    table[OP_EXTCODECOPY] = 700;
-    table[OP_SLOAD] = 200;
-    table[OP_CALL] = 700;
-    table[OP_CALLCODE] = 700;
-    table[OP_DELEGATECALL] = 700;
-    table[OP_SELFDESTRUCT] = 5000;
-    return table;
-}();
-
-template <>
-constexpr inline auto gas_costs<EVMC_SPURIOUS_DRAGON> = gas_costs<EVMC_TANGERINE_WHISTLE>;
-
-template <>
-constexpr inline std::array<int16_t, 256> gas_costs<EVMC_BYZANTIUM> = []() noexcept {
-    auto table = gas_costs<EVMC_SPURIOUS_DRAGON>;
-    table[OP_RETURNDATASIZE] = 2;
-    table[OP_RETURNDATACOPY] = 3;
-    table[OP_STATICCALL] = 700;
-    table[OP_REVERT] = 0;
-    return table;
-}();
-
-template <>
-constexpr inline std::array<int16_t, 256> gas_costs<EVMC_CONSTANTINOPLE> = []() noexcept {
-    auto table = gas_costs<EVMC_BYZANTIUM>;
-    table[OP_SHL] = 3;
-    table[OP_SHR] = 3;
-    table[OP_SAR] = 3;
-    table[OP_EXTCODEHASH] = 400;
-    table[OP_CREATE2] = 32000;
-    return table;
-}();
-
-template <>
-constexpr inline auto gas_costs<EVMC_PETERSBURG> = gas_costs<EVMC_CONSTANTINOPLE>;
-
-template <>
-constexpr inline std::array<int16_t, 256> gas_costs<EVMC_ISTANBUL> = []() noexcept {
-    auto table = gas_costs<EVMC_CONSTANTINOPLE>;
-    table[OP_BALANCE] = 700;
-    table[OP_CHAINID] = 2;
-    table[OP_EXTCODEHASH] = 700;
-    table[OP_SELFBALANCE] = 5;
-    table[OP_SLOAD] = 800;
-    return table;
-}();
-
-template <>
-constexpr inline std::array<int16_t, 256> gas_costs<EVMC_BERLIN> = []() noexcept {
-    auto table = gas_costs<EVMC_ISTANBUL>;
-    table[OP_EXTCODESIZE] = warm_storage_read_cost;
-    table[OP_EXTCODECOPY] = warm_storage_read_cost;
-    table[OP_EXTCODEHASH] = warm_storage_read_cost;
-    table[OP_BALANCE] = warm_storage_read_cost;
-    table[OP_CALL] = warm_storage_read_cost;
-    table[OP_CALLCODE] = warm_storage_read_cost;
-    table[OP_DELEGATECALL] = warm_storage_read_cost;
-    table[OP_STATICCALL] = warm_storage_read_cost;
-    table[OP_SLOAD] = warm_storage_read_cost;
-    return table;
-}();
-
-template <>
-constexpr inline std::array<int16_t, 256> gas_costs<EVMC_LONDON> = []() noexcept {
-    auto table = gas_costs<EVMC_BERLIN>;
-    table[OP_BASEFEE] = 2;
     return table;
 }();
 

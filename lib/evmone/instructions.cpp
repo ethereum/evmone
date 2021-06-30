@@ -324,7 +324,7 @@ constexpr op_table create_op_table() noexcept
     for (size_t i = 0; i < table.size(); ++i)
     {
         auto& t = table[i];
-        const auto gas_cost = instr::gas_costs<Rev>[i];
+        const auto gas_cost = instr::gas_costs[Rev][i];
         if (gas_cost == instr::undefined)
         {
             t.fn = op_undefined;

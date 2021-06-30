@@ -17,7 +17,7 @@ constexpr InstructionTable create_instruction_table() noexcept
     for (size_t i = 0; i < table.size(); ++i)
     {
         auto& t = table[i];
-        const auto gas_cost = instr::gas_costs<Rev>[i];
+        const auto gas_cost = instr::gas_costs[Rev][i];
         t.gas_cost = gas_cost;  // Include instr::undefined in the table.
         t.stack_height_required = instr::traits[i].stack_height_required;
 
