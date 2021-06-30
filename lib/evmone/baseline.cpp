@@ -51,10 +51,21 @@ template <evmc_opcode Op>
 inline evmc_status_code check_requirements(
     const CostTable& cost_table, ExecutionState& state) noexcept
 {
-    if (INTX_UNLIKELY(cost_table[Op] == instr::undefined))
-        return EVMC_UNDEFINED_INSTRUCTION;
+    static_assert(
+        !(instr::has_const_gas_cost(Op) && instr::gas_costs[EVMC_FRONTIER][Op] == instr::undefined),
+        "undefined instructions must not be handled by check_requirements()");
 
-    if (INTX_UNLIKELY((state.gas_left -= cost_table[Op]) < 0))
+    auto gas_cost = instr::gas_costs[EVMC_FRONTIER][Op];  // Init assuming const cost.
+    if constexpr (!instr::has_const_gas_cost(Op))
+    {
+        gas_cost = cost_table[Op];  // If not, load the cost from the table.
+
+        // Negative cost marks an undefined instruction.
+        if (INTX_UNLIKELY(gas_cost < 0))
+            return EVMC_UNDEFINED_INSTRUCTION;
+    }
+
+    if (INTX_UNLIKELY((state.gas_left -= gas_cost) < 0))
         return EVMC_OUT_OF_GAS;
 
     const auto stack_size = state.stack.size();
