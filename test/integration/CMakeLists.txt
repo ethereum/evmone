@@ -22,7 +22,7 @@ DUP1,4
     add_test(NAME ${PREFIX}/trace COMMAND $<TARGET_FILE:evmc::tool> --vm $<TARGET_FILE:evmone>,O=0,trace run 60006002800103)
     set_tests_properties(
         ${PREFIX}/trace PROPERTIES PASS_REGULAR_EXPRESSION
-        "{\"depth\":0,\"rev\":\"Berlin\",\"static\":false}
+        "{\"depth\":0,\"rev\":\"London\",\"static\":false}
 {\"pc\":0,\"op\":96,\"opName\":\"PUSH1\",\"gas\":1000000,\"stack\":\\[\\],\"memorySize\":0}
 {\"pc\":2,\"op\":96,\"opName\":\"PUSH1\",\"gas\":999997,\"stack\":\\[\"0x0\"\\],\"memorySize\":0}
 {\"pc\":4,\"op\":128,\"opName\":\"DUP1\",\"gas\":999994,\"stack\":\\[\"0x0\",\"0x2\"\\],\"memorySize\":0}
