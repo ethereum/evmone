@@ -161,10 +161,13 @@ void register_benchmarks(const std::vector<BenchmarkCase>& benchmark_cases)
 {
     evmc::VM* advanced_vm = nullptr;
     evmc::VM* baseline_vm = nullptr;
+    evmc::VM* caterpillar_vm = nullptr;
     if (const auto it = registered_vms.find("advanced"); it != registered_vms.end())
         advanced_vm = &it->second;
     if (const auto it = registered_vms.find("baseline"); it != registered_vms.end())
         baseline_vm = &it->second;
+    if (const auto it = registered_vms.find("caterpillar"); it != registered_vms.end())
+        caterpillar_vm = &it->second;
 
     for (const auto& b : benchmark_cases)
     {
@@ -201,6 +204,15 @@ void register_benchmarks(const std::vector<BenchmarkCase>& benchmark_cases)
                 const auto name = "baseline/execute/" + case_name;
                 RegisterBenchmark(name.c_str(), [&vm = *baseline_vm, &b, &input](State& state) {
                     bench_baseline_execute(state, vm, b.code, input.input, input.expected_output);
+                })->Unit(kMicrosecond);
+            }
+
+            if (caterpillar_vm)
+            {
+                const auto name = "caterpillar/execute/" + case_name;
+                RegisterBenchmark(name.c_str(), [&vm = *caterpillar_vm, &b, &input](State& state) {
+                    bench_caterpillar_execute(
+                        state, vm, b.code, input.input, input.expected_output);
                 })->Unit(kMicrosecond);
             }
 
@@ -322,6 +334,7 @@ int main(int argc, char** argv)
 
         registered_vms["advanced"] = evmc::VM{evmc_create_evmone(), {{"O", "2"}}};
         registered_vms["baseline"] = evmc::VM{evmc_create_evmone(), {{"O", "0"}}};
+        registered_vms["caterpillar"] = evmc::VM{evmc_create_evmone(), {{"O", "3"}}};
         register_benchmarks(benchmark_cases);
         register_synthetic_benchmarks();
         RunSpecifiedBenchmarks();

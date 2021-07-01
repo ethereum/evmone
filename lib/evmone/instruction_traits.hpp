@@ -185,7 +185,7 @@ inline constexpr evmc_revision is_defined_since(evmc_opcode op) noexcept
         if (gas_costs[r][op] != undefined)
             return static_cast<evmc_revision>(r);
     }
-    __builtin_trap();
+    return EVMC_MAX_REVISION;
 }
 
 inline constexpr bool has_const_gas_cost(evmc_opcode op) noexcept

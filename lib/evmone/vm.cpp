@@ -7,6 +7,7 @@
 
 #include "vm.hpp"
 #include "baseline.hpp"
+#include "caterpillar.hpp"
 #include "execution.hpp"
 #include <evmone/evmone.h>
 #include <iostream>
@@ -42,6 +43,11 @@ evmc_set_option_result set_option(evmc_vm* c_vm, char const* c_name, char const*
         else if (value == "2")
         {
             c_vm->execute = evmone::execute;
+            return EVMC_SET_OPTION_SUCCESS;
+        }
+        else if (value == "3")
+        {
+            c_vm->execute = evmone::caterpillar::execute;
             return EVMC_SET_OPTION_SUCCESS;
         }
         return EVMC_SET_OPTION_INVALID_VALUE;

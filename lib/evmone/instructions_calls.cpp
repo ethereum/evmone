@@ -101,6 +101,8 @@ template evmc_status_code call<EVMC_CALL>(ExecutionState& state) noexcept;
 template evmc_status_code call<EVMC_CALL, true>(ExecutionState& state) noexcept;
 template evmc_status_code call<EVMC_DELEGATECALL>(ExecutionState& state) noexcept;
 template evmc_status_code call<EVMC_CALLCODE>(ExecutionState& state) noexcept;
+template evmc_status_code call<EVMC_CREATE>(ExecutionState& state) noexcept;
+template evmc_status_code call<EVMC_CREATE2>(ExecutionState& state) noexcept;
 
 
 template <evmc_call_kind Kind>
