@@ -127,31 +127,31 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
         case OP_STOP:
             goto exit;
         case OP_ADD:
-            add(state.stack);
+            add(state);
             break;
         case OP_MUL:
-            mul(state.stack);
+            mul(state);
             break;
         case OP_SUB:
-            sub(state.stack);
+            sub(state);
             break;
         case OP_DIV:
-            div(state.stack);
+            div(state);
             break;
         case OP_SDIV:
-            sdiv(state.stack);
+            sdiv(state);
             break;
         case OP_MOD:
-            mod(state.stack);
+            mod(state);
             break;
         case OP_SMOD:
-            smod(state.stack);
+            smod(state);
             break;
         case OP_ADDMOD:
-            addmod(state.stack);
+            addmod(state);
             break;
         case OP_MULMOD:
-            mulmod(state.stack);
+            mulmod(state);
             break;
         case OP_EXP:
         {
@@ -164,50 +164,50 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
             break;
         }
         case OP_SIGNEXTEND:
-            signextend(state.stack);
+            signextend(state);
             break;
 
         case OP_LT:
-            lt(state.stack);
+            lt(state);
             break;
         case OP_GT:
-            gt(state.stack);
+            gt(state);
             break;
         case OP_SLT:
-            slt(state.stack);
+            slt(state);
             break;
         case OP_SGT:
-            sgt(state.stack);
+            sgt(state);
             break;
         case OP_EQ:
-            eq(state.stack);
+            eq(state);
             break;
         case OP_ISZERO:
-            iszero(state.stack);
+            iszero(state);
             break;
         case OP_AND:
-            and_(state.stack);
+            and_(state);
             break;
         case OP_OR:
-            or_(state.stack);
+            or_(state);
             break;
         case OP_XOR:
-            xor_(state.stack);
+            xor_(state);
             break;
         case OP_NOT:
-            not_(state.stack);
+            not_(state);
             break;
         case OP_BYTE:
-            byte(state.stack);
+            byte(state);
             break;
         case OP_SHL:
-            shl(state.stack);
+            shl(state);
             break;
         case OP_SHR:
-            shr(state.stack);
+            shr(state);
             break;
         case OP_SAR:
-            sar(state.stack);
+            sar(state);
             break;
 
         case OP_KECCAK256:
@@ -347,7 +347,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
             break;
 
         case OP_POP:
-            pop(state.stack);
+            pop(state);
             break;
         case OP_MLOAD:
         {
@@ -423,7 +423,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
             break;
         }
         case OP_GAS:
-            state.stack.push(state.gas_left);
+            gas(state);
             break;
         case OP_JUMPDEST:
             break;
@@ -526,101 +526,101 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
             continue;
 
         case OP_DUP1:
-            dup<1>(state.stack);
+            dup<1>(state);
             break;
         case OP_DUP2:
-            dup<2>(state.stack);
+            dup<2>(state);
             break;
         case OP_DUP3:
-            dup<3>(state.stack);
+            dup<3>(state);
             break;
         case OP_DUP4:
-            dup<4>(state.stack);
+            dup<4>(state);
             break;
         case OP_DUP5:
-            dup<5>(state.stack);
+            dup<5>(state);
             break;
         case OP_DUP6:
-            dup<6>(state.stack);
+            dup<6>(state);
             break;
         case OP_DUP7:
-            dup<7>(state.stack);
+            dup<7>(state);
             break;
         case OP_DUP8:
-            dup<8>(state.stack);
+            dup<8>(state);
             break;
         case OP_DUP9:
-            dup<9>(state.stack);
+            dup<9>(state);
             break;
         case OP_DUP10:
-            dup<10>(state.stack);
+            dup<10>(state);
             break;
         case OP_DUP11:
-            dup<11>(state.stack);
+            dup<11>(state);
             break;
         case OP_DUP12:
-            dup<12>(state.stack);
+            dup<12>(state);
             break;
         case OP_DUP13:
-            dup<13>(state.stack);
+            dup<13>(state);
             break;
         case OP_DUP14:
-            dup<14>(state.stack);
+            dup<14>(state);
             break;
         case OP_DUP15:
-            dup<15>(state.stack);
+            dup<15>(state);
             break;
         case OP_DUP16:
-            dup<16>(state.stack);
+            dup<16>(state);
             break;
 
         case OP_SWAP1:
-            swap<1>(state.stack);
+            swap<1>(state);
             break;
         case OP_SWAP2:
-            swap<2>(state.stack);
+            swap<2>(state);
             break;
         case OP_SWAP3:
-            swap<3>(state.stack);
+            swap<3>(state);
             break;
         case OP_SWAP4:
-            swap<4>(state.stack);
+            swap<4>(state);
             break;
         case OP_SWAP5:
-            swap<5>(state.stack);
+            swap<5>(state);
             break;
         case OP_SWAP6:
-            swap<6>(state.stack);
+            swap<6>(state);
             break;
         case OP_SWAP7:
-            swap<7>(state.stack);
+            swap<7>(state);
             break;
         case OP_SWAP8:
-            swap<8>(state.stack);
+            swap<8>(state);
             break;
         case OP_SWAP9:
-            swap<9>(state.stack);
+            swap<9>(state);
             break;
         case OP_SWAP10:
-            swap<10>(state.stack);
+            swap<10>(state);
             break;
         case OP_SWAP11:
-            swap<11>(state.stack);
+            swap<11>(state);
             break;
         case OP_SWAP12:
-            swap<12>(state.stack);
+            swap<12>(state);
             break;
         case OP_SWAP13:
-            swap<13>(state.stack);
+            swap<13>(state);
             break;
         case OP_SWAP14:
-            swap<14>(state.stack);
+            swap<14>(state);
             break;
         case OP_SWAP15:
-            swap<15>(state.stack);
+            swap<15>(state);
             break;
         case OP_SWAP16:
-            swap<16>(state.stack);
+            swap<16>(state);
             break;
 
         case OP_LOG0:
