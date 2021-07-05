@@ -158,6 +158,9 @@ constexpr inline GasCostTable gas_costs = []() noexcept {
     table[EVMC_LONDON][OP_BASEFEE] = 2;
 
     table[EVMC_SHANGHAI] = table[EVMC_LONDON];
+    table[EVMC_SHANGHAI][OP_RJUMP] = 8;
+    table[EVMC_SHANGHAI][OP_RJUMPI] = 10;
+    table[EVMC_SHANGHAI][OP_RJUMPTABLE] = 10;
 
     return table;
 }();
@@ -251,6 +254,9 @@ constexpr inline std::array<Traits, 256> traits = []() noexcept {
     table[OP_MSIZE] = {"MSIZE", 0, 1};
     table[OP_GAS] = {"GAS", 0, 1};
     table[OP_JUMPDEST] = {"JUMPDEST", 0, 0};
+    table[OP_RJUMP] = {"RJUMP", 0, 0};
+    table[OP_RJUMPI] = {"RJUMPI", 1, -1};
+    table[OP_RJUMPTABLE] = {"RJUMPTABLE", 1, -1};
 
     table[OP_PUSH1] = {"PUSH1", 0, 1};
     table[OP_PUSH2] = {"PUSH2", 0, 1};
