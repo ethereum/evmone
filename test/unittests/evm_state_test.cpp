@@ -123,34 +123,34 @@ TEST_P(evm, sstore_cost)
 
         // Added:
         storage.clear();
-        execute(20006, sstore(1, push(1)));
+        execute(20006, sstore(1, 1));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         storage.clear();
-        execute(20005, sstore(1, push(1)));
+        execute(20005, sstore(1, 1));
         EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 
         // Deleted:
         storage.clear();
         storage[v1] = v1;
-        execute(5006, sstore(1, push(0)));
+        execute(5006, sstore(1, 0));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         storage[v1] = v1;
-        execute(5005, sstore(1, push(0)));
+        execute(5005, sstore(1, 0));
         EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 
         // Modified:
         storage.clear();
         storage[v1] = v1;
-        execute(5006, sstore(1, push(2)));
+        execute(5006, sstore(1, 2));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         storage[v1] = v1;
-        execute(5005, sstore(1, push(2)));
+        execute(5005, sstore(1, 2));
         EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 
         // Unchanged:
         storage.clear();
         storage[v1] = v1;
-        execute(sstore(1, push(1)));
+        execute(sstore(1, 1));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         if (rev >= EVMC_ISTANBUL)
             EXPECT_EQ(gas_used, 806);
@@ -158,12 +158,12 @@ TEST_P(evm, sstore_cost)
             EXPECT_EQ(gas_used, 206);
         else
             EXPECT_EQ(gas_used, 5006);
-        execute(205, sstore(1, push(1)));
+        execute(205, sstore(1, 1));
         EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 
         // Added & unchanged:
         storage.clear();
-        execute(sstore(1, push(1)) + sstore(1, push(1)));
+        execute(sstore(1, 1) + sstore(1, 1));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         if (rev >= EVMC_ISTANBUL)
             EXPECT_EQ(gas_used, 20812);
@@ -175,7 +175,7 @@ TEST_P(evm, sstore_cost)
         // Modified again:
         storage.clear();
         storage[v1] = {v1, true};
-        execute(sstore(1, push(2)));
+        execute(sstore(1, 2));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         if (rev >= EVMC_ISTANBUL)
             EXPECT_EQ(gas_used, 806);
@@ -186,7 +186,7 @@ TEST_P(evm, sstore_cost)
 
         // Added & modified again:
         storage.clear();
-        execute(sstore(1, push(1)) + sstore(1, push(2)));
+        execute(sstore(1, 1) + sstore(1, 2));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         if (rev >= EVMC_ISTANBUL)
             EXPECT_EQ(gas_used, 20812);
@@ -198,7 +198,7 @@ TEST_P(evm, sstore_cost)
         // Modified & modified again:
         storage.clear();
         storage[v1] = v1;
-        execute(sstore(1, push(2)) + sstore(1, push(3)));
+        execute(sstore(1, 2) + sstore(1, 3));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         if (rev >= EVMC_ISTANBUL)
             EXPECT_EQ(gas_used, 5812);
@@ -210,7 +210,7 @@ TEST_P(evm, sstore_cost)
         // Modified & modified again back to original:
         storage.clear();
         storage[v1] = v1;
-        execute(sstore(1, push(2)) + sstore(1, push(1)));
+        execute(sstore(1, 2) + sstore(1, 1));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         if (rev >= EVMC_ISTANBUL)
             EXPECT_EQ(gas_used, 5812);
