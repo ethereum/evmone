@@ -194,3 +194,51 @@ TEST_P(evm, eof1_codecopy_data)
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size), from_hex("deadbeef"));
 }
+
+TEST_P(evm, eof2_rjump)
+{
+    rev = EVMC_SHANGHAI;
+    auto code = eof2_bytecode(rjump(1) + OP_INVALID + mstore8(0, 1) + ret(0, 1));
+
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 1);
+
+    code = eof2_bytecode(rjump(1) + OP_INVALID + mstore8(0, 1) + ret(0, 1), "deadbeef");
+
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 1);
+}
+
+TEST_P(evm, eof2_rjump_backward)
+{
+    rev = EVMC_SHANGHAI;
+    auto code = eof2_bytecode(rjump(11) + OP_INVALID + mstore8(0, 1) + ret(0, 1) + rjump(-13));
+
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 1);
+
+    code =
+        eof2_bytecode(rjump(11) + OP_INVALID + mstore8(0, 1) + ret(0, 1) + rjump(-13), "deadbeef");
+
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 1);
+}
+
+TEST_P(evm, eof2_rjump_0_offset)
+{
+    rev = EVMC_SHANGHAI;
+    auto code = eof2_bytecode(rjump(0) + mstore8(0, 1) + ret(0, 1));
+
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 1);
+}
