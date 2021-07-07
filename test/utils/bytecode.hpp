@@ -232,6 +232,11 @@ inline bytecode rjump(int16_t offset)
     return OP_RJUMP + big_endian(offset);
 }
 
+inline bytecode rjumpi(int16_t offset, bytecode condition)
+{
+    return condition + OP_RJUMPI + bytecode{big_endian(offset)};
+}
+
 inline bytecode ret(bytecode index, bytecode size)
 {
     return size + index + OP_RETURN;

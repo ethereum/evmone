@@ -242,3 +242,57 @@ TEST_P(evm, eof2_rjump_0_offset)
     ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 1);
 }
+
+TEST_P(evm, eof2_rjumpi)
+{
+    rev = EVMC_SHANGHAI;
+    auto code = eof2_bytecode(
+        rjumpi(10, calldataload(0)) + mstore8(0, 2) + ret(0, 1) + mstore8(0, 1) + ret(0, 1));
+
+    // RJUMPI condition is true
+    execute(code, "01");
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 1);
+
+    // RJUMPI condition is false
+    execute(code, "00");
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 2);
+}
+
+TEST_P(evm, eof2_rjumpi_backwards)
+{
+    rev = EVMC_SHANGHAI;
+    auto code = eof2_bytecode(rjump(11) + OP_INVALID + mstore8(0, 1) + ret(0, 1) +
+                              rjumpi(-16, calldataload(0)) + mstore8(0, 2) + ret(0, 1));
+
+    // RJUMPI condition is true
+    execute(code, "01");
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 1);
+
+    // RJUMPI condition is false
+    execute(code, "00");
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 2);
+}
+
+TEST_P(evm, eof2_rjumpi_0_offset)
+{
+    rev = EVMC_SHANGHAI;
+    auto code = eof2_bytecode(rjumpi(0, calldataload(0)) + mstore8(0, 1) + ret(0, 1));
+
+    // RJUMPI condition is true
+    execute(code, "01");
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+
+    // RJUMPI condition is false
+    execute(code, "01");
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+}
