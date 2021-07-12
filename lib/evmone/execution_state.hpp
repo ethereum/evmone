@@ -107,7 +107,11 @@ struct ExecutionState
     evmc::HostContext host;
     evmc_revision rev = {};
     bytes return_data;
+
+    /// Reference to original EVM code.
+    /// TODO: Code should be accessed via code analysis only and this should be removed.
     bytes_view code;
+
     evmc_status_code status = EVMC_SUCCESS;
     size_t output_offset = 0;
     size_t output_size = 0;
