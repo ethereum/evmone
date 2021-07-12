@@ -12,7 +12,7 @@ executors:
       - image: ethereum/cpp-build-env:16-clang-11
   macos:
     macos:
-      xcode: 11.1.0
+      xcode: 12.5.1
 
 commands:
   build_silkworm:

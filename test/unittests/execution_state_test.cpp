@@ -75,7 +75,7 @@ TEST(execution_state, default_construct_advanced)
     EXPECT_EQ(st.output_size, 0);
 
     EXPECT_EQ(st.current_block_cost, 0u);
-    EXPECT_EQ(st.analysis, nullptr);
+    EXPECT_EQ(st.analysis.advanced, nullptr);
 }
 
 TEST(execution_state, reset_advanced)
@@ -96,7 +96,7 @@ TEST(execution_state, reset_advanced)
     st.output_offset = 3;
     st.output_size = 4;
     st.current_block_cost = 5;
-    st.analysis = &analysis;
+    st.analysis.advanced = &analysis;
 
     EXPECT_EQ(st.gas_left, 1);
     EXPECT_EQ(st.stack.size(), 1);
@@ -110,7 +110,7 @@ TEST(execution_state, reset_advanced)
     EXPECT_EQ(st.output_offset, 3);
     EXPECT_EQ(st.output_size, 4u);
     EXPECT_EQ(st.current_block_cost, 5u);
-    EXPECT_EQ(st.analysis, &analysis);
+    EXPECT_EQ(st.analysis.advanced, &analysis);
 
     {
         evmc_message msg2{};
@@ -134,7 +134,7 @@ TEST(execution_state, reset_advanced)
         EXPECT_EQ(st.output_offset, 0);
         EXPECT_EQ(st.output_size, 0);
         EXPECT_EQ(st.current_block_cost, 0u);
-        EXPECT_EQ(st.analysis, nullptr);
+        EXPECT_EQ(st.analysis.advanced, nullptr);
     }
 }
 

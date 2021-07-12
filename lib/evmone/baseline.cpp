@@ -45,9 +45,10 @@ CodeAnalysis analyze(const uint8_t* code, size_t code_size)
 
 namespace
 {
-const uint8_t* op_jump(
-    ExecutionState& state, const CodeAnalysis::JumpdestMap& jumpdest_map) noexcept
+/// JUMP instruction implementation using baseline::CodeAnalysis.
+inline const uint8_t* jump(ExecutionState& state) noexcept
 {
+    const auto& jumpdest_map = state.analysis.baseline->jumpdest_map;
     const auto dst = state.stack.pop();
     if (dst >= jumpdest_map.size() || !jumpdest_map[static_cast<size_t>(dst)])
     {
@@ -102,6 +103,8 @@ inline evmc_status_code check_requirements(
 template <bool TracingEnabled>
 evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& analysis) noexcept
 {
+    state.analysis.baseline = &analysis;  // Assign code analysis for instruction implementations.
+
     // Use padded code.
     state.code = {analysis.padded_code.get(), state.code.size()};
 
@@ -389,12 +392,12 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
         }
 
         case OP_JUMP:
-            code_it = op_jump(state, analysis.jumpdest_map);
+            code_it = jump(state);
             DISPATCH();
         case OP_JUMPI:
             if (state.stack[1] != 0)
             {
-                code_it = op_jump(state, analysis.jumpdest_map);
+                code_it = jump(state);
             }
             else
             {

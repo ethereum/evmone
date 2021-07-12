@@ -10,9 +10,9 @@ namespace evmone
 {
 evmc_result execute(AdvancedExecutionState& state, const AdvancedCodeAnalysis& analysis) noexcept
 {
-    state.analysis = &analysis;  // Allow accessing the analysis by instructions.
+    state.analysis.advanced = &analysis;  // Allow accessing the analysis by instructions.
 
-    const auto* instr = &state.analysis->instrs[0];  // Start with the first instruction.
+    const auto* instr = &state.analysis.advanced->instrs[0];  // Start with the first instruction.
     while (instr != nullptr)
         instr = instr->fn(instr, state);
 

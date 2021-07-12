@@ -44,10 +44,10 @@ const instruction* op_jump(const instruction*, AdvancedExecutionState& state) no
     const auto dst = state.stack.pop();
     auto pc = -1;
     if (std::numeric_limits<int>::max() < dst ||
-        (pc = find_jumpdest(*state.analysis, static_cast<int>(dst))) < 0)
+        (pc = find_jumpdest(*state.analysis.advanced, static_cast<int>(dst))) < 0)
         return state.exit(EVMC_BAD_JUMP_DESTINATION);
 
-    return &state.analysis->instrs[static_cast<size_t>(pc)];
+    return &state.analysis.advanced->instrs[static_cast<size_t>(pc)];
 }
 
 const instruction* op_jumpi(const instruction* instr, AdvancedExecutionState& state) noexcept

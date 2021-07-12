@@ -10,6 +10,12 @@
 
 namespace evmone
 {
+struct AdvancedCodeAnalysis;
+namespace baseline
+{
+struct CodeAnalysis;
+}
+
 using uint256 = intx::uint256;
 using bytes = std::basic_string<uint8_t>;
 using bytes_view = std::basic_string_view<uint8_t>;
@@ -101,10 +107,22 @@ struct ExecutionState
     evmc::HostContext host;
     evmc_revision rev = {};
     bytes return_data;
+
+    /// Reference to original EVM code.
+    /// TODO: Code should be accessed via code analysis only and this should be removed.
     bytes_view code;
+
     evmc_status_code status = EVMC_SUCCESS;
     size_t output_offset = 0;
     size_t output_size = 0;
+
+    /// Pointer to code analysis.
+    /// This should be set and used internally by execute() function of a particular interpreter.
+    union
+    {
+        const baseline::CodeAnalysis* baseline = nullptr;
+        const AdvancedCodeAnalysis* advanced;
+    } analysis{};
 
     ExecutionState() noexcept = default;
 
