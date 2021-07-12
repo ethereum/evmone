@@ -732,6 +732,21 @@ inline evmc_status_code gas(ExecutionState& state) noexcept
     return EVMC_SUCCESS;
 }
 
+/// PUSH instruction implementation.
+/// @tparam Len The number of push data bytes, e.g. PUSH3 is push<3>.
+///
+/// It assumes that the whole data read is valid so code padding is required for some EVM bytecodes
+/// having an "incomplete" PUSH instruction at the very end.
+template <size_t Len>
+inline InstrResult push(ExecutionState& state, size_t pc) noexcept
+{
+    const auto data_pos = state.code.data() + pc + 1;
+    uint8_t buffer[Len];
+    std::memcpy(buffer, data_pos, Len);  // Valid by the assumption code is padded.
+    state.stack.push(intx::be::load<intx::uint256>(buffer));
+    return {EVMC_SUCCESS, pc + 1 + Len};
+}
+
 /// DUP instruction implementation.
 /// @tparam N  The number as in the instruction definition, e.g. DUP3 is dup<3>.
 template <size_t N>
