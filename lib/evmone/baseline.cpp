@@ -96,7 +96,7 @@ inline evmc_status_code check_requirements(
 
 /// Increment "pc" and dispatch the instruction.
 #define DISPATCH_NEXT() \
-    ++pc;               \
+    ++code_it;          \
     DISPATCH()
 
 template <bool TracingEnabled>
@@ -112,17 +112,17 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     const auto& instruction_table = get_baseline_instruction_table(state.rev);
 
     const auto* const code = state.code.data();
-    auto pc = code;
-    while (true)  // Guaranteed to terminate because padded code ends with STOP.
+    auto code_it = code;  // Code iterator for the interpreter loop.
+    while (true)          // Guaranteed to terminate because padded code ends with STOP.
     {
         if constexpr (TracingEnabled)
         {
-            const auto offset = static_cast<uint32_t>(pc - code);
+            const auto offset = static_cast<uint32_t>(code_it - code);
             if (offset < state.code.size())  // Skip STOP from code padding.
                 tracer->notify_instruction_start(offset, state);
         }
 
-        const auto op = *pc;
+        const auto op = *code_it;
         const auto status = check_requirements(instruction_table, state, op);
         if (status != EVMC_SUCCESS)
         {
@@ -389,23 +389,23 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
         }
 
         case OP_JUMP:
-            pc = op_jump(state, analysis.jumpdest_map);
+            code_it = op_jump(state, analysis.jumpdest_map);
             DISPATCH();
         case OP_JUMPI:
             if (state.stack[1] != 0)
             {
-                pc = op_jump(state, analysis.jumpdest_map);
+                code_it = op_jump(state, analysis.jumpdest_map);
             }
             else
             {
                 state.stack.pop();
-                ++pc;
+                ++code_it;
             }
             state.stack.pop();
             DISPATCH();
 
         case OP_PC:
-            state.stack.push(pc - code);
+            state.stack.push(code_it - code);
             DISPATCH_NEXT();
         case OP_MSIZE:
             msize(state);
@@ -437,100 +437,100 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
             DISPATCH_NEXT();
 
         case OP_PUSH1:
-            pc = load_push<1>(state, pc + 1);
+            code_it = load_push<1>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH2:
-            pc = load_push<2>(state, pc + 1);
+            code_it = load_push<2>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH3:
-            pc = load_push<3>(state, pc + 1);
+            code_it = load_push<3>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH4:
-            pc = load_push<4>(state, pc + 1);
+            code_it = load_push<4>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH5:
-            pc = load_push<5>(state, pc + 1);
+            code_it = load_push<5>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH6:
-            pc = load_push<6>(state, pc + 1);
+            code_it = load_push<6>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH7:
-            pc = load_push<7>(state, pc + 1);
+            code_it = load_push<7>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH8:
-            pc = load_push<8>(state, pc + 1);
+            code_it = load_push<8>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH9:
-            pc = load_push<9>(state, pc + 1);
+            code_it = load_push<9>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH10:
-            pc = load_push<10>(state, pc + 1);
+            code_it = load_push<10>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH11:
-            pc = load_push<11>(state, pc + 1);
+            code_it = load_push<11>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH12:
-            pc = load_push<12>(state, pc + 1);
+            code_it = load_push<12>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH13:
-            pc = load_push<13>(state, pc + 1);
+            code_it = load_push<13>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH14:
-            pc = load_push<14>(state, pc + 1);
+            code_it = load_push<14>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH15:
-            pc = load_push<15>(state, pc + 1);
+            code_it = load_push<15>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH16:
-            pc = load_push<16>(state, pc + 1);
+            code_it = load_push<16>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH17:
-            pc = load_push<17>(state, pc + 1);
+            code_it = load_push<17>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH18:
-            pc = load_push<18>(state, pc + 1);
+            code_it = load_push<18>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH19:
-            pc = load_push<19>(state, pc + 1);
+            code_it = load_push<19>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH20:
-            pc = load_push<20>(state, pc + 1);
+            code_it = load_push<20>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH21:
-            pc = load_push<21>(state, pc + 1);
+            code_it = load_push<21>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH22:
-            pc = load_push<22>(state, pc + 1);
+            code_it = load_push<22>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH23:
-            pc = load_push<23>(state, pc + 1);
+            code_it = load_push<23>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH24:
-            pc = load_push<24>(state, pc + 1);
+            code_it = load_push<24>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH25:
-            pc = load_push<25>(state, pc + 1);
+            code_it = load_push<25>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH26:
-            pc = load_push<26>(state, pc + 1);
+            code_it = load_push<26>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH27:
-            pc = load_push<27>(state, pc + 1);
+            code_it = load_push<27>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH28:
-            pc = load_push<28>(state, pc + 1);
+            code_it = load_push<28>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH29:
-            pc = load_push<29>(state, pc + 1);
+            code_it = load_push<29>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH30:
-            pc = load_push<30>(state, pc + 1);
+            code_it = load_push<30>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH31:
-            pc = load_push<31>(state, pc + 1);
+            code_it = load_push<31>(state, code_it + 1);
             DISPATCH();
         case OP_PUSH32:
-            pc = load_push<32>(state, pc + 1);
+            code_it = load_push<32>(state, code_it + 1);
             DISPATCH();
 
         case OP_DUP1:
