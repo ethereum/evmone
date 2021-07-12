@@ -42,8 +42,6 @@ struct block_info
 };
 static_assert(sizeof(block_info) == 8);
 
-struct AdvancedCodeAnalysis;
-
 /// The execution state specialized for the Advanced interpreter.
 struct AdvancedExecutionState : ExecutionState
 {
@@ -51,9 +49,6 @@ struct AdvancedExecutionState : ExecutionState
     ///
     /// This is only needed to correctly calculate the "current gas left" value.
     uint32_t current_block_cost = 0;
-
-    /// Pointer to code analysis.
-    const AdvancedCodeAnalysis* analysis = nullptr;
 
     using ExecutionState::ExecutionState;
 
@@ -70,8 +65,8 @@ struct AdvancedExecutionState : ExecutionState
         const uint8_t* code_ptr, size_t code_size) noexcept
     {
         ExecutionState::reset(message, revision, host_interface, host_ctx, code_ptr, code_size);
+        analysis.advanced = nullptr;  // For consistency with previous behavior.
         current_block_cost = 0;
-        analysis = nullptr;
     }
 };
 
