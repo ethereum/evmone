@@ -9,6 +9,13 @@
 
 namespace evmone
 {
+/// Full status of an instruction execution.
+struct InstrResult
+{
+    evmc_status_code status;  ///< Status code.
+    size_t pc;                ///< Code offset of the next instruction (PC).
+};
+
 /// Function signature of the core implementation (without requirements check)
 /// of an EVM instruction.
 using InstrFn = evmc_status_code(ExecutionState&) noexcept;
@@ -707,6 +714,11 @@ inline evmc_status_code sstore(ExecutionState& state) noexcept
     return EVMC_SUCCESS;
 }
 
+inline InstrResult pc(ExecutionState& state, size_t pc) noexcept
+{
+    state.stack.push(pc);
+    return {EVMC_SUCCESS, pc + 1};
+}
 
 inline evmc_status_code msize(ExecutionState& state) noexcept
 {
@@ -826,4 +838,5 @@ inline evmc_status_code selfdestruct(ExecutionState& state) noexcept
     state.host.selfdestruct(state.msg->destination, beneficiary);
     return EVMC_SUCCESS;
 }
+
 }  // namespace evmone
