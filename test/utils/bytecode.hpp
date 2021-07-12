@@ -195,6 +195,11 @@ inline bytecode ret(bytecode c)
     return c + ret_top();
 }
 
+inline bytecode revert(bytecode index, bytecode size)
+{
+    return size + index + OP_REVERT;
+}
+
 inline bytecode keccak256(bytecode index, bytecode size)
 {
     return size + index + OP_KECCAK256;

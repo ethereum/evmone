@@ -630,6 +630,35 @@ TEST_P(evm, invalid)
     EXPECT_EQ(result.gas_left, 0);
 }
 
+TEST_P(evm, inner_stop)
+{
+    const auto code = push(0) + OP_STOP + OP_POP;
+    execute(3, code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 3);
+}
+
+TEST_P(evm, inner_return)
+{
+    const auto code = ret(0, 0) + push(0);
+    execute(6, code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 6);
+}
+
+TEST_P(evm, inner_revert)
+{
+    const auto code = revert(0, 0) + push(0);
+    execute(6, code);
+    EXPECT_GAS_USED(EVMC_REVERT, 6);
+}
+
+TEST_P(evm, inner_selfdestruct)
+{
+    rev = EVMC_FRONTIER;
+    const auto code = push(0) + OP_SELFDESTRUCT + push(0);
+    execute(3, code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 3);
+}
+
 TEST_P(evm, keccak256)
 {
     execute("6108006103ff2060005260206000f3");
