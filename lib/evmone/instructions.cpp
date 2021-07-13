@@ -10,7 +10,7 @@ namespace evmone
 {
 namespace
 {
-template <InstrFn Fn>
+template <evmc_status_code Fn(ExecutionState&) noexcept>
 const instruction* op(const instruction* instr, AdvancedExecutionState& state) noexcept
 {
     const auto status_code = Fn(state);

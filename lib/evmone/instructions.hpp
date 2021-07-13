@@ -19,7 +19,7 @@ struct InstrResult
 
 /// Function signature of the core implementation (without requirements check)
 /// of an EVM instruction.
-using InstrFn = evmc_status_code(ExecutionState&) noexcept;
+using InstrFn = InstrResult(ExecutionState& state, size_t pc) noexcept;
 
 constexpr auto max_buffer_size = std::numeric_limits<uint32_t>::max();
 
