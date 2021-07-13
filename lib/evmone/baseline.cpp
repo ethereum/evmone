@@ -102,8 +102,8 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
         }
 
         const auto op = *code_it;
-        const auto status = check_requirements(instruction_table, state, op);
-        if (status != EVMC_SUCCESS)
+        if (const auto status = check_requirements(instruction_table, state, op);
+            status != EVMC_SUCCESS)
         {
             state.status = status;
             goto exit;
