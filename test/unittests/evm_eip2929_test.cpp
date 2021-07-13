@@ -64,15 +64,12 @@ TEST_P(evm, eip2929_case2)
     EXPECT_EQ(result.output_size, 0);
 
     const auto& r = host.recorded_account_accesses;
-    ASSERT_EQ(r.size(), 8);
+    ASSERT_EQ(r.size(), 5);
     EXPECT_EQ(r[0], msg.sender);
     EXPECT_EQ(r[1], msg.destination);
     EXPECT_EQ(r[2], 0x00000000000000000000000000000000000000ff_address);
     EXPECT_EQ(r[3], 0x00000000000000000000000000000000000000ff_address);
-    EXPECT_EQ(r[4], 0x00000000000000000000000000000000000000ff_address);
-    EXPECT_EQ(r[5], 0x00000000000000000000000000000000000000ff_address);
-    EXPECT_EQ(r[6], msg.destination);
-    EXPECT_EQ(r[7], msg.destination);
+    EXPECT_EQ(r[4], msg.destination);
 }
 
 TEST_P(evm, eip2929_case3)

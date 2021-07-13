@@ -476,10 +476,7 @@ inline evmc_status_code extcodecopy(ExecutionState& state) noexcept
     if (!check_memory(state, mem_index, size))
         return EVMC_OUT_OF_GAS;
 
-    auto dst = static_cast<size_t>(mem_index);
-    auto src = max_buffer_size < input_index ? max_buffer_size : static_cast<size_t>(input_index);
-    auto s = static_cast<size_t>(size);
-
+    const auto s = static_cast<size_t>(size);
     const auto copy_cost = num_words(s) * 3;
     if ((state.gas_left -= copy_cost) < 0)
         return EVMC_OUT_OF_GAS;
@@ -490,10 +487,15 @@ inline evmc_status_code extcodecopy(ExecutionState& state) noexcept
             return EVMC_OUT_OF_GAS;
     }
 
-    auto data = s != 0 ? &state.memory[dst] : nullptr;
-    auto num_bytes_copied = state.host.copy_code(addr, src, data, s);
-    if (s - num_bytes_copied > 0)
-        std::memset(&state.memory[dst + num_bytes_copied], 0, s - num_bytes_copied);
+    if (s > 0)
+    {
+        const auto src =
+            (max_buffer_size < input_index) ? max_buffer_size : static_cast<size_t>(input_index);
+        const auto dst = static_cast<size_t>(mem_index);
+        const auto num_bytes_copied = state.host.copy_code(addr, src, &state.memory[dst], s);
+        if (const auto num_bytes_to_clear = s - num_bytes_copied; num_bytes_to_clear > 0)
+            std::memset(&state.memory[dst + num_bytes_copied], 0, num_bytes_to_clear);
+    }
 
     return EVMC_SUCCESS;
 }
