@@ -112,6 +112,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
         switch (op)
         {
         case OP_STOP:
+            state.status = stop(state);
             goto exit;
         case OP_ADD:
             add(state);
@@ -422,6 +423,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
             gas(state);
             DISPATCH_NEXT();
         case OP_JUMPDEST:
+            jumpdest(state);
             DISPATCH_NEXT();
 
         case OP_PUSH1:
@@ -701,7 +703,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
             DISPATCH_NEXT();
         }
         case OP_RETURN:
-            return_<EVMC_SUCCESS>(state);
+            state.status = return_<EVMC_SUCCESS>(state);
             goto exit;
         case OP_DELEGATECALL:
         {
@@ -734,10 +736,10 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
             DISPATCH_NEXT();
         }
         case OP_REVERT:
-            return_<EVMC_REVERT>(state);
+            state.status = return_<EVMC_REVERT>(state);
             goto exit;
         case OP_INVALID:
-            state.status = EVMC_INVALID_INSTRUCTION;
+            state.status = invalid(state);
             goto exit;
         case OP_SELFDESTRUCT:
             state.status = selfdestruct(state);
