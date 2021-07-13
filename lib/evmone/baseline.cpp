@@ -701,7 +701,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
             DISPATCH_NEXT();
         }
         case OP_RETURN:
-            return_<EVMC_SUCCESS>(state);
+            state.status = return_<EVMC_SUCCESS>(state);
             goto exit;
         case OP_DELEGATECALL:
         {
@@ -734,7 +734,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
             DISPATCH_NEXT();
         }
         case OP_REVERT:
-            return_<EVMC_REVERT>(state);
+            state.status = return_<EVMC_REVERT>(state);
             goto exit;
         case OP_INVALID:
             state.status = EVMC_INVALID_INSTRUCTION;
