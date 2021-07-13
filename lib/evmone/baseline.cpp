@@ -73,7 +73,7 @@ inline evmc_status_code check_requirements(
 
 /// Increment "pc" and dispatch the instruction.
 #define DISPATCH_NEXT() \
-    ++code_it;          \
+    ++pc;               \
     DISPATCH()
 
 template <bool TracingEnabled>
@@ -91,17 +91,16 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     const auto& instruction_table = get_baseline_instruction_table(state.rev);
 
     const auto* const code = state.code.data();
-    auto code_it = code;  // Code iterator for the interpreter loop.
-    while (true)          // Guaranteed to terminate because padded code ends with STOP.
+    size_t pc = 0;  // The code offset of the current instruction.
+    while (true)    // Guaranteed to terminate because padded code ends with STOP.
     {
         if constexpr (TracingEnabled)
         {
-            const auto offset = static_cast<uint32_t>(code_it - code);
-            if (offset < state.code.size())  // Skip STOP from code padding.
-                tracer->notify_instruction_start(offset, state);
+            if (pc < state.code.size())  // Skip STOP from code padding.
+                tracer->notify_instruction_start(static_cast<uint32_t>(pc), state);
         }
 
-        const auto op = *code_it;
+        const auto op = code[pc];
         const auto status = check_requirements(instruction_table, state, op);
         if (status != EVMC_SUCCESS)
         {
@@ -369,30 +368,30 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
 
         case OP_JUMP:
         {
-            const auto r = jump(state, static_cast<size_t>(code_it - code));
+            const auto r = jump(state, pc);
             if (r.status != EVMC_SUCCESS)
             {
                 state.status = r.status;
                 goto exit;
             }
-            code_it = code + r.pc;
+            pc = r.pc;
             DISPATCH();
         }
 
         case OP_JUMPI:
         {
-            const auto r = jumpi(state, static_cast<size_t>(code_it - code));
+            const auto r = jumpi(state, pc);
             if (r.status != EVMC_SUCCESS)
             {
                 state.status = r.status;
                 goto exit;
             }
-            code_it = code + r.pc;
+            pc = r.pc;
             DISPATCH();
         }
 
         case OP_PC:
-            code_it = code + pc(state, static_cast<size_t>(code_it - code)).pc;
+            pc = evmone::pc(state, pc).pc;
             DISPATCH();
 
         case OP_MSIZE:
@@ -425,100 +424,100 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
             DISPATCH_NEXT();
 
         case OP_PUSH1:
-            code_it = code + push<1>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<1>(state, pc).pc;
             DISPATCH();
         case OP_PUSH2:
-            code_it = code + push<2>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<2>(state, pc).pc;
             DISPATCH();
         case OP_PUSH3:
-            code_it = code + push<3>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<3>(state, pc).pc;
             DISPATCH();
         case OP_PUSH4:
-            code_it = code + push<4>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<4>(state, pc).pc;
             DISPATCH();
         case OP_PUSH5:
-            code_it = code + push<5>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<5>(state, pc).pc;
             DISPATCH();
         case OP_PUSH6:
-            code_it = code + push<6>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<6>(state, pc).pc;
             DISPATCH();
         case OP_PUSH7:
-            code_it = code + push<7>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<7>(state, pc).pc;
             DISPATCH();
         case OP_PUSH8:
-            code_it = code + push<8>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<8>(state, pc).pc;
             DISPATCH();
         case OP_PUSH9:
-            code_it = code + push<9>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<9>(state, pc).pc;
             DISPATCH();
         case OP_PUSH10:
-            code_it = code + push<10>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<10>(state, pc).pc;
             DISPATCH();
         case OP_PUSH11:
-            code_it = code + push<11>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<11>(state, pc).pc;
             DISPATCH();
         case OP_PUSH12:
-            code_it = code + push<12>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<12>(state, pc).pc;
             DISPATCH();
         case OP_PUSH13:
-            code_it = code + push<13>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<13>(state, pc).pc;
             DISPATCH();
         case OP_PUSH14:
-            code_it = code + push<14>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<14>(state, pc).pc;
             DISPATCH();
         case OP_PUSH15:
-            code_it = code + push<15>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<15>(state, pc).pc;
             DISPATCH();
         case OP_PUSH16:
-            code_it = code + push<16>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<16>(state, pc).pc;
             DISPATCH();
         case OP_PUSH17:
-            code_it = code + push<17>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<17>(state, pc).pc;
             DISPATCH();
         case OP_PUSH18:
-            code_it = code + push<18>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<18>(state, pc).pc;
             DISPATCH();
         case OP_PUSH19:
-            code_it = code + push<19>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<19>(state, pc).pc;
             DISPATCH();
         case OP_PUSH20:
-            code_it = code + push<20>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<20>(state, pc).pc;
             DISPATCH();
         case OP_PUSH21:
-            code_it = code + push<21>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<21>(state, pc).pc;
             DISPATCH();
         case OP_PUSH22:
-            code_it = code + push<22>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<22>(state, pc).pc;
             DISPATCH();
         case OP_PUSH23:
-            code_it = code + push<23>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<23>(state, pc).pc;
             DISPATCH();
         case OP_PUSH24:
-            code_it = code + push<24>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<24>(state, pc).pc;
             DISPATCH();
         case OP_PUSH25:
-            code_it = code + push<25>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<25>(state, pc).pc;
             DISPATCH();
         case OP_PUSH26:
-            code_it = code + push<26>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<26>(state, pc).pc;
             DISPATCH();
         case OP_PUSH27:
-            code_it = code + push<27>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<27>(state, pc).pc;
             DISPATCH();
         case OP_PUSH28:
-            code_it = code + push<28>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<28>(state, pc).pc;
             DISPATCH();
         case OP_PUSH29:
-            code_it = code + push<29>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<29>(state, pc).pc;
             DISPATCH();
         case OP_PUSH30:
-            code_it = code + push<30>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<30>(state, pc).pc;
             DISPATCH();
         case OP_PUSH31:
-            code_it = code + push<31>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<31>(state, pc).pc;
             DISPATCH();
         case OP_PUSH32:
-            code_it = code + push<32>(state, static_cast<size_t>(code_it - code)).pc;
+            pc = push<32>(state, pc).pc;
             DISPATCH();
 
         case OP_DUP1:
