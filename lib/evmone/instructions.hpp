@@ -68,6 +68,11 @@ inline bool check_memory(ExecutionState& state, const uint256& offset, const uin
     return check_memory(state, offset, static_cast<uint64_t>(size));
 }
 
+inline evmc_status_code stop(ExecutionState& /*state*/) noexcept
+{
+    return EVMC_SUCCESS;
+}
+
 inline evmc_status_code add(ExecutionState& state) noexcept
 {
     state.stack.top() += state.stack.pop();
@@ -761,6 +766,11 @@ inline evmc_status_code gas(ExecutionState& state) noexcept
     return EVMC_SUCCESS;
 }
 
+inline evmc_status_code jumpdest(ExecutionState& /*state*/) noexcept
+{
+    return EVMC_SUCCESS;
+}
+
 /// PUSH instruction implementation.
 /// @tparam Len The number of push data bytes, e.g. PUSH3 is push<3>.
 ///
@@ -847,6 +857,11 @@ inline evmc_status_code return_(ExecutionState& state) noexcept
     state.output_offset = static_cast<size_t>(offset);  // Can be garbage if size is 0.
     state.output_size = static_cast<size_t>(size);
     return StatusCode;
+}
+
+inline evmc_status_code invalid(ExecutionState& /*state*/) noexcept
+{
+    return EVMC_INVALID_INSTRUCTION;
 }
 
 inline evmc_status_code selfdestruct(ExecutionState& state) noexcept
