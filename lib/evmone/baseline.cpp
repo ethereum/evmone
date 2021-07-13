@@ -94,6 +94,15 @@ CodeAnalysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size)
 
 namespace
 {
+const uint8_t* rjump(const uint8_t* pc) noexcept
+{
+    // Reading next 2 bytes is guaranteed to be safe by deploy-time validation.
+    const auto offset_hi = *(pc + 1);
+    const auto offset_lo = *(pc + 2);
+    const auto offset = static_cast<int16_t>((offset_hi << 8) + offset_lo);
+    return pc + 3 + offset;  // PC_post_rjump + offset
+}
+
 inline evmc_status_code check_requirements(
     const InstructionTable& instruction_table, ExecutionState& state, uint8_t op) noexcept
 {
@@ -474,6 +483,18 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
         case OP_JUMPDEST:
             jumpdest(state);
             DISPATCH_NEXT();
+        case OP_RJUMP:
+            code_it = rjump(code_it);
+            DISPATCH();
+        case OP_RJUMPI:
+            if (state.stack.pop() != 0)
+                code_it = rjump(code_it);
+            else
+            {
+                // skip immediate argument
+                code_it += 3;
+            }
+            DISPATCH();
 
         case OP_PUSH1:
             code_it = code + push<1>(state, static_cast<size_t>(code_it - code)).pc;
