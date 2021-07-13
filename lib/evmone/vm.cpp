@@ -9,6 +9,7 @@
 #include "baseline.hpp"
 #include "execution.hpp"
 #include <evmone/evmone.h>
+#include <cassert>
 #include <iostream>
 
 namespace evmone

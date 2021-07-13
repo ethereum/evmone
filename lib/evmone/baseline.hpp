@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
-#include "execution_state.hpp"
 #include <evmc/evmc.h>
 #include <evmc/utils.h>
 #include <memory>
@@ -11,6 +10,7 @@
 
 namespace evmone
 {
+struct ExecutionState;
 class VM;
 
 namespace baseline
