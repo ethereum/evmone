@@ -45,34 +45,6 @@ CodeAnalysis analyze(const uint8_t* code, size_t code_size)
 
 namespace
 {
-/// Helper for JUMP/JUMPI instructions to check validity of a jump destination.
-inline InstrResult resolve_jump_destination(
-    const CodeAnalysis& analysis, const uint256& dst) noexcept
-{
-    const auto& jumpdest_map = analysis.jumpdest_map;
-    if (dst >= jumpdest_map.size() || !jumpdest_map[static_cast<size_t>(dst)])
-        return {EVMC_BAD_JUMP_DESTINATION, 0};
-
-    return {EVMC_SUCCESS, static_cast<size_t>(dst)};
-}
-
-/// JUMP instruction implementation using baseline::CodeAnalysis.
-inline InstrResult jump(ExecutionState& state, size_t /*pc*/) noexcept
-{
-    return resolve_jump_destination(*state.analysis.baseline, state.stack.pop());
-}
-
-/// JUMPI instruction implementation using baseline::CodeAnalysis.
-inline InstrResult jumpi(ExecutionState& state, size_t pc) noexcept
-{
-    const auto dst = state.stack.pop();
-    const auto cond = state.stack.pop();
-    if (cond)
-        return resolve_jump_destination(*state.analysis.baseline, dst);
-    else
-        return {EVMC_SUCCESS, pc + 1};
-}
-
 inline evmc_status_code check_requirements(
     const InstructionTable& instruction_table, ExecutionState& state, uint8_t op) noexcept
 {

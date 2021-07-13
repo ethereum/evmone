@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
+#include "baseline.hpp"
 #include "execution_state.hpp"
 #include "instruction_traits.hpp"
 #include <ethash/keccak.hpp>
@@ -712,6 +713,34 @@ inline evmc_status_code sstore(ExecutionState& state) noexcept
     if ((state.gas_left -= cost) < 0)
         return EVMC_OUT_OF_GAS;
     return EVMC_SUCCESS;
+}
+
+/// Helper for JUMP/JUMPI instructions to check validity of a jump destination.
+inline InstrResult resolve_jump_destination(
+    const baseline::CodeAnalysis& analysis, const uint256& dst) noexcept
+{
+    const auto& jumpdest_map = analysis.jumpdest_map;
+    if (dst >= jumpdest_map.size() || !jumpdest_map[static_cast<size_t>(dst)])
+        return {EVMC_BAD_JUMP_DESTINATION, 0};
+
+    return {EVMC_SUCCESS, static_cast<size_t>(dst)};
+}
+
+/// JUMP instruction implementation using baseline::CodeAnalysis.
+inline InstrResult jump(ExecutionState& state, size_t /*pc*/) noexcept
+{
+    return resolve_jump_destination(*state.analysis.baseline, state.stack.pop());
+}
+
+/// JUMPI instruction implementation using baseline::CodeAnalysis.
+inline InstrResult jumpi(ExecutionState& state, size_t pc) noexcept
+{
+    const auto dst = state.stack.pop();
+    const auto cond = state.stack.pop();
+    if (cond)
+        return resolve_jump_destination(*state.analysis.baseline, dst);
+    else
+        return {EVMC_SUCCESS, pc + 1};
 }
 
 inline InstrResult pc(ExecutionState& state, size_t pc) noexcept
