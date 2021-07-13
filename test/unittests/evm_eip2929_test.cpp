@@ -256,7 +256,7 @@ TEST_P(evm, eip2929_delegatecall_cold)
     EXPECT_EQ(r[0], msg.sender);
     EXPECT_EQ(r[1], msg.recipient);
     EXPECT_EQ(r[2], 0x00000000000000000000000000000000000000de_address);
-    EXPECT_EQ(r[3], 0x00000000000000000000000000000000000000de_address);
+    EXPECT_EQ(r[3], msg.sender);
 
     r.clear();
     execute(2617, code);
