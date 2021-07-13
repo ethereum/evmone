@@ -3,12 +3,20 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
+#include "baseline.hpp"
 #include "execution_state.hpp"
 #include "instruction_traits.hpp"
 #include <ethash/keccak.hpp>
 
 namespace evmone
 {
+/// Full status of an instruction execution.
+struct InstrResult
+{
+    evmc_status_code status;  ///< Status code.
+    size_t pc;                ///< Code offset of the next instruction (PC).
+};
+
 /// Function signature of the core implementation (without requirements check)
 /// of an EVM instruction.
 using InstrFn = evmc_status_code(ExecutionState&) noexcept;
@@ -707,6 +715,39 @@ inline evmc_status_code sstore(ExecutionState& state) noexcept
     return EVMC_SUCCESS;
 }
 
+/// Helper for JUMP/JUMPI instructions to check validity of a jump destination.
+inline InstrResult resolve_jump_destination(
+    const baseline::CodeAnalysis& analysis, const uint256& dst) noexcept
+{
+    const auto& jumpdest_map = analysis.jumpdest_map;
+    if (dst >= jumpdest_map.size() || !jumpdest_map[static_cast<size_t>(dst)])
+        return {EVMC_BAD_JUMP_DESTINATION, 0};
+
+    return {EVMC_SUCCESS, static_cast<size_t>(dst)};
+}
+
+/// JUMP instruction implementation using baseline::CodeAnalysis.
+inline InstrResult jump(ExecutionState& state, size_t /*pc*/) noexcept
+{
+    return resolve_jump_destination(*state.analysis.baseline, state.stack.pop());
+}
+
+/// JUMPI instruction implementation using baseline::CodeAnalysis.
+inline InstrResult jumpi(ExecutionState& state, size_t pc) noexcept
+{
+    const auto dst = state.stack.pop();
+    const auto cond = state.stack.pop();
+    if (cond)
+        return resolve_jump_destination(*state.analysis.baseline, dst);
+    else
+        return {EVMC_SUCCESS, pc + 1};
+}
+
+inline InstrResult pc(ExecutionState& state, size_t pc) noexcept
+{
+    state.stack.push(pc);
+    return {EVMC_SUCCESS, pc + 1};
+}
 
 inline evmc_status_code msize(ExecutionState& state) noexcept
 {
@@ -718,6 +759,21 @@ inline evmc_status_code gas(ExecutionState& state) noexcept
 {
     state.stack.push(state.gas_left);
     return EVMC_SUCCESS;
+}
+
+/// PUSH instruction implementation.
+/// @tparam Len The number of push data bytes, e.g. PUSH3 is push<3>.
+///
+/// It assumes that the whole data read is valid so code padding is required for some EVM bytecodes
+/// having an "incomplete" PUSH instruction at the very end.
+template <size_t Len>
+inline InstrResult push(ExecutionState& state, size_t pc) noexcept
+{
+    const auto data_pos = state.code.data() + pc + 1;
+    uint8_t buffer[Len];
+    std::memcpy(buffer, data_pos, Len);  // Valid by the assumption code is padded.
+    state.stack.push(intx::be::load<intx::uint256>(buffer));
+    return {EVMC_SUCCESS, pc + 1 + Len};
 }
 
 /// DUP instruction implementation.
@@ -826,4 +882,5 @@ inline evmc_status_code selfdestruct(ExecutionState& state) noexcept
     state.host.selfdestruct(state.msg->destination, beneficiary);
     return EVMC_SUCCESS;
 }
+
 }  // namespace evmone
