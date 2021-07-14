@@ -158,7 +158,7 @@ inline evmc_status_code exp(ExecutionState& state) noexcept
     return EVMC_SUCCESS;
 }
 
-inline evmc_status_code signextend(ExecutionState& state) noexcept
+inline void signextend(ExecutionState& state) noexcept
 {
     const auto ext = state.stack.pop();
     auto& x = state.stack.top();
@@ -171,7 +171,6 @@ inline evmc_status_code signextend(ExecutionState& state) noexcept
         auto is_neg = (x & sign_mask) != 0;
         x = is_neg ? x | ~value_mask : x & value_mask;
     }
-    return EVMC_SUCCESS;
 }
 
 inline evmc_status_code lt(ExecutionState& state) noexcept

@@ -5,6 +5,7 @@
 #include "instructions.hpp"
 #include "analysis.hpp"
 #include "instruction_traits.hpp"
+#include "instructions_implementations_table.hpp"
 
 namespace evmone
 {
@@ -187,7 +188,7 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
     table[OP_ADDMOD] = op<addmod>;
     table[OP_MULMOD] = op<mulmod>;
     table[OP_EXP] = op<exp>;
-    table[OP_SIGNEXTEND] = op<signextend>;
+    table[OP_SIGNEXTEND] = op<instr::wrap2<signextend>>;
     table[OP_LT] = op<lt>;
     table[OP_GT] = op<gt>;
     table[OP_SLT] = op<slt>;

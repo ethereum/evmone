@@ -143,16 +143,16 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
 
         switch (op)
         {
-        INSTR_IMPL(OP_STOP)
-        INSTR_IMPL(OP_ADD)
-        INSTR_IMPL(OP_MUL)
-        INSTR_IMPL(OP_SUB)
-        INSTR_IMPL(OP_DIV)
-        INSTR_IMPL(OP_SDIV)
-        INSTR_IMPL(OP_MOD)
-        INSTR_IMPL(OP_SMOD)
-        INSTR_IMPL(OP_ADDMOD)
-        INSTR_IMPL(OP_MULMOD)
+            INSTR_IMPL(OP_STOP)
+            INSTR_IMPL(OP_ADD)
+            INSTR_IMPL(OP_MUL)
+            INSTR_IMPL(OP_SUB)
+            INSTR_IMPL(OP_DIV)
+            INSTR_IMPL(OP_SDIV)
+            INSTR_IMPL(OP_MOD)
+            INSTR_IMPL(OP_SMOD)
+            INSTR_IMPL(OP_ADDMOD)
+            INSTR_IMPL(OP_MULMOD)
         case OP_EXP:
         {
             const auto status_code = exp(state);
@@ -163,9 +163,8 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
             }
             DISPATCH_NEXT();
         }
-        case OP_SIGNEXTEND:
-            signextend(state);
-            DISPATCH_NEXT();
+
+        INSTR_IMPL(OP_SIGNEXTEND)
 
         case OP_LT:
             lt(state);
