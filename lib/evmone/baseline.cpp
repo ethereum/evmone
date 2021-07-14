@@ -72,21 +72,25 @@ inline evmc_status_code check_requirements(
 /// Dispatch the instruction currently pointed by "pc".
 #define DISPATCH() break  // Break out of switch statement.
 
-#define INSTR_IMPL(OPCODE)                                                                  \
-    case OPCODE:                                                                            \
-        asm("# " #OPCODE);                                                                  \
-        if (const auto r =                                                                  \
-                instr::implementations[OPCODE](state, static_cast<size_t>(code_it - code)); \
-            instr::traits[OPCODE].terminator || r.status != EVMC_SUCCESS)                   \
-        {                                                                                   \
-            state.status = r.status;                                                        \
-            goto exit;                                                                      \
-        }                                                                                   \
-        else                                                                                \
-        {                                                                                   \
-            code_it = code + r.pc;                                                          \
-        }                                                                                   \
-        DISPATCH();
+#define INSTR_IMPL(OPCODE)                                                 \
+    case OPCODE:                                                           \
+    {                                                                      \
+        /* Force constexpr resolution: */                                  \
+        constexpr auto fn = instr::implementations[OPCODE];                \
+        constexpr auto terminator = instr::traits[OPCODE].terminator;      \
+                                                                           \
+        if (const auto r = fn(state, static_cast<size_t>(code_it - code)); \
+            terminator || r.status != EVMC_SUCCESS)                        \
+        {                                                                  \
+            state.status = r.status;                                       \
+            goto exit;                                                     \
+        }                                                                  \
+        else                                                               \
+        {                                                                  \
+            code_it = code + r.pc;                                         \
+        }                                                                  \
+        DISPATCH();                                                        \
+    }
 
 template <bool TracingEnabled>
 evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& analysis) noexcept
