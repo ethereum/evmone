@@ -244,14 +244,14 @@ inline evmc_status_code byte(ExecutionState& state) noexcept
     const auto n = state.stack.pop();
     auto& x = state.stack.top();
 
-    if (n > 31)
-        x = 0;
-    else
-    {
-        auto sh = (31 - static_cast<unsigned>(n)) * 8;
-        auto y = x >> sh;
-        x = y & 0xff;
-    }
+    const bool n_valid = n < 32;
+    const uint64_t byte_mask = (n_valid ? 0xff : 0);
+
+    const auto index = 31 - static_cast<unsigned>(n[0] % 32);
+    const auto word = x[index / 8];
+    const auto byte_index = index % 8;
+    const auto byte = (word >> (byte_index * 8)) & byte_mask;
+    x = byte;
     return EVMC_SUCCESS;
 }
 
