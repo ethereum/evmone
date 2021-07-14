@@ -145,33 +145,14 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
         {
         INSTR_IMPL(OP_STOP)
         INSTR_IMPL(OP_ADD)
-
-
-
-        case OP_MUL:
-            mul(state);
-            DISPATCH_NEXT();
-        case OP_SUB:
-            sub(state);
-            DISPATCH_NEXT();
-        case OP_DIV:
-            div(state);
-            DISPATCH_NEXT();
-        case OP_SDIV:
-            sdiv(state);
-            DISPATCH_NEXT();
-        case OP_MOD:
-            mod(state);
-            DISPATCH_NEXT();
-        case OP_SMOD:
-            smod(state);
-            DISPATCH_NEXT();
-        case OP_ADDMOD:
-            addmod(state);
-            DISPATCH_NEXT();
-        case OP_MULMOD:
-            mulmod(state);
-            DISPATCH_NEXT();
+        INSTR_IMPL(OP_MUL)
+        INSTR_IMPL(OP_SUB)
+        INSTR_IMPL(OP_DIV)
+        INSTR_IMPL(OP_SDIV)
+        INSTR_IMPL(OP_MOD)
+        INSTR_IMPL(OP_SMOD)
+        INSTR_IMPL(OP_ADDMOD)
+        INSTR_IMPL(OP_MULMOD)
         case OP_EXP:
         {
             const auto status_code = exp(state);
