@@ -36,7 +36,8 @@ evmc_status_code call(ExecutionState& state) noexcept
     msg.kind = Kind;
     msg.flags = Static ? uint32_t{EVMC_STATIC} : state.msg->flags;
     msg.depth = state.msg->depth + 1;
-    msg.destination = dst;
+    msg.destination = (Kind == EVMC_CALL) ? dst : state.msg->destination;
+    msg.code_address = dst;
     msg.sender = (Kind == EVMC_DELEGATECALL) ? state.msg->sender : state.msg->destination;
     msg.value =
         (Kind == EVMC_DELEGATECALL) ? state.msg->value : intx::be::store<evmc::uint256be>(value);

@@ -250,7 +250,8 @@ jobs:
     steps:
       - build
       - build_silkworm:
-          commit: 82344ce1277642ca549e0603d70f24050073e202
+          branch: code_address
+          commit: b88f90003e1f9ebf70e5bee35b1903bdca17c903
       - download_consensus_tests:
           rev: 9.0.2
       - run:
