@@ -72,24 +72,36 @@ inline evmc_status_code check_requirements(
 /// Dispatch the instruction currently pointed by "pc".
 #define DISPATCH() break  // Break out of switch statement.
 
-#define INSTR_IMPL(OPCODE)                                                 \
-    case OPCODE:                                                           \
-    {                                                                      \
-        /* Force constexpr resolution: */                                  \
-        constexpr auto fn = instr::implementations[OPCODE];                \
-        constexpr auto terminator = instr::traits[OPCODE].terminator;      \
-                                                                           \
-        if (const auto r = fn(state, static_cast<size_t>(code_it - code)); \
-            terminator || r.status != EVMC_SUCCESS)                        \
-        {                                                                  \
-            state.status = r.status;                                       \
-            goto exit;                                                     \
-        }                                                                  \
-        else                                                               \
-        {                                                                  \
-            code_it = code + r.pc;                                         \
-        }                                                                  \
-        DISPATCH();                                                        \
+#define INSTR_IMPL(OPCODE)                                                    \
+    case OPCODE:                                                              \
+    {                                                                         \
+        /* Force constexpr resolution: */                                     \
+        constexpr auto state_fn = instr::implementations[OPCODE];             \
+        constexpr auto pc_fn = instr::pc_implementations[OPCODE];             \
+        constexpr auto terminator = instr::traits[OPCODE].terminator;         \
+                                                                              \
+        if constexpr (state_fn != nullptr)                                    \
+        {                                                                     \
+            const auto status = state_fn(state);                              \
+            if (terminator || status != EVMC_SUCCESS)                         \
+            {                                                                 \
+                state.status = status;                                        \
+                goto exit;                                                    \
+            }                                                                 \
+            ++code_it;                                                        \
+        }                                                                     \
+        else                                                                  \
+        {                                                                     \
+            const auto r = pc_fn(state, static_cast<size_t>(code_it - code)); \
+            if (terminator || r.status != EVMC_SUCCESS)                       \
+            {                                                                 \
+                state.status = r.status;                                      \
+                goto exit;                                                    \
+            }                                                                 \
+            code_it = code + r.pc;                                            \
+        }                                                                     \
+                                                                              \
+        DISPATCH();                                                           \
     }
 
 template <bool TracingEnabled>

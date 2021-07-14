@@ -14,8 +14,139 @@ inline InstrResult wrap(ExecutionState& state, size_t pc) noexcept
     return {Fn(state), pc + 1};
 }
 
+using StateInstrFn = evmc_status_code(ExecutionState&) noexcept;
+
 /// The table of pointers to core instruction implementations.
-constexpr std::array<InstrFn*, 256> implementations = []() noexcept {
+constexpr std::array<StateInstrFn*, 256> implementations = []() noexcept {
+  std::array<StateInstrFn *, 256> table{};
+
+  table[OP_STOP] = stop;
+  table[OP_ADD] = add;
+  table[OP_MUL] = mul;
+  table[OP_SUB] = sub;
+  table[OP_DIV] = div;
+  table[OP_SDIV] = sdiv;
+  table[OP_MOD] = mod;
+  table[OP_SMOD] = smod;
+  table[OP_ADDMOD] = addmod;
+  table[OP_MULMOD] = mulmod;
+  table[OP_EXP] = exp;
+  table[OP_SIGNEXTEND] = signextend;
+
+  table[OP_LT] = lt;
+  table[OP_GT] = gt;
+  table[OP_SLT] = slt;
+  table[OP_SGT] = sgt;
+  table[OP_EQ] = eq;
+  table[OP_ISZERO] = iszero;
+  table[OP_AND] = and_;
+  table[OP_OR] = or_;
+  table[OP_XOR] = xor_;
+  table[OP_NOT] = not_;
+  table[OP_BYTE] = byte;
+  table[OP_SHL] = shl;
+  table[OP_SHR] = shr;
+  table[OP_SAR] = sar;
+
+  table[OP_KECCAK256] = keccak256;
+
+  table[OP_ADDRESS] = address;
+  table[OP_BALANCE] = balance;
+  table[OP_ORIGIN] = origin;
+  table[OP_CALLER] = caller;
+  table[OP_CALLVALUE] = callvalue;
+  table[OP_CALLDATALOAD] = calldataload;
+  table[OP_CALLDATASIZE] = calldatasize;
+  table[OP_CALLDATACOPY] = calldatacopy;
+  table[OP_CODESIZE] = codesize;
+  table[OP_CODECOPY] = codecopy;
+  table[OP_GASPRICE] = gasprice;
+  table[OP_EXTCODESIZE] = extcodesize;
+  table[OP_EXTCODECOPY] = extcodecopy;
+  table[OP_RETURNDATASIZE] = returndatasize;
+  table[OP_RETURNDATACOPY] = returndatacopy;
+  table[OP_EXTCODEHASH] = extcodehash;
+
+  table[OP_BLOCKHASH] = blockhash;
+  table[OP_COINBASE] = coinbase;
+  table[OP_TIMESTAMP] = timestamp;
+  table[OP_NUMBER] = number;
+  table[OP_DIFFICULTY] = difficulty;
+  table[OP_GASLIMIT] = gaslimit;
+  table[OP_CHAINID] = chainid;
+  table[OP_SELFBALANCE] = selfbalance;
+  table[OP_BASEFEE] = basefee;
+
+  table[OP_POP] = pop;
+  table[OP_MLOAD] = mload;
+  table[OP_MSTORE] = mstore;
+  table[OP_MSTORE8] = mstore8;
+  table[OP_SLOAD] = sload;
+  table[OP_SSTORE] = sstore;
+  table[OP_JUMP] = nullptr;
+  table[OP_JUMPI] = nullptr;
+  table[OP_PC] = nullptr;
+  table[OP_MSIZE] = msize;
+  table[OP_GAS] = gas;
+  table[OP_JUMPDEST] = jumpdest;
+
+  table[OP_DUP1] = dup<1>;
+  table[OP_DUP2] = dup<2>;
+  table[OP_DUP3] = dup<3>;
+  table[OP_DUP4] = dup<4>;
+  table[OP_DUP5] = dup<5>;
+  table[OP_DUP6] = dup<6>;
+  table[OP_DUP7] = dup<7>;
+  table[OP_DUP8] = dup<8>;
+  table[OP_DUP9] = dup<9>;
+  table[OP_DUP10] = dup<10>;
+  table[OP_DUP11] = dup<11>;
+  table[OP_DUP12] = dup<12>;
+  table[OP_DUP13] = dup<13>;
+  table[OP_DUP14] = dup<14>;
+  table[OP_DUP15] = dup<15>;
+  table[OP_DUP16] = dup<16>;
+
+  table[OP_SWAP1] = swap<1>;
+  table[OP_SWAP2] = swap<2>;
+  table[OP_SWAP3] = swap<3>;
+  table[OP_SWAP4] = swap<4>;
+  table[OP_SWAP5] = swap<5>;
+  table[OP_SWAP6] = swap<6>;
+  table[OP_SWAP7] = swap<7>;
+  table[OP_SWAP8] = swap<8>;
+  table[OP_SWAP9] = swap<9>;
+  table[OP_SWAP10] = swap<10>;
+  table[OP_SWAP11] = swap<11>;
+  table[OP_SWAP12] = swap<12>;
+  table[OP_SWAP13] = swap<13>;
+  table[OP_SWAP14] = swap<14>;
+  table[OP_SWAP15] = swap<15>;
+  table[OP_SWAP16] = swap<16>;
+
+  table[OP_LOG0] = log<0>;
+  table[OP_LOG1] = log<1>;
+  table[OP_LOG2] = log<2>;
+  table[OP_LOG3] = log<3>;
+  table[OP_LOG4] = log<4>;
+
+  table[OP_CREATE] = create<EVMC_CREATE>;
+  table[OP_CALL] = call<EVMC_CALL>;
+  table[OP_CALLCODE] = call<EVMC_CALLCODE>;
+  table[OP_RETURN] = return_<EVMC_SUCCESS>;
+  table[OP_DELEGATECALL] = call<EVMC_DELEGATECALL>;
+  table[OP_CREATE2] = create<EVMC_CREATE2>;
+  table[OP_STATICCALL] = call<EVMC_CALL, true>;
+  table[OP_REVERT] = return_<EVMC_REVERT>;
+  table[OP_INVALID] = invalid;
+  table[OP_SELFDESTRUCT] = selfdestruct;
+
+  return table;
+}();
+
+
+/// The table of pointers to core instruction implementations.
+constexpr std::array<InstrFn*, 256> pc_implementations = []() noexcept {
     std::array<InstrFn*, 256> table{};
 
     table[OP_STOP] = wrap<stop>;
