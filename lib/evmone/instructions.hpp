@@ -266,10 +266,13 @@ inline evmc_status_code shr(ExecutionState& state) noexcept
     return EVMC_SUCCESS;
 }
 
-inline evmc_status_code sar(ExecutionState& state) noexcept
+inline void sar(ExecutionState& state) noexcept
 {
     if ((state.stack[1] & (uint256{1} << 255)) == 0)
-        return shr(state);
+    {
+        shr(state);
+        return;
+    }
 
     constexpr auto allones = ~uint256{};
 
@@ -282,7 +285,6 @@ inline evmc_status_code sar(ExecutionState& state) noexcept
     }
 
     state.stack.pop();
-    return EVMC_SUCCESS;
 }
 
 

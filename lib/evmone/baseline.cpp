@@ -153,61 +153,23 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
             INSTR_IMPL(OP_SMOD)
             INSTR_IMPL(OP_ADDMOD)
             INSTR_IMPL(OP_MULMOD)
-        case OP_EXP:
-        {
-            const auto status_code = exp(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
+            INSTR_IMPL(OP_EXP)
+            INSTR_IMPL(OP_SIGNEXTEND)
 
-        INSTR_IMPL(OP_SIGNEXTEND)
-
-        case OP_LT:
-            lt(state);
-            DISPATCH_NEXT();
-        case OP_GT:
-            gt(state);
-            DISPATCH_NEXT();
-        case OP_SLT:
-            slt(state);
-            DISPATCH_NEXT();
-        case OP_SGT:
-            sgt(state);
-            DISPATCH_NEXT();
-        case OP_EQ:
-            eq(state);
-            DISPATCH_NEXT();
-        case OP_ISZERO:
-            iszero(state);
-            DISPATCH_NEXT();
-        case OP_AND:
-            and_(state);
-            DISPATCH_NEXT();
-        case OP_OR:
-            or_(state);
-            DISPATCH_NEXT();
-        case OP_XOR:
-            xor_(state);
-            DISPATCH_NEXT();
-        case OP_NOT:
-            not_(state);
-            DISPATCH_NEXT();
-        case OP_BYTE:
-            byte(state);
-            DISPATCH_NEXT();
-        case OP_SHL:
-            shl(state);
-            DISPATCH_NEXT();
-        case OP_SHR:
-            shr(state);
-            DISPATCH_NEXT();
-        case OP_SAR:
-            sar(state);
-            DISPATCH_NEXT();
+            INSTR_IMPL(OP_LT)
+            INSTR_IMPL(OP_GT)
+            INSTR_IMPL(OP_SLT)
+            INSTR_IMPL(OP_SGT)
+            INSTR_IMPL(OP_EQ)
+            INSTR_IMPL(OP_ISZERO)
+            INSTR_IMPL(OP_AND)
+            INSTR_IMPL(OP_OR)
+            INSTR_IMPL(OP_XOR)
+            INSTR_IMPL(OP_NOT)
+            INSTR_IMPL(OP_BYTE)
+            INSTR_IMPL(OP_SHL)
+            INSTR_IMPL(OP_SHR)
+            INSTR_IMPL(OP_SAR)
 
         case OP_KECCAK256:
         {

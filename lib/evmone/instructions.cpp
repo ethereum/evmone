@@ -202,7 +202,7 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
     table[OP_BYTE] = op<byte>;
     table[OP_SHL] = op<shl>;
     table[OP_SHR] = op<shr>;
-    table[OP_SAR] = op<sar>;
+    table[OP_SAR] = op<instr::wrap2<sar>>;
 
     table[OP_KECCAK256] = op<keccak256>;
 

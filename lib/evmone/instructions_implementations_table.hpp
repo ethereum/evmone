@@ -53,7 +53,7 @@ constexpr std::array<StateInstrFn*, 256> implementations = []() noexcept {
     table[OP_BYTE] = byte;
     table[OP_SHL] = shl;
     table[OP_SHR] = shr;
-    table[OP_SAR] = sar;
+    table[OP_SAR] = wrap2<sar>;
 
     table[OP_KECCAK256] = keccak256;
 
@@ -182,7 +182,7 @@ constexpr std::array<InstrFn*, 256> pc_implementations = []() noexcept {
     table[OP_BYTE] = wrap<byte>;
     table[OP_SHL] = wrap<shl>;
     table[OP_SHR] = wrap<shr>;
-    table[OP_SAR] = wrap<sar>;
+    table[OP_SAR] = wrap<wrap2<sar>>;
 
     table[OP_KECCAK256] = wrap<keccak256>;
 
