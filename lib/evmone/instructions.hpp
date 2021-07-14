@@ -269,20 +269,15 @@ inline evmc_status_code shr(ExecutionState& state) noexcept
 
 inline evmc_status_code sar(ExecutionState& state) noexcept
 {
-    if ((state.stack[1] & (uint256{1} << 255)) == 0)
-        return shr(state);
+    const auto y = state.stack.pop();
+    auto& x = state.stack.top();
 
-    constexpr auto allones = ~uint256{};
+    const bool is_neg = static_cast<int64_t>(x[3]) < 0;  // Inspect the top bit (words are LE).
+    const auto sign_mask = is_neg ? ~uint256{} : uint256{};
 
-    if (state.stack[0] >= 256)
-        state.stack[1] = allones;
-    else
-    {
-        const auto shift = static_cast<unsigned>(state.stack[0]);
-        state.stack[1] = (state.stack[1] >> shift) | (allones << (256 - shift));
-    }
+    const auto mask_shift = (y < 256) ? (256 - y[0]) : 0;
+    x = (x >> y) | (sign_mask << mask_shift);
 
-    state.stack.pop();
     return EVMC_SUCCESS;
 }
 
