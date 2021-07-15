@@ -36,6 +36,8 @@ enum class EOFValidationErrror
 
     incomplete_section_size,
     code_section_missing,
+    multiple_code_sections,
+    multiple_data_sections,
     unknown_section_id,
     zero_section_size,
     section_headers_not_terminated,

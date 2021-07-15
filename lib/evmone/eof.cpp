@@ -86,8 +86,13 @@ std::pair<EOF1Header, EOFValidationErrror> validate_eof1(
             case DATA_SECTION:
                 if (section_sizes[CODE_SECTION] == 0)
                     return {{}, EOFValidationErrror::code_section_missing};
-                [[fallthrough]];
+                if (section_sizes[DATA_SECTION] != 0)
+                    return {{}, EOFValidationErrror::multiple_data_sections};
+                state = State::section_size;
+                break;
             case CODE_SECTION:
+                if (section_sizes[CODE_SECTION] != 0)
+                    return {{}, EOFValidationErrror::multiple_code_sections};
                 state = State::section_size;
                 break;
             default:

@@ -74,3 +74,17 @@ TEST(eof_validation, EOF1_data_section_0_size)
     EXPECT_EQ(validate_eof(from_hex("EFCAFE01 010001 020000 00 FE")),
         EOFValidationErrror::zero_section_size);
 }
+
+TEST(eof_validation, EOF1_multiple_code_sections)
+{
+    EXPECT_EQ(validate_eof(from_hex("EFCAFE01 010001 010001 00 FE FE")),
+        EOFValidationErrror::multiple_code_sections);
+    EXPECT_EQ(validate_eof(from_hex("EFCAFE01 010001 010001 020001 00 FE FE DA")),
+        EOFValidationErrror::multiple_code_sections);
+}
+
+TEST(eof_validation, EOF1_multiple_data_sections)
+{
+    EXPECT_EQ(validate_eof(from_hex("EFCAFE01 010001 020001 020001 00 FE DA DA")),
+        EOFValidationErrror::multiple_data_sections);
+}
