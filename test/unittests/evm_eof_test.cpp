@@ -296,3 +296,82 @@ TEST_P(evm, eof2_rjumpi_0_offset)
     EXPECT_STATUS(EVMC_SUCCESS);
     ASSERT_EQ(result.output_size, 1);
 }
+
+TEST_P(evm, eof2_rjumptable)
+{
+    rev = EVMC_SHANGHAI;
+    auto code = eof2_bytecode(rjump(10) + mstore8(0, 1) + ret(0, 1) +
+                                  rjumptable(0, calldataload(0)) + mstore8(0, 2) + ret(0, 1) +
+                                  mstore8(0, 3) + ret(0, 1) + mstore8(0, 4) + ret(0, 1),
+        {}, {{20, 10, 0, -16}});
+
+    // index = 0 (offset = 20)
+    execute(code, "0000000000000000000000000000000000000000000000000000000000000000");
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 4);
+
+    // index = 1 (offset = 10)
+    execute(code, "0000000000000000000000000000000000000000000000000000000000000001");
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 3);
+
+    // index = 2 (offset = 0)
+    execute(code, "0000000000000000000000000000000000000000000000000000000000000002");
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 2);
+
+    // index = 3 (offset = -16)
+    execute(code, "0000000000000000000000000000000000000000000000000000000000000003");
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 1);
+
+    // index = 4 (out of table bounds)
+    execute(code, "0000000000000000000000000000000000000000000000000000000000000004");
+    EXPECT_STATUS(EVMC_BAD_JUMP_DESTINATION);
+}
+
+TEST_P(evm, eof2_rjumptable_multiple_tables)
+{
+    rev = EVMC_SHANGHAI;
+    auto code = eof2_bytecode(rjumptable(0, calldataload(0)) + mstore8(0, 1) + ret(0, 1) +
+                                  rjumptable(1, calldataload(32)) + mstore8(0, 2) + ret(0, 1) +
+                                  mstore8(0, 3) + ret(0, 1) + mstore8(0, 4) + ret(0, 1),
+        {}, {{10, 0}, {0, 10, 20}});
+
+    // 1st jump: table 0 index = 0 (offset = 10)
+    // 2st jump: table 1 index = 0 (offset = 0)
+    execute(code,
+        "0000000000000000000000000000000000000000000000000000000000000000"
+        "0000000000000000000000000000000000000000000000000000000000000000");
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 2);
+
+    // 1st jump: table 0 index = 0 (offset = 10)
+    // 2st jump: table 1 index = 1 (offset = 10)
+    execute(code,
+        "0000000000000000000000000000000000000000000000000000000000000000"
+        "0000000000000000000000000000000000000000000000000000000000000001");
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 3);
+
+    // 1st jump: table 0 index = 0 (offset = 10)
+    // 2st jump: table 1 index = 2 (offset = 20)
+    execute(code,
+        "0000000000000000000000000000000000000000000000000000000000000000"
+        "0000000000000000000000000000000000000000000000000000000000000002");
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 4);
+
+    // 1st jump: table 0 index = 1 (offset = 0)
+    execute(code, "0000000000000000000000000000000000000000000000000000000000000001");
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 1);
+}
