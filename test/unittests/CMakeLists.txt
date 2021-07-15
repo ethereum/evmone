@@ -9,6 +9,7 @@ find_package(GTest CONFIG REQUIRED)
 add_executable(evmone-unittests
     analysis_test.cpp
     bytecode_test.cpp
+    eof_validation_test.cpp
     evm_fixture.cpp
     evm_fixture.hpp
     evm_test.cpp
