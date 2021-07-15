@@ -10,6 +10,7 @@
 
 namespace evmone
 {
+struct EOF1Header;
 struct ExecutionState;
 class VM;
 
@@ -21,10 +22,12 @@ struct CodeAnalysis
 
     const std::unique_ptr<uint8_t[]> padded_code;
     const JumpdestMap jumpdest_map;
+    size_t code_begin = 0;
+    size_t code_end = 0;
 };
 
 /// Analyze the code to build the bitmap of valid JUMPDEST locations.
-EVMC_EXPORT CodeAnalysis analyze(const uint8_t* code, size_t code_size);
+EVMC_EXPORT CodeAnalysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size);
 
 /// Executes in Baseline interpreter using EVMC-compatible parameters.
 evmc_result execute(evmc_vm* vm, const evmc_host_interface* host, evmc_host_context* ctx,

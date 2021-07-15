@@ -39,28 +39,29 @@ struct block_analysis
     }
 };
 
-AdvancedCodeAnalysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
+AdvancedCodeAnalysis analyze(
+    evmc_revision rev, const uint8_t* code, size_t code_begin, size_t code_end) noexcept
 {
     const auto& op_tbl = get_op_table(rev);
     const auto opx_beginblock_fn = op_tbl[OPX_BEGINBLOCK].fn;
 
     AdvancedCodeAnalysis analysis;
 
-    const auto max_instrs_size = code_size + 1;
+    const auto max_instrs_size = code_end - code_begin + 1;
     analysis.instrs.reserve(max_instrs_size);
 
     // This is 2x more than needed but using (code_size / 2 + 1) increases page-faults 1000x.
-    const auto max_args_storage_size = code_size + 1;
+    const auto max_args_storage_size = code_end - code_begin + 1;
     analysis.push_values.reserve(max_args_storage_size);
 
     // Create first block.
     analysis.instrs.emplace_back(opx_beginblock_fn);
     auto block = block_analysis{0};
 
-    const auto code_end = code + code_size;
-    auto code_pos = code;
+    const auto code_end_pos = code + code_end;
+    auto code_pos = code + code_begin;
 
-    while (code_pos != code_end)
+    while (code_pos != code_end_pos)
     {
         const auto opcode = *code_pos++;
         const auto& opcode_info = op_tbl[opcode];
@@ -99,7 +100,7 @@ AdvancedCodeAnalysis analyze(evmc_revision rev, const uint8_t* code, size_t code
         case ANY_SMALL_PUSH:
         {
             const auto push_size = static_cast<size_t>(opcode - OP_PUSH1) + 1;
-            const auto push_end = std::min(code_pos + push_size, code_end);
+            const auto push_end = std::min(code_pos + push_size, code_end_pos);
 
             uint64_t value = 0;
             auto insert_bit_pos = (push_size - 1) * 8;
@@ -130,7 +131,7 @@ AdvancedCodeAnalysis analyze(evmc_revision rev, const uint8_t* code, size_t code
             // This seems like a good micro-optimization but we were not able to show
             // this is faster, at least with GCC 8 (producing the best results at the time).
             // FIXME: Add support for big endian architectures.
-            while (code_pos < push_end && code_pos < code_end)
+            while (code_pos < push_end && code_pos < code_end_pos)
                 *insert_pos-- = *code_pos++;
 
             instr.arg.push_value = &push_value;
@@ -154,7 +155,7 @@ AdvancedCodeAnalysis analyze(evmc_revision rev, const uint8_t* code, size_t code
         }
 
         // If this is a terminating instruction or the next instruction is a JUMPDEST.
-        if (is_terminator || (code_pos != code_end && *code_pos == OP_JUMPDEST))
+        if (is_terminator || (code_pos != code_end_pos && *code_pos == OP_JUMPDEST))
         {
             // Save current block.
             analysis.instrs[block.begin_block_index].arg.block = block.close();
@@ -170,7 +171,8 @@ AdvancedCodeAnalysis analyze(evmc_revision rev, const uint8_t* code, size_t code
 
     // Make sure the last block is terminated.
     // TODO: This is not needed if the last instruction is a terminating one.
-    analysis.instrs.emplace_back(op_tbl[OP_STOP].fn);
+    const bool is_legacy_code = (code_begin == 0);
+    analysis.instrs.emplace_back(op_tbl[is_legacy_code ? OP_STOP : OP_INVALID].fn);
 
     // FIXME: assert(analysis.instrs.size() <= max_instrs_size);
 

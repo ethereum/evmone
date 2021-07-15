@@ -9,6 +9,7 @@
 #include <evmc/mocked_host.hpp>
 #include <evmone/analysis.hpp>
 #include <evmone/baseline.hpp>
+#include <evmone/eof.hpp>
 #include <evmone/execution.hpp>
 #include <evmone/vm.hpp>
 
@@ -37,12 +38,12 @@ struct FakeCodeAnalysis
 inline AdvancedCodeAnalysis advanced_analyse(evmc_revision rev, bytes_view code)
 {
     // TODO: Change analyze() signature.
-    return analyze(rev, code.data(), code.size());
+    return analyze(rev, code.data(), 0, code.size());
 }
 
-inline baseline::CodeAnalysis baseline_analyse(evmc_revision /*rev*/, bytes_view code)
+inline baseline::CodeAnalysis baseline_analyse(evmc_revision rev, bytes_view code)
 {
-    return baseline::analyze(code.data(), code.size());
+    return baseline::analyze(rev, code.data(), code.size());
 }
 
 inline FakeCodeAnalysis evmc_analyse(evmc_revision /*rev*/, bytes_view /*code*/)
