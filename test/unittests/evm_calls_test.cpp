@@ -349,14 +349,18 @@ TEST_P(evm, call_value_zero_to_nonexistent_account)
     EXPECT_EQ(call_msg.kind, EVMC_CALL);
     EXPECT_EQ(call_msg.depth, 1);
     EXPECT_EQ(call_msg.gas, 6000);
+    EXPECT_EQ(call_msg.input_size, 64);
+    EXPECT_EQ(call_msg.destination, 0x00000000000000000000000000000000000000aa_address);
+    EXPECT_EQ(call_msg.value.bytes[31], 0);
 }
 
 TEST_P(evm, call_new_account_creation_cost)
 {
     constexpr auto call_dst = 0x00000000000000000000000000000000000000ad_address;
+    constexpr auto msg_dst = 0x0000000000000000000000000000000000000003_address;
     const auto code = 4 * push(0) + calldataload(0) + push({call_dst.bytes, sizeof(call_dst)}) +
                       push(0) + OP_CALL + ret_top();
-    msg.destination = evmc_address{{3}};
+    msg.destination = msg_dst;
 
 
     rev = EVMC_TANGERINE_WHISTLE;
@@ -381,6 +385,9 @@ TEST_P(evm, call_new_account_creation_cost)
     ASSERT_EQ(host.recorded_calls.size(), 1);
     EXPECT_EQ(host.recorded_calls.back().destination, call_dst);
     EXPECT_EQ(host.recorded_calls.back().gas, 2300);
+    EXPECT_EQ(host.recorded_calls.back().sender, msg_dst);
+    EXPECT_EQ(host.recorded_calls.back().value.bytes[31], 1);
+    EXPECT_EQ(host.recorded_calls.back().input_size, 0);
     ASSERT_EQ(host.recorded_account_accesses.size(), 3);
     EXPECT_EQ(host.recorded_account_accesses[0], call_dst);         // Account exist?
     EXPECT_EQ(host.recorded_account_accesses[1], msg.destination);  // Balance.
@@ -396,6 +403,9 @@ TEST_P(evm, call_new_account_creation_cost)
     ASSERT_EQ(host.recorded_calls.size(), 1);
     EXPECT_EQ(host.recorded_calls.back().destination, call_dst);
     EXPECT_EQ(host.recorded_calls.back().gas, 0);
+    EXPECT_EQ(host.recorded_calls.back().sender, msg_dst);
+    EXPECT_EQ(host.recorded_calls.back().value.bytes[31], 0);
+    EXPECT_EQ(host.recorded_calls.back().input_size, 0);
     ASSERT_EQ(host.recorded_account_accesses.size(), 1);
     EXPECT_EQ(host.recorded_account_accesses[0], call_dst);  // Call.
     host.recorded_account_accesses.clear();
@@ -409,6 +419,9 @@ TEST_P(evm, call_new_account_creation_cost)
     ASSERT_EQ(host.recorded_calls.size(), 1);
     EXPECT_EQ(host.recorded_calls.back().destination, call_dst);
     EXPECT_EQ(host.recorded_calls.back().gas, 2300);
+    EXPECT_EQ(host.recorded_calls.back().sender, msg_dst);
+    EXPECT_EQ(host.recorded_calls.back().value.bytes[31], 1);
+    EXPECT_EQ(host.recorded_calls.back().input_size, 0);
     ASSERT_EQ(host.recorded_account_accesses.size(), 3);
     EXPECT_EQ(host.recorded_account_accesses[0], call_dst);         // Account exist?
     EXPECT_EQ(host.recorded_account_accesses[1], msg.destination);  // Balance.
@@ -434,6 +447,7 @@ TEST_P(evm, callcode_new_account_create)
     EXPECT_EQ(call_msg.depth, 1);
     EXPECT_EQ(call_msg.gas, 52300);
     EXPECT_EQ(call_msg.sender, call_sender);
+    EXPECT_EQ(call_msg.value.bytes[31], 1);
 }
 
 TEST_P(evm, call_then_oog)
@@ -481,7 +495,11 @@ TEST_P(evm, delegatecall_then_oog)
     host.accounts[call_dst] = {};
     host.call_result.status_code = EVMC_FAILURE;
     host.call_result.gas_left = 0;
-    execute(1000, "604060006040600060aa60fef4800180018001800150");
+
+    const auto code =
+        delegatecall(0xaa).gas(254).input(0, 0x40).output(0, 0x40) + 4 * add(OP_DUP1) + OP_POP;
+
+    execute(1000, code);
     EXPECT_EQ(gas_used, 1000);
     ASSERT_EQ(host.recorded_calls.size(), 1);
     const auto& call_msg = host.recorded_calls.back();
@@ -594,7 +612,8 @@ TEST_P(evm, returndatasize)
     host.call_result.output_size = std::size(call_output);
     host.call_result.output_data = std::begin(call_output);
 
-    auto code = "60008080808080f43d60005360016000f3";
+    const auto code =
+        push(0) + 5 * OP_DUP1 + OP_DELEGATECALL + mstore8(0, OP_RETURNDATASIZE) + ret(0, 1);
     execute(code);
     EXPECT_EQ(gas_used, 735);
     ASSERT_EQ(result.output_size, 1);
