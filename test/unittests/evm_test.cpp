@@ -386,6 +386,17 @@ TEST_P(evm, byte)
     EXPECT_EQ(result.output_data[6], 0);
 }
 
+TEST_P(evm, byte_overflow)
+{
+    const auto code = not_(0) + push(32) + OP_BYTE + ret_top();
+    execute(code);
+    EXPECT_OUTPUT_INT(0);
+
+    const auto code2 = not_(0) + push("ffffffffffffffffffffffffffffffffffff") + OP_BYTE + ret_top();
+    execute(code2);
+    EXPECT_OUTPUT_INT(0);
+}
+
 TEST_P(evm, addmod_mulmod)
 {
     std::string s;
