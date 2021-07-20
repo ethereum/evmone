@@ -19,11 +19,13 @@ namespace baseline
 struct CodeAnalysis
 {
     using JumpdestMap = std::vector<bool>;
+    using TableList = std::vector<std::vector<int16_t>>;
 
     const std::unique_ptr<uint8_t[]> padded_code;
     const JumpdestMap jumpdest_map;
     size_t code_begin = 0;
     size_t code_end = 0;
+    TableList tables;
 };
 
 /// Analyze the code to build the bitmap of valid JUMPDEST locations.

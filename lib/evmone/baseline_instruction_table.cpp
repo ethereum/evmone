@@ -32,4 +32,30 @@ const InstructionTable& get_baseline_instruction_table(evmc_revision rev) noexce
 
     return instruction_tables[rev];
 }
+
+const InstructionTable& get_baseline_legacy_instruction_table(evmc_revision rev) noexcept
+{
+    static auto instruction_tables = []() noexcept {
+        std::array<InstructionTable, EVMC_MAX_REVISION + 1> tables{};
+        for (size_t r = EVMC_FRONTIER; r <= EVMC_MAX_REVISION; ++r)
+            tables[r] = get_baseline_instruction_table(static_cast<evmc_revision>(r));
+
+        tables[EVMC_SHANGHAI][OP_RJUMP].gas_cost = instr::undefined;
+        tables[EVMC_SHANGHAI][OP_RJUMP].stack_height_required = 0;
+        tables[EVMC_SHANGHAI][OP_RJUMP].can_overflow_stack = false;
+
+        tables[EVMC_SHANGHAI][OP_RJUMPI].gas_cost = instr::undefined;
+        tables[EVMC_SHANGHAI][OP_RJUMPI].stack_height_required = 0;
+        tables[EVMC_SHANGHAI][OP_RJUMPI].can_overflow_stack = false;
+
+        tables[EVMC_SHANGHAI][OP_RJUMPTABLE].gas_cost = instr::undefined;
+        tables[EVMC_SHANGHAI][OP_RJUMPTABLE].stack_height_required = 0;
+        tables[EVMC_SHANGHAI][OP_RJUMPTABLE].can_overflow_stack = false;
+
+        return tables;
+    }();
+
+    return instruction_tables[rev];
+}
+
 }  // namespace evmone::baseline

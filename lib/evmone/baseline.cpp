@@ -45,7 +45,7 @@ CodeAnalysis analyze_jumpdests(
     // TODO: Using fixed-size padding of 33, the padded code buffer and jumpdest bitmap can be
     //       created with single allocation.
 
-    return CodeAnalysis{std::move(padded_code), std::move(map), code_begin, code_end};
+    return CodeAnalysis{std::move(padded_code), std::move(map), code_begin, code_end, {}};
 }
 
 
@@ -58,6 +58,44 @@ CodeAnalysis analyze_eof1(const uint8_t* code, const EOF1Header& header)
 {
     return analyze_jumpdests(code, header.code_begin(), header.code_end(), OP_INVALID);
 }
+
+CodeAnalysis analyze_eof2(const uint8_t* code, size_t /*code_size*/, const EOF2Header& header)
+{
+    constexpr auto code_padding = 33;
+
+    const auto code_begin = header.code_begin();
+    const auto code_end = header.code_end();
+
+    // Using "raw" new operator instead of std::make_unique() to get uninitialized array.
+    std::unique_ptr<uint8_t[]> padded_code{new uint8_t[code_end + code_padding]};
+    std::copy_n(code, code_end, padded_code.get());
+    // Set final STOP/INVALID at the code end.
+    std::fill_n(padded_code.get() + code_end, code_padding, uint8_t{OP_INVALID});
+
+    // Read tables
+    CodeAnalysis::TableList tables;
+    tables.reserve(header.table_sizes.size());
+
+    const auto* table_section = code + header.tables_begin();
+    for (const auto table_size : header.table_sizes)
+    {
+        std::vector<int16_t> table;
+        table.reserve(static_cast<size_t>(table_size));
+        const auto* table_section_end = table_section + table_size;
+        while (table_section != table_section_end)
+        {
+            const auto offset_hi = *(table_section);
+            const auto offset_lo = *(table_section + 1);
+            const int16_t offset = static_cast<int16_t>((offset_hi << 8) + offset_lo);
+            table.push_back(offset);
+
+            table_section += 2;
+        }
+        tables.emplace_back(std::move(table));
+    }
+
+    return CodeAnalysis{std::move(padded_code), {}, code_begin, code_end, std::move(tables)};
+}
 }  // namespace
 
 CodeAnalysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size)
@@ -65,12 +103,50 @@ CodeAnalysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size)
     if (rev < EVMC_SHANGHAI || !is_eof_code(code, code_size))
         return analyze_legacy(code, code_size);
 
-    const auto eof1_header = read_valid_eof1_header(code);
-    return analyze_eof1(code, eof1_header);
+    const auto version = read_eof_version(code);
+    if (version == 1)
+    {
+        const auto eof1_header = read_valid_eof1_header(code);
+        return analyze_eof1(code, eof1_header);
+    }
+
+    assert(version == 2);
+    const auto eof2_header = read_valid_eof2_header(code);
+    return analyze_eof2(code, code_size, eof2_header);
 }
 
 namespace
 {
+const uint8_t* rjump(const uint8_t* pc) noexcept
+{
+    // Reading next 2 bytes is guaranteed to be safe by deploy-time validation.
+    const auto offset_hi = *(pc + 1);
+    const auto offset_lo = *(pc + 2);
+    const auto offset = static_cast<int16_t>((offset_hi << 8) + offset_lo);
+    return pc + 3 + offset;  // PC_post_rjump + offset
+}
+
+const uint8_t* rjumptable(ExecutionState& state, const uint8_t* pc) noexcept
+{
+    const auto& tables = state.analysis.baseline->tables;
+
+    // Reading next 2 bytes is guaranteed to be safe by deploy-time validation.
+    const auto table_index_hi = *(pc + 1);
+    const auto table_index_lo = *(pc + 2);
+    const auto table_index = static_cast<uint16_t>((table_index_hi << 8) + table_index_lo);
+
+    // table_index is guaranteed to be within tables bounds by deploy-time validation.
+
+    const auto index = state.stack.pop();
+    if (index >= tables[table_index].size())
+    {
+        state.status = EVMC_BAD_JUMP_DESTINATION;  // TODO new error code
+        return pc;                                 // This value is ignored.
+    }
+
+    return pc + 3 + tables[table_index][static_cast<size_t>(index)];  // PC_post_rjumptable + offset
+}
+
 inline evmc_status_code check_requirements(
     const InstructionTable& instruction_table, ExecutionState& state, uint8_t op) noexcept
 {
@@ -114,7 +190,9 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     if constexpr (TracingEnabled)
         tracer->notify_execution_start(state.rev, *state.msg, state.code);
 
-    const auto& instruction_table = get_baseline_instruction_table(state.rev);
+    const auto& instruction_table = analysis.code_begin == 0 ?
+                                        get_baseline_legacy_instruction_table(state.rev) :
+                                        get_baseline_instruction_table(state.rev);
 
     const auto* const code = state.code.data();
     const auto* code_it = code + analysis.code_begin;  // Code iterator for the interpreter loop.
@@ -451,6 +529,23 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
         case OP_JUMPDEST:
             jumpdest(state);
             DISPATCH_NEXT();
+        case OP_RJUMP:
+            code_it = rjump(code_it);
+            DISPATCH();
+        case OP_RJUMPI:
+            if (state.stack.pop() != 0)
+                code_it = rjump(code_it);
+            else
+            {
+                // skip immediate argument
+                code_it += 3;
+            }
+            DISPATCH();
+        case OP_RJUMPTABLE:
+            code_it = rjumptable(state, code_it);
+            if (state.status == EVMC_BAD_JUMP_DESTINATION)
+                goto exit;
+            DISPATCH();
 
         case OP_PUSH1:
             code_it = code + push<1>(state, static_cast<size_t>(code_it - code)).pc;

@@ -243,6 +243,9 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
     table[OP_MSIZE] = op<msize>;
     table[OP_GAS] = op_gas;
     table[OPX_BEGINBLOCK] = opx_beginblock;
+    table[OP_RJUMP] = op_invalid;
+    table[OP_RJUMPI] = op_invalid;
+    table[OP_RJUMPTABLE] = op_invalid;
 
     for (auto op = size_t{OP_PUSH1}; op <= OP_PUSH8; ++op)
         table[op] = op_push_small;

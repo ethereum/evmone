@@ -18,4 +18,6 @@ struct InstructionTableEntry
 using InstructionTable = std::array<InstructionTableEntry, 256>;
 
 const InstructionTable& get_baseline_instruction_table(evmc_revision rev) noexcept;
+
+const InstructionTable& get_baseline_legacy_instruction_table(evmc_revision rev) noexcept;
 }  // namespace evmone::baseline

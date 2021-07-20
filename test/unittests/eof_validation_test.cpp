@@ -35,13 +35,15 @@ TEST(eof_validation, validate_EOF_prefix)
 
     EXPECT_EQ(
         validate_eof(from_hex("EFCAFE01")), EOFValidationErrror::section_headers_not_terminated);
+    EXPECT_EQ(
+        validate_eof(from_hex("EFCAFE02")), EOFValidationErrror::section_headers_not_terminated);
 }
 
 // TODO tests from pre-Shanghai
 
 TEST(eof_validation, validate_EOF_version)
 {
-    EXPECT_EQ(validate_eof(from_hex("EFCAFE02")), EOFValidationErrror::eof_version_unknown);
+    EXPECT_EQ(validate_eof(from_hex("EFCAFE03")), EOFValidationErrror::eof_version_unknown);
     EXPECT_EQ(validate_eof(from_hex("EFCAFEFF")), EOFValidationErrror::eof_version_unknown);
 }
 
@@ -87,4 +89,54 @@ TEST(eof_validation, EOF1_multiple_data_sections)
 {
     EXPECT_EQ(validate_eof(from_hex("EFCAFE01 010001 020001 020001 00 FE DA DA")),
         EOFValidationErrror::multiple_data_sections);
+}
+
+TEST(eof_validation, EOF1_table_section)
+{
+    EXPECT_EQ(validate_eof(from_hex("EFCAFE01 010001 030002 00 FE 0001")),
+        EOFValidationErrror::unknown_section_id);
+
+    EXPECT_EQ(validate_eof(from_hex("EFCAFE01 010001 020001 030002 00 FE DA 0001")),
+        EOFValidationErrror::unknown_section_id);
+}
+
+TEST(eof_validation, minimal_valid_EOF2)
+{
+    EXPECT_EQ(validate_eof(from_hex("EFCAFE02 010001 00 FE")), EOFValidationErrror::success);
+
+    EXPECT_EQ(
+        validate_eof(from_hex("EFCAFE02 010001 020001 00 FE DA")), EOFValidationErrror::success);
+
+    EXPECT_EQ(
+        validate_eof(from_hex("EFCAFE02 010001 030002 00 FE 0001")), EOFValidationErrror::success);
+
+    EXPECT_EQ(validate_eof(from_hex("EFCAFE02 010001 020001 030002 00 FE DA 0001")),
+        EOFValidationErrror::success);
+}
+
+TEST(eof_validation, multiple_table_sections)
+{
+    EXPECT_EQ(validate_eof(from_hex("EFCAFE02 010001 030002 030004 00 FE 0001 00010002")),
+        EOFValidationErrror::success);
+
+    EXPECT_EQ(validate_eof(from_hex("EFCAFE02 010001 020001 030002 030004 00 FE DA 0001 00010002")),
+        EOFValidationErrror::success);
+}
+
+TEST(eof_validation, EOF2_table_section_0_size)
+{
+    EXPECT_EQ(validate_eof(from_hex("EFCAFE02 010001 030000 00 FE")),
+        EOFValidationErrror::zero_section_size);
+
+    EXPECT_EQ(validate_eof(from_hex("EFCAFE02 010001 030002 030000 00 FE 0000")),
+        EOFValidationErrror::zero_section_size);
+}
+
+TEST(eof_validation, EOF2_table_section_odd_size)
+{
+    EXPECT_EQ(validate_eof(from_hex("EFCAFE02 010001 030003 00 FE 000000")),
+        EOFValidationErrror::odd_table_section_size);
+
+    EXPECT_EQ(validate_eof(from_hex("EFCAFE02 010001 030002 030003 00 FE 0000 000000")),
+        EOFValidationErrror::odd_table_section_size);
 }
