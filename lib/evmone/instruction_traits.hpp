@@ -176,13 +176,19 @@ struct Traits
 
     /// The stack height change caused by the instruction execution. Can be negative.
     int8_t stack_height_change = 0;
+
+    /// Does the instruction terminate execution?
+    bool terminator = false;
 };
 
 /// The global, EVM revision independent, table of traits of all known EVM instructions.
 constexpr inline std::array<Traits, 256> traits = []() noexcept {
     std::array<Traits, 256> table{};
 
-    table[OP_STOP] = {"STOP", 0, 0};
+    for (auto& t : table)
+        t.terminator = true;  // Mark all undefined instructions as terminators.
+
+    table[OP_STOP] = {"STOP", 0, 0, true};
     table[OP_ADD] = {"ADD", 2, -1};
     table[OP_MUL] = {"MUL", 2, -1};
     table[OP_SUB] = {"SUB", 2, -1};
@@ -328,13 +334,13 @@ constexpr inline std::array<Traits, 256> traits = []() noexcept {
     table[OP_CREATE] = {"CREATE", 3, -2};
     table[OP_CALL] = {"CALL", 7, -6};
     table[OP_CALLCODE] = {"CALLCODE", 7, -6};
-    table[OP_RETURN] = {"RETURN", 2, -2};
+    table[OP_RETURN] = {"RETURN", 2, -2, true};
     table[OP_DELEGATECALL] = {"DELEGATECALL", 6, -5};
     table[OP_CREATE2] = {"CREATE2", 4, -3};
     table[OP_STATICCALL] = {"STATICCALL", 6, -5};
-    table[OP_REVERT] = {"REVERT", 2, -2};
-    table[OP_INVALID] = {"INVALID", 0, 0};
-    table[OP_SELFDESTRUCT] = {"SELFDESTRUCT", 1, -1};
+    table[OP_REVERT] = {"REVERT", 2, -2, true};
+    table[OP_INVALID] = {"INVALID", 0, 0, true};
+    table[OP_SELFDESTRUCT] = {"SELFDESTRUCT", 1, -1, true};
 
     return table;
 }();

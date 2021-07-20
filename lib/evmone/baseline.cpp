@@ -6,6 +6,7 @@
 #include "baseline_instruction_table.hpp"
 #include "execution_state.hpp"
 #include "instructions.hpp"
+#include "instructions_implementations_table.hpp"
 #include "vm.hpp"
 #include <evmc/instructions.h>
 #include <memory>
@@ -71,10 +72,41 @@ inline evmc_status_code check_requirements(
 /// Dispatch the instruction currently pointed by "pc".
 #define DISPATCH() break  // Break out of switch statement.
 
-/// Increment "pc" and dispatch the instruction.
 #define DISPATCH_NEXT() \
     ++code_it;          \
     DISPATCH()
+
+#define INSTR_IMPL(OPCODE)                                                    \
+    case OPCODE:                                                              \
+    {                                                                         \
+        /* Force constexpr resolution: */                                     \
+        constexpr auto state_fn = instr::implementations[OPCODE];             \
+        constexpr auto pc_fn = instr::pc_implementations[OPCODE];             \
+        constexpr auto terminator = instr::traits[OPCODE].terminator;         \
+                                                                              \
+        if constexpr (state_fn != nullptr)                                    \
+        {                                                                     \
+            const auto status = state_fn(state);                              \
+            if (terminator || status != EVMC_SUCCESS)                         \
+            {                                                                 \
+                state.status = status;                                        \
+                goto exit;                                                    \
+            }                                                                 \
+            ++code_it;                                                        \
+        }                                                                     \
+        else                                                                  \
+        {                                                                     \
+            const auto r = pc_fn(state, static_cast<size_t>(code_it - code)); \
+            if (terminator || r.status != EVMC_SUCCESS)                       \
+            {                                                                 \
+                state.status = r.status;                                      \
+                goto exit;                                                    \
+            }                                                                 \
+            code_it = code + r.pc;                                            \
+        }                                                                     \
+                                                                              \
+        DISPATCH();                                                           \
+    }
 
 template <bool TracingEnabled>
 evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& analysis) noexcept
@@ -111,92 +143,33 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
 
         switch (op)
         {
-        case OP_STOP:
-            state.status = stop(state);
-            goto exit;
-        case OP_ADD:
-            add(state);
-            DISPATCH_NEXT();
-        case OP_MUL:
-            mul(state);
-            DISPATCH_NEXT();
-        case OP_SUB:
-            sub(state);
-            DISPATCH_NEXT();
-        case OP_DIV:
-            div(state);
-            DISPATCH_NEXT();
-        case OP_SDIV:
-            sdiv(state);
-            DISPATCH_NEXT();
-        case OP_MOD:
-            mod(state);
-            DISPATCH_NEXT();
-        case OP_SMOD:
-            smod(state);
-            DISPATCH_NEXT();
-        case OP_ADDMOD:
-            addmod(state);
-            DISPATCH_NEXT();
-        case OP_MULMOD:
-            mulmod(state);
-            DISPATCH_NEXT();
-        case OP_EXP:
-        {
-            const auto status_code = exp(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
-        case OP_SIGNEXTEND:
-            signextend(state);
-            DISPATCH_NEXT();
+            INSTR_IMPL(OP_STOP)
+            INSTR_IMPL(OP_ADD)
+            INSTR_IMPL(OP_MUL)
+            INSTR_IMPL(OP_SUB)
+            INSTR_IMPL(OP_DIV)
+            INSTR_IMPL(OP_SDIV)
+            INSTR_IMPL(OP_MOD)
+            INSTR_IMPL(OP_SMOD)
+            INSTR_IMPL(OP_ADDMOD)
+            INSTR_IMPL(OP_MULMOD)
+            INSTR_IMPL(OP_EXP)
+            INSTR_IMPL(OP_SIGNEXTEND)
 
-        case OP_LT:
-            lt(state);
-            DISPATCH_NEXT();
-        case OP_GT:
-            gt(state);
-            DISPATCH_NEXT();
-        case OP_SLT:
-            slt(state);
-            DISPATCH_NEXT();
-        case OP_SGT:
-            sgt(state);
-            DISPATCH_NEXT();
-        case OP_EQ:
-            eq(state);
-            DISPATCH_NEXT();
-        case OP_ISZERO:
-            iszero(state);
-            DISPATCH_NEXT();
-        case OP_AND:
-            and_(state);
-            DISPATCH_NEXT();
-        case OP_OR:
-            or_(state);
-            DISPATCH_NEXT();
-        case OP_XOR:
-            xor_(state);
-            DISPATCH_NEXT();
-        case OP_NOT:
-            not_(state);
-            DISPATCH_NEXT();
-        case OP_BYTE:
-            byte(state);
-            DISPATCH_NEXT();
-        case OP_SHL:
-            shl(state);
-            DISPATCH_NEXT();
-        case OP_SHR:
-            shr(state);
-            DISPATCH_NEXT();
-        case OP_SAR:
-            sar(state);
-            DISPATCH_NEXT();
+            INSTR_IMPL(OP_LT)
+            INSTR_IMPL(OP_GT)
+            INSTR_IMPL(OP_SLT)
+            INSTR_IMPL(OP_SGT)
+            INSTR_IMPL(OP_EQ)
+            INSTR_IMPL(OP_ISZERO)
+            INSTR_IMPL(OP_AND)
+            INSTR_IMPL(OP_OR)
+            INSTR_IMPL(OP_XOR)
+            INSTR_IMPL(OP_NOT)
+            INSTR_IMPL(OP_BYTE)
+            INSTR_IMPL(OP_SHL)
+            INSTR_IMPL(OP_SHR)
+            INSTR_IMPL(OP_SAR)
 
         case OP_KECCAK256:
         {

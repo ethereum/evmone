@@ -5,12 +5,13 @@
 #include "instructions.hpp"
 #include "analysis.hpp"
 #include "instruction_traits.hpp"
+#include "instructions_implementations_table.hpp"
 
 namespace evmone
 {
 namespace
 {
-template <InstrFn Fn>
+template <evmc_status_code Fn(ExecutionState&) noexcept>
 const instruction* op(const instruction* instr, AdvancedExecutionState& state) noexcept
 {
     const auto status_code = Fn(state);
@@ -187,7 +188,7 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
     table[OP_ADDMOD] = op<addmod>;
     table[OP_MULMOD] = op<mulmod>;
     table[OP_EXP] = op<exp>;
-    table[OP_SIGNEXTEND] = op<signextend>;
+    table[OP_SIGNEXTEND] = op<instr::wrap2<signextend>>;
     table[OP_LT] = op<lt>;
     table[OP_GT] = op<gt>;
     table[OP_SLT] = op<slt>;
@@ -201,7 +202,7 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
     table[OP_BYTE] = op<byte>;
     table[OP_SHL] = op<shl>;
     table[OP_SHR] = op<shr>;
-    table[OP_SAR] = op<sar>;
+    table[OP_SAR] = op<instr::wrap2<sar>>;
 
     table[OP_KECCAK256] = op<keccak256>;
 

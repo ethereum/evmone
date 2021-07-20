@@ -19,7 +19,7 @@ struct InstrResult
 
 /// Function signature of the core implementation (without requirements check)
 /// of an EVM instruction.
-using InstrFn = evmc_status_code(ExecutionState&) noexcept;
+using InstrFn = InstrResult(ExecutionState& state, size_t pc) noexcept;
 
 constexpr auto max_buffer_size = std::numeric_limits<uint32_t>::max();
 
@@ -158,7 +158,7 @@ inline evmc_status_code exp(ExecutionState& state) noexcept
     return EVMC_SUCCESS;
 }
 
-inline evmc_status_code signextend(ExecutionState& state) noexcept
+inline void signextend(ExecutionState& state) noexcept
 {
     const auto ext = state.stack.pop();
     auto& x = state.stack.top();
@@ -171,7 +171,6 @@ inline evmc_status_code signextend(ExecutionState& state) noexcept
         auto is_neg = (x & sign_mask) != 0;
         x = is_neg ? x | ~value_mask : x & value_mask;
     }
-    return EVMC_SUCCESS;
 }
 
 inline evmc_status_code lt(ExecutionState& state) noexcept
@@ -267,10 +266,13 @@ inline evmc_status_code shr(ExecutionState& state) noexcept
     return EVMC_SUCCESS;
 }
 
-inline evmc_status_code sar(ExecutionState& state) noexcept
+inline void sar(ExecutionState& state) noexcept
 {
     if ((state.stack[1] & (uint256{1} << 255)) == 0)
-        return shr(state);
+    {
+        shr(state);
+        return;
+    }
 
     constexpr auto allones = ~uint256{};
 
@@ -283,7 +285,6 @@ inline evmc_status_code sar(ExecutionState& state) noexcept
     }
 
     state.stack.pop();
-    return EVMC_SUCCESS;
 }
 
 
