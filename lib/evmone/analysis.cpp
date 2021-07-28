@@ -189,9 +189,9 @@ AdvancedCodeAnalysis analyze(evmc_revision rev, const uint8_t* code, size_t code
     assert(analysis.push_values.size() <= max_args_storage_size);
 
     // pad jumpdest_offsets to make it suitable for unrolled_binary_search
-    const size_t padded_size_of_jumpdest_offsets =
-        bit_ceil(analysis.jumpdest_offsets.size() + 1) - 1;
-    analysis.jumpdest_offsets.resize(padded_size_of_jumpdest_offsets, INT32_MAX);
+    const uint64_t padded_size =
+        bit_ceil(static_cast<uint64_t>(analysis.jumpdest_offsets.size()) + 1) - 1;
+    analysis.jumpdest_offsets.resize(static_cast<size_t>(padded_size), INT32_MAX);
 
     return analysis;
 }

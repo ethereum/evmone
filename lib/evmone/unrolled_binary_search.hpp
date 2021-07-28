@@ -21,6 +21,9 @@ namespace evmone
 template <typename T>
 const T* unrolled_binary_search(const T* vec, size_t n, const T& key)
 {
+    if (n == 0)
+        return vec;
+
     int pos = -1;
     switch (n + 1)
     {
