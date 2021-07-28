@@ -161,8 +161,8 @@ TEST(analysis, jumpdests_groups)
     EXPECT_EQ(analysis.instrs[9].fn, op_tbl[OPX_BEGINBLOCK].fn);
     EXPECT_EQ(analysis.instrs[10].fn, op_tbl[OP_STOP].fn);
 
-
-    ASSERT_EQ(analysis.jumpdest_offsets.size(), 6);
+    // jumpdest_offsets is padded to 2^k-1 for unrolled_binary_search
+    ASSERT_EQ(analysis.jumpdest_offsets.size(), 7);
     ASSERT_EQ(analysis.jumpdest_targets.size(), 6);
     EXPECT_EQ(analysis.jumpdest_offsets[0], 0);
     EXPECT_EQ(analysis.jumpdest_targets[0], 0);
@@ -176,4 +176,5 @@ TEST(analysis, jumpdests_groups)
     EXPECT_EQ(analysis.jumpdest_targets[4], 5);
     EXPECT_EQ(analysis.jumpdest_offsets[5], 7);
     EXPECT_EQ(analysis.jumpdest_targets[5], 6);
+    EXPECT_EQ(analysis.jumpdest_offsets[6], INT32_MAX);
 }

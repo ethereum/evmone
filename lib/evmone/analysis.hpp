@@ -5,6 +5,7 @@
 
 #include "execution_state.hpp"
 #include "limits.hpp"
+#include "unrolled_binary_search.hpp"
 #include <evmc/evmc.hpp>
 #include <evmc/instructions.h>
 #include <evmc/utils.h>
@@ -133,12 +134,13 @@ struct AdvancedCodeAnalysis
     std::vector<int32_t> jumpdest_targets;
 };
 
-inline int find_jumpdest(const AdvancedCodeAnalysis& analysis, int offset) noexcept
+// Warning: INT32_MAX is used internally and not supported as a key
+inline int32_t find_jumpdest(const AdvancedCodeAnalysis& analysis, int32_t offset) noexcept
 {
-    const auto begin = std::begin(analysis.jumpdest_offsets);
-    const auto end = std::end(analysis.jumpdest_offsets);
-    const auto it = std::lower_bound(begin, end, offset);
-    return (it != end && *it == offset) ?
+    const auto begin = analysis.jumpdest_offsets.data();
+    const auto n = analysis.jumpdest_offsets.size();
+    const auto it = unrolled_binary_search(begin, n, offset);
+    return (it != begin + n && *it == offset) ?
                analysis.jumpdest_targets[static_cast<size_t>(it - begin)] :
                -1;
 }

@@ -25,6 +25,7 @@ add_library(evmone
     opcodes_helpers.h
     tracing.cpp
     tracing.hpp
+    unrolled_binary_search.hpp
     vm.cpp
     vm.hpp
 )

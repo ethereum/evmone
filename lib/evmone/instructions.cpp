@@ -43,7 +43,7 @@ const instruction* op_jump(const instruction*, AdvancedExecutionState& state) no
 {
     const auto dst = state.stack.pop();
     auto pc = -1;
-    if (std::numeric_limits<int>::max() < dst ||
+    if (dst >= INT32_MAX ||  // find_jumpdest can't handle INT32_MAX
         (pc = find_jumpdest(*state.analysis.advanced, static_cast<int>(dst))) < 0)
         return state.exit(EVMC_BAD_JUMP_DESTINATION);
 
