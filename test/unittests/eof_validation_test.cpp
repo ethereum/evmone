@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <evmone/eof.hpp>
+#include <evmone/instruction_traits.hpp>
 #include <gtest/gtest.h>
 #include <test/utils/utils.hpp>
 
@@ -87,4 +88,52 @@ TEST(eof_validation, EOF1_multiple_data_sections)
 {
     EXPECT_EQ(validate_eof(from_hex("EFCAFE01 010001 020001 020001 00 FE DA DA")),
         EOFValidationErrror::multiple_data_sections);
+}
+
+TEST(eof_validation, EOF1_undefined_opcodes)
+{
+    auto code = from_hex("EFCAFE01 010001 00 00");
+
+    const auto& gas_table = evmone::instr::gas_costs[EVMC_SHANGHAI];
+
+    for (uint16_t opcode = 0; opcode <= 0xff; ++opcode)
+    {
+        // PUSH* require immediate argument to be valid, checked in a separate test
+        if (opcode >= OP_PUSH1 && opcode <= OP_PUSH32)
+            continue;
+
+        code.back() = static_cast<uint8_t>(opcode);
+
+        const auto expected = (gas_table[opcode] == evmone::instr::undefined ?
+                                   EOFValidationErrror::undefined_instruction :
+                                   EOFValidationErrror::success);
+        EXPECT_EQ(validate_eof(code), expected) << hex(code);
+    }
+
+    EXPECT_EQ(validate_eof(from_hex("EFCAFE01 010001 00 FE")), EOFValidationErrror::success);
+}
+
+TEST(eof_validation, EOF1_truncated_push)
+{
+    auto eof_header = from_hex("EFCAFE01 010001 00");
+    auto& code_size_byte = eof_header[6];
+    for (uint8_t opcode = OP_PUSH1; opcode <= OP_PUSH32; ++opcode)
+    {
+        const auto required_bytes = static_cast<size_t>(opcode - OP_PUSH1 + 1);
+        for (size_t i = 0; i < required_bytes; ++i)
+        {
+            bytes code{opcode + bytes(i, 0)};
+            code_size_byte = static_cast<uint8_t>(code.size());
+            const auto container = eof_header + code;
+
+            EXPECT_EQ(validate_eof(container), EOFValidationErrror::truncated_push)
+                << hex(container);
+        }
+
+        bytes code{opcode + bytes(required_bytes, 0)};
+        code_size_byte = static_cast<uint8_t>(code.size());
+        const auto container = eof_header + code;
+
+        EXPECT_EQ(validate_eof(container), EOFValidationErrror::success) << hex(container);
+    }
 }
