@@ -25,41 +25,62 @@ const T* unrolled_binary_search(const T* vec, size_t n, const T& key)
         return vec;
 
     int pos = -1;
+    int step = -1;
+
+#if defined(__GNUC__) && !defined(__clang__)
+// For some reason gcc doesn't generate cmov with the ternary operator
+#define EVMONE_BINARY_SEARCH_BRANCHLESS_STEP pos += (vec[pos + step] < key) * step;
+#else
+#define EVMONE_BINARY_SEARCH_BRANCHLESS_STEP pos = (vec[pos + step] < key ? pos + step : pos)
+#endif
+
     switch (n + 1)
     {
     case 1u << 10:
-        pos = (vec[pos + (1 << 9)] < key ? pos + (1 << 9) : pos);
+        step = 1 << 9;
+        EVMONE_BINARY_SEARCH_BRANCHLESS_STEP;
         [[fallthrough]];
     case 1u << 9:
-        pos = (vec[pos + (1 << 8)] < key ? pos + (1 << 8) : pos);
+        step = 1 << 8;
+        EVMONE_BINARY_SEARCH_BRANCHLESS_STEP;
         [[fallthrough]];
     case 1u << 8:
-        pos = (vec[pos + (1 << 7)] < key ? pos + (1 << 7) : pos);
+        step = 1 << 7;
+        EVMONE_BINARY_SEARCH_BRANCHLESS_STEP;
         [[fallthrough]];
     case 1u << 7:
-        pos = (vec[pos + (1 << 6)] < key ? pos + (1 << 6) : pos);
+        step = 1 << 6;
+        EVMONE_BINARY_SEARCH_BRANCHLESS_STEP;
         [[fallthrough]];
     case 1u << 6:
-        pos = (vec[pos + (1 << 5)] < key ? pos + (1 << 5) : pos);
+        step = 1 << 5;
+        EVMONE_BINARY_SEARCH_BRANCHLESS_STEP;
         [[fallthrough]];
     case 1u << 5:
-        pos = (vec[pos + (1 << 4)] < key ? pos + (1 << 4) : pos);
+        step = 1 << 4;
+        EVMONE_BINARY_SEARCH_BRANCHLESS_STEP;
         [[fallthrough]];
     case 1u << 4:
-        pos = (vec[pos + (1 << 3)] < key ? pos + (1 << 3) : pos);
+        step = 1 << 3;
+        EVMONE_BINARY_SEARCH_BRANCHLESS_STEP;
         [[fallthrough]];
     case 1u << 3:
-        pos = (vec[pos + (1 << 2)] < key ? pos + (1 << 2) : pos);
+        step = 1 << 2;
+        EVMONE_BINARY_SEARCH_BRANCHLESS_STEP;
         [[fallthrough]];
     case 1u << 2:
-        pos = (vec[pos + (1 << 1)] < key ? pos + (1 << 1) : pos);
+        step = 1 << 1;
+        EVMONE_BINARY_SEARCH_BRANCHLESS_STEP;
         [[fallthrough]];
     case 1u << 1:
-        pos = (vec[pos + (1 << 0)] < key ? pos + (1 << 0) : pos);
+        step = 1 << 0;
+        EVMONE_BINARY_SEARCH_BRANCHLESS_STEP;
         [[fallthrough]];
     case 1u << 0:
         return vec + pos + 1;
     }
+
+#undef EVMONE_BINARY_SEARCH_BRANCHLESS_STEP
 
     return std::lower_bound(vec, vec + n, key);
 }
