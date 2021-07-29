@@ -159,7 +159,7 @@ void find_jumpdest_random(benchmark::State& state)
     const auto begin = map.data();
     benchmark::ClobberMemory();
 
-    for (auto _ : state)
+    while (state.KeepRunningBatch(indexes.size()))
     {
         for (auto i : indexes)
         {
@@ -269,7 +269,7 @@ void find_jumpdest_split_random(benchmark::State& state)
     const auto value = map.value.data();
     benchmark::ClobberMemory();
 
-    for (auto _ : state)
+    while (state.KeepRunningBatch(indexes.size()))
     {
         for (auto i : indexes)
         {
@@ -294,7 +294,7 @@ void find_jumpdest_hashmap_random(benchmark::State& state)
     const auto hashmap = std::unordered_map<T, T>{map.begin(), map.end()};
     benchmark::ClobberMemory();
 
-    for (auto _ : state)
+    while (state.KeepRunningBatch(indexes.size()))
     {
         for (auto i : indexes)
         {
