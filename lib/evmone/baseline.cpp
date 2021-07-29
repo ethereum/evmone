@@ -36,7 +36,7 @@ CodeAnalysis analyze(const uint8_t* code, size_t code_size)
     std::unique_ptr<uint8_t[]> padded_code{new uint8_t[i + 1]};  // +1 for the final STOP.
     std::copy_n(code, code_size, padded_code.get());
     // Set final STOP at the code end.
-    std::fill_n(padded_code.get() + code_size, i + 1 - code_size, OP_STOP);
+    std::fill_n(padded_code.get() + code_size, i + 1 - code_size, uint8_t{OP_STOP});
 
     // TODO: Using fixed-size padding of 33, the padded code buffer and jumpdest bitmap can be
     //       created with single allocation.
