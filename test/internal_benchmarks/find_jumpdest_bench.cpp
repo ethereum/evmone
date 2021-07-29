@@ -92,7 +92,7 @@ const std::array<std::pair<T, T>, jumpdest_map_size> map_builder<T>::map = []() 
     return m;
 }();
 
-template <typename T, T (*F)(const std::pair<T, T>*, size_t, T) noexcept>
+template <typename T, T Fn(const std::pair<T, T>*, size_t, T) noexcept>
 void find_jumpdest(benchmark::State& state)
 {
     const auto& map = map_builder<T>::map;
@@ -104,7 +104,7 @@ void find_jumpdest(benchmark::State& state)
     int x = -1;
     for (auto _ : state)
     {
-        x = F(begin, size, needle);
+        x = Fn(begin, size, needle);
         benchmark::DoNotOptimize(x);
     }
 
@@ -151,7 +151,7 @@ std::array<uint16_t, 1000> get_random_indexes()
 
 const auto random_indexes = get_random_indexes();
 
-template <typename T, T (*F)(const std::pair<T, T>*, size_t, T) noexcept>
+template <typename T, T Fn(const std::pair<T, T>*, size_t, T) noexcept>
 void find_jumpdest_random(benchmark::State& state)
 {
     const auto indexes = random_indexes;
@@ -163,7 +163,7 @@ void find_jumpdest_random(benchmark::State& state)
     {
         for (auto i : indexes)
         {
-            auto x = F(begin, jumpdest_map_size, i);
+            auto x = Fn(begin, jumpdest_map_size, i);
             benchmark::DoNotOptimize(x);
         }
     }
@@ -234,7 +234,7 @@ inline T binary_search2(const T* begin, const T* values, size_t size, T offset) 
 }
 
 
-template <typename T, T (*F)(const T*, const T*, size_t, T) noexcept>
+template <typename T, T Fn(const T*, const T*, size_t, T) noexcept>
 void find_jumpdest_split(benchmark::State& state)
 {
     const auto& map = split_map_builder<T>::map;
@@ -247,7 +247,7 @@ void find_jumpdest_split(benchmark::State& state)
     int x = -1;
     for (auto _ : state)
     {
-        x = F(begin, values, size, needle);
+        x = Fn(begin, values, size, needle);
         benchmark::DoNotOptimize(x);
     }
 
@@ -260,7 +260,7 @@ void find_jumpdest_split(benchmark::State& state)
         state.SkipWithError("element should not have been found");
 }
 
-template <typename T, T (*F)(const T*, const T*, size_t, T) noexcept>
+template <typename T, T Fn(const T*, const T*, size_t, T) noexcept>
 void find_jumpdest_split_random(benchmark::State& state)
 {
     const auto indexes = random_indexes;
@@ -273,7 +273,7 @@ void find_jumpdest_split_random(benchmark::State& state)
     {
         for (auto i : indexes)
         {
-            auto x = F(key, value, jumpdest_map_size, i);
+            auto x = Fn(key, value, jumpdest_map_size, i);
             benchmark::DoNotOptimize(x);
         }
     }
