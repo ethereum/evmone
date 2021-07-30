@@ -1,9 +1,10 @@
 # evmone: Fast Ethereum Virtual Machine implementation
-# Copyright 2019-2020 The evmone Authors.
+# Copyright 2019 The evmone Authors.
 # SPDX-License-Identifier: Apache-2.0
 
 add_executable(
     evmone-bench-internal
+    eof_jumpdest_section_bench.cpp
     find_jumpdest_bench.cpp
     memory_allocation.cpp
 )
