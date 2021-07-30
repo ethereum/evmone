@@ -19,8 +19,9 @@ hunter_config(
 
 hunter_config(
     benchmark
-    VERSION 1.5.4
-    URL https://github.com/google/benchmark/archive/refs/tags/v1.5.4.tar.gz
-    SHA1 b8c2501b33c8649a2c9e2268d8f652284ac5a778
+    VERSION 1.5.5
+    URL https://github.com/google/benchmark/archive/refs/tags/v1.5.5.tar.gz
+    SHA1 5d9957a347f9abd3a491596cb5e40078cee0ec01
+    CMAKE_ARGS -DBENCHMARK_ENABLE_TESTING=OFF -DBENCHMARK_ENABLE_LIBPFM=ON
 )
 
