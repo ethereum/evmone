@@ -333,6 +333,18 @@ TEST_P(evm, jump_over_jumpdest)
     EXPECT_GAS_USED(EVMC_SUCCESS, 3 + 8 + 1);
 }
 
+TEST_P(evm, jump_to_missing_push_data)
+{
+    execute(push(5) + OP_JUMP + OP_PUSH1);
+    EXPECT_STATUS(EVMC_BAD_JUMP_DESTINATION);
+}
+
+TEST_P(evm, jump_to_missing_push_data2)
+{
+    execute(push(6) + OP_JUMP + OP_PUSH2 + "ef");
+    EXPECT_STATUS(EVMC_BAD_JUMP_DESTINATION);
+}
+
 TEST_P(evm, pc_sum)
 {
     const auto code = 4 * OP_PC + 3 * OP_ADD + ret_top();
