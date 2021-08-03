@@ -283,6 +283,22 @@ jobs:
       - upload_coverage:
           flags: unittests
 
+  gcc-latest-memcheck:
+    executor: linux-gcc-latest
+    environment:
+      BUILD_TYPE: Debug
+      CMAKE_OPTIONS: -DCMAKE_CXX_FLAGS=-O1
+    steps:
+      - build
+      - test
+      - run:
+          name: "Install valgrind"
+          command: sudo apt-get -q update && sudo apt-get -qy install --no-install-recommends valgrind
+      - run:
+          name: "memcheck"
+          working_directory: ~/build
+          command: valgrind --vgdb=no --error-exitcode=99 bin/evmone-unittests
+
   gcc-32bit:
     docker:
       - image: ethereum/cpp-build-env:15-gcc-10-multilib
@@ -370,6 +386,7 @@ workflows:
       - consensus-tests
       - gcc-min
       - gcc-latest-coverage
+      - gcc-latest-memcheck
       - clang-latest-ubsan
       - clang-latest-coverage
       - macos-asan

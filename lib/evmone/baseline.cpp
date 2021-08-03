@@ -35,7 +35,8 @@ CodeAnalysis analyze(const uint8_t* code, size_t code_size)
     // Using "raw" new operator instead of std::make_unique() to get uninitialized array.
     std::unique_ptr<uint8_t[]> padded_code{new uint8_t[i + 1]};  // +1 for the final STOP.
     std::copy_n(code, code_size, padded_code.get());
-    padded_code[i] = OP_STOP;  // Set final STOP at the code end.
+    padded_code[code_size] = OP_STOP;  // Used to terminate invalid jumps, see op_jump().
+    padded_code[i] = OP_STOP;  // Set final STOP at the code end - guarantees loop termination.
 
     // TODO: Using fixed-size padding of 33, the padded code buffer and jumpdest bitmap can be
     //       created with single allocation.
