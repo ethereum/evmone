@@ -5,7 +5,7 @@
 #include "../support/attributes.h"
 #include <ethash/keccak.h>
 
-#if defined(_MSC_VER)
+#if !__has_builtin(__builtin_memcpy) && !defined(__GNUC__)
 #include <string.h>
 #define __builtin_memcpy memcpy
 #endif
