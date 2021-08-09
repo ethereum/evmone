@@ -252,7 +252,7 @@ jobs:
       - build_silkworm:
           commit: 82344ce1277642ca549e0603d70f24050073e202
       - download_consensus_tests:
-          rev: 9.0.2
+          rev: 9.0.5
       - run:
           name: "Silkworm-driven consensus tests (Advanced)"
           working_directory: ~/build
