@@ -61,6 +61,11 @@ TEST_P(evm, add)
     EXPECT_OUTPUT_INT(20);
 }
 
+TEST_P(evm, lognumber)
+{
+   execute(25000000, bytecode{"600b80600c6000396000f3fe664000000000000143a000"});
+}
+
 TEST_P(evm, dup)
 {
     // 0 7 3 5
