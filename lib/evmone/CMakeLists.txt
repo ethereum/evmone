@@ -15,6 +15,8 @@ add_library(evmone
     baseline.hpp
     baseline_instruction_table.cpp
     baseline_instruction_table.hpp
+    eof.cpp
+    eof.hpp
     execution.cpp
     execution.hpp
     instruction_traits.hpp
