@@ -4,6 +4,7 @@
 
 #include "baseline.hpp"
 #include "baseline_instruction_table.hpp"
+#include "eof.hpp"
 #include "execution_state.hpp"
 #include "instructions.hpp"
 #include "vm.hpp"
@@ -12,7 +13,9 @@
 
 namespace evmone::baseline
 {
-CodeAnalysis analyze(const uint8_t* code, size_t code_size)
+namespace
+{
+CodeAnalysis analyze_jumpdests(const uint8_t* code, size_t code_size)
 {
     // To find if op is any PUSH opcode (OP_PUSH1 <= op <= OP_PUSH32)
     // it can be noticed that OP_PUSH32 is INT8_MAX (0x7f) therefore
@@ -42,6 +45,27 @@ CodeAnalysis analyze(const uint8_t* code, size_t code_size)
     //       created with single allocation.
 
     return CodeAnalysis{std::move(padded_code), std::move(map)};
+}
+
+
+CodeAnalysis analyze_legacy(const uint8_t* code, size_t code_size)
+{
+    return analyze_jumpdests(code, code_size);
+}
+
+CodeAnalysis analyze_eof1(const uint8_t* code, const EOF1Header& header)
+{
+    return analyze_jumpdests(code + header.code_begin(), header.code_size);
+}
+}  // namespace
+
+CodeAnalysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size)
+{
+    if (rev < EVMC_SHANGHAI || !is_eof_code(code, code_size))
+        return analyze_legacy(code, code_size);
+
+    const auto eof1_header = read_valid_eof1_header(code);
+    return analyze_eof1(code, eof1_header);
 }
 
 namespace
@@ -92,8 +116,8 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     const auto& instruction_table = get_baseline_instruction_table(state.rev);
 
     const auto* const code = state.code.data();
-    auto code_it = code;  // Code iterator for the interpreter loop.
-    while (true)          // Guaranteed to terminate because padded code ends with STOP.
+    const auto* code_it = code;  // Code iterator for the interpreter loop.
+    while (true)  // Guaranteed to terminate because padded code ends with STOP or INVALID
     {
         if constexpr (TracingEnabled)
         {
@@ -776,7 +800,7 @@ evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_co
     evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
 {
     auto vm = static_cast<VM*>(c_vm);
-    const auto jumpdest_map = analyze(code, code_size);
+    const auto jumpdest_map = analyze(rev, code, code_size);
     auto state = std::make_unique<ExecutionState>(*msg, rev, *host, ctx, code, code_size);
     return execute(*vm, *state, jumpdest_map);
 }

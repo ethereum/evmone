@@ -12,6 +12,8 @@ struct EOF1Header
 {
     size_t code_size = 0;
     size_t data_size = 0;
+
+    size_t code_begin() const noexcept;
 };
 
 // Checks if code starts with EOF FORMAT + MAGIC, doesn't validate the format.
