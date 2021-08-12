@@ -33,7 +33,8 @@ evmc_result execute(evmc_vm* /*unused*/, const evmc_host_interface* host, evmc_h
         if (rev >= EVMC_SHANGHAI)
         {
             const auto eof1_header = read_valid_eof1_header(code);
-            analysis = analyze(rev, code + eof1_header.code_begin(), eof1_header.code_size);
+            analysis =
+                analyze(rev, code + eof1_header.code_begin(), eof1_header.code_size, OP_INVALID);
         }
         else
             // Skip analysis, because it will recognize 01 section id as OP_ADD and return
@@ -41,7 +42,7 @@ evmc_result execute(evmc_vm* /*unused*/, const evmc_host_interface* host, evmc_h
             return evmc::make_result(EVMC_UNDEFINED_INSTRUCTION, 0, nullptr, 0);
     }
     else
-        analysis = analyze(rev, code, code_size);
+        analysis = analyze(rev, code, code_size, OP_STOP);
     auto state = std::make_unique<AdvancedExecutionState>(*msg, rev, *host, ctx, code, code_size);
     return execute(*state, analysis);
 }

@@ -39,7 +39,8 @@ struct block_analysis
     }
 };
 
-AdvancedCodeAnalysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
+AdvancedCodeAnalysis analyze(
+    evmc_revision rev, const uint8_t* code, size_t code_size, evmc_opcode final_opcode) noexcept
 {
     const auto& op_tbl = get_op_table(rev);
     const auto opx_beginblock_fn = op_tbl[OPX_BEGINBLOCK].fn;
@@ -170,7 +171,7 @@ AdvancedCodeAnalysis analyze(evmc_revision rev, const uint8_t* code, size_t code
 
     // Make sure the last block is terminated.
     // TODO: This is not needed if the last instruction is a terminating one.
-    analysis.instrs.emplace_back(op_tbl[OP_STOP].fn);
+    analysis.instrs.emplace_back(op_tbl[final_opcode].fn);
 
     // FIXME: assert(analysis.instrs.size() <= max_instrs_size);
 

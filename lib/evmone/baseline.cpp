@@ -15,7 +15,7 @@ namespace evmone::baseline
 {
 namespace
 {
-CodeAnalysis analyze_jumpdests(const uint8_t* code, size_t code_size)
+CodeAnalysis analyze_jumpdests(const uint8_t* code, size_t code_size, evmc_opcode final_opcode)
 {
     // To find if op is any PUSH opcode (OP_PUSH1 <= op <= OP_PUSH32)
     // it can be noticed that OP_PUSH32 is INT8_MAX (0x7f) therefore
@@ -36,10 +36,12 @@ CodeAnalysis analyze_jumpdests(const uint8_t* code, size_t code_size)
 
     // i is the needed code size including the last push data (can be bigger than code_size).
     // Using "raw" new operator instead of std::make_unique() to get uninitialized array.
-    std::unique_ptr<uint8_t[]> padded_code{new uint8_t[i + 1]};  // +1 for the final STOP.
+    std::unique_ptr<uint8_t[]> padded_code{new uint8_t[i + 1]};  // +1 for the final STOP/INVALID.
     std::copy_n(code, code_size, padded_code.get());
-    padded_code[code_size] = OP_STOP;  // Used to terminate invalid jumps, see op_jump().
-    padded_code[i] = OP_STOP;  // Set final STOP at the code end - guarantees loop termination.
+    // Used to terminate invalid jumps, see jump().
+    padded_code[code_size] = static_cast<uint8_t>(final_opcode);
+    // Set final STOP/INVALID at the code end - guarantees loop termination.
+    padded_code[i] = static_cast<uint8_t>(final_opcode);
 
     // TODO: Using fixed-size padding of 33, the padded code buffer and jumpdest bitmap can be
     //       created with single allocation.
@@ -50,12 +52,12 @@ CodeAnalysis analyze_jumpdests(const uint8_t* code, size_t code_size)
 
 CodeAnalysis analyze_legacy(const uint8_t* code, size_t code_size)
 {
-    return analyze_jumpdests(code, code_size);
+    return analyze_jumpdests(code, code_size, OP_STOP);
 }
 
 CodeAnalysis analyze_eof1(const uint8_t* code, const EOF1Header& header)
 {
-    return analyze_jumpdests(code + header.code_begin(), header.code_size);
+    return analyze_jumpdests(code + header.code_begin(), header.code_size, OP_INVALID);
 }
 }  // namespace
 

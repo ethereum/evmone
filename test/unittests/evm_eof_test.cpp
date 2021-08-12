@@ -23,7 +23,14 @@ TEST_P(evm, eof1_execution_with_data_section)
 {
     rev = EVMC_SHANGHAI;
     // data section contains ret(0, 1)
-    const auto code = eof1_bytecode(mstore8(0, 1), ret(0, 1));
+    auto code = eof1_bytecode(mstore8(0, 1), ret(0, 1));
+
+    execute(code);
+    EXPECT_STATUS(EVMC_INVALID_INSTRUCTION);
+    EXPECT_EQ(result.output_size, 0);
+
+    // data section contains ret(0, 1)
+    code = eof1_bytecode(mstore8(0, 1) + OP_STOP, ret(0, 1));
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
