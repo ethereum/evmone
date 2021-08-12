@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <benchmark/benchmark.h>
+#include <intx/int128.hpp>
 #include <array>
 #include <random>
 #include <unordered_map>
@@ -233,6 +234,39 @@ inline T binary_search2(const T* begin, const T* values, size_t size, T offset) 
     return T(-1);
 }
 
+// Inspired by
+// https://dirtyhandscoding.wordpress.com/2017/08/25/performance-comparison-linear-search-vs-binary-search/
+template <typename T>
+inline T branchless_binary_search(const T* begin, const T* values, size_t size, T offset) noexcept
+{
+    if (size == 0)
+        return T(-1);
+
+    std::ptrdiff_t pos = -1;
+
+    unsigned logstep;
+    if constexpr (sizeof(size_t) == sizeof(uint64_t))
+        logstep = 63 - intx::clz(static_cast<uint64_t>(size));
+    else if constexpr (sizeof(size_t) == sizeof(uint32_t))
+        logstep = 31 - intx::clz(static_cast<uint32_t>(size));
+
+    auto step = static_cast<std::ptrdiff_t>(1) << logstep;
+    // The first step is special to cater for the case when (size + 1) is not a power of 2
+    const auto range1 = static_cast<std::ptrdiff_t>(size + 1) - step;
+    pos += (begin[pos + range1] < offset) * range1;
+    // Later on range is the same as step
+    step >>= 1;
+    while (step > 0)
+    {
+        // GCC compiles this to cmov, but Clang still uses jumps :(
+        // See https://godbolt.org/z/Meh6vcf68
+        pos = (begin[pos + step] < offset) ? pos + step : pos;
+        step >>= 1;
+    }
+
+    const size_t index = static_cast<size_t>(pos + 1);
+    return (index < size && begin[index] == offset) ? values[index] : T(-1);
+}
 
 template <typename T, T Fn(const T*, const T*, size_t, T) noexcept>
 void find_jumpdest_split(benchmark::State& state)
@@ -279,11 +313,19 @@ void find_jumpdest_split_random(benchmark::State& state)
     }
 }
 
+BENCHMARK_TEMPLATE(find_jumpdest_split, int, lower_bound) ARGS;
+BENCHMARK_TEMPLATE(find_jumpdest_split, int, binary_search2) ARGS;
+BENCHMARK_TEMPLATE(find_jumpdest_split, int, branchless_binary_search) ARGS;
+BENCHMARK_TEMPLATE(find_jumpdest_split_random, int, lower_bound);
+BENCHMARK_TEMPLATE(find_jumpdest_split_random, int, binary_search2);
+BENCHMARK_TEMPLATE(find_jumpdest_split_random, int, branchless_binary_search);
+
 BENCHMARK_TEMPLATE(find_jumpdest_split, uint16_t, lower_bound) ARGS;
 BENCHMARK_TEMPLATE(find_jumpdest_split, uint16_t, binary_search2) ARGS;
+BENCHMARK_TEMPLATE(find_jumpdest_split, uint16_t, branchless_binary_search) ARGS;
 BENCHMARK_TEMPLATE(find_jumpdest_split_random, uint16_t, lower_bound);
 BENCHMARK_TEMPLATE(find_jumpdest_split_random, uint16_t, binary_search2);
-
+BENCHMARK_TEMPLATE(find_jumpdest_split_random, uint16_t, branchless_binary_search);
 
 template <typename T>
 void find_jumpdest_hashmap_random(benchmark::State& state)
