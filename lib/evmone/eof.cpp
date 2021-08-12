@@ -4,8 +4,10 @@
 
 #include "eof.hpp"
 
+#include <evmc/instructions.h>
 #include <array>
 #include <cassert>
+#include <limits>
 
 namespace evmone
 {
@@ -99,6 +101,33 @@ std::pair<EOFSectionHeaders, EOFValidationErrror> validate_eof_headers(
     return {section_headers, EOFValidationErrror::success};
 }
 
+EOFValidationErrror validate_instructions(
+    evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
+{
+    // To find if op is any PUSH opcode (OP_PUSH1 <= op <= OP_PUSH32)
+    // it can be noticed that OP_PUSH32 is INT8_MAX (0x7f) therefore
+    // static_cast<int8_t>(op) <= OP_PUSH32 is always true and can be skipped.
+    static_assert(OP_PUSH32 == std::numeric_limits<int8_t>::max());
+
+    const auto* names = evmc_get_instruction_names_table(rev);
+
+    size_t i = 0;
+    while (i < code_size)
+    {
+        const auto op = code[i];
+        if (names[op] == nullptr)
+            return EOFValidationErrror::undefined_instruction;
+
+        if (static_cast<int8_t>(op) >= OP_PUSH1)  // If any PUSH opcode (see explanation above).
+            i += op - size_t{OP_PUSH1 - 1};       // Skip PUSH data.
+        ++i;
+    }
+    if (i != code_size)
+        return EOFValidationErrror::truncated_push;
+
+    return EOFValidationErrror::success;
+}
+
 }  // namespace
 
 size_t EOF1Header::code_begin() const noexcept
@@ -138,13 +167,19 @@ uint8_t get_eof_version(const uint8_t* code, size_t code_size) noexcept
 }
 
 std::pair<EOF1Header, EOFValidationErrror> validate_eof1(
-    const uint8_t* code, size_t code_size) noexcept
+    evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
 {
-    const auto [section_headers, error] = validate_eof_headers(code, code_size);
-    if (error != EOFValidationErrror::success)
-        return {{}, error};
+    const auto [section_headers, error_header] = validate_eof_headers(code, code_size);
+    if (error_header != EOFValidationErrror::success)
+        return {{}, error_header};
 
     EOF1Header header{section_headers[CODE_SECTION], section_headers[DATA_SECTION]};
+
+    const auto error_instr =
+        validate_instructions(rev, &code[header.code_begin()], header.code_size);
+    if (error_instr != EOFValidationErrror::success)
+        return {{}, error_instr};
+
     return {header, EOFValidationErrror::success};
 }
 
@@ -163,7 +198,7 @@ EOFValidationErrror validate_eof(evmc_revision rev, const uint8_t* code, size_t 
     {
         if (rev < EVMC_SHANGHAI)
             return EOFValidationErrror::eof_version_unknown;
-        return validate_eof1(code, code_size).second;
+        return validate_eof1(rev, code, code_size).second;
     }
     }
 }
