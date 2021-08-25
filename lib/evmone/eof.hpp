@@ -63,6 +63,7 @@ enum class EOFValidationErrror
     multiple_data_sections,
     unknown_section_id,
     zero_section_size,
+    odd_table_section_size,
     section_headers_not_terminated,
     invalid_section_bodies_size,
     undefined_instruction,
@@ -78,6 +79,9 @@ uint8_t get_eof_version(const uint8_t* code, size_t code_size) noexcept;
 
 std::pair<EOF1Header, EOFValidationErrror> validate_eof1(
     evmc_revision rev, const uint8_t* code, size_t code_size) noexcept;
+
+std::pair<EOF2Header, EOFValidationErrror> validate_eof2(
+    const uint8_t* code, size_t code_size) noexcept;
 
 EVMC_EXPORT EOFValidationErrror validate_eof(
     evmc_revision rev, const uint8_t* code, size_t code_size) noexcept;
