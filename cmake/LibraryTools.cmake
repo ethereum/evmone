@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # For given target of a static library creates a custom target with -standalone suffix
-# that merges the given target and all its static library depenednecies
+# that merges the given target and all its static library dependencies
 # into a single static library.
 #
 # It silently ignores non-static library target and unsupported platforms.
@@ -18,7 +18,7 @@ function(add_standalone_library TARGET)
     if(CMAKE_AR)
         # Generate ar linker script.
         set(script_file ${name}.mri)
-        set(script "OPEN $<TARGET_FILE:${name}>\n")
+        set(script "CREATE $<TARGET_FILE:${name}>\n")
         string(APPEND script "ADDLIB $<TARGET_FILE:${TARGET}>\n")
 
         get_target_property(link_libraries ${TARGET} LINK_LIBRARIES)
