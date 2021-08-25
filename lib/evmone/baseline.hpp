@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
+#include "eof.hpp"
 #include <evmc/evmc.h>
 #include <evmc/utils.h>
 #include <memory>
@@ -10,7 +11,6 @@
 
 namespace evmone
 {
-struct EOF1Header;
 struct ExecutionState;
 class VM;
 
@@ -22,7 +22,7 @@ struct CodeAnalysis
 
     const std::unique_ptr<uint8_t[]> padded_code;
     const JumpdestMap jumpdest_map;
-    // TODO add tables
+    TableList tables;
 };
 
 /// Analyze the code to build the bitmap of valid JUMPDEST locations.

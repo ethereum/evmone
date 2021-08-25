@@ -46,7 +46,7 @@ CodeAnalysis analyze_jumpdests(const uint8_t* code, size_t code_size, evmc_opcod
     // TODO: Using fixed-size padding of 33, the padded code buffer and jumpdest bitmap can be
     //       created with single allocation.
 
-    return CodeAnalysis{std::move(padded_code), std::move(map)};
+    return CodeAnalysis{std::move(padded_code), std::move(map), {}};
 }
 
 CodeAnalysis analyze_legacy(const uint8_t* code, size_t code_size)
@@ -69,9 +69,9 @@ CodeAnalysis analyze_eof2(const uint8_t* code, const EOF2Header& header)
     // Set final STOP/INVALID at the code end.
     std::fill_n(padded_code.get() + header.code_size, code_padding, uint8_t{OP_INVALID});
 
-    // Skipping jumpdest analysis
+    const auto tables = read_valid_table_sections(header.table_sizes, code + header.tables_begin());
 
-    return CodeAnalysis{std::move(padded_code), {}};
+    return CodeAnalysis{std::move(padded_code), {}, std::move(tables)};
 }
 }  // namespace
 
@@ -101,6 +101,27 @@ const uint8_t* rjump(const uint8_t* pc) noexcept
     const auto offset_lo = *(pc + 2);
     const auto offset = static_cast<int16_t>((offset_hi << 8) + offset_lo);
     return pc + 3 + offset;  // PC_post_rjump + offset
+}
+
+const uint8_t* rjumptable(ExecutionState& state, const uint8_t* pc) noexcept
+{
+    const auto& tables = state.analysis.baseline->tables;
+
+    // Reading next 2 bytes is guaranteed to be safe by deploy-time validation.
+    const auto table_index_hi = *(pc + 1);
+    const auto table_index_lo = *(pc + 2);
+    const auto table_index = static_cast<uint16_t>((table_index_hi << 8) + table_index_lo);
+
+    // table_index is guaranteed to be within tables bounds by deploy-time validation.
+
+    const auto index = state.stack.pop();
+    if (index >= tables[table_index].size())
+    {
+        state.status = EVMC_BAD_JUMP_DESTINATION;  // TODO new error code
+        return pc;                                 // This value is ignored.
+    }
+
+    return pc + 3 + tables[table_index][static_cast<size_t>(index)];  // PC_post_rjumptable + offset
 }
 
 inline evmc_status_code check_requirements(
@@ -494,6 +515,11 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
                 // skip immediate argument
                 code_it += 3;
             }
+            DISPATCH();
+        case OP_RJUMPTABLE:
+            code_it = rjumptable(state, code_it);
+            if (state.status == EVMC_BAD_JUMP_DESTINATION)
+                goto exit;
             DISPATCH();
 
         case OP_PUSH1:

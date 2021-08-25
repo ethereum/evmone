@@ -28,7 +28,10 @@ struct EOF2Header
 
     size_t code_begin() const noexcept;
     size_t code_end() const noexcept;
+    size_t tables_begin() const noexcept;
 };
+
+using TableList = std::vector<std::vector<int16_t>>;
 
 // Checks if code starts with EOF FORMAT + MAGIC, doesn't validate the format.
 bool is_eof_code(const uint8_t* code, size_t code_size) noexcept;
@@ -42,6 +45,9 @@ EVMC_EXPORT EOF1Header read_valid_eof1_header(const uint8_t* code) noexcept;
 // Reads the section sizes assuming that code has valid format.
 // (must be true for all EOF contracts on-chain)
 EOF2Header read_valid_eof2_header(const uint8_t* code) noexcept;
+
+TableList read_valid_table_sections(
+    const std::vector<size_t> table_sizes, const uint8_t* table_sections) noexcept;
 
 enum class EOFValidationErrror
 {

@@ -159,6 +159,11 @@ size_t EOF2Header::code_end() const noexcept
     return code_begin() + code_size;
 }
 
+size_t EOF2Header::tables_begin() const noexcept
+{
+    return code_end() + static_cast<size_t>(data_size);
+}
+
 bool is_eof_code(const uint8_t* code, size_t code_size) noexcept
 {
     static_assert(std::size(MAGIC) == 2);
@@ -208,6 +213,32 @@ EOF2Header read_valid_eof2_header(const uint8_t* code) noexcept
     }
 
     return header;
+}
+
+TableList read_valid_table_sections(
+    const std::vector<size_t> table_sizes, const uint8_t* table_sections) noexcept
+{
+    TableList tables;
+    tables.reserve(table_sizes.size());
+
+    const auto* table_item = table_sections;
+    for (const auto table_size : table_sizes)
+    {
+        std::vector<int16_t> table;
+        table.reserve(static_cast<size_t>(table_size));
+        const auto* table_section_end = table_item + table_size;
+        while (table_item != table_section_end)
+        {
+            const auto offset_hi = *(table_item);
+            const auto offset_lo = *(table_item + 1);
+            const int16_t offset = static_cast<int16_t>((offset_hi << 8) + offset_lo);
+            table.push_back(offset);
+
+            table_item += 2;
+        }
+        tables.emplace_back(std::move(table));
+    }
+    return tables;
 }
 
 uint8_t get_eof_version(const uint8_t* code, size_t code_size) noexcept
