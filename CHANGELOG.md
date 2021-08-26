@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
 
+## [0.8.2] — 2021-08-26
+
+### Fixed
+
+- Fixed building of `evmone-standalone` static library when the `llvm-ar` tool is being used.
+  [#373](https://github.com/ethereum/evmone/pull/373)
+  [#374](https://github.com/ethereum/evmone/pull/374)
+
+
 ## [0.8.1] — 2021-08-03
 
 ### Fixed
@@ -273,6 +282,7 @@ It delivers fully-compatible and high-speed EVM implementation.
 - The [intx 0.2.0](https://github.com/chfast/intx/releases/tag/v0.2.0) library is used for 256-bit precision arithmetic. 
 
 
+[0.8.2]: https://github.com/ethereum/evmone/releases/tag/v0.8.2
 [0.8.1]: https://github.com/ethereum/evmone/releases/tag/v0.8.1
 [0.8.0]: https://github.com/ethereum/evmone/releases/tag/v0.8.0
 [0.7.0]: https://github.com/ethereum/evmone/releases/tag/v0.7.0
