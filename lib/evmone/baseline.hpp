@@ -23,6 +23,7 @@ struct CodeAnalysis
     const std::unique_ptr<uint8_t[]> padded_code;
     const JumpdestMap jumpdest_map;
     TableList tables;
+    bool is_legacy_code = false;
 };
 
 /// Analyze the code to build the bitmap of valid JUMPDEST locations.

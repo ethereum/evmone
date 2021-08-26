@@ -15,7 +15,8 @@ namespace evmone::baseline
 {
 namespace
 {
-CodeAnalysis analyze_jumpdests(const uint8_t* code, size_t code_size, evmc_opcode final_opcode)
+std::pair<CodeAnalysis::JumpdestMap, std::unique_ptr<uint8_t[]>> analyze_jumpdests(
+    const uint8_t* code, size_t code_size, evmc_opcode final_opcode)
 {
     // To find if op is any PUSH opcode (OP_PUSH1 <= op <= OP_PUSH32)
     // it can be noticed that OP_PUSH32 is INT8_MAX (0x7f) therefore
@@ -46,17 +47,22 @@ CodeAnalysis analyze_jumpdests(const uint8_t* code, size_t code_size, evmc_opcod
     // TODO: Using fixed-size padding of 33, the padded code buffer and jumpdest bitmap can be
     //       created with single allocation.
 
-    return CodeAnalysis{std::move(padded_code), std::move(map), {}};
+    return std::make_pair(std::move(map), std::move(padded_code));
 }
 
 CodeAnalysis analyze_legacy(const uint8_t* code, size_t code_size)
 {
-    return analyze_jumpdests(code, code_size, OP_STOP);
+    auto jumpdest_map_and_code = analyze_jumpdests(code, code_size, OP_STOP);
+    return {
+        std::move(jumpdest_map_and_code.second), std::move(jumpdest_map_and_code.first), {}, true};
 }
 
 CodeAnalysis analyze_eof1(const uint8_t* code, const EOF1Header& header)
 {
-    return analyze_jumpdests(code + header.code_begin(), header.code_size, OP_INVALID);
+    auto jumpdest_map_and_code =
+        analyze_jumpdests(code + header.code_begin(), header.code_size, OP_INVALID);
+    return {
+        std::move(jumpdest_map_and_code.second), std::move(jumpdest_map_and_code.first), {}, false};
 }
 
 CodeAnalysis analyze_eof2(const uint8_t* code, const EOF2Header& header)
@@ -71,7 +77,7 @@ CodeAnalysis analyze_eof2(const uint8_t* code, const EOF2Header& header)
 
     const auto tables = read_valid_table_sections(header.table_sizes, code + header.tables_begin());
 
-    return CodeAnalysis{std::move(padded_code), {}, std::move(tables)};
+    return CodeAnalysis{std::move(padded_code), {}, std::move(tables), false};
 }
 }  // namespace
 
@@ -167,7 +173,9 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     if constexpr (TracingEnabled)
         tracer->notify_execution_start(state.rev, *state.msg, state.code);
 
-    const auto& instruction_table = get_baseline_instruction_table(state.rev);
+    const auto& instruction_table = analysis.is_legacy_code ?
+                                        get_baseline_legacy_instruction_table(state.rev) :
+                                        get_baseline_instruction_table(state.rev);
 
     const auto* const code = state.code.data();
     const auto* code_it = code;  // Code iterator for the interpreter loop.
