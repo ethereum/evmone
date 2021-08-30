@@ -49,7 +49,6 @@ CodeAnalysis analyze_jumpdests(const uint8_t* code, size_t code_size, evmc_opcod
     return CodeAnalysis{std::move(padded_code), std::move(map)};
 }
 
-
 CodeAnalysis analyze_legacy(const uint8_t* code, size_t code_size)
 {
     return analyze_jumpdests(code, code_size, OP_STOP);
@@ -59,6 +58,21 @@ CodeAnalysis analyze_eof1(const uint8_t* code, const EOF1Header& header)
 {
     return analyze_jumpdests(code + header.code_begin(), header.code_size, OP_INVALID);
 }
+
+CodeAnalysis analyze_eof2(const uint8_t* code, const EOF2Header& header)
+{
+    constexpr auto code_padding = 33;
+
+    // Using "raw" new operator instead of std::make_unique() to get uninitialized array.
+    std::unique_ptr<uint8_t[]> padded_code{new uint8_t[header.code_size + code_padding]};
+    std::copy_n(code + header.code_begin(), header.code_size, padded_code.get());
+    // Set final STOP/INVALID at the code end.
+    std::fill_n(padded_code.get() + header.code_size, code_padding, uint8_t{OP_INVALID});
+
+    // Skipping jumpdest analysis
+
+    return CodeAnalysis{std::move(padded_code), {}};
+}
 }  // namespace
 
 CodeAnalysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size)
@@ -66,8 +80,16 @@ CodeAnalysis analyze(evmc_revision rev, const uint8_t* code, size_t code_size)
     if (rev < EVMC_SHANGHAI || !is_eof_code(code, code_size))
         return analyze_legacy(code, code_size);
 
-    const auto eof1_header = read_valid_eof1_header(code);
-    return analyze_eof1(code, eof1_header);
+    const auto version = read_eof_version(code);
+    if (version == 1)
+    {
+        const auto eof1_header = read_valid_eof1_header(code);
+        return analyze_eof1(code, eof1_header);
+    }
+
+    assert(version == 2);
+    const auto eof2_header = read_valid_eof2_header(code);
+    return analyze_eof2(code, eof2_header);
 }
 
 namespace
