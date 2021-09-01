@@ -6,6 +6,7 @@
 #include "baseline_instruction_table.hpp"
 #include "execution_state.hpp"
 #include "instructions.hpp"
+#include "instructions_op2fn.hpp"
 #include "vm.hpp"
 #include <evmc/instructions.h>
 #include <memory>
@@ -77,6 +78,31 @@ inline evmc_status_code check_requirements(
     ++code_it;          \
     DISPATCH()
 
+/// Implementation of a generic instruction "case".
+#define DISPATCH_CASE(OPCODE)                                          \
+    case OPCODE:                                                       \
+        if (code_it = invoke(op2fn::OPCODE, state, code_it); !code_it) \
+            goto exit;                                                 \
+        break
+
+/// The signature of basic instructions which always succeed, e.g. ADD.
+using SucceedingInstrFn = void(ExecutionState&) noexcept;
+static_assert(std::is_same_v<decltype(add), SucceedingInstrFn>);
+
+/// A helper to invoke instruction implementations of different signatures
+/// done by template specialization.
+template <typename InstrFn>
+code_iterator invoke(InstrFn instr_fn, ExecutionState& state, code_iterator pos) noexcept = delete;
+
+template <>
+[[gnu::always_inline]] inline code_iterator invoke<SucceedingInstrFn*>(
+    SucceedingInstrFn* instr_fn, ExecutionState& state, code_iterator pos) noexcept
+{
+    instr_fn(state);
+    return pos + 1;
+}
+
+
 template <bool TracingEnabled>
 evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& analysis) noexcept
 {
@@ -116,33 +142,17 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
             stop(state);
             state.status = EVMC_SUCCESS;  // Not needed, but does some magic to clang optimization.
             goto exit;
-        case OP_ADD:
-            add(state);
-            DISPATCH_NEXT();
-        case OP_MUL:
-            mul(state);
-            DISPATCH_NEXT();
-        case OP_SUB:
-            sub(state);
-            DISPATCH_NEXT();
-        case OP_DIV:
-            div(state);
-            DISPATCH_NEXT();
-        case OP_SDIV:
-            sdiv(state);
-            DISPATCH_NEXT();
-        case OP_MOD:
-            mod(state);
-            DISPATCH_NEXT();
-        case OP_SMOD:
-            smod(state);
-            DISPATCH_NEXT();
-        case OP_ADDMOD:
-            addmod(state);
-            DISPATCH_NEXT();
-        case OP_MULMOD:
-            mulmod(state);
-            DISPATCH_NEXT();
+
+            DISPATCH_CASE(OP_ADD);
+            DISPATCH_CASE(OP_MUL);
+            DISPATCH_CASE(OP_SUB);
+            DISPATCH_CASE(OP_DIV);
+            DISPATCH_CASE(OP_SDIV);
+            DISPATCH_CASE(OP_MOD);
+            DISPATCH_CASE(OP_SMOD);
+            DISPATCH_CASE(OP_ADDMOD);
+            DISPATCH_CASE(OP_MULMOD);
+
         case OP_EXP:
         {
             const auto status_code = exp(state);
