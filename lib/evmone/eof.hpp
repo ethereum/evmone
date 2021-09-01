@@ -68,6 +68,10 @@ enum class EOFValidationErrror
     invalid_section_bodies_size,
     undefined_instruction,
     truncated_push,
+    missing_immediate_argument,
+    invalid_rjump_destination,
+    invalid_rjump_table_index,
+    incomplete_table_section,
 
     initcode_failure,
     impossible,

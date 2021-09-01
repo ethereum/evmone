@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "eof.hpp"
+#include <evmc/instructions.h>
 
 #include <evmc/instructions.h>
 #include <array>
@@ -143,6 +144,73 @@ EOFValidationErrror validate_instructions(
     return EOFValidationErrror::success;
 }
 
+EOFValidationErrror validate_rjump_instructions(const EOF2Header& header,
+    std::vector<std::vector<int16_t>> tables, const uint8_t* code) noexcept
+{
+    // Collect jumpdest locations and immediate locations
+    size_t i = header.code_begin();
+    // TODO change to set / unordered_set?
+    std::vector<size_t> jumpdests;
+    std::vector<bool> immediate_map(header.code_end());
+    while (i < header.code_end())
+    {
+        const auto op = code[i];
+        if (static_cast<int8_t>(op) >= OP_PUSH1)  // If any PUSH opcode (see explanation in
+                                                  // baseline.cpp).
+        {
+            const auto n = op - size_t{OP_PUSH1 - 1};
+            std::fill_n(immediate_map.begin() + static_cast<ptrdiff_t>(i) + 1, n, true);
+            i += n;  // Skip PUSH data.
+        }
+        else if (op == OP_RJUMP || op == OP_RJUMPI)
+        {
+            if (i + 2 >= header.code_end())
+                return EOFValidationErrror::missing_immediate_argument;
+            const auto offset_hi = code[i + 1];
+            const auto offset_lo = code[i + 2];
+            const auto offset = static_cast<int16_t>((offset_hi << 8) + offset_lo);
+            const auto jumpdest = static_cast<int32_t>(i) + 3 + offset;
+            if (jumpdest < static_cast<int32_t>(header.code_begin()) ||
+                jumpdest >= static_cast<int32_t>(header.code_end()))
+                return EOFValidationErrror::invalid_rjump_destination;
+            jumpdests.push_back(static_cast<size_t>(jumpdest));
+            immediate_map[i + 1] = true;
+            immediate_map[i + 2] = true;
+            i += 2;
+        }
+        else if (op == OP_RJUMPTABLE)
+        {
+            if (i + 2 >= header.code_end())
+                return EOFValidationErrror::missing_immediate_argument;
+            const auto table_index_hi = code[i + 1];
+            const auto table_index_lo = code[i + 2];
+            const auto table_index = static_cast<uint16_t>((table_index_hi << 8) + table_index_lo);
+            if (table_index >= tables.size())
+                return EOFValidationErrror::invalid_rjump_table_index;
+
+            for (const auto offset : tables[table_index])
+            {
+                const auto jumpdest = static_cast<int32_t>(i) + 3 + offset;
+                if (jumpdest < static_cast<int32_t>(header.code_begin()) ||
+                    jumpdest >= static_cast<int32_t>(header.code_end()))
+                    return EOFValidationErrror::invalid_rjump_destination;
+                jumpdests.push_back(static_cast<size_t>(jumpdest));
+            }
+
+            immediate_map[i + 1] = true;
+            immediate_map[i + 2] = true;
+            i += 2;
+        }
+        ++i;
+    }
+
+    // Check jumpdest locations against immediate locations.
+    for (const auto jumpdest : jumpdests)
+        if (immediate_map[jumpdest])
+            return EOFValidationErrror::invalid_rjump_destination;
+
+    return EOFValidationErrror::success;
+}
 }  // namespace
 
 size_t EOF1Header::code_begin() const noexcept
@@ -293,6 +361,14 @@ std::pair<EOF2Header, EOFValidationErrror> validate_eof2(
     EOF2Header header{section_headers[CODE_SECTION][0],
         section_headers[DATA_SECTION].empty() ? 0 : section_headers[DATA_SECTION][0],
         section_headers[TABLE_SECTION]};
+
+    // Read jump tables.
+    const auto tables = read_valid_table_sections(header.table_sizes, code + header.tables_begin());
+
+    const auto error_instr = validate_rjump_instructions(header, tables, code);
+    if (error_instr != EOFValidationErrror::success)
+        return {{}, error_instr};
+
     return {header, EOFValidationErrror::success};
 }
 
