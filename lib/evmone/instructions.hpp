@@ -1,5 +1,5 @@
 // evmone: Fast Ethereum Virtual Machine implementation
-// Copyright 2019-2020 The evmone Authors.
+// Copyright 2019 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
@@ -16,10 +16,6 @@ struct InstrResult
     evmc_status_code status;  ///< Status code.
     size_t pc;                ///< Code offset of the next instruction (PC).
 };
-
-/// Function signature of the core implementation (without requirements check)
-/// of an EVM instruction.
-using InstrFn = evmc_status_code(ExecutionState&) noexcept;
 
 constexpr auto max_buffer_size = std::numeric_limits<uint32_t>::max();
 
@@ -68,78 +64,66 @@ inline bool check_memory(ExecutionState& state, const uint256& offset, const uin
     return check_memory(state, offset, static_cast<uint64_t>(size));
 }
 
-inline evmc_status_code stop(ExecutionState& /*state*/) noexcept
-{
-    return EVMC_SUCCESS;
-}
+inline void stop(ExecutionState& /*state*/) noexcept {}
 
-inline evmc_status_code add(ExecutionState& state) noexcept
+inline void add(ExecutionState& state) noexcept
 {
     state.stack.top() += state.stack.pop();
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code mul(ExecutionState& state) noexcept
+inline void mul(ExecutionState& state) noexcept
 {
     state.stack.top() *= state.stack.pop();
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code sub(ExecutionState& state) noexcept
+inline void sub(ExecutionState& state) noexcept
 {
     state.stack[1] = state.stack[0] - state.stack[1];
     state.stack.pop();
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code div(ExecutionState& state) noexcept
+inline void div(ExecutionState& state) noexcept
 {
     auto& v = state.stack[1];
     v = v != 0 ? state.stack[0] / v : 0;
     state.stack.pop();
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code sdiv(ExecutionState& state) noexcept
+inline void sdiv(ExecutionState& state) noexcept
 {
     auto& v = state.stack[1];
     v = v != 0 ? intx::sdivrem(state.stack[0], v).quot : 0;
     state.stack.pop();
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code mod(ExecutionState& state) noexcept
+inline void mod(ExecutionState& state) noexcept
 {
     auto& v = state.stack[1];
     v = v != 0 ? state.stack[0] % v : 0;
     state.stack.pop();
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code smod(ExecutionState& state) noexcept
+inline void smod(ExecutionState& state) noexcept
 {
     auto& v = state.stack[1];
     v = v != 0 ? intx::sdivrem(state.stack[0], v).rem : 0;
     state.stack.pop();
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code addmod(ExecutionState& state) noexcept
+inline void addmod(ExecutionState& state) noexcept
 {
     const auto x = state.stack.pop();
     const auto y = state.stack.pop();
     auto& m = state.stack.top();
     m = m != 0 ? intx::addmod(x, y, m) : 0;
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code mulmod(ExecutionState& state) noexcept
+inline void mulmod(ExecutionState& state) noexcept
 {
     const auto x = state.stack.pop();
     const auto y = state.stack.pop();
     auto& m = state.stack.top();
     m = m != 0 ? intx::mulmod(x, y, m) : 0;
-    return EVMC_SUCCESS;
 }
 
 inline evmc_status_code exp(ExecutionState& state) noexcept
@@ -158,7 +142,7 @@ inline evmc_status_code exp(ExecutionState& state) noexcept
     return EVMC_SUCCESS;
 }
 
-inline evmc_status_code signextend(ExecutionState& state) noexcept
+inline void signextend(ExecutionState& state) noexcept
 {
     const auto ext = state.stack.pop();
     auto& x = state.stack.top();
@@ -171,75 +155,64 @@ inline evmc_status_code signextend(ExecutionState& state) noexcept
         auto is_neg = (x & sign_mask) != 0;
         x = is_neg ? x | ~value_mask : x & value_mask;
     }
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code lt(ExecutionState& state) noexcept
+inline void lt(ExecutionState& state) noexcept
 {
     const auto x = state.stack.pop();
     state.stack[0] = x < state.stack[0];
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code gt(ExecutionState& state) noexcept
+inline void gt(ExecutionState& state) noexcept
 {
     const auto x = state.stack.pop();
     state.stack[0] = state.stack[0] < x;  // Arguments are swapped and < is used.
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code slt(ExecutionState& state) noexcept
+inline void slt(ExecutionState& state) noexcept
 {
     const auto x = state.stack.pop();
     state.stack[0] = slt(x, state.stack[0]);
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code sgt(ExecutionState& state) noexcept
+inline void sgt(ExecutionState& state) noexcept
 {
     const auto x = state.stack.pop();
     state.stack[0] = slt(state.stack[0], x);  // Arguments are swapped and SLT is used.
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code eq(ExecutionState& state) noexcept
+inline void eq(ExecutionState& state) noexcept
 {
     state.stack[1] = state.stack[0] == state.stack[1];
     state.stack.pop();
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code iszero(ExecutionState& state) noexcept
+inline void iszero(ExecutionState& state) noexcept
 {
     state.stack.top() = state.stack.top() == 0;
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code and_(ExecutionState& state) noexcept
+inline void and_(ExecutionState& state) noexcept
 {
     state.stack.top() &= state.stack.pop();
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code or_(ExecutionState& state) noexcept
+inline void or_(ExecutionState& state) noexcept
 {
     state.stack.top() |= state.stack.pop();
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code xor_(ExecutionState& state) noexcept
+inline void xor_(ExecutionState& state) noexcept
 {
     state.stack.top() ^= state.stack.pop();
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code not_(ExecutionState& state) noexcept
+inline void not_(ExecutionState& state) noexcept
 {
     state.stack.top() = ~state.stack.top();
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code byte(ExecutionState& state) noexcept
+inline void byte(ExecutionState& state) noexcept
 {
     const auto n = state.stack.pop();
     auto& x = state.stack.top();
@@ -252,22 +225,19 @@ inline evmc_status_code byte(ExecutionState& state) noexcept
     const auto byte_index = index % 8;
     const auto byte = (word >> (byte_index * 8)) & byte_mask;
     x = byte;
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code shl(ExecutionState& state) noexcept
+inline void shl(ExecutionState& state) noexcept
 {
     state.stack.top() <<= state.stack.pop();
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code shr(ExecutionState& state) noexcept
+inline void shr(ExecutionState& state) noexcept
 {
     state.stack.top() >>= state.stack.pop();
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code sar(ExecutionState& state) noexcept
+inline void sar(ExecutionState& state) noexcept
 {
     const auto y = state.stack.pop();
     auto& x = state.stack.top();
@@ -277,8 +247,6 @@ inline evmc_status_code sar(ExecutionState& state) noexcept
 
     const auto mask_shift = (y < 256) ? (256 - y[0]) : 0;
     x = (x >> y) | (sign_mask << mask_shift);
-
-    return EVMC_SUCCESS;
 }
 
 
@@ -303,10 +271,9 @@ inline evmc_status_code keccak256(ExecutionState& state) noexcept
 }
 
 
-inline evmc_status_code address(ExecutionState& state) noexcept
+inline void address(ExecutionState& state) noexcept
 {
     state.stack.push(intx::be::load<uint256>(state.msg->destination));
-    return EVMC_SUCCESS;
 }
 
 inline evmc_status_code balance(ExecutionState& state) noexcept
@@ -324,25 +291,22 @@ inline evmc_status_code balance(ExecutionState& state) noexcept
     return EVMC_SUCCESS;
 }
 
-inline evmc_status_code origin(ExecutionState& state) noexcept
+inline void origin(ExecutionState& state) noexcept
 {
     state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().tx_origin));
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code caller(ExecutionState& state) noexcept
+inline void caller(ExecutionState& state) noexcept
 {
     state.stack.push(intx::be::load<uint256>(state.msg->sender));
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code callvalue(ExecutionState& state) noexcept
+inline void callvalue(ExecutionState& state) noexcept
 {
     state.stack.push(intx::be::load<uint256>(state.msg->value));
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code calldataload(ExecutionState& state) noexcept
+inline void calldataload(ExecutionState& state) noexcept
 {
     auto& index = state.stack.top();
 
@@ -359,13 +323,11 @@ inline evmc_status_code calldataload(ExecutionState& state) noexcept
 
         index = intx::be::load<uint256>(data);
     }
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code calldatasize(ExecutionState& state) noexcept
+inline void calldatasize(ExecutionState& state) noexcept
 {
     state.stack.push(state.msg->input_size);
-    return EVMC_SUCCESS;
 }
 
 inline evmc_status_code calldatacopy(ExecutionState& state) noexcept
@@ -396,10 +358,9 @@ inline evmc_status_code calldatacopy(ExecutionState& state) noexcept
     return EVMC_SUCCESS;
 }
 
-inline evmc_status_code codesize(ExecutionState& state) noexcept
+inline void codesize(ExecutionState& state) noexcept
 {
     state.stack.push(state.code.size());
-    return EVMC_SUCCESS;
 }
 
 inline evmc_status_code codecopy(ExecutionState& state) noexcept
@@ -434,16 +395,14 @@ inline evmc_status_code codecopy(ExecutionState& state) noexcept
 }
 
 
-inline evmc_status_code gasprice(ExecutionState& state) noexcept
+inline void gasprice(ExecutionState& state) noexcept
 {
     state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().tx_gas_price));
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code basefee(ExecutionState& state) noexcept
+inline void basefee(ExecutionState& state) noexcept
 {
     state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().block_base_fee));
-    return EVMC_SUCCESS;
 }
 
 inline evmc_status_code extcodesize(ExecutionState& state) noexcept
@@ -495,10 +454,9 @@ inline evmc_status_code extcodecopy(ExecutionState& state) noexcept
     return EVMC_SUCCESS;
 }
 
-inline evmc_status_code returndatasize(ExecutionState& state) noexcept
+inline void returndatasize(ExecutionState& state) noexcept
 {
     state.stack.push(state.return_data.size());
-    return EVMC_SUCCESS;
 }
 
 inline evmc_status_code returndatacopy(ExecutionState& state) noexcept
@@ -546,7 +504,7 @@ inline evmc_status_code extcodehash(ExecutionState& state) noexcept
 }
 
 
-inline evmc_status_code blockhash(ExecutionState& state) noexcept
+inline void blockhash(ExecutionState& state) noexcept
 {
     auto& number = state.stack.top();
 
@@ -556,62 +514,53 @@ inline evmc_status_code blockhash(ExecutionState& state) noexcept
     const auto header =
         (number < upper_bound && n >= lower_bound) ? state.host.get_block_hash(n) : evmc::bytes32{};
     number = intx::be::load<uint256>(header);
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code coinbase(ExecutionState& state) noexcept
+inline void coinbase(ExecutionState& state) noexcept
 {
     state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().block_coinbase));
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code timestamp(ExecutionState& state) noexcept
+inline void timestamp(ExecutionState& state) noexcept
 {
     // TODO: Add tests for negative timestamp?
     const auto timestamp = static_cast<uint64_t>(state.host.get_tx_context().block_timestamp);
     state.stack.push(timestamp);
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code number(ExecutionState& state) noexcept
+inline void number(ExecutionState& state) noexcept
 {
     // TODO: Add tests for negative block number?
     const auto block_number = static_cast<uint64_t>(state.host.get_tx_context().block_number);
     state.stack.push(block_number);
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code difficulty(ExecutionState& state) noexcept
+inline void difficulty(ExecutionState& state) noexcept
 {
     state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().block_difficulty));
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code gaslimit(ExecutionState& state) noexcept
+inline void gaslimit(ExecutionState& state) noexcept
 {
     const auto block_gas_limit = static_cast<uint64_t>(state.host.get_tx_context().block_gas_limit);
     state.stack.push(block_gas_limit);
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code chainid(ExecutionState& state) noexcept
+inline void chainid(ExecutionState& state) noexcept
 {
     state.stack.push(intx::be::load<uint256>(state.host.get_tx_context().chain_id));
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code selfbalance(ExecutionState& state) noexcept
+inline void selfbalance(ExecutionState& state) noexcept
 {
     // TODO: introduce selfbalance in EVMC?
     state.stack.push(intx::be::load<uint256>(state.host.get_balance(state.msg->destination)));
-    return EVMC_SUCCESS;
 }
 
 
-inline evmc_status_code pop(ExecutionState& state) noexcept
+inline void pop(ExecutionState& state) noexcept
 {
     state.stack.pop();
-    return EVMC_SUCCESS;
 }
 
 inline evmc_status_code mload(ExecutionState& state) noexcept
@@ -751,22 +700,17 @@ inline InstrResult pc(ExecutionState& state, size_t pc) noexcept
     return {EVMC_SUCCESS, pc + 1};
 }
 
-inline evmc_status_code msize(ExecutionState& state) noexcept
+inline void msize(ExecutionState& state) noexcept
 {
     state.stack.push(state.memory.size());
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code gas(ExecutionState& state) noexcept
+inline void gas(ExecutionState& state) noexcept
 {
     state.stack.push(state.gas_left);
-    return EVMC_SUCCESS;
 }
 
-inline evmc_status_code jumpdest(ExecutionState& /*state*/) noexcept
-{
-    return EVMC_SUCCESS;
-}
+inline void jumpdest(ExecutionState& /*state*/) noexcept {}
 
 /// PUSH instruction implementation.
 /// @tparam Len The number of push data bytes, e.g. PUSH3 is push<3>.
@@ -786,21 +730,19 @@ inline InstrResult push(ExecutionState& state, size_t pc) noexcept
 /// DUP instruction implementation.
 /// @tparam N  The number as in the instruction definition, e.g. DUP3 is dup<3>.
 template <size_t N>
-inline evmc_status_code dup(ExecutionState& state) noexcept
+inline void dup(ExecutionState& state) noexcept
 {
     static_assert(N >= 1 && N <= 16);
     state.stack.push(state.stack[N - 1]);
-    return EVMC_SUCCESS;
 }
 
 /// SWAP instruction implementation.
 /// @tparam N  The number as in the instruction definition, e.g. SWAP3 is swap<3>.
 template <size_t N>
-inline evmc_status_code swap(ExecutionState& state) noexcept
+inline void swap(ExecutionState& state) noexcept
 {
     static_assert(N >= 1 && N <= 16);
     std::swap(state.stack.top(), state.stack[N]);
-    return EVMC_SUCCESS;
 }
 
 

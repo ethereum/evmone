@@ -1,5 +1,5 @@
 // evmone: Fast Ethereum Virtual Machine implementation
-// Copyright 2019-2020 The evmone Authors.
+// Copyright 2019 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
 #include "instructions.hpp"
@@ -10,10 +10,19 @@ namespace evmone
 {
 namespace
 {
-template <InstrFn Fn>
+/// Wraps the generic instruction implementation to advanced instruction function signature.
+template <void instr_fn(ExecutionState&)>
 const instruction* op(const instruction* instr, AdvancedExecutionState& state) noexcept
 {
-    const auto status_code = Fn(state);
+    instr_fn(state);
+    return ++instr;
+}
+
+/// Wraps the generic instruction implementation to advanced instruction function signature.
+template <evmc_status_code instr_fn(ExecutionState&)>
+const instruction* op(const instruction* instr, AdvancedExecutionState& state) noexcept
+{
+    const auto status_code = instr_fn(state);
     if (status_code != EVMC_SUCCESS)
         return state.exit(status_code);
     return ++instr;
