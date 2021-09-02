@@ -1,5 +1,5 @@
 // evmone: Fast Ethereum Virtual Machine implementation
-// Copyright 2019-2020 The evmone Authors.
+// Copyright 2019 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
@@ -16,10 +16,6 @@ struct InstrResult
     evmc_status_code status;  ///< Status code.
     size_t pc;                ///< Code offset of the next instruction (PC).
 };
-
-/// Function signature of the core implementation (without requirements check)
-/// of an EVM instruction.
-using InstrFn = evmc_status_code(ExecutionState&) noexcept;
 
 constexpr auto max_buffer_size = std::numeric_limits<uint32_t>::max();
 
