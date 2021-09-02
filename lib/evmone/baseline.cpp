@@ -113,7 +113,8 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
         switch (op)
         {
         case OP_STOP:
-            state.status = stop(state);
+            stop(state);
+            state.status = EVMC_SUCCESS;  // Not needed, but does some magic to clang optimization.
             goto exit;
         case OP_ADD:
             add(state);

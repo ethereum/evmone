@@ -10,6 +10,15 @@ namespace evmone
 {
 namespace
 {
+/// Wraps the generic instruction implementation to advanced instruction function signature.
+template <void instr_fn(ExecutionState&)>
+const instruction* op(const instruction* instr, AdvancedExecutionState& state) noexcept
+{
+    instr_fn(state);
+    return ++instr;
+}
+
+/// Wraps the generic instruction implementation to advanced instruction function signature.
 template <evmc_status_code instr_fn(ExecutionState&)>
 const instruction* op(const instruction* instr, AdvancedExecutionState& state) noexcept
 {
