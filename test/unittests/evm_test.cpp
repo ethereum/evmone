@@ -674,6 +674,13 @@ TEST_P(evm, inner_revert)
     EXPECT_GAS_USED(EVMC_REVERT, 6);
 }
 
+TEST_P(evm, inner_invalid)
+{
+    const auto code = push(0) + "fe" + OP_POP;
+    execute(5, code);
+    EXPECT_GAS_USED(EVMC_INVALID_INSTRUCTION, 5);
+}
+
 TEST_P(evm, inner_selfdestruct)
 {
     rev = EVMC_FRONTIER;
