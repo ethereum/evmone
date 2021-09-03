@@ -705,7 +705,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
             DISPATCH_NEXT();
         }
         case OP_RETURN:
-            state.status = return_<EVMC_SUCCESS>(state);
+            state.status = return_<EVMC_SUCCESS>(state).status;
             goto exit;
         case OP_DELEGATECALL:
         {
@@ -738,13 +738,13 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
             DISPATCH_NEXT();
         }
         case OP_REVERT:
-            state.status = return_<EVMC_REVERT>(state);
+            state.status = return_<EVMC_REVERT>(state).status;
             goto exit;
         case OP_INVALID:
-            state.status = invalid(state);
+            state.status = invalid(state).status;
             goto exit;
         case OP_SELFDESTRUCT:
-            state.status = selfdestruct(state);
+            state.status = selfdestruct(state).status;
             goto exit;
         default:
             INTX_UNREACHABLE();

@@ -17,6 +17,13 @@ struct InstrResult
     size_t pc;                ///< Code offset of the next instruction (PC).
 };
 
+/// A wrapper for evmc_status_code to indicate that an instruction
+/// unconditionally terminates execution.
+struct StopToken
+{
+    const evmc_status_code status;  ///< The status code execution terminates with.
+};
+
 constexpr auto max_buffer_size = std::numeric_limits<uint32_t>::max();
 
 /// The size of the EVM 256-bit word.
@@ -64,7 +71,10 @@ inline bool check_memory(ExecutionState& state, const uint256& offset, const uin
     return check_memory(state, offset, static_cast<uint64_t>(size));
 }
 
-inline void stop(ExecutionState& /*state*/) noexcept {}
+inline StopToken stop(ExecutionState& /*state*/) noexcept
+{
+    return {EVMC_SUCCESS};
+}
 
 inline void add(ExecutionState& state) noexcept
 {
@@ -785,35 +795,35 @@ evmc_status_code create(ExecutionState& state) noexcept;
 
 
 template <evmc_status_code StatusCode>
-inline evmc_status_code return_(ExecutionState& state) noexcept
+inline StopToken return_(ExecutionState& state) noexcept
 {
     const auto offset = state.stack[0];
     const auto size = state.stack[1];
 
     if (!check_memory(state, offset, size))
-        return EVMC_OUT_OF_GAS;
+        return {EVMC_OUT_OF_GAS};
 
     state.output_offset = static_cast<size_t>(offset);  // Can be garbage if size is 0.
     state.output_size = static_cast<size_t>(size);
-    return StatusCode;
+    return {StatusCode};
 }
 
-inline evmc_status_code invalid(ExecutionState& /*state*/) noexcept
+inline StopToken invalid(ExecutionState& /*state*/) noexcept
 {
-    return EVMC_INVALID_INSTRUCTION;
+    return {EVMC_INVALID_INSTRUCTION};
 }
 
-inline evmc_status_code selfdestruct(ExecutionState& state) noexcept
+inline StopToken selfdestruct(ExecutionState& state) noexcept
 {
     if (state.msg->flags & EVMC_STATIC)
-        return EVMC_STATIC_MODE_VIOLATION;
+        return {EVMC_STATIC_MODE_VIOLATION};
 
     const auto beneficiary = intx::be::trunc<evmc::address>(state.stack[0]);
 
     if (state.rev >= EVMC_BERLIN && state.host.access_account(beneficiary) == EVMC_ACCESS_COLD)
     {
         if ((state.gas_left -= instr::cold_account_access_cost) < 0)
-            return EVMC_OUT_OF_GAS;
+            return {EVMC_OUT_OF_GAS};
     }
 
     if (state.rev >= EVMC_TANGERINE_WHISTLE)
@@ -825,13 +835,13 @@ inline evmc_status_code selfdestruct(ExecutionState& state) noexcept
             if (!state.host.account_exists(beneficiary))
             {
                 if ((state.gas_left -= 25000) < 0)
-                    return EVMC_OUT_OF_GAS;
+                    return {EVMC_OUT_OF_GAS};
             }
         }
     }
 
     state.host.selfdestruct(state.msg->destination, beneficiary);
-    return EVMC_SUCCESS;
+    return {EVMC_SUCCESS};
 }
 
 }  // namespace evmone

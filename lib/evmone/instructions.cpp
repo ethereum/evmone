@@ -161,7 +161,7 @@ const instruction* op_undefined(const instruction*, AdvancedExecutionState& stat
 
 const instruction* op_selfdestruct(const instruction*, AdvancedExecutionState& state) noexcept
 {
-    return state.exit(selfdestruct(state));
+    return state.exit(selfdestruct(state).status);
 }
 
 const instruction* opx_beginblock(const instruction* instr, AdvancedExecutionState& state) noexcept
