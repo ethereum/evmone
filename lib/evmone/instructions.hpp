@@ -10,6 +10,8 @@
 
 namespace evmone
 {
+using code_iterator = const uint8_t*;
+
 /// Full status of an instruction execution.
 struct InstrResult
 {
@@ -728,13 +730,13 @@ inline void jumpdest(ExecutionState& /*state*/) noexcept {}
 /// It assumes that the whole data read is valid so code padding is required for some EVM bytecodes
 /// having an "incomplete" PUSH instruction at the very end.
 template <size_t Len>
-inline InstrResult push(ExecutionState& state, size_t pc) noexcept
+inline code_iterator push(ExecutionState& state, code_iterator pos) noexcept
 {
-    const auto data_pos = state.code.data() + pc + 1;
+    const auto data_pos = pos + 1;
     uint8_t buffer[Len];
     std::memcpy(buffer, data_pos, Len);  // Valid by the assumption code is padded.
     state.stack.push(intx::be::load<intx::uint256>(buffer));
-    return {EVMC_SUCCESS, pc + 1 + Len};
+    return pos + (Len + 1);
 }
 
 /// DUP instruction implementation.
