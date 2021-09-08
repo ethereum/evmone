@@ -706,10 +706,10 @@ inline InstrResult jumpi(ExecutionState& state, size_t pc) noexcept
         return {EVMC_SUCCESS, pc + 1};
 }
 
-inline InstrResult pc(ExecutionState& state, size_t pc) noexcept
+inline code_iterator pc(ExecutionState& state, code_iterator pos) noexcept
 {
-    state.stack.push(pc);
-    return {EVMC_SUCCESS, pc + 1};
+    state.stack.push(static_cast<uint64_t>(pos - state.code.data()));
+    return pos + 1;
 }
 
 inline void msize(ExecutionState& state) noexcept
