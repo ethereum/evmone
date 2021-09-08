@@ -15,7 +15,7 @@ TEST_P(evm, eip2929_case1)
     // https://gist.github.com/holiman/174548cad102096858583c6fbbb0649a#case-1
     rev = EVMC_BERLIN;
     msg.sender = 0x0000000000000000000000000000000000000000_address;
-    msg.destination = 0x000000000000000000000000636F6E7472616374_address;
+    msg.recipient = 0x000000000000000000000000636F6E7472616374_address;
     const auto code =
         "0x60013f5060023b506003315060f13f5060f23b5060f3315060f23f5060f33b5060f1315032315030315000";
 
@@ -26,7 +26,7 @@ TEST_P(evm, eip2929_case1)
     const auto& r = host.recorded_account_accesses;
     ASSERT_EQ(r.size(), 24);
     EXPECT_EQ(r[0], msg.sender);
-    EXPECT_EQ(r[1], msg.destination);
+    EXPECT_EQ(r[1], msg.recipient);
     EXPECT_EQ(r[2], 0x0000000000000000000000000000000000000001_address);
     EXPECT_EQ(r[3], 0x0000000000000000000000000000000000000001_address);
     EXPECT_EQ(r[4], 0x0000000000000000000000000000000000000002_address);
@@ -47,8 +47,8 @@ TEST_P(evm, eip2929_case1)
     EXPECT_EQ(r[19], 0x00000000000000000000000000000000000000f1_address);
     EXPECT_EQ(r[20], 0x0000000000000000000000000000000000000000_address);
     EXPECT_EQ(r[21], 0x0000000000000000000000000000000000000000_address);
-    EXPECT_EQ(r[22], msg.destination);
-    EXPECT_EQ(r[23], msg.destination);
+    EXPECT_EQ(r[22], msg.recipient);
+    EXPECT_EQ(r[23], msg.recipient);
 }
 
 TEST_P(evm, eip2929_case2)
@@ -56,7 +56,7 @@ TEST_P(evm, eip2929_case2)
     // https://gist.github.com/holiman/174548cad102096858583c6fbbb0649a#case-2
     rev = EVMC_BERLIN;
     msg.sender = 0x0000000000000000000000000000000000000000_address;
-    msg.destination = 0x000000000000000000000000636F6E7472616374_address;
+    msg.recipient = 0x000000000000000000000000636F6E7472616374_address;
     const auto code = "0x60006000600060ff3c60006000600060ff3c600060006000303c00";
 
     execute(code);
@@ -66,10 +66,10 @@ TEST_P(evm, eip2929_case2)
     const auto& r = host.recorded_account_accesses;
     ASSERT_EQ(r.size(), 5);
     EXPECT_EQ(r[0], msg.sender);
-    EXPECT_EQ(r[1], msg.destination);
+    EXPECT_EQ(r[1], msg.recipient);
     EXPECT_EQ(r[2], 0x00000000000000000000000000000000000000ff_address);
     EXPECT_EQ(r[3], 0x00000000000000000000000000000000000000ff_address);
-    EXPECT_EQ(r[4], msg.destination);
+    EXPECT_EQ(r[4], msg.recipient);
 }
 
 TEST_P(evm, eip2929_case3)
@@ -77,7 +77,7 @@ TEST_P(evm, eip2929_case3)
     // https://gist.github.com/holiman/174548cad102096858583c6fbbb0649a#case-3
     rev = EVMC_BERLIN;
     msg.sender = 0x0000000000000000000000000000000000000000_address;
-    msg.destination = 0x000000000000000000000000636F6E7472616374_address;
+    msg.recipient = 0x000000000000000000000000636F6E7472616374_address;
     const auto code = "0x60015450601160015560116002556011600255600254600154";
 
     execute(code);
@@ -90,7 +90,7 @@ TEST_P(evm, eip2929_case4)
     // https://gist.github.com/holiman/174548cad102096858583c6fbbb0649a#case-4
     rev = EVMC_BERLIN;
     msg.sender = 0x0000000000000000000000000000000000000000_address;
-    msg.destination = 0x000000000000000000000000636F6E7472616374_address;
+    msg.recipient = 0x000000000000000000000000636F6E7472616374_address;
     const auto code = "0x60008080808060046000f15060008080808060ff6000f15060008080808060ff6000fa50";
 
     execute(code);
@@ -156,13 +156,13 @@ TEST_P(evm, eip2929_sload_cold)
     const auto code = push(1) + OP_SLOAD;
 
     const evmc::bytes32 key{1};
-    host.accounts[msg.destination].storage[key] = evmc::bytes32{2};
-    ASSERT_EQ(host.accounts[msg.destination].storage[key].access_status, EVMC_ACCESS_COLD);
+    host.accounts[msg.recipient].storage[key] = evmc::bytes32{2};
+    ASSERT_EQ(host.accounts[msg.recipient].storage[key].access_status, EVMC_ACCESS_COLD);
     execute(2103, code);
     EXPECT_GAS_USED(EVMC_SUCCESS, 2103);
-    EXPECT_EQ(host.accounts[msg.destination].storage[key].access_status, EVMC_ACCESS_WARM);
+    EXPECT_EQ(host.accounts[msg.recipient].storage[key].access_status, EVMC_ACCESS_WARM);
 
-    host.accounts[msg.destination].storage[key].access_status = EVMC_ACCESS_COLD;
+    host.accounts[msg.recipient].storage[key].access_status = EVMC_ACCESS_COLD;
     execute(2102, code);
     EXPECT_GAS_USED(EVMC_OUT_OF_GAS, 2102);
 }
@@ -176,8 +176,8 @@ TEST_P(evm, eip2929_sload_two_slots)
 
     execute(30000, code);
     EXPECT_GAS_USED(EVMC_SUCCESS, 4210);
-    EXPECT_EQ(host.accounts[msg.destination].storage[key0].access_status, EVMC_ACCESS_WARM);
-    EXPECT_EQ(host.accounts[msg.destination].storage[key1].access_status, EVMC_ACCESS_WARM);
+    EXPECT_EQ(host.accounts[msg.recipient].storage[key0].access_status, EVMC_ACCESS_WARM);
+    EXPECT_EQ(host.accounts[msg.recipient].storage[key1].access_status, EVMC_ACCESS_WARM);
 }
 
 TEST_P(evm, eip2929_sload_warm)
@@ -186,11 +186,11 @@ TEST_P(evm, eip2929_sload_warm)
     const auto code = push(1) + OP_SLOAD;
 
     const evmc::bytes32 key{1};
-    host.accounts[msg.destination].storage[key] = {evmc::bytes32{2}, EVMC_ACCESS_WARM};
-    ASSERT_EQ(host.accounts[msg.destination].storage[key].access_status, EVMC_ACCESS_WARM);
+    host.accounts[msg.recipient].storage[key] = {evmc::bytes32{2}, EVMC_ACCESS_WARM};
+    ASSERT_EQ(host.accounts[msg.recipient].storage[key].access_status, EVMC_ACCESS_WARM);
     execute(103, code);
     EXPECT_GAS_USED(EVMC_SUCCESS, 103);
-    EXPECT_EQ(host.accounts[msg.destination].storage[key].access_status, EVMC_ACCESS_WARM);
+    EXPECT_EQ(host.accounts[msg.recipient].storage[key].access_status, EVMC_ACCESS_WARM);
 
     execute(102, code);
     EXPECT_GAS_USED(EVMC_OUT_OF_GAS, 102);
@@ -202,18 +202,18 @@ TEST_P(evm, eip2929_sstore_modify_cold)
     const auto code = sstore(1, 3);
 
     const evmc::bytes32 key{1};
-    host.accounts[msg.destination].storage[key] = evmc::bytes32{2};
+    host.accounts[msg.recipient].storage[key] = evmc::bytes32{2};
     execute(5006, code);
     EXPECT_GAS_USED(EVMC_SUCCESS, 5006);
-    EXPECT_EQ(host.accounts[msg.destination].storage[key].value, evmc::bytes32{3});
-    EXPECT_EQ(host.accounts[msg.destination].storage[key].access_status, EVMC_ACCESS_WARM);
+    EXPECT_EQ(host.accounts[msg.recipient].storage[key].value, evmc::bytes32{3});
+    EXPECT_EQ(host.accounts[msg.recipient].storage[key].access_status, EVMC_ACCESS_WARM);
 
-    host.accounts[msg.destination].storage[key] = evmc::bytes32{2};
+    host.accounts[msg.recipient].storage[key] = evmc::bytes32{2};
     execute(5005, code);
     EXPECT_GAS_USED(EVMC_OUT_OF_GAS, 5005);
     // The storage will be modified anyway, because the cost is checked after.
-    EXPECT_EQ(host.accounts[msg.destination].storage[key].value, evmc::bytes32{3});
-    EXPECT_EQ(host.accounts[msg.destination].storage[key].access_status, EVMC_ACCESS_WARM);
+    EXPECT_EQ(host.accounts[msg.recipient].storage[key].value, evmc::bytes32{3});
+    EXPECT_EQ(host.accounts[msg.recipient].storage[key].access_status, EVMC_ACCESS_WARM);
 }
 
 TEST_P(evm, eip2929_selfdestruct_cold_beneficiary)
@@ -254,7 +254,7 @@ TEST_P(evm, eip2929_delegatecall_cold)
     EXPECT_GAS_USED(EVMC_SUCCESS, 2618);
     ASSERT_EQ(r.size(), 4);
     EXPECT_EQ(r[0], msg.sender);
-    EXPECT_EQ(r[1], msg.destination);
+    EXPECT_EQ(r[1], msg.recipient);
     EXPECT_EQ(r[2], 0x00000000000000000000000000000000000000de_address);
     EXPECT_EQ(r[3], 0x00000000000000000000000000000000000000de_address);
 
@@ -263,6 +263,6 @@ TEST_P(evm, eip2929_delegatecall_cold)
     EXPECT_GAS_USED(EVMC_OUT_OF_GAS, 2617);
     ASSERT_EQ(r.size(), 3);
     EXPECT_EQ(r[0], msg.sender);
-    EXPECT_EQ(r[1], msg.destination);
+    EXPECT_EQ(r[1], msg.recipient);
     EXPECT_EQ(r[2], 0x00000000000000000000000000000000000000de_address);
 }

@@ -615,7 +615,7 @@ TEST_P(evm, address)
     std::string s;
     s += "30600052";    // ADDRESS MSTORE(0)
     s += "600a600af3";  // RETURN(10,10)
-    msg.destination.bytes[0] = 0xcc;
+    msg.recipient.bytes[0] = 0xcc;
     execute(17, s);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 0);

@@ -278,7 +278,7 @@ inline evmc_status_code keccak256(ExecutionState& state) noexcept
 
 inline void address(ExecutionState& state) noexcept
 {
-    state.stack.push(intx::be::load<uint256>(state.msg->destination));
+    state.stack.push(intx::be::load<uint256>(state.msg->recipient));
 }
 
 inline evmc_status_code balance(ExecutionState& state) noexcept
@@ -559,7 +559,7 @@ inline void chainid(ExecutionState& state) noexcept
 inline void selfbalance(ExecutionState& state) noexcept
 {
     // TODO: introduce selfbalance in EVMC?
-    state.stack.push(intx::be::load<uint256>(state.host.get_balance(state.msg->destination)));
+    state.stack.push(intx::be::load<uint256>(state.host.get_balance(state.msg->recipient)));
 }
 
 
@@ -609,7 +609,7 @@ inline evmc_status_code sload(ExecutionState& state) noexcept
     const auto key = intx::be::store<evmc::bytes32>(x);
 
     if (state.rev >= EVMC_BERLIN &&
-        state.host.access_storage(state.msg->destination, key) == EVMC_ACCESS_COLD)
+        state.host.access_storage(state.msg->recipient, key) == EVMC_ACCESS_COLD)
     {
         // The warm storage access cost is already applied (from the cost table).
         // Here we need to apply additional cold storage access cost.
@@ -619,7 +619,7 @@ inline evmc_status_code sload(ExecutionState& state) noexcept
             return EVMC_OUT_OF_GAS;
     }
 
-    x = intx::be::load<uint256>(state.host.get_storage(state.msg->destination, key));
+    x = intx::be::load<uint256>(state.host.get_storage(state.msg->recipient, key));
 
     return EVMC_SUCCESS;
 }
@@ -637,10 +637,10 @@ inline evmc_status_code sstore(ExecutionState& state) noexcept
 
     int cost = 0;
     if (state.rev >= EVMC_BERLIN &&
-        state.host.access_storage(state.msg->destination, key) == EVMC_ACCESS_COLD)
+        state.host.access_storage(state.msg->recipient, key) == EVMC_ACCESS_COLD)
         cost = instr::cold_sload_cost;
 
-    const auto status = state.host.set_storage(state.msg->destination, key, value);
+    const auto status = state.host.set_storage(state.msg->recipient, key, value);
 
     switch (status)
     {
@@ -776,7 +776,7 @@ inline evmc_status_code log(ExecutionState& state) noexcept
         topic = intx::be::store<evmc::bytes32>(state.stack.pop());
 
     const auto data = s != 0 ? &state.memory[o] : nullptr;
-    state.host.emit_log(state.msg->destination, data, s, topics.data(), NumTopics);
+    state.host.emit_log(state.msg->recipient, data, s, topics.data(), NumTopics);
     return EVMC_SUCCESS;
 }
 
@@ -822,7 +822,7 @@ inline StopToken selfdestruct(ExecutionState& state) noexcept
 
     if (state.rev >= EVMC_TANGERINE_WHISTLE)
     {
-        if (state.rev == EVMC_TANGERINE_WHISTLE || state.host.get_balance(state.msg->destination))
+        if (state.rev == EVMC_TANGERINE_WHISTLE || state.host.get_balance(state.msg->recipient))
         {
             // After TANGERINE_WHISTLE apply additional cost of
             // sending value to a non-existing account.
@@ -834,7 +834,7 @@ inline StopToken selfdestruct(ExecutionState& state) noexcept
         }
     }
 
-    state.host.selfdestruct(state.msg->destination, beneficiary);
+    state.host.selfdestruct(state.msg->recipient, beneficiary);
     return {EVMC_SUCCESS};
 }
 
