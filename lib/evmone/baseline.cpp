@@ -372,25 +372,17 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
 
         case OP_JUMP:
         {
-            const auto r = jump(state, static_cast<size_t>(code_it - code));
-            if (r.status != EVMC_SUCCESS)
-            {
-                state.status = r.status;
+            code_it = jump(state, code_it);
+            if (code_it == nullptr)
                 goto exit;
-            }
-            code_it = code + r.pc;
             DISPATCH();
         }
 
         case OP_JUMPI:
         {
-            const auto r = jumpi(state, static_cast<size_t>(code_it - code));
-            if (r.status != EVMC_SUCCESS)
-            {
-                state.status = r.status;
+            code_it = jumpi(state, code_it);
+            if (code_it == nullptr)
                 goto exit;
-            }
-            code_it = code + r.pc;
             DISPATCH();
         }
 

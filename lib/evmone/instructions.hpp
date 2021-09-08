@@ -12,13 +12,6 @@ namespace evmone
 {
 using code_iterator = const uint8_t*;
 
-/// Full status of an instruction execution.
-struct InstrResult
-{
-    evmc_status_code status;  ///< Status code.
-    size_t pc;                ///< Code offset of the next instruction (PC).
-};
-
 /// A wrapper for evmc_status_code to indicate that an instruction
 /// unconditionally terminates execution.
 struct StopToken
@@ -678,32 +671,31 @@ inline evmc_status_code sstore(ExecutionState& state) noexcept
     return EVMC_SUCCESS;
 }
 
-/// Helper for JUMP/JUMPI instructions to check validity of a jump destination.
-inline InstrResult resolve_jump_destination(
-    const baseline::CodeAnalysis& analysis, const uint256& dst) noexcept
+/// Internal jump implementation for JUMP/JUMPI instructions.
+inline code_iterator jump_impl(ExecutionState& state, const uint256& dst) noexcept
 {
-    const auto& jumpdest_map = analysis.jumpdest_map;
+    const auto& jumpdest_map = state.analysis.baseline->jumpdest_map;
     if (dst >= jumpdest_map.size() || !jumpdest_map[static_cast<size_t>(dst)])
-        return {EVMC_BAD_JUMP_DESTINATION, 0};
+    {
+        state.status = EVMC_BAD_JUMP_DESTINATION;
+        return nullptr;
+    }
 
-    return {EVMC_SUCCESS, static_cast<size_t>(dst)};
+    return state.code.data() + static_cast<size_t>(dst);
 }
 
 /// JUMP instruction implementation using baseline::CodeAnalysis.
-inline InstrResult jump(ExecutionState& state, size_t /*pc*/) noexcept
+inline code_iterator jump(ExecutionState& state, code_iterator /*pc*/) noexcept
 {
-    return resolve_jump_destination(*state.analysis.baseline, state.stack.pop());
+    return jump_impl(state, state.stack.pop());
 }
 
 /// JUMPI instruction implementation using baseline::CodeAnalysis.
-inline InstrResult jumpi(ExecutionState& state, size_t pc) noexcept
+inline code_iterator jumpi(ExecutionState& state, code_iterator pc) noexcept
 {
     const auto dst = state.stack.pop();
     const auto cond = state.stack.pop();
-    if (cond)
-        return resolve_jump_destination(*state.analysis.baseline, dst);
-    else
-        return {EVMC_SUCCESS, pc + 1};
+    return cond ? jump_impl(state, dst) : pc + 1;
 }
 
 inline code_iterator pc(ExecutionState& state, code_iterator pos) noexcept
