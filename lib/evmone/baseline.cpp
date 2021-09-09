@@ -89,6 +89,10 @@ inline evmc_status_code check_requirements(
 using SucceedingInstrFn = void(ExecutionState&) noexcept;
 static_assert(std::is_same_v<decltype(add), SucceedingInstrFn>);
 
+/// The signature of basic instructions which may fail.
+using MayFailInstrFn = evmc_status_code(ExecutionState&) noexcept;
+static_assert(std::is_same_v<decltype(exp), MayFailInstrFn>);
+
 /// A helper to invoke instruction implementations of different signatures
 /// done by template specialization.
 template <typename InstrFn>
@@ -99,6 +103,18 @@ template <>
     SucceedingInstrFn* instr_fn, ExecutionState& state, code_iterator pos) noexcept
 {
     instr_fn(state);
+    return pos + 1;
+}
+
+template <>
+[[gnu::always_inline]] inline code_iterator invoke<MayFailInstrFn*>(
+    MayFailInstrFn* instr_fn, ExecutionState& state, code_iterator pos) noexcept
+{
+    if (const auto status = instr_fn(state); status != EVMC_SUCCESS)
+    {
+        state.status = status;
+        return nullptr;
+    }
     return pos + 1;
 }
 
@@ -152,17 +168,8 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
             DISPATCH_CASE(OP_SMOD);
             DISPATCH_CASE(OP_ADDMOD);
             DISPATCH_CASE(OP_MULMOD);
+            DISPATCH_CASE(OP_EXP);
 
-        case OP_EXP:
-        {
-            const auto status_code = exp(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
         case OP_SIGNEXTEND:
             signextend(state);
             DISPATCH_NEXT();
