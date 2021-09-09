@@ -407,25 +407,9 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
             DISPATCH_NEXT();
         }
 
-        case OP_JUMP:
-        {
-            code_it = jump(state, code_it);
-            if (code_it == nullptr)
-                goto exit;
-            DISPATCH();
-        }
-
-        case OP_JUMPI:
-        {
-            code_it = jumpi(state, code_it);
-            if (code_it == nullptr)
-                goto exit;
-            DISPATCH();
-        }
-
-        case OP_PC:
-            code_it = pc(state, code_it);
-            DISPATCH();
+            DISPATCH_CASE(OP_JUMP);
+            DISPATCH_CASE(OP_JUMPI);
+            DISPATCH_CASE(OP_PC);
 
         case OP_MSIZE:
             msize(state);
