@@ -4,9 +4,9 @@ executors:
   linux-gcc-latest:
     docker:
       - image: ethereum/cpp-build-env:16-gcc-10
-  linux-gcc-7:
+  linux-gcc-min:
     docker:
-      - image: ethereum/cpp-build-env:12-gcc-7
+      - image: ethereum/cpp-build-env:15-gcc-8
   linux-clang-latest:
     docker:
       - image: ethereum/cpp-build-env:16-clang-11
@@ -268,7 +268,7 @@ jobs:
           flags: consensus
 
   gcc-min:
-    executor: linux-gcc-7
+    executor: linux-gcc-min
     steps:
       - build
       - test
