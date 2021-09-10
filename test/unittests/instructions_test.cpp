@@ -8,7 +8,7 @@
 #include <gtest/gtest.h>
 #include <test/utils/bytecode.hpp>
 
-TEST(op_table, compare_with_evmc_instruction_tables)
+TEST(instructions, compare_with_evmc_instruction_tables)
 {
     for (int r = EVMC_FRONTIER; r <= EVMC_MAX_REVISION; ++r)
     {
@@ -38,7 +38,7 @@ TEST(op_table, compare_with_evmc_instruction_tables)
     }
 }
 
-TEST(op_table, compare_undefined_instructions)
+TEST(instructions, compare_undefined_instructions)
 {
     for (int r = EVMC_FRONTIER; r <= EVMC_MAX_REVISION; ++r)
     {
@@ -51,7 +51,7 @@ TEST(op_table, compare_undefined_instructions)
     }
 }
 
-TEST(op_table, compare_with_evmc_instruction_names)
+TEST(instructions, compare_with_evmc_instruction_names)
 {
     const auto* evmc_tbl = evmc_get_instruction_names_table(EVMC_MAX_REVISION);
     for (size_t i = 0; i < evmone::instr::traits.size(); ++i)

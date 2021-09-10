@@ -19,7 +19,7 @@ add_executable(evmone-unittests
     evm_other_test.cpp
     evmone_test.cpp
     execution_state_test.cpp
-    op_table_test.cpp
+    instructions_test.cpp
     tracing_test.cpp
     utils_test.cpp
 )
