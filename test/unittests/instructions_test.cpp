@@ -8,7 +8,33 @@
 #include <gtest/gtest.h>
 #include <test/utils/bytecode.hpp>
 
-TEST(op_table, compare_with_evmc_instruction_tables)
+namespace
+{
+constexpr int unspecified = -1000000;
+
+constexpr int get_revision_defined_in(size_t op) noexcept
+{
+    for (size_t r = EVMC_FRONTIER; r <= EVMC_MAX_REVISION; ++r)
+    {
+        if (evmone::instr::gas_costs[r][op] != evmone::instr::undefined)
+            return static_cast<int>(r);
+    }
+    return unspecified;
+}
+}  // namespace
+
+TEST(instructions, validate_since)
+{
+    for (size_t op = 0x00; op <= 0xff; ++op)
+    {
+        const auto since = evmone::instr::traits[op].since;
+        const auto test_value = since.has_value() ? *since : unspecified;
+        const auto expected = get_revision_defined_in(op);
+        EXPECT_EQ(test_value, expected) << std::hex << op;
+    }
+}
+
+TEST(instructions, compare_with_evmc_instruction_tables)
 {
     for (int r = EVMC_FRONTIER; r <= EVMC_MAX_REVISION; ++r)
     {
@@ -38,7 +64,7 @@ TEST(op_table, compare_with_evmc_instruction_tables)
     }
 }
 
-TEST(op_table, compare_undefined_instructions)
+TEST(instructions, compare_undefined_instructions)
 {
     for (int r = EVMC_FRONTIER; r <= EVMC_MAX_REVISION; ++r)
     {
@@ -51,7 +77,7 @@ TEST(op_table, compare_undefined_instructions)
     }
 }
 
-TEST(op_table, compare_with_evmc_instruction_names)
+TEST(instructions, compare_with_evmc_instruction_names)
 {
     const auto* evmc_tbl = evmc_get_instruction_names_table(EVMC_MAX_REVISION);
     for (size_t i = 0; i < evmone::instr::traits.size(); ++i)
