@@ -8,6 +8,32 @@
 #include <gtest/gtest.h>
 #include <test/utils/bytecode.hpp>
 
+namespace
+{
+constexpr int unspecified = -1000000;
+
+constexpr int get_revision_defined_in(size_t op) noexcept
+{
+    for (size_t r = EVMC_FRONTIER; r <= EVMC_MAX_REVISION; ++r)
+    {
+        if (evmone::instr::gas_costs[r][op] != evmone::instr::undefined)
+            return static_cast<int>(r);
+    }
+    return unspecified;
+}
+}  // namespace
+
+TEST(instructions, validate_since)
+{
+    for (size_t op = 0x00; op <= 0xff; ++op)
+    {
+        const auto since = evmone::instr::traits[op].since;
+        const auto test_value = since.has_value() ? *since : unspecified;
+        const auto expected = get_revision_defined_in(op);
+        EXPECT_EQ(test_value, expected) << std::hex << op;
+    }
+}
+
 TEST(instructions, compare_with_evmc_instruction_tables)
 {
     for (int r = EVMC_FRONTIER; r <= EVMC_MAX_REVISION; ++r)
