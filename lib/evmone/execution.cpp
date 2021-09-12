@@ -45,20 +45,33 @@ evmc_result execute_measure_each_time(const evmc_host_interface* host, evmc_host
     const auto* instr = &state->analysis->instrs[0];
     unsigned int instruction_counter = 0;
 
-    std::chrono::steady_clock::time_point start_time, end_time;
+    std::chrono::steady_clock::time_point start_time, end_time, end_time_timer;
     long times[200000];
+    long times_timer[200000];
     start_time = std::chrono::steady_clock::now();
     while (instr != nullptr) {
         instr = instr->fn(instr, *state);
+
+        // measure the current iteration
         end_time = std::chrono::steady_clock::now();
+
+        // take a new measurement to have the timer overhead
+        end_time_timer = std::chrono::steady_clock::now();
         std::chrono::nanoseconds elapsed_nanoseconds = end_time - start_time;
+        std::chrono::nanoseconds elapsed_nanoseconds_timer = end_time_timer - end_time;
         times[instruction_counter] = elapsed_nanoseconds.count();
+        times_timer[instruction_counter] = elapsed_nanoseconds_timer.count();
         ++instruction_counter;
+
+        // start timing the next iteration
         start_time = std::chrono::steady_clock::now();
     }
+
+    // print CSV result, for columns refer to `measurements.py`
     for (unsigned int i = 0; i < instruction_counter; ++i) {
-        std::cout << run_id << ","<< i << "," << times[i] << "," << std::endl;
+        std::cout << run_id << ","<< i << "," << times[i] << "," << times_timer[i] << std::endl;
     }
+    
     const auto gas_left =
         (state->status == EVMC_SUCCESS || state->status == EVMC_REVERT) ? state->gas_left : 0;
 
