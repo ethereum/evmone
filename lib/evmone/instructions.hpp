@@ -31,9 +31,13 @@ inline constexpr int64_t num_words(uint64_t size_in_bytes) noexcept
     return (static_cast<int64_t>(size_in_bytes) + (word_size - 1)) / word_size;
 }
 
+// Check memory requirements of a reasonable size.
 inline bool check_memory(ExecutionState& state, const uint256& offset, uint64_t size) noexcept
 {
-    if (offset > max_buffer_size)
+    // TODO: This should be done in intx.
+    // There is "branchless" variant of this using | instead of ||, but benchmarks difference
+    // is within noise. This should be decided when moving the implementation to intx.
+    if (((offset[3] | offset[2] | offset[1]) != 0) || (offset[0] > max_buffer_size))
         return false;
 
     const auto new_size = static_cast<uint64_t>(offset) + size;
@@ -55,12 +59,16 @@ inline bool check_memory(ExecutionState& state, const uint256& offset, uint64_t 
     return true;
 }
 
+// Check memory requirements for "copy" instructions.
 inline bool check_memory(ExecutionState& state, const uint256& offset, const uint256& size) noexcept
 {
-    if (size == 0)
+    if (size == 0)  // Copy of size 0 is always valid (even if offset is huge).
         return true;
 
-    if (size > max_buffer_size)
+    // This check has 3 same word checks with the check above.
+    // However, compilers do decent although not perfect job unifying common instructions.
+    // TODO: This should be done in intx.
+    if (((size[3] | size[2] | size[1]) != 0) || (size[0] > max_buffer_size))
         return false;
 
     return check_memory(state, offset, static_cast<uint64_t>(size));
