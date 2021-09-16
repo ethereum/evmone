@@ -28,7 +28,7 @@ constexpr auto word_size = 32;
 /// i.e. it rounds up the number bytes to number of words.
 inline constexpr int64_t num_words(uint64_t size_in_bytes) noexcept
 {
-    return (static_cast<int64_t>(size_in_bytes) + (word_size - 1)) / word_size;
+    return static_cast<int64_t>((size_in_bytes + (word_size - 1)) / word_size);
 }
 
 // Grows EVM memory and checks its cost.
@@ -44,7 +44,7 @@ inline constexpr int64_t num_words(uint64_t size_in_bytes) noexcept
     // and can be passed as a parameter, but this make no difference to the performance.
 
     const auto new_words = num_words(new_size);
-    const auto current_words = static_cast<int64_t>(state.memory.size() / 32);
+    const auto current_words = static_cast<int64_t>(state.memory.size() / word_size);
     const auto new_cost = 3 * new_words + new_words * new_words / 512;
     const auto current_cost = 3 * current_words + current_words * current_words / 512;
     const auto cost = new_cost - current_cost;
