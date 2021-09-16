@@ -17,6 +17,7 @@ add_executable(evmone-unittests
     evm_eip3198_basefee_test.cpp
     evm_state_test.cpp
     evm_other_test.cpp
+    evm_benchmark_test.cpp
     evmone_test.cpp
     execution_state_test.cpp
     instructions_test.cpp
