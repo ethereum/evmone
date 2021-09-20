@@ -36,8 +36,9 @@ evmc_status_code call(ExecutionState& state) noexcept
     msg.kind = Kind;
     msg.flags = Static ? uint32_t{EVMC_STATIC} : state.msg->flags;
     msg.depth = state.msg->depth + 1;
-    msg.destination = dst;
-    msg.sender = (Kind == EVMC_DELEGATECALL) ? state.msg->sender : state.msg->destination;
+    msg.recipient = (Kind == EVMC_CALL) ? dst : state.msg->recipient;
+    msg.code_address = dst;
+    msg.sender = (Kind == EVMC_DELEGATECALL) ? state.msg->sender : state.msg->recipient;
     msg.value =
         (Kind == EVMC_DELEGATECALL) ? state.msg->value : intx::be::store<evmc::uint256be>(value);
 
@@ -81,8 +82,7 @@ evmc_status_code call(ExecutionState& state) noexcept
     if (state.msg->depth >= 1024)
         return EVMC_SUCCESS;
 
-    if (has_value &&
-        intx::be::load<uint256>(state.host.get_balance(state.msg->destination)) < value)
+    if (has_value && intx::be::load<uint256>(state.host.get_balance(state.msg->recipient)) < value)
         return EVMC_SUCCESS;
 
     const auto result = state.host.call(msg);
@@ -132,7 +132,7 @@ evmc_status_code create(ExecutionState& state) noexcept
         return EVMC_SUCCESS;
 
     if (endowment != 0 &&
-        intx::be::load<uint256>(state.host.get_balance(state.msg->destination)) < endowment)
+        intx::be::load<uint256>(state.host.get_balance(state.msg->recipient)) < endowment)
         return EVMC_SUCCESS;
 
     auto msg = evmc_message{};
@@ -146,7 +146,7 @@ evmc_status_code create(ExecutionState& state) noexcept
         msg.input_data = &state.memory[size_t(init_code_offset)];
         msg.input_size = size_t(init_code_size);
     }
-    msg.sender = state.msg->destination;
+    msg.sender = state.msg->recipient;
     msg.depth = state.msg->depth + 1;
     msg.create2_salt = intx::be::store<evmc::bytes32>(salt);
     msg.value = intx::be::store<evmc::uint256be>(endowment);

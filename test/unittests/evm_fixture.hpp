@@ -75,7 +75,7 @@ protected:
         if (rev >= EVMC_BERLIN)  // Add EIP-2929 tweak.
         {
             host.access_account(msg.sender);
-            host.access_account(msg.destination);
+            host.access_account(msg.recipient);
         }
 
         result = vm.execute(host, rev, msg, code.data(), code.size());

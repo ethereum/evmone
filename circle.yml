@@ -52,7 +52,7 @@ commands:
           working_directory: ~/silkworm
           command: |
             [ "$SILKWORM_BUILD" = true ] || exit 0
-            cmake -S src -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=$(pwd)
+            cmake -S src -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=$(pwd) -DSILKWORM_CORE_ONLY=ON
       - run:
           name: "Build Silkworm cmd/consensus"
           working_directory: ~/silkworm
@@ -250,7 +250,7 @@ jobs:
     steps:
       - build
       - build_silkworm:
-          commit: 82344ce1277642ca549e0603d70f24050073e202
+          commit: b37cd9e21f654aa6b2dd2cada55f9058c7ec3ac5
       - download_consensus_tests:
           rev: 9.0.5
       - run:
