@@ -165,7 +165,7 @@ constexpr inline GasCostTable gas_costs = []() noexcept {
     table[EVMC_LONDON][OP_BASEFEE] = 2;
 
     table[EVMC_SHANGHAI] = table[EVMC_LONDON];
-    table[EVMC_SHANGHAI][OP_RJUMP] = 5;
+    table[EVMC_SHANGHAI][OP_RJUMP] = 3;
     table[EVMC_SHANGHAI][OP_RJUMPI] = 7;
 
     return table;
