@@ -83,3 +83,38 @@ TEST_P(evm, jump_around)
     execute(code);
     EXPECT_GAS_USED(EVMC_SUCCESS, int64_t{(1 + 3 + 8) * num_jumps + 1});
 }
+
+TEST_P(evm, rjump_around)
+{
+    // Generates code built from a number of "jumppads" (JUMPDEST PUSH JUMP).
+    // Each jumppad is visited exactly once in pseudo-random order.
+
+    constexpr size_t num_jumps = 4096;
+    std::vector<uint16_t> jump_order(num_jumps, 0);
+
+    // Generate sequence starting from 1, 0 is the execution starting point.
+    std::iota(std::begin(jump_order), std::end(jump_order), uint16_t{1});
+
+    // Shuffle jump order, leaving the highest value in place for the last jump to the code end.
+    std::shuffle(std::begin(jump_order), std::prev(std::end(jump_order)), std::mt19937_64{0});
+
+    const auto jumppad_code = bytecode{"5c0000"};
+    auto code = num_jumps * jumppad_code + OP_STOP;
+
+    uint16_t cur_target = 0;
+    for (const auto next_target : jump_order)
+    {
+        const auto cur_offset = cur_target * std::size(jumppad_code);
+        const auto next_offset = next_target * std::size(jumppad_code);
+        const auto relative_offset = next_offset - cur_offset - 3;
+        code[cur_offset + 1] = static_cast<uint8_t>(relative_offset >> 8);
+        code[cur_offset + 2] = static_cast<uint8_t>(relative_offset);
+        cur_target = next_target;
+    }
+
+    // EXPECT_EQ(hex(code), "");  // Uncomment to get the code dump.
+
+    rev = EVMC_SHANGHAI;
+    execute(code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, int64_t{6 * num_jumps});
+}
