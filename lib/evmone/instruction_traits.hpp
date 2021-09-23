@@ -9,6 +9,12 @@
 
 namespace evmone::instr
 {
+enum opcodes
+{
+    OP_RJUMP = 0x5c,
+    OP_RJUMPI = 0x5d
+};
+
 /// The special gas cost value marking an EVM instruction as "undefined".
 constexpr int16_t undefined = -1;
 
@@ -159,6 +165,8 @@ constexpr inline GasCostTable gas_costs = []() noexcept {
     table[EVMC_LONDON][OP_BASEFEE] = 2;
 
     table[EVMC_SHANGHAI] = table[EVMC_LONDON];
+    table[EVMC_SHANGHAI][OP_RJUMP] = 6;
+    table[EVMC_SHANGHAI][OP_RJUMPI] = 8;
 
     return table;
 }();
@@ -257,6 +265,8 @@ constexpr inline std::array<Traits, 256> traits = []() noexcept {
     table[OP_MSIZE] = {"MSIZE", 0, 1, EVMC_FRONTIER};
     table[OP_GAS] = {"GAS", 0, 1, EVMC_FRONTIER};
     table[OP_JUMPDEST] = {"JUMPDEST", 0, 0, EVMC_FRONTIER};
+    table[OP_RJUMP] = {"RJUMP", 0, 0, EVMC_SHANGHAI};
+    table[OP_RJUMPI] = {"RJUMPI", 1, -1, EVMC_SHANGHAI};
 
     table[OP_PUSH1] = {"PUSH1", 0, 1, EVMC_FRONTIER};
     table[OP_PUSH2] = {"PUSH2", 0, 1, EVMC_FRONTIER};
