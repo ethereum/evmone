@@ -35,7 +35,7 @@ evmc_result execute_measure_collective_time(const evmc_host_interface* host,
 }
 
 evmc_result execute_measure_each_time(const evmc_host_interface* host, evmc_host_context* ctx, evmc_revision rev,
-    const evmc_message* msg, const uint8_t* code, size_t code_size, unsigned int run_id) noexcept
+    const evmc_message* msg, const uint8_t* code, size_t code_size, unsigned int /*run_id*/) noexcept
 {
     auto analysis = analyze(rev, code, code_size);
 
@@ -67,11 +67,11 @@ evmc_result execute_measure_each_time(const evmc_host_interface* host, evmc_host
         start_time = std::chrono::steady_clock::now();
     }
 
-    // print CSV result, for columns refer to `measurements.py`
-    for (unsigned int i = 0; i < instruction_counter; ++i) {
-        std::cout << run_id << ","<< i << "," << times[i] << "," << times_timer[i] << std::endl;
-    }
-    
+    // // print CSV result, for columns refer to `measurements.py`
+    // for (unsigned int i = 0; i < instruction_counter; ++i) {
+    //     std::cout << run_id << ","<< i << "," << times[i] << "," << times_timer[i] << std::endl;
+    // }
+
     const auto gas_left =
         (state->status == EVMC_SUCCESS || state->status == EVMC_REVERT) ? state->gas_left : 0;
 
@@ -148,6 +148,7 @@ evmc_result execute(evmc_vm* /*unused*/, const evmc_host_interface* host, evmc_h
     bool print_opcodes, bool measure_collective_time, bool measure_each_time,
     unsigned int instruction_to_measure) noexcept
 {
+    return execute_measure_each_time(host, ctx, rev, msg, code, code_size, 0);
     for (unsigned int run_id = 0; run_id < repeat; ++run_id) {
         if (measure_collective_time)
             execute_measure_collective_time(host, ctx, rev, msg, code, code_size);
