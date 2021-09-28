@@ -87,7 +87,7 @@ TEST(execution_state, reset_advanced)
     evmone::AdvancedExecutionState st;
     st.gas_left = 1;
     st.stack.push({});
-    st.memory.resize(2);
+    st.memory.grow(64);
     st.msg = &msg;
     st.rev = EVMC_BYZANTIUM;
     st.return_data.push_back('0');
@@ -100,7 +100,7 @@ TEST(execution_state, reset_advanced)
 
     EXPECT_EQ(st.gas_left, 1);
     EXPECT_EQ(st.stack.size(), 1);
-    EXPECT_EQ(st.memory.size(), 2);
+    EXPECT_EQ(st.memory.size(), 64);
     EXPECT_EQ(st.msg, &msg);
     EXPECT_EQ(st.rev, EVMC_BYZANTIUM);
     EXPECT_EQ(st.return_data.size(), 1);
@@ -174,17 +174,17 @@ TEST(execution_state, const_stack)
 TEST(execution_state, memory_view)
 {
     evmone::Memory memory;
-    memory.resize(3);
+    memory.grow(32);
 
     evmone::bytes_view view{memory.data(), memory.size()};
-    ASSERT_EQ(view.size(), 3);
+    ASSERT_EQ(view.size(), 32);
     EXPECT_EQ(view[0], 0x00);
     EXPECT_EQ(view[1], 0x00);
     EXPECT_EQ(view[2], 0x00);
 
     memory[0] = 0xc0;
     memory[2] = 0xc2;
-    ASSERT_EQ(view.size(), 3);
+    ASSERT_EQ(view.size(), 32);
     EXPECT_EQ(view[0], 0xc0);
     EXPECT_EQ(view[1], 0x00);
     EXPECT_EQ(view[2], 0xc2);

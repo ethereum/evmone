@@ -52,7 +52,7 @@ inline constexpr int64_t num_words(uint64_t size_in_bytes) noexcept
     if ((state.gas_left -= cost) < 0)
         return false;
 
-    state.memory.resize(static_cast<size_t>(new_words * word_size));
+    state.memory.grow(static_cast<size_t>(new_words * word_size));
     return true;
 }
 
