@@ -92,7 +92,21 @@ public:
     [[nodiscard]] const uint8_t* data() const noexcept { return m_memory.data(); }
     [[nodiscard]] size_t size() const noexcept { return m_memory.size(); }
 
-    void resize(size_t new_size) { m_memory.resize(new_size); }
+    /// Grows the memory to the given size. The extend is filled with zeros.
+    ///
+    /// @param new_size  New memory size. Must be larger than the current size and multiple of 32.
+    void grow(size_t new_size)
+    {
+        // Restriction for future changes. EVM always has memory size as multiple of 32 bytes.
+        assert(new_size % 32 == 0);
+
+        // Allow only growing memory. Include hint for optimizing compiler.
+        assert(new_size > m_memory.size());
+        if (new_size <= m_memory.size())
+            INTX_UNREACHABLE();
+
+        m_memory.resize(new_size);
+    }
 
     void clear() noexcept { m_memory.clear(); }
 };
