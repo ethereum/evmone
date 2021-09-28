@@ -28,39 +28,60 @@ constexpr auto word_size = 32;
 /// i.e. it rounds up the number bytes to number of words.
 inline constexpr int64_t num_words(uint64_t size_in_bytes) noexcept
 {
-    return (static_cast<int64_t>(size_in_bytes) + (word_size - 1)) / word_size;
+    return static_cast<int64_t>((size_in_bytes + (word_size - 1)) / word_size);
 }
 
+// Grows EVM memory and checks its cost.
+//
+// This function should not be inlined because this may affect other inlining decisions:
+// - making check_memory() too costly to inline,
+// - making mload()/mstore()/mstore8() too costly to inline.
+//
+// TODO: This function should be moved to Memory class.
+[[gnu::noinline]] inline bool grow_memory(ExecutionState& state, uint64_t new_size) noexcept
+{
+    // This implementation recomputes memory.size(). This value is already known to the caller
+    // and can be passed as a parameter, but this make no difference to the performance.
+
+    const auto new_words = num_words(new_size);
+    const auto current_words = static_cast<int64_t>(state.memory.size() / word_size);
+    const auto new_cost = 3 * new_words + new_words * new_words / 512;
+    const auto current_cost = 3 * current_words + current_words * current_words / 512;
+    const auto cost = new_cost - current_cost;
+
+    if ((state.gas_left -= cost) < 0)
+        return false;
+
+    state.memory.resize(static_cast<size_t>(new_words * word_size));
+    return true;
+}
+
+// Check memory requirements of a reasonable size.
 inline bool check_memory(ExecutionState& state, const uint256& offset, uint64_t size) noexcept
 {
-    if (offset > max_buffer_size)
+    // TODO: This should be done in intx.
+    // There is "branchless" variant of this using | instead of ||, but benchmarks difference
+    // is within noise. This should be decided when moving the implementation to intx.
+    if (((offset[3] | offset[2] | offset[1]) != 0) || (offset[0] > max_buffer_size))
         return false;
 
     const auto new_size = static_cast<uint64_t>(offset) + size;
-    const auto current_size = state.memory.size();
-    if (new_size > current_size)
-    {
-        const auto new_words = num_words(new_size);
-        const auto current_words = static_cast<int64_t>(current_size / 32);
-        const auto new_cost = 3 * new_words + new_words * new_words / 512;
-        const auto current_cost = 3 * current_words + current_words * current_words / 512;
-        const auto cost = new_cost - current_cost;
-
-        if ((state.gas_left -= cost) < 0)
-            return false;
-
-        state.memory.resize(static_cast<size_t>(new_words * word_size));
-    }
+    if (new_size > state.memory.size())
+        return grow_memory(state, new_size);
 
     return true;
 }
 
+// Check memory requirements for "copy" instructions.
 inline bool check_memory(ExecutionState& state, const uint256& offset, const uint256& size) noexcept
 {
-    if (size == 0)
+    if (size == 0)  // Copy of size 0 is always valid (even if offset is huge).
         return true;
 
-    if (size > max_buffer_size)
+    // This check has 3 same word checks with the check above.
+    // However, compilers do decent although not perfect job unifying common instructions.
+    // TODO: This should be done in intx.
+    if (((size[3] | size[2] | size[1]) != 0) || (size[0] > max_buffer_size))
         return false;
 
     return check_memory(state, offset, static_cast<uint64_t>(size));
