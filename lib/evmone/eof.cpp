@@ -134,6 +134,7 @@ EOFValidationErrror validate_instructions(
         if (names[op] == nullptr)
             return EOFValidationErrror::undefined_instruction;
 
+        // TODO use instruction traits table to get number of immediates instead
         if (static_cast<int8_t>(op) >= OP_PUSH1)  // If any PUSH opcode (see explanation above).
             i += op - size_t{OP_PUSH1 - 1};       // Skip PUSH data.
         ++i;
@@ -164,6 +165,7 @@ EOFValidationErrror validate_rjump_instructions(const EOF2Header& header,
         }
         else if (op == OP_RJUMP || op == OP_RJUMPI)
         {
+            // TODO not needed, should be checked in validate_instructions
             if (i + 2 >= header.code_end())
                 return EOFValidationErrror::missing_immediate_argument;
             const auto offset_hi = code[i + 1];
@@ -180,6 +182,7 @@ EOFValidationErrror validate_rjump_instructions(const EOF2Header& header,
         }
         else if (op == OP_RJUMPTABLE)
         {
+            // TODO not needed, should be checked in validate_instructions
             if (i + 2 >= header.code_end())
                 return EOFValidationErrror::missing_immediate_argument;
             const auto table_index_hi = code[i + 1];
@@ -350,23 +353,26 @@ std::pair<EOF1Header, EOFValidationErrror> validate_eof1(
 }
 
 std::pair<EOF2Header, EOFValidationErrror> validate_eof2(
-    const uint8_t* code, size_t code_size) noexcept
+    evmc_revision rev, const uint8_t* code, size_t code_size) noexcept
 {
     const auto [section_headers, error] = validate_eof_headers(2, code, code_size);
     if (error != EOFValidationErrror::success)
         return {{}, error};
 
-    // TODO validate_instructions
-
     EOF2Header header{section_headers[CODE_SECTION][0],
         section_headers[DATA_SECTION].empty() ? 0 : section_headers[DATA_SECTION][0],
         section_headers[TABLE_SECTION]};
 
+    const auto error_instr =
+        validate_instructions(rev, &code[header.code_begin()], header.code_size);
+    if (error_instr != EOFValidationErrror::success)
+        return {{}, error_instr};
+
     // Read jump tables.
     const auto tables = read_valid_table_sections(header.table_sizes, code + header.tables_begin());
 
-    const auto error_instr = validate_rjump_instructions(header, tables, code);
-    if (error_instr != EOFValidationErrror::success)
+    const auto error_rjump = validate_rjump_instructions(header, tables, code);
+    if (error_rjump != EOFValidationErrror::success)
         return {{}, error_instr};
 
     return {header, EOFValidationErrror::success};
@@ -393,7 +399,7 @@ EOFValidationErrror validate_eof(evmc_revision rev, const uint8_t* code, size_t 
     {
         if (rev < EVMC_SHANGHAI)
             return EOFValidationErrror::eof_version_unknown;
-        return validate_eof2(code, code_size).second;
+        return validate_eof2(rev, code, code_size).second;
     }
     }
 }
