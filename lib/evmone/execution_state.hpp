@@ -85,9 +85,18 @@ class Memory
     /// The size of allocated memory. The initialization value is the initial capacity.
     size_t m_capacity = page_size;
 
+    [[noreturn, gnu::cold]] static void handle_out_of_memory() noexcept { std::terminate(); }
+
+    void allocate_capacity() noexcept
+    {
+        m_data = static_cast<uint8_t*>(std::realloc(m_data, m_capacity));
+        if (m_data == nullptr)
+            handle_out_of_memory();
+    }
+
 public:
     /// Creates Memory object with initial capacity allocation.
-    Memory() noexcept { m_data = static_cast<uint8_t*>(std::malloc(m_capacity)); }
+    Memory() noexcept { allocate_capacity(); }
 
     /// Frees all allocated memory.
     ~Memory() noexcept { std::free(m_data); }
@@ -123,7 +132,7 @@ public:
                 m_capacity = ((new_size + (page_size - 1)) / page_size) * page_size;
             }
 
-            m_data = static_cast<uint8_t*>(std::realloc(m_data, m_capacity));
+            allocate_capacity();
         }
         std::memset(m_data + m_size, 0, new_size - m_size);
         m_size = new_size;
