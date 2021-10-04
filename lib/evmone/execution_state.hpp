@@ -69,46 +69,77 @@ struct Stack
 
 /// The EVM memory.
 ///
-/// At this point it is a wrapper for std::vector<uint8_t> with initial allocation of 4k.
+/// The implementations uses initial allocation of 4k and then grows capacity with 2x factor.
 /// Some benchmarks has been done to confirm 4k is ok-ish value.
-/// Also std::basic_string<uint8_t> has been tried but not faster and we don't want SSO
-/// if initial_capacity is used.
-/// In future, transition to std::realloc() + std::free() planned.
 class Memory
 {
-    /// The initial memory allocation.
-    static constexpr size_t initial_capacity = 4 * 1024;
+    /// The size of allocation "page".
+    static constexpr size_t page_size = 4 * 1024;
 
-    std::vector<uint8_t> m_memory;
+    /// Pointer to allocated memory.
+    uint8_t* m_data = nullptr;
+
+    /// The "virtual" size of the memory.
+    size_t m_size = 0;
+
+    /// The size of allocated memory. The initialization value is the initial capacity.
+    size_t m_capacity = page_size;
+
+    [[noreturn, gnu::cold]] static void handle_out_of_memory() noexcept { std::terminate(); }
+
+    void allocate_capacity() noexcept
+    {
+        m_data = static_cast<uint8_t*>(std::realloc(m_data, m_capacity));
+        if (m_data == nullptr)
+            handle_out_of_memory();
+    }
 
 public:
-    Memory() noexcept { m_memory.reserve(initial_capacity); }
+    /// Creates Memory object with initial capacity allocation.
+    Memory() noexcept { allocate_capacity(); }
+
+    /// Frees all allocated memory.
+    ~Memory() noexcept { std::free(m_data); }
 
     Memory(const Memory&) = delete;
     Memory& operator=(const Memory&) = delete;
 
-    uint8_t& operator[](size_t index) noexcept { return m_memory[index]; }
+    uint8_t& operator[](size_t index) noexcept { return m_data[index]; }
 
-    [[nodiscard]] const uint8_t* data() const noexcept { return m_memory.data(); }
-    [[nodiscard]] size_t size() const noexcept { return m_memory.size(); }
+    [[nodiscard]] const uint8_t* data() const noexcept { return m_data; }
+    [[nodiscard]] size_t size() const noexcept { return m_size; }
 
     /// Grows the memory to the given size. The extend is filled with zeros.
     ///
     /// @param new_size  New memory size. Must be larger than the current size and multiple of 32.
-    void grow(size_t new_size)
+    void grow(size_t new_size) noexcept
     {
         // Restriction for future changes. EVM always has memory size as multiple of 32 bytes.
         assert(new_size % 32 == 0);
 
         // Allow only growing memory. Include hint for optimizing compiler.
-        assert(new_size > m_memory.size());
-        if (new_size <= m_memory.size())
+        assert(new_size > m_size);
+        if (new_size <= m_size)
             INTX_UNREACHABLE();
 
-        m_memory.resize(new_size);
+        if (new_size > m_capacity)
+        {
+            m_capacity *= 2;  // Double the capacity.
+
+            if (m_capacity < new_size)  // If not enough.
+            {
+                // Set capacity to required size rounded to multiple of page_size.
+                m_capacity = ((new_size + (page_size - 1)) / page_size) * page_size;
+            }
+
+            allocate_capacity();
+        }
+        std::memset(m_data + m_size, 0, new_size - m_size);
+        m_size = new_size;
     }
 
-    void clear() noexcept { m_memory.clear(); }
+    /// Virtually clears the memory by setting its size to 0. The capacity stays unchanged.
+    void clear() noexcept { m_size = 0; }
 };
 
 /// Generic execution state for generic instructions implementations.
