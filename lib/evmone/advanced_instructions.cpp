@@ -138,6 +138,16 @@ const Instruction* op_jumpi(const Instruction* instr, AdvancedExecutionState& st
     return instr;
 }
 
+const Instruction* op_rjump(const Instruction*, AdvancedExecutionState& state) noexcept
+{
+    return state.exit(EVMC_UNDEFINED_INSTRUCTION);
+}
+
+const Instruction* op_rjumpi(const Instruction*, AdvancedExecutionState& state) noexcept
+{
+    return state.exit(EVMC_UNDEFINED_INSTRUCTION);
+}
+
 const Instruction* op_pc(const Instruction* instr, AdvancedExecutionState& state) noexcept
 {
     state.stack.push(instr->arg.number);
@@ -231,6 +241,8 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
     table[OP_SSTORE] = op_sstore;
     table[OP_JUMP] = op_jump;
     table[OP_JUMPI] = op_jumpi;
+    table[OP_RJUMP] = op_rjump;
+    table[OP_RJUMPI] = op_rjumpi;
     table[OP_PC] = op_pc;
     table[OP_GAS] = op_gas;
     table[OPX_BEGINBLOCK] = opx_beginblock;
