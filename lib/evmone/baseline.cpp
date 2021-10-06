@@ -47,10 +47,11 @@ CodeAnalysis analyze(const uint8_t* code, size_t code_size)
 
 namespace
 {
+template <evmc_opcode Op>
 inline evmc_status_code check_requirements(
-    const InstructionTable& instruction_table, ExecutionState& state, uint8_t op) noexcept
+    const InstructionTable& instruction_table, ExecutionState& state) noexcept
 {
-    const auto metrics = instruction_table[op];
+    const auto metrics = instruction_table[Op];
 
     if (INTX_UNLIKELY(metrics.gas_cost == instr::undefined))
         return EVMC_UNDEFINED_INSTRUCTION;
@@ -141,7 +142,7 @@ template <evmc_opcode Op>
 [[gnu::always_inline]] inline code_iterator invoke(
     const InstructionTable& instruction_table, ExecutionState& state, code_iterator pos) noexcept
 {
-    if (const auto status = check_requirements(instruction_table, state, Op);
+    if (const auto status = check_requirements<Op>(instruction_table, state);
         status != EVMC_SUCCESS)
     {
         state.status = status;
