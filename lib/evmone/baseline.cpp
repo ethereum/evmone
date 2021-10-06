@@ -60,13 +60,17 @@ inline evmc_status_code check_requirements(
         return EVMC_OUT_OF_GAS;
 
     const auto stack_size = state.stack.size();
-    if (INTX_UNLIKELY(stack_size == Stack::limit))
+    if constexpr (instr::traits[Op].stack_height_change > 0)
     {
-        if (metrics.can_overflow_stack)
+        static_assert(instr::traits[Op].stack_height_change == 1);
+        if (INTX_UNLIKELY(stack_size == Stack::limit))
             return EVMC_STACK_OVERFLOW;
     }
-    else if (INTX_UNLIKELY(stack_size < metrics.stack_height_required))
-        return EVMC_STACK_UNDERFLOW;
+    if constexpr (instr::traits[Op].stack_height_required > 0)
+    {
+        if (INTX_UNLIKELY(stack_size < instr::traits[Op].stack_height_required))
+            return EVMC_STACK_UNDERFLOW;
+    }
 
     return EVMC_SUCCESS;
 }
