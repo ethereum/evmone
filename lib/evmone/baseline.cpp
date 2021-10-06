@@ -6,6 +6,7 @@
 #include "baseline_instruction_table.hpp"
 #include "execution_state.hpp"
 #include "instructions.hpp"
+#include "instructions_op2fn.hpp"
 #include "vm.hpp"
 #include <evmc/instructions.h>
 #include <memory>
@@ -69,13 +70,71 @@ inline evmc_status_code check_requirements(
     return EVMC_SUCCESS;
 }
 
-/// Dispatch the instruction currently pointed by "pc".
-#define DISPATCH() break  // Break out of switch statement.
 
-/// Increment "pc" and dispatch the instruction.
-#define DISPATCH_NEXT() \
-    ++code_it;          \
-    DISPATCH()
+/// Implementation of a generic instruction "case".
+#define DISPATCH_CASE(OPCODE)                                          \
+    case OPCODE:                                                       \
+        if (code_it = invoke(op2fn::OPCODE, state, code_it); !code_it) \
+            goto exit;                                                 \
+        break
+
+/// The signature of basic instructions which always succeed, e.g. ADD.
+using SucceedingInstrFn = void(ExecutionState&) noexcept;
+static_assert(std::is_same_v<decltype(add), SucceedingInstrFn>);
+
+/// The signature of basic instructions which may fail.
+using MayFailInstrFn = evmc_status_code(ExecutionState&) noexcept;
+static_assert(std::is_same_v<decltype(exp), MayFailInstrFn>);
+
+/// The signature of terminating instructions.
+using TerminatingInstrFn = StopToken(ExecutionState&) noexcept;
+static_assert(std::is_same_v<decltype(stop), TerminatingInstrFn>);
+
+/// The signature of instructions requiring access to current code position.
+using CodePositionInstrFn = code_iterator(ExecutionState&, code_iterator) noexcept;
+static_assert(std::is_same_v<decltype(push<1>), CodePositionInstrFn>);
+static_assert(std::is_same_v<decltype(pc), CodePositionInstrFn>);
+static_assert(std::is_same_v<decltype(jump), CodePositionInstrFn>);
+
+/// A helper to invoke instruction implementations of different signatures
+/// done by template specialization.
+template <typename InstrFn>
+code_iterator invoke(InstrFn instr_fn, ExecutionState& state, code_iterator pos) noexcept = delete;
+
+template <>
+[[gnu::always_inline]] inline code_iterator invoke<SucceedingInstrFn*>(
+    SucceedingInstrFn* instr_fn, ExecutionState& state, code_iterator pos) noexcept
+{
+    instr_fn(state);
+    return pos + 1;
+}
+
+template <>
+[[gnu::always_inline]] inline code_iterator invoke<MayFailInstrFn*>(
+    MayFailInstrFn* instr_fn, ExecutionState& state, code_iterator pos) noexcept
+{
+    if (const auto status = instr_fn(state); status != EVMC_SUCCESS)
+    {
+        state.status = status;
+        return nullptr;
+    }
+    return pos + 1;
+}
+
+template <>
+[[gnu::always_inline]] inline code_iterator invoke<TerminatingInstrFn*>(
+    TerminatingInstrFn* instr_fn, ExecutionState& state, code_iterator /*pos*/) noexcept
+{
+    state.status = instr_fn(state).status;
+    return nullptr;
+}
+
+template <>
+[[gnu::always_inline]] inline code_iterator invoke<CodePositionInstrFn*>(
+    CodePositionInstrFn* instr_fn, ExecutionState& state, code_iterator pos) noexcept
+{
+    return instr_fn(state, pos);
+}
 
 template <bool TracingEnabled>
 evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& analysis) noexcept
@@ -112,632 +171,159 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
 
         switch (op)
         {
-        case OP_STOP:
-            stop(state);
-            state.status = EVMC_SUCCESS;  // Not needed, but does some magic to clang optimization.
-            goto exit;
-        case OP_ADD:
-            add(state);
-            DISPATCH_NEXT();
-        case OP_MUL:
-            mul(state);
-            DISPATCH_NEXT();
-        case OP_SUB:
-            sub(state);
-            DISPATCH_NEXT();
-        case OP_DIV:
-            div(state);
-            DISPATCH_NEXT();
-        case OP_SDIV:
-            sdiv(state);
-            DISPATCH_NEXT();
-        case OP_MOD:
-            mod(state);
-            DISPATCH_NEXT();
-        case OP_SMOD:
-            smod(state);
-            DISPATCH_NEXT();
-        case OP_ADDMOD:
-            addmod(state);
-            DISPATCH_NEXT();
-        case OP_MULMOD:
-            mulmod(state);
-            DISPATCH_NEXT();
-        case OP_EXP:
-        {
-            const auto status_code = exp(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
-        case OP_SIGNEXTEND:
-            signextend(state);
-            DISPATCH_NEXT();
+            DISPATCH_CASE(OP_STOP);
+            DISPATCH_CASE(OP_ADD);
+            DISPATCH_CASE(OP_MUL);
+            DISPATCH_CASE(OP_SUB);
+            DISPATCH_CASE(OP_DIV);
+            DISPATCH_CASE(OP_SDIV);
+            DISPATCH_CASE(OP_MOD);
+            DISPATCH_CASE(OP_SMOD);
+            DISPATCH_CASE(OP_ADDMOD);
+            DISPATCH_CASE(OP_MULMOD);
+            DISPATCH_CASE(OP_EXP);
+            DISPATCH_CASE(OP_SIGNEXTEND);
 
-        case OP_LT:
-            lt(state);
-            DISPATCH_NEXT();
-        case OP_GT:
-            gt(state);
-            DISPATCH_NEXT();
-        case OP_SLT:
-            slt(state);
-            DISPATCH_NEXT();
-        case OP_SGT:
-            sgt(state);
-            DISPATCH_NEXT();
-        case OP_EQ:
-            eq(state);
-            DISPATCH_NEXT();
-        case OP_ISZERO:
-            iszero(state);
-            DISPATCH_NEXT();
-        case OP_AND:
-            and_(state);
-            DISPATCH_NEXT();
-        case OP_OR:
-            or_(state);
-            DISPATCH_NEXT();
-        case OP_XOR:
-            xor_(state);
-            DISPATCH_NEXT();
-        case OP_NOT:
-            not_(state);
-            DISPATCH_NEXT();
-        case OP_BYTE:
-            byte(state);
-            DISPATCH_NEXT();
-        case OP_SHL:
-            shl(state);
-            DISPATCH_NEXT();
-        case OP_SHR:
-            shr(state);
-            DISPATCH_NEXT();
-        case OP_SAR:
-            sar(state);
-            DISPATCH_NEXT();
+            DISPATCH_CASE(OP_LT);
+            DISPATCH_CASE(OP_GT);
+            DISPATCH_CASE(OP_SLT);
+            DISPATCH_CASE(OP_SGT);
+            DISPATCH_CASE(OP_EQ);
+            DISPATCH_CASE(OP_ISZERO);
+            DISPATCH_CASE(OP_AND);
+            DISPATCH_CASE(OP_OR);
+            DISPATCH_CASE(OP_XOR);
+            DISPATCH_CASE(OP_NOT);
+            DISPATCH_CASE(OP_BYTE);
+            DISPATCH_CASE(OP_SHL);
+            DISPATCH_CASE(OP_SHR);
+            DISPATCH_CASE(OP_SAR);
 
-        case OP_KECCAK256:
-        {
-            const auto status_code = keccak256(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
+            DISPATCH_CASE(OP_KECCAK256);
 
-        case OP_ADDRESS:
-            address(state);
-            DISPATCH_NEXT();
-        case OP_BALANCE:
-        {
-            const auto status_code = balance(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
-        case OP_ORIGIN:
-            origin(state);
-            DISPATCH_NEXT();
-        case OP_CALLER:
-            caller(state);
-            DISPATCH_NEXT();
-        case OP_CALLVALUE:
-            callvalue(state);
-            DISPATCH_NEXT();
-        case OP_CALLDATALOAD:
-            calldataload(state);
-            DISPATCH_NEXT();
-        case OP_CALLDATASIZE:
-            calldatasize(state);
-            DISPATCH_NEXT();
-        case OP_CALLDATACOPY:
-        {
-            const auto status_code = calldatacopy(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
-        case OP_CODESIZE:
-            codesize(state);
-            DISPATCH_NEXT();
-        case OP_CODECOPY:
-        {
-            const auto status_code = codecopy(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
-        case OP_GASPRICE:
-            gasprice(state);
-            DISPATCH_NEXT();
-        case OP_EXTCODESIZE:
-        {
-            const auto status_code = extcodesize(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
-        case OP_EXTCODECOPY:
-        {
-            const auto status_code = extcodecopy(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
-        case OP_RETURNDATASIZE:
-            returndatasize(state);
-            DISPATCH_NEXT();
-        case OP_RETURNDATACOPY:
-        {
-            const auto status_code = returndatacopy(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
-        case OP_EXTCODEHASH:
-        {
-            const auto status_code = extcodehash(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
-        case OP_BLOCKHASH:
-            blockhash(state);
-            DISPATCH_NEXT();
-        case OP_COINBASE:
-            coinbase(state);
-            DISPATCH_NEXT();
-        case OP_TIMESTAMP:
-            timestamp(state);
-            DISPATCH_NEXT();
-        case OP_NUMBER:
-            number(state);
-            DISPATCH_NEXT();
-        case OP_DIFFICULTY:
-            difficulty(state);
-            DISPATCH_NEXT();
-        case OP_GASLIMIT:
-            gaslimit(state);
-            DISPATCH_NEXT();
-        case OP_CHAINID:
-            chainid(state);
-            DISPATCH_NEXT();
-        case OP_SELFBALANCE:
-            selfbalance(state);
-            DISPATCH_NEXT();
-        case OP_BASEFEE:
-            basefee(state);
-            DISPATCH_NEXT();
+            DISPATCH_CASE(OP_ADDRESS);
+            DISPATCH_CASE(OP_BALANCE);
+            DISPATCH_CASE(OP_ORIGIN);
+            DISPATCH_CASE(OP_CALLER);
+            DISPATCH_CASE(OP_CALLVALUE);
+            DISPATCH_CASE(OP_CALLDATALOAD);
+            DISPATCH_CASE(OP_CALLDATASIZE);
+            DISPATCH_CASE(OP_CALLDATACOPY);
+            DISPATCH_CASE(OP_CODESIZE);
+            DISPATCH_CASE(OP_CODECOPY);
+            DISPATCH_CASE(OP_GASPRICE);
+            DISPATCH_CASE(OP_EXTCODESIZE);
+            DISPATCH_CASE(OP_EXTCODECOPY);
+            DISPATCH_CASE(OP_RETURNDATASIZE);
+            DISPATCH_CASE(OP_RETURNDATACOPY);
+            DISPATCH_CASE(OP_EXTCODEHASH);
+            DISPATCH_CASE(OP_BLOCKHASH);
+            DISPATCH_CASE(OP_COINBASE);
+            DISPATCH_CASE(OP_TIMESTAMP);
+            DISPATCH_CASE(OP_NUMBER);
+            DISPATCH_CASE(OP_DIFFICULTY);
+            DISPATCH_CASE(OP_GASLIMIT);
+            DISPATCH_CASE(OP_CHAINID);
+            DISPATCH_CASE(OP_SELFBALANCE);
+            DISPATCH_CASE(OP_BASEFEE);
 
-        case OP_POP:
-            pop(state);
-            DISPATCH_NEXT();
-        case OP_MLOAD:
-        {
-            const auto status_code = mload(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
-        case OP_MSTORE:
-        {
-            const auto status_code = mstore(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
-        case OP_MSTORE8:
-        {
-            const auto status_code = mstore8(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
+            DISPATCH_CASE(OP_POP);
+            DISPATCH_CASE(OP_MLOAD);
+            DISPATCH_CASE(OP_MSTORE);
+            DISPATCH_CASE(OP_MSTORE8);
+            DISPATCH_CASE(OP_SLOAD);
+            DISPATCH_CASE(OP_SSTORE);
+            DISPATCH_CASE(OP_JUMP);
+            DISPATCH_CASE(OP_JUMPI);
+            DISPATCH_CASE(OP_PC);
+            DISPATCH_CASE(OP_MSIZE);
+            DISPATCH_CASE(OP_GAS);
+            DISPATCH_CASE(OP_JUMPDEST);
 
-        case OP_JUMP:
-        {
-            code_it = jump(state, code_it);
-            if (code_it == nullptr)
-                goto exit;
-            DISPATCH();
-        }
+            DISPATCH_CASE(OP_PUSH1);
+            DISPATCH_CASE(OP_PUSH2);
+            DISPATCH_CASE(OP_PUSH3);
+            DISPATCH_CASE(OP_PUSH4);
+            DISPATCH_CASE(OP_PUSH5);
+            DISPATCH_CASE(OP_PUSH6);
+            DISPATCH_CASE(OP_PUSH7);
+            DISPATCH_CASE(OP_PUSH8);
+            DISPATCH_CASE(OP_PUSH9);
+            DISPATCH_CASE(OP_PUSH10);
+            DISPATCH_CASE(OP_PUSH11);
+            DISPATCH_CASE(OP_PUSH12);
+            DISPATCH_CASE(OP_PUSH13);
+            DISPATCH_CASE(OP_PUSH14);
+            DISPATCH_CASE(OP_PUSH15);
+            DISPATCH_CASE(OP_PUSH16);
+            DISPATCH_CASE(OP_PUSH17);
+            DISPATCH_CASE(OP_PUSH18);
+            DISPATCH_CASE(OP_PUSH19);
+            DISPATCH_CASE(OP_PUSH20);
+            DISPATCH_CASE(OP_PUSH21);
+            DISPATCH_CASE(OP_PUSH22);
+            DISPATCH_CASE(OP_PUSH23);
+            DISPATCH_CASE(OP_PUSH24);
+            DISPATCH_CASE(OP_PUSH25);
+            DISPATCH_CASE(OP_PUSH26);
+            DISPATCH_CASE(OP_PUSH27);
+            DISPATCH_CASE(OP_PUSH28);
+            DISPATCH_CASE(OP_PUSH29);
+            DISPATCH_CASE(OP_PUSH30);
+            DISPATCH_CASE(OP_PUSH31);
+            DISPATCH_CASE(OP_PUSH32);
 
-        case OP_JUMPI:
-        {
-            code_it = jumpi(state, code_it);
-            if (code_it == nullptr)
-                goto exit;
-            DISPATCH();
-        }
+            DISPATCH_CASE(OP_DUP1);
+            DISPATCH_CASE(OP_DUP2);
+            DISPATCH_CASE(OP_DUP3);
+            DISPATCH_CASE(OP_DUP4);
+            DISPATCH_CASE(OP_DUP5);
+            DISPATCH_CASE(OP_DUP6);
+            DISPATCH_CASE(OP_DUP7);
+            DISPATCH_CASE(OP_DUP8);
+            DISPATCH_CASE(OP_DUP9);
+            DISPATCH_CASE(OP_DUP10);
+            DISPATCH_CASE(OP_DUP11);
+            DISPATCH_CASE(OP_DUP12);
+            DISPATCH_CASE(OP_DUP13);
+            DISPATCH_CASE(OP_DUP14);
+            DISPATCH_CASE(OP_DUP15);
+            DISPATCH_CASE(OP_DUP16);
 
-        case OP_PC:
-            code_it = pc(state, code_it);
-            DISPATCH();
+            DISPATCH_CASE(OP_SWAP1);
+            DISPATCH_CASE(OP_SWAP2);
+            DISPATCH_CASE(OP_SWAP3);
+            DISPATCH_CASE(OP_SWAP4);
+            DISPATCH_CASE(OP_SWAP5);
+            DISPATCH_CASE(OP_SWAP6);
+            DISPATCH_CASE(OP_SWAP7);
+            DISPATCH_CASE(OP_SWAP8);
+            DISPATCH_CASE(OP_SWAP9);
+            DISPATCH_CASE(OP_SWAP10);
+            DISPATCH_CASE(OP_SWAP11);
+            DISPATCH_CASE(OP_SWAP12);
+            DISPATCH_CASE(OP_SWAP13);
+            DISPATCH_CASE(OP_SWAP14);
+            DISPATCH_CASE(OP_SWAP15);
+            DISPATCH_CASE(OP_SWAP16);
 
-        case OP_MSIZE:
-            msize(state);
-            DISPATCH_NEXT();
-        case OP_SLOAD:
-        {
-            const auto status_code = sload(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
-        case OP_SSTORE:
-        {
-            const auto status_code = sstore(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
-        case OP_GAS:
-            gas(state);
-            DISPATCH_NEXT();
-        case OP_JUMPDEST:
-            jumpdest(state);
-            DISPATCH_NEXT();
+            DISPATCH_CASE(OP_LOG0);
+            DISPATCH_CASE(OP_LOG1);
+            DISPATCH_CASE(OP_LOG2);
+            DISPATCH_CASE(OP_LOG3);
+            DISPATCH_CASE(OP_LOG4);
 
-        case OP_PUSH1:
-            code_it = push<1>(state, code_it);
-            DISPATCH();
-        case OP_PUSH2:
-            code_it = push<2>(state, code_it);
-            DISPATCH();
-        case OP_PUSH3:
-            code_it = push<3>(state, code_it);
-            DISPATCH();
-        case OP_PUSH4:
-            code_it = push<4>(state, code_it);
-            DISPATCH();
-        case OP_PUSH5:
-            code_it = push<5>(state, code_it);
-            DISPATCH();
-        case OP_PUSH6:
-            code_it = push<6>(state, code_it);
-            DISPATCH();
-        case OP_PUSH7:
-            code_it = push<7>(state, code_it);
-            DISPATCH();
-        case OP_PUSH8:
-            code_it = push<8>(state, code_it);
-            DISPATCH();
-        case OP_PUSH9:
-            code_it = push<9>(state, code_it);
-            DISPATCH();
-        case OP_PUSH10:
-            code_it = push<10>(state, code_it);
-            DISPATCH();
-        case OP_PUSH11:
-            code_it = push<11>(state, code_it);
-            DISPATCH();
-        case OP_PUSH12:
-            code_it = push<12>(state, code_it);
-            DISPATCH();
-        case OP_PUSH13:
-            code_it = push<13>(state, code_it);
-            DISPATCH();
-        case OP_PUSH14:
-            code_it = push<14>(state, code_it);
-            DISPATCH();
-        case OP_PUSH15:
-            code_it = push<15>(state, code_it);
-            DISPATCH();
-        case OP_PUSH16:
-            code_it = push<16>(state, code_it);
-            DISPATCH();
-        case OP_PUSH17:
-            code_it = push<17>(state, code_it);
-            DISPATCH();
-        case OP_PUSH18:
-            code_it = push<18>(state, code_it);
-            DISPATCH();
-        case OP_PUSH19:
-            code_it = push<19>(state, code_it);
-            DISPATCH();
-        case OP_PUSH20:
-            code_it = push<20>(state, code_it);
-            DISPATCH();
-        case OP_PUSH21:
-            code_it = push<21>(state, code_it);
-            DISPATCH();
-        case OP_PUSH22:
-            code_it = push<22>(state, code_it);
-            DISPATCH();
-        case OP_PUSH23:
-            code_it = push<23>(state, code_it);
-            DISPATCH();
-        case OP_PUSH24:
-            code_it = push<24>(state, code_it);
-            DISPATCH();
-        case OP_PUSH25:
-            code_it = push<25>(state, code_it);
-            DISPATCH();
-        case OP_PUSH26:
-            code_it = push<26>(state, code_it);
-            DISPATCH();
-        case OP_PUSH27:
-            code_it = push<27>(state, code_it);
-            DISPATCH();
-        case OP_PUSH28:
-            code_it = push<28>(state, code_it);
-            DISPATCH();
-        case OP_PUSH29:
-            code_it = push<29>(state, code_it);
-            DISPATCH();
-        case OP_PUSH30:
-            code_it = push<30>(state, code_it);
-            DISPATCH();
-        case OP_PUSH31:
-            code_it = push<31>(state, code_it);
-            DISPATCH();
-        case OP_PUSH32:
-            code_it = push<32>(state, code_it);
-            DISPATCH();
+            DISPATCH_CASE(OP_CREATE);
+            DISPATCH_CASE(OP_CALL);
+            DISPATCH_CASE(OP_CALLCODE);
+            DISPATCH_CASE(OP_RETURN);
+            DISPATCH_CASE(OP_DELEGATECALL);
+            DISPATCH_CASE(OP_STATICCALL);
+            DISPATCH_CASE(OP_CREATE2);
+            DISPATCH_CASE(OP_REVERT);
+            DISPATCH_CASE(OP_INVALID);
+            DISPATCH_CASE(OP_SELFDESTRUCT);
 
-        case OP_DUP1:
-            dup<1>(state);
-            DISPATCH_NEXT();
-        case OP_DUP2:
-            dup<2>(state);
-            DISPATCH_NEXT();
-        case OP_DUP3:
-            dup<3>(state);
-            DISPATCH_NEXT();
-        case OP_DUP4:
-            dup<4>(state);
-            DISPATCH_NEXT();
-        case OP_DUP5:
-            dup<5>(state);
-            DISPATCH_NEXT();
-        case OP_DUP6:
-            dup<6>(state);
-            DISPATCH_NEXT();
-        case OP_DUP7:
-            dup<7>(state);
-            DISPATCH_NEXT();
-        case OP_DUP8:
-            dup<8>(state);
-            DISPATCH_NEXT();
-        case OP_DUP9:
-            dup<9>(state);
-            DISPATCH_NEXT();
-        case OP_DUP10:
-            dup<10>(state);
-            DISPATCH_NEXT();
-        case OP_DUP11:
-            dup<11>(state);
-            DISPATCH_NEXT();
-        case OP_DUP12:
-            dup<12>(state);
-            DISPATCH_NEXT();
-        case OP_DUP13:
-            dup<13>(state);
-            DISPATCH_NEXT();
-        case OP_DUP14:
-            dup<14>(state);
-            DISPATCH_NEXT();
-        case OP_DUP15:
-            dup<15>(state);
-            DISPATCH_NEXT();
-        case OP_DUP16:
-            dup<16>(state);
-            DISPATCH_NEXT();
-
-        case OP_SWAP1:
-            swap<1>(state);
-            DISPATCH_NEXT();
-        case OP_SWAP2:
-            swap<2>(state);
-            DISPATCH_NEXT();
-        case OP_SWAP3:
-            swap<3>(state);
-            DISPATCH_NEXT();
-        case OP_SWAP4:
-            swap<4>(state);
-            DISPATCH_NEXT();
-        case OP_SWAP5:
-            swap<5>(state);
-            DISPATCH_NEXT();
-        case OP_SWAP6:
-            swap<6>(state);
-            DISPATCH_NEXT();
-        case OP_SWAP7:
-            swap<7>(state);
-            DISPATCH_NEXT();
-        case OP_SWAP8:
-            swap<8>(state);
-            DISPATCH_NEXT();
-        case OP_SWAP9:
-            swap<9>(state);
-            DISPATCH_NEXT();
-        case OP_SWAP10:
-            swap<10>(state);
-            DISPATCH_NEXT();
-        case OP_SWAP11:
-            swap<11>(state);
-            DISPATCH_NEXT();
-        case OP_SWAP12:
-            swap<12>(state);
-            DISPATCH_NEXT();
-        case OP_SWAP13:
-            swap<13>(state);
-            DISPATCH_NEXT();
-        case OP_SWAP14:
-            swap<14>(state);
-            DISPATCH_NEXT();
-        case OP_SWAP15:
-            swap<15>(state);
-            DISPATCH_NEXT();
-        case OP_SWAP16:
-            swap<16>(state);
-            DISPATCH_NEXT();
-
-        case OP_LOG0:
-        {
-            const auto status_code = log<0>(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
-        case OP_LOG1:
-        {
-            const auto status_code = log<1>(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
-        case OP_LOG2:
-        {
-            const auto status_code = log<2>(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
-        case OP_LOG3:
-        {
-            const auto status_code = log<3>(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
-        case OP_LOG4:
-        {
-            const auto status_code = log<4>(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
-
-        case OP_CREATE:
-        {
-            const auto status_code = create<EVMC_CREATE>(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
-        case OP_CALL:
-        {
-            const auto status_code = call<EVMC_CALL>(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
-        case OP_CALLCODE:
-        {
-            const auto status_code = call<EVMC_CALLCODE>(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
-        case OP_RETURN:
-            state.status = return_<EVMC_SUCCESS>(state).status;
-            goto exit;
-        case OP_DELEGATECALL:
-        {
-            const auto status_code = call<EVMC_DELEGATECALL>(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
-        case OP_STATICCALL:
-        {
-            const auto status_code = call<EVMC_CALL, true>(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
-        case OP_CREATE2:
-        {
-            const auto status_code = create<EVMC_CREATE2>(state);
-            if (status_code != EVMC_SUCCESS)
-            {
-                state.status = status_code;
-                goto exit;
-            }
-            DISPATCH_NEXT();
-        }
-        case OP_REVERT:
-            state.status = return_<EVMC_REVERT>(state).status;
-            goto exit;
-        case OP_INVALID:
-            state.status = invalid(state).status;
-            goto exit;
-        case OP_SELFDESTRUCT:
-            state.status = selfdestruct(state).status;
-            goto exit;
         default:
             INTX_UNREACHABLE();
         }
