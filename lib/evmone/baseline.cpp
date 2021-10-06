@@ -49,14 +49,12 @@ namespace
 {
 template <evmc_opcode Op>
 inline evmc_status_code check_requirements(
-    const InstructionTable& instruction_table, ExecutionState& state) noexcept
+    const CostTable& cost_table, ExecutionState& state) noexcept
 {
-    const auto metrics = instruction_table[Op];
-
-    if (INTX_UNLIKELY(metrics.gas_cost == instr::undefined))
+    if (INTX_UNLIKELY(cost_table[Op] == instr::undefined))
         return EVMC_UNDEFINED_INSTRUCTION;
 
-    if (INTX_UNLIKELY((state.gas_left -= metrics.gas_cost) < 0))
+    if (INTX_UNLIKELY((state.gas_left -= cost_table[Op]) < 0))
         return EVMC_OUT_OF_GAS;
 
     const auto stack_size = state.stack.size();
@@ -77,10 +75,10 @@ inline evmc_status_code check_requirements(
 
 
 /// Implementation of a generic instruction "case".
-#define DISPATCH_CASE(OPCODE)                                                      \
-    case OPCODE:                                                                   \
-        if (code_it = invoke<OPCODE>(instruction_table, state, code_it); !code_it) \
-            goto exit;                                                             \
+#define DISPATCH_CASE(OPCODE)                                               \
+    case OPCODE:                                                            \
+        if (code_it = invoke<OPCODE>(cost_table, state, code_it); !code_it) \
+            goto exit;                                                      \
         break
 
 /// The signature of basic instructions which always succeed, e.g. ADD.
@@ -144,10 +142,9 @@ template <>
 /// A helper to invoke the instruction implementation of the given opcode Op.
 template <evmc_opcode Op>
 [[gnu::always_inline]] inline code_iterator invoke(
-    const InstructionTable& instruction_table, ExecutionState& state, code_iterator pos) noexcept
+    const CostTable& cost_table, ExecutionState& state, code_iterator pos) noexcept
 {
-    if (const auto status = check_requirements<Op>(instruction_table, state);
-        status != EVMC_SUCCESS)
+    if (const auto status = check_requirements<Op>(cost_table, state); status != EVMC_SUCCESS)
     {
         state.status = status;
         return nullptr;
@@ -167,7 +164,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     if constexpr (TracingEnabled)
         tracer->notify_execution_start(state.rev, *state.msg, state.code);
 
-    const auto& instruction_table = get_baseline_instruction_table(state.rev);
+    const auto& cost_table = get_baseline_cost_table(state.rev);
 
     const auto* const code = state.code.data();
     auto code_it = code;  // Code iterator for the interpreter loop.

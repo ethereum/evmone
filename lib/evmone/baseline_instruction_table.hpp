@@ -8,14 +8,7 @@
 
 namespace evmone::baseline
 {
-struct InstructionTableEntry
-{
-    int16_t gas_cost;
-    int8_t stack_height_required;
-    bool can_overflow_stack;
-};
+using CostTable = std::array<int16_t, 256>;
 
-using InstructionTable = std::array<InstructionTableEntry, 256>;
-
-const InstructionTable& get_baseline_instruction_table(evmc_revision rev) noexcept;
+const CostTable& get_baseline_cost_table(evmc_revision rev) noexcept;
 }  // namespace evmone::baseline
