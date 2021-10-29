@@ -9,20 +9,18 @@
 
 #include <stddef.h>
 
-#ifdef __cplusplus
-#define NOEXCEPT noexcept
-#else
-#define NOEXCEPT
+#ifndef __cplusplus
+#define noexcept  // Ignore noexcept in C code.
 #endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-union ethash_hash256 ethash_keccak256(const uint8_t* data, size_t size) NOEXCEPT;
-union ethash_hash256 ethash_keccak256_32(const uint8_t data[32]) NOEXCEPT;
-union ethash_hash512 ethash_keccak512(const uint8_t* data, size_t size) NOEXCEPT;
-union ethash_hash512 ethash_keccak512_64(const uint8_t data[64]) NOEXCEPT;
+union ethash_hash256 ethash_keccak256(const uint8_t* data, size_t size) noexcept;
+union ethash_hash256 ethash_keccak256_32(const uint8_t data[32]) noexcept;
+union ethash_hash512 ethash_keccak512(const uint8_t* data, size_t size) noexcept;
+union ethash_hash512 ethash_keccak512_64(const uint8_t data[64]) noexcept;
 
 #ifdef __cplusplus
 }
