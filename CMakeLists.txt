@@ -49,6 +49,23 @@ if(CABLE_COMPILER_GNULIKE)
         -Wmissing-declarations
         -Wno-attributes  # Allow using unknown attributes.
         $<$<COMPILE_LANGUAGE:CXX>:-Wextra-semi>
+
+        -Warray-bounds
+#        -Warray-bounds=2
+#        -Warith-conversion
+#        -Wredundant-tags
+        -Wmismatched-tags
+        -Wenum-conversion
+
+#        -Wcast-qual
+        -Wmissing-declarations
+        -Wsign-conversion
+        -Wundef
+        -Wunreachable-code
+        $<$<COMPILE_LANGUAGE:C>:-Wmissing-prototypes>
+        $<$<CXX_COMPILER_ID:Clang>:-Wduplicate-enum>
+        $<$<CXX_COMPILER_ID:Clang>:-Wnewline-eof>
+        $<$<CXX_COMPILER_ID:Clang>:-Wunreachable-code-aggressive>
     )
     cable_add_cxx_compiler_flag_if_supported(-Wduplicated-cond)
     cable_add_cxx_compiler_flag_if_supported(-Wduplicate-enum)
@@ -58,7 +75,28 @@ if(CABLE_COMPILER_GNULIKE)
     cable_add_cxx_compiler_flag_if_supported(-Wsuggest-destructor-override)
     cable_add_cxx_compiler_flag_if_supported(-Wunreachable-code-break)
 
+
+
     if(CABLE_COMPILER_CLANG)
+        add_compile_options(
+            -Weverything
+            -Wno-c++98-compat
+            -Wno-padded
+            -Wno-old-style-cast
+            -Wno-cast-qual
+            -Wno-cast-align
+            -Wno-c++98-compat-pedantic
+            -Wno-documentation-unknown-command
+            -Wno-array-bounds-pointer-arithmetic
+            -Wno-weak-vtables
+            -Wno-undefined-func-template
+            -Wno-global-constructors
+            -Wno-exit-time-destructors
+            -Wno-missing-variable-declarations
+            -Wno-unsafe-buffer-usage
+            -Wno-deprecated-copy-with-dtor
+            -Wno-switch-enum
+        )
         set(CMAKE_CXX_FLAGS_COVERAGE "-fprofile-instr-generate -fcoverage-mapping")
     elseif(CABLE_COMPILER_GNU)
         set(CMAKE_CXX_FLAGS_COVERAGE "--coverage")
