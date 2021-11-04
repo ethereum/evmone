@@ -6,8 +6,8 @@
 
 #include "account.hpp"
 #include "hash_utils.hpp"
-#include <cassert>
 #include <optional>
+#include <unordered_map>
 #include <vector>
 
 namespace evmone::state
@@ -24,6 +24,24 @@ public:
         assert(r.second);
         return r.first->second;
     }
+
+    Account& get(const address& addr)
+    {
+        assert(m_accounts.count(addr) == 1);
+        return m_accounts.find(addr)->second;
+    }
+
+    Account* get_or_null(const address& addr)
+    {
+        const auto it = m_accounts.find(addr);
+        if (it != m_accounts.end())
+            return &it->second;
+        return nullptr;
+    }
+
+    Account& get_or_create(const address& addr) { return m_accounts[addr]; }
+
+    auto& get_accounts() { return m_accounts; }
 };
 
 struct BlockInfo
@@ -56,4 +74,16 @@ struct Transaction
     intx::uint256 value;
     AccessList access_list;
 };
+
+struct Log
+{
+    address addr;
+    bytes data;
+    std::vector<hash256> topics;
+};
+
+
+[[nodiscard]] std::optional<std::vector<Log>> transition(
+    State& state, const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm);
+
 }  // namespace evmone::state
