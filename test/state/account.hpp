@@ -21,6 +21,8 @@ struct StorageValue
 
     /// The original value.
     bytes32 original{};
+
+    evmc_access_status access_status{EVMC_ACCESS_COLD};
 };
 
 /// The state account.
@@ -37,5 +39,21 @@ struct Account
 
     /// The account code.
     bytes code;
+
+    /// Is the account "touched" as defined in EIP-161.
+    bool touched = false;
+
+    [[nodiscard]] bool is_empty() const noexcept
+    {
+        return code.empty() && nonce == 0 && balance == 0;
+    }
+
+    [[nodiscard]] bool bump_nonce() noexcept
+    {
+        if (nonce == std::numeric_limits<decltype(nonce)>::max())
+            return false;
+        ++nonce;
+        return true;
+    }
 };
 }  // namespace evmone::state
