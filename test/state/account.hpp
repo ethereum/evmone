@@ -21,11 +21,16 @@ struct StorageValue
 
     /// The original value.
     bytes32 original = {};
+
+    evmc_access_status access_status = EVMC_ACCESS_COLD;
 };
 
 /// The state account.
 struct Account
 {
+    /// The maximum allowed nonce value.
+    static constexpr auto NonceMax = std::numeric_limits<uint64_t>::max();
+
     /// The account nonce.
     uint64_t nonce = 0;
 
@@ -37,5 +42,20 @@ struct Account
 
     /// The account code.
     bytes code = {};
+
+    /// The account has been destructed and should be erased at the end of of a transaction.
+    bool destructed = false;
+
+    /// The account should be erased if it is empty at the end of a transaction.
+    /// This flag means the account has been "touched" as defined in EIP-161
+    /// or it is a newly created temporary account.
+    bool erasable = false;
+
+    evmc_access_status access_status = EVMC_ACCESS_COLD;
+
+    [[nodiscard]] bool is_empty() const noexcept
+    {
+        return code.empty() && nonce == 0 && balance == 0;
+    }
 };
 }  // namespace evmone::state
