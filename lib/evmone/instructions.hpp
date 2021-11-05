@@ -774,7 +774,7 @@ inline void swap(ExecutionState& state) noexcept
 template <size_t NumTopics>
 inline evmc_status_code log(ExecutionState& state) noexcept
 {
-    static_assert(NumTopics >= 0 && NumTopics <= 4);
+    static_assert(NumTopics <= 4);
 
     if (state.msg->flags & EVMC_STATIC)
         return EVMC_STATIC_MODE_VIOLATION;
