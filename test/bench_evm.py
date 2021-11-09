@@ -122,7 +122,7 @@ class BenchCase:
     inputs: list
 
 
-def run_case(case: BenchCase, tool: str, repetitions: int = 3):
+def run_case(case: BenchCase, tool: str, repetitions: int):
     print(f"{case.name} ({len(case.inputs)}):")
     results = []
     for input in case.inputs:
@@ -152,6 +152,7 @@ def run_case(case: BenchCase, tool: str, repetitions: int = 3):
 parser = argparse.ArgumentParser()
 parser.add_argument('dir', help="Directory with benchmark files")
 parser.add_argument('-o', dest='output_file', help="Results output file")
+parser.add_argument('-c', dest='repetitions', type=int, default=1, help="Number of benchmark case repetitions")
 args = parser.parse_args()
 
 benchmarks = load_benchmarks(args.dir)
@@ -162,7 +163,7 @@ for b in benchmarks:
 
 results = []
 for b in benchmarks:
-    results += run_case(b, TOOL)
+    results += run_case(b, TOOL, args.repetitions)
 
 identify_tool(TOOL)
 
