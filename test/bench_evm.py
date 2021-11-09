@@ -122,16 +122,21 @@ class BenchCase:
     inputs: list
 
 
-def run_case(case, tool):
-    print(f"{case.name} ({len(case.inputs)})")
+def run_case(case: BenchCase, tool: str, repetitions: int=3):
+    print(f"{case.name} ({len(case.inputs)}):")
     results = []
     for input in case.inputs:
-        t = run_tool(tool, case.code_file, input[1], input[2])
-        print(f"{input[0]}: {t}")
-        if t:
-            results.append({'name': 'geth/' + case.name + '/' + input[0],
-                            'real_time': t.real_time, 'cpu_time': t.cpu_time, 'time_unit': TIME_UNIT,
-                            'gas_used': t.gas_used, 'gas_rate': t.gas_rate()})
+        print(f"  {input[0]} ({repetitions}):")
+        timings = []
+        for r in range(repetitions):
+            t = run_tool(tool, case.code_file, input[1], input[2])
+            print(f"    {r}: {t}")
+            if t:
+                timings.append(t)
+                results.append({'name': 'geth/' + case.name + '/' + input[0],
+                                'real_time': t.real_time, 'cpu_time': t.cpu_time,
+                                'time_unit': TIME_UNIT,
+                                'gas_used': t.gas_used, 'gas_rate': t.gas_rate()})
     return results
 
 
