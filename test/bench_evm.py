@@ -122,21 +122,30 @@ class BenchCase:
     inputs: list
 
 
-def run_case(case: BenchCase, tool: str, repetitions: int=3):
+def run_case(case: BenchCase, tool: str, repetitions: int = 3):
     print(f"{case.name} ({len(case.inputs)}):")
     results = []
     for input in case.inputs:
         print(f"  {input[0]} ({repetitions}):")
+        name = 'geth/' + case.name + '/' + input[0]
         timings = []
         for r in range(repetitions):
             t = run_tool(tool, case.code_file, input[1], input[2])
             print(f"    {r}: {t}")
             if t:
                 timings.append(t)
-                results.append({'name': 'geth/' + case.name + '/' + input[0],
+                results.append({'name': name, 'time_unit': TIME_UNIT,
                                 'real_time': t.real_time, 'cpu_time': t.cpu_time,
-                                'time_unit': TIME_UNIT,
                                 'gas_used': t.gas_used, 'gas_rate': t.gas_rate()})
+        if len(timings) > 0:
+            real_time_mean = sum(t.real_time for t in timings) / len(timings)
+            cpu_time_mean = sum(t.cpu_time for t in timings) / len(timings)
+            gas_used_mean = sum(t.gas_used for t in timings) // len(timings)
+            t_mean = Timings(real_time_mean, cpu_time_mean, gas_used_mean)
+            results.append({'name': name + '_mean', 'run_type': 'aggregate',
+                            'aggregate_name': 'mean', 'time_unit': TIME_UNIT,
+                            'real_time': t_mean.real_time, 'cpu_time': t_mean.cpu_time,
+                            'gas_used': t_mean.gas_used, 'gas_rate': t_mean.gas_rate()})
     return results
 
 
