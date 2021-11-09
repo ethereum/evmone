@@ -5,6 +5,8 @@ import os
 import re
 import subprocess
 import json
+from dataclasses import dataclass
+from typing import Optional
 
 TOOL = '/home/chfast/.local/bin/evm'
 TIME_UNIT = 'us'  # Must match definition in evmone-bench.
@@ -19,9 +21,22 @@ def identify_tool(tool):
         print("UNKNOWN")
 
 
-def run_tool(tool, code_file, input, expected):
+@dataclass
+class Timings:
+    real_time: float
+    cpu_time: float
+    gas_used: int
+
+    def gas_rate(self) -> float:
+        assert TIME_UNIT == 'us'
+        return self.gas_used * 1_000_000 / self.real_time
+
+
+def run_tool(tool: str, code_file: str, input: str, expected: str) -> Optional[Timings]:
     try:
-        r = subprocess.run([tool, '--bench', '--statdump', '--codefile', code_file, '--input', input, 'run'], capture_output=True, check=True, encoding='utf-8')
+        r = subprocess.run(
+            [tool, '--bench', '--statdump', '--codefile', code_file, '--input', input, 'run'],
+            capture_output=True, check=True, encoding='utf-8')
     except OSError as err:
         print(err)
         return
@@ -40,7 +55,11 @@ def run_tool(tool, code_file, input, expected):
         time *= 10 ** 3
     elif unit == 'µ':
         pass
-    return time
+
+    gas_used_m = re.search(r'gas used:\s*([0-9]+)', r.stderr)
+    gas_used = int(gas_used_m.group(1))
+
+    return Timings(time, time, gas_used)  # There is not CPU time so return real time twice.
 
 
 def hexx_to_hex(hexx):
@@ -96,19 +115,24 @@ def load_inputs(file):
     return inputs
 
 
+@dataclass
 class BenchCase:
-    def __init__(self, name, code_file, inputs):
-        self.name = name
-        self.code_file = code_file
-        self.inputs = inputs
+    name: str
+    code_file: str
+    inputs: list
 
 
 def run_case(case, tool):
-    print(case.name)
+    print(f"{case.name} ({len(case.inputs)})")
+    results = []
     for input in case.inputs:
         t = run_tool(tool, case.code_file, input[1], input[2])
         print(f"{input[0]}: {t}")
-        return {'name': 'geth/' + case.name + '/' + input[0], 'real_time': t, 'cpu_time': t, 'time_unit': TIME_UNIT}
+        if t:
+            results.append({'name': 'geth/' + case.name + '/' + input[0],
+                            'real_time': t.real_time, 'cpu_time': t.cpu_time, 'time_unit': TIME_UNIT,
+                            'gas_used': t.gas_used, 'gas_rate': t.gas_rate()})
+    return results
 
 
 parser = argparse.ArgumentParser()
@@ -117,10 +141,14 @@ parser.add_argument('-o', dest='output_file', help="Results output file")
 args = parser.parse_args()
 
 benchmarks = load_benchmarks(args.dir)
+for b in benchmarks:
+    print(f"{b.name}:")
+    for i in b.inputs:
+        print(f"  {i[0]}")
 
 results = []
 for b in benchmarks:
-    results.append(run_case(b, TOOL))
+    results += run_case(b, TOOL)
 
 identify_tool(TOOL)
 
