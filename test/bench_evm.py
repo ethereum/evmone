@@ -4,8 +4,10 @@ import argparse
 import os
 import re
 import subprocess
+import json
 
 TOOL = '/home/chfast/.local/bin/evm'
+TIME_UNIT = 'us'  # Must match definition in evmone-bench.
 
 
 def identify_tool(tool):
@@ -15,19 +17,6 @@ def identify_tool(tool):
         print("geth (evm) {}".format(m.group(1)))
     else:
         print("UNKNOWN")
-
-
-def run_tool_old(tool, code, input, expected):
-    r = subprocess.run([tool, '--bench', '--statdump', '--code', code, '--input', input, 'run'], capture_output=True, check=True, encoding='utf-8')
-    output_hex = re.match(r'0x([0-9a-f]*)', r.stdout).group(1)
-    assert output_hex == expected
-
-    time_m = re.search(r'execution time:\s*([0-9.]+)([µ])s', r.stderr)
-    time = float(time_m.group(1))
-    time_unit = time_m.group(2)
-    if time_unit == 'µ':
-        time /= 10 ** 6
-    print("time: {}".format(time))
 
 
 def run_tool(tool, code_file, input, expected):
@@ -48,9 +37,9 @@ def run_tool(tool, code_file, input, expected):
     time = float(time_m.group(1))
     unit = time_m.group(2)
     if unit == 'm':
-        time /= 10 ** 3
+        time *= 10 ** 3
     elif unit == 'µ':
-        time /= 10 ** 6
+        pass
     return time
 
 
@@ -68,7 +57,7 @@ def hexx_to_hex(hexx):
 
 def load_benchmarks(dir):
     benchmarks = []
-    for (root, _, files) in os.walk(dir, topdown=True):
+    for (root, _, files) in os.walk(dir):
         for file in files:
             if file.endswith('.evm'):
                 inputs_file = root + '/' + file.replace('.evm', '.inputs')
@@ -77,7 +66,8 @@ def load_benchmarks(dir):
                 except FileNotFoundError:
                     continue
                 code_file = root + '/' + file
-                b = BenchCase(code_file.removesuffix('.evm'), code_file, inputs)
+                name = code_file.removeprefix(dir + '/').removesuffix('.evm')
+                b = BenchCase(name, code_file, inputs)
                 benchmarks.append(b)
     return benchmarks
 
@@ -118,21 +108,27 @@ def run_case(case, tool):
     for input in case.inputs:
         t = run_tool(tool, case.code_file, input[1], input[2])
         print(f"{input[0]}: {t}")
+        return {'name': 'geth/' + case.name + '/' + input[0], 'real_time': t, 'cpu_time': t, 'time_unit': TIME_UNIT}
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('dir')
+parser.add_argument('dir', help="Directory with benchmark files")
+parser.add_argument('-o', dest='output_file', help="Results output file")
 args = parser.parse_args()
 
 benchmarks = load_benchmarks(args.dir)
+
+results = []
 for b in benchmarks:
-    run_case(b, TOOL)
+    results.append(run_case(b, TOOL))
 
 identify_tool(TOOL)
 
-# b = BenchCase("weirstrudel", args.dir + "/main/weierstrudel.evm", load_inputs(args.dir + "/main/weierstrudel.inputs"))
-# run_case(b, TOOL)
+if args.output_file:
+    with open(args.output_file, 'w') as f:
+        json.dump({'benchmarks': results}, f, indent=2)
 
+# Unit tests
 assert hexx_to_hex("") == ""
 
 assert hexx_to_hex("(0xca)") == ""
