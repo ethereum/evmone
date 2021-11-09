@@ -85,7 +85,7 @@ def load_benchmarks(dir):
                 except FileNotFoundError:
                     continue
                 code_file = root + '/' + file
-                name = code_file.removeprefix(dir + '/').removesuffix('.evm')
+                name = code_file[len(dir) + 1:-len('.evm')]  # Remove root dir and extension.
                 b = BenchCase(name, code_file, inputs)
                 benchmarks.append(b)
     return benchmarks
