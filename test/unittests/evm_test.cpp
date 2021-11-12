@@ -478,13 +478,12 @@ TEST_P(evm, signextend)
     s += "602052";      // m[32..]
     s += "60406000f3";  // RETURN(0,64)
     execute(49, s);
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    EXPECT_EQ(result.gas_left, 0);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 49);
     ASSERT_EQ(result.output_size, 64);
-    auto a = from_hex("fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe");
-    EXPECT_EQ(bytes(&result.output_data[0], 32), a);
-    auto b = from_hex("0000000000000000000000000000000000000000000000000000000000007ffe");
-    EXPECT_EQ(bytes(&result.output_data[32], 32), b);
+    EXPECT_EQ(hex(bytes(&result.output_data[0], 32)),
+        "fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe");
+    EXPECT_EQ(hex(bytes(&result.output_data[32], 32)),
+        "0000000000000000000000000000000000000000000000000000000000007ffe");
 }
 
 TEST_P(evm, signextend_31)
@@ -492,18 +491,48 @@ TEST_P(evm, signextend_31)
     rev = EVMC_CONSTANTINOPLE;
 
     execute("61010160000360081c601e0b60005260206000f3");
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    EXPECT_EQ(gas_used, 38);
-    ASSERT_EQ(result.output_size, 32);
-    auto a = from_hex("fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe");
-    EXPECT_EQ(bytes(&result.output_data[0], 32), a);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 38);
+    EXPECT_OUTPUT_INT(0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe_u256);
 
     execute("61010160000360081c601f0b60005260206000f3");
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    EXPECT_EQ(gas_used, 38);
-    ASSERT_EQ(result.output_size, 32);
-    a = from_hex("00fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe");
-    EXPECT_EQ(bytes(&result.output_data[0], 32), a);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 38);
+    EXPECT_OUTPUT_INT(0x00fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe_u256);
+}
+
+TEST_P(evm, signextend_fuzzing)
+{
+    const auto signextend_reference = [](const intx::uint256& x, uint64_t ext) noexcept {
+        if (ext < 31)
+        {
+            const auto sign_bit = ext * 8 + 7;
+            const auto sign_mask = uint256{1} << sign_bit;
+            const auto value_mask = sign_mask - 1;
+            const auto is_neg = (x & sign_mask) != 0;
+            return is_neg ? x | ~value_mask : x & value_mask;
+        }
+        return x;
+    };
+
+    const auto code = bytecode{} + calldataload(0) + calldataload(32) + OP_SIGNEXTEND + ret_top();
+
+    for (int b = 0; b <= 0xff; ++b)
+    {
+        uint8_t input[64]{};
+
+        auto g = b;
+        for (size_t i = 0; i < 32; ++i)
+            input[i] = static_cast<uint8_t>(g++);  // Generate SIGNEXTEND base argument.
+
+        for (uint8_t e = 0; e <= 32; ++e)
+        {
+            input[63] = e;
+            execute(code, hex({input, 64}));
+            ASSERT_EQ(output.size(), sizeof(uint256));
+            const auto out = be::unsafe::load<uint256>(output.data());
+            const auto expected = signextend_reference(be::unsafe::load<uint256>(input), e);
+            ASSERT_EQ(out, expected);
+        }
+    }
 }
 
 TEST_P(evm, exp)

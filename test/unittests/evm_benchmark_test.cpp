@@ -83,3 +83,36 @@ TEST_P(evm, jump_around)
     execute(code);
     EXPECT_GAS_USED(EVMC_SUCCESS, int64_t{(1 + 3 + 8) * num_jumps + 1});
 }
+
+TEST_P(evm, signextend_bench)
+{
+    constexpr auto num_instr = 12000;
+
+    constexpr uint8_t byte_indexes[] = {
+        // clang-format off
+        0, 1, 3, 7,
+        8, 10, 12, 15,
+        16, 17, 20, 23,
+        24, 27, 31,
+        // clang-format on
+    };
+    static_assert(std::size(byte_indexes) == 15);
+
+    bytecode code;
+    for (const auto b : byte_indexes)
+        code += push(b);
+    code += calldataload(0);
+    for (size_t i = 0; i < num_instr; ++i)
+    {
+        code += bytecode{static_cast<evmc_opcode>(OP_DUP2 + (i % std::size(byte_indexes)))} +
+                OP_SIGNEXTEND;
+    }
+    code += ret_top();
+    ASSERT_EQ(code.size(), 24041);
+
+    // EXPECT_EQ(hex(code), "");  // Uncomment to get the code dump.
+
+    execute(code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 8 * num_instr + 15 * 3 + 21);
+    EXPECT_OUTPUT_INT(0);
+}

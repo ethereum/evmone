@@ -173,13 +173,31 @@ inline void signextend(ExecutionState& state) noexcept
     const auto ext = state.stack.pop();
     auto& x = state.stack.top();
 
-    if (ext < 31)
+    if (ext < 31)  // For 31 we also don't need to do anything.
     {
-        auto sign_bit = static_cast<int>(ext) * 8 + 7;
-        auto sign_mask = uint256{1} << sign_bit;
-        auto value_mask = sign_mask - 1;
-        auto is_neg = (x & sign_mask) != 0;
-        x = is_neg ? x | ~value_mask : x & value_mask;
+        const auto e = ext[0];  // uint256 -> uint64.
+        const auto sign_word_index =
+            static_cast<size_t>(e / sizeof(e));      // Index of the word with the sign bit.
+        const auto sign_byte_index = e % sizeof(e);  // Index of the sign byte in the sign word.
+        auto& sign_word = x[sign_word_index];
+
+        const auto sign_byte_offset = sign_byte_index * 8;
+        const auto sign_byte = sign_word >> sign_byte_offset;  // Move sign byte to position 0.
+
+        // Sign-extend the "sign" byte and move it to the right position. Value bits are zeros.
+        const auto sext_byte = static_cast<uint64_t>(int64_t{static_cast<int8_t>(sign_byte)});
+        const auto sext = sext_byte << sign_byte_offset;
+
+        const auto sign_mask = ~uint64_t{0} << sign_byte_offset;
+        const auto value = sign_word & ~sign_mask;  // Reset extended bytes.
+        sign_word = sext | value;                   // Combine the result word.
+
+        // Produce bits (all zeros or ones) for extended words. This is done by SAR of
+        // the sign-extended byte. Shift by any value 7-63 would work.
+        const auto sign_ex = static_cast<uint64_t>(static_cast<int64_t>(sext_byte) >> 8);
+
+        for (size_t i = 3; i > sign_word_index; --i)
+            x[i] = sign_ex;  // Clear extended words.
     }
 }
 
