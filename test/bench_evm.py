@@ -149,27 +149,62 @@ def run_case(case: BenchCase, tool: str, repetitions: int):
     return results
 
 
+def bench(args):
+    benchmarks = load_benchmarks(args.dir)
+    for b in benchmarks:
+        print(f"{b.name}:")
+        for i in b.inputs:
+            print(f"  {i[0]}")
+
+    results = []
+    for b in benchmarks:
+        results += run_case(b, TOOL, args.repetitions)
+
+    identify_tool(TOOL)
+
+    if args.output_file:
+        with open(args.output_file, 'w') as f:
+            json.dump({'benchmarks': results}, f, indent=2)
+
+
+def convert(file, prefix):
+    if prefix[-1] != '/':
+        prefix += '/'
+    with open(file) as f:
+        results = json.load(f)['benchmarks']
+        for r in results:
+            name = r['name']
+            if any(name.endswith(suffix) for suffix in ('_mean', '_median', '_stddev', '_cv')):
+                continue
+            elif not name.startswith(prefix):
+                continue
+            name = name[len(prefix):]
+            unit = r['time_unit']
+            assert unit == 'us'
+            time = int(float(r['real_time']) * 1000)
+            iterations = 1  # TODO: output iterations in JSON.
+            gas_rate = r['gas_rate']
+            print(f"Benchmark{name} {iterations} {time} ns/op  {gas_rate} gas/s")
+
+
 parser = argparse.ArgumentParser()
-parser.add_argument('dir', help="Directory with benchmark files")
-parser.add_argument('-o', dest='output_file', help="Results output file")
-parser.add_argument('-c', dest='repetitions', type=int, default=1, help="Number of benchmark case repetitions")
+subparsers = parser.add_subparsers(dest='command', help='Commands')
+
+bench_parser = subparsers.add_parser('bench', help='Benchmark EVM implementation')
+bench_parser.add_argument('dir', help="Directory with benchmark files")
+bench_parser.add_argument('-o', dest='output_file', help="Results output file")
+bench_parser.add_argument('-c', dest='repetitions', type=int, default=1, help="Number of benchmark case repetitions")
+
+convert_parser = subparsers.add_parser('convert', help='Convert between benchmark result format')
+convert_parser.add_argument('file')
+convert_parser.add_argument('--prefix', required=True, help='The benchmark name prefix to filter out')
+
 args = parser.parse_args()
 
-benchmarks = load_benchmarks(args.dir)
-for b in benchmarks:
-    print(f"{b.name}:")
-    for i in b.inputs:
-        print(f"  {i[0]}")
-
-results = []
-for b in benchmarks:
-    results += run_case(b, TOOL, args.repetitions)
-
-identify_tool(TOOL)
-
-if args.output_file:
-    with open(args.output_file, 'w') as f:
-        json.dump({'benchmarks': results}, f, indent=2)
+if args.command == 'bench':
+    bench(args)
+elif args.command == 'convert':
+    convert(args.file, args.prefix)
 
 # Unit tests
 assert hexx_to_hex("") == ""
