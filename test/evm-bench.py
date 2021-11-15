@@ -12,7 +12,6 @@ import json
 from dataclasses import dataclass
 from typing import Optional
 
-TOOL = '/home/chfast/.local/bin/evm'
 TIME_UNIT = 'us'  # Must match definition in evmone-bench.
 
 
@@ -155,8 +154,10 @@ def run_case(case: BenchCase, tool: str, repetitions: int):
     return results
 
 
-def bench(args):
-    benchmarks = load_benchmarks(args.dir)
+def bench(tool, benchmark_suite_dir, repetitions, output_file):
+    identify_tool(tool)
+
+    benchmarks = load_benchmarks(benchmark_suite_dir)
     for b in benchmarks:
         print(f"{b.name}:")
         for i in b.inputs:
@@ -164,12 +165,10 @@ def bench(args):
 
     results = []
     for b in benchmarks:
-        results += run_case(b, TOOL, args.repetitions)
+        results += run_case(b, tool, repetitions)
 
-    identify_tool(TOOL)
-
-    if args.output_file:
-        with open(args.output_file, 'w') as f:
+    if output_file:
+        with open(output_file, 'w') as f:
             json.dump({'benchmarks': results}, f, indent=2)
 
 
@@ -206,8 +205,8 @@ def plot(files):
     width = 0.35  # the width of the bars
 
     fig, ax = plt.subplots()
-    rects1 = ax.boxplot([1,2,3,4])
-    rects2 = ax.boxplot([0,2,3,4])
+    rects1 = ax.boxplot([1, 2, 3, 4])
+    rects2 = ax.boxplot([0, 2, 3, 4])
     # rects1 = ax.bar(x - width/2, men_means, width, label='geth')
     # rects2 = ax.bar(x + width/2, women_means, width, label='evmone')
 
@@ -233,6 +232,7 @@ parser = argparse.ArgumentParser()
 subparsers = parser.add_subparsers(dest='command', help='Commands')
 
 bench_parser = subparsers.add_parser('bench', help='Benchmark EVM implementation')
+bench_parser.add_argument('tool', help="The EVM CLI tool to be used for benchmarks")
 bench_parser.add_argument('dir', help="Directory with benchmark files")
 bench_parser.add_argument('-o', dest='output_file', help="Results output file")
 bench_parser.add_argument('-c', dest='repetitions', type=int, default=1, help="Number of benchmark case repetitions")
@@ -247,7 +247,7 @@ plot_parser.add_argument('file', nargs='+')
 args = parser.parse_args()
 
 if args.command == 'bench':
-    bench(args)
+    bench(args.tool, args.dir, args.repetitions, args.output_file)
 elif args.command == 'convert':
     convert(args.file, args.prefix)
 elif args.command == 'plot':
