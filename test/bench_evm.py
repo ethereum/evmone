@@ -187,6 +187,41 @@ def convert(file, prefix):
             print(f"Benchmark{name} {iterations} {time} ns/op  {gas_rate} gas/s")
 
 
+def plot(files):
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    labels = ['sha1', 'blake2b']
+    men_means = [20, 34]
+    women_means = [25, 32]
+
+    x = np.arange(len(labels))  # the label locations
+    width = 0.35  # the width of the bars
+
+    fig, ax = plt.subplots()
+    rects1 = ax.boxplot([1,2,3,4])
+    rects2 = ax.boxplot([0,2,3,4])
+    # rects1 = ax.bar(x - width/2, men_means, width, label='geth')
+    # rects2 = ax.bar(x + width/2, women_means, width, label='evmone')
+
+    # Add some text for labels, title and custom x-axis tick labels, etc.
+    # ax.set_ylabel('Scores')
+    # ax.set_title('Scores by group and gender')
+    # ax.set_xticks(x)
+    # ax.set_xticklabels(labels)
+    # ax.legend()
+
+    # ax.bar_label(rects1, padding=3)
+    # ax.bar_label(rects2, padding=3)
+
+    # fig.tight_layout()
+
+    plt.show()
+
+    for file in files:
+        print(file)
+
+
 parser = argparse.ArgumentParser()
 subparsers = parser.add_subparsers(dest='command', help='Commands')
 
@@ -199,12 +234,17 @@ convert_parser = subparsers.add_parser('convert', help='Convert between benchmar
 convert_parser.add_argument('file')
 convert_parser.add_argument('--prefix', required=True, help='The benchmark name prefix to filter out')
 
+plot_parser = subparsers.add_parser('plot', help='Plot benchmark results')
+plot_parser.add_argument('file', nargs='+')
+
 args = parser.parse_args()
 
 if args.command == 'bench':
     bench(args)
 elif args.command == 'convert':
     convert(args.file, args.prefix)
+elif args.command == 'plot':
+    plot(args.file)
 
 # Unit tests
 assert hexx_to_hex("") == ""
