@@ -203,7 +203,7 @@ jobs:
     - run:
         name: "Check spelling"
         command: |
-          codespell --quiet-level=4
+          codespell --quiet-level=4 --skip=.git
 
   release-linux:
     executor: linux-gcc-latest
