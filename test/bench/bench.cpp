@@ -55,6 +55,7 @@ struct BenchmarkCase
 };
 
 
+constexpr auto runtime_code_extension = ".bin-runtime";
 constexpr auto inputs_extension = ".inputs";
 
 /// Loads the benchmark case's inputs from the inputs file at the given path.
@@ -127,7 +128,7 @@ std::vector<BenchmarkCase> load_benchmarks_from_dir(
     {
         if (e.is_directory())
             subdirs.emplace_back(e);
-        else if (e.path().extension() != inputs_extension)
+        else if (e.path().extension() == runtime_code_extension)
             code_files.emplace_back(e);
     }
 
