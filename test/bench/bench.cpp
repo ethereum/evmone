@@ -106,11 +106,6 @@ BenchmarkCase load_benchmark(const fs::path& path, const std::string& name_prefi
 
     std::ifstream file{path};
     std::string code_hexx{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
-
-    code_hexx.erase(
-        std::remove_if(code_hexx.begin(), code_hexx.end(), [](auto x) { return std::isspace(x); }),
-        code_hexx.end());
-
     BenchmarkCase b{name, from_hexx(code_hexx)};
 
     auto inputs_path = path;
