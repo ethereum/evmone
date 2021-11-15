@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+# evmone: Fast Ethereum Virtual Machine implementation
+# Copyright 2021 The evmone Authors.
+# SPDX-License-Identifier: Apache-2.0
+
 import argparse
 import os
 import re
@@ -33,6 +37,8 @@ class Timings:
 
 
 def run_tool(tool: str, code_file: str, input: str, expected: str) -> Optional[Timings]:
+    # TODO: Big input arguments will not work. They have to be dumped to a file or preferably
+    #       kept as separate files in the repo.
     try:
         r = subprocess.run(
             [tool, '--bench', '--statdump', '--codefile', code_file, '--input', input, 'run'],
@@ -188,6 +194,7 @@ def convert(file, prefix):
 
 
 def plot(files):
+    # TODO: This is incomplete, just random example dump.
     import matplotlib.pyplot as plt
     import numpy as np
 
