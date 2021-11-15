@@ -113,9 +113,6 @@ BenchmarkCase load_benchmark(const fs::path& path, const std::string& name_prefi
     if (fs::exists(inputs_path))
         b.inputs = load_inputs(inputs_path);
 
-    if (b.inputs.empty())  // Add at least one input for simpler registration logic.
-        b.inputs.emplace_back("", bytes{}, bytes{});
-
     return b;
 }
 
