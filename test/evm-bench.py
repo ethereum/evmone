@@ -12,6 +12,8 @@ import json
 from dataclasses import dataclass
 from typing import Optional
 
+RUNTIME_CODE_EXTENSION = '.bin-runtime'
+INPUTS_EXTENSION = '.inputs'
 TIME_UNIT = 'us'  # Must match definition in evmone-bench.
 
 
@@ -83,14 +85,14 @@ def load_benchmarks(dir):
     benchmarks = []
     for (root, _, files) in os.walk(dir):
         for file in files:
-            if file.endswith('.evm'):
-                inputs_file = root + '/' + file.replace('.evm', '.inputs')
+            if file.endswith(RUNTIME_CODE_EXTENSION):
+                inputs_file = root + '/' + file.replace(RUNTIME_CODE_EXTENSION, INPUTS_EXTENSION)
                 try:
                     inputs = load_inputs(inputs_file)
                 except FileNotFoundError:
                     continue
                 code_file = root + '/' + file
-                name = code_file[len(dir) + 1:-len('.evm')]  # Remove root dir and extension.
+                name = code_file[len(dir) + 1:-len(RUNTIME_CODE_EXTENSION)]  # Remove root dir and extension.
                 b = BenchCase(name, code_file, inputs)
                 benchmarks.append(b)
     return benchmarks
