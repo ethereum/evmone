@@ -132,6 +132,7 @@ def run_case(case: BenchCase, tool: str, repetitions: int):
     results = []
     for input in case.inputs:
         print(f"  {input[0]} ({repetitions}):")
+        # TODO: Hardcoded name.
         name = 'geth/' + case.name + '/' + input[0]
         timings = []
         for r in range(repetitions):
@@ -158,10 +159,6 @@ def bench(tool, benchmark_suite_dir, repetitions, output_file):
     identify_tool(tool)
 
     benchmarks = load_benchmarks(benchmark_suite_dir)
-    for b in benchmarks:
-        print(f"{b.name}:")
-        for i in b.inputs:
-            print(f"  {i[0]}")
 
     results = []
     for b in benchmarks:
@@ -170,6 +167,14 @@ def bench(tool, benchmark_suite_dir, repetitions, output_file):
     if output_file:
         with open(output_file, 'w') as f:
             json.dump({'benchmarks': results}, f, indent=2)
+
+
+def benchmark_suite_list(benchmark_suite_dir):
+    benchmarks = load_benchmarks(benchmark_suite_dir)
+    for b in benchmarks:
+        print(f"{b.name}:")
+        for i in b.inputs:
+            print(f"  {i[0]}")
 
 
 def convert(file, prefix):
@@ -231,11 +236,16 @@ def plot(files):
 parser = argparse.ArgumentParser()
 subparsers = parser.add_subparsers(dest='command', help='Commands')
 
+dir_arg_definition = dict(help="Directory with benchmark files")
+
 bench_parser = subparsers.add_parser('bench', help='Benchmark EVM implementation')
 bench_parser.add_argument('tool', help="The EVM CLI tool to be used for benchmarks")
-bench_parser.add_argument('dir', help="Directory with benchmark files")
+bench_parser.add_argument('dir', **dir_arg_definition)
 bench_parser.add_argument('-o', dest='output_file', help="Results output file")
 bench_parser.add_argument('-c', dest='repetitions', type=int, default=1, help="Number of benchmark case repetitions")
+
+list_parser = subparsers.add_parser('list', help="List benchmark cases")
+list_parser.add_argument('dir', **dir_arg_definition)
 
 convert_parser = subparsers.add_parser('convert', help='Convert between benchmark result format')
 convert_parser.add_argument('file')
@@ -248,6 +258,8 @@ args = parser.parse_args()
 
 if args.command == 'bench':
     bench(args.tool, args.dir, args.repetitions, args.output_file)
+elif args.command == 'list':
+    benchmark_suite_list(args.dir)
 elif args.command == 'convert':
     convert(args.file, args.prefix)
 elif args.command == 'plot':
