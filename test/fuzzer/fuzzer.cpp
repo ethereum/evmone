@@ -182,7 +182,7 @@ inline int expand_block_number(uint8_t x) noexcept
 
 inline int64_t expand_block_timestamp(uint8_t x) noexcept
 {
-    // TODO: If timestamp is -1 Aleth and evmone disagrees how to covert it to uint256.
+    // TODO: If timestamp is -1 Aleth and evmone disagrees how to convert it to uint256.
     return x < 255 ? int64_t{16777619} * x : std::numeric_limits<int64_t>::max();
 }
 

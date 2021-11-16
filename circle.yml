@@ -3,19 +3,19 @@ version: 2.1
 executors:
   linux-gcc-latest:
     docker:
-      - image: ethereum/cpp-build-env:16-gcc-10
+      - image: ethereum/cpp-build-env:17-gcc-11
   linux-gcc-min:
     docker:
       - image: ethereum/cpp-build-env:15-gcc-8
   linux-clang-latest:
     docker:
-      - image: ethereum/cpp-build-env:16-clang-11
+      - image: ethereum/cpp-build-env:17-clang-13
   linux-clang-min:
     docker:
       - image: ethereum/cpp-build-env:15-clang-9
   macos:
     macos:
-      xcode: 12.5.1
+      xcode: 13.2.0
 
 commands:
   build_silkworm:
@@ -191,7 +191,7 @@ jobs:
 
   lint:
     docker:
-    - image: ethereum/cpp-build-env:14-lint
+    - image: ethereum/cpp-build-env:17-lint
     steps:
     - checkout
     - run:
@@ -203,7 +203,7 @@ jobs:
     - run:
         name: "Check spelling"
         command: |
-          codespell --quiet-level=4
+          codespell --quiet-level=4 --skip=.git
 
   release-linux:
     executor: linux-gcc-latest
@@ -313,29 +313,32 @@ jobs:
 
   gcc-32bit:
     docker:
-      - image: ethereum/cpp-build-env:15-gcc-10-multilib
+      - image: ethereum/cpp-build-env:17-gcc-11-multilib
     environment:
       TOOLCHAIN: cxx17-32bit
     steps:
       - build
       - test
 
-  clang-latest-ubsan:
+  clang-latest-sanitizers:
     executor: linux-clang-latest
     environment:
-      CMAKE_OPTIONS: -DSANITIZE=undefined,implicit-conversion,nullability
+      CMAKE_OPTIONS: -DBUILD_SHARED_LIBS=NO -DSANITIZE=address,undefined,shift-exponent,implicit-conversion,nullability
       UBSAN_OPTIONS: halt_on_error=1
     steps:
       - build
       - test
 
   clang-latest-coverage:
-    executor: linux-clang-latest
+    docker:
+      # TODO: clang-13 is broken.
+      - image: ethereum/cpp-build-env:17-clang-12
     environment:
       BUILD_TYPE: Coverage
       TESTS_FILTER: unittests|integration
     steps:
       - build
+      # TODO: use `test` command
       - run:
           name: "Run unit tests"
           working_directory: ~/build
@@ -400,7 +403,7 @@ workflows:
       - clang-min
       - gcc-latest-coverage
       - gcc-latest-memcheck
-      - clang-latest-ubsan
+      - clang-latest-sanitizers
       - clang-latest-coverage
       - macos-asan
       - gcc-32bit
