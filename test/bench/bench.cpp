@@ -55,6 +55,7 @@ struct BenchmarkCase
 };
 
 
+constexpr auto runtime_code_extension = ".bin-runtime";
 constexpr auto inputs_extension = ".inputs";
 
 /// Loads the benchmark case's inputs from the inputs file at the given path.
@@ -106,20 +107,12 @@ BenchmarkCase load_benchmark(const fs::path& path, const std::string& name_prefi
 
     std::ifstream file{path};
     std::string code_hexx{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
-
-    code_hexx.erase(
-        std::remove_if(code_hexx.begin(), code_hexx.end(), [](auto x) { return std::isspace(x); }),
-        code_hexx.end());
-
     BenchmarkCase b{name, from_hexx(code_hexx)};
 
     auto inputs_path = path;
     inputs_path.replace_extension(inputs_extension);
     if (fs::exists(inputs_path))
         b.inputs = load_inputs(inputs_path);
-
-    if (b.inputs.empty())  // Add at least one input for simpler registration logic.
-        b.inputs.emplace_back("", bytes{}, bytes{});
 
     return b;
 }
@@ -129,22 +122,23 @@ std::vector<BenchmarkCase> load_benchmarks_from_dir(
     const fs::path& path, const std::string& name_prefix = {})
 {
     std::vector<fs::path> subdirs;
-    std::vector<fs::path> files;
+    std::vector<fs::path> code_files;
 
     for (auto& e : fs::directory_iterator{path})
     {
         if (e.is_directory())
             subdirs.emplace_back(e);
-        else if (e.path().extension() != inputs_extension)
-            files.emplace_back(e);
+        else if (e.path().extension() == runtime_code_extension)
+            code_files.emplace_back(e);
     }
 
     std::sort(std::begin(subdirs), std::end(subdirs));
-    std::sort(std::begin(files), std::end(files));
+    std::sort(std::begin(code_files), std::end(code_files));
 
     std::vector<BenchmarkCase> benchmark_cases;
 
-    for (const auto& f : files)
+    benchmark_cases.reserve(std::size(code_files));
+    for (const auto& f : code_files)
         benchmark_cases.emplace_back(load_benchmark(f, name_prefix));
 
     for (const auto& d : subdirs)
