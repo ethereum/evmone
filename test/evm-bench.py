@@ -199,7 +199,7 @@ def convert(file, prefix):
             print(f"Benchmark{name} {iterations} {time} ns/op  {gas_rate} gas/s")
 
 
-def convert_suite(suite_dir, out_dir, format):
+def convert_suite_json(suite_dir, out_dir, format):
     GAS_LIMIT = 10 ** 9
 
     benchmarks = load_benchmarks(suite_dir)
@@ -262,7 +262,77 @@ def convert_suite(suite_dir, out_dir, format):
         }
     }}
 
-    print(json.dumps(j, indent=2))
+    if format == 'json':
+        print(json.dumps(j, indent=2))
+    elif format == 'yaml':
+        import yaml
+        print(yaml.dump(j))
+    else:
+        raise Exception("invalid format: " + format)
+
+
+def convert_suite_yaml(suite_dir, out_dir):
+    import yaml
+    GAS_LIMIT = 10 ** 9
+    ORIGIN = '0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b'
+    ORIGIN_PRIVKEY = '0x45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8'
+    REVISION = 'London'
+
+    benchmarks = load_benchmarks(suite_dir)
+    for b in benchmarks:
+
+        with open(b.code_file) as f:
+            code = hexx_to_hex(f.read())
+
+        datas = []
+        expect = []
+        for i, input in enumerate(b.inputs):
+            label, data, _ = input
+            datas.append(':label ' + label + ' 0x' + data)
+            expect.append({
+                'indexes': {'data': ':label ' + label, 'gas': -1, 'value': -1},
+                'network': [REVISION],
+                'result': {}
+            })
+
+        j = {b.name: {
+            "env": {
+                "currentBaseFee": 1,
+                "currentCoinbase": ORIGIN,
+                "currentDifficulty": 1,
+                "currentGasLimit": GAS_LIMIT,
+                "currentNumber": 1,
+                "currentTimestamp": 1638453897,
+                "previousHash": "0x5e20a0453cecd065ea59c37ac63e079ee08998b6045136a8ce6635c7912ec0b6",
+            },
+            'pre': {
+                '0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b': {
+                    'balance': GAS_LIMIT,
+                    'code': '',
+                    'nonce': 0,
+                    'storage': {}
+                },
+                '0xbe7c43a580000000000000000000000000000001': {
+                    'balance': 0,
+                    'code': "0x" + code,
+                    'nonce': 0,
+                    'storage': {}
+                },
+            },
+            'transaction': {
+                "to": "0xbe7c43a580000000000000000000000000000001",
+                'data': datas,
+                'gasLimit': [GAS_LIMIT],
+                "value": [0],
+                'nonce': 0,
+                'gasPrice': 1,
+                "secretKey": ORIGIN_PRIVKEY,
+            },
+            'expect': expect
+        }}
+
+        with open(out_dir + '/' + b.name + '.yml', 'w') as f:
+            yaml.dump(j, f, sort_keys=False)
 
 
 def plot(files):
@@ -322,7 +392,6 @@ convert_parser.add_argument('--prefix', required=True, help='The benchmark name 
 convert_suite_parser = subparsers.add_parser('convert-suite', help='Convert benchmark suite test cases to new format')
 convert_suite_parser.add_argument('suite_dir')
 convert_suite_parser.add_argument('out_dir')
-convert_suite_parser.add_argument('--format', required=True)
 
 plot_parser = subparsers.add_parser('plot', help='Plot benchmark results')
 plot_parser.add_argument('file', nargs='+')
@@ -336,7 +405,7 @@ elif args.command == 'list':
 elif args.command == 'convert':
     convert(args.file, args.prefix)
 elif args.command == 'convert-suite':
-    convert_suite(args.suite_dir, args.out_dir, args.format)
+    convert_suite_yaml(args.suite_dir, args.out_dir)
 elif args.command == 'plot':
     plot(args.file)
 
