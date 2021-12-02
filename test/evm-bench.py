@@ -199,6 +199,72 @@ def convert(file, prefix):
             print(f"Benchmark{name} {iterations} {time} ns/op  {gas_rate} gas/s")
 
 
+def convert_suite(suite_dir, out_dir, format):
+    GAS_LIMIT = 10 ** 9
+
+    benchmarks = load_benchmarks(suite_dir)
+    b = benchmarks[0]
+
+    with open(b.code_file) as f:
+        code = hexx_to_hex(f.read())
+
+    labels = {}
+    datas = []
+    posts = []
+    for i, input in enumerate(b.inputs):
+        labels[str(i)] = input[0]
+        datas.append(input[1])
+        posts.append({
+            "indexes": {"data": i, "gas": 0, "value": 0},
+            "output": "0x" + input[2],
+            "hash": "0x000000000000000000000000000000000000000000000000000000000000000" + hex(i)[-1],
+            "logs": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347"
+        })
+
+    j = {b.name: {
+        '_info': {
+            'labels': labels,
+        },
+        "env": {
+            "currentCoinbase": "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
+            "currentDifficulty": "0x01",
+            "currentBaseFee": "0x01",
+            "currentNumber": "0x01",
+            "currentTimestamp": "0xffff",
+            "previousHash": "0x5e20a0453cecd065ea59c37ac63e079ee08998b6045136a8ce6635c7912ec0b6",
+            "currentGasLimit": hex(GAS_LIMIT),
+        },
+        'transaction': {
+            'data': datas,
+            'gasPrice': "0x01",
+            'gasLimit': [hex(GAS_LIMIT)],
+            'nonce': "0x00",
+            "secretKey": "0x45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8",
+            "to": "0xbe7c43a580000000000000000000000000000001",
+            "value": ["0x00"]
+        },
+        'pre': {
+            '0xbe7c43a580000000000000000000000000000001': {
+                'balance': "0x00",
+                'code': "0x" + code,
+                'nonce': "0x00",
+                'storage': {}
+            },
+            '0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b': {
+                'balance': hex(GAS_LIMIT),
+                'code': "0x",
+                'nonce': "0x00",
+                'storage': {}
+            }
+        },
+        'post': {
+            "London": posts
+        }
+    }}
+
+    print(json.dumps(j, indent=2))
+
+
 def plot(files):
     # TODO: This is incomplete, just random example dump.
     import matplotlib.pyplot as plt
@@ -253,6 +319,11 @@ convert_parser = subparsers.add_parser('convert', help='Convert between benchmar
 convert_parser.add_argument('file')
 convert_parser.add_argument('--prefix', required=True, help='The benchmark name prefix to filter out')
 
+convert_suite_parser = subparsers.add_parser('convert-suite', help='Convert benchmark suite test cases to new format')
+convert_suite_parser.add_argument('suite_dir')
+convert_suite_parser.add_argument('out_dir')
+convert_suite_parser.add_argument('--format', required=True)
+
 plot_parser = subparsers.add_parser('plot', help='Plot benchmark results')
 plot_parser.add_argument('file', nargs='+')
 
@@ -264,6 +335,8 @@ elif args.command == 'list':
     benchmark_suite_list(args.dir)
 elif args.command == 'convert':
     convert(args.file, args.prefix)
+elif args.command == 'convert-suite':
+    convert_suite(args.suite_dir, args.out_dir, args.format)
 elif args.command == 'plot':
     plot(args.file)
 
