@@ -78,6 +78,8 @@ def hexx_to_hex(hexx):
         end = m.end() + pos_correction
         hex = hex[:start] + rep + hex[end:]
         pos_correction += len(rep) - (end - start)
+    hex = hex.replace(' ', '')
+    hex = hex.replace('\n', '')
     return hex
 
 
