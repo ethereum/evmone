@@ -4,16 +4,16 @@
 
 hunter_config(
     intx
-    VERSION 0.6.0
-    URL https://github.com/chfast/intx/archive/v0.6.0.tar.gz
-    SHA1 507827495de07412863349bc8c2a8704c7b0e5d4
+    VERSION 0.7.0
+    URL https://github.com/chfast/intx/archive/v0.7.0.tar.gz
+    SHA1 d5bacebd6b66f7f3b22c2f7db43696f98951e8c3
 )
 
 hunter_config(
     ethash
-    VERSION 0.7.0
-    URL https://github.com/chfast/ethash/archive/refs/tags/v0.7.0.tar.gz
-    SHA1 83768c203c98dff1829f038fde98a7226e1edd98
+    VERSION 0.8.0
+    URL https://github.com/chfast/ethash/archive/v0.8.0.tar.gz
+    SHA1 41fd440f70b6a8dfc3fd29b20f471dcbd1345ad0
     CMAKE_ARGS -DETHASH_BUILD_ETHASH=OFF -DETHASH_BUILD_TESTS=OFF
 )
 
