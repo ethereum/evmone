@@ -1,21 +1,45 @@
 version: 2.1
 
 executors:
+  lint:
+    docker:
+      - image: ethereum/cpp-build-env:17-lint
+    resource_class: small
+    environment:
+      CMAKE_BUILD_PARALLEL_LEVEL: 2
   linux-gcc-latest:
     docker:
       - image: ethereum/cpp-build-env:17-gcc-11
+    environment:
+      CMAKE_BUILD_PARALLEL_LEVEL: 4
+  consensus-tests:
+    docker:
+      - image: ethereum/cpp-build-env:17-gcc-11
+    resource_class: xlarge
+    environment:
+      CMAKE_BUILD_PARALLEL_LEVEL: 8
   linux-gcc-min:
     docker:
       - image: ethereum/cpp-build-env:15-gcc-8
+    resource_class: small
+    environment:
+      CMAKE_BUILD_PARALLEL_LEVEL: 2
   linux-clang-latest:
     docker:
       - image: ethereum/cpp-build-env:17-clang-13
+    environment:
+      CMAKE_BUILD_PARALLEL_LEVEL: 4
   linux-clang-min:
     docker:
       - image: ethereum/cpp-build-env:15-clang-9
+    resource_class: small
+    environment:
+      CMAKE_BUILD_PARALLEL_LEVEL: 2
   macos:
     macos:
       xcode: 13.2.0
+    environment:
+      CMAKE_BUILD_PARALLEL_LEVEL: 2
 
 commands:
   build_silkworm:
@@ -49,19 +73,19 @@ commands:
             [ "$SILKWORM_BUILD" = true ] || exit 0
             git clone --no-checkout --single-branch https://github.com/torquem-ch/silkworm.git . --branch <<parameters.branch>>
             git checkout <<parameters.commit>>
-            git submodule update --init --recursive --depth=1 --progress
+            git submodule update --init --recursive --progress
       - run:
           name: "Configure Silkworm"
           working_directory: ~/silkworm
           command: |
             [ "$SILKWORM_BUILD" = true ] || exit 0
-            cmake -S src -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=$(pwd) -DSILKWORM_CORE_ONLY=ON
+            cmake -S src -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=$(pwd)
       - run:
           name: "Build Silkworm cmd/consensus"
           working_directory: ~/silkworm
           command: |
             [ "$SILKWORM_BUILD" = true ] || exit 0
-            cmake --build build --parallel --target consensus
+            cmake --build build --target consensus
       - save_cache:
           name: "Save Silkworm cache"
           key: *silkworm-cache-key
@@ -95,6 +119,7 @@ commands:
             $CC --version
             $CXX --version
             cmake --version
+            echo CMAKE_BUILD_PARALLEL_LEVEL: $CMAKE_BUILD_PARALLEL_LEVEL
 
             # Create the toolchain.info file for cache key.
             echo $TOOLCHAIN >> toolchain.info
@@ -117,7 +142,7 @@ commands:
             - ~/.hunter/_Base/Cache
       - run:
           name: "Build"
-          command: cmake --build ~/build -- -j4
+          command: cmake --build ~/build
       - run:
           name: "Install"
           command: cmake --build ~/build --target install
@@ -128,7 +153,7 @@ commands:
     - run:
         name: "Test"
         working_directory: ~/build
-        command: ctest -R ${TESTS_FILTER:-'.*'} -j4 --schedule-random --output-on-failure
+        command: ctest -R ${TESTS_FILTER:-'.*'} --schedule-random --output-on-failure --parallel $CMAKE_BUILD_PARALLEL_LEVEL
 
   collect_coverage_gcc:
     description: "Collect coverage data (GCC)"
@@ -139,8 +164,11 @@ commands:
           command: |
             lcov --capture --directory . --output-file coverage.lcov --exclude='/usr/*' --exclude="$HOME/.hunter/*" --exclude="$PWD/_deps/*"
             lcov --zerocounters --directory .
-            rm -rf coverage
-            genhtml coverage.lcov --output-directory coverage --title $CIRCLE_PROJECT_REPONAME
+            rm -rf ~/coverage
+            genhtml coverage.lcov --output-directory ~/coverage --title $CIRCLE_PROJECT_REPONAME
+      - store_artifacts:
+          path: ~/coverage
+          destination: coverage
 
   upload_coverage:
     description: "Upload coverage data"
@@ -190,8 +218,7 @@ commands:
 jobs:
 
   lint:
-    docker:
-    - image: ethereum/cpp-build-env:17-lint
+    executor: lint
     steps:
     - checkout
     - run:
@@ -246,26 +273,26 @@ jobs:
             ghr -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME -n "$name" $prerelease_flag $CIRCLE_TAG ~/package
 
   consensus-tests:
-    executor: linux-gcc-latest
+    executor: consensus-tests
     environment:
       BUILD_TYPE: Coverage
-      CMAKE_OPTIONS: -DEVMONE_TESTING=OFF
+      CMAKE_OPTIONS: -DEVMONE_TESTING=OFF -DCMAKE_CXX_FLAGS=-Og
     steps:
       - build
       - build_silkworm:
-          commit: b37cd9e21f654aa6b2dd2cada55f9058c7ec3ac5
+          commit: c75b07d26f19d1ce8439f9e73612cecf70dccaea
       - download_consensus_tests:
-          rev: 9.0.5
+          rev: v10.2
       - run:
           name: "Silkworm-driven consensus tests (Advanced)"
           working_directory: ~/build
           no_output_timeout: 20m
-          command: ~/silkworm/consensus --evm lib/libevmone.so,O=2 --tests ~/tests
+          command: ~/silkworm/consensus --evm lib/libevmone.so,O=2 --tests ~/tests --threads $CMAKE_BUILD_PARALLEL_LEVEL
       - run:
           name: "Silkworm-driven consensus tests (Baseline)"
           working_directory: ~/build
           no_output_timeout: 20m
-          command: ~/silkworm/consensus --evm lib/libevmone.so,O=0 --tests ~/tests
+          command: ~/silkworm/consensus --evm lib/libevmone.so,O=0 --tests ~/tests --threads $CMAKE_BUILD_PARALLEL_LEVEL
       - collect_coverage_gcc
       - upload_coverage:
           flags: consensus
@@ -314,7 +341,9 @@ jobs:
   gcc-32bit:
     docker:
       - image: ethereum/cpp-build-env:17-gcc-11-multilib
+    resource_class: small
     environment:
+      CMAKE_BUILD_PARALLEL_LEVEL: 2
       TOOLCHAIN: cxx17-32bit
     steps:
       - build
@@ -333,7 +362,9 @@ jobs:
     docker:
       # TODO: clang-13 is broken.
       - image: ethereum/cpp-build-env:17-clang-12
+    resource_class: small
     environment:
+      CMAKE_BUILD_PARALLEL_LEVEL: 2
       BUILD_TYPE: Coverage
       TESTS_FILTER: unittests|integration
     steps:
@@ -348,13 +379,16 @@ jobs:
           name: "Coverage report"
           working_directory: ~/build
           command: |
+            ARGS='lib/libevmone.so -Xdemangler llvm-cxxfilt -instr-profile=evmone.profdata -ignore-filename-regex=include/evmc'
+            SHOW_ARGS='-format=html -show-branches=count -show-regions -show-expansions'
+            
             mkdir ~/coverage
             llvm-profdata merge *.profraw -o evmone.profdata
-            llvm-cov show lib/libevmone.so bin/evmone-unittests -Xdemangler llvm-cxxfilt -instr-profile=evmone.profdata -ignore-filename-regex=include/evmc -region-coverage-lt=100 -format=html > ~/coverage/missing.html
-            llvm-cov show lib/libevmone.so bin/evmone-unittests -Xdemangler llvm-cxxfilt -instr-profile=evmone.profdata -ignore-filename-regex=include/evmc -format=html > ~/coverage/full.html
+            llvm-cov show $ARGS $SHOW_ARGS > ~/coverage/full.html
+            llvm-cov show $ARGS $SHOW_ARGS -region-coverage-lt=100 > ~/coverage/missing.html
 
-            llvm-cov report lib/libevmone.so bin/evmone-unittests -Xdemangler llvm-cxxfilt -instr-profile=evmone.profdata -ignore-filename-regex=include/evmc > ~/coverage/report.txt
-            llvm-cov report lib/libevmone.so bin/evmone-unittests -Xdemangler llvm-cxxfilt -instr-profile=evmone.profdata -ignore-filename-regex=include/evmc -use-color
+            llvm-cov report $ARGS > ~/coverage/report.txt
+            llvm-cov report $ARGS -use-color
       - store_artifacts:
           path: ~/coverage
           destination: coverage
