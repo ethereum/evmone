@@ -20,10 +20,10 @@ void dump(const evmone::AdvancedCodeAnalysis& analysis)
     for (size_t i = 0; i < analysis.instrs.size(); ++i)
     {
         auto& instr = analysis.instrs[i];
-        auto c = static_cast<uint8_t>((size_t)instr.fn);
+        auto c = static_cast<uint8_t>(reinterpret_cast<uintptr_t>(instr.fn));
         auto name = names[c];
         auto gas_cost = metrics[c].gas_cost;
-        if (!name)
+        if (name == nullptr)
             name = "XX";
 
         if (c == OPX_BEGINBLOCK)

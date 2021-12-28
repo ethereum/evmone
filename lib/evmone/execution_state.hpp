@@ -31,7 +31,7 @@ struct Stack
     static constexpr auto limit = 1024;
 
     /// The pointer to the top item, or below the stack bottom if stack is empty.
-    intx::uint256* top_item;
+    intx::uint256* top_item = nullptr;
 
     /// The storage allocated for maximum possible number of items.
     /// This is also the pointer to the bottom item.
@@ -45,9 +45,11 @@ struct Stack
     [[nodiscard]] int size() const noexcept { return static_cast<int>(top_item + 1 - storage); }
 
     /// Returns the reference to the top item.
+    // NOLINTNEXTLINE(readability-make-member-function-const)
     [[nodiscard]] intx::uint256& top() noexcept { return *top_item; }
 
     /// Returns the reference to the stack item on given position from the stack top.
+    // NOLINTNEXTLINE(readability-make-member-function-const)
     [[nodiscard]] intx::uint256& operator[](int index) noexcept { return *(top_item - index); }
 
     /// Returns the const reference to the stack item on given position from the stack top.
@@ -120,7 +122,7 @@ public:
         // Allow only growing memory. Include hint for optimizing compiler.
         assert(new_size > m_size);
         if (new_size <= m_size)
-            INTX_UNREACHABLE();
+            INTX_UNREACHABLE();  // TODO: NOLINT(misc-static-assert)
 
         if (new_size > m_capacity)
         {
@@ -143,7 +145,7 @@ public:
 };
 
 /// Generic execution state for generic instructions implementations.
-struct ExecutionState
+struct ExecutionState  // TODO: NOLINT(clang-analyzer-optin.performance.Padding)
 {
     int64_t gas_left = 0;
     Stack stack;

@@ -810,7 +810,7 @@ inline evmc_status_code log(ExecutionState& state) noexcept
     if ((state.gas_left -= cost) < 0)
         return EVMC_OUT_OF_GAS;
 
-    std::array<evmc::bytes32, NumTopics> topics;
+    std::array<evmc::bytes32, NumTopics> topics;  // NOLINT(cppcoreguidelines-pro-type-member-init)
     for (auto& topic : topics)
         topic = intx::be::store<evmc::bytes32>(state.stack.pop());
 

@@ -13,14 +13,14 @@ namespace
 {
 void malloc_(size_t size) noexcept
 {
-    auto m = std::malloc(size);
+    const auto m = std::malloc(size);
     benchmark::DoNotOptimize(m);
     std::free(m);
 }
 
 void calloc_(size_t size) noexcept
 {
-    auto m = std::calloc(1, size);
+    const auto m = std::calloc(1, size);
     benchmark::DoNotOptimize(m);
     std::free(m);
 }
@@ -28,7 +28,7 @@ void calloc_(size_t size) noexcept
 void os_specific(size_t size) noexcept
 {
 #if defined(__unix__) || defined(__APPLE__)
-    auto m = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS, -1, 0);
+    const auto m = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS, -1, 0);
     benchmark::DoNotOptimize(m);
     munmap(m, size);
 #else
