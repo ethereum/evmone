@@ -21,6 +21,7 @@ add_library(evmone
     instructions.cpp
     instructions.hpp
     instructions_calls.cpp
+    instructions_impl_map.hpp
     limits.hpp
     opcodes_helpers.h
     tracing.cpp
