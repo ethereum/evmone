@@ -47,35 +47,38 @@ CodeAnalysis analyze(const uint8_t* code, size_t code_size)
 
 namespace
 {
+template <evmc_opcode Op>
 inline evmc_status_code check_requirements(
-    const InstructionTable& instruction_table, ExecutionState& state, uint8_t op) noexcept
+    const CostTable& cost_table, ExecutionState& state) noexcept
 {
-    const auto metrics = instruction_table[op];
-
-    if (INTX_UNLIKELY(metrics.gas_cost == instr::undefined))
+    if (INTX_UNLIKELY(cost_table[Op] == instr::undefined))
         return EVMC_UNDEFINED_INSTRUCTION;
 
-    if (INTX_UNLIKELY((state.gas_left -= metrics.gas_cost) < 0))
+    if (INTX_UNLIKELY((state.gas_left -= cost_table[Op]) < 0))
         return EVMC_OUT_OF_GAS;
 
     const auto stack_size = state.stack.size();
-    if (INTX_UNLIKELY(stack_size == Stack::limit))
+    if constexpr (instr::traits[Op].stack_height_change > 0)
     {
-        if (metrics.can_overflow_stack)
+        static_assert(instr::traits[Op].stack_height_change == 1);
+        if (INTX_UNLIKELY(stack_size == Stack::limit))
             return EVMC_STACK_OVERFLOW;
     }
-    else if (INTX_UNLIKELY(stack_size < metrics.stack_height_required))
-        return EVMC_STACK_UNDERFLOW;
+    if constexpr (instr::traits[Op].stack_height_required > 0)
+    {
+        if (INTX_UNLIKELY(stack_size < instr::traits[Op].stack_height_required))
+            return EVMC_STACK_UNDERFLOW;
+    }
 
     return EVMC_SUCCESS;
 }
 
 
 /// Implementation of a generic instruction "case".
-#define DISPATCH_CASE(OPCODE)                                                \
-    case OPCODE:                                                             \
-        if (code_it = invoke(instr::impl<OPCODE>, state, code_it); !code_it) \
-            goto exit;                                                       \
+#define DISPATCH_CASE(OPCODE)                                               \
+    case OPCODE:                                                            \
+        if (code_it = invoke<OPCODE>(cost_table, state, code_it); !code_it) \
+            goto exit;                                                      \
         break
 
 /// The signature of basic instructions which always succeed, e.g. ADD.
@@ -136,6 +139,19 @@ template <>
     return instr_fn(state, pos);
 }
 
+/// A helper to invoke the instruction implementation of the given opcode Op.
+template <evmc_opcode Op>
+[[gnu::always_inline]] inline code_iterator invoke(
+    const CostTable& cost_table, ExecutionState& state, code_iterator pos) noexcept
+{
+    if (const auto status = check_requirements<Op>(cost_table, state); status != EVMC_SUCCESS)
+    {
+        state.status = status;
+        return nullptr;
+    }
+    return invoke(instr::impl<Op>, state, pos);
+}
+
 template <bool TracingEnabled>
 evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& analysis) noexcept
 {
@@ -148,7 +164,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     if constexpr (TracingEnabled)
         tracer->notify_execution_start(state.rev, *state.msg, state.code);
 
-    const auto& instruction_table = get_baseline_instruction_table(state.rev);
+    const auto& cost_table = get_baseline_cost_table(state.rev);
 
     const auto* const code = state.code.data();
     auto code_it = code;  // Code iterator for the interpreter loop.
@@ -162,13 +178,6 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
         }
 
         const auto op = *code_it;
-        if (const auto status = check_requirements(instruction_table, state, op);
-            status != EVMC_SUCCESS)
-        {
-            state.status = status;
-            goto exit;
-        }
-
         switch (op)
         {
             DISPATCH_CASE(OP_STOP);
@@ -325,7 +334,8 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
             DISPATCH_CASE(OP_SELFDESTRUCT);
 
         default:
-            INTX_UNREACHABLE();
+            state.status = EVMC_UNDEFINED_INSTRUCTION;
+            goto exit;
         }
     }
 
