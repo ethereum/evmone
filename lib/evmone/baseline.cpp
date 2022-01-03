@@ -61,13 +61,13 @@ inline evmc_status_code check_requirements(
         gas_cost = cost_table[Op];  // If not, load the cost from the table.
 
         // Negative cost marks an undefined instruction.
+        // This check must be first to produce correct error code.
         if (INTX_UNLIKELY(gas_cost < 0))
             return EVMC_UNDEFINED_INSTRUCTION;
     }
 
-    if (INTX_UNLIKELY((state.gas_left -= gas_cost) < 0))
-        return EVMC_OUT_OF_GAS;
-
+    // Check stack requirements first. This is order is not required,
+    // but it is nicer because complete gas check may need to inspect operands.
     const auto stack_size = state.stack.size();
     if constexpr (instr::traits[Op].stack_height_change > 0)
     {
@@ -80,6 +80,9 @@ inline evmc_status_code check_requirements(
         if (INTX_UNLIKELY(stack_size < instr::traits[Op].stack_height_required))
             return EVMC_STACK_UNDERFLOW;
     }
+
+    if (INTX_UNLIKELY((state.gas_left -= gas_cost) < 0))
+        return EVMC_OUT_OF_GAS;
 
     return EVMC_SUCCESS;
 }
