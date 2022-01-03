@@ -6,7 +6,7 @@
 #include "baseline_instruction_table.hpp"
 #include "execution_state.hpp"
 #include "instructions.hpp"
-#include "instructions_op2fn.hpp"
+#include "instructions_impl_map.hpp"
 #include "vm.hpp"
 #include <evmc/instructions.h>
 #include <memory>
@@ -72,10 +72,10 @@ inline evmc_status_code check_requirements(
 
 
 /// Implementation of a generic instruction "case".
-#define DISPATCH_CASE(OPCODE)                                          \
-    case OPCODE:                                                       \
-        if (code_it = invoke(op2fn::OPCODE, state, code_it); !code_it) \
-            goto exit;                                                 \
+#define DISPATCH_CASE(OPCODE)                                                \
+    case OPCODE:                                                             \
+        if (code_it = invoke(instr::impl<OPCODE>, state, code_it); !code_it) \
+            goto exit;                                                       \
         break
 
 /// The signature of basic instructions which always succeed, e.g. ADD.
