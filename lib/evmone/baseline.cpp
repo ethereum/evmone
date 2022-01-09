@@ -11,6 +11,12 @@
 #include <evmc/instructions.h>
 #include <memory>
 
+#if defined(__GNUC__)
+#define ASM_COMMENT(COMMENT) asm("# " #COMMENT)  // NOLINT(hicpp-no-assembler)
+#else
+#define ASM_COMMENT(COMMENT)
+#endif
+
 namespace evmone::baseline
 {
 CodeAnalysis analyze(const uint8_t* code, size_t code_size)
@@ -91,6 +97,7 @@ inline evmc_status_code check_requirements(
 /// Implementation of a generic instruction "case".
 #define DISPATCH_CASE(OPCODE)                                               \
     case OPCODE:                                                            \
+        ASM_COMMENT(OPCODE);                                                \
         if (code_it = invoke<OPCODE>(cost_table, state, code_it); !code_it) \
             goto exit;                                                      \
         break
