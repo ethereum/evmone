@@ -105,78 +105,96 @@ inline evmc_status_code check_requirements(
 }
 
 
+/// The execution position.
+struct Position
+{
+    code_iterator code_it;  ///< The position in the code.
+    uint256* stack_top;     ///< The pointer to the stack top.
+};
+
 /// Helpers for invoking instruction implementations of different signatures.
 /// @{
 inline code_iterator invoke(
-    void (*instr_fn)(StackTop) noexcept, ExecutionState& state, code_iterator pos) noexcept
+    void (*instr_fn)(StackTop) noexcept, Position pos, ExecutionState& /*state*/) noexcept
 {
-    instr_fn(state.stack.top_item);
-    return pos + 1;
+    instr_fn(pos.stack_top);
+    return pos.code_it + 1;
 }
 
 inline code_iterator invoke(
-    StopToken (*instr_fn)() noexcept, ExecutionState& state, code_iterator /*pos*/) noexcept
+    StopToken (*instr_fn)() noexcept, Position /*pos*/, ExecutionState& state) noexcept
 {
     state.status = instr_fn().status;
     return nullptr;
 }
 
 inline code_iterator invoke(evmc_status_code (*instr_fn)(StackTop, ExecutionState&) noexcept,
-    ExecutionState& state, code_iterator pos) noexcept
+    Position pos, ExecutionState& state) noexcept
 {
-    if (const auto status = instr_fn(state.stack.top_item, state); status != EVMC_SUCCESS)
+    if (const auto status = instr_fn(pos.stack_top, state); status != EVMC_SUCCESS)
     {
         state.status = status;
         return nullptr;
     }
-    return pos + 1;
+    return pos.code_it + 1;
 }
 
-inline code_iterator invoke(void (*instr_fn)(StackTop, ExecutionState&) noexcept,
-    ExecutionState& state, code_iterator pos) noexcept
+inline code_iterator invoke(void (*instr_fn)(StackTop, ExecutionState&) noexcept, Position pos,
+    ExecutionState& state) noexcept
 {
-    instr_fn(state.stack.top_item, state);
-    return pos + 1;
+    instr_fn(pos.stack_top, state);
+    return pos.code_it + 1;
 }
 
 inline code_iterator invoke(
-    code_iterator (*instr_fn)(StackTop, ExecutionState&, code_iterator) noexcept,
-    ExecutionState& state, code_iterator pos) noexcept
+    code_iterator (*instr_fn)(StackTop, ExecutionState&, code_iterator) noexcept, Position pos,
+    ExecutionState& state) noexcept
 {
-    return instr_fn(state.stack.top_item, state, pos);
+    return instr_fn(pos.stack_top, state, pos.code_it);
 }
 
-inline code_iterator invoke(StopToken (*instr_fn)(StackTop, ExecutionState&) noexcept,
-    ExecutionState& state, code_iterator /*pos*/) noexcept
+inline code_iterator invoke(StopToken (*instr_fn)(StackTop, ExecutionState&) noexcept, Position pos,
+    ExecutionState& state) noexcept
 {
-    state.status = instr_fn(state.stack.top_item, state).status;
+    state.status = instr_fn(pos.stack_top, state).status;
     return nullptr;
 }
 /// @}
 
 /// A helper to invoke the instruction implementation of the given opcode Op.
 template <evmc_opcode Op>
-[[gnu::always_inline]] inline code_iterator invoke(
-    const CostTable& cost_table, ExecutionState& state, code_iterator pos) noexcept
+[[gnu::always_inline]] inline Position invoke(const CostTable& cost_table,
+    const uint256* stack_bottom, Position pos, ExecutionState& state) noexcept
 {
-    if (const auto status = check_requirements<Op>(cost_table, state.gas_left, state.stack.size());
+    const auto stack_size = static_cast<int>(pos.stack_top - stack_bottom);
+    if (const auto status = check_requirements<Op>(cost_table, state.gas_left, stack_size);
         status != EVMC_SUCCESS)
     {
         state.status = status;
-        return nullptr;
+        return {nullptr, pos.stack_top};
     }
-    const auto new_pos = invoke(instr::core::impl<Op>, state, pos);
-    state.stack.top_item += instr::traits[Op].stack_height_change;
-    return new_pos;
+    const auto new_pos = invoke(instr::core::impl<Op>, pos, state);
+    const auto new_stack_top = pos.stack_top + instr::traits[Op].stack_height_change;
+    return {new_pos, new_stack_top};
 }
 
 
 /// Implementation of a generic instruction "case".
-#define DISPATCH_CASE(OPCODE)                                               \
-    case OPCODE:                                                            \
-        ASM_COMMENT(OPCODE);                                                \
-        if (code_it = invoke<OPCODE>(cost_table, state, code_it); !code_it) \
-            goto exit;                                                      \
+#define DISPATCH_CASE(OPCODE)                                                            \
+    case OPCODE:                                                                         \
+        ASM_COMMENT(OPCODE);                                                             \
+                                                                                         \
+        if (const auto next = invoke<OPCODE>(cost_table, stack_bottom, position, state); \
+            next.code_it == nullptr)                                                     \
+        {                                                                                \
+            goto exit;                                                                   \
+        }                                                                                \
+        else                                                                             \
+        {                                                                                \
+            /* Update current position only when no error,                               \
+               this improves compiler optimization. */                                   \
+            position = next;                                                             \
+        }                                                                                \
         break
 
 template <bool TracingEnabled>
@@ -194,17 +212,21 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     const auto& cost_table = get_baseline_cost_table(state.rev);
 
     const auto* const code = state.code.data();
-    auto code_it = code;  // Code iterator for the interpreter loop.
-    while (true)          // Guaranteed to terminate because padded code ends with STOP.
+    const auto stack_bottom = state.stack.bottom();
+
+    // Code iterator and stack top pointer for interpreter loop.
+    Position position{code, stack_bottom};
+
+    while (true)  // Guaranteed to terminate because padded code ends with STOP.
     {
         if constexpr (TracingEnabled)
         {
-            const auto offset = static_cast<uint32_t>(code_it - code);
+            const auto offset = static_cast<uint32_t>(position.code_it - code);
             if (offset < state.code.size())  // Skip STOP from code padding.
                 tracer->notify_instruction_start(offset, state);
         }
 
-        const auto op = *code_it;
+        const auto op = *position.code_it;
         switch (op)
         {
 #define X(OPCODE, IGNORED) DISPATCH_CASE(OPCODE);
