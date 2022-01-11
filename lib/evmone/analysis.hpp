@@ -15,10 +15,10 @@
 
 namespace evmone
 {
-struct instruction;
+struct Instruction;
 
 /// Compressed information about instruction basic block.
-struct block_info
+struct BlockInfo
 {
     /// The total base gas cost of all instructions in the block.
     /// This cannot overflow, see the static_assert() below.
@@ -40,7 +40,7 @@ struct block_info
                       std::numeric_limits<decltype(stack_max_growth)>::max(),
         "Potential block_info::stack_max_growth overflow");
 };
-static_assert(sizeof(block_info) == 8);
+static_assert(sizeof(BlockInfo) == 8);
 
 /// The execution state specialized for the Advanced interpreter.
 struct AdvancedExecutionState : ExecutionState
@@ -53,7 +53,7 @@ struct AdvancedExecutionState : ExecutionState
     using ExecutionState::ExecutionState;
 
     /// Terminates the execution with the given status code.
-    const instruction* exit(evmc_status_code status_code) noexcept
+    const Instruction* exit(evmc_status_code status_code) noexcept
     {
         status = status_code;
         return nullptr;
@@ -70,18 +70,18 @@ struct AdvancedExecutionState : ExecutionState
     }
 };
 
-union instruction_argument
+union InstructionArgument
 {
     int64_t number;
     const intx::uint256* push_value;
     uint64_t small_push_value;
-    block_info block{};
+    BlockInfo block{};
 };
 static_assert(
-    sizeof(instruction_argument) == sizeof(uint64_t), "Incorrect size of instruction_argument");
+    sizeof(InstructionArgument) == sizeof(uint64_t), "Incorrect size of instruction_argument");
 
 /// The pointer to function implementing an instruction execution.
-using instruction_exec_fn = const instruction* (*)(const instruction*, AdvancedExecutionState&);
+using instruction_exec_fn = const Instruction* (*)(const Instruction*, AdvancedExecutionState&);
 
 /// The evmone intrinsic opcodes.
 ///
@@ -97,7 +97,7 @@ enum intrinsic_opcodes
     OPX_BEGINBLOCK = OP_JUMPDEST
 };
 
-struct op_table_entry
+struct OpTableEntry
 {
     instruction_exec_fn fn;
     int16_t gas_cost;
@@ -105,19 +105,19 @@ struct op_table_entry
     int8_t stack_change;
 };
 
-using op_table = std::array<op_table_entry, 256>;
+using OpTable = std::array<OpTableEntry, 256>;
 
-struct instruction
+struct Instruction
 {
     instruction_exec_fn fn = nullptr;
-    instruction_argument arg;
+    InstructionArgument arg;
 
-    explicit constexpr instruction(instruction_exec_fn f) noexcept : fn{f}, arg{} {}
+    explicit constexpr Instruction(instruction_exec_fn f) noexcept : fn{f}, arg{} {}
 };
 
 struct AdvancedCodeAnalysis
 {
-    std::vector<instruction> instrs;
+    std::vector<Instruction> instrs;
 
     /// Storage for large push values.
     std::vector<intx::uint256> push_values;
@@ -146,6 +146,6 @@ inline int find_jumpdest(const AdvancedCodeAnalysis& analysis, int offset) noexc
 EVMC_EXPORT AdvancedCodeAnalysis analyze(
     evmc_revision rev, const uint8_t* code, size_t code_size) noexcept;
 
-EVMC_EXPORT const op_table& get_op_table(evmc_revision rev) noexcept;
+EVMC_EXPORT const OpTable& get_op_table(evmc_revision rev) noexcept;
 
 }  // namespace evmone
