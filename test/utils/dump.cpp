@@ -16,7 +16,7 @@ void dump(const evmone::AdvancedCodeAnalysis& analysis)
     auto names = evmc_get_instruction_names_table(EVMC_BYZANTIUM);
     auto metrics = evmc_get_instruction_metrics_table(EVMC_BYZANTIUM);
 
-    const block_info* block = nullptr;
+    const BlockInfo* block = nullptr;
     for (size_t i = 0; i < analysis.instrs.size(); ++i)
     {
         auto& instr = analysis.instrs[i];

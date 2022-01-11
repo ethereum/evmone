@@ -59,3 +59,9 @@ Checks: >
   -readability-named-parameter,
   -readability-qualified-auto,
   -readability-uppercase-literal-suffix,
+
+CheckOptions:
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.UnionCase
+    value: CamelCase

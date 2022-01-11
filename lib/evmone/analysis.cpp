@@ -16,7 +16,7 @@ inline constexpr To clamp(T x) noexcept
     return x <= max ? static_cast<To>(x) : max;
 }
 
-struct block_analysis
+struct BlockAnalysis
 {
     int64_t gas_cost = 0;
 
@@ -28,14 +28,14 @@ struct block_analysis
     /// This is the place where the analysis data is going to be dumped.
     size_t begin_block_index = 0;
 
-    explicit block_analysis(size_t index) noexcept : begin_block_index{index} {}
+    explicit BlockAnalysis(size_t index) noexcept : begin_block_index{index} {}
 
     /// Close the current block by producing compressed information about the block.
-    [[nodiscard]] block_info close() const noexcept
+    [[nodiscard]] BlockInfo close() const noexcept
     {
-        return {clamp<decltype(block_info{}.gas_cost)>(gas_cost),
-            clamp<decltype(block_info{}.stack_req)>(stack_req),
-            clamp<decltype(block_info{}.stack_max_growth)>(stack_max_growth)};
+        return {clamp<decltype(BlockInfo{}.gas_cost)>(gas_cost),
+            clamp<decltype(BlockInfo{}.stack_req)>(stack_req),
+            clamp<decltype(BlockInfo{}.stack_max_growth)>(stack_max_growth)};
     }
 };
 
@@ -55,7 +55,7 @@ AdvancedCodeAnalysis analyze(evmc_revision rev, const uint8_t* code, size_t code
 
     // Create first block.
     analysis.instrs.emplace_back(opx_beginblock_fn);
-    auto block = block_analysis{0};
+    auto block = BlockAnalysis{0};
 
     const auto code_end = code + code_size;
     auto code_pos = code;
@@ -164,7 +164,7 @@ AdvancedCodeAnalysis analyze(evmc_revision rev, const uint8_t* code, size_t code
 
             // Create new block.
             analysis.instrs.emplace_back(opx_beginblock_fn);
-            block = block_analysis{analysis.instrs.size() - 1};
+            block = BlockAnalysis{analysis.instrs.size() - 1};
         }
     }
 
