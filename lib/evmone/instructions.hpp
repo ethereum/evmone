@@ -926,6 +926,7 @@ MAP_OPCODE_TO_IDENTIFIER
 }  // namespace core
 
 /// Instruction implementations - "core" instruction + stack height adjustment.
+/// TODO: These are only used by Advanced, so can be moved there.
 /// @{
 template <evmc_opcode Op, void CoreFn(StackTop) noexcept = core::impl<Op>>
 inline void impl(ExecutionState& state) noexcept
