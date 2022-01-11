@@ -92,6 +92,8 @@ std::vector<BenchmarkCase::Input> load_inputs(const fs::path& path)
 
         case state::expected_output:
             inputs.emplace_back(std::move(input_name), std::move(input), from_hexx(l));
+            input_name = {};
+            input = {};
             st = state::name;
             break;
         }
@@ -118,7 +120,7 @@ BenchmarkCase load_benchmark(const fs::path& path, const std::string& name_prefi
 }
 
 /// Loads all benchmark cases from the given directory and all its subdirectories.
-std::vector<BenchmarkCase> load_benchmarks_from_dir(
+std::vector<BenchmarkCase> load_benchmarks_from_dir(  // NOLINT(misc-no-recursion)
     const fs::path& path, const std::string& name_prefix = {})
 {
     std::vector<fs::path> subdirs;
@@ -162,7 +164,7 @@ void register_benchmarks(const std::vector<BenchmarkCase>& benchmark_cases)
 
     for (const auto& b : benchmark_cases)
     {
-        if (advanced_vm)
+        if (advanced_vm != nullptr)
         {
             RegisterBenchmark(("advanced/analyse/" + b.name).c_str(), [&b](State& state) {
                 bench_analyse<AdvancedCodeAnalysis, advanced_analyse>(
@@ -170,7 +172,7 @@ void register_benchmarks(const std::vector<BenchmarkCase>& benchmark_cases)
             })->Unit(kMicrosecond);
         }
 
-        if (baseline_vm)
+        if (baseline_vm != nullptr)
         {
             RegisterBenchmark(("baseline/analyse/" + b.name).c_str(), [&b](State& state) {
                 bench_analyse<baseline::CodeAnalysis, baseline_analyse>(
@@ -182,7 +184,7 @@ void register_benchmarks(const std::vector<BenchmarkCase>& benchmark_cases)
         {
             const auto case_name = b.name + (!input.name.empty() ? '/' + input.name : "");
 
-            if (advanced_vm)
+            if (advanced_vm != nullptr)
             {
                 const auto name = "advanced/execute/" + case_name;
                 RegisterBenchmark(name.c_str(), [&vm = *advanced_vm, &b, &input](State& state) {
@@ -190,7 +192,7 @@ void register_benchmarks(const std::vector<BenchmarkCase>& benchmark_cases)
                 })->Unit(kMicrosecond);
             }
 
-            if (baseline_vm)
+            if (baseline_vm != nullptr)
             {
                 const auto name = "baseline/execute/" + case_name;
                 RegisterBenchmark(name.c_str(), [&vm = *baseline_vm, &b, &input](State& state) {

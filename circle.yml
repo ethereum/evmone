@@ -352,7 +352,7 @@ jobs:
   clang-latest-sanitizers:
     executor: linux-clang-latest
     environment:
-      CMAKE_OPTIONS: -DBUILD_SHARED_LIBS=NO -DSANITIZE=address,undefined,shift-exponent,implicit-conversion,nullability
+      CMAKE_OPTIONS: -DBUILD_SHARED_LIBS=NO -DSANITIZE=address,undefined,shift-exponent,implicit-conversion,nullability -DCMAKE_CXX_CLANG_TIDY=clang-tidy
       UBSAN_OPTIONS: halt_on_error=1
     steps:
       - build
