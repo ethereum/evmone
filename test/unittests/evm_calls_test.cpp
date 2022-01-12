@@ -587,6 +587,63 @@ TEST_P(evm, call_oog_after_depth_check)
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
+TEST_P(evm, call_recipient_and_code_address)
+{
+    constexpr auto origin = 0x9900000000000000000000000000000000000099_address;
+    constexpr auto executor = 0xee000000000000000000000000000000000000ee_address;
+    constexpr auto recipient = 0x4400000000000000000000000000000000000044_address;
+
+    msg.sender = origin;
+    msg.recipient = executor;
+
+    for (auto op : {OP_CALL, OP_CALLCODE, OP_DELEGATECALL, OP_STATICCALL})
+    {
+        const auto code = 5 * push(0) + push(recipient) + push(0) + op;
+        execute(100000, code);
+        EXPECT_GAS_USED(EVMC_SUCCESS, 721);
+        ASSERT_EQ(host.recorded_calls.size(), 1);
+        const auto& call = host.recorded_calls[0];
+        EXPECT_EQ(call.recipient, (op == OP_CALL || op == OP_STATICCALL) ? recipient : executor);
+        EXPECT_EQ(call.code_address, recipient);
+        EXPECT_EQ(call.sender, (op == OP_DELEGATECALL) ? origin : executor);
+        host.recorded_calls.clear();
+    }
+}
+
+TEST_P(evm, call_value)
+{
+    constexpr auto origin = 0x9900000000000000000000000000000000000099_address;
+    constexpr auto executor = 0xee000000000000000000000000000000000000ee_address;
+    constexpr auto recipient = 0x4400000000000000000000000000000000000044_address;
+
+    constexpr auto passed_value = 3;
+    constexpr auto origin_value = 8;
+
+    msg.sender = origin;
+    msg.recipient = executor;
+    msg.value.bytes[31] = origin_value;
+    host.accounts[executor].set_balance(passed_value);
+    host.accounts[recipient] = {};  // Create the call recipient account.
+
+    for (auto op : {OP_CALL, OP_CALLCODE, OP_DELEGATECALL, OP_STATICCALL})
+    {
+        const auto has_value_arg = (op == OP_CALL || op == OP_CALLCODE);
+        const auto value_cost = has_value_arg ? 9000 : 0;
+        const auto expected_value = has_value_arg           ? passed_value :
+                                    (op == OP_DELEGATECALL) ? origin_value :
+                                                              0;
+
+        const auto code =
+            4 * push(0) + push(has_value_arg ? passed_value : 0) + push(recipient) + push(0) + op;
+        execute(100000, code);
+        EXPECT_GAS_USED(EVMC_SUCCESS, 721 + value_cost);
+        ASSERT_EQ(host.recorded_calls.size(), 1);
+        const auto& call = host.recorded_calls[0];
+        EXPECT_EQ(call.value.bytes[31], expected_value) << op;
+        host.recorded_calls.clear();
+    }
+}
+
 TEST_P(evm, create_oog_after)
 {
     rev = EVMC_CONSTANTINOPLE;
