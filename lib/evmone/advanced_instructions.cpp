@@ -11,26 +11,27 @@ namespace evmone::advanced
 namespace
 {
 /// Wraps the generic instruction implementation to advanced instruction function signature.
-template <void instr_fn(ExecutionState&)>
+template <void InstrFn(ExecutionState&) noexcept>
 const Instruction* op(const Instruction* instr, AdvancedExecutionState& state) noexcept
 {
-    instr_fn(state);
+    InstrFn(state);
     return ++instr;
 }
 
 /// Wraps the generic instruction implementation to advanced instruction function signature.
-template <evmc_status_code instr_fn(ExecutionState&)>
+template <evmc_status_code InstrFn(ExecutionState&) noexcept>
 const Instruction* op(const Instruction* instr, AdvancedExecutionState& state) noexcept
 {
-    const auto status_code = instr_fn(state);
-    if (status_code != EVMC_SUCCESS)
+    if (const auto status_code = InstrFn(state); status_code != EVMC_SUCCESS)
         return state.exit(status_code);
     return ++instr;
 }
 
-const Instruction* op_stop(const Instruction*, AdvancedExecutionState& state) noexcept
+/// Wraps the generic instruction implementation to advanced instruction function signature.
+template <StopToken InstrFn(ExecutionState&) noexcept>
+const Instruction* op(const Instruction* /*instr*/, AdvancedExecutionState& state) noexcept
 {
-    return state.exit(EVMC_SUCCESS);
+    return state.exit(InstrFn(state).status);
 }
 
 const Instruction* op_sstore(const Instruction* instr, AdvancedExecutionState& state) noexcept
@@ -102,26 +103,6 @@ const Instruction* op_push_full(const Instruction* instr, AdvancedExecutionState
     return ++instr;
 }
 
-const Instruction* op_invalid(const Instruction*, AdvancedExecutionState& state) noexcept
-{
-    return state.exit(EVMC_INVALID_INSTRUCTION);
-}
-
-template <evmc_status_code status_code>
-const Instruction* op_return(const Instruction*, AdvancedExecutionState& state) noexcept
-{
-    const auto offset = state.stack[0];
-    const auto size = state.stack[1];
-
-    if (!check_memory(state, offset, size))
-        return state.exit(EVMC_OUT_OF_GAS);
-
-    state.output_size = static_cast<size_t>(size);
-    if (state.output_size != 0)
-        state.output_offset = static_cast<size_t>(offset);
-    return state.exit(status_code);
-}
-
 template <evmc_opcode Op>
 const Instruction* op_call(const Instruction* instr, AdvancedExecutionState& state) noexcept
 {
@@ -159,11 +140,6 @@ const Instruction* op_undefined(const Instruction*, AdvancedExecutionState& stat
     return state.exit(EVMC_UNDEFINED_INSTRUCTION);
 }
 
-const Instruction* op_selfdestruct(const Instruction*, AdvancedExecutionState& state) noexcept
-{
-    return state.exit(selfdestruct(state).status);
-}
-
 const Instruction* opx_beginblock(const Instruction* instr, AdvancedExecutionState& state) noexcept
 {
     auto& block = instr->arg.block;
@@ -185,7 +161,7 @@ const Instruction* opx_beginblock(const Instruction* instr, AdvancedExecutionSta
 constexpr std::array<instruction_exec_fn, 256> instruction_implementations = []() noexcept {
     std::array<instruction_exec_fn, 256> table{};
 
-    table[OP_STOP] = op_stop;
+    table[OP_STOP] = op<stop>;
     table[OP_ADD] = op<add>;
     table[OP_MUL] = op<mul>;
     table[OP_SUB] = op<sub>;
@@ -301,13 +277,13 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
     table[OP_CREATE] = op_create<OP_CREATE>;
     table[OP_CALL] = op_call<OP_CALL>;
     table[OP_CALLCODE] = op_call<OP_CALLCODE>;
-    table[OP_RETURN] = op_return<EVMC_SUCCESS>;
+    table[OP_RETURN] = op<return_>;
     table[OP_DELEGATECALL] = op_call<OP_DELEGATECALL>;
     table[OP_CREATE2] = op_create<OP_CREATE2>;
     table[OP_STATICCALL] = op_call<OP_STATICCALL>;
-    table[OP_REVERT] = op_return<EVMC_REVERT>;
-    table[OP_INVALID] = op_invalid;
-    table[OP_SELFDESTRUCT] = op_selfdestruct;
+    table[OP_REVERT] = op<revert>;
+    table[OP_INVALID] = op<invalid>;
+    table[OP_SELFDESTRUCT] = op<selfdestruct>;
 
     return table;
 }();
