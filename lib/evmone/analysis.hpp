@@ -133,14 +133,42 @@ struct AdvancedCodeAnalysis
     std::vector<int32_t> jumpdest_targets;
 };
 
+template <typename T>
+inline T branchless_binary_search(const T* begin, const T* values, size_t size, T offset) noexcept
+{
+    if (size == 0)
+        return T(-1);
+
+    std::ptrdiff_t pos = -1;
+
+    unsigned logstep;
+    if constexpr (sizeof(size_t) == sizeof(uint64_t))
+        logstep = 63 - intx::clz(static_cast<uint64_t>(size));
+    else if constexpr (sizeof(size_t) == sizeof(uint32_t))
+        logstep = 31 - intx::clz(static_cast<uint32_t>(size));
+
+    auto step = static_cast<std::ptrdiff_t>(1) << logstep;
+    // The first step is special to cater for the case when (size + 1) is not a power of 2
+    const auto range1 = static_cast<std::ptrdiff_t>(size + 1) - step;
+    pos += (begin[pos + range1] < offset) * range1;
+    // Later on range is the same as step
+    step >>= 1;
+    while (step > 0)
+    {
+        // GCC compiles this to cmov, but Clang still uses jumps :(
+        // See https://godbolt.org/z/Meh6vcf68
+        pos = (begin[pos + step] < offset) ? pos + step : pos;
+        step >>= 1;
+    }
+
+    const size_t index = static_cast<size_t>(pos + 1);
+    return (index < size && begin[index] == offset) ? values[index] : T(-1);
+}
+
 inline int find_jumpdest(const AdvancedCodeAnalysis& analysis, int offset) noexcept
 {
-    const auto begin = std::begin(analysis.jumpdest_offsets);
-    const auto end = std::end(analysis.jumpdest_offsets);
-    const auto it = std::lower_bound(begin, end, offset);
-    return (it != end && *it == offset) ?
-               analysis.jumpdest_targets[static_cast<size_t>(it - begin)] :
-               -1;
+    return branchless_binary_search<int>(analysis.jumpdest_offsets.data(),
+        analysis.jumpdest_targets.data(), std::size(analysis.jumpdest_offsets), offset);
 }
 
 EVMC_EXPORT AdvancedCodeAnalysis analyze(
