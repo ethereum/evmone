@@ -1,10 +1,9 @@
 // evmone: Fast Ethereum Virtual Machine implementation
-// Copyright 2019-2020 The evmone Authors.
+// Copyright 2019 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
 #include "execution_state.hpp"
-#include "limits.hpp"
 #include <evmc/evmc.hpp>
 #include <evmc/instructions.h>
 #include <evmc/utils.h>
@@ -13,7 +12,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace evmone
+namespace evmone::advanced
 {
 struct Instruction;
 
@@ -21,24 +20,13 @@ struct Instruction;
 struct BlockInfo
 {
     /// The total base gas cost of all instructions in the block.
-    /// This cannot overflow, see the static_assert() below.
     uint32_t gas_cost = 0;
 
-    static_assert(
-        max_code_size * max_instruction_base_cost < std::numeric_limits<decltype(gas_cost)>::max(),
-        "Potential block_info::gas_cost overflow");
-
     /// The stack height required to execute the block.
-    /// This MAY overflow.
     int16_t stack_req = 0;
 
     /// The maximum stack height growth relative to the stack height at block start.
-    /// This cannot overflow, see the static_assert() below.
     int16_t stack_max_growth = 0;
-
-    static_assert(max_code_size * max_instruction_stack_increase <
-                      std::numeric_limits<decltype(stack_max_growth)>::max(),
-        "Potential block_info::stack_max_growth overflow");
 };
 static_assert(sizeof(BlockInfo) == 8);
 
@@ -148,4 +136,4 @@ EVMC_EXPORT AdvancedCodeAnalysis analyze(
 
 EVMC_EXPORT const OpTable& get_op_table(evmc_revision rev) noexcept;
 
-}  // namespace evmone
+}  // namespace evmone::advanced

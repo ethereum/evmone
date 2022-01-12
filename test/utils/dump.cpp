@@ -4,14 +4,14 @@
 
 #include "dump.hpp"
 #include <evmc/instructions.h>
-#include <evmone/analysis.hpp>
+#include <evmone/advanced_analysis.hpp>
 #include <test/utils/utils.hpp>
 #include <iomanip>
 #include <iostream>
 
-void dump(const evmone::AdvancedCodeAnalysis& analysis)
+void dump(const evmone::advanced::AdvancedCodeAnalysis& analysis)
 {
-    using namespace evmone;
+    using namespace evmone::advanced;
 
     auto names = evmc_get_instruction_names_table(EVMC_BYZANTIUM);
     auto metrics = evmc_get_instruction_metrics_table(EVMC_BYZANTIUM);

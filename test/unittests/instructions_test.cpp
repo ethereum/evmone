@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <evmc/instructions.h>
-#include <evmone/analysis.hpp>
+#include <evmone/advanced_analysis.hpp>
 #include <evmone/instruction_traits.hpp>
 #include <gtest/gtest.h>
 #include <test/utils/bytecode.hpp>
@@ -40,7 +40,7 @@ TEST(instructions, compare_with_evmc_instruction_tables)
     {
         const auto rev = static_cast<evmc_revision>(r);
         const auto& instr_tbl = evmone::instr::gas_costs[rev];
-        const auto& evmone_tbl = evmone::get_op_table(rev);
+        const auto& evmone_tbl = evmone::advanced::get_op_table(rev);
         const auto* evmc_tbl = evmc_get_instruction_metrics_table(rev);
 
         for (size_t i = 0; i < evmone_tbl.size(); ++i)

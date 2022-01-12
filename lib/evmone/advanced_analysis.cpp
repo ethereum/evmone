@@ -2,11 +2,11 @@
 // Copyright 2019 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-#include "analysis.hpp"
+#include "advanced_analysis.hpp"
 #include "opcodes_helpers.h"
 #include <cassert>
 
-namespace evmone
+namespace evmone::advanced
 {
 /// Clamps x to the max value of To type.
 template <typename To, typename T>
@@ -183,4 +183,4 @@ AdvancedCodeAnalysis analyze(evmc_revision rev, const uint8_t* code, size_t code
     return analysis;
 }
 
-}  // namespace evmone
+}  // namespace evmone::advanced
