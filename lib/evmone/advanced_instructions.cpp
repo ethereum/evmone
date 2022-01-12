@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "advanced_analysis.hpp"
-#include "instruction_traits.hpp"
 #include "instructions.hpp"
+#include "instructions_traits.hpp"
 
 namespace evmone::advanced
 {

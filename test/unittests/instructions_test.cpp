@@ -4,7 +4,7 @@
 
 #include <evmc/instructions.h>
 #include <evmone/advanced_analysis.hpp>
-#include <evmone/instruction_traits.hpp>
+#include <evmone/instructions_traits.hpp>
 #include <gtest/gtest.h>
 #include <test/utils/bytecode.hpp>
 
