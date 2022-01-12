@@ -1,17 +1,20 @@
 // evmone: Fast Ethereum Virtual Machine implementation
-// Copyright 2019-2020 The evmone Authors.
+// Copyright 2019 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
 #include "instructions.hpp"
 
 namespace evmone
 {
-template <evmc_call_kind Kind, bool Static>
+template <evmc_opcode Op>
 evmc_status_code call(ExecutionState& state) noexcept
 {
+    static_assert(
+        Op == OP_CALL || Op == OP_CALLCODE || Op == OP_DELEGATECALL || Op == OP_STATICCALL);
+
     const auto gas = state.stack.pop();
     const auto dst = intx::be::trunc<evmc::address>(state.stack.pop());
-    const auto value = (Static || Kind == EVMC_DELEGATECALL) ? 0 : state.stack.pop();
+    const auto value = (Op == OP_STATICCALL || Op == OP_DELEGATECALL) ? 0 : state.stack.pop();
     const auto has_value = value != 0;
     const auto input_offset = state.stack.pop();
     const auto input_size = state.stack.pop();
@@ -33,14 +36,16 @@ evmc_status_code call(ExecutionState& state) noexcept
         return EVMC_OUT_OF_GAS;
 
     auto msg = evmc_message{};
-    msg.kind = Kind;
-    msg.flags = Static ? uint32_t{EVMC_STATIC} : state.msg->flags;
+    msg.kind = (Op == OP_DELEGATECALL) ? EVMC_DELEGATECALL :
+               (Op == OP_CALLCODE)     ? EVMC_CALLCODE :
+                                         EVMC_CALL;
+    msg.flags = (Op == OP_STATICCALL) ? uint32_t{EVMC_STATIC} : state.msg->flags;
     msg.depth = state.msg->depth + 1;
-    msg.recipient = (Kind == EVMC_CALL) ? dst : state.msg->recipient;
+    msg.recipient = (Op == OP_CALL || Op == OP_STATICCALL) ? dst : state.msg->recipient;
     msg.code_address = dst;
-    msg.sender = (Kind == EVMC_DELEGATECALL) ? state.msg->sender : state.msg->recipient;
+    msg.sender = (Op == OP_DELEGATECALL) ? state.msg->sender : state.msg->recipient;
     msg.value =
-        (Kind == EVMC_DELEGATECALL) ? state.msg->value : intx::be::store<evmc::uint256be>(value);
+        (Op == OP_DELEGATECALL) ? state.msg->value : intx::be::store<evmc::uint256be>(value);
 
     if (size_t(input_size) > 0)
     {
@@ -50,7 +55,7 @@ evmc_status_code call(ExecutionState& state) noexcept
 
     auto cost = has_value ? 9000 : 0;
 
-    if constexpr (Kind == EVMC_CALL)
+    if constexpr (Op == OP_CALL)
     {
         if (has_value && state.msg->flags & EVMC_STATIC)
             return EVMC_STATIC_MODE_VIOLATION;
@@ -97,15 +102,17 @@ evmc_status_code call(ExecutionState& state) noexcept
     return EVMC_SUCCESS;
 }
 
-template evmc_status_code call<EVMC_CALL>(ExecutionState& state) noexcept;
-template evmc_status_code call<EVMC_CALL, true>(ExecutionState& state) noexcept;
-template evmc_status_code call<EVMC_DELEGATECALL>(ExecutionState& state) noexcept;
-template evmc_status_code call<EVMC_CALLCODE>(ExecutionState& state) noexcept;
+template evmc_status_code call<OP_CALL>(ExecutionState& state) noexcept;
+template evmc_status_code call<OP_STATICCALL>(ExecutionState& state) noexcept;
+template evmc_status_code call<OP_DELEGATECALL>(ExecutionState& state) noexcept;
+template evmc_status_code call<OP_CALLCODE>(ExecutionState& state) noexcept;
 
 
-template <evmc_call_kind Kind>
+template <evmc_opcode Op>
 evmc_status_code create(ExecutionState& state) noexcept
 {
+    static_assert(Op == OP_CREATE || Op == OP_CREATE2);
+
     if (state.msg->flags & EVMC_STATIC)
         return EVMC_STATIC_MODE_VIOLATION;
 
@@ -117,7 +124,7 @@ evmc_status_code create(ExecutionState& state) noexcept
         return EVMC_OUT_OF_GAS;
 
     auto salt = uint256{};
-    if constexpr (Kind == EVMC_CREATE2)
+    if constexpr (Op == OP_CREATE2)
     {
         salt = state.stack.pop();
         auto salt_cost = num_words(static_cast<size_t>(init_code_size)) * 6;
@@ -140,7 +147,7 @@ evmc_status_code create(ExecutionState& state) noexcept
     if (state.rev >= EVMC_TANGERINE_WHISTLE)
         msg.gas = msg.gas - msg.gas / 64;
 
-    msg.kind = Kind;
+    msg.kind = (Op == OP_CREATE) ? EVMC_CREATE : EVMC_CREATE2;
     if (size_t(init_code_size) > 0)
     {
         msg.input_data = &state.memory[size_t(init_code_offset)];
@@ -161,6 +168,6 @@ evmc_status_code create(ExecutionState& state) noexcept
     return EVMC_SUCCESS;
 }
 
-template evmc_status_code create<EVMC_CREATE>(ExecutionState& state) noexcept;
-template evmc_status_code create<EVMC_CREATE2>(ExecutionState& state) noexcept;
+template evmc_status_code create<OP_CREATE>(ExecutionState& state) noexcept;
+template evmc_status_code create<OP_CREATE2>(ExecutionState& state) noexcept;
 }  // namespace evmone

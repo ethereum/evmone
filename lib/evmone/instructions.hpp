@@ -820,10 +820,10 @@ inline evmc_status_code log(ExecutionState& state) noexcept
 }
 
 
-template <evmc_call_kind Kind, bool Static = false>
+template <evmc_opcode Op>
 evmc_status_code call(ExecutionState& state) noexcept;
 
-template <evmc_call_kind Kind>
+template <evmc_opcode Op>
 evmc_status_code create(ExecutionState& state) noexcept;
 
 
