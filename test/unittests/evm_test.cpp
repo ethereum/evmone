@@ -4,7 +4,6 @@
 
 #include "evm_fixture.hpp"
 #include <evmc/instructions.h>
-#include <evmone/limits.hpp>
 #include <intx/intx.hpp>
 #include <algorithm>
 #include <numeric>
@@ -959,7 +958,7 @@ TEST_P(evm, calldatacopy_memory_cost)
 
 TEST_P(evm, max_code_size_push1)
 {
-    // TODO: Optimize the code generation.
+    constexpr auto max_code_size = 0x6000;
     const auto code = (max_code_size / 2) * push(1);
     ASSERT_EQ(code.size(), max_code_size);
 
