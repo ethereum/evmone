@@ -4,7 +4,7 @@
 
 #include "dump.hpp"
 #include <evmc/instructions.h>
-#include <evmone/analysis.hpp>
+#include <evmone/advanced_analysis.hpp>
 #include <test/utils/utils.hpp>
 #include <iomanip>
 #include <iostream>
