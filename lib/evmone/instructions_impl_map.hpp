@@ -146,15 +146,15 @@ template <> constexpr auto impl<OP_LOG1> = log<1>;
 template <> constexpr auto impl<OP_LOG2> = log<2>;
 template <> constexpr auto impl<OP_LOG3> = log<3>;
 template <> constexpr auto impl<OP_LOG4> = log<4>;
-template <> constexpr auto impl<OP_CREATE> = create<OP_CREATE>;
-template <> constexpr auto impl<OP_CALL> = call<OP_CALL>;
-template <> constexpr auto impl<OP_CALLCODE> = call<OP_CALLCODE>;
-template <> constexpr auto impl<OP_RETURN> = return_<EVMC_SUCCESS>;
-template <> constexpr auto impl<OP_DELEGATECALL> = call<OP_DELEGATECALL>;
-template <> constexpr auto impl<OP_CREATE2> = create<OP_CREATE2>;
-template <> constexpr auto impl<OP_STATICCALL> = call<OP_STATICCALL>;
+template <> constexpr auto impl<OP_CREATE> = create;
+template <> constexpr auto impl<OP_CALL> = call;
+template <> constexpr auto impl<OP_CALLCODE> = callcode;
+template <> constexpr auto impl<OP_RETURN> = return_;
+template <> constexpr auto impl<OP_DELEGATECALL> = delegatecall;
+template <> constexpr auto impl<OP_CREATE2> = create2;
+template <> constexpr auto impl<OP_STATICCALL> = staticcall;
 template <> constexpr auto impl<OP_INVALID> = invalid;
-template <> constexpr auto impl<OP_REVERT> = return_<EVMC_REVERT>;
+template <> constexpr auto impl<OP_REVERT> = revert;
 template <> constexpr auto impl<OP_SELFDESTRUCT> = selfdestruct;
 // clang-format on
 }  // namespace evmone::instr

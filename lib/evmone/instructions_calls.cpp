@@ -7,7 +7,7 @@
 namespace evmone
 {
 template <evmc_opcode Op>
-evmc_status_code call(ExecutionState& state) noexcept
+evmc_status_code call_impl(ExecutionState& state) noexcept
 {
     static_assert(
         Op == OP_CALL || Op == OP_CALLCODE || Op == OP_DELEGATECALL || Op == OP_STATICCALL);
@@ -102,14 +102,14 @@ evmc_status_code call(ExecutionState& state) noexcept
     return EVMC_SUCCESS;
 }
 
-template evmc_status_code call<OP_CALL>(ExecutionState& state) noexcept;
-template evmc_status_code call<OP_STATICCALL>(ExecutionState& state) noexcept;
-template evmc_status_code call<OP_DELEGATECALL>(ExecutionState& state) noexcept;
-template evmc_status_code call<OP_CALLCODE>(ExecutionState& state) noexcept;
+template evmc_status_code call_impl<OP_CALL>(ExecutionState& state) noexcept;
+template evmc_status_code call_impl<OP_STATICCALL>(ExecutionState& state) noexcept;
+template evmc_status_code call_impl<OP_DELEGATECALL>(ExecutionState& state) noexcept;
+template evmc_status_code call_impl<OP_CALLCODE>(ExecutionState& state) noexcept;
 
 
 template <evmc_opcode Op>
-evmc_status_code create(ExecutionState& state) noexcept
+evmc_status_code create_impl(ExecutionState& state) noexcept
 {
     static_assert(Op == OP_CREATE || Op == OP_CREATE2);
 
@@ -168,6 +168,6 @@ evmc_status_code create(ExecutionState& state) noexcept
     return EVMC_SUCCESS;
 }
 
-template evmc_status_code create<OP_CREATE>(ExecutionState& state) noexcept;
-template evmc_status_code create<OP_CREATE2>(ExecutionState& state) noexcept;
+template evmc_status_code create_impl<OP_CREATE>(ExecutionState& state) noexcept;
+template evmc_status_code create_impl<OP_CREATE2>(ExecutionState& state) noexcept;
 }  // namespace evmone
