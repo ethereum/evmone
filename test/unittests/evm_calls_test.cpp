@@ -358,8 +358,8 @@ TEST_P(evm, call_new_account_creation_cost)
 {
     constexpr auto call_dst = 0x00000000000000000000000000000000000000ad_address;
     constexpr auto msg_dst = 0x0000000000000000000000000000000000000003_address;
-    const auto code = 4 * push(0) + calldataload(0) + push({call_dst.bytes, sizeof(call_dst)}) +
-                      push(0) + OP_CALL + ret_top();
+    const auto code =
+        4 * push(0) + calldataload(0) + push(call_dst) + push(0) + OP_CALL + ret_top();
     msg.recipient = msg_dst;
 
 
@@ -567,7 +567,7 @@ TEST_P(evm, call_oog_after_balance_check)
 
 TEST_P(evm, call_oog_after_depth_check)
 {
-    // Create the call destination account.
+    // Create the call recipient account.
     host.accounts[0x0000000000000000000000000000000000000000_address] = {};
     msg.depth = 1024;
 
