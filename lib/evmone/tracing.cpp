@@ -4,7 +4,7 @@
 
 #include "tracing.hpp"
 #include "execution_state.hpp"
-#include "instruction_traits.hpp"
+#include "instructions_traits.hpp"
 #include <evmc/hex.hpp>
 #include <stack>
 

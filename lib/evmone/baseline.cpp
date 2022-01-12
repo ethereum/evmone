@@ -120,21 +120,16 @@ static_assert(std::is_same_v<decltype(push<1>), CodePositionInstrFn>);
 static_assert(std::is_same_v<decltype(pc), CodePositionInstrFn>);
 static_assert(std::is_same_v<decltype(jump), CodePositionInstrFn>);
 
-/// A helper to invoke instruction implementations of different signatures
-/// done by template specialization.
-template <typename InstrFn>
-code_iterator invoke(InstrFn instr_fn, ExecutionState& state, code_iterator pos) noexcept = delete;
-
-template <>
-[[gnu::always_inline]] inline code_iterator invoke<SucceedingInstrFn*>(
+/// Helpers for invoking instruction implementations of different signatures.
+/// @{
+[[gnu::always_inline]] inline code_iterator invoke(
     SucceedingInstrFn* instr_fn, ExecutionState& state, code_iterator pos) noexcept
 {
     instr_fn(state);
     return pos + 1;
 }
 
-template <>
-[[gnu::always_inline]] inline code_iterator invoke<MayFailInstrFn*>(
+[[gnu::always_inline]] inline code_iterator invoke(
     MayFailInstrFn* instr_fn, ExecutionState& state, code_iterator pos) noexcept
 {
     if (const auto status = instr_fn(state); status != EVMC_SUCCESS)
@@ -145,20 +140,19 @@ template <>
     return pos + 1;
 }
 
-template <>
-[[gnu::always_inline]] inline code_iterator invoke<TerminatingInstrFn*>(
+[[gnu::always_inline]] inline code_iterator invoke(
     TerminatingInstrFn* instr_fn, ExecutionState& state, code_iterator /*pos*/) noexcept
 {
     state.status = instr_fn(state).status;
     return nullptr;
 }
 
-template <>
-[[gnu::always_inline]] inline code_iterator invoke<CodePositionInstrFn*>(
+[[gnu::always_inline]] inline code_iterator invoke(
     CodePositionInstrFn* instr_fn, ExecutionState& state, code_iterator pos) noexcept
 {
     return instr_fn(state, pos);
 }
+/// @}
 
 /// A helper to invoke the instruction implementation of the given opcode Op.
 template <evmc_opcode Op>

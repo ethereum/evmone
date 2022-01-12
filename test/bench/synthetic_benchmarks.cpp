@@ -6,7 +6,7 @@
 #include "helpers.hpp"
 #include "test/utils/bytecode.hpp"
 #include <evmc/instructions.h>
-#include <evmone/instruction_traits.hpp>
+#include <evmone/instructions_traits.hpp>
 
 using namespace benchmark;
 

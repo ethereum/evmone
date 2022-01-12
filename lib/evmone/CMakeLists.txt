@@ -18,10 +18,10 @@ add_library(evmone
     baseline.hpp
     baseline_instruction_table.cpp
     baseline_instruction_table.hpp
-    instruction_traits.hpp
     instructions.hpp
     instructions_calls.cpp
     instructions_impl_map.hpp
+    instructions_traits.hpp
     opcodes_helpers.h
     tracing.cpp
     tracing.hpp
