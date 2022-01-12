@@ -5,4 +5,4 @@
 
 #include <evmone/advanced_analysis.hpp>
 
-void dump(const evmone::AdvancedCodeAnalysis& analysis);
+void dump(const evmone::advanced::AdvancedCodeAnalysis& analysis);

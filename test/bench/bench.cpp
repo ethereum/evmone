@@ -167,7 +167,7 @@ void register_benchmarks(const std::vector<BenchmarkCase>& benchmark_cases)
         if (advanced_vm != nullptr)
         {
             RegisterBenchmark(("advanced/analyse/" + b.name).c_str(), [&b](State& state) {
-                bench_analyse<AdvancedCodeAnalysis, advanced_analyse>(
+                bench_analyse<advanced::AdvancedCodeAnalysis, advanced_analyse>(
                     state, default_revision, b.code);
             })->Unit(kMicrosecond);
         }

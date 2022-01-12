@@ -10,7 +10,10 @@
 
 namespace evmone
 {
+namespace advanced
+{
 struct AdvancedCodeAnalysis;
+}
 namespace baseline
 {
 struct CodeAnalysis;
@@ -168,7 +171,7 @@ struct ExecutionState  // TODO: NOLINT(clang-analyzer-optin.performance.Padding)
     union
     {
         const baseline::CodeAnalysis* baseline = nullptr;
-        const AdvancedCodeAnalysis* advanced;
+        const advanced::AdvancedCodeAnalysis* advanced;
     } analysis{};
 
     ExecutionState() noexcept = default;

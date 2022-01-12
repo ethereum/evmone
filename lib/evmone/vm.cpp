@@ -42,7 +42,7 @@ evmc_set_option_result set_option(evmc_vm* c_vm, char const* c_name, char const*
         }
         else if (value == "2")
         {
-            c_vm->execute = evmone::execute;
+            c_vm->execute = evmone::advanced::execute;
             return EVMC_SET_OPTION_SUCCESS;
         }
         return EVMC_SET_OPTION_INVALID_VALUE;
@@ -69,7 +69,7 @@ inline constexpr VM::VM() noexcept
         "evmone",
         PROJECT_VERSION,
         evmone::destroy,
-        evmone::execute,
+        evmone::advanced::execute,
         evmone::get_capabilities,
         evmone::set_option,
     }

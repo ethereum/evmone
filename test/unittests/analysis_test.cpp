@@ -8,7 +8,7 @@
 #include <test/utils/bytecode.hpp>
 #include <test/utils/utils.hpp>
 
-using namespace evmone;
+using namespace evmone::advanced;
 
 constexpr auto rev = EVMC_BYZANTIUM;
 const auto& op_tbl = get_op_table(rev);
@@ -73,7 +73,7 @@ TEST(analysis, jumpdest_skip)
     // and no new block should be created in this place.
 
     const auto code = bytecode{} + OP_STOP + OP_JUMPDEST;
-    auto analysis = evmone::analyze(rev, &code[0], code.size());
+    auto analysis = analyze(rev, &code[0], code.size());
 
     ASSERT_EQ(analysis.instrs.size(), 4);
     EXPECT_EQ(analysis.instrs[0].fn, op_tbl[OPX_BEGINBLOCK].fn);
@@ -99,7 +99,7 @@ TEST(analysis, jump1)
 TEST(analysis, empty)
 {
     bytes code;
-    auto analysis = evmone::analyze(rev, &code[0], code.size());
+    auto analysis = analyze(rev, &code[0], code.size());
 
     ASSERT_EQ(analysis.instrs.size(), 2);
     EXPECT_EQ(analysis.instrs[0].fn, op_tbl[OPX_BEGINBLOCK].fn);
@@ -109,7 +109,7 @@ TEST(analysis, empty)
 TEST(analysis, only_jumpdest)
 {
     const auto code = bytecode{OP_JUMPDEST};
-    auto analysis = evmone::analyze(rev, &code[0], code.size());
+    auto analysis = analyze(rev, &code[0], code.size());
 
     ASSERT_EQ(analysis.jumpdest_offsets.size(), 1);
     ASSERT_EQ(analysis.jumpdest_targets.size(), 1);
@@ -120,7 +120,7 @@ TEST(analysis, only_jumpdest)
 TEST(analysis, jumpi_at_the_end)
 {
     const auto code = bytecode{OP_JUMPI};
-    auto analysis = evmone::analyze(rev, &code[0], code.size());
+    auto analysis = analyze(rev, &code[0], code.size());
 
     ASSERT_EQ(analysis.instrs.size(), 4);
     EXPECT_EQ(analysis.instrs[0].fn, op_tbl[OPX_BEGINBLOCK].fn);
@@ -134,7 +134,7 @@ TEST(analysis, terminated_last_block)
     // TODO: Even if the last basic block is properly terminated an additional artificial block
     // is going to be created with only STOP instruction.
     const auto code = ret(0, 0);
-    auto analysis = evmone::analyze(rev, &code[0], code.size());
+    auto analysis = analyze(rev, &code[0], code.size());
 
     ASSERT_EQ(analysis.instrs.size(), 6);
     EXPECT_EQ(analysis.instrs[0].fn, op_tbl[OPX_BEGINBLOCK].fn);
@@ -146,7 +146,7 @@ TEST(analysis, terminated_last_block)
 TEST(analysis, jumpdests_groups)
 {
     const auto code = 3 * OP_JUMPDEST + push(1) + 3 * OP_JUMPDEST + push(2) + OP_JUMPI;
-    auto analysis = evmone::analyze(rev, &code[0], code.size());
+    auto analysis = analyze(rev, &code[0], code.size());
 
     ASSERT_EQ(analysis.instrs.size(), 11);
     EXPECT_EQ(analysis.instrs[0].fn, op_tbl[OP_JUMPDEST].fn);
