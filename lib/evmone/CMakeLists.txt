@@ -20,7 +20,6 @@ add_library(evmone
     baseline_instruction_table.hpp
     instructions.hpp
     instructions_calls.cpp
-    instructions_impl_map.hpp
     instructions_traits.hpp
     instructions_xmacro.hpp
     opcodes_helpers.h

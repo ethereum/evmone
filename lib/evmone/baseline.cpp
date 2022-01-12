@@ -6,7 +6,6 @@
 #include "baseline_instruction_table.hpp"
 #include "execution_state.hpp"
 #include "instructions.hpp"
-#include "instructions_impl_map.hpp"
 #include "vm.hpp"
 #include <evmc/instructions.h>
 #include <memory>
