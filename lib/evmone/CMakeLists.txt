@@ -22,6 +22,7 @@ add_library(evmone
     instructions_calls.cpp
     instructions_impl_map.hpp
     instructions_traits.hpp
+    instructions_xmacro.hpp
     opcodes_helpers.h
     tracing.cpp
     tracing.hpp
@@ -34,7 +35,7 @@ target_include_directories(evmone PUBLIC
 )
 if(CABLE_COMPILER_GNULIKE)
     target_compile_options(evmone PRIVATE -fno-exceptions)
-    if (NOT SANITIZE MATCHES undefined)
+    if(NOT SANITIZE MATCHES undefined)
         # RTTI can be disabled except for UBSan which checks vptr integrity.
         target_compile_options(evmone PRIVATE -fno-rtti)
     endif()
