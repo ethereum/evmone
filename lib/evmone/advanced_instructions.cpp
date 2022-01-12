@@ -8,8 +8,16 @@
 
 namespace evmone::advanced
 {
+/// Fake wrap for generic instruction implementations accessing current code location.
+/// This is to make any op<...> compile, but pointers must be replaced with Advanced-specific
+/// implementation. Definition not provided.
+template <code_iterator InstrFn(ExecutionState&, code_iterator)>
+const Instruction* op(const Instruction* /*instr*/, AdvancedExecutionState& state) noexcept;
+
 namespace
 {
+using advanced::op;
+
 /// Wraps the generic instruction implementation to advanced instruction function signature.
 template <void InstrFn(ExecutionState&) noexcept>
 const Instruction* op(const Instruction* instr, AdvancedExecutionState& state) noexcept
@@ -161,71 +169,16 @@ const Instruction* opx_beginblock(const Instruction* instr, AdvancedExecutionSta
 constexpr std::array<instruction_exec_fn, 256> instruction_implementations = []() noexcept {
     std::array<instruction_exec_fn, 256> table{};
 
-    table[OP_STOP] = op<stop>;
-    table[OP_ADD] = op<add>;
-    table[OP_MUL] = op<mul>;
-    table[OP_SUB] = op<sub>;
-    table[OP_DIV] = op<div>;
-    table[OP_SDIV] = op<sdiv>;
-    table[OP_MOD] = op<mod>;
-    table[OP_SMOD] = op<smod>;
-    table[OP_ADDMOD] = op<addmod>;
-    table[OP_MULMOD] = op<mulmod>;
-    table[OP_EXP] = op<exp>;
-    table[OP_SIGNEXTEND] = op<signextend>;
-    table[OP_LT] = op<lt>;
-    table[OP_GT] = op<gt>;
-    table[OP_SLT] = op<slt>;
-    table[OP_SGT] = op<sgt>;
-    table[OP_EQ] = op<eq>;
-    table[OP_ISZERO] = op<iszero>;
-    table[OP_AND] = op<and_>;
-    table[OP_OR] = op<or_>;
-    table[OP_XOR] = op<xor_>;
-    table[OP_NOT] = op<not_>;
-    table[OP_BYTE] = op<byte>;
-    table[OP_SHL] = op<shl>;
-    table[OP_SHR] = op<shr>;
-    table[OP_SAR] = op<sar>;
+    // Init table with wrapped generic implementations.
+#define X(OPCODE, IDENTIFIER) table[OPCODE] = op<IDENTIFIER>;
+    MAP_OPCODE_TO_IDENTIFIER
+#undef X
 
-    table[OP_KECCAK256] = op<keccak256>;
-
-    table[OP_ADDRESS] = op<address>;
-    table[OP_BALANCE] = op<balance>;
-    table[OP_ORIGIN] = op<origin>;
-    table[OP_CALLER] = op<caller>;
-    table[OP_CALLVALUE] = op<callvalue>;
-    table[OP_CALLDATALOAD] = op<calldataload>;
-    table[OP_CALLDATASIZE] = op<calldatasize>;
-    table[OP_CALLDATACOPY] = op<calldatacopy>;
-    table[OP_CODESIZE] = op<codesize>;
-    table[OP_CODECOPY] = op<codecopy>;
-    table[OP_GASPRICE] = op<gasprice>;
-    table[OP_EXTCODESIZE] = op<extcodesize>;
-    table[OP_EXTCODECOPY] = op<extcodecopy>;
-    table[OP_RETURNDATASIZE] = op<returndatasize>;
-    table[OP_RETURNDATACOPY] = op<returndatacopy>;
-    table[OP_EXTCODEHASH] = op<extcodehash>;
-    table[OP_BLOCKHASH] = op<blockhash>;
-    table[OP_COINBASE] = op<coinbase>;
-    table[OP_TIMESTAMP] = op<timestamp>;
-    table[OP_NUMBER] = op<number>;
-    table[OP_DIFFICULTY] = op<difficulty>;
-    table[OP_GASLIMIT] = op<gaslimit>;
-    table[OP_CHAINID] = op<chainid>;
-    table[OP_SELFBALANCE] = op<selfbalance>;
-    table[OP_BASEFEE] = op<basefee>;
-
-    table[OP_POP] = op<pop>;
-    table[OP_MLOAD] = op<mload>;
-    table[OP_MSTORE] = op<mstore>;
-    table[OP_MSTORE8] = op<mstore8>;
-    table[OP_SLOAD] = op<sload>;
+    // Overwrite with Advanced-specific implementations.
     table[OP_SSTORE] = op_sstore;
     table[OP_JUMP] = op_jump;
     table[OP_JUMPI] = op_jumpi;
     table[OP_PC] = op_pc;
-    table[OP_MSIZE] = op<msize>;
     table[OP_GAS] = op_gas;
     table[OPX_BEGINBLOCK] = opx_beginblock;
 
@@ -234,56 +187,12 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
     for (auto op = size_t{OP_PUSH9}; op <= OP_PUSH32; ++op)
         table[op] = op_push_full;
 
-    table[OP_DUP1] = op<dup<1>>;
-    table[OP_DUP2] = op<dup<2>>;
-    table[OP_DUP3] = op<dup<3>>;
-    table[OP_DUP4] = op<dup<4>>;
-    table[OP_DUP5] = op<dup<5>>;
-    table[OP_DUP6] = op<dup<6>>;
-    table[OP_DUP7] = op<dup<7>>;
-    table[OP_DUP8] = op<dup<8>>;
-    table[OP_DUP9] = op<dup<9>>;
-    table[OP_DUP10] = op<dup<10>>;
-    table[OP_DUP11] = op<dup<11>>;
-    table[OP_DUP12] = op<dup<12>>;
-    table[OP_DUP13] = op<dup<13>>;
-    table[OP_DUP14] = op<dup<14>>;
-    table[OP_DUP15] = op<dup<15>>;
-    table[OP_DUP16] = op<dup<16>>;
-
-    table[OP_SWAP1] = op<swap<1>>;
-    table[OP_SWAP2] = op<swap<2>>;
-    table[OP_SWAP3] = op<swap<3>>;
-    table[OP_SWAP4] = op<swap<4>>;
-    table[OP_SWAP5] = op<swap<5>>;
-    table[OP_SWAP6] = op<swap<6>>;
-    table[OP_SWAP7] = op<swap<7>>;
-    table[OP_SWAP8] = op<swap<8>>;
-    table[OP_SWAP9] = op<swap<9>>;
-    table[OP_SWAP10] = op<swap<10>>;
-    table[OP_SWAP11] = op<swap<11>>;
-    table[OP_SWAP12] = op<swap<12>>;
-    table[OP_SWAP13] = op<swap<13>>;
-    table[OP_SWAP14] = op<swap<14>>;
-    table[OP_SWAP15] = op<swap<15>>;
-    table[OP_SWAP16] = op<swap<16>>;
-
-    table[OP_LOG0] = op<log<0>>;
-    table[OP_LOG1] = op<log<1>>;
-    table[OP_LOG2] = op<log<2>>;
-    table[OP_LOG3] = op<log<3>>;
-    table[OP_LOG4] = op<log<4>>;
-
     table[OP_CREATE] = op_create<OP_CREATE>;
     table[OP_CALL] = op_call<OP_CALL>;
     table[OP_CALLCODE] = op_call<OP_CALLCODE>;
-    table[OP_RETURN] = op<return_>;
     table[OP_DELEGATECALL] = op_call<OP_DELEGATECALL>;
     table[OP_CREATE2] = op_create<OP_CREATE2>;
     table[OP_STATICCALL] = op_call<OP_STATICCALL>;
-    table[OP_REVERT] = op<revert>;
-    table[OP_INVALID] = op<invalid>;
-    table[OP_SELFDESTRUCT] = op<selfdestruct>;
 
     return table;
 }();
