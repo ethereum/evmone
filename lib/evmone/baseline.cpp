@@ -103,21 +103,21 @@ inline evmc_status_code check_requirements(
 
 /// The signature of basic instructions which always succeed, e.g. ADD.
 using SucceedingInstrFn = void(ExecutionState&) noexcept;
-static_assert(std::is_same_v<decltype(add), SucceedingInstrFn>);
+static_assert(std::is_same_v<decltype(instr::add), SucceedingInstrFn>);
 
 /// The signature of basic instructions which may fail.
 using MayFailInstrFn = evmc_status_code(ExecutionState&) noexcept;
-static_assert(std::is_same_v<decltype(exp), MayFailInstrFn>);
+static_assert(std::is_same_v<decltype(instr::exp), MayFailInstrFn>);
 
 /// The signature of terminating instructions.
 using TerminatingInstrFn = StopToken(ExecutionState&) noexcept;
-static_assert(std::is_same_v<decltype(stop), TerminatingInstrFn>);
+static_assert(std::is_same_v<decltype(instr::stop), TerminatingInstrFn>);
 
 /// The signature of instructions requiring access to current code position.
 using CodePositionInstrFn = code_iterator(ExecutionState&, code_iterator) noexcept;
-static_assert(std::is_same_v<decltype(push<1>), CodePositionInstrFn>);
-static_assert(std::is_same_v<decltype(pc), CodePositionInstrFn>);
-static_assert(std::is_same_v<decltype(jump), CodePositionInstrFn>);
+static_assert(std::is_same_v<decltype(instr::push<1>), CodePositionInstrFn>);
+static_assert(std::is_same_v<decltype(instr::pc), CodePositionInstrFn>);
+static_assert(std::is_same_v<decltype(instr::jump), CodePositionInstrFn>);
 
 /// Helpers for invoking instruction implementations of different signatures.
 /// @{
