@@ -7,9 +7,9 @@
 #include <benchmark/benchmark.h>
 #include <evmc/evmc.hpp>
 #include <evmc/mocked_host.hpp>
+#include <evmone/advanced_execution.hpp>
 #include <evmone/analysis.hpp>
 #include <evmone/baseline.hpp>
-#include <evmone/execution.hpp>
 #include <evmone/vm.hpp>
 
 namespace evmone::test

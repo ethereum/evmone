@@ -9,6 +9,8 @@ find_package(intx CONFIG REQUIRED)
 
 add_library(evmone
     ${include_dir}/evmone/evmone.h
+    advanced_execution.cpp
+    advanced_execution.hpp
     advanced_instructions.cpp
     analysis.cpp
     analysis.hpp
@@ -16,8 +18,6 @@ add_library(evmone
     baseline.hpp
     baseline_instruction_table.cpp
     baseline_instruction_table.hpp
-    execution.cpp
-    execution.hpp
     instruction_traits.hpp
     instructions.hpp
     instructions_calls.cpp
