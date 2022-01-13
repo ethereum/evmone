@@ -110,6 +110,11 @@ inline bytecode push(evmc::bytes32 bs)
     return push(data.substr(std::min(data.find_first_not_of(uint8_t{0}), size_t{31})));
 }
 
+inline bytecode push(evmc::address addr)
+{
+    return push({std::data(addr.bytes), std::size(addr.bytes)});
+}
+
 inline bytecode dup1(bytecode c)
 {
     return c + OP_DUP1;

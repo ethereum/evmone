@@ -122,13 +122,13 @@ const Instruction* op_return(const Instruction*, AdvancedExecutionState& state) 
     return state.exit(status_code);
 }
 
-template <evmc_call_kind Kind, bool Static = false>
+template <evmc_opcode Op>
 const Instruction* op_call(const Instruction* instr, AdvancedExecutionState& state) noexcept
 {
     const auto gas_left_correction = state.current_block_cost - instr->arg.number;
     state.gas_left += gas_left_correction;
 
-    const auto status = call<Kind, Static>(state);
+    const auto status = call_impl<Op>(state);
     if (status != EVMC_SUCCESS)
         return state.exit(status);
 
@@ -138,13 +138,13 @@ const Instruction* op_call(const Instruction* instr, AdvancedExecutionState& sta
     return ++instr;
 }
 
-template <evmc_call_kind Kind>
+template <evmc_opcode Op>
 const Instruction* op_create(const Instruction* instr, AdvancedExecutionState& state) noexcept
 {
     const auto gas_left_correction = state.current_block_cost - instr->arg.number;
     state.gas_left += gas_left_correction;
 
-    const auto status = create<Kind>(state);
+    const auto status = create_impl<Op>(state);
     if (status != EVMC_SUCCESS)
         return state.exit(status);
 
@@ -298,13 +298,13 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
     table[OP_LOG3] = op<log<3>>;
     table[OP_LOG4] = op<log<4>>;
 
-    table[OP_CREATE] = op_create<EVMC_CREATE>;
-    table[OP_CALL] = op_call<EVMC_CALL>;
-    table[OP_CALLCODE] = op_call<EVMC_CALLCODE>;
+    table[OP_CREATE] = op_create<OP_CREATE>;
+    table[OP_CALL] = op_call<OP_CALL>;
+    table[OP_CALLCODE] = op_call<OP_CALLCODE>;
     table[OP_RETURN] = op_return<EVMC_SUCCESS>;
-    table[OP_DELEGATECALL] = op_call<EVMC_DELEGATECALL>;
-    table[OP_CREATE2] = op_create<EVMC_CREATE2>;
-    table[OP_STATICCALL] = op_call<EVMC_CALL, true>;
+    table[OP_DELEGATECALL] = op_call<OP_DELEGATECALL>;
+    table[OP_CREATE2] = op_create<OP_CREATE2>;
+    table[OP_STATICCALL] = op_call<OP_STATICCALL>;
     table[OP_REVERT] = op_return<EVMC_REVERT>;
     table[OP_INVALID] = op_invalid;
     table[OP_SELFDESTRUCT] = op_selfdestruct;

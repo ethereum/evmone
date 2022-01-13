@@ -820,15 +820,20 @@ inline evmc_status_code log(ExecutionState& state) noexcept
 }
 
 
-template <evmc_call_kind Kind, bool Static = false>
-evmc_status_code call(ExecutionState& state) noexcept;
+template <evmc_opcode Op>
+evmc_status_code call_impl(ExecutionState& state) noexcept;
+inline constexpr auto call = call_impl<OP_CALL>;
+inline constexpr auto callcode = call_impl<OP_CALLCODE>;
+inline constexpr auto delegatecall = call_impl<OP_DELEGATECALL>;
+inline constexpr auto staticcall = call_impl<OP_STATICCALL>;
 
-template <evmc_call_kind Kind>
-evmc_status_code create(ExecutionState& state) noexcept;
-
+template <evmc_opcode Op>
+evmc_status_code create_impl(ExecutionState& state) noexcept;
+inline constexpr auto create = create_impl<OP_CREATE>;
+inline constexpr auto create2 = create_impl<OP_CREATE2>;
 
 template <evmc_status_code StatusCode>
-inline StopToken return_(ExecutionState& state) noexcept
+inline StopToken return_impl(ExecutionState& state) noexcept
 {
     const auto offset = state.stack[0];
     const auto size = state.stack[1];
@@ -840,6 +845,8 @@ inline StopToken return_(ExecutionState& state) noexcept
     state.output_size = static_cast<size_t>(size);
     return {StatusCode};
 }
+inline constexpr auto return_ = return_impl<EVMC_SUCCESS>;
+inline constexpr auto revert = return_impl<EVMC_REVERT>;
 
 inline StopToken invalid(ExecutionState& /*state*/) noexcept
 {

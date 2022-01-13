@@ -410,7 +410,7 @@ TEST_P(evm, selfdestruct)
 TEST_P(evm, selfdestruct_with_balance)
 {
     constexpr auto beneficiary = 0x00000000000000000000000000000000000000be_address;
-    const auto code = push({beneficiary.bytes, sizeof(beneficiary)}) + OP_SELFDESTRUCT;
+    const auto code = push(beneficiary) + OP_SELFDESTRUCT;
     msg.recipient = evmc_address{{0x5e}};
 
 
