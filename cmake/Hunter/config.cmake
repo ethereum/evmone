@@ -29,7 +29,7 @@ hunter_config(
 
 hunter_config(
     benchmark
-    VERSION 1.6.0
-    URL https://github.com/google/benchmark/archive/refs/tags/v1.6.0.tar.gz
-    SHA1 c4d1a9135e779c5507015ccc8c428cb4aca69cef
+    VERSION 1.6.1
+    URL https://github.com/google/benchmark/archive/v1.6.1.tar.gz
+    SHA1 1faaa54195824bbe151c1ebee31623232477d075
 )
