@@ -101,35 +101,18 @@ inline evmc_status_code check_requirements(
             goto exit;                                                      \
         break
 
-/// The signature of basic instructions which always succeed, e.g. ADD.
-using SucceedingInstrFn = void(ExecutionState&) noexcept;
-static_assert(std::is_same_v<decltype(instr::add), SucceedingInstrFn>);
-
-/// The signature of basic instructions which may fail.
-using MayFailInstrFn = evmc_status_code(ExecutionState&) noexcept;
-static_assert(std::is_same_v<decltype(instr::exp), MayFailInstrFn>);
-
-/// The signature of terminating instructions.
-using TerminatingInstrFn = StopToken(ExecutionState&) noexcept;
-static_assert(std::is_same_v<decltype(instr::stop), TerminatingInstrFn>);
-
-/// The signature of instructions requiring access to current code position.
-using CodePositionInstrFn = code_iterator(ExecutionState&, code_iterator) noexcept;
-static_assert(std::is_same_v<decltype(instr::push<1>), CodePositionInstrFn>);
-static_assert(std::is_same_v<decltype(instr::pc), CodePositionInstrFn>);
-static_assert(std::is_same_v<decltype(instr::jump), CodePositionInstrFn>);
-
 /// Helpers for invoking instruction implementations of different signatures.
 /// @{
 [[gnu::always_inline]] inline code_iterator invoke(
-    SucceedingInstrFn* instr_fn, ExecutionState& state, code_iterator pos) noexcept
+    void (*instr_fn)(ExecutionState&) noexcept, ExecutionState& state, code_iterator pos) noexcept
 {
     instr_fn(state);
     return pos + 1;
 }
 
 [[gnu::always_inline]] inline code_iterator invoke(
-    MayFailInstrFn* instr_fn, ExecutionState& state, code_iterator pos) noexcept
+    evmc_status_code (*instr_fn)(ExecutionState&) noexcept, ExecutionState& state,
+    code_iterator pos) noexcept
 {
     if (const auto status = instr_fn(state); status != EVMC_SUCCESS)
     {
@@ -139,15 +122,16 @@ static_assert(std::is_same_v<decltype(instr::jump), CodePositionInstrFn>);
     return pos + 1;
 }
 
-[[gnu::always_inline]] inline code_iterator invoke(
-    TerminatingInstrFn* instr_fn, ExecutionState& state, code_iterator /*pos*/) noexcept
+[[gnu::always_inline]] inline code_iterator invoke(StopToken (*instr_fn)(ExecutionState&) noexcept,
+    ExecutionState& state, code_iterator /*pos*/) noexcept
 {
     state.status = instr_fn(state).status;
     return nullptr;
 }
 
 [[gnu::always_inline]] inline code_iterator invoke(
-    CodePositionInstrFn* instr_fn, ExecutionState& state, code_iterator pos) noexcept
+    code_iterator (*instr_fn)(ExecutionState&, code_iterator) noexcept, ExecutionState& state,
+    code_iterator pos) noexcept
 {
     return instr_fn(state, pos);
 }
