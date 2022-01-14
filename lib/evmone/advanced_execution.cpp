@@ -19,6 +19,7 @@ evmc_result execute(AdvancedExecutionState& state, const AdvancedCodeAnalysis& a
     const auto gas_left =
         (state.status == EVMC_SUCCESS || state.status == EVMC_REVERT) ? state.gas_left : 0;
 
+    assert(state.output_size != 0 || state.output_offset == 0);
     return evmc::make_result(
         state.status, gas_left, state.memory.data() + state.output_offset, state.output_size);
 }

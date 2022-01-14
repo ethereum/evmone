@@ -841,8 +841,9 @@ inline StopToken return_impl(ExecutionState& state) noexcept
     if (!check_memory(state, offset, size))
         return {EVMC_OUT_OF_GAS};
 
-    state.output_offset = static_cast<size_t>(offset);  // Can be garbage if size is 0.
     state.output_size = static_cast<size_t>(size);
+    if (state.output_size != 0)
+        state.output_offset = static_cast<size_t>(offset);
     return {StatusCode};
 }
 inline constexpr auto return_ = return_impl<EVMC_SUCCESS>;
