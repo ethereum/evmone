@@ -6,6 +6,7 @@
 #include "baseline.hpp"
 #include "execution_state.hpp"
 #include "instructions_traits.hpp"
+#include "instructions_xmacro.hpp"
 #include <ethash/keccak.hpp>
 
 namespace evmone
@@ -885,4 +886,21 @@ inline StopToken selfdestruct(ExecutionState& state) noexcept
     return {EVMC_SUCCESS};
 }
 
+namespace instr
+{
+/// Maps an opcode to the instruction implementation.
+///
+/// The set of template specializations which map opcodes `Op` to the function
+/// implementing the instruction identified by the opcode.
+///     instr::impl<OP_DUP1>(/*...*/);
+/// The unspecialized template is invalid and should never to used.
+template <evmc_opcode Op>
+inline constexpr auto impl = nullptr;
+
+#define X(OPCODE, IDENTIFIER) \
+    template <>               \
+    inline constexpr auto impl<OPCODE> = IDENTIFIER;  // opcode -> implementation
+MAP_OPCODE_TO_IDENTIFIER
+#undef X
+}  // namespace instr
 }  // namespace evmone
