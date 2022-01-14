@@ -4,7 +4,7 @@
 
 #include "instructions.hpp"
 
-namespace evmone
+namespace evmone::instr
 {
 template <evmc_opcode Op>
 evmc_status_code call_impl(ExecutionState& state) noexcept
@@ -170,4 +170,4 @@ evmc_status_code create_impl(ExecutionState& state) noexcept
 
 template evmc_status_code create_impl<OP_CREATE>(ExecutionState& state) noexcept;
 template evmc_status_code create_impl<OP_CREATE2>(ExecutionState& state) noexcept;
-}  // namespace evmone
+}  // namespace evmone::instr

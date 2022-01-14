@@ -52,9 +52,22 @@ CodeAnalysis analyze(const uint8_t* code, size_t code_size)
 
 namespace
 {
+/// Checks instruction requirements before execution.
+///
+/// This checks:
+/// - if the instruction is defined
+/// - if stack height requirements are fulfilled (stack overflow, stack underflow)
+/// - charges the instruction base gas cost and checks is there is any gas left.
+///
+/// @tparam         Op          Instruction opcode.
+/// @param          cost_table  Table of base gas costs.
+/// @param [in,out] gas_left    Gas left.
+/// @param          stack_size  Current stack height.
+/// @return  Status code with information which check has failed
+///          or EVMC_SUCCESS if everything is fine.
 template <evmc_opcode Op>
 inline evmc_status_code check_requirements(
-    const CostTable& cost_table, ExecutionState& state) noexcept
+    const CostTable& cost_table, int64_t& gas_left, int stack_size) noexcept
 {
     static_assert(
         !(instr::has_const_gas_cost(Op) && instr::gas_costs[EVMC_FRONTIER][Op] == instr::undefined),
@@ -73,7 +86,6 @@ inline evmc_status_code check_requirements(
 
     // Check stack requirements first. This is order is not required,
     // but it is nicer because complete gas check may need to inspect operands.
-    const auto stack_size = state.stack.size();
     if constexpr (instr::traits[Op].stack_height_change > 0)
     {
         static_assert(instr::traits[Op].stack_height_change == 1);
@@ -86,7 +98,7 @@ inline evmc_status_code check_requirements(
             return EVMC_STACK_UNDERFLOW;
     }
 
-    if (INTX_UNLIKELY((state.gas_left -= gas_cost) < 0))
+    if (INTX_UNLIKELY((gas_left -= gas_cost) < 0))
         return EVMC_OUT_OF_GAS;
 
     return EVMC_SUCCESS;
@@ -101,35 +113,18 @@ inline evmc_status_code check_requirements(
             goto exit;                                                      \
         break
 
-/// The signature of basic instructions which always succeed, e.g. ADD.
-using SucceedingInstrFn = void(ExecutionState&) noexcept;
-static_assert(std::is_same_v<decltype(add), SucceedingInstrFn>);
-
-/// The signature of basic instructions which may fail.
-using MayFailInstrFn = evmc_status_code(ExecutionState&) noexcept;
-static_assert(std::is_same_v<decltype(exp), MayFailInstrFn>);
-
-/// The signature of terminating instructions.
-using TerminatingInstrFn = StopToken(ExecutionState&) noexcept;
-static_assert(std::is_same_v<decltype(stop), TerminatingInstrFn>);
-
-/// The signature of instructions requiring access to current code position.
-using CodePositionInstrFn = code_iterator(ExecutionState&, code_iterator) noexcept;
-static_assert(std::is_same_v<decltype(push<1>), CodePositionInstrFn>);
-static_assert(std::is_same_v<decltype(pc), CodePositionInstrFn>);
-static_assert(std::is_same_v<decltype(jump), CodePositionInstrFn>);
-
 /// Helpers for invoking instruction implementations of different signatures.
 /// @{
 [[gnu::always_inline]] inline code_iterator invoke(
-    SucceedingInstrFn* instr_fn, ExecutionState& state, code_iterator pos) noexcept
+    void (*instr_fn)(ExecutionState&) noexcept, ExecutionState& state, code_iterator pos) noexcept
 {
     instr_fn(state);
     return pos + 1;
 }
 
 [[gnu::always_inline]] inline code_iterator invoke(
-    MayFailInstrFn* instr_fn, ExecutionState& state, code_iterator pos) noexcept
+    evmc_status_code (*instr_fn)(ExecutionState&) noexcept, ExecutionState& state,
+    code_iterator pos) noexcept
 {
     if (const auto status = instr_fn(state); status != EVMC_SUCCESS)
     {
@@ -139,15 +134,16 @@ static_assert(std::is_same_v<decltype(jump), CodePositionInstrFn>);
     return pos + 1;
 }
 
-[[gnu::always_inline]] inline code_iterator invoke(
-    TerminatingInstrFn* instr_fn, ExecutionState& state, code_iterator /*pos*/) noexcept
+[[gnu::always_inline]] inline code_iterator invoke(StopToken (*instr_fn)(ExecutionState&) noexcept,
+    ExecutionState& state, code_iterator /*pos*/) noexcept
 {
     state.status = instr_fn(state).status;
     return nullptr;
 }
 
 [[gnu::always_inline]] inline code_iterator invoke(
-    CodePositionInstrFn* instr_fn, ExecutionState& state, code_iterator pos) noexcept
+    code_iterator (*instr_fn)(ExecutionState&, code_iterator) noexcept, ExecutionState& state,
+    code_iterator pos) noexcept
 {
     return instr_fn(state, pos);
 }
@@ -158,7 +154,8 @@ template <evmc_opcode Op>
 [[gnu::always_inline]] inline code_iterator invoke(
     const CostTable& cost_table, ExecutionState& state, code_iterator pos) noexcept
 {
-    if (const auto status = check_requirements<Op>(cost_table, state); status != EVMC_SUCCESS)
+    if (const auto status = check_requirements<Op>(cost_table, state.gas_left, state.stack.size());
+        status != EVMC_SUCCESS)
     {
         state.status = status;
         return nullptr;

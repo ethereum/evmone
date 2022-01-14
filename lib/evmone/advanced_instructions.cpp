@@ -47,7 +47,7 @@ const Instruction* op_sstore(const Instruction* instr, AdvancedExecutionState& s
     const auto gas_left_correction = state.current_block_cost - instr->arg.number;
     state.gas_left += gas_left_correction;
 
-    const auto status = sstore(state);
+    const auto status = instr::sstore(state);
     if (status != EVMC_SUCCESS)
         return state.exit(status);
 
@@ -117,7 +117,7 @@ const Instruction* op_call(const Instruction* instr, AdvancedExecutionState& sta
     const auto gas_left_correction = state.current_block_cost - instr->arg.number;
     state.gas_left += gas_left_correction;
 
-    const auto status = call_impl<Op>(state);
+    const auto status = instr::call_impl<Op>(state);
     if (status != EVMC_SUCCESS)
         return state.exit(status);
 
@@ -133,7 +133,7 @@ const Instruction* op_create(const Instruction* instr, AdvancedExecutionState& s
     const auto gas_left_correction = state.current_block_cost - instr->arg.number;
     state.gas_left += gas_left_correction;
 
-    const auto status = create_impl<Op>(state);
+    const auto status = instr::create_impl<Op>(state);
     if (status != EVMC_SUCCESS)
         return state.exit(status);
 
@@ -170,7 +170,7 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
     std::array<instruction_exec_fn, 256> table{};
 
     // Init table with wrapped generic implementations.
-#define X(OPCODE, IDENTIFIER) table[OPCODE] = op<IDENTIFIER>;
+#define X(OPCODE, IDENTIFIER) table[OPCODE] = op<instr::IDENTIFIER>;
     MAP_OPCODE_TO_IDENTIFIER
 #undef X
 

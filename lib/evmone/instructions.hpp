@@ -88,6 +88,9 @@ inline bool check_memory(ExecutionState& state, const uint256& offset, const uin
     return check_memory(state, offset, static_cast<uint64_t>(size));
 }
 
+namespace instr
+{
+
 inline StopToken stop(ExecutionState& /*state*/) noexcept
 {
     return {EVMC_SUCCESS};
@@ -886,8 +889,7 @@ inline StopToken selfdestruct(ExecutionState& state) noexcept
     return {EVMC_SUCCESS};
 }
 
-namespace instr
-{
+
 /// Maps an opcode to the instruction implementation.
 ///
 /// The set of template specializations which map opcodes `Op` to the function

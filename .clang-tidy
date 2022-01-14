@@ -55,6 +55,7 @@ Checks: >
   -readability-else-after-return,
   -readability-function-cognitive-complexity,
   -readability-function-size,
+  -readability-identifier-length,
   -readability-implicit-bool-conversion,
   -readability-magic-numbers,
   -readability-named-parameter,
