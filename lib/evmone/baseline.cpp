@@ -222,8 +222,9 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
         if constexpr (TracingEnabled)
         {
             const auto offset = static_cast<uint32_t>(position.code_it - code);
+            const auto stack_height = static_cast<int>(position.stack_top - stack_bottom);
             if (offset < state.code.size())  // Skip STOP from code padding.
-                tracer->notify_instruction_start(offset, state);
+                tracer->notify_instruction_start(offset, position.stack_top, stack_height, state);
         }
 
         const auto op = *position.code_it;

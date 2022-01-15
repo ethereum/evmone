@@ -54,8 +54,8 @@ protected:
 
         void on_execution_end(const evmc_result& /*result*/) noexcept override { m_code = nullptr; }
 
-        void on_instruction_start(
-            uint32_t pc, const evmone::ExecutionState& /*state*/) noexcept override
+        void on_instruction_start(uint32_t pc, const intx::uint256* /*stack_top*/,
+            int /*stack_height*/, const evmone::ExecutionState& /*state*/) noexcept override
         {
             const auto opcode = m_code[pc];
             m_trace << m_name << pc << ":"
