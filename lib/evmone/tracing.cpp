@@ -42,7 +42,8 @@ class HistogramTracer : public Tracer
         m_contexts.emplace(msg.depth, code.data(), evmc_get_instruction_names_table(rev));
     }
 
-    void on_instruction_start(uint32_t pc, const ExecutionState& /*state*/) noexcept override
+    void on_instruction_start(uint32_t pc, const intx::uint256* /*stack_top*/, int /*stack_height*/,
+        const ExecutionState& /*state*/) noexcept override
     {
         auto& ctx = m_contexts.top();
         ++ctx.counts[ctx.code[pc]];
@@ -82,15 +83,16 @@ class InstructionTracer : public Tracer
     const char* const* m_opcode_names = nullptr;
     std::ostream& m_out;  ///< Output stream.
 
-    void output_stack(const Stack& stack)
+    void output_stack(const intx::uint256* stack_top, int stack_height)
     {
-        const auto top = stack.size() - 1;
         m_out << R"(,"stack":[)";
-        for (int i = top; i >= 0; --i)
+        const auto stack_end = stack_top + 1;
+        const auto stack_begin = stack_end - stack_height;
+        for (auto it = stack_begin; it != stack_end; ++it)
         {
-            if (i != top)
+            if (it != stack_begin)
                 m_out << ',';
-            m_out << R"("0x)" << to_string(stack[i], 16) << '"';
+            m_out << R"("0x)" << to_string(*it, 16) << '"';
         }
         m_out << ']';
     }
@@ -109,7 +111,8 @@ class InstructionTracer : public Tracer
         m_out << "}\n";
     }
 
-    void on_instruction_start(uint32_t pc, const ExecutionState& state) noexcept override
+    void on_instruction_start(uint32_t pc, const intx::uint256* stack_top, int stack_height,
+        const ExecutionState& state) noexcept override
     {
         const auto& ctx = m_contexts.top();
 
@@ -119,7 +122,7 @@ class InstructionTracer : public Tracer
         m_out << R"(,"op":)" << int{opcode};
         m_out << R"(,"opName":")" << get_name(m_opcode_names, opcode) << '"';
         m_out << R"(,"gas":)" << state.gas_left;
-        output_stack(state.stack);
+        output_stack(stack_top, stack_height);
 
         // Full memory can be dumped as evmc::hex({state.memory.data(), state.memory.size()}),
         // but this should not be done by default. Adding --tracing=+memory option would be nice.
