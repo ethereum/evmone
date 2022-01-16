@@ -151,10 +151,9 @@ public:
 };
 
 /// Generic execution state for generic instructions implementations.
-struct ExecutionState  // TODO: NOLINT(clang-analyzer-optin.performance.Padding)
+struct ExecutionState
 {
     int64_t gas_left = 0;
-    Stack stack;
     Memory memory;
     const evmc_message* msg = nullptr;
     evmc::HostContext host;
@@ -176,6 +175,9 @@ struct ExecutionState  // TODO: NOLINT(clang-analyzer-optin.performance.Padding)
         const baseline::CodeAnalysis* baseline = nullptr;
         const advanced::AdvancedCodeAnalysis* advanced;
     } analysis{};
+
+    Stack stack;
+
 
     ExecutionState() noexcept = default;
 
