@@ -9,6 +9,7 @@
 
 #include <cstring>
 #include <iostream>
+#include <limits>
 
 constexpr auto latest_rev = EVMC_ISTANBUL;
 
@@ -56,16 +57,11 @@ template <typename T1, typename T2>
 
 static auto print_input = std::getenv("PRINT");
 
-extern "C" evmc_vm* evmc_create_aleth_interpreter() noexcept;
-
-/// The reference VM.
-static auto ref_vm = evmc::VM{evmc_create_evmone()};
+/// The reference VM: evmone Baseline
+static auto ref_vm = evmc::VM{evmc_create_evmone(), {{"O", "0"}}};
 
 static evmc::VM external_vms[] = {
-    evmc::VM{evmc_create_evmone(), {{"O", "0"}}},
-#if ALETH
-    evmc::VM{evmc_create_aleth_interpreter()},
-#endif
+    evmc::VM{evmc_create_evmone(), {{"O", "2"}}},
 };
 
 
@@ -216,7 +212,7 @@ fuzz_input populate_input(const uint8_t* data, size_t data_size) noexcept
     const auto block_number_8bits = data[13];
     const auto block_timestamp_8bits = data[14];
     const auto block_gas_limit_8bits = data[15];
-    const auto block_difficulty_8bits = data[16];
+    const auto block_prev_randao_8bits = data[16];
     const auto chainid_8bits = data[17];
 
     const auto account_balance_8bits = data[18];
@@ -247,7 +243,7 @@ fuzz_input populate_input(const uint8_t* data, size_t data_size) noexcept
     // - pre Tangerine Whistle calls are extremely cheap and it is easy to find slow running units.
     in.msg.gas = in.rev <= old_rev ? std::min(gas_24bits, old_rev_max_gas) : gas_24bits;
 
-    in.msg.destination = generate_interesting_address(destination_8bits);
+    in.msg.recipient = generate_interesting_address(destination_8bits);
     in.msg.sender = generate_interesting_address(sender_8bits);
     in.msg.input_size = input_size_16bits;
     in.msg.input_data = data;
@@ -265,10 +261,10 @@ fuzz_input populate_input(const uint8_t* data, size_t data_size) noexcept
     in.host.tx_context.block_number = expand_block_number(block_number_8bits);
     in.host.tx_context.block_timestamp = expand_block_timestamp(block_timestamp_8bits);
     in.host.tx_context.block_gas_limit = expand_block_gas_limit(block_gas_limit_8bits);
-    in.host.tx_context.block_difficulty = generate_interesting_value(block_difficulty_8bits);
+    in.host.tx_context.block_prev_randao = generate_interesting_value(block_prev_randao_8bits);
     in.host.tx_context.chain_id = generate_interesting_value(chainid_8bits);
 
-    auto& account = in.host.accounts[in.msg.destination];
+    auto& account = in.host.accounts[in.msg.recipient];
     account.balance = generate_interesting_value(account_balance_8bits);
     const auto storage_key1 = generate_interesting_value(account_storage_key1_8bits);
     const auto storage_key2 = generate_interesting_value(account_storage_key2_8bits);
@@ -310,7 +306,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
         return 0;
 
     auto ref_host = in.host;  // Copy Host.
-    const auto& code = ref_host.accounts[in.msg.destination].code;
+    const auto& code = ref_host.accounts[in.msg.recipient].code;
 
     if (print_input)
     {
@@ -319,13 +315,13 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
         std::cout << "code: " << hex(code) << "\n";
         std::cout << "decoded: " << decode(code, in.rev) << "\n";
         std::cout << "input: " << hex({in.msg.input_data, in.msg.input_size}) << "\n";
-        std::cout << "account: " << hex(in.msg.destination) << "\n";
+        std::cout << "account: " << hex(in.msg.recipient) << "\n";
         std::cout << "caller: " << hex(in.msg.sender) << "\n";
         std::cout << "value: " << in.msg.value << "\n";
         std::cout << "gas: " << in.msg.gas << "\n";
-        std::cout << "balance: " << in.host.accounts[in.msg.destination].balance << "\n";
+        std::cout << "balance: " << in.host.accounts[in.msg.recipient].balance << "\n";
         std::cout << "coinbase: " << in.host.tx_context.block_coinbase << "\n";
-        std::cout << "difficulty: " << in.host.tx_context.block_difficulty << "\n";
+        std::cout << "prevrandao: " << in.host.tx_context.block_prev_randao << "\n";
         std::cout << "timestamp: " << in.host.tx_context.block_timestamp << "\n";
         std::cout << "chainid: " << in.host.tx_context.chain_id << "\n";
     }
@@ -359,7 +355,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
                 ASSERT_EQ(m1.flags, m2.flags);
                 ASSERT_EQ(m1.depth, m2.depth);
                 ASSERT_EQ(m1.gas, m2.gas);
-                ASSERT_EQ(evmc::address{m1.destination}, evmc::address{m2.destination});
+                ASSERT_EQ(evmc::address{m1.recipient}, evmc::address{m2.recipient});
                 ASSERT_EQ(evmc::address{m1.sender}, evmc::address{m2.sender});
                 ASSERT_EQ(bytes_view(m1.input_data, m1.input_size),
                     bytes_view(m2.input_data, m2.input_size));

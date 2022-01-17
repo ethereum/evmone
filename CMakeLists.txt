@@ -88,7 +88,8 @@ if(EVMONE_FUZZING)
         # Add fuzzing instrumentation only for non-coverage builds.
         # The coverage builds should be without fuzzing instrumentation to allow
         # running fuzzing corpus once and getting code coverage.
-        set(fuzzing_flags -fsanitize=fuzzer-no-link,undefined,address)
+        set(fuzzing_flags -fsanitize=fuzzer-no-link,address,undefined,shift-exponent,implicit-conversion,nullability)
+#        set(fuzzing_flags -fsanitize=fuzzer-no-link)
         add_compile_options(${fuzzing_flags})
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${fuzzing_flags}")
     endif()
