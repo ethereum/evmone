@@ -106,21 +106,21 @@ inline evmc_status_code check_requirements(
 
 
 /// Implementation of a generic instruction "case".
-#define DISPATCH_CASE(OPCODE)                                                            \
-    case OPCODE:                                                                         \
-        ASM_COMMENT(OPCODE);                                                             \
-                                                                                         \
-        if (const auto next = invoke<OPCODE>(cost_table, stack_bottom, position, state); \
-            next.code_it == nullptr)                                                     \
-        {                                                                                \
-            goto exit;                                                                   \
-        }                                                                                \
-        else                                                                             \
-        {                                                                                \
-            /* Update current position only when no error,                               \
-               this improves compiler optimization. */                                   \
-            position = next;                                                             \
-        }                                                                                \
+#define DISPATCH_CASE(OPCODE)                                              \
+    case OPCODE:                                                           \
+        ASM_COMMENT(OPCODE);                                               \
+                                                                           \
+        if (const auto next = invoke<OPCODE>(cost_table, position, state); \
+            next.code_it == nullptr)                                       \
+        {                                                                  \
+            goto exit;                                                     \
+        }                                                                  \
+        else                                                               \
+        {                                                                  \
+            /* Update current position only when no error,                 \
+               this improves compiler optimization. */                     \
+            position = next;                                               \
+        }                                                                  \
         break
 
 
@@ -129,6 +129,7 @@ struct Position
 {
     code_iterator code_it;  ///< The position in the code.
     uint256* stack_top;     ///< The EVM stack top item.
+    int stack_size = 0;
 };
 
 /// Helpers for invoking instruction implementations of different signatures.
@@ -183,18 +184,18 @@ struct Position
 
 /// A helper to invoke the instruction implementation of the given opcode Op.
 template <evmc_opcode Op>
-[[gnu::always_inline]] inline Position invoke(const CostTable& cost_table,
-    const uint256* stack_bottom, Position pos, ExecutionState& state) noexcept
+[[gnu::always_inline]] inline Position invoke(
+    const CostTable& cost_table, Position pos, ExecutionState& state) noexcept
 {
-    const auto stack_size = static_cast<int>(pos.stack_top - stack_bottom);
-    if (const auto status = check_requirements<Op>(cost_table, state.gas_left, stack_size);
+    if (const auto status = check_requirements<Op>(cost_table, state.gas_left, pos.stack_size);
         status != EVMC_SUCCESS)
     {
         state.status = status;
         return {nullptr, pos.stack_top};
     }
-    return {invoke(instr::core::impl<Op>, pos, state),
-        pos.stack_top + instr::traits[Op].stack_height_change};
+    static constexpr auto stack_height_change = instr::traits[Op].stack_height_change;
+    const auto r = invoke(instr::core::impl<Op>, pos, state);
+    return {r, pos.stack_top + stack_height_change, pos.stack_size + stack_height_change};
 }
 
 template <bool TracingEnabled>
