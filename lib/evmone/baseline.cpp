@@ -8,8 +8,8 @@
 #include "instructions.hpp"
 #include "vm.hpp"
 #include <evmc/instructions.h>
+#include <iostream>
 #include <memory>
-
 #if defined(__GNUC__)
 #define ASM_COMMENT(COMMENT) asm("# " #COMMENT)  // NOLINT(hicpp-no-assembler)
 #else
@@ -179,7 +179,8 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
 
     const auto* const code = state.code.data();
     auto code_it = code;  // Code iterator for the interpreter loop.
-    while (true)          // Guaranteed to terminate because padded code ends with STOP.
+    uint8_t op = 0;
+    while (true)  // Guaranteed to terminate because padded code ends with STOP.
     {
         if constexpr (TracingEnabled)
         {
@@ -188,7 +189,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
                 tracer->notify_instruction_start(offset, state);
         }
 
-        const auto op = *code_it;
+        op = *code_it;
         switch (op)
         {
 #define X(OPCODE, IGNORED) DISPATCH_CASE(OPCODE);
@@ -210,6 +211,36 @@ exit:
 
     if constexpr (TracingEnabled)
         tracer->notify_execution_end(result);
+
+    evmc_status_code st = EVMC_SUCCESS;
+    {
+        if (state.gas_left < 0)
+            st = EVMC_OUT_OF_GAS;
+        else if (instr::gas_costs[state.rev][op] < 0)
+            st = EVMC_UNDEFINED_INSTRUCTION;
+        // FIXME: state.stack.size() is not reliable.
+        else if (state.stack.size() < instr::traits[op].stack_height_required)
+            st = EVMC_STACK_UNDERFLOW;
+        else if (instr::traits[op].stack_height_change > 0 && state.stack.size() == 1024)
+            st = EVMC_STACK_OVERFLOW;
+        else if (op == OP_REVERT)
+            st = EVMC_REVERT;
+        else if ((op == OP_JUMP || op == OP_JUMPI) && code_it == nullptr)
+            st = EVMC_BAD_JUMP_DESTINATION;
+        else if (op == OP_INVALID)
+            st = EVMC_INVALID_INSTRUCTION;
+        else if ((state.msg->flags & EVMC_STATIC) &&
+                 (op == OP_SSTORE || op == OP_CREATE || op == OP_CREATE2 ||
+                     (op >= OP_LOG0 && op <= OP_LOG4)))
+            st = EVMC_STATIC_MODE_VIOLATION;
+    }
+
+    if (st != state.status)
+    {
+        std::cerr << "op: " << std::hex << int(op) << ", got '" << st << "', expected '"
+                  << state.status << "'\n";
+        // assert(false);
+    }
 
     return result;
 }
