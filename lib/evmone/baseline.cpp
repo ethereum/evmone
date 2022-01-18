@@ -128,7 +128,7 @@ inline evmc_status_code check_requirements(
 struct Position
 {
     code_iterator code_it;  ///< The position in the code.
-    uint256* stack_top;     ///< The EVM stack top item.
+    uint256* stack_bottom;  ///< The EVM stack top item.
     int stack_size = 0;
 };
 
@@ -137,7 +137,7 @@ struct Position
 [[gnu::always_inline]] inline code_iterator invoke(
     void (*instr_fn)(uint256*), Position pos, ExecutionState& /*state*/) noexcept
 {
-    instr_fn(pos.stack_top);
+    instr_fn(&pos.stack_bottom[pos.stack_size]);
     return pos.code_it + 1;
 }
 
@@ -152,7 +152,8 @@ struct Position
     evmc_status_code (*instr_fn)(uint256*, ExecutionState&), Position pos,
     ExecutionState& state) noexcept
 {
-    if (const auto status = instr_fn(pos.stack_top, state); status != EVMC_SUCCESS)
+    if (const auto status = instr_fn(pos.stack_bottom + pos.stack_size, state);
+        status != EVMC_SUCCESS)
     {
         state.status = status;
         return nullptr;
@@ -163,7 +164,7 @@ struct Position
 [[gnu::always_inline]] inline code_iterator invoke(
     void (*instr_fn)(uint256*, ExecutionState&), Position pos, ExecutionState& state) noexcept
 {
-    instr_fn(pos.stack_top, state);
+    instr_fn(pos.stack_bottom + pos.stack_size, state);
     return pos.code_it + 1;
 }
 
@@ -171,13 +172,13 @@ struct Position
     code_iterator (*instr_fn)(uint256*, ExecutionState&, code_iterator), Position pos,
     ExecutionState& state) noexcept
 {
-    return instr_fn(pos.stack_top, state, pos.code_it);
+    return instr_fn(pos.stack_bottom + pos.stack_size, state, pos.code_it);
 }
 
 [[gnu::always_inline]] inline code_iterator invoke(
     StopToken (*instr_fn)(uint256*, ExecutionState&), Position pos, ExecutionState& state) noexcept
 {
-    state.status = instr_fn(pos.stack_top, state).status;
+    state.status = instr_fn(pos.stack_bottom + pos.stack_size, state).status;
     return nullptr;
 }
 /// @}
@@ -191,11 +192,11 @@ template <evmc_opcode Op>
         status != EVMC_SUCCESS)
     {
         state.status = status;
-        return {nullptr, pos.stack_top};
+        return {nullptr, pos.stack_bottom, pos.stack_size};
     }
     static constexpr auto stack_height_change = instr::traits[Op].stack_height_change;
     const auto r = invoke(instr::core::impl<Op>, pos, state);
-    return {r, pos.stack_top + stack_height_change, pos.stack_size + stack_height_change};
+    return {r, pos.stack_bottom, pos.stack_size + stack_height_change};
 }
 
 template <bool TracingEnabled>
@@ -223,9 +224,10 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
         if constexpr (TracingEnabled)
         {
             const auto offset = static_cast<uint32_t>(position.code_it - code);
-            const auto stack_height = static_cast<int>(position.stack_top - stack_bottom);
+            const auto stack_height = position.stack_size;
             if (offset < state.code.size())  // Skip STOP from code padding.
-                tracer->notify_instruction_start(offset, position.stack_top, stack_height, state);
+                tracer->notify_instruction_start(
+                    offset, position.stack_bottom + position.stack_size, stack_height, state);
         }
 
         const auto op = *position.code_it;
