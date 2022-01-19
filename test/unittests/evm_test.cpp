@@ -105,7 +105,8 @@ TEST_P(evm, dup_stack_underflow)
 
 TEST_P(evm, sub_and_swap)
 {
-    execute(33, "600180810380829052602090f3");
+    execute(33, push(1) + OP_DUP1 + OP_DUP2 + OP_SUB + OP_DUP1 + OP_DUP3 + OP_SWAP1 + OP_MSTORE +
+                    push(32) + OP_SWAP1 + OP_RETURN);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 0);
     ASSERT_EQ(result.output_size, 32);
