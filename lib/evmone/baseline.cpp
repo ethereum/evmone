@@ -115,23 +115,22 @@ inline evmc_status_code check_requirements(
 
 /// Helpers for invoking instruction implementations of different signatures.
 /// @{
-[[gnu::always_inline]] inline code_iterator invoke(
+inline code_iterator invoke(
     void (*instr_fn)(StackTop) noexcept, ExecutionState& state, code_iterator pos) noexcept
 {
     instr_fn(state.stack.top_item);
     return pos + 1;
 }
 
-[[gnu::always_inline]] inline code_iterator invoke(
+inline code_iterator invoke(
     StopToken (*instr_fn)() noexcept, ExecutionState& state, code_iterator /*pos*/) noexcept
 {
     state.status = instr_fn().status;
     return nullptr;
 }
 
-[[gnu::always_inline]] inline code_iterator invoke(
-    evmc_status_code (*instr_fn)(StackTop, ExecutionState&) noexcept, ExecutionState& state,
-    code_iterator pos) noexcept
+inline code_iterator invoke(evmc_status_code (*instr_fn)(StackTop, ExecutionState&) noexcept,
+    ExecutionState& state, code_iterator pos) noexcept
 {
     if (const auto status = instr_fn(state.stack.top_item, state); status != EVMC_SUCCESS)
     {
@@ -141,24 +140,22 @@ inline evmc_status_code check_requirements(
     return pos + 1;
 }
 
-[[gnu::always_inline]] inline code_iterator invoke(
-    void (*instr_fn)(StackTop, ExecutionState&) noexcept, ExecutionState& state,
-    code_iterator pos) noexcept
+inline code_iterator invoke(void (*instr_fn)(StackTop, ExecutionState&) noexcept,
+    ExecutionState& state, code_iterator pos) noexcept
 {
     instr_fn(state.stack.top_item, state);
     return pos + 1;
 }
 
-[[gnu::always_inline]] inline code_iterator invoke(
+inline code_iterator invoke(
     code_iterator (*instr_fn)(StackTop, ExecutionState&, code_iterator) noexcept,
     ExecutionState& state, code_iterator pos) noexcept
 {
     return instr_fn(state.stack.top_item, state, pos);
 }
 
-[[gnu::always_inline]] inline code_iterator invoke(
-    StopToken (*instr_fn)(StackTop, ExecutionState&) noexcept, ExecutionState& state,
-    code_iterator /*pos*/) noexcept
+inline code_iterator invoke(StopToken (*instr_fn)(StackTop, ExecutionState&) noexcept,
+    ExecutionState& state, code_iterator /*pos*/) noexcept
 {
     state.status = instr_fn(state.stack.top_item, state).status;
     return nullptr;
