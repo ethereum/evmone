@@ -33,16 +33,20 @@ struct Stack
     /// The maximum number of stack items.
     static constexpr auto limit = 1024;
 
-    /// The pointer to the top item, or below the stack bottom if stack is empty.
-    uint256* top_item = nullptr;
+    /// The pointer to the top item.
+    /// This is never nullptr and when stack is empty it points to bottom(),
+    /// i.e. one item below the stack space.
+    uint256* top_item;
 
     /// The storage allocated for maximum possible number of items.
-    /// This is also the pointer to the bottom item.
     /// Items are aligned to 256 bits for better packing in cache lines.
     alignas(sizeof(uint256)) uint256 storage[limit];
 
-    /// Default constructor. Sets the top_item pointer to below the stack bottom.
-    Stack() noexcept { clear(); }
+    /// Returns the pointer to below the stack storage.
+    [[nodiscard, clang::no_sanitize("bounds")]] uint256* bottom() noexcept { return storage - 1; }
+
+    /// Default constructor. Stack is empty.
+    Stack() noexcept : top_item{bottom()} {}
 
     /// The current number of items on the stack.
     [[nodiscard]] int size() const noexcept { return static_cast<int>(top_item + 1 - storage); }
@@ -67,9 +71,8 @@ struct Stack
     /// Returns an item popped from the top of the stack.
     uint256 pop() noexcept { return *top_item--; }
 
-    /// Clears the stack by resetting its size to 0 (sets the top_item pointer to below the stack
-    /// bottom).
-    [[clang::no_sanitize("bounds")]] void clear() noexcept { top_item = storage - 1; }
+    /// Empties the stack by resetting the top item pointer.
+    void clear() noexcept { top_item = bottom(); }
 };
 
 /// The EVM memory.
