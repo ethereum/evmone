@@ -105,14 +105,6 @@ inline evmc_status_code check_requirements(
 }
 
 
-/// Implementation of a generic instruction "case".
-#define DISPATCH_CASE(OPCODE)                                               \
-    case OPCODE:                                                            \
-        ASM_COMMENT(OPCODE);                                                \
-        if (code_it = invoke<OPCODE>(cost_table, state, code_it); !code_it) \
-            goto exit;                                                      \
-        break
-
 /// Helpers for invoking instruction implementations of different signatures.
 /// @{
 inline code_iterator invoke(
@@ -177,6 +169,15 @@ template <evmc_opcode Op>
     state.stack.top_item += instr::traits[Op].stack_height_change;
     return new_pos;
 }
+
+
+/// Implementation of a generic instruction "case".
+#define DISPATCH_CASE(OPCODE)                                               \
+    case OPCODE:                                                            \
+        ASM_COMMENT(OPCODE);                                                \
+        if (code_it = invoke<OPCODE>(cost_table, state, code_it); !code_it) \
+            goto exit;                                                      \
+        break
 
 template <bool TracingEnabled>
 evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& analysis) noexcept
