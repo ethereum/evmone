@@ -34,12 +34,12 @@ struct Stack
     static constexpr auto limit = 1024;
 
     /// The pointer to the top item, or below the stack bottom if stack is empty.
-    intx::uint256* top_item = nullptr;
+    uint256* top_item = nullptr;
 
     /// The storage allocated for maximum possible number of items.
     /// This is also the pointer to the bottom item.
     /// Items are aligned to 256 bits for better packing in cache lines.
-    alignas(sizeof(intx::uint256)) intx::uint256 storage[limit];
+    alignas(sizeof(uint256)) uint256 storage[limit];
 
     /// Default constructor. Sets the top_item pointer to below the stack bottom.
     Stack() noexcept { clear(); }
@@ -49,23 +49,23 @@ struct Stack
 
     /// Returns the reference to the top item.
     // NOLINTNEXTLINE(readability-make-member-function-const)
-    [[nodiscard]] intx::uint256& top() noexcept { return *top_item; }
+    [[nodiscard]] uint256& top() noexcept { return *top_item; }
 
     /// Returns the reference to the stack item on given position from the stack top.
     // NOLINTNEXTLINE(readability-make-member-function-const)
-    [[nodiscard]] intx::uint256& operator[](int index) noexcept { return *(top_item - index); }
+    [[nodiscard]] uint256& operator[](int index) noexcept { return *(top_item - index); }
 
     /// Returns the const reference to the stack item on given position from the stack top.
-    [[nodiscard]] const intx::uint256& operator[](int index) const noexcept
+    [[nodiscard]] const uint256& operator[](int index) const noexcept
     {
         return *(top_item - index);
     }
 
     /// Pushes an item on the stack. The stack limit is not checked.
-    void push(const intx::uint256& item) noexcept { *++top_item = item; }
+    void push(const uint256& item) noexcept { *++top_item = item; }
 
     /// Returns an item popped from the top of the stack.
-    intx::uint256 pop() noexcept { return *top_item--; }
+    uint256 pop() noexcept { return *top_item--; }
 
     /// Clears the stack by resetting its size to 0 (sets the top_item pointer to below the stack
     /// bottom).
