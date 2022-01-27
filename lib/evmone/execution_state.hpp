@@ -3,9 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER)
 // Enables extended alignment of std::aligned_storage for VS 2017 15.8 or newer.
-#define _ENABLE_EXTENDED_ALIGNED_STORAGE 1
+#define _ENABLE_EXTENDED_ALIGNED_STORAGE
 #endif
 
 #include <evmc/evmc.hpp>
