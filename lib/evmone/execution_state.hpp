@@ -4,7 +4,7 @@
 #pragma once
 
 #ifdef _MSC_VER
-// Enables extended alignmnet of std::aligned_storage for VS 2017 15.8 or newer.
+// Enables extended alignment of std::aligned_storage for VS 2017 15.8 or newer.
 #define _ENABLE_EXTENDED_ALIGNED_STORAGE 1
 #endif
 
