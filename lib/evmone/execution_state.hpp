@@ -47,14 +47,18 @@ struct Stack
     /// Items are aligned to 256 bits for better packing in cache lines.
     std::aligned_storage_t<sizeof(uint256), sizeof(uint256)> m_storage[limit];
 
-    [[nodiscard]] const uint256* storage() const noexcept { return reinterpret_cast<const uint256*>(m_storage); }
-    uint256* storage() noexcept { return reinterpret_cast<uint256*>(m_storage); }
+    [[nodiscard]] const uint256* storage() const noexcept
+    {
+        return reinterpret_cast<const uint256*>(m_storage);
+    }
+
+    [[nodiscard]] uint256* storage() noexcept { return reinterpret_cast<uint256*>(m_storage); }
 
     /// Returns the pointer to below the stack storage.
     [[nodiscard, clang::no_sanitize("bounds")]] uint256* bottom() noexcept { return storage() - 1; }
 
     /// Default constructor. Stack is empty.
-    Stack() noexcept : top_item{bottom()}, m_storage() {}
+    Stack() noexcept : top_item{bottom()} {}  // NOLINT(cppcoreguidelines-pro-type-member-init)
 
     /// The current number of items on the stack.
     [[nodiscard]] int size() const noexcept { return static_cast<int>(top_item + 1 - storage()); }
