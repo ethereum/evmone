@@ -40,10 +40,7 @@ struct Stack
 
     /// The storage allocated for maximum possible number of items.
     /// Items are aligned to 256 bits for better packing in cache lines.
-    std::aligned_storage<sizeof(uint256), sizeof(uint256)> m_storage[limit];
-
-    static_assert(alignof(decltype(m_storage)) == 1);  // FIXME: Should be 32?
-    static_assert(sizeof(m_storage) == 1024);          // FIXME: Should be 32*1024.
+    std::aligned_storage_t<sizeof(uint256), sizeof(uint256)> m_storage[limit];
 
     const uint256* storage() const noexcept { return reinterpret_cast<const uint256*>(m_storage); }
     uint256* storage() noexcept { return reinterpret_cast<uint256*>(m_storage); }
