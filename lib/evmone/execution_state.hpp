@@ -3,11 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
-#if defined(_MSC_VER)
-// Enables extended alignment of std::aligned_storage for VS 2017 15.8 or newer.
-#define _ENABLE_EXTENDED_ALIGNED_STORAGE
-#endif
-
 #include <evmc/evmc.hpp>
 #include <intx/intx.hpp>
 #include <string>
@@ -45,7 +40,12 @@ struct Stack
 
     /// The storage allocated for maximum possible number of items.
     /// Items are aligned to 256 bits for better packing in cache lines.
-    std::aligned_storage_t<sizeof(uint256), sizeof(uint256)> m_storage[limit];
+    struct Uint256Storage
+    {
+        alignas(sizeof(uint256)) std::byte data[sizeof(uint256)];
+    };
+
+    Uint256Storage m_storage[limit];
 
     [[nodiscard]] const uint256* storage() const noexcept
     {
