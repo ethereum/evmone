@@ -27,33 +27,32 @@ namespace evmone::baseline
 {
 CodeAnalysis analyze(bytes_view code)
 {
+    // We need at most 33 bytes of code padding: 32 for possible missing all data bytes of PUSH32
+    // at the very end of the code; and one more byte for STOP to guarantee there is a terminating
+    // instruction at the code end.
+    constexpr auto padding = 32 + 1;
+
     // To find if op is any PUSH opcode (OP_PUSH1 <= op <= OP_PUSH32)
     // it can be noticed that OP_PUSH32 is INT8_MAX (0x7f) therefore
     // static_cast<int8_t>(op) <= OP_PUSH32 is always true and can be skipped.
     static_assert(OP_PUSH32 == std::numeric_limits<int8_t>::max());
 
     CodeAnalysis::JumpdestMap map(code.size());  // Allocate and init bitmap with zeros.
-    size_t i = 0;
-    while (i < code.size())
+    for (size_t i = 0; i < code.size(); ++i)
     {
         const auto op = code[i];
         if (static_cast<int8_t>(op) >= OP_PUSH1)  // If any PUSH opcode (see explanation above).
             i += op - size_t{OP_PUSH1 - 1};       // Skip PUSH data.
         else if (INTX_UNLIKELY(op == OP_JUMPDEST))
             map[i] = true;
-        ++i;
     }
 
-    // i is the needed code size including the last push data (can be bigger than code.size()).
     // Using "raw" new operator instead of std::make_unique() to get uninitialized array.
-    std::unique_ptr<uint8_t[]> padded_code{new uint8_t[i + 1]};  // +1 for the final STOP.
+    std::unique_ptr<uint8_t[]> padded_code{new uint8_t[code.size() + padding]};
     std::copy(std::begin(code), std::end(code), padded_code.get());
-    padded_code[code.size()] = OP_STOP;  // Used to terminate invalid jumps, see op_jump().
-    padded_code[i] = OP_STOP;  // Set final STOP at the code end - guarantees loop termination.
+    std::fill_n(&padded_code[code.size()], padding, uint8_t{OP_STOP});
 
-    // TODO: Using fixed-size padding of 33, the padded code buffer and jumpdest bitmap can be
-    //       created with single allocation.
-
+    // TODO: The padded code buffer and jumpdest bitmap can be created with single allocation.
     return CodeAnalysis{std::move(padded_code), std::move(map)};
 }
 
