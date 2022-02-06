@@ -359,9 +359,7 @@ jobs:
       - test
 
   clang-latest-coverage:
-    docker:
-      # TODO: clang-13 is broken.
-      - image: ethereum/cpp-build-env:17-clang-12
+    executor: linux-clang-latest
     resource_class: small
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
