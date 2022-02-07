@@ -163,8 +163,8 @@ inline code_iterator invoke(StopToken (*instr_fn)(StackTop, ExecutionState&) noe
 
 /// A helper to invoke the instruction implementation of the given opcode Op.
 template <evmc_opcode Op>
-[[gnu::always_inline]] inline Position invoke(const CostTable& cost_table,
-    const uint256* stack_bottom, Position pos, ExecutionState& state) noexcept
+inline Position invoke(const CostTable& cost_table, const uint256* stack_bottom, Position pos,
+    ExecutionState& state) noexcept
 {
     const auto stack_size = static_cast<int>(pos.stack_top - stack_bottom);
     if (const auto status = check_requirements<Op>(cost_table, state.gas_left, stack_size);
