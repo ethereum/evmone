@@ -1,6 +1,23 @@
-# Cable: CMake Bootstrap Library
-# Copyright 2018 Pawel Bylica.
-# Licensed under the Apache License, Version 2.0. See the LICENSE file.
+# Cable: CMake Bootstrap Library <https://github.com/ethereum/cable>
+# Copyright 2018-2020 Pawel Bylica.
+# Licensed under the Apache License, Version 2.0.
+
+# Cable Compiler Settings, version 1.0.1
+#
+# This CMake module provides default configuration (with some options)
+# for C/C++ compilers. Use cable_configure_compiler().
+#
+# CHANGELOG
+#
+# 1.0.1 - 2020-01-30
+# - Do not explicitly set -mtune=generic, this is default anyway.
+#
+# 1.0.0 - 2019-12-20
+
+if(cable_compiler_settings_included)
+    return()
+endif()
+set(cable_compiler_settings_included TRUE)
 
 include(CheckCXXCompilerFlag)
 
@@ -29,8 +46,19 @@ endfunction()
 
 # Configures the compiler with default flags.
 macro(cable_configure_compiler)
-    if(NOT PROJECT_IS_NESTED)
-        # Do this configuration only in the top project.
+    if(NOT PROJECT_SOURCE_DIR)
+        message(FATAL_ERROR "cable_configure_compiler() must be used after project()")
+    endif()
+
+    # Determine if this is the main or a subproject. Leave this variable available for later use.
+    if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+        set(PROJECT_IS_MAIN TRUE)
+    else()
+        set(PROJECT_IS_MAIN FALSE)
+    endif()
+
+    if(PROJECT_IS_MAIN)
+        # Do this configuration only in the main project.
 
         cmake_parse_arguments(cable "NO_CONVERSION_WARNINGS;NO_STACK_PROTECTION;NO_PEDANTIC" "" "" ${ARGN})
 
@@ -79,7 +107,7 @@ macro(cable_configure_compiler)
                     # Try enabling the "strong" variant.
                     cable_add_cxx_compiler_flag_if_supported(-fstack-protector-strong have_stack_protector_strong_support)
                     if(NOT have_stack_protector_strong_support)
-                        # Fallback to standard variant of "strong" not available.
+                        # Fallback to standard variant if "strong" not available.
                         add_compile_options(-fstack-protector)
                     endif()
                 endif()
@@ -109,9 +137,6 @@ macro(cable_configure_compiler)
             else()
                 add_compile_options(-mtune=native -march=native)
             endif()
-        elseif(NOT MSVC)
-            # Tune for currently most common CPUs.
-            cable_add_cxx_compiler_flag_if_supported(-mtune=generic)
         endif()
 
         # Sanitizers support.
@@ -128,30 +153,18 @@ macro(cable_configure_compiler)
             endif()
             add_compile_options(-fno-omit-frame-pointer -fsanitize=${SANITIZE})
 
-            set(backlist_file ${PROJECT_SOURCE_DIR}/sanitizer-blacklist.txt)
-            if(EXISTS ${backlist_file})
-                check_cxx_compiler_flag(-fsanitize-blacklist=${backlist_file} have_fsanitize-blacklist)
-                if(have_fsanitize-blacklist)
-                    add_compile_options(-fsanitize-blacklist=${backlist_file})
-                endif()
+            set(blacklist_file ${PROJECT_SOURCE_DIR}/sanitizer-blacklist.txt)
+            if(EXISTS ${blacklist_file})
+                cable_add_cxx_compiler_flag_if_supported(-fsanitize-blacklist=${blacklist_file})
             endif()
+            unset(blacklist_file)
         endif()
 
-        # Code coverage support.
-        option(COVERAGE "Build with code coverage support" OFF)
-        if(COVERAGE)
-            # Set the linker flags first, they are required to properly test the compiler flag.
-            set(CMAKE_SHARED_LINKER_FLAGS "--coverage ${CMAKE_SHARED_LINKER_FLAGS}")
-            set(CMAKE_EXE_LINKER_FLAGS "--coverage ${CMAKE_EXE_LINKER_FLAGS}")
-
-            set(CMAKE_REQUIRED_LIBRARIES "--coverage ${CMAKE_REQUIRED_LIBRARIES}")
-            check_cxx_compiler_flag(--coverage have_coverage)
-            string(REPLACE "--coverage " "" CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
-            if(NOT have_coverage)
-                message(FATAL_ERROR "Coverage not supported")
-            endif()
-            add_compile_options(-g --coverage)
+        # The "Coverage" build type.
+        if(CABLE_COMPILER_CLANG)
+            set(CMAKE_CXX_FLAGS_COVERAGE "-fprofile-instr-generate -fcoverage-mapping")
+        elseif(CABLE_COMPILER_GNU)
+            set(CMAKE_CXX_FLAGS_COVERAGE "--coverage")
         endif()
-
     endif()
 endmacro()

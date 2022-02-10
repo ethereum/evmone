@@ -69,6 +69,7 @@ function(cable_add_buildinfo_library)
         ${cable_buildinfo_template_dir}/buildinfo.cmake
         ${cable_buildinfo_template_dir}/buildinfo.c.in
         ${cable_buildinfo_template_dir}/buildinfo.json.in
+        ${cable_buildinfo_template_dir}/version.h.in
         ${name}-git
         ${output_dir}/gitinfo.txt
     )
