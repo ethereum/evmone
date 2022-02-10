@@ -781,6 +781,11 @@ inline void gas(StackTop stack, ExecutionState& state) noexcept
     stack.push(state.gas_left);
 }
 
+inline void push0(StackTop stack) noexcept
+{
+    stack.push({});
+}
+
 
 template <size_t Len>
 inline uint64_t load_partial_push_data(code_iterator pos) noexcept

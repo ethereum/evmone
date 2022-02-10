@@ -68,6 +68,7 @@
     X(OP_MSIZE, msize)                   \
     X(OP_GAS, gas)                       \
     X(OP_JUMPDEST, jumpdest)             \
+    X(OP_PUSH0, push0)                   \
     X(OP_PUSH1, push<1>)                 \
     X(OP_PUSH2, push<2>)                 \
     X(OP_PUSH3, push<3>)                 \
