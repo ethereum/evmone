@@ -1,7 +1,8 @@
 # Cable: CMake Bootstrap Library.
-# Copyright 2018 Pawel Bylica.
-# Licensed under the Apache License, Version 2.0. See the LICENSE file.
+# Copyright 2018-2019 Pawel Bylica.
+# Licensed under the Apache License, Version 2.0.
 
+string(TOUPPER "${PROJECT_NAME}" PROJECT_NAME_UPPERCASE)
 string(TOLOWER "${SYSTEM_NAME}" SYSTEM_NAME)
 string(TOLOWER "${SYSTEM_PROCESSOR}" SYSTEM_PROCESSOR)
 string(TOLOWER "${COMPILER_ID}" COMPILER_ID)
@@ -74,7 +75,9 @@ message(
     "       Compiler ID:      ${COMPILER_ID}\n"
     "       Compiler Version: ${COMPILER_VERSION}\n"
     "       Build Type:       ${BUILD_TYPE}\n"
-    "       Git Info:         ${GIT_LATEST_PROJECT_VERSION} ${GIT_LATEST_PROJECT_VERSION_DISTANCE} ${GIT_COMMIT_HASH}${dirty_msg}\n"
+    "       Git Info:         ${GIT_LATEST_PROJECT_VERSION}/${GIT_LATEST_PROJECT_VERSION_DISTANCE}/${GIT_COMMIT_HASH}${dirty_msg}\n"
+    "       Git Branch:       ${GIT_BRANCH}\n"
+    "       Git Origin URL:   ${GIT_ORIGIN_URL}\n"
     "       Timestamp:        ${TIMESTAMP}"
 )
 
@@ -82,3 +85,5 @@ configure_file(${CMAKE_CURRENT_LIST_DIR}/buildinfo.c.in ${OUTPUT_DIR}/buildinfo.
 configure_file(${CMAKE_CURRENT_LIST_DIR}/buildinfo.json.in ${OUTPUT_DIR}/buildinfo.json)
 configure_file(${CMAKE_CURRENT_LIST_DIR}/buildinfo.sh.in ${OUTPUT_DIR}/buildinfo.sh)
 configure_file(${CMAKE_CURRENT_LIST_DIR}/buildinfo.ps1.in ${OUTPUT_DIR}/buildinfo.ps1)
+
+configure_file(${CMAKE_CURRENT_LIST_DIR}/version.h.in ${OUTPUT_DIR}/version.h)

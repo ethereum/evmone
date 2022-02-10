@@ -1,14 +1,21 @@
-# Cable: CMake Bootstrap Library.
+# Cable: CMake Bootstrap Library <https://github.com/ethereum/cable>
 # Copyright 2019 Pawel Bylica.
 # Licensed under the Apache License, Version 2.0.
 
-if(cable_build_info_included)
-    return()
-endif()
-set(cable_build_info_included TRUE)
+# Cable Build Info, version 1.0.0
+#
+# This CMake module collects build information and provides it in different
+# forms: static librar, JSON file, shell scripts.
+#
+# CHANGELOG
+#
+# 1.0.0 - 2022-02-12
+
+include_guard(GLOBAL)
 
 include(GNUInstallDirs)
 
+# TODO: From CMake 3.17 the CMAKE_CURRENT_FUNCTION_LIST_DIR can be used instead.
 set(cable_buildinfo_template_dir ${CMAKE_CURRENT_LIST_DIR}/buildinfo)
 
 function(cable_add_buildinfo_library)
@@ -69,6 +76,7 @@ function(cable_add_buildinfo_library)
         ${cable_buildinfo_template_dir}/buildinfo.cmake
         ${cable_buildinfo_template_dir}/buildinfo.c.in
         ${cable_buildinfo_template_dir}/buildinfo.json.in
+        ${cable_buildinfo_template_dir}/version.h.in
         ${name}-git
         ${output_dir}/gitinfo.txt
     )

@@ -22,6 +22,17 @@ independent and it is easy to use them individually.
 
 The suggested Cable location is `cmake/cable` relative to your project root directory.
 
+
+### With cable.cmake script
+
+Copy [cable.cmake](cable.cmake) script to your project.
+Then use it to download individual Cable CMake modules.
+
+```bash
+./cable.cmake install CableBuildType
+```
+
+
 ### As git subtree
 
 Adding a dependency project as a [git subtree] is just a copy of the source code

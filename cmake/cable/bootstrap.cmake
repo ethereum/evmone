@@ -1,5 +1,5 @@
-# Cable: CMake Bootstrap Library.
-# Copyright 2019 Pawel Bylica.
+# Cable: CMake Bootstrap Library <https://github.com/ethereum/cable>
+# Copyright 2019-2020 Pawel Bylica.
 # Licensed under the Apache License, Version 2.0.
 
 # Bootstrap the Cable - CMake Bootstrap Library by including this file.
@@ -10,13 +10,16 @@
 #
 # This is internal variable automatically updated with external tools.
 # Use CABLE_VERSION variable if you need this information.
-set(version 0.4.1)
+set(version 0.5.0)
 
 # For convenience, add the project CMake module dir to module path.
 set(module_dir ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 if(EXISTS ${module_dir})
     list(APPEND CMAKE_MODULE_PATH ${module_dir})
 endif()
+
+# Always add this Cable instance modules to the CMake module path.
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 
 if(CABLE_VERSION)
     # Some other instance of Cable has been initialized in the top project.
@@ -60,9 +63,6 @@ set(CABLE_VERSION ${version})
 
 # Mark this project as non-nested.
 set(PROJECT_IS_NESTED FALSE)
-
-# Add Cable modules to the CMake module path.
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 
 cable_log("Cable ${CABLE_VERSION} initialized")
 cable_debug("Project CMake modules directory: ${module_dir}")
