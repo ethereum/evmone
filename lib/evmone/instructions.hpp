@@ -783,6 +783,11 @@ inline void gas(StackTop stack, ExecutionState& state) noexcept
     stack.push(state.gas_left);
 }
 
+inline void push0(StackTop stack) noexcept
+{
+    stack.push({});
+}
+
 /// PUSH instruction implementation.
 /// @tparam Len The number of push data bytes, e.g. PUSH3 is push<3>.
 ///
