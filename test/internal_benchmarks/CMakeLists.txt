@@ -8,5 +8,5 @@ add_executable(
     instructions_bench.cpp
     memory_allocation.cpp
 )
-
+target_compile_options(evmone-bench-internal PRIVATE -fno-exceptions)
 target_link_libraries(evmone-bench-internal PRIVATE evmone benchmark::benchmark)
