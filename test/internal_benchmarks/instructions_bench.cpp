@@ -55,7 +55,8 @@ instr_v5 instr_table_v5[] = {nullptr};
     return instr_table_v5[code[0]](0, bottom, size, state);
 }
 
-evmc_status_code add_v1(size_t pc, ExecutionState& state) noexcept
+template <evmc_opcode Op>
+evmc_status_code op_v1(size_t pc, ExecutionState& state) noexcept
 {
     if (INTX_UNLIKELY(state.stack.size() < 2))
         return EVMC_STACK_UNDERFLOW;
@@ -64,13 +65,14 @@ evmc_status_code add_v1(size_t pc, ExecutionState& state) noexcept
     if (INTX_UNLIKELY(state.gas_left < 0))
         return EVMC_OUT_OF_GAS;
 
-    instr::impl<OP_ADD>(state);
+    instr::impl<Op>(state);
 
     pc += 1;
     [[clang::musttail]] return instr_table_v1[state.code[pc]](pc, state);
 }
 
-evmc_status_code add_v2(size_t pc, uint256* stack, ExecutionState& state) noexcept
+template <evmc_opcode Op>
+evmc_status_code op_v2(size_t pc, uint256* stack, ExecutionState& state) noexcept
 {
     const auto stack_size = stack - state.stack.top_item;
     if (INTX_UNLIKELY(stack_size < 2))
@@ -80,13 +82,14 @@ evmc_status_code add_v2(size_t pc, uint256* stack, ExecutionState& state) noexce
     if (INTX_UNLIKELY(state.gas_left < 0))
         return EVMC_OUT_OF_GAS;
 
-    stack[-1] += stack[0];
+    instr::core::impl<Op>(stack);
 
     pc += 1;
     [[clang::musttail]] return instr_table_v2[state.code[pc]](pc, stack - 1, state);
 }
 
-evmc_status_code add_v3(
+template <evmc_opcode Op>
+evmc_status_code op_v3(
     size_t pc, uint256* stack, const uint256* bottom, ExecutionState& state) noexcept
 {
     const auto stack_size = stack - bottom;
@@ -97,13 +100,14 @@ evmc_status_code add_v3(
     if (INTX_UNLIKELY(state.gas_left < 0))
         return EVMC_OUT_OF_GAS;
 
-    stack[-1] += stack[0];
+    instr::core::impl<Op>(stack);
 
     pc += 1;
     [[clang::musttail]] return instr_table_v3[state.code[pc]](pc, stack - 1, bottom, state);
 }
 
-evmc_status_code add_v3a(
+template <evmc_opcode Op>
+evmc_status_code op_v3a(
     size_t pc, uint256* stack, const uint256* bottom, ExecutionState& state) noexcept
 {
     pc += 1;
@@ -117,12 +121,13 @@ evmc_status_code add_v3a(
     if (INTX_UNLIKELY(state.gas_left < 0))
         return EVMC_OUT_OF_GAS;
 
-    stack[-1] += stack[0];
+    instr::core::impl<Op>(stack);
 
     [[clang::musttail]] return next(pc, stack - 1, bottom, state);
 }
 
-evmc_status_code add_v4(
+template <evmc_opcode Op>
+evmc_status_code op_v4(
     size_t pc, uint256* stack, const uint256* bottom, int64_t gas, ExecutionState& state) noexcept
 {
     const auto stack_size = stack - bottom;
@@ -133,20 +138,21 @@ evmc_status_code add_v4(
     if (INTX_UNLIKELY(gas < 0))
         return EVMC_OUT_OF_GAS;
 
-    stack[-1] += stack[0];
+    instr::core::impl<Op>(stack);
 
     pc += 1;
     [[clang::musttail]] return instr_table_v4[state.code[pc]](pc, stack - 1, bottom, gas, state);
 }
 
-evmc_status_code add_v4a(
+template <evmc_opcode Op>
+evmc_status_code op_v4a(
     size_t pc, uint256* stack, const uint256* bottom, int64_t gas, ExecutionState& state) noexcept
 {
     const auto stack_size = stack - bottom;
     if (INTX_UNLIKELY(stack_size < 2))
         return EVMC_STACK_UNDERFLOW;
 
-    stack[-1] += stack[0];
+    instr::core::impl<Op>(stack);
 
     // Speculative.
     gas -= 3;
@@ -167,6 +173,21 @@ evmc_status_code add_v5(size_t pc, uint256* bottom, int size, ExecutionState& st
         return EVMC_OUT_OF_GAS;
 
     bottom[size - 1] += bottom[size];
+
+    pc += 1;
+    [[clang::musttail]] return instr_table_v5[state.code[pc]](pc, bottom, size - 1, state);
+}
+
+evmc_status_code xor_v5(size_t pc, uint256* bottom, int size, ExecutionState& state) noexcept
+{
+    if (INTX_UNLIKELY((size + 1) < 2))
+        return EVMC_STACK_UNDERFLOW;
+
+    state.gas_left -= 3;
+    if (INTX_UNLIKELY(state.gas_left < 0))
+        return EVMC_OUT_OF_GAS;
+
+    bottom[size - 1] |= bottom[size];
 
     pc += 1;
     [[clang::musttail]] return instr_table_v5[state.code[pc]](pc, bottom, size - 1, state);
@@ -193,7 +214,8 @@ static void run_v1(benchmark::State& state)
             state.SkipWithError("wrong exit code");
     }
 }
-BENCHMARK_TEMPLATE(run_v1, add_v1);
+BENCHMARK_TEMPLATE(run_v1, op_v1<OP_ADD>);
+BENCHMARK_TEMPLATE(run_v1, op_v1<OP_XOR>);
 
 
 template <instr_v2 Instr>
@@ -218,7 +240,8 @@ static void run_v2(benchmark::State& state)
             state.SkipWithError("wrong exit code");
     }
 }
-BENCHMARK_TEMPLATE(run_v2, add_v2);
+BENCHMARK_TEMPLATE(run_v2, op_v2<OP_ADD>);
+BENCHMARK_TEMPLATE(run_v2, op_v2<OP_XOR>);
 
 
 template <instr_v3 Instr>
@@ -243,8 +266,10 @@ static void run_v3(benchmark::State& state)
             state.SkipWithError("wrong exit code");
     }
 }
-BENCHMARK_TEMPLATE(run_v3, add_v3);
-BENCHMARK_TEMPLATE(run_v3, add_v3a);
+BENCHMARK_TEMPLATE(run_v3, op_v3<OP_ADD>);
+BENCHMARK_TEMPLATE(run_v3, op_v3<OP_XOR>);
+BENCHMARK_TEMPLATE(run_v3, op_v3a<OP_ADD>);
+BENCHMARK_TEMPLATE(run_v3, op_v3a<OP_XOR>);
 
 
 template <instr_v4 Instr>
@@ -269,8 +294,10 @@ static void run_v4(benchmark::State& state)
             state.SkipWithError("wrong exit code");
     }
 }
-BENCHMARK_TEMPLATE(run_v4, add_v4);
-BENCHMARK_TEMPLATE(run_v4, add_v4a);
+BENCHMARK_TEMPLATE(run_v4, op_v4<OP_ADD>);
+BENCHMARK_TEMPLATE(run_v4, op_v4<OP_XOR>);
+BENCHMARK_TEMPLATE(run_v4, op_v4a<OP_ADD>);
+BENCHMARK_TEMPLATE(run_v4, op_v4a<OP_XOR>);
 
 
 template <instr_v5 Instr>
@@ -295,3 +322,4 @@ static void run_v5(benchmark::State& state)
     }
 }
 BENCHMARK_TEMPLATE(run_v5, add_v5);
+BENCHMARK_TEMPLATE(run_v5, xor_v5);
