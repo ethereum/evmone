@@ -111,6 +111,24 @@ evmc_status_code add_v4(
     [[clang::musttail]] return instr_table_v4[state.code[pc]](pc, stack - 1, bottom, gas, state);
 }
 
+evmc_status_code add_v4a(
+    size_t pc, uint256* stack, const uint256* bottom, int64_t gas, ExecutionState& state) noexcept
+{
+    const auto stack_size = stack - bottom;
+    if (INTX_UNLIKELY(stack_size < 2))
+        return EVMC_STACK_UNDERFLOW;
+
+    stack[-1] += stack[0];
+
+    // Speculative.
+    gas -= 3;
+    if (INTX_UNLIKELY(gas < 0))
+        return EVMC_OUT_OF_GAS;
+
+    pc += 1;
+    [[clang::musttail]] return instr_table_v4[state.code[pc]](pc, stack - 1, bottom, gas, state);
+}
+
 
 template <instr_v1 Instr>
 static void run_v1(benchmark::State& state)
@@ -208,3 +226,4 @@ static void run_v4(benchmark::State& state)
     }
 }
 BENCHMARK_TEMPLATE(run_v4, add_v4);
+BENCHMARK_TEMPLATE(run_v4, add_v4a);
