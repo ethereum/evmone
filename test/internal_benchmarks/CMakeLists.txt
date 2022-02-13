@@ -12,5 +12,6 @@ target_compile_options(
     evmone-bench-internal PRIVATE
     -fno-exceptions
     -falign-functions=32  # Default alignment (16) gives some boost to some ADD implementation.
+    -mtune=generic
 )
 target_link_libraries(evmone-bench-internal PRIVATE evmone benchmark::benchmark)
