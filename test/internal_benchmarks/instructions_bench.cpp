@@ -309,6 +309,7 @@ static void run_v2(benchmark::State& state)
 }
 BENCHMARK_TEMPLATE(run_v2, op_v2<OP_ADD>);
 BENCHMARK_TEMPLATE(run_v2, op_v2<OP_XOR>);
+BENCHMARK_TEMPLATE(run_v2, op_v2<OP_BYTE>);
 
 
 template <instr_v3 Instr>
@@ -330,8 +331,10 @@ static void run_v3(benchmark::State& state)
 }
 BENCHMARK_TEMPLATE(run_v3, op_v3<OP_ADD>);
 BENCHMARK_TEMPLATE(run_v3, op_v3<OP_XOR>);
+BENCHMARK_TEMPLATE(run_v3, op_v3<OP_BYTE>);
 BENCHMARK_TEMPLATE(run_v3, op_v3a<OP_ADD>);
 BENCHMARK_TEMPLATE(run_v3, op_v3a<OP_XOR>);
+BENCHMARK_TEMPLATE(run_v3, op_v3a<OP_BYTE>);
 
 
 template <instr_v4 Instr>
@@ -352,8 +355,10 @@ static void run_v4(benchmark::State& state)
 }
 BENCHMARK_TEMPLATE(run_v4, op_v4<OP_ADD>);
 BENCHMARK_TEMPLATE(run_v4, op_v4<OP_XOR>);
+BENCHMARK_TEMPLATE(run_v4, op_v4<OP_BYTE>);
 BENCHMARK_TEMPLATE(run_v4, op_v4a<OP_ADD>);
 BENCHMARK_TEMPLATE(run_v4, op_v4a<OP_XOR>);
+BENCHMARK_TEMPLATE(run_v4, op_v4a<OP_BYTE>);
 
 
 template <instr_v5 Instr>
@@ -375,10 +380,13 @@ static void run_v5(benchmark::State& state)
 }
 BENCHMARK_TEMPLATE(run_v5, op_v5<OP_ADD>);
 BENCHMARK_TEMPLATE(run_v5, op_v5<OP_XOR>);
+BENCHMARK_TEMPLATE(run_v5, op_v5<OP_BYTE>);
 BENCHMARK_TEMPLATE(run_v5, op_v5t<OP_ADD>);
 BENCHMARK_TEMPLATE(run_v5, op_v5t<OP_XOR>);
+BENCHMARK_TEMPLATE(run_v5, op_v5t<OP_BYTE>);
 BENCHMARK_TEMPLATE(run_v5, op_v5u<OP_ADD>);
 BENCHMARK_TEMPLATE(run_v5, op_v5u<OP_XOR>);
+BENCHMARK_TEMPLATE(run_v5, op_v5u<OP_BYTE>);
 
 template <instr_v7 Instr>
 static void run_v7(benchmark::State& state)
@@ -398,6 +406,7 @@ static void run_v7(benchmark::State& state)
 }
 BENCHMARK_TEMPLATE(run_v7, op_v7<OP_ADD>);
 BENCHMARK_TEMPLATE(run_v7, op_v7<OP_XOR>);
+BENCHMARK_TEMPLATE(run_v7, op_v7<OP_BYTE>);
 
 
 template <instr_v10 Instr>

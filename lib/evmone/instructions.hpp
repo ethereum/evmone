@@ -298,17 +298,7 @@ inline void not_(StackTop stack) noexcept
 
 inline void byte(StackTop stack) noexcept
 {
-    const auto& n = stack.pop();
-    auto& x = stack.top();
-
-    const bool n_valid = n < 32;
-    const uint64_t byte_mask = (n_valid ? 0xff : 0);
-
-    const auto index = 31 - static_cast<unsigned>(n[0] % 32);
-    const auto word = x[index / 8];
-    const auto byte_index = index % 8;
-    const auto byte = (word >> (byte_index * 8)) & byte_mask;
-    x = byte;
+    (void)stack;
 }
 
 inline void shl(StackTop stack) noexcept
