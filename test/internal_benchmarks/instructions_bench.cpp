@@ -11,6 +11,32 @@
 
 using namespace evmone;
 
+template <evmc_opcode Op>
+inline bool check_stack(ptrdiff_t stack_size) noexcept
+{
+    if constexpr (instr::traits[Op].stack_height_change > 0)
+    {
+        static_assert(instr::traits[Op].stack_height_change == 1);
+        if (INTX_UNLIKELY(stack_size == Stack::limit))
+            return false;
+    }
+    if constexpr (instr::traits[Op].stack_height_required > 0)
+    {
+        if (INTX_UNLIKELY(stack_size < instr::traits[Op].stack_height_required))
+            return false;
+    }
+
+    return true;
+}
+
+template <evmc_opcode Op>
+inline int64_t check_gas(int64_t gas_left) noexcept
+{
+    static_assert(instr::has_const_gas_cost(Op));
+    constexpr auto gas_cost = instr::gas_costs[EVMC_FRONTIER][Op];  // Init assuming const cost.
+    return gas_left - gas_cost;
+}
+
 using instr_v1 = evmc_status_code (*)(size_t pc, ExecutionState& state) noexcept;
 using instr_v2 = evmc_status_code (*)(size_t pc, uint256* top, ExecutionState& state) noexcept;
 using instr_v3 = evmc_status_code (*)(
@@ -102,11 +128,11 @@ template <evmc_opcode Op>
 evmc_status_code op_v2(size_t pc, uint256* stack, ExecutionState& state) noexcept
 {
     const auto stack_size = stack - state.stack.top_item;
-    if (INTX_UNLIKELY(stack_size < 2))
+
+    if (INTX_UNLIKELY(!check_stack<Op>(stack_size)))
         return EVMC_STACK_UNDERFLOW;
 
-    state.gas_left -= 3;
-    if (INTX_UNLIKELY(state.gas_left < 0))
+    if (state.gas_left = check_gas<Op>(state.gas_left); INTX_UNLIKELY(state.gas_left < 0))
         return EVMC_OUT_OF_GAS;
 
     instr::core::impl<Op>(stack);
