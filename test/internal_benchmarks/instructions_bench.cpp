@@ -264,6 +264,79 @@ evmc_status_code op_v6(const uint8_t* pc, uint256* stack, int64_t gas, State& st
 }
 
 template <evmc_opcode Op>
+evmc_status_code op_v6t(const uint8_t* pc, uint256* stack, int64_t gas, State& state) noexcept
+{
+    pc += 1;
+    auto instr_tbl = reinterpret_cast<const instr_v6*>(state.tbl);
+    auto next = instr_tbl[*pc];
+
+    const auto stack_size = stack - state.stack_bottom;
+    if (INTX_UNLIKELY(!check_stack<Op>(stack_size)))
+        return EVMC_STACK_UNDERFLOW;
+
+    if (gas = check_gas<Op>(gas); INTX_UNLIKELY(gas < 0))
+        return EVMC_OUT_OF_GAS;
+    instr::core::impl<Op>(stack);
+
+    [[clang::musttail]] return next(pc, stack - 1, gas, state);
+}
+
+template <evmc_opcode Op>
+evmc_status_code op_v6s(const uint8_t* pc, uint256* stack, int64_t gas, State& state) noexcept
+{
+    instr::core::impl<Op>(stack);
+
+    const auto stack_size = stack - state.stack_bottom;
+    if (INTX_UNLIKELY(!check_stack<Op>(stack_size)))
+        return EVMC_STACK_UNDERFLOW;
+
+    if (gas = check_gas<Op>(gas); INTX_UNLIKELY(gas < 0))
+        return EVMC_OUT_OF_GAS;
+
+    pc += 1;
+    auto instr_tbl = reinterpret_cast<const instr_v6*>(state.tbl);
+    [[clang::musttail]] return instr_tbl[*pc](pc, stack - 1, gas, state);
+}
+
+template <evmc_opcode Op>
+evmc_status_code op_v6x(const uint8_t* pc, uint256* stack, int64_t gas, State& state) noexcept
+{
+    pc += 1;
+    auto instr_tbl = reinterpret_cast<const instr_v6*>(state.tbl);
+    auto next = instr_tbl[*pc];
+
+    instr::core::impl<Op>(stack);
+
+    const auto stack_size = stack - state.stack_bottom;
+    if (INTX_UNLIKELY(!check_stack<Op>(stack_size)))
+        return EVMC_STACK_UNDERFLOW;
+
+    if (gas = check_gas<Op>(gas); INTX_UNLIKELY(gas < 0))
+        return EVMC_OUT_OF_GAS;
+
+    [[clang::musttail]] return next(pc, stack - 1, gas, state);
+}
+
+template <evmc_opcode Op>
+evmc_status_code op_v6z(const uint8_t* pc, uint256* stack, int64_t gas, State& state) noexcept
+{
+    instr::core::impl<Op>(stack);
+
+    pc += 1;
+    auto instr_tbl = reinterpret_cast<const instr_v6*>(state.tbl);
+    auto next = instr_tbl[*pc];
+
+    const auto stack_size = stack - state.stack_bottom;
+    if (INTX_UNLIKELY(!check_stack<Op>(stack_size)))
+        return EVMC_STACK_UNDERFLOW;
+
+    if (gas = check_gas<Op>(gas); INTX_UNLIKELY(gas < 0))
+        return EVMC_OUT_OF_GAS;
+
+    [[clang::musttail]] return next(pc, stack - 1, gas, state);
+}
+
+template <evmc_opcode Op>
 evmc_status_code op_v7(const void* tbl, const uint8_t* pc, uint256* stack, int stack_size,
     int64_t gas, State& state) noexcept
 {
@@ -443,6 +516,22 @@ BENCHMARK_TEMPLATE(run_v6, op_v6<OP_ADD>);
 BENCHMARK_TEMPLATE(run_v6, op_v6<OP_XOR>);
 BENCHMARK_TEMPLATE(run_v6, op_v6<OP_BYTE>);
 BENCHMARK_TEMPLATE(run_v6, op_v6<OP_MUL>);
+BENCHMARK_TEMPLATE(run_v6, op_v6t<OP_ADD>);
+BENCHMARK_TEMPLATE(run_v6, op_v6t<OP_XOR>);
+BENCHMARK_TEMPLATE(run_v6, op_v6t<OP_BYTE>);
+BENCHMARK_TEMPLATE(run_v6, op_v6t<OP_MUL>);
+BENCHMARK_TEMPLATE(run_v6, op_v6s<OP_ADD>);
+BENCHMARK_TEMPLATE(run_v6, op_v6s<OP_XOR>);
+BENCHMARK_TEMPLATE(run_v6, op_v6s<OP_BYTE>);
+BENCHMARK_TEMPLATE(run_v6, op_v6s<OP_MUL>);
+BENCHMARK_TEMPLATE(run_v6, op_v6x<OP_ADD>);
+BENCHMARK_TEMPLATE(run_v6, op_v6x<OP_XOR>);
+BENCHMARK_TEMPLATE(run_v6, op_v6x<OP_BYTE>);
+BENCHMARK_TEMPLATE(run_v6, op_v6x<OP_MUL>);
+BENCHMARK_TEMPLATE(run_v6, op_v6z<OP_ADD>);
+BENCHMARK_TEMPLATE(run_v6, op_v6z<OP_XOR>);
+BENCHMARK_TEMPLATE(run_v6, op_v6z<OP_BYTE>);
+BENCHMARK_TEMPLATE(run_v6, op_v6z<OP_MUL>);
 
 template <instr_v7 Instr>
 static void run_v7(benchmark::State& state)
