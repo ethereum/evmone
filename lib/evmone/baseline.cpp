@@ -10,6 +10,13 @@
 #include <evmc/instructions.h>
 #include <memory>
 
+#ifdef NDEBUG
+// TODO: msvc::forceinline can be used in C++20.
+#define release_inline gnu::always_inline
+#else
+#define release_inline
+#endif
+
 #if defined(__GNUC__)
 #define ASM_COMMENT(COMMENT) asm("# " #COMMENT)  // NOLINT(hicpp-no-assembler)
 #else
@@ -114,22 +121,23 @@ struct Position
 
 /// Helpers for invoking instruction implementations of different signatures.
 /// @{
-inline code_iterator invoke(
+[[release_inline]] inline code_iterator invoke(
     void (*instr_fn)(StackTop) noexcept, Position pos, ExecutionState& /*state*/) noexcept
 {
     instr_fn(pos.stack_top);
     return pos.code_it + 1;
 }
 
-inline code_iterator invoke(
+[[release_inline]] inline code_iterator invoke(
     StopToken (*instr_fn)() noexcept, Position /*pos*/, ExecutionState& state) noexcept
 {
     state.status = instr_fn().status;
     return nullptr;
 }
 
-inline code_iterator invoke(evmc_status_code (*instr_fn)(StackTop, ExecutionState&) noexcept,
-    Position pos, ExecutionState& state) noexcept
+[[release_inline]] inline code_iterator invoke(
+    evmc_status_code (*instr_fn)(StackTop, ExecutionState&) noexcept, Position pos,
+    ExecutionState& state) noexcept
 {
     if (const auto status = instr_fn(pos.stack_top, state); status != EVMC_SUCCESS)
     {
@@ -139,21 +147,22 @@ inline code_iterator invoke(evmc_status_code (*instr_fn)(StackTop, ExecutionStat
     return pos.code_it + 1;
 }
 
-inline code_iterator invoke(void (*instr_fn)(StackTop, ExecutionState&) noexcept, Position pos,
-    ExecutionState& state) noexcept
+[[release_inline]] inline code_iterator invoke(void (*instr_fn)(StackTop, ExecutionState&) noexcept,
+    Position pos, ExecutionState& state) noexcept
 {
     instr_fn(pos.stack_top, state);
     return pos.code_it + 1;
 }
 
-inline code_iterator invoke(
+[[release_inline]] inline code_iterator invoke(
     code_iterator (*instr_fn)(StackTop, ExecutionState&, code_iterator) noexcept, Position pos,
     ExecutionState& state) noexcept
 {
     return instr_fn(pos.stack_top, state, pos.code_it);
 }
 
-inline code_iterator invoke(StopToken (*instr_fn)(StackTop, ExecutionState&) noexcept, Position pos,
+[[release_inline]] inline code_iterator invoke(
+    StopToken (*instr_fn)(StackTop, ExecutionState&) noexcept, Position pos,
     ExecutionState& state) noexcept
 {
     state.status = instr_fn(pos.stack_top, state).status;
@@ -163,8 +172,8 @@ inline code_iterator invoke(StopToken (*instr_fn)(StackTop, ExecutionState&) noe
 
 /// A helper to invoke the instruction implementation of the given opcode Op.
 template <evmc_opcode Op>
-inline Position invoke(const CostTable& cost_table, const uint256* stack_bottom, Position pos,
-    ExecutionState& state) noexcept
+[[release_inline]] inline Position invoke(const CostTable& cost_table, const uint256* stack_bottom,
+    Position pos, ExecutionState& state) noexcept
 {
     const auto stack_size = static_cast<int>(pos.stack_top - stack_bottom);
     if (const auto status = check_requirements<Op>(cost_table, state.gas_left, stack_size);
