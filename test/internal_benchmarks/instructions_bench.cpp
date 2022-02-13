@@ -37,7 +37,6 @@ inline int64_t check_gas(int64_t gas_left) noexcept
     return gas_left - gas_cost;
 }
 
-using instr_v1 = evmc_status_code (*)(size_t pc, ExecutionState& state) noexcept;
 using instr_v2 = evmc_status_code (*)(size_t pc, uint256* top, ExecutionState& state) noexcept;
 using instr_v3 = evmc_status_code (*)(
     size_t pc, uint256* top, const uint256* bottom, ExecutionState& state) noexcept;
@@ -52,7 +51,6 @@ using instr_v7 = evmc_status_code (*)(const void* tbl, const uint8_t* pc, uint25
 using instr_v10 = evmc_status_code (*)(
     size_t pc, uint256* bottom, int size, ExecutionState& state) noexcept;
 
-instr_v1 instr_table_v1[] = {nullptr};
 instr_v2 instr_table_v2[] = {nullptr};
 instr_v3 instr_table_v3[] = {nullptr};
 instr_v4 instr_table_v4[] = {nullptr};
@@ -60,11 +58,6 @@ instr_v5 instr_table_v5[] = {nullptr};
 instr_v6 instr_table_v6[] = {nullptr};
 instr_v7 instr_table_v7[] = {nullptr};
 instr_v10 instr_table_v10[] = {nullptr};
-
-[[gnu::noinline]] evmc_status_code loop_v1(const uint8_t* code, ExecutionState& state) noexcept
-{
-    return instr_table_v1[code[0]](0, state);
-}
 
 [[gnu::noinline]] evmc_status_code loop_v2(
     const uint8_t* code, uint256* top, ExecutionState& state) noexcept
@@ -106,22 +99,6 @@ instr_v10 instr_table_v10[] = {nullptr};
     const uint8_t* code, uint256* bottom, int size, ExecutionState& state) noexcept
 {
     return instr_table_v10[code[0]](0, bottom, size, state);
-}
-
-template <evmc_opcode Op>
-evmc_status_code op_v1(size_t pc, ExecutionState& state) noexcept
-{
-    if (INTX_UNLIKELY(state.stack.size() < 2))
-        return EVMC_STACK_UNDERFLOW;
-
-    state.gas_left -= 3;
-    if (INTX_UNLIKELY(state.gas_left < 0))
-        return EVMC_OUT_OF_GAS;
-
-    instr::impl<Op>(state);
-
-    pc += 1;
-    [[clang::musttail]] return instr_table_v1[state.code[pc]](pc, state);
 }
 
 template <evmc_opcode Op>
@@ -298,30 +275,6 @@ evmc_status_code XOR_v10(size_t pc, uint256* bottom, int size, ExecutionState& s
     pc += 1;
     [[clang::musttail]] return instr_table_v10[state.code[pc]](pc, bottom, size - 1, state);
 }
-
-
-template <instr_v1 Instr>
-static void run_v1(benchmark::State& state)
-{
-    instr_table_v1[0] = Instr;
-    uint8_t code[1024]{};
-    evmone::ExecutionState es;
-    es.code = {code, std::size(code)};
-    es.gas_left = std::numeric_limits<int64_t>::max();
-    for (uint64_t i = 0; i < 1024; ++i)
-        es.stack.push(i);
-
-    const auto stack_top = es.stack.top_item;
-    for (auto _ : state)
-    {
-        es.stack.top_item = stack_top;
-        const auto r = loop_v1(code, es);
-        if (INTX_UNLIKELY(r != EVMC_STACK_UNDERFLOW))
-            state.SkipWithError("wrong exit code");
-    }
-}
-BENCHMARK_TEMPLATE(run_v1, op_v1<OP_ADD>);
-BENCHMARK_TEMPLATE(run_v1, op_v1<OP_XOR>);
 
 
 template <instr_v2 Instr>
