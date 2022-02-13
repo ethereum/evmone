@@ -58,6 +58,10 @@ if(CABLE_COMPILER_GNULIKE)
     cable_add_cxx_compiler_flag_if_supported(-Wsuggest-destructor-override)
     cable_add_cxx_compiler_flag_if_supported(-Wunreachable-code-break)
 
+    # The -mtune=generic does not work well yet in current compilers.
+    # Pick a good baseline for tuning.
+    cable_add_cxx_compiler_flag_if_supported(-mtune=haswell)
+
     if(CABLE_COMPILER_CLANG)
         set(CMAKE_CXX_FLAGS_COVERAGE "-fprofile-instr-generate -fcoverage-mapping")
     elseif(CABLE_COMPILER_GNU)
