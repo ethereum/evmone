@@ -163,7 +163,7 @@ evmc_status_code op_v4a(
     [[clang::musttail]] return instr_table_v4[state.code[pc]](pc, stack - 1, bottom, gas, state);
 }
 
-evmc_status_code add_v5(size_t pc, uint256* bottom, int size, ExecutionState& state) noexcept
+evmc_status_code ADD_v5(size_t pc, uint256* bottom, int size, ExecutionState& state) noexcept
 {
     if (INTX_UNLIKELY((size + 1) < 2))
         return EVMC_STACK_UNDERFLOW;
@@ -178,7 +178,7 @@ evmc_status_code add_v5(size_t pc, uint256* bottom, int size, ExecutionState& st
     [[clang::musttail]] return instr_table_v5[state.code[pc]](pc, bottom, size - 1, state);
 }
 
-evmc_status_code xor_v5(size_t pc, uint256* bottom, int size, ExecutionState& state) noexcept
+evmc_status_code XOR_v5(size_t pc, uint256* bottom, int size, ExecutionState& state) noexcept
 {
     if (INTX_UNLIKELY((size + 1) < 2))
         return EVMC_STACK_UNDERFLOW;
@@ -321,5 +321,5 @@ static void run_v5(benchmark::State& state)
             state.SkipWithError("wrong exit code");
     }
 }
-BENCHMARK_TEMPLATE(run_v5, add_v5);
-BENCHMARK_TEMPLATE(run_v5, xor_v5);
+BENCHMARK_TEMPLATE(run_v5, ADD_v5);
+BENCHMARK_TEMPLATE(run_v5, XOR_v5);
