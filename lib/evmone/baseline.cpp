@@ -74,7 +74,7 @@ namespace
 ///          or EVMC_SUCCESS if everything is fine.
 template <evmc_opcode Op>
 inline evmc_status_code check_requirements(
-    const CostTable& cost_table, int64_t& gas_left, int stack_size) noexcept
+    const CostTable& cost_table, int64_t& gas_left, ptrdiff_t stack_size) noexcept
 {
     static_assert(
         !(instr::has_const_gas_cost(Op) && instr::gas_costs[EVMC_FRONTIER][Op] == instr::undefined),
@@ -175,7 +175,7 @@ template <evmc_opcode Op>
 [[release_inline]] inline Position invoke(const CostTable& cost_table, const uint256* stack_bottom,
     Position pos, ExecutionState& state) noexcept
 {
-    const auto stack_size = static_cast<int>(pos.stack_top - stack_bottom);
+    const auto stack_size = pos.stack_top - stack_bottom;
     if (const auto status = check_requirements<Op>(cost_table, state.gas_left, stack_size);
         status != EVMC_SUCCESS)
     {
