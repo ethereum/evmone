@@ -16,6 +16,7 @@ struct State
     int64_t gas_left;
     const uint256* stack_bottom;
     const uint8_t* code;
+    const void* tbl;
 };
 
 template <evmc_opcode Op>
@@ -107,7 +108,6 @@ evmc_status_code op_v2(const uint8_t* pc, uint256* stack, State& state) noexcept
 
     if (state.gas_left = check_gas<Op>(state.gas_left); INTX_UNLIKELY(state.gas_left < 0))
         return EVMC_OUT_OF_GAS;
-
     instr::core::impl<Op>(stack);
 
     pc += 1;
@@ -196,14 +196,47 @@ evmc_status_code op_v5(
     if (INTX_UNLIKELY(stack_size < 2))
         return EVMC_STACK_UNDERFLOW;
 
-    gas -= 3;
-    if (INTX_UNLIKELY(gas < 0))
+    if (gas = check_gas<Op>(gas); INTX_UNLIKELY(gas < 0))
         return EVMC_OUT_OF_GAS;
-
     instr::core::impl<Op>(stack);
 
     pc += 1;
     [[clang::musttail]] return instr_table_v5[*pc](pc, stack - 1, stack_size - 1, gas, state);
+}
+
+template <evmc_opcode Op>
+evmc_status_code op_v5t(
+    const uint8_t* pc, uint256* stack, int stack_size, int64_t gas, State& state) noexcept
+{
+    auto instr_tbl = reinterpret_cast<const instr_v5*>(state.tbl);
+
+    if (INTX_UNLIKELY(stack_size < 2))
+        return EVMC_STACK_UNDERFLOW;
+
+    if (gas = check_gas<Op>(gas); INTX_UNLIKELY(gas < 0))
+        return EVMC_OUT_OF_GAS;
+    instr::core::impl<Op>(stack);
+
+    pc += 1;
+    [[clang::musttail]] return instr_tbl[*pc](pc, stack - 1, stack_size - 1, gas, state);
+}
+
+template <evmc_opcode Op>
+evmc_status_code op_v5u(
+    const uint8_t* pc, uint256* stack, int stack_size, int64_t gas, State& state) noexcept
+{
+    auto instr_tbl = reinterpret_cast<const instr_v5*>(state.tbl);
+    pc += 1;
+    auto next = instr_tbl[*pc];
+
+    if (INTX_UNLIKELY(stack_size < 2))
+        return EVMC_STACK_UNDERFLOW;
+
+    if (gas = check_gas<Op>(gas); INTX_UNLIKELY(gas < 0))
+        return EVMC_OUT_OF_GAS;
+    instr::core::impl<Op>(stack);
+
+    [[clang::musttail]] return next(pc, stack - 1, stack_size - 1, gas, state);
 }
 
 template <evmc_opcode Op>
@@ -332,6 +365,7 @@ static void run_v5(benchmark::State& state)
 
     State es;
     es.code = code;
+    es.tbl = instr_table_v5;
     for (auto _ : state)
     {
         const auto r = loop_v5(stack + 1023, 1024, std::numeric_limits<int64_t>::max(), es);
@@ -341,6 +375,10 @@ static void run_v5(benchmark::State& state)
 }
 BENCHMARK_TEMPLATE(run_v5, op_v5<OP_ADD>);
 BENCHMARK_TEMPLATE(run_v5, op_v5<OP_XOR>);
+BENCHMARK_TEMPLATE(run_v5, op_v5t<OP_ADD>);
+BENCHMARK_TEMPLATE(run_v5, op_v5t<OP_XOR>);
+BENCHMARK_TEMPLATE(run_v5, op_v5u<OP_ADD>);
+BENCHMARK_TEMPLATE(run_v5, op_v5u<OP_XOR>);
 
 template <instr_v7 Instr>
 static void run_v7(benchmark::State& state)
