@@ -17,14 +17,14 @@ using instr_v3 = evmc_status_code (*)(
     size_t pc, uint256* top, const uint256* bottom, ExecutionState& state) noexcept;
 using instr_v4 = evmc_status_code (*)(
     size_t pc, uint256* top, const uint256* bottom, int64_t gas, ExecutionState& state) noexcept;
-using instr_v5 = evmc_status_code (*)(
+using instr_v10 = evmc_status_code (*)(
     size_t pc, uint256* bottom, int size, ExecutionState& state) noexcept;
 
 instr_v1 instr_table_v1[] = {nullptr};
 instr_v2 instr_table_v2[] = {nullptr};
 instr_v3 instr_table_v3[] = {nullptr};
 instr_v4 instr_table_v4[] = {nullptr};
-instr_v5 instr_table_v5[] = {nullptr};
+instr_v10 instr_table_v10[] = {nullptr};
 
 [[gnu::noinline]] evmc_status_code loop_v1(const uint8_t* code, ExecutionState& state) noexcept
 {
@@ -49,10 +49,10 @@ instr_v5 instr_table_v5[] = {nullptr};
     return instr_table_v4[code[0]](0, top, bottom, gas, state);
 }
 
-[[gnu::noinline]] evmc_status_code loop_v5(
+[[gnu::noinline]] evmc_status_code loop_v10(
     const uint8_t* code, uint256* bottom, int size, ExecutionState& state) noexcept
 {
-    return instr_table_v5[code[0]](0, bottom, size, state);
+    return instr_table_v10[code[0]](0, bottom, size, state);
 }
 
 template <evmc_opcode Op>
@@ -163,7 +163,7 @@ evmc_status_code op_v4a(
     [[clang::musttail]] return instr_table_v4[state.code[pc]](pc, stack - 1, bottom, gas, state);
 }
 
-evmc_status_code ADD_v5(size_t pc, uint256* bottom, int size, ExecutionState& state) noexcept
+evmc_status_code ADD_v10(size_t pc, uint256* bottom, int size, ExecutionState& state) noexcept
 {
     if (INTX_UNLIKELY((size + 1) < 2))
         return EVMC_STACK_UNDERFLOW;
@@ -175,10 +175,10 @@ evmc_status_code ADD_v5(size_t pc, uint256* bottom, int size, ExecutionState& st
     bottom[size - 1] += bottom[size];
 
     pc += 1;
-    [[clang::musttail]] return instr_table_v5[state.code[pc]](pc, bottom, size - 1, state);
+    [[clang::musttail]] return instr_table_v10[state.code[pc]](pc, bottom, size - 1, state);
 }
 
-evmc_status_code XOR_v5(size_t pc, uint256* bottom, int size, ExecutionState& state) noexcept
+evmc_status_code XOR_v10(size_t pc, uint256* bottom, int size, ExecutionState& state) noexcept
 {
     if (INTX_UNLIKELY((size + 1) < 2))
         return EVMC_STACK_UNDERFLOW;
@@ -190,7 +190,7 @@ evmc_status_code XOR_v5(size_t pc, uint256* bottom, int size, ExecutionState& st
     bottom[size - 1] |= bottom[size];
 
     pc += 1;
-    [[clang::musttail]] return instr_table_v5[state.code[pc]](pc, bottom, size - 1, state);
+    [[clang::musttail]] return instr_table_v10[state.code[pc]](pc, bottom, size - 1, state);
 }
 
 
@@ -300,10 +300,10 @@ BENCHMARK_TEMPLATE(run_v4, op_v4a<OP_ADD>);
 BENCHMARK_TEMPLATE(run_v4, op_v4a<OP_XOR>);
 
 
-template <instr_v5 Instr>
-static void run_v5(benchmark::State& state)
+template <instr_v10 Instr>
+static void run_v10(benchmark::State& state)
 {
-    instr_table_v5[0] = Instr;
+    instr_table_v10[0] = Instr;
     uint8_t code[1024]{};
     evmone::ExecutionState es;
     es.code = {code, std::size(code)};
@@ -316,10 +316,10 @@ static void run_v5(benchmark::State& state)
     for (auto _ : state)
     {
         es.stack.top_item = bottom;
-        const auto r = loop_v5(code, bottom, 1023, es);
+        const auto r = loop_v10(code, bottom, 1023, es);
         if (INTX_UNLIKELY(r != EVMC_STACK_UNDERFLOW))
             state.SkipWithError("wrong exit code");
     }
 }
-BENCHMARK_TEMPLATE(run_v5, ADD_v5);
-BENCHMARK_TEMPLATE(run_v5, XOR_v5);
+BENCHMARK_TEMPLATE(run_v10, ADD_v10);
+BENCHMARK_TEMPLATE(run_v10, XOR_v10);
