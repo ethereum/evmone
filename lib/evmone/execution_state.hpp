@@ -1,5 +1,5 @@
 // evmone: Fast Ethereum Virtual Machine implementation
-// Copyright 2019-2020 The evmone Authors.
+// Copyright 2019 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
@@ -24,32 +24,21 @@ using bytes = std::basic_string<uint8_t>;
 using bytes_view = std::basic_string_view<uint8_t>;
 
 
-/// The stack for 256-bit EVM words.
-///
-/// This implementation reserves memory inplace for all possible stack items (1024),
-/// so this type is big. Make sure it is allocated on heap.
-struct Stack
+/// The view/controller for EVM stack.
+class Stack
 {
-    /// The maximum number of stack items.
-    static constexpr auto limit = 1024;
-
+public:
     /// The pointer to the top item.
-    /// This is never nullptr and when stack is empty it points to bottom(),
-    /// i.e. one item below the stack space.
-    uint256* top_item;
+    /// Once stack space is provided with reset() this is never null.
+    uint256* top_item = nullptr;
 
-    /// The storage allocated for maximum possible number of items.
-    /// Items are aligned to 256 bits for better packing in cache lines.
-    alignas(sizeof(uint256)) uint256 storage[limit];
+private:
+    /// The pointer to the stack space "bottom".
+    uint256* m_bottom = nullptr;
 
-    /// Returns the pointer to below the stack storage.
-    [[nodiscard, clang::no_sanitize("bounds")]] uint256* bottom() noexcept { return storage - 1; }
-
-    /// Default constructor. Stack is empty.
-    Stack() noexcept : top_item{bottom()} {}
-
+public:
     /// The current number of items on the stack.
-    [[nodiscard]] int size() const noexcept { return static_cast<int>(top_item + 1 - storage); }
+    [[nodiscard]] int size() const noexcept { return static_cast<int>(top_item - m_bottom); }
 
     /// Returns the reference to the top item.
     // NOLINTNEXTLINE(readability-make-member-function-const)
@@ -71,9 +60,33 @@ struct Stack
     /// Returns an item popped from the top of the stack.
     uint256 pop() noexcept { return *top_item--; }
 
-    /// Empties the stack by resetting the top item pointer.
-    void clear() noexcept { top_item = bottom(); }
+    /// Empties the stack by resetting the top item pointer to the new provided stack space.
+    void reset(uint256* stack_space_bottom) noexcept
+    {
+        m_bottom = stack_space_bottom;
+        top_item = m_bottom;
+    }
 };
+
+/// Provides memory for EVM stack.
+class StackSpace
+{
+public:
+    /// The maximum number of EVM stack items.
+    static constexpr auto limit = 1024;
+
+    /// Returns the pointer to the "bottom", i.e. below the stack space.
+    [[nodiscard, clang::no_sanitize("bounds")]] uint256* bottom() noexcept
+    {
+        return m_stack_space - 1;
+    }
+
+private:
+    /// The storage allocated for maximum possible number of items.
+    /// Items are aligned to 256 bits for better packing in cache lines.
+    alignas(sizeof(uint256)) uint256 m_stack_space[limit];
+};
+
 
 /// The EVM memory.
 ///
@@ -150,8 +163,9 @@ public:
     void clear() noexcept { m_size = 0; }
 };
 
+
 /// Generic execution state for generic instructions implementations.
-struct ExecutionState
+struct ExecutionState  // NOLINT(clang-analyzer-optin.performance.Padding)
 {
     int64_t gas_left = 0;
     Memory memory;
@@ -178,8 +192,12 @@ struct ExecutionState
 
     Stack stack;
 
+    /// Stack space allocation.
+    ///
+    /// This is the last field to make other fields' offsets of reasonable values.
+    StackSpace stack_space;
 
-    ExecutionState() noexcept = default;
+    ExecutionState() noexcept { stack.reset(stack_space.bottom()); }
 
     ExecutionState(const evmc_message& message, evmc_revision revision,
         const evmc_host_interface& host_interface, evmc_host_context* host_ctx,
@@ -189,7 +207,9 @@ struct ExecutionState
         host{host_interface, host_ctx},
         rev{revision},
         code{_code}
-    {}
+    {
+        stack.reset(stack_space.bottom());
+    }
 
     /// Resets the contents of the ExecutionState so that it could be reused.
     void reset(const evmc_message& message, evmc_revision revision,
@@ -197,7 +217,6 @@ struct ExecutionState
         bytes_view _code) noexcept
     {
         gas_left = message.gas;
-        stack.clear();
         memory.clear();
         msg = &message;
         host = {host_interface, host_ctx};
@@ -207,6 +226,7 @@ struct ExecutionState
         status = EVMC_SUCCESS;
         output_offset = 0;
         output_size = 0;
+        stack.reset(stack_space.bottom());
     }
 
     bool in_static_mode() const { return (msg->flags & EVMC_STATIC) != 0; }

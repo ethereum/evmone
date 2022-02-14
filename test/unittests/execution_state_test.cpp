@@ -138,30 +138,29 @@ TEST(execution_state, reset_advanced)
     }
 }
 
-TEST(execution_state, stack_clear)
+TEST(execution_state, stack_reset)
 {
     evmone::Stack stack;
+    evmone::StackSpace stack_space;
 
-    stack.clear();
+    stack.reset(stack_space.bottom());
     EXPECT_EQ(stack.size(), 0);
-    EXPECT_EQ(stack.top_item + 1, stack.storage);
 
     stack.push({});
     EXPECT_EQ(stack.size(), 1);
-    EXPECT_EQ(stack.top_item, stack.storage);
 
-    stack.clear();
+    stack.reset(stack_space.bottom());
     EXPECT_EQ(stack.size(), 0);
-    EXPECT_EQ(stack.top_item + 1, stack.storage);
 
-    stack.clear();
+    stack.reset(stack_space.bottom());
     EXPECT_EQ(stack.size(), 0);
-    EXPECT_EQ(stack.top_item + 1, stack.storage);
 }
 
 TEST(execution_state, const_stack)
 {
     evmone::Stack stack;
+    evmone::StackSpace stack_space;
+    stack.reset(stack_space.bottom());
     stack.push(1);
     stack.push(2);
 
