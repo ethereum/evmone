@@ -58,29 +58,29 @@ inline constexpr int64_t num_words(uint64_t size_in_bytes) noexcept
     return static_cast<int64_t>((size_in_bytes + (word_size - 1)) / word_size);
 }
 
-// Grows EVM memory and checks its cost.
-//
-// This function should not be inlined because this may affect other inlining decisions:
-// - making check_memory() too costly to inline,
-// - making mload()/mstore()/mstore8() too costly to inline.
-//
-// TODO: This function should be moved to Memory class.
-[[gnu::noinline]] inline bool grow_memory(ExecutionState& state, uint64_t new_size) noexcept
+/// Grows EVM memory and checks its cost.
+///
+/// This function should not be inlined because this may affect other inlining decisions:
+/// - making check_memory() too costly to inline,
+/// - making mload()/mstore()/mstore8() too costly to inline.
+///
+/// TODO: This function should be moved to Memory class.
+[[gnu::noinline]] inline int64_t grow_memory(
+    int64_t gas_left, Memory& memory, uint64_t new_size) noexcept
 {
     // This implementation recomputes memory.size(). This value is already known to the caller
     // and can be passed as a parameter, but this make no difference to the performance.
 
     const auto new_words = num_words(new_size);
-    const auto current_words = static_cast<int64_t>(state.memory.size() / word_size);
+    const auto current_words = static_cast<int64_t>(memory.size() / word_size);
     const auto new_cost = 3 * new_words + new_words * new_words / 512;
     const auto current_cost = 3 * current_words + current_words * current_words / 512;
     const auto cost = new_cost - current_cost;
 
-    if ((state.gas_left -= cost) < 0)
-        return false;
-
-    state.memory.grow(static_cast<size_t>(new_words * word_size));
-    return true;
+    gas_left -= cost;
+    if (gas_left >= 0) [[likely]]
+        memory.grow(static_cast<size_t>(new_words * word_size));
+    return gas_left;
 }
 
 // Check memory requirements of a reasonable size.
@@ -94,9 +94,9 @@ inline bool check_memory(ExecutionState& state, const uint256& offset, uint64_t 
 
     const auto new_size = static_cast<uint64_t>(offset) + size;
     if (new_size > state.memory.size())
-        return grow_memory(state, new_size);
+        state.gas_left = grow_memory(state.gas_left, state.memory, new_size);
 
-    return true;
+    return state.gas_left >= 0;  // Always true for no-grow case.
 }
 
 // Check memory requirements for "copy" instructions.
