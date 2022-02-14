@@ -15,14 +15,14 @@ using namespace evmone::instr;
 /// Instruction implementations - "core" instruction + stack height adjustment.
 /// @{
 template <evmc_opcode Op, void CoreFn(StackTop) noexcept = core::impl<Op>>
-inline void impl(ExecutionState& state) noexcept
+inline void impl(AdvancedExecutionState& state) noexcept
 {
     CoreFn(state.stack.top_item);
     state.stack.top_item += instr::traits[Op].stack_height_change;
 }
 
 template <evmc_opcode Op, void CoreFn(StackTop, ExecutionState&) noexcept = core::impl<Op>>
-inline void impl(ExecutionState& state) noexcept
+inline void impl(AdvancedExecutionState& state) noexcept
 {
     CoreFn(state.stack.top_item, state);
     state.stack.top_item += instr::traits[Op].stack_height_change;
@@ -30,7 +30,7 @@ inline void impl(ExecutionState& state) noexcept
 
 template <evmc_opcode Op,
     evmc_status_code CoreFn(StackTop, ExecutionState&) noexcept = core::impl<Op>>
-inline evmc_status_code impl(ExecutionState& state) noexcept
+inline evmc_status_code impl(AdvancedExecutionState& state) noexcept
 {
     const auto status = CoreFn(state.stack.top_item, state);
     state.stack.top_item += instr::traits[Op].stack_height_change;
@@ -38,13 +38,13 @@ inline evmc_status_code impl(ExecutionState& state) noexcept
 }
 
 template <evmc_opcode Op, StopToken CoreFn() noexcept = core::impl<Op>>
-inline StopToken impl(ExecutionState& /*state*/) noexcept
+inline StopToken impl(AdvancedExecutionState& /*state*/) noexcept
 {
     return CoreFn();
 }
 
 template <evmc_opcode Op, StopToken CoreFn(StackTop, ExecutionState&) noexcept = core::impl<Op>>
-inline StopToken impl(ExecutionState& state) noexcept
+inline StopToken impl(AdvancedExecutionState& state) noexcept
 {
     // Stack height adjustment may be omitted.
     return CoreFn(state.stack.top_item, state);
@@ -52,7 +52,7 @@ inline StopToken impl(ExecutionState& state) noexcept
 
 template <evmc_opcode Op,
     code_iterator CoreFn(StackTop, ExecutionState&, code_iterator) noexcept = core::impl<Op>>
-inline code_iterator impl(ExecutionState& state, code_iterator pos) noexcept
+inline code_iterator impl(AdvancedExecutionState& state, code_iterator pos) noexcept
 {
     const auto new_pos = CoreFn(state.stack.top_item, state, pos);
     state.stack.top_item += instr::traits[Op].stack_height_change;
@@ -64,7 +64,7 @@ inline code_iterator impl(ExecutionState& state, code_iterator pos) noexcept
 /// Fake wrap for generic instruction implementations accessing current code location.
 /// This is to make any op<...> compile, but pointers must be replaced with Advanced-specific
 /// implementation. Definition not provided.
-template <code_iterator InstrFn(ExecutionState&, code_iterator)>
+template <code_iterator InstrFn(AdvancedExecutionState&, code_iterator)>
 const Instruction* op(const Instruction* /*instr*/, AdvancedExecutionState& state) noexcept;
 
 namespace
@@ -72,7 +72,7 @@ namespace
 using advanced::op;
 
 /// Wraps the generic instruction implementation to advanced instruction function signature.
-template <void InstrFn(ExecutionState&) noexcept>
+template <void InstrFn(AdvancedExecutionState&) noexcept>
 const Instruction* op(const Instruction* instr, AdvancedExecutionState& state) noexcept
 {
     InstrFn(state);
@@ -80,7 +80,7 @@ const Instruction* op(const Instruction* instr, AdvancedExecutionState& state) n
 }
 
 /// Wraps the generic instruction implementation to advanced instruction function signature.
-template <evmc_status_code InstrFn(ExecutionState&) noexcept>
+template <evmc_status_code InstrFn(AdvancedExecutionState&) noexcept>
 const Instruction* op(const Instruction* instr, AdvancedExecutionState& state) noexcept
 {
     if (const auto status_code = InstrFn(state); status_code != EVMC_SUCCESS)
@@ -89,7 +89,7 @@ const Instruction* op(const Instruction* instr, AdvancedExecutionState& state) n
 }
 
 /// Wraps the generic instruction implementation to advanced instruction function signature.
-template <StopToken InstrFn(ExecutionState&) noexcept>
+template <StopToken InstrFn(AdvancedExecutionState&) noexcept>
 const Instruction* op(const Instruction* /*instr*/, AdvancedExecutionState& state) noexcept
 {
     return state.exit(InstrFn(state).status);

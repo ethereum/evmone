@@ -24,50 +24,6 @@ using bytes = std::basic_string<uint8_t>;
 using bytes_view = std::basic_string_view<uint8_t>;
 
 
-/// The view/controller for EVM stack.
-class Stack
-{
-public:
-    /// The pointer to the top item.
-    /// Once stack space is provided with reset() this is never null.
-    uint256* top_item = nullptr;
-
-private:
-    /// The pointer to the stack space "bottom".
-    uint256* m_bottom = nullptr;
-
-public:
-    /// The current number of items on the stack.
-    [[nodiscard]] int size() const noexcept { return static_cast<int>(top_item - m_bottom); }
-
-    /// Returns the reference to the top item.
-    // NOLINTNEXTLINE(readability-make-member-function-const)
-    [[nodiscard]] uint256& top() noexcept { return *top_item; }
-
-    /// Returns the reference to the stack item on given position from the stack top.
-    // NOLINTNEXTLINE(readability-make-member-function-const)
-    [[nodiscard]] uint256& operator[](int index) noexcept { return *(top_item - index); }
-
-    /// Returns the const reference to the stack item on given position from the stack top.
-    [[nodiscard]] const uint256& operator[](int index) const noexcept
-    {
-        return *(top_item - index);
-    }
-
-    /// Pushes an item on the stack. The stack limit is not checked.
-    void push(const uint256& item) noexcept { *++top_item = item; }
-
-    /// Returns an item popped from the top of the stack.
-    uint256 pop() noexcept { return *top_item--; }
-
-    /// Empties the stack by resetting the top item pointer to the new provided stack space.
-    void reset(uint256* stack_space_bottom) noexcept
-    {
-        m_bottom = stack_space_bottom;
-        top_item = m_bottom;
-    }
-};
-
 /// Provides memory for EVM stack.
 class StackSpace
 {
@@ -165,7 +121,7 @@ public:
 
 
 /// Generic execution state for generic instructions implementations.
-struct ExecutionState  // NOLINT(clang-analyzer-optin.performance.Padding)
+struct ExecutionState
 {
     int64_t gas_left = 0;
     Memory memory;
@@ -190,14 +146,12 @@ struct ExecutionState  // NOLINT(clang-analyzer-optin.performance.Padding)
         const advanced::AdvancedCodeAnalysis* advanced;
     } analysis{};
 
-    Stack stack;
-
     /// Stack space allocation.
     ///
     /// This is the last field to make other fields' offsets of reasonable values.
     StackSpace stack_space;
 
-    ExecutionState() noexcept { stack.reset(stack_space.bottom()); }
+    ExecutionState() noexcept = default;
 
     ExecutionState(const evmc_message& message, evmc_revision revision,
         const evmc_host_interface& host_interface, evmc_host_context* host_ctx,
@@ -207,9 +161,7 @@ struct ExecutionState  // NOLINT(clang-analyzer-optin.performance.Padding)
         host{host_interface, host_ctx},
         rev{revision},
         code{_code}
-    {
-        stack.reset(stack_space.bottom());
-    }
+    {}
 
     /// Resets the contents of the ExecutionState so that it could be reused.
     void reset(const evmc_message& message, evmc_revision revision,
@@ -226,7 +178,6 @@ struct ExecutionState  // NOLINT(clang-analyzer-optin.performance.Padding)
         status = EVMC_SUCCESS;
         output_offset = 0;
         output_size = 0;
-        stack.reset(stack_space.bottom());
     }
 
     bool in_static_mode() const { return (msg->flags & EVMC_STATIC) != 0; }
