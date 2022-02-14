@@ -8,6 +8,59 @@
 
 namespace evmone::advanced
 {
+namespace instr
+{
+using namespace evmone::instr;
+
+/// Instruction implementations - "core" instruction + stack height adjustment.
+/// @{
+template <evmc_opcode Op, void CoreFn(StackTop) noexcept = core::impl<Op>>
+inline void impl(ExecutionState& state) noexcept
+{
+    CoreFn(state.stack.top_item);
+    state.stack.top_item += instr::traits[Op].stack_height_change;
+}
+
+template <evmc_opcode Op, void CoreFn(StackTop, ExecutionState&) noexcept = core::impl<Op>>
+inline void impl(ExecutionState& state) noexcept
+{
+    CoreFn(state.stack.top_item, state);
+    state.stack.top_item += instr::traits[Op].stack_height_change;
+}
+
+template <evmc_opcode Op,
+    evmc_status_code CoreFn(StackTop, ExecutionState&) noexcept = core::impl<Op>>
+inline evmc_status_code impl(ExecutionState& state) noexcept
+{
+    const auto status = CoreFn(state.stack.top_item, state);
+    state.stack.top_item += instr::traits[Op].stack_height_change;
+    return status;
+}
+
+template <evmc_opcode Op, StopToken CoreFn() noexcept = core::impl<Op>>
+inline StopToken impl(ExecutionState& /*state*/) noexcept
+{
+    return CoreFn();
+}
+
+template <evmc_opcode Op, StopToken CoreFn(StackTop, ExecutionState&) noexcept = core::impl<Op>>
+inline StopToken impl(ExecutionState& state) noexcept
+{
+    // Stack height adjustment may be omitted.
+    return CoreFn(state.stack.top_item, state);
+}
+
+template <evmc_opcode Op,
+    code_iterator CoreFn(StackTop, ExecutionState&, code_iterator) noexcept = core::impl<Op>>
+inline code_iterator impl(ExecutionState& state, code_iterator pos) noexcept
+{
+    const auto new_pos = CoreFn(state.stack.top_item, state, pos);
+    state.stack.top_item += instr::traits[Op].stack_height_change;
+    return new_pos;
+}
+/// @}
+}  // namespace instr
+
 /// Fake wrap for generic instruction implementations accessing current code location.
 /// This is to make any op<...> compile, but pointers must be replaced with Advanced-specific
 /// implementation. Definition not provided.

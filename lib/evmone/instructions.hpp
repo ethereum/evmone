@@ -113,7 +113,7 @@ inline bool check_memory(ExecutionState& state, const uint256& offset, const uin
     return check_memory(state, offset, static_cast<uint64_t>(size));
 }
 
-namespace instr
+namespace instr::core
 {
 
 /// The "core" instruction implementations.
@@ -124,8 +124,6 @@ namespace instr
 /// - the `stack` pointer points to the EVM stack top element.
 /// Moreover, these implementations _do not_ inform about new stack height
 /// after execution. The adjustment must be performed by the caller.
-namespace core
-{
 inline void noop(StackTop /*stack*/) noexcept {}
 inline constexpr auto pop = noop;
 inline constexpr auto jumpdest = noop;
@@ -972,56 +970,5 @@ inline constexpr auto impl = nullptr;
     inline constexpr auto impl<OPCODE> = IDENTIFIER;  // opcode -> implementation
 MAP_OPCODE_TO_IDENTIFIER
 #undef X
-}  // namespace core
-
-/// Instruction implementations - "core" instruction + stack height adjustment.
-/// TODO: These are only used by Advanced, so can be moved there.
-/// @{
-template <evmc_opcode Op, void CoreFn(StackTop) noexcept = core::impl<Op>>
-inline void impl(ExecutionState& state) noexcept
-{
-    CoreFn(state.stack.top_item);
-    state.stack.top_item += instr::traits[Op].stack_height_change;
-}
-
-template <evmc_opcode Op, void CoreFn(StackTop, ExecutionState&) noexcept = core::impl<Op>>
-inline void impl(ExecutionState& state) noexcept
-{
-    CoreFn(state.stack.top_item, state);
-    state.stack.top_item += instr::traits[Op].stack_height_change;
-}
-
-template <evmc_opcode Op,
-    evmc_status_code CoreFn(StackTop, ExecutionState&) noexcept = core::impl<Op>>
-inline evmc_status_code impl(ExecutionState& state) noexcept
-{
-    const auto status = CoreFn(state.stack.top_item, state);
-    state.stack.top_item += instr::traits[Op].stack_height_change;
-    return status;
-}
-
-template <evmc_opcode Op, StopToken CoreFn() noexcept = core::impl<Op>>
-inline StopToken impl(ExecutionState& /*state*/) noexcept
-{
-    return CoreFn();
-}
-
-template <evmc_opcode Op, StopToken CoreFn(StackTop, ExecutionState&) noexcept = core::impl<Op>>
-inline StopToken impl(ExecutionState& state) noexcept
-{
-    // Stack height adjustment may be omitted.
-    return CoreFn(state.stack.top_item, state);
-}
-
-template <evmc_opcode Op,
-    code_iterator CoreFn(StackTop, ExecutionState&, code_iterator) noexcept = core::impl<Op>>
-inline code_iterator impl(ExecutionState& state, code_iterator pos) noexcept
-{
-    const auto new_pos = CoreFn(state.stack.top_item, state, pos);
-    state.stack.top_item += instr::traits[Op].stack_height_change;
-    return new_pos;
-}
-/// @}
-
-}  // namespace instr
+}  // namespace instr::core
 }  // namespace evmone
