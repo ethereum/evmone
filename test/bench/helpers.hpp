@@ -36,13 +36,12 @@ struct FakeCodeAnalysis
 
 inline advanced::AdvancedCodeAnalysis advanced_analyse(evmc_revision rev, bytes_view code)
 {
-    // TODO: Change analyze() signature.
-    return advanced::analyze(rev, code.data(), code.size());
+    return advanced::analyze(rev, code);
 }
 
 inline baseline::CodeAnalysis baseline_analyse(evmc_revision /*rev*/, bytes_view code)
 {
-    return baseline::analyze(code.data(), code.size());
+    return baseline::analyze(code);
 }
 
 inline FakeCodeAnalysis evmc_analyse(evmc_revision /*rev*/, bytes_view /*code*/)

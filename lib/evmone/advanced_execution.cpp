@@ -27,7 +27,7 @@ evmc_result execute(AdvancedExecutionState& state, const AdvancedCodeAnalysis& a
 evmc_result execute(evmc_vm* /*unused*/, const evmc_host_interface* host, evmc_host_context* ctx,
     evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
 {
-    const auto analysis = analyze(rev, code, code_size);
+    const auto analysis = analyze(rev, {code, code_size});
     auto state = std::make_unique<AdvancedExecutionState>(*msg, rev, *host, ctx, code, code_size);
     return execute(*state, analysis);
 }

@@ -131,8 +131,7 @@ inline int find_jumpdest(const AdvancedCodeAnalysis& analysis, int offset) noexc
                -1;
 }
 
-EVMC_EXPORT AdvancedCodeAnalysis analyze(
-    evmc_revision rev, const uint8_t* code, size_t code_size) noexcept;
+EVMC_EXPORT AdvancedCodeAnalysis analyze(evmc_revision rev, bytes_view code) noexcept;
 
 EVMC_EXPORT const OpTable& get_op_table(evmc_revision rev) noexcept;
 
