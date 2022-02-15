@@ -86,7 +86,7 @@ inline bool check_requirements(
 
         // Negative cost marks an undefined instruction.
         // This check must be first to produce correct error code.
-        if (INTX_UNLIKELY(gas_cost < 0))
+        if (gas_cost < 0)
             return false;
     }
 
@@ -95,16 +95,16 @@ inline bool check_requirements(
     if constexpr (instr::traits[Op].stack_height_change > 0)
     {
         static_assert(instr::traits[Op].stack_height_change == 1);
-        if (INTX_UNLIKELY(stack_size == StackSpace::limit))
+        if (stack_size == StackSpace::limit)
             return false;
     }
     if constexpr (instr::traits[Op].stack_height_required > 0)
     {
-        if (INTX_UNLIKELY(stack_size < instr::traits[Op].stack_height_required))
+        if (stack_size < instr::traits[Op].stack_height_required)
             return false;
     }
 
-    if (INTX_UNLIKELY((gas_left -= gas_cost) < 0))
+    if ((gas_left -= gas_cost) < 0)
         return false;
 
     return true;
