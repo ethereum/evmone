@@ -72,7 +72,7 @@ namespace
 /// @return  Status code with information which check has failed
 ///          or EVMC_SUCCESS if everything is fine.
 template <evmc_opcode Op>
-inline evmc_status_code check_requirements(
+inline bool check_requirements(
     const CostTable& cost_table, int64_t& gas_left, ptrdiff_t stack_size) noexcept
 {
     static_assert(
@@ -87,7 +87,7 @@ inline evmc_status_code check_requirements(
         // Negative cost marks an undefined instruction.
         // This check must be first to produce correct error code.
         if (INTX_UNLIKELY(gas_cost < 0))
-            return EVMC_FAILURE;
+            return false;
     }
 
     // Check stack requirements first. This is order is not required,
@@ -96,18 +96,18 @@ inline evmc_status_code check_requirements(
     {
         static_assert(instr::traits[Op].stack_height_change == 1);
         if (INTX_UNLIKELY(stack_size == StackSpace::limit))
-            return EVMC_STACK_OVERFLOW;
+            return false;
     }
     if constexpr (instr::traits[Op].stack_height_required > 0)
     {
         if (INTX_UNLIKELY(stack_size < instr::traits[Op].stack_height_required))
-            return EVMC_STACK_UNDERFLOW;
+            return false;
     }
 
     if (INTX_UNLIKELY((gas_left -= gas_cost) < 0))
-        return EVMC_FAILURE;
+        return false;
 
-    return EVMC_SUCCESS;
+    return true;
 }
 
 
@@ -175,12 +175,9 @@ template <evmc_opcode Op>
     Position pos, ExecutionState& state) noexcept
 {
     const auto stack_size = pos.stack_top - stack_bottom;
-    if (const auto status = check_requirements<Op>(cost_table, state.gas_left, stack_size);
-        status != EVMC_SUCCESS)
-    {
-        state.status = status;
+    if (!check_requirements<Op>(cost_table, state.gas_left, stack_size))
         return {nullptr, pos.stack_top};
-    }
+
     const auto new_pos = invoke(instr::core::impl<Op>, pos, state);
     const auto new_stack_top = pos.stack_top + instr::traits[Op].stack_height_change;
     return {new_pos, new_stack_top};
@@ -252,10 +249,15 @@ exit:
     if (state.status == EVMC_FAILURE)
     {
         const auto op = *position.code_it;
+        const auto stack_size = position.stack_top - stack_bottom;
         if (state.gas_left < 0)
             state.status = EVMC_OUT_OF_GAS;
         else if (cost_table[op] < 0)
             state.status = EVMC_UNDEFINED_INSTRUCTION;
+        else if (stack_size == StackSpace::limit)
+            state.status = EVMC_STACK_OVERFLOW;
+        else
+            state.status = EVMC_STACK_UNDERFLOW;
     }
     assert(state.status != EVMC_FAILURE);
 
