@@ -208,6 +208,7 @@ template <evmc_opcode Op>
 template <bool TracingEnabled>
 evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& analysis) noexcept
 {
+    state.status = EVMC_FAILURE;
     state.analysis.baseline = &analysis;  // Assign code analysis for instruction implementations.
 
     // Use padded code.
@@ -248,6 +249,8 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     }
 
 exit:
+    assert(state.status != EVMC_FAILURE);
+
     const auto gas_left =
         (state.status == EVMC_SUCCESS || state.status == EVMC_REVERT) ? state.gas_left : 0;
 
