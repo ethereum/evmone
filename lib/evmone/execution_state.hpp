@@ -208,5 +208,7 @@ struct ExecutionState
         output_offset = 0;
         output_size = 0;
     }
+
+    bool in_static_mode() const { return (msg->flags & EVMC_STATIC) != 0; }
 };
 }  // namespace evmone

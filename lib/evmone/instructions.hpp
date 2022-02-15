@@ -695,7 +695,7 @@ inline evmc_status_code sload(StackTop stack, ExecutionState& state) noexcept
 
 inline evmc_status_code sstore(StackTop stack, ExecutionState& state) noexcept
 {
-    if (state.msg->flags & EVMC_STATIC)
+    if (state.in_static_mode())
         return EVMC_STATIC_MODE_VIOLATION;
 
     if (state.rev >= EVMC_ISTANBUL && state.gas_left <= 2300)
@@ -822,7 +822,7 @@ inline evmc_status_code log(StackTop stack, ExecutionState& state) noexcept
 {
     static_assert(NumTopics <= 4);
 
-    if (state.msg->flags & EVMC_STATIC)
+    if (state.in_static_mode())
         return EVMC_STATIC_MODE_VIOLATION;
 
     const auto& offset = stack.pop();
@@ -879,7 +879,7 @@ inline constexpr auto revert = return_impl<EVMC_REVERT>;
 
 inline StopToken selfdestruct(StackTop stack, ExecutionState& state) noexcept
 {
-    if (state.msg->flags & EVMC_STATIC)
+    if (state.in_static_mode())
         return {EVMC_STATIC_MODE_VIOLATION};
 
     const auto beneficiary = intx::be::trunc<evmc::address>(stack[0]);

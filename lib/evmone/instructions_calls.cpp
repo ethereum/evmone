@@ -57,7 +57,7 @@ evmc_status_code call_impl(StackTop stack, ExecutionState& state) noexcept
 
     if constexpr (Op == OP_CALL)
     {
-        if (has_value && state.msg->flags & EVMC_STATIC)
+        if (has_value && state.in_static_mode())
             return EVMC_STATIC_MODE_VIOLATION;
 
         if ((has_value || state.rev < EVMC_SPURIOUS_DRAGON) && !state.host.account_exists(dst))
@@ -114,7 +114,7 @@ evmc_status_code create_impl(StackTop stack, ExecutionState& state) noexcept
 {
     static_assert(Op == OP_CREATE || Op == OP_CREATE2);
 
-    if (state.msg->flags & EVMC_STATIC)
+    if (state.in_static_mode())
         return EVMC_STATIC_MODE_VIOLATION;
 
     const auto endowment = stack.pop();
