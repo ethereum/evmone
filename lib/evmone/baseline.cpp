@@ -105,7 +105,7 @@ inline evmc_status_code check_requirements(
     }
 
     if (INTX_UNLIKELY((gas_left -= gas_cost) < 0))
-        return EVMC_OUT_OF_GAS;
+        return EVMC_FAILURE;
 
     return EVMC_SUCCESS;
 }
@@ -249,6 +249,11 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     }
 
 exit:
+    if (state.status == EVMC_FAILURE)
+    {
+        if (state.gas_left < 0)
+            state.status = EVMC_OUT_OF_GAS;
+    }
     assert(state.status != EVMC_FAILURE);
 
     const auto gas_left =
