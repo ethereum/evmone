@@ -87,7 +87,7 @@ inline evmc_status_code check_requirements(
         // Negative cost marks an undefined instruction.
         // This check must be first to produce correct error code.
         if (INTX_UNLIKELY(gas_cost < 0))
-            return EVMC_UNDEFINED_INSTRUCTION;
+            return EVMC_FAILURE;
     }
 
     // Check stack requirements first. This is order is not required,
@@ -251,8 +251,11 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
 exit:
     if (state.status == EVMC_FAILURE)
     {
+        const auto op = *position.code_it;
         if (state.gas_left < 0)
             state.status = EVMC_OUT_OF_GAS;
+        else if (cost_table[op] < 0)
+            state.status = EVMC_UNDEFINED_INSTRUCTION;
     }
     assert(state.status != EVMC_FAILURE);
 
