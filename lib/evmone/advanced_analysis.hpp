@@ -50,9 +50,9 @@ struct AdvancedExecutionState : ExecutionState
     /// Resets the contents of the execution_state so that it could be reused.
     void reset(const evmc_message& message, evmc_revision revision,
         const evmc_host_interface& host_interface, evmc_host_context* host_ctx,
-        const uint8_t* code_ptr, size_t code_size) noexcept
+        bytes_view _code) noexcept
     {
-        ExecutionState::reset(message, revision, host_interface, host_ctx, code_ptr, code_size);
+        ExecutionState::reset(message, revision, host_interface, host_ctx, _code);
         analysis.advanced = nullptr;  // For consistency with previous behavior.
         current_block_cost = 0;
     }
@@ -131,8 +131,7 @@ inline int find_jumpdest(const AdvancedCodeAnalysis& analysis, int offset) noexc
                -1;
 }
 
-EVMC_EXPORT AdvancedCodeAnalysis analyze(
-    evmc_revision rev, const uint8_t* code, size_t code_size) noexcept;
+EVMC_EXPORT AdvancedCodeAnalysis analyze(evmc_revision rev, bytes_view code) noexcept;
 
 EVMC_EXPORT const OpTable& get_op_table(evmc_revision rev) noexcept;
 
