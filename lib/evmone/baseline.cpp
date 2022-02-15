@@ -276,7 +276,8 @@ evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_co
 {
     auto vm = static_cast<VM*>(c_vm);
     const auto jumpdest_map = analyze({code, code_size});
-    auto state = std::make_unique<ExecutionState>(*msg, rev, *host, ctx, code, code_size);
+    auto state =
+        std::make_unique<ExecutionState>(*msg, rev, *host, ctx, bytes_view{code, code_size});
     return execute(*vm, *state, jumpdest_map);
 }
 }  // namespace evmone::baseline

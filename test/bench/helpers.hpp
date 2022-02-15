@@ -54,7 +54,7 @@ inline evmc::result advanced_execute(evmc::VM& /*vm*/, advanced::AdvancedExecuti
     const advanced::AdvancedCodeAnalysis& analysis, const evmc_message& msg, evmc_revision rev,
     evmc::Host& host, bytes_view code)
 {
-    exec_state.reset(msg, rev, host.get_interface(), host.to_context(), code.data(), code.size());
+    exec_state.reset(msg, rev, host.get_interface(), host.to_context(), code);
     return evmc::result{execute(exec_state, analysis)};
 }
 
@@ -63,7 +63,7 @@ inline evmc::result baseline_execute(evmc::VM& c_vm, ExecutionState& exec_state,
     evmc::Host& host, bytes_view code)
 {
     const auto& vm = *static_cast<evmone::VM*>(c_vm.get_raw_pointer());
-    exec_state.reset(msg, rev, host.get_interface(), host.to_context(), code.data(), code.size());
+    exec_state.reset(msg, rev, host.get_interface(), host.to_context(), code);
     return evmc::result{baseline::execute(vm, exec_state, analysis)};
 }
 
