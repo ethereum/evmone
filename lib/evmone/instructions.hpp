@@ -783,19 +783,68 @@ inline void gas(StackTop stack, ExecutionState& state) noexcept
     stack.push(state.gas_left);
 }
 
+
+template <size_t Len>
+inline uint64_t load_partial_push_data(code_iterator pos) noexcept
+{
+    static_assert(Len > 4 && Len < 8);
+
+    // It loads up to 3 additional bytes.
+    return intx::be::unsafe::load<uint64_t>(pos) >> (8 * (sizeof(uint64_t) - Len));
+}
+
+template <>
+inline uint64_t load_partial_push_data<1>(code_iterator pos) noexcept
+{
+    return pos[0];
+}
+
+template <>
+inline uint64_t load_partial_push_data<2>(code_iterator pos) noexcept
+{
+    return intx::be::unsafe::load<uint16_t>(pos);
+}
+
+template <>
+inline uint64_t load_partial_push_data<3>(code_iterator pos) noexcept
+{
+    // It loads 1 additional byte.
+    return intx::be::unsafe::load<uint32_t>(pos) >> 8;
+}
+
+template <>
+inline uint64_t load_partial_push_data<4>(code_iterator pos) noexcept
+{
+    return intx::be::unsafe::load<uint32_t>(pos);
+}
+
 /// PUSH instruction implementation.
 /// @tparam Len The number of push data bytes, e.g. PUSH3 is push<3>.
 ///
-/// It assumes that the whole data read is valid so code padding is required for some EVM bytecodes
-/// having an "incomplete" PUSH instruction at the very end.
+/// It assumes that at lest 32 bytes of data are available so code padding is required.
 template <size_t Len>
 inline code_iterator push(StackTop stack, ExecutionState& /*state*/, code_iterator pos) noexcept
 {
-    // TODO: state access not needed.
-    const auto data_pos = pos + 1;
-    uint8_t buffer[Len];
-    std::memcpy(buffer, data_pos, Len);  // Valid by the assumption code is padded.
-    stack.push(intx::be::load<uint256>(buffer));
+    constexpr auto num_full_words = Len / sizeof(uint64_t);
+    constexpr auto num_partial_bytes = Len % sizeof(uint64_t);
+    auto data = pos + 1;
+    uint256 r;
+
+    // Load top partial word.
+    if constexpr (num_partial_bytes != 0)
+    {
+        r[num_full_words] = load_partial_push_data<num_partial_bytes>(data);
+        data += num_partial_bytes;
+    }
+
+    // Load full words.
+    for (size_t i = 0; i < num_full_words; ++i)
+    {
+        r[num_full_words - 1 - i] = intx::be::unsafe::load<uint64_t>(data);
+        data += sizeof(uint64_t);
+    }
+
+    stack.push(r);
     return pos + (Len + 1);
 }
 
