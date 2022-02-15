@@ -48,6 +48,11 @@ if(CABLE_COMPILER_GNULIKE)
     add_compile_options(
         -Wmissing-declarations
         -Wno-attributes  # Allow using unknown attributes.
+
+        -march=haswell
+        -mprefer-vector-width=128
+        -mbranches-within-32B-boundaries
+        -falign-functions=32
     )
     cable_add_cxx_compiler_flag_if_supported(-Wduplicated-cond)
     cable_add_cxx_compiler_flag_if_supported(-Wduplicate-enum)
