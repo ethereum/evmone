@@ -175,7 +175,7 @@ template <evmc_opcode Op>
     Position pos, ExecutionState& state) noexcept
 {
     const auto stack_size = pos.stack_top - stack_bottom;
-    if (!check_requirements<Op>(cost_table, state.gas_left, stack_size))
+    if (INTX_UNLIKELY(!check_requirements<Op>(cost_table, state.gas_left, stack_size)))
         return {nullptr, pos.stack_top};
 
     const auto new_pos = invoke(instr::core::impl<Op>, pos, state);
