@@ -351,7 +351,7 @@ constexpr inline std::array<Traits, 256> traits = []() noexcept {
 /// not available in the first revision (e.g. SHL).
 inline constexpr std::optional<int64_t> get_const_gas_cost(evmc_opcode op) noexcept
 {
-    const auto since = *traits[op].since;
+    const size_t since = *traits[op].since;
     const auto g = gas_costs[since][op];
     for (size_t r = since + 1; r <= EVMC_MAX_REVISION; ++r)
     {
