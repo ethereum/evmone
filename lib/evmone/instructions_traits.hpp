@@ -368,4 +368,12 @@ inline constexpr std::optional<int64_t> get_const_gas_cost(evmc_opcode op) noexc
 // static_assert(!has_const_gas_cost(OP_BALANCE));
 // static_assert(!has_const_gas_cost(OP_SLOAD));
 // static_assert(!has_const_gas_cost(OP_STATICCALL));
+
+inline constexpr std::array<int16_t, EVMC_MAX_REVISION + 1> get_gas_cost_table(evmc_opcode op) noexcept
+{
+    std::array<int16_t, EVMC_MAX_REVISION + 1> table{};
+    for (size_t i = 0; i <= EVMC_MAX_REVISION; ++i)
+        table[i] = gas_costs[i][op];
+    return table;
+}
 }  // namespace evmone::instr

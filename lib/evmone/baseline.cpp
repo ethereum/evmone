@@ -82,7 +82,7 @@ inline constexpr bool check_defined(evmc_revision rev) noexcept
 ///          or EVMC_SUCCESS if everything is fine.
 template <evmc_opcode Op>
 inline evmc_status_code check_requirements(
-    const CostTable& cost_table, int64_t& gas_left, ptrdiff_t stack_size) noexcept
+    evmc_revision rev, int64_t& gas_left, ptrdiff_t stack_size) noexcept
 {
     // Check stack requirements first. This is order is not required,
     // but it is nicer because complete gas check may need to inspect operands.
@@ -98,7 +98,15 @@ inline evmc_status_code check_requirements(
             return EVMC_STACK_UNDERFLOW;
     }
 
-    const int64_t gas_cost = instr::get_const_gas_cost(Op).value_or(cost_table[Op]);
+    constexpr auto g = instr::get_const_gas_cost(Op);
+    int64_t gas_cost;
+    if constexpr (g.has_value())
+        gas_cost = *g;
+    else
+    {
+        static constexpr auto gas_tbl = instr::get_gas_cost_table(Op);
+        gas_cost = gas_tbl[rev];
+    }
     if (INTX_UNLIKELY((gas_left -= gas_cost) < 0))
         return EVMC_OUT_OF_GAS;
 
@@ -166,8 +174,8 @@ struct Position
 
 /// A helper to invoke the instruction implementation of the given opcode Op.
 template <evmc_opcode Op>
-[[release_inline]] inline Position invoke(const CostTable& cost_table, const uint256* stack_bottom,
-    Position pos, ExecutionState& state) noexcept
+[[release_inline]] inline Position invoke(const CostTable& /*cost_table*/,
+    const uint256* stack_bottom, Position pos, ExecutionState& state) noexcept
 {
     if (!check_defined<Op>(state.rev))
     {
@@ -176,7 +184,7 @@ template <evmc_opcode Op>
     }
 
     const auto stack_size = pos.stack_top - stack_bottom;
-    if (const auto status = check_requirements<Op>(cost_table, state.gas_left, stack_size);
+    if (const auto status = check_requirements<Op>(state.rev, state.gas_left, stack_size);
         status != EVMC_SUCCESS)
     {
         state.status = status;
