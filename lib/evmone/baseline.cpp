@@ -58,6 +58,15 @@ CodeAnalysis analyze(bytes_view code)
 
 namespace
 {
+template <evmc_opcode Op>
+inline constexpr bool check_defined(evmc_revision rev) noexcept
+{
+    constexpr auto since = *instr::traits[Op].since;
+    if constexpr (since != EVMC_FRONTIER)
+        return rev >= since;
+    return true;
+}
+
 /// Checks instruction requirements before execution.
 ///
 /// This checks:
@@ -84,10 +93,10 @@ inline evmc_status_code check_requirements(
     {
         gas_cost = cost_table[Op];  // If not, load the cost from the table.
 
-        // Negative cost marks an undefined instruction.
-        // This check must be first to produce correct error code.
-        if (INTX_UNLIKELY(gas_cost < 0))
-            return EVMC_UNDEFINED_INSTRUCTION;
+        // // Negative cost marks an undefined instruction.
+        // // This check must be first to produce correct error code.
+        // if (INTX_UNLIKELY(gas_cost < 0))
+        //     return EVMC_UNDEFINED_INSTRUCTION;
     }
 
     // Check stack requirements first. This is order is not required,
@@ -174,6 +183,12 @@ template <evmc_opcode Op>
 [[release_inline]] inline Position invoke(const CostTable& cost_table, const uint256* stack_bottom,
     Position pos, ExecutionState& state) noexcept
 {
+    if (!check_defined<Op>(state.rev))
+    {
+        state.status = EVMC_UNDEFINED_INSTRUCTION;
+        return {nullptr, pos.stack_top};
+    }
+
     const auto stack_size = pos.stack_top - stack_bottom;
     if (const auto status = check_requirements<Op>(cost_table, state.gas_left, stack_size);
         status != EVMC_SUCCESS)
