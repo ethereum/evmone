@@ -184,26 +184,6 @@ struct Traits
     std::optional<evmc_revision> since;
 };
 
-/// Determines if an instruction has constant base gas cost across all revisions.
-/// Note that this is not true for instructions with constant base gas cost but
-/// not available in the first revision (e.g. SHL).
-inline constexpr bool has_const_gas_cost(evmc_opcode op) noexcept
-{
-    const auto g = gas_costs[EVMC_FRONTIER][op];
-    for (size_t r = EVMC_FRONTIER + 1; r <= EVMC_MAX_REVISION; ++r)
-    {
-        if (gas_costs[r][op] != g)
-            return false;
-    }
-    return true;
-}
-static_assert(has_const_gas_cost(OP_STOP));
-static_assert(has_const_gas_cost(OP_ADD));
-static_assert(has_const_gas_cost(OP_PUSH1));
-static_assert(!has_const_gas_cost(OP_SHL));
-static_assert(!has_const_gas_cost(OP_BALANCE));
-static_assert(!has_const_gas_cost(OP_SLOAD));
-
 
 /// The global, EVM revision independent, table of traits of all known EVM instructions.
 constexpr inline std::array<Traits, 256> traits = []() noexcept {
@@ -366,4 +346,26 @@ constexpr inline std::array<Traits, 256> traits = []() noexcept {
     return table;
 }();
 
+/// Determines if an instruction has constant base gas cost across all revisions.
+/// Note that this is not true for instructions with constant base gas cost but
+/// not available in the first revision (e.g. SHL).
+inline constexpr std::optional<int64_t> get_const_gas_cost(evmc_opcode op) noexcept
+{
+    const auto since = *traits[op].since;
+    const auto g = gas_costs[since][op];
+    for (size_t r = since + 1; r <= EVMC_MAX_REVISION; ++r)
+    {
+        if (gas_costs[r][op] != g)
+            return {};
+    }
+    return g;
+}
+// static_assert(has_const_gas_cost(OP_STOP));
+// static_assert(has_const_gas_cost(OP_ADD));
+// static_assert(has_const_gas_cost(OP_PUSH1));
+// static_assert(has_const_gas_cost(OP_SHL));
+// static_assert(has_const_gas_cost(OP_CREATE2));
+// static_assert(!has_const_gas_cost(OP_BALANCE));
+// static_assert(!has_const_gas_cost(OP_SLOAD));
+// static_assert(!has_const_gas_cost(OP_STATICCALL));
 }  // namespace evmone::instr
