@@ -174,7 +174,7 @@ struct Position
 
 /// A helper to invoke the instruction implementation of the given opcode Op.
 template <evmc_opcode Op>
-[[release_inline]] inline Position invoke(const CostTable& /*cost_table*/,
+[[release_inline]] inline Position invoke(
     const uint256* stack_bottom, Position pos, ExecutionState& state) noexcept
 {
     if (!check_defined<Op>(state.rev))
@@ -197,21 +197,21 @@ template <evmc_opcode Op>
 
 
 /// Implementation of a generic instruction "case".
-#define DISPATCH_CASE(OPCODE)                                                            \
-    case OPCODE:                                                                         \
-        ASM_COMMENT(OPCODE);                                                             \
-                                                                                         \
-        if (const auto next = invoke<OPCODE>(cost_table, stack_bottom, position, state); \
-            next.code_it == nullptr)                                                     \
-        {                                                                                \
-            goto exit;                                                                   \
-        }                                                                                \
-        else                                                                             \
-        {                                                                                \
-            /* Update current position only when no error,                               \
-               this improves compiler optimization. */                                   \
-            position = next;                                                             \
-        }                                                                                \
+#define DISPATCH_CASE(OPCODE)                                                \
+    case OPCODE:                                                             \
+        ASM_COMMENT(OPCODE);                                                 \
+                                                                             \
+        if (const auto next = invoke<OPCODE>(stack_bottom, position, state); \
+            next.code_it == nullptr)                                         \
+        {                                                                    \
+            goto exit;                                                       \
+        }                                                                    \
+        else                                                                 \
+        {                                                                    \
+            /* Update current position only when no error,                   \
+               this improves compiler optimization. */                       \
+            position = next;                                                 \
+        }                                                                    \
         break
 
 template <bool TracingEnabled>
@@ -225,8 +225,6 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     auto* tracer = vm.get_tracer();
     if constexpr (TracingEnabled)
         tracer->notify_execution_start(state.rev, *state.msg, state.code);
-
-    const auto& cost_table = get_baseline_cost_table(state.rev);
 
     const auto* const code = state.code.data();
     const auto stack_bottom = state.stack_space.bottom();
