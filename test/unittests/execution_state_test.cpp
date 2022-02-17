@@ -138,10 +138,8 @@ TEST(execution_state, reset_advanced)
 
 TEST(execution_state, stack_reset)
 {
-    evmone::advanced::Stack stack;
     evmone::StackSpace stack_space;
-
-    stack.reset(stack_space.bottom());
+    evmone::advanced::Stack stack{stack_space.bottom()};
     EXPECT_EQ(stack.size(), 0);
 
     stack.push({});
@@ -156,9 +154,8 @@ TEST(execution_state, stack_reset)
 
 TEST(execution_state, const_stack)
 {
-    evmone::advanced::Stack stack;
     evmone::StackSpace stack_space;
-    stack.reset(stack_space.bottom());
+    evmone::advanced::Stack stack{stack_space.bottom()};
     stack.push(1);
     stack.push(2);
 

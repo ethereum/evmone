@@ -35,7 +35,7 @@ class Stack
 {
 public:
     /// The pointer to the top item.
-    /// Once stack space is provided with reset() this is never null.
+    /// This is never null.
     uint256* top_item = nullptr;
 
 private:
@@ -43,6 +43,9 @@ private:
     uint256* m_bottom = nullptr;
 
 public:
+    /// Init with the provided stack space.
+    explicit Stack(uint256* stack_space_bottom) noexcept { reset(stack_space_bottom); }
+
     /// The current number of items on the stack.
     [[nodiscard]] int size() const noexcept { return static_cast<int>(top_item - m_bottom); }
 
@@ -84,15 +87,14 @@ struct AdvancedExecutionState : ExecutionState
     /// This is only needed to correctly calculate the "current gas left" value.
     uint32_t current_block_cost = 0;
 
-    AdvancedExecutionState() noexcept { stack.reset(stack_space.bottom()); }
+    AdvancedExecutionState() noexcept : stack{stack_space.bottom()} {}
 
     AdvancedExecutionState(const evmc_message& message, evmc_revision revision,
         const evmc_host_interface& host_interface, evmc_host_context* host_ctx,
         bytes_view _code) noexcept
-      : ExecutionState{message, revision, host_interface, host_ctx, _code}
-    {
-        stack.reset(stack_space.bottom());
-    }
+      : ExecutionState{message, revision, host_interface, host_ctx, _code},
+        stack{stack_space.bottom()}
+    {}
 
     /// Terminates the execution with the given status code.
     const Instruction* exit(evmc_status_code status_code) noexcept
