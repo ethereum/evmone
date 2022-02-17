@@ -38,7 +38,7 @@ TEST(evmone, set_option_optimization_level)
     EXPECT_EQ(vm.set_option("O", "0"), EVMC_SET_OPTION_SUCCESS);
     EXPECT_EQ(vm.set_option("O", "1"), EVMC_SET_OPTION_INVALID_VALUE);
     EXPECT_EQ(vm.set_option("O", "2"), EVMC_SET_OPTION_SUCCESS);
-    EXPECT_EQ(vm.set_option("O", "3"), EVMC_SET_OPTION_INVALID_VALUE);
+    EXPECT_EQ(vm.set_option("O", "4"), EVMC_SET_OPTION_INVALID_VALUE);
 
     EXPECT_EQ(vm.set_option("O", "20"), EVMC_SET_OPTION_INVALID_VALUE);
     EXPECT_EQ(vm.set_option("O", "21"), EVMC_SET_OPTION_INVALID_VALUE);

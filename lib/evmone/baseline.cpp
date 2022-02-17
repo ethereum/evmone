@@ -239,8 +239,10 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
         switch (op)
         {
 #define X(OPCODE, IGNORED) DISPATCH_CASE(OPCODE);
+#define X_UNDEFINED(IGNORED)
             MAP_OPCODE_TO_IDENTIFIER
 #undef X
+#undef X_UNDEFINED
         default:
             state.status = EVMC_UNDEFINED_INSTRUCTION;
             goto exit;

@@ -154,6 +154,8 @@ public:
 struct ExecutionState
 {
     int64_t gas_left = 0;
+    const uint256* stack_bottom = nullptr;
+    const void* tbl = nullptr;
     Memory memory;
     const evmc_message* msg = nullptr;
     evmc::HostContext host;

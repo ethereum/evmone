@@ -970,8 +970,10 @@ inline constexpr auto impl = nullptr;
 #define X(OPCODE, IDENTIFIER) \
     template <>               \
     inline constexpr auto impl<OPCODE> = IDENTIFIER;  // opcode -> implementation
+#define X_UNDEFINED(IGNORED)
 MAP_OPCODE_TO_IDENTIFIER
 #undef X
+#undef X_UNDEFINED
 }  // namespace core
 
 /// Instruction implementations - "core" instruction + stack height adjustment.
