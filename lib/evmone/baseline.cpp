@@ -75,15 +75,14 @@ template <evmc_opcode Op>
 inline evmc_status_code check_requirements(
     const CostTable& cost_table, int64_t& gas_left, ptrdiff_t stack_size) noexcept
 {
-    static_assert(
-        !(instr::has_const_gas_cost(Op) && instr::gas_costs[EVMC_FRONTIER][Op] == instr::undefined),
-        "undefined instructions must not be handled by check_requirements()");
+    static constexpr auto is_always_defined = *instr::traits[Op].since == EVMC_FRONTIER;
 
     auto gas_cost = instr::gas_costs[EVMC_FRONTIER][Op];  // Init assuming const cost.
-    if constexpr (!instr::has_const_gas_cost(Op))
-    {
+    if constexpr (!is_always_defined || !instr::has_const_gas_cost(Op))
         gas_cost = cost_table[Op];  // If not, load the cost from the table.
 
+    if constexpr (!is_always_defined)
+    {
         // Negative cost marks an undefined instruction.
         // This check must be first to produce correct error code.
         if (INTX_UNLIKELY(gas_cost < 0))
