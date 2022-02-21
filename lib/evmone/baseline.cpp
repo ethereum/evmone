@@ -99,9 +99,8 @@ inline evmc_status_code check_requirements(
             return EVMC_STACK_UNDERFLOW;
     }
 
-    auto gas_cost = instr::gas_costs[EVMC_FRONTIER][Op];  // Init assuming const cost.
-    if constexpr (!instr::has_const_gas_cost(Op))
-        gas_cost = cost_table[Op];  // If not, load the cost from the table.
+    static constexpr auto constant_gas_cost = instr::get_const_gas_cost(Op);
+    const auto gas_cost = constant_gas_cost.has_value() ? *constant_gas_cost : cost_table[Op];
     if (INTX_UNLIKELY((gas_left -= gas_cost) < 0))
         return EVMC_OUT_OF_GAS;
 
