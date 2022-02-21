@@ -163,7 +163,27 @@ constexpr inline GasCostTable gas_costs = []() noexcept {
     return table;
 }();
 
+
+/// The table of instruction base gas costs in EVM revisions grouped by opcodes.
+using GasCostByRevisionTable = std::array<std::array<int16_t, EVMC_MAX_REVISION + 1>, 256>;
+
+/// The EVM instructions base gas costs in EVM revisions grouped by opcodes
+/// (dimensions reversed in comparison to instr::gas_costs).
+/// For instructions undefined in given EVM revision, the value is instr::undefined.
+inline constexpr GasCostByRevisionTable gas_costs_by_revision = []() noexcept {
+    GasCostByRevisionTable table{};
+    for (size_t op = 0x00; op <= 0xff; ++op)
+    {
+        for (size_t rev = EVMC_FRONTIER; rev <= EVMC_MAX_REVISION; ++rev)
+            table[op][rev] = gas_costs[rev][op];
+    }
+    return table;
+}();
+
 static_assert(gas_costs[EVMC_MAX_REVISION][OP_ADD] > 0, "gas costs missing for a revision");
+static_assert(gas_costs[EVMC_MAX_REVISION][OP_BALANCE] ==
+                  gas_costs_by_revision[OP_BALANCE][EVMC_MAX_REVISION],
+    "invalid gas cost tables");
 
 
 /// The EVM instruction traits.
