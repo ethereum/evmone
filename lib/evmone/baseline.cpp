@@ -77,15 +77,11 @@ inline evmc_status_code check_requirements(
 {
     static constexpr auto is_always_defined = *instr::traits[Op].since == EVMC_FRONTIER;
 
-    auto gas_cost = instr::gas_costs[EVMC_FRONTIER][Op];  // Init assuming const cost.
-    if constexpr (!is_always_defined || !instr::has_const_gas_cost(Op))
-        gas_cost = cost_table[Op];  // If not, load the cost from the table.
-
     if constexpr (!is_always_defined)
     {
         // Negative cost marks an undefined instruction.
         // This check must be first to produce correct error code.
-        if (INTX_UNLIKELY(gas_cost < 0))
+        if (INTX_UNLIKELY(cost_table[Op] < 0))
             return EVMC_UNDEFINED_INSTRUCTION;
     }
 
@@ -103,6 +99,9 @@ inline evmc_status_code check_requirements(
             return EVMC_STACK_UNDERFLOW;
     }
 
+    auto gas_cost = instr::gas_costs[EVMC_FRONTIER][Op];  // Init assuming const cost.
+    if constexpr (!instr::has_const_gas_cost(Op))
+        gas_cost = cost_table[Op];  // If not, load the cost from the table.
     if (INTX_UNLIKELY((gas_left -= gas_cost) < 0))
         return EVMC_OUT_OF_GAS;
 
