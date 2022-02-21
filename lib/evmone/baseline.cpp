@@ -95,7 +95,7 @@ inline evmc_status_code check_requirements(
     if constexpr (instr::traits[Op].stack_height_change > 0)
     {
         static_assert(instr::traits[Op].stack_height_change == 1);
-        if (INTX_UNLIKELY(stack_size == Stack::limit))
+        if (INTX_UNLIKELY(stack_size == StackSpace::limit))
             return EVMC_STACK_OVERFLOW;
     }
     if constexpr (instr::traits[Op].stack_height_required > 0)
@@ -220,7 +220,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     const auto& cost_table = get_baseline_cost_table(state.rev);
 
     const auto* const code = state.code.data();
-    const auto stack_bottom = state.stack.bottom();
+    const auto stack_bottom = state.stack_space.bottom();
 
     // Code iterator and stack top pointer for interpreter loop.
     Position position{code, stack_bottom};

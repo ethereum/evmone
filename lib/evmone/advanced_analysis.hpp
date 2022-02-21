@@ -30,15 +30,71 @@ struct BlockInfo
 };
 static_assert(sizeof(BlockInfo) == 8);
 
+/// The view/controller for EVM stack.
+class Stack
+{
+public:
+    /// The pointer to the top item.
+    /// This is never null.
+    uint256* top_item = nullptr;
+
+private:
+    /// The pointer to the stack space "bottom".
+    uint256* m_bottom = nullptr;
+
+public:
+    /// Init with the provided stack space.
+    explicit Stack(uint256* stack_space_bottom) noexcept { reset(stack_space_bottom); }
+
+    /// The current number of items on the stack.
+    [[nodiscard]] int size() const noexcept { return static_cast<int>(top_item - m_bottom); }
+
+    /// Returns the reference to the top item.
+    // NOLINTNEXTLINE(readability-make-member-function-const)
+    [[nodiscard]] uint256& top() noexcept { return *top_item; }
+
+    /// Returns the reference to the stack item on given position from the stack top.
+    // NOLINTNEXTLINE(readability-make-member-function-const)
+    [[nodiscard]] uint256& operator[](int index) noexcept { return *(top_item - index); }
+
+    /// Returns the const reference to the stack item on given position from the stack top.
+    [[nodiscard]] const uint256& operator[](int index) const noexcept
+    {
+        return *(top_item - index);
+    }
+
+    /// Pushes an item on the stack. The stack limit is not checked.
+    void push(const uint256& item) noexcept { *++top_item = item; }
+
+    /// Returns an item popped from the top of the stack.
+    uint256 pop() noexcept { return *top_item--; }
+
+    /// Empties the stack by resetting the top item pointer to the new provided stack space.
+    void reset(uint256* stack_space_bottom) noexcept
+    {
+        m_bottom = stack_space_bottom;
+        top_item = m_bottom;
+    }
+};
+
 /// The execution state specialized for the Advanced interpreter.
 struct AdvancedExecutionState : ExecutionState
 {
+    Stack stack;
+
     /// The gas cost of the current block.
     ///
     /// This is only needed to correctly calculate the "current gas left" value.
     uint32_t current_block_cost = 0;
 
-    using ExecutionState::ExecutionState;
+    AdvancedExecutionState() noexcept : stack{stack_space.bottom()} {}
+
+    AdvancedExecutionState(const evmc_message& message, evmc_revision revision,
+        const evmc_host_interface& host_interface, evmc_host_context* host_ctx,
+        bytes_view _code) noexcept
+      : ExecutionState{message, revision, host_interface, host_ctx, _code},
+        stack{stack_space.bottom()}
+    {}
 
     /// Terminates the execution with the given status code.
     const Instruction* exit(evmc_status_code status_code) noexcept
@@ -53,6 +109,7 @@ struct AdvancedExecutionState : ExecutionState
         bytes_view _code) noexcept
     {
         ExecutionState::reset(message, revision, host_interface, host_ctx, _code);
+        stack.reset(stack_space.bottom());
         analysis.advanced = nullptr;  // For consistency with previous behavior.
         current_block_cost = 0;
     }

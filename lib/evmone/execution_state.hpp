@@ -1,5 +1,5 @@
 // evmone: Fast Ethereum Virtual Machine implementation
-// Copyright 2019-2020 The evmone Authors.
+// Copyright 2019 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
@@ -24,56 +24,25 @@ using bytes = std::basic_string<uint8_t>;
 using bytes_view = std::basic_string_view<uint8_t>;
 
 
-/// The stack for 256-bit EVM words.
-///
-/// This implementation reserves memory inplace for all possible stack items (1024),
-/// so this type is big. Make sure it is allocated on heap.
-struct Stack
+/// Provides memory for EVM stack.
+class StackSpace
 {
-    /// The maximum number of stack items.
+public:
+    /// The maximum number of EVM stack items.
     static constexpr auto limit = 1024;
 
-    /// The pointer to the top item.
-    /// This is never nullptr and when stack is empty it points to bottom(),
-    /// i.e. one item below the stack space.
-    uint256* top_item;
-
-    /// The storage allocated for maximum possible number of items.
-    /// Items are aligned to 256 bits for better packing in cache lines.
-    alignas(sizeof(uint256)) uint256 storage[limit];
-
-    /// Returns the pointer to below the stack storage.
-    [[nodiscard, clang::no_sanitize("bounds")]] uint256* bottom() noexcept { return storage - 1; }
-
-    /// Default constructor. Stack is empty.
-    Stack() noexcept : top_item{bottom()} {}
-
-    /// The current number of items on the stack.
-    [[nodiscard]] int size() const noexcept { return static_cast<int>(top_item + 1 - storage); }
-
-    /// Returns the reference to the top item.
-    // NOLINTNEXTLINE(readability-make-member-function-const)
-    [[nodiscard]] uint256& top() noexcept { return *top_item; }
-
-    /// Returns the reference to the stack item on given position from the stack top.
-    // NOLINTNEXTLINE(readability-make-member-function-const)
-    [[nodiscard]] uint256& operator[](int index) noexcept { return *(top_item - index); }
-
-    /// Returns the const reference to the stack item on given position from the stack top.
-    [[nodiscard]] const uint256& operator[](int index) const noexcept
+    /// Returns the pointer to the "bottom", i.e. below the stack space.
+    [[nodiscard, clang::no_sanitize("bounds")]] uint256* bottom() noexcept
     {
-        return *(top_item - index);
+        return m_stack_space - 1;
     }
 
-    /// Pushes an item on the stack. The stack limit is not checked.
-    void push(const uint256& item) noexcept { *++top_item = item; }
-
-    /// Returns an item popped from the top of the stack.
-    uint256 pop() noexcept { return *top_item--; }
-
-    /// Empties the stack by resetting the top item pointer.
-    void clear() noexcept { top_item = bottom(); }
+private:
+    /// The storage allocated for maximum possible number of items.
+    /// Items are aligned to 256 bits for better packing in cache lines.
+    alignas(sizeof(uint256)) uint256 m_stack_space[limit];
 };
+
 
 /// The EVM memory.
 ///
@@ -150,6 +119,7 @@ public:
     void clear() noexcept { m_size = 0; }
 };
 
+
 /// Generic execution state for generic instructions implementations.
 struct ExecutionState
 {
@@ -176,8 +146,10 @@ struct ExecutionState
         const advanced::AdvancedCodeAnalysis* advanced;
     } analysis{};
 
-    Stack stack;
-
+    /// Stack space allocation.
+    ///
+    /// This is the last field to make other fields' offsets of reasonable values.
+    StackSpace stack_space;
 
     ExecutionState() noexcept = default;
 
@@ -197,7 +169,6 @@ struct ExecutionState
         bytes_view _code) noexcept
     {
         gas_left = message.gas;
-        stack.clear();
         memory.clear();
         msg = &message;
         host = {host_interface, host_ctx};

@@ -29,7 +29,6 @@ TEST(execution_state, construct)
         msg, EVMC_MAX_REVISION, host_interface, nullptr, {code, std::size(code)}};
 
     EXPECT_EQ(st.gas_left, -1);
-    EXPECT_EQ(st.stack.size(), 0);
     EXPECT_EQ(st.memory.size(), 0);
     EXPECT_EQ(st.msg, &msg);
     EXPECT_EQ(st.rev, EVMC_MAX_REVISION);
@@ -46,7 +45,6 @@ TEST(execution_state, default_construct)
     const evmone::ExecutionState st;
 
     EXPECT_EQ(st.gas_left, 0);
-    EXPECT_EQ(st.stack.size(), 0);
     EXPECT_EQ(st.memory.size(), 0);
     EXPECT_EQ(st.msg, nullptr);
     EXPECT_EQ(st.rev, EVMC_FRONTIER);
@@ -138,30 +136,26 @@ TEST(execution_state, reset_advanced)
     }
 }
 
-TEST(execution_state, stack_clear)
+TEST(execution_state, stack_reset)
 {
-    evmone::Stack stack;
-
-    stack.clear();
+    evmone::StackSpace stack_space;
+    evmone::advanced::Stack stack{stack_space.bottom()};
     EXPECT_EQ(stack.size(), 0);
-    EXPECT_EQ(stack.top_item + 1, stack.storage);
 
     stack.push({});
     EXPECT_EQ(stack.size(), 1);
-    EXPECT_EQ(stack.top_item, stack.storage);
 
-    stack.clear();
+    stack.reset(stack_space.bottom());
     EXPECT_EQ(stack.size(), 0);
-    EXPECT_EQ(stack.top_item + 1, stack.storage);
 
-    stack.clear();
+    stack.reset(stack_space.bottom());
     EXPECT_EQ(stack.size(), 0);
-    EXPECT_EQ(stack.top_item + 1, stack.storage);
 }
 
 TEST(execution_state, const_stack)
 {
-    evmone::Stack stack;
+    evmone::StackSpace stack_space;
+    evmone::advanced::Stack stack{stack_space.bottom()};
     stack.push(1);
     stack.push(2);
 
