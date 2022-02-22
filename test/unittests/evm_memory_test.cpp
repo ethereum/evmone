@@ -153,10 +153,28 @@ struct
     uint256 size;
 } memory_access_test_cases[] = {
     {0, 0x100000000},
+    {0, 0x10000000000000000_u256},
+    {0, 0x100000000000000000000000000000000_u256},
+    {0, 0x1000000000000000000000000000000000000000000000000_u256},
+    {0, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff_u256},
     {0x80000000, 0x80000000},
+    {0xffffffe0, 32},
+    {0xffffffff, 1},
     {0x100000000, 0},
     {0x100000000, 1},
     {0x100000000, 0x100000000},
+    {0xffffffffffffffc1, 32},
+    {0xffffffffffffffc0, 32},
+    {0xffffffffffffffdf, 32},
+    {0xffffffffffffffe0, 32},
+    {0xffffffffffffffff, 1},
+    {0x80000000000000000000000000000000_u256, 1},
+    {0x800000000000000000000000000000000000000000000000_u256, 1},
+    {0x8000000000000000000000000000000000000000000000000000000000000000_u256, 1},
+    {0x8000000000000000800000000000000080000000000000000000000000000000_u256, 1},
+    {0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff_u256, 1},
+    {0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff_u256,
+        0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff_u256},
 };
 
 TEST_P(evm, memory_access)
