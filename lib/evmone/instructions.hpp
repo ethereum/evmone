@@ -104,13 +104,10 @@ inline bool check_memory(ExecutionState& state, const uint256& offset, const uin
     if (size == 0)  // Copy of size 0 is always valid (even if offset is huge).
         return true;
 
-    // This check has 3 same word checks with the check above.
-    // However, compilers do decent although not perfect job unifying common instructions.
-    // TODO: This should be done in intx.
-    if (((size[3] | size[2] | size[1]) != 0) || (size[0] > max_buffer_size))
+    if ((size[3] | size[2] | size[1]) != 0)
         return false;
 
-    return check_memory(state, offset, static_cast<uint64_t>(size));
+    return check_memory(state, offset, size[0]);
 }
 
 namespace instr::core
