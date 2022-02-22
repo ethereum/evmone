@@ -85,12 +85,11 @@ inline constexpr int64_t num_words(uint64_t size_in_bytes) noexcept
 // Check memory requirements of a reasonable size.
 inline bool check_memory(ExecutionState& state, const uint256& offset, uint64_t size) noexcept
 {
-    if ((offset[3] | offset[2] | offset[1]) != 0)
-        return false;
+    auto ch1 = ((offset[3] | offset[2] | offset[1]) != 0);
 
     uint64_t new_size;
     auto o = __builtin_add_overflow(offset[0] , size, &new_size);
-    if (o)
+    if (ch1 || o)
         return false;
     if (new_size > state.memory.size())
         return grow_memory(state, new_size);
