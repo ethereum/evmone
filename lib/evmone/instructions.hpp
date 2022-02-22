@@ -88,10 +88,10 @@ inline bool check_memory(ExecutionState& state, const uint256& offset, uint64_t 
     if ((offset[3] | offset[2] | offset[1]) != 0)
         return false;
 
-    if (offset[0] > max_buffer_size)
+    uint64_t new_size;
+    auto o = __builtin_add_overflow(offset[0] , size, &new_size);
+    if (o)
         return false;
-
-    const auto new_size = offset[0] + size;
     if (new_size > state.memory.size())
         return grow_memory(state, new_size);
 
