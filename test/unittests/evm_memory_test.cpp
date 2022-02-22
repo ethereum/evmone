@@ -3,20 +3,20 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "evm_fixture.hpp"
-#include <evmc/instructions.h>
+#include <evmone/instructions_traits.hpp>
 #include <intx/intx.hpp>
 #include <algorithm>
-#include <numeric>
 
+using namespace evmone;
 using namespace evmc::literals;
 using namespace intx;
 using evmone::test::evm;
 
 TEST_P(evm, memory_and_not)
 {
-    execute(42, "600060018019815381518252800190f3");
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    EXPECT_EQ(result.gas_left, 0);
+    execute(42, push(0) + push(1) + OP_DUP1 + OP_NOT + OP_DUP2 + OP_MSTORE8 + OP_DUP2 + OP_MLOAD +
+                    OP_DUP3 + OP_MSTORE + OP_DUP1 + OP_ADD + OP_SWAP1 + OP_RETURN);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 42);
     ASSERT_EQ(result.output_size, 2);
     EXPECT_EQ(result.output_data[1], 0xfe);
     EXPECT_EQ(result.output_data[0], 0);
@@ -118,11 +118,6 @@ struct memory_access_opcode
     int memory_size_arg;
 };
 
-struct memory_access_params
-{
-    uint64_t index;
-    uint64_t size;
-};
 
 memory_access_opcode memory_access_opcodes[] = {
     {OP_KECCAK256, 0, 1},
@@ -152,7 +147,11 @@ memory_access_opcode memory_access_opcodes[] = {
     {OP_CREATE2, 1, 2},
 };
 
-memory_access_params memory_access_test_cases[] = {
+struct
+{
+    uint256 index;
+    uint256 size;
+} memory_access_test_cases[] = {
     {0, 0x100000000},
     {0x80000000, 0x80000000},
     {0x100000000, 0},
@@ -162,22 +161,15 @@ memory_access_params memory_access_test_cases[] = {
 
 TEST_P(evm, memory_access)
 {
+    // This test checks if instructions accessing memory properly respond with out-of-gas
+    // error for combinations of memory offset and memory size arguments.
     rev = EVMC_CONSTANTINOPLE;
-    auto metrics = evmc_get_instruction_metrics_table(rev);
-    auto names = evmc_get_instruction_names_table(rev);
 
-    for (auto& p : memory_access_test_cases)
+    for (const auto& p : memory_access_test_cases)
     {
-        auto ss = std::ostringstream{};
-        ss << std::hex << std::setw(10) << std::setfill('0') << p.size;
-        const auto push_size = "64" + ss.str();
-        ss.str({});
-        ss << std::hex << std::setw(10) << std::setfill('0') << p.index;
-        const auto push_index = "64" + ss.str();
-
         for (auto& t : memory_access_opcodes)
         {
-            const auto num_args = int{metrics[t.opcode].stack_height_required};
+            const auto num_args = int{instr::traits[t.opcode].stack_height_required};
             auto h = std::max(num_args, t.memory_size_arg + 1);
             auto code = bytecode{};
 
@@ -186,7 +178,7 @@ TEST_P(evm, memory_access)
                 while (--h != t.memory_size_arg)
                     code += push(0);
 
-                code += push_size;
+                code += push(p.size);
             }
             else if (p.index == 0 || p.size == 0)
                 continue;  // Skip opcodes not having SIZE argument.
@@ -194,20 +186,20 @@ TEST_P(evm, memory_access)
             while (--h != t.memory_index_arg)
                 code += push(0);
 
-            code += push_index;
+            code += push(p.index);
 
             while (h-- != 0)
                 code += push(0);
 
             code += bytecode{t.opcode};
 
-            auto const gas = 8796294610952;
+            const auto gas = 8796294610952;
             execute(gas, code);
 
             auto case_descr_str = std::ostringstream{};
-            case_descr_str << "offset = 0x" << std::hex << p.index << " size = 0x" << std::hex
-                           << p.size << " opcode " << names[t.opcode];
-            auto const case_descr = case_descr_str.str();
+            case_descr_str << "offset = 0x" << to_string(p.index, 16) << " size = 0x"
+                           << to_string(p.size, 16) << " opcode " << instr::traits[t.opcode].name;
+            const auto case_descr = case_descr_str.str();
 
             if (p.size == 0)  // It is allowed to request 0 size memory at very big offset.
             {

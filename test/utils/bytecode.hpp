@@ -5,6 +5,7 @@
 
 #include <evmc/evmc.hpp>
 #include <evmc/instructions.h>
+#include <intx/intx.hpp>
 #include <test/utils/utils.hpp>
 #include <algorithm>
 #include <ostream>
@@ -76,6 +77,13 @@ inline bytecode push(bytes_view data)
 inline bytecode push(std::string_view hex_data)
 {
     return push(from_hex(hex_data));
+}
+
+inline bytecode push(const intx::uint256& value)
+{
+    uint8_t data[sizeof(value)]{};
+    intx::be::store(data, value);
+    return push({data, std::size(data)});
 }
 
 bytecode push(evmc_opcode opcode) = delete;
