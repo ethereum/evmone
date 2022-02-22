@@ -85,13 +85,13 @@ inline constexpr int64_t num_words(uint64_t size_in_bytes) noexcept
 // Check memory requirements of a reasonable size.
 inline bool check_memory(ExecutionState& state, const uint256& offset, uint64_t size) noexcept
 {
-    // TODO: This should be done in intx.
-    // There is "branchless" variant of this using | instead of ||, but benchmarks difference
-    // is within noise. This should be decided when moving the implementation to intx.
-    if (((offset[3] | offset[2] | offset[1]) != 0) || (offset[0] > max_buffer_size))
+    if ((offset[3] | offset[2] | offset[1]) != 0)
         return false;
 
-    const auto new_size = static_cast<uint64_t>(offset) + size;
+    if (offset[0] > max_buffer_size)
+        return false;
+
+    const auto new_size = offset[0] + size;
     if (new_size > state.memory.size())
         return grow_memory(state, new_size);
 
