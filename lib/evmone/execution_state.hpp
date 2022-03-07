@@ -121,8 +121,9 @@ public:
 
 
 /// Generic execution state for generic instructions implementations.
-struct ExecutionState
+class ExecutionState
 {
+public:
     int64_t gas_left = 0;
     Memory memory;
     const evmc_message* msg = nullptr;
@@ -138,6 +139,10 @@ struct ExecutionState
     size_t output_offset = 0;
     size_t output_size = 0;
 
+private:
+    evmc_tx_context m_tx = {};
+
+public:
     /// Pointer to code analysis.
     /// This should be set and used internally by execute() function of a particular interpreter.
     union
@@ -180,6 +185,13 @@ struct ExecutionState
         output_size = 0;
     }
 
-    bool in_static_mode() const { return (msg->flags & EVMC_STATIC) != 0; }
+    [[nodiscard]] bool in_static_mode() const { return (msg->flags & EVMC_STATIC) != 0; }
+
+    const evmc_tx_context& get_tx_context() noexcept
+    {
+        if (INTX_UNLIKELY(m_tx.block_timestamp == 0))
+            m_tx = host.get_tx_context();
+        return m_tx;
+    }
 };
 }  // namespace evmone

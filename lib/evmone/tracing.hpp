@@ -13,7 +13,7 @@ namespace evmone
 {
 using bytes_view = std::basic_string_view<uint8_t>;
 
-struct ExecutionState;
+class ExecutionState;
 
 class Tracer
 {
