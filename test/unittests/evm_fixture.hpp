@@ -32,6 +32,9 @@ namespace evmone::test
 class evm : public testing::TestWithParam<evmc::VM*>
 {
 protected:
+    /// Reports if execution is done by evmone/Advanced.
+    static bool is_advanced() noexcept;
+
     /// The VM handle.
     evmc::VM& vm;
 
