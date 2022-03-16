@@ -42,6 +42,8 @@ if(CABLE_COMPILER_GNULIKE)
         evmone PRIVATE
         -fno-exceptions
         $<$<CXX_COMPILER_ID:GNU>:-Wstack-usage=2600>
+        $<$<CXX_COMPILER_ID:GNU>:-fno-crossjumping>
+        $<$<CXX_COMPILER_ID:Clang>:-mllvm -sink-common-insts=false>  # FIXME: No effect in clang 17.
     )
     if(NOT SANITIZE MATCHES undefined)
         # RTTI can be disabled except for UBSan which checks vptr integrity.
