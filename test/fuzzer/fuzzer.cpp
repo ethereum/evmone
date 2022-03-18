@@ -186,56 +186,37 @@ FuzzEnv populate_fuzz_env(const uint8_t* data, size_t data_size) noexcept
     FuzzEnv in{};
 
     const auto rev_4bits = data[0] >> 4;
-    const auto kind_1bit = (data[0] >> 3) & 0b1;
-    const auto static_1bit = (data[0] >> 2) & 0b1;
-    const auto depth_2bits = uint8_t(data[0] & 0b11);
-    const auto input_size_selector_2bit = (data[1] >> 6);
-    const auto gas_18bits = ((data[1] & 0b11) << 16) | (data[2] << 8) | data[3];
-    const auto destination_8bits = data[4];
-    const auto sender_8bits = data[5];
-    const auto value_8bits = data[6];
-    const auto create2_salt_8bits = data[7];
 
-    const auto tx_gas_price_8bits = data[8];
-    const auto tx_origin_8bits = data[9];
-    const auto block_coinbase_8bits = data[10];
-    const auto block_number_8bits = data[11];
-    const auto block_timestamp_8bits = data[12];
-    const auto block_gas_limit_8bits = data[13];
-    const auto block_difficulty_8bits = data[14];
-    const auto chainid_8bits = data[15];
+    const auto kind_1bit = (data[1] >> 3) & 0b1;
+    const auto static_1bit = (data[1] >> 2) & 0b1;
+    const auto depth_2bits = uint8_t(data[1] & 0b11);
+    const auto input_size_8bits = data[2];
+    const auto gas_18bits = ((data[3] & 0b11) << 16) | (data[4] << 8) | data[5];
+    const auto destination_8bits = data[6];
+    const auto sender_8bits = data[7];
+    const auto value_8bits = data[8];
+    const auto create2_salt_8bits = data[9];
 
-    const auto account_balance_8bits = data[16];
-    const auto account_storage_key1_8bits = data[17];
-    const auto account_storage_key2_8bits = data[18];
-    const auto account_codehash_8bits = data[19];
+    const auto tx_gas_price_8bits = data[10];
+    const auto tx_origin_8bits = data[11];
+    const auto block_coinbase_8bits = data[12];
+    const auto block_number_8bits = data[13];
+    const auto block_timestamp_8bits = data[14];
+    const auto block_gas_limit_8bits = data[15];
+    const auto block_difficulty_8bits = data[16];
+    const auto chainid_8bits = data[17];
+
+    const auto account_balance_8bits = data[18];
+    const auto account_storage_key1_8bits = data[19];
+    const auto account_storage_key2_8bits = data[20];
+    const auto account_codehash_8bits = data[21];
     // TODO: Add another account?
 
-    const auto call_result_status_4bits = data[20] >> 4;
-    const auto call_result_gas_left_factor_4bits = uint8_t(data[20] & 0b1111);
+    const auto call_result_status_4bits = data[22] >> 4;
+    const auto call_result_gas_left_factor_4bits = uint8_t(data[23] & 0b1111);
 
     data += 32;
     data_size -= 32;
-
-    // Split remaining data to input and code.
-    size_t input_size = 0;
-    switch (input_size_selector_2bit)
-    {
-    case 0:
-        input_size = 0;
-        break;
-    case 1:
-        input_size = data_size / 4;
-        break;
-    case 2:
-        input_size = data_size / 2;
-        break;
-    case 3:
-        input_size = data_size > 32 ? 32 : 1;
-        break;
-    default:
-        __builtin_trap();
-    }
 
     in.rev = (rev_4bits > EVMC_LATEST_STABLE_REVISION) ? EVMC_LATEST_STABLE_REVISION :
                                                          static_cast<evmc_revision>(rev_4bits);
@@ -251,17 +232,17 @@ FuzzEnv populate_fuzz_env(const uint8_t* data, size_t data_size) noexcept
     // - pre Tangerine Whistle calls are extremely cheap and it is easy to find slow running units.
     in.msg.gas = in.rev <= old_rev ? std::min(gas_18bits, old_rev_max_gas) : gas_18bits;
 
+    const auto input_size = std::min(size_t{input_size_8bits}, data_size / 2);
+    const auto code_size = data_size - input_size;
+
     in.msg.recipient = generate_interesting_address(destination_8bits);
     in.msg.sender = generate_interesting_address(sender_8bits);
     in.msg.input_size = input_size;
-    in.msg.input_data = data;
+    in.msg.input_data = data + code_size;
     in.msg.value = generate_interesting_value(value_8bits);
 
     // Should be ignored by VMs.
     in.msg.create2_salt = generate_interesting_value(create2_salt_8bits);
-
-    data += in.msg.input_size;
-    data_size -= in.msg.input_size;
 
     in.host.tx_context.tx_gas_price = generate_interesting_value(tx_gas_price_8bits);
     in.host.tx_context.tx_origin = generate_interesting_address(tx_origin_8bits);
@@ -283,7 +264,7 @@ FuzzEnv populate_fuzz_env(const uint8_t* data, size_t data_size) noexcept
     account.storage[storage_key2] = {storage_key1, true};
 
     account.codehash = generate_interesting_value(account_codehash_8bits);
-    account.code = {data, data_size};  // Use remaining data as code.
+    account.code = {data, code_size};
 
     in.host.call_result.status_code = static_cast<evmc_status_code>(call_result_status_4bits);
     in.host.gas_left_factor = call_result_gas_left_factor_4bits;
