@@ -183,8 +183,17 @@ public:
     uint8_t value_;
     uint8_t create2_salt_;
 
+    uint8_t tx_gas_price_;
+    uint8_t tx_origin_;
+    uint8_t block_coinbase_;
+    uint8_t block_number_;
+    uint8_t block_timestamp_;
+    uint8_t block_gas_limit_;
+    uint8_t block_difficulty_;
+    uint8_t chainid_;
+
 private:
-    [[maybe_unused]] uint8_t padding_[21];
+    [[maybe_unused]] uint8_t padding_[21-8];
 
     FuzzEnv2() = default;
 
@@ -234,15 +243,6 @@ FuzzEnv populate_fuzz_env(const uint8_t* data, size_t data_size) noexcept
 
     FuzzEnv in{};
 
-    const auto tx_gas_price_8bits = data[10];
-    const auto tx_origin_8bits = data[11];
-    const auto block_coinbase_8bits = data[12];
-    const auto block_number_8bits = data[13];
-    const auto block_timestamp_8bits = data[14];
-    const auto block_gas_limit_8bits = data[15];
-    const auto block_difficulty_8bits = data[16];
-    const auto chainid_8bits = data[17];
-
     const auto account_balance_8bits = data[18];
     const auto account_storage_key1_8bits = data[19];
     const auto account_storage_key2_8bits = data[20];
@@ -276,14 +276,14 @@ FuzzEnv populate_fuzz_env(const uint8_t* data, size_t data_size) noexcept
     // Should be ignored by VMs.
     in.msg.create2_salt = generate_interesting_value(env.create2_salt_);
 
-    in.host.tx_context.tx_gas_price = generate_interesting_value(tx_gas_price_8bits);
-    in.host.tx_context.tx_origin = generate_interesting_address(tx_origin_8bits);
-    in.host.tx_context.block_coinbase = generate_interesting_address(block_coinbase_8bits);
-    in.host.tx_context.block_number = expand_block_number(block_number_8bits);
-    in.host.tx_context.block_timestamp = expand_block_timestamp(block_timestamp_8bits);
-    in.host.tx_context.block_gas_limit = expand_block_gas_limit(block_gas_limit_8bits);
-    in.host.tx_context.block_difficulty = generate_interesting_value(block_difficulty_8bits);
-    in.host.tx_context.chain_id = generate_interesting_value(chainid_8bits);
+    in.host.tx_context.tx_gas_price = generate_interesting_value(env.tx_gas_price_);
+    in.host.tx_context.tx_origin = generate_interesting_address(env.tx_origin_);
+    in.host.tx_context.block_coinbase = generate_interesting_address(env.block_coinbase_);
+    in.host.tx_context.block_number = expand_block_number(env.block_number_);
+    in.host.tx_context.block_timestamp = expand_block_timestamp(env.block_timestamp_);
+    in.host.tx_context.block_gas_limit = expand_block_gas_limit(env.block_gas_limit_);
+    in.host.tx_context.block_difficulty = generate_interesting_value(env.block_difficulty_);
+    in.host.tx_context.chain_id = generate_interesting_value(env.chainid_);
 
     auto& account = in.host.accounts[in.msg.recipient];
     account.balance = generate_interesting_value(account_balance_8bits);
