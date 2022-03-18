@@ -179,13 +179,40 @@ inline int64_t expand_block_gas_limit(uint8_t x) noexcept
     return x == 0 ? 0 : std::numeric_limits<int64_t>::max() / x;
 }
 
-constexpr auto min_required_size = 33;
+constexpr size_t min_required_size = 33;
+
+enum EnvItemId : size_t
+{
+    rev,
+    num_items,
+};
+
+using NormalizeFn = void (*)(uint8_t*);
+
+struct DataRef
+{
+    size_t byte_offset;
+    size_t length;
+    NormalizeFn normalize;
+};
+
+static constexpr auto data_ref = [] {
+    std::array<DataRef, 1> tbl{};
+    tbl[rev] = {0, 1, [](uint8_t* data) {
+                    *data = std::min<uint8_t>(EVMC_LATEST_STABLE_REVISION, *data & 0b11111);
+                }};
+    return tbl;
+}();
+
+template <typename T, EnvItemId id>
+T get(const uint8_t* data) noexcept
+{
+    return static_cast<T>(data[data_ref[id].byte_offset]);
+}
 
 FuzzEnv populate_fuzz_env(const uint8_t* data, size_t data_size) noexcept
 {
     FuzzEnv in{};
-
-    const auto rev_4bits = data[0] >> 4;
 
     const auto kind_1bit = (data[1] >> 3) & 0b1;
     const auto static_1bit = (data[1] >> 2) & 0b1;
@@ -218,8 +245,7 @@ FuzzEnv populate_fuzz_env(const uint8_t* data, size_t data_size) noexcept
     data += 32;
     data_size -= 32;
 
-    in.rev = (rev_4bits > EVMC_LATEST_STABLE_REVISION) ? EVMC_LATEST_STABLE_REVISION :
-                                                         static_cast<evmc_revision>(rev_4bits);
+    in.rev = get<evmc_revision, rev>(data);
 
     // The message king should not matter but this 1 bit was free.
     in.msg.kind = kind_1bit ? EVMC_CREATE : EVMC_CALL;
@@ -294,9 +320,19 @@ extern "C" size_t LLVMFuzzerMutate(uint8_t* data, size_t size, size_t max_size);
 extern "C" size_t LLVMFuzzerCustomMutator(
     uint8_t* data, size_t size, size_t max_size, unsigned int /*seed*/) noexcept
 {
-    if (max_size >= min_required_size)
-        size = min_required_size;
-    return LLVMFuzzerMutate(data, size, max_size);
+    if (max_size < min_required_size)
+        return 0;
+
+    size = std::min(size, min_required_size);
+    size = LLVMFuzzerMutate(data, size, max_size);
+    size = std::min(size, min_required_size);
+
+    for (size_t i = 0; i < EnvItemId::num_items; ++i)
+    {
+        const auto& r = data_ref[i];
+        r.normalize(data + r.byte_offset);
+    }
+    return size;
 }
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noexcept
