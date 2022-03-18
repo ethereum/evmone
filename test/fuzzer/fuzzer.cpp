@@ -184,7 +184,7 @@ inline int64_t expand_block_gas_limit(uint8_t x) noexcept
     return x == 0 ? 0 : std::numeric_limits<int64_t>::max() / x;
 }
 
-constexpr auto min_required_size = 22;
+constexpr auto min_required_size = 33;
 
 fuzz_input populate_input(const uint8_t* data, size_t data_size) noexcept
 {
@@ -222,8 +222,8 @@ fuzz_input populate_input(const uint8_t* data, size_t data_size) noexcept
     const auto call_result_status_4bits = data[20] >> 4;
     const auto call_result_gas_left_factor_4bits = uint8_t(data[20] & 0b1111);
 
-    data += 21;
-    data_size -= 21;
+    data += 32;
+    data_size -= 32;
 
     // Split remaining data to input and code.
     size_t input_size = 0;
