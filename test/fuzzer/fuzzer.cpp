@@ -190,11 +190,12 @@ inline int64_t expand_block_gas_limit(uint8_t x) noexcept
     return x == 0 ? 0 : std::numeric_limits<int64_t>::max() / x;
 }
 
+constexpr auto min_required_size = 24;
+
 fuzz_input populate_input(const uint8_t* data, size_t data_size) noexcept
 {
     auto in = fuzz_input{};
 
-    constexpr auto min_required_size = 24;
     if (data_size < min_required_size)
         return in;
 
@@ -301,6 +302,17 @@ inline evmc_status_code check_and_normalize(evmc_status_code status) noexcept
 {
     ASSERT(status >= 0);
     return status <= EVMC_REVERT ? status : EVMC_FAILURE;
+}
+
+
+extern "C" size_t LLVMFuzzerMutate(uint8_t* data, size_t size, size_t max_size);
+
+extern "C" size_t LLVMFuzzerCustomMutator(
+    uint8_t* data, size_t size, size_t max_size, unsigned int /*seed*/) noexcept
+{
+    if (max_size >= min_required_size)
+        size = min_required_size;
+    return LLVMFuzzerMutate(data, size, max_size);
 }
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noexcept
