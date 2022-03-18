@@ -91,12 +91,6 @@ public:
     }
 };
 
-/// The newest "old" EVM revision. Lower priority.
-static constexpr auto old_rev = EVMC_SPURIOUS_DRAGON;
-
-/// The additional gas limit cap for "old" EVM revisions.
-static constexpr auto old_rev_max_gas = 500000;
-
 struct FuzzEnv
 {
     evmc_revision rev;
@@ -154,13 +148,6 @@ inline evmc::address generate_interesting_address(uint8_t b) noexcept
     return z;
 }
 
-inline int generate_depth(uint8_t x_2bits) noexcept
-{
-    const auto h = (x_2bits >> 1) & 0b1;
-    const auto l = x_2bits & 0b1;
-    return 1023 * h + l;  // 0, 1, 1023, 1024.
-}
-
 /// Creates the block number value from 8-bit value.
 /// The result is still quite small because block number affects blockhash().
 inline int expand_block_number(uint8_t x) noexcept
@@ -183,8 +170,21 @@ constexpr size_t min_required_size = 33;
 
 class FuzzEnv2
 {
+    uint32_t gas_;
     uint8_t rev_;
-    [[maybe_unused]] uint8_t padding_[31];
+    uint8_t input_size_;
+    uint8_t kind_ : 1;
+    uint8_t static_ : 1;
+    uint8_t depth_ : 2;
+
+public:
+    uint8_t recipient_;
+    uint8_t sender_;
+    uint8_t value_;
+    uint8_t create2_salt_;
+
+private:
+    [[maybe_unused]] uint8_t padding_[21];
 
     FuzzEnv2() = default;
 
@@ -195,7 +195,12 @@ public:
         __builtin_memcpy(&raw, data, sizeof(raw));
 
         FuzzEnv2 env{};
+        env.gas_ = raw.gas_ & 0x3ffff;  // 18 bits
         env.rev_ = std::min<uint8_t>(raw.rev_ & 0b11111, EVMC_LATEST_STABLE_REVISION);
+        env.input_size_ = raw.input_size_;
+        env.kind_ = raw.kind_;
+        env.static_ = raw.static_;
+        env.depth_ = raw.depth_;
 
         return env;
     }
@@ -207,6 +212,19 @@ public:
     }
 
     evmc_revision rev() const noexcept { return static_cast<evmc_revision>(rev_); }
+    evmc_call_kind msg_kind() const noexcept { return kind_ == 0 ? EVMC_CALL : EVMC_CREATE; }
+    evmc_flags msg_flags() const noexcept
+    {
+        return static_cast<evmc_flags>(static_ == 0 ? 0 : EVMC_STATIC);
+    }
+    int depth() const noexcept
+    {
+        const auto h = (depth_ >> 1) & 0b1;
+        const auto l = depth_ & 0b1;
+        return 1023 * h + l;  // 0, 1, 1023, 1024.
+    }
+    size_t input_size() const noexcept { return input_size_; }
+    int64_t gas() const noexcept { return gas_; }
 };
 static_assert(sizeof(FuzzEnv2) == 32);
 
@@ -215,16 +233,6 @@ FuzzEnv populate_fuzz_env(const uint8_t* data, size_t data_size) noexcept
     const auto env = FuzzEnv2::load(data);
 
     FuzzEnv in{};
-
-    const auto kind_1bit = (data[1] >> 3) & 0b1;
-    const auto static_1bit = (data[1] >> 2) & 0b1;
-    const auto depth_2bits = uint8_t(data[1] & 0b11);
-    const auto input_size_8bits = data[2];
-    const auto gas_18bits = ((data[3] & 0b11) << 16) | (data[4] << 8) | data[5];
-    const auto destination_8bits = data[6];
-    const auto sender_8bits = data[7];
-    const auto value_8bits = data[8];
-    const auto create2_salt_8bits = data[9];
 
     const auto tx_gas_price_8bits = data[10];
     const auto tx_origin_8bits = data[11];
@@ -249,28 +257,24 @@ FuzzEnv populate_fuzz_env(const uint8_t* data, size_t data_size) noexcept
     data += 32;
     data_size -= 32;
 
-    // The message king should not matter but this 1 bit was free.
-    in.msg.kind = kind_1bit ? EVMC_CREATE : EVMC_CALL;
+    in.msg.kind = env.msg_kind();
 
-    in.msg.flags = static_1bit ? EVMC_STATIC : 0;
-    in.msg.depth = generate_depth(depth_2bits);
+    in.msg.flags = env.msg_flags();
+    in.msg.depth = env.depth();
 
-    // Set the gas limit. For old revisions cap the gas limit more because:
-    // - they are less priority,
-    // - pre Tangerine Whistle calls are extremely cheap and it is easy to find slow running units.
-    in.msg.gas = in.rev <= old_rev ? std::min(gas_18bits, old_rev_max_gas) : gas_18bits;
+    in.msg.gas = env.gas();
 
-    const auto input_size = std::min(size_t{input_size_8bits}, data_size / 2);
+    const auto input_size = std::min(env.input_size(), data_size / 2);
     const auto code_size = data_size - input_size;
 
-    in.msg.recipient = generate_interesting_address(destination_8bits);
-    in.msg.sender = generate_interesting_address(sender_8bits);
+    in.msg.recipient = generate_interesting_address(env.recipient_);
+    in.msg.sender = generate_interesting_address(env.sender_);
     in.msg.input_size = input_size;
     in.msg.input_data = data + code_size;
-    in.msg.value = generate_interesting_value(value_8bits);
+    in.msg.value = generate_interesting_value(env.value_);
 
     // Should be ignored by VMs.
-    in.msg.create2_salt = generate_interesting_value(create2_salt_8bits);
+    in.msg.create2_salt = generate_interesting_value(env.create2_salt_);
 
     in.host.tx_context.tx_gas_price = generate_interesting_value(tx_gas_price_8bits);
     in.host.tx_context.tx_origin = generate_interesting_address(tx_origin_8bits);
@@ -331,7 +335,10 @@ extern "C" size_t LLVMFuzzerCustomMutator(
 
     FuzzEnv2::normalize(data);
 
-    if (data[0] > EVMC_LATEST_STABLE_REVISION)
+    if (data[3] != 0)
+        __builtin_trap();
+
+    if (data[4] > EVMC_LATEST_STABLE_REVISION)
         __builtin_trap();
 
     return size;
