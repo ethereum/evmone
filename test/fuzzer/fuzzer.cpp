@@ -198,7 +198,7 @@ fuzz_input populate_input(const uint8_t* data, size_t data_size) noexcept
     const auto static_1bit = (data[0] >> 2) & 0b1;
     const auto depth_2bits = uint8_t(data[0] & 0b11);
     const auto gas_24bits = /*(data[1] << 16) | */(data[2] << 8) | data[3];  // Max 16777216.
-    const auto input_size_16bits = unsigned(data[4] << 8) | data[5];
+    // const auto input_size_16bits = unsigned(data[4] << 8) | data[5];
     const auto destination_8bits = data[6];
     const auto sender_8bits = data[7];
     const auto value_8bits = data[8];
@@ -225,8 +225,8 @@ fuzz_input populate_input(const uint8_t* data, size_t data_size) noexcept
     data += min_required_size;
     data_size -= min_required_size;
 
-    if (data_size < input_size_16bits)  // Not enough data for input.
-        return in;
+    // Split remaining data to input and code.
+    const auto input_size = data_size / 2;
 
     in.rev = (rev_4bits > EVMC_LATEST_STABLE_REVISION) ? EVMC_LATEST_STABLE_REVISION :
                                                          static_cast<evmc_revision>(rev_4bits);
@@ -244,7 +244,7 @@ fuzz_input populate_input(const uint8_t* data, size_t data_size) noexcept
 
     in.msg.recipient = generate_interesting_address(destination_8bits);
     in.msg.sender = generate_interesting_address(sender_8bits);
-    in.msg.input_size = input_size_16bits;
+    in.msg.input_size = input_size;
     in.msg.input_data = data;
     in.msg.value = generate_interesting_value(value_8bits);
 
