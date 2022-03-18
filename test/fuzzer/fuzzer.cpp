@@ -330,13 +330,13 @@ extern "C" size_t LLVMFuzzerCustomMutator(
     size = LLVMFuzzerMutate(data, size, max_size);
     size = std::min(size, min_required_size);
 
-    FuzzEnv2::normalize(data);
-
-    if (data[3] != 0)
-        __builtin_trap();
-
-    if (data[4] > EVMC_LATEST_STABLE_REVISION)
-        __builtin_trap();
+    // FuzzEnv2::normalize(data);
+    //
+    // if (data[3] != 0)
+    //     __builtin_trap();
+    //
+    // if (data[4] > EVMC_LATEST_STABLE_REVISION)
+    //     __builtin_trap();
 
     return size;
 }
