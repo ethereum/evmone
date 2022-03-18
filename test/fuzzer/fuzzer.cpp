@@ -54,17 +54,11 @@ template <typename T1, typename T2>
 
 static auto print_input = std::getenv("PRINT");
 
-extern "C" evmc_vm* evmc_create_aleth_interpreter() noexcept;
-
 /// The reference VM.
-static auto ref_vm = evmc::VM{evmc_create_evmone()};
+static auto ref_vm = evmc::VM{evmc_create_evmone(), {{"O", "0"}}};
 
 static evmc::VM external_vms[] = {
-    evmc::VM{evmc_create_evmone(), {{"O", "0"}}},
     evmc::VM{evmc_create_evmone(), {{"O", "2"}}},
-#if ALETH
-    evmc::VM{evmc_create_aleth_interpreter()},
-#endif
 };
 
 
