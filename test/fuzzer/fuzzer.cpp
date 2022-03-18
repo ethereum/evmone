@@ -197,7 +197,7 @@ fuzz_input populate_input(const uint8_t* data, size_t data_size) noexcept
     const auto kind_1bit = (data[0] >> 3) & 0b1;
     const auto static_1bit = (data[0] >> 2) & 0b1;
     const auto depth_2bits = uint8_t(data[0] & 0b11);
-    const auto gas_24bits = /*(data[1] << 16) | */(data[2] << 8) | data[3];  // Max 16777216.
+    const auto gas_24bits = (data[1] << 16) | (data[2] << 8) | data[3];  // Max 16777216.
     // const auto input_size_16bits = unsigned(data[4] << 8) | data[5];
     const auto destination_8bits = data[6];
     const auto sender_8bits = data[7];
