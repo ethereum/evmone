@@ -97,16 +97,11 @@ static constexpr auto old_rev = EVMC_SPURIOUS_DRAGON;
 /// The additional gas limit cap for "old" EVM revisions.
 static constexpr auto old_rev_max_gas = 500000;
 
-struct fuzz_input
+struct FuzzEnv
 {
-    evmc_revision rev{};
-    evmc_message msg{};
+    evmc_revision rev;
+    evmc_message msg;
     FuzzHost host;
-
-    /// Creates invalid input.
-    fuzz_input() noexcept { msg.gas = -1; }
-
-    explicit operator bool() const noexcept { return msg.gas != -1; }
 };
 
 inline evmc::uint256be generate_interesting_value(uint8_t b) noexcept
@@ -186,12 +181,9 @@ inline int64_t expand_block_gas_limit(uint8_t x) noexcept
 
 constexpr auto min_required_size = 33;
 
-fuzz_input populate_input(const uint8_t* data, size_t data_size) noexcept
+FuzzEnv populate_fuzz_env(const uint8_t* data, size_t data_size) noexcept
 {
-    auto in = fuzz_input{};
-
-    if (data_size < min_required_size)
-        return in;
+    FuzzEnv in{};
 
     const auto rev_4bits = data[0] >> 4;
     const auto kind_1bit = (data[0] >> 3) & 0b1;
@@ -328,9 +320,10 @@ extern "C" size_t LLVMFuzzerCustomMutator(
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noexcept
 {
-    auto in = populate_input(data, data_size);
-    if (!in)
+    if (data_size < min_required_size)
         return 0;
+
+    auto in = populate_fuzz_env(data, data_size);
 
     auto ref_host = in.host;  // Copy Host.
     const auto& code = ref_host.accounts[in.msg.recipient].code;
