@@ -166,8 +166,6 @@ inline int64_t expand_block_gas_limit(uint8_t x) noexcept
     return x == 0 ? 0 : std::numeric_limits<int64_t>::max() / x;
 }
 
-constexpr size_t min_required_size = 33;
-
 class FuzzEnv2
 {
     uint32_t gas_;
@@ -192,8 +190,18 @@ public:
     uint8_t block_difficulty_;
     uint8_t chainid_;
 
+    uint8_t account_balance_;
+    uint8_t account_storage_key1_;
+    uint8_t account_storage_key2_;
+    uint8_t account_codehash_;
+    // TODO: Add another account?
+
+    uint8_t call_result_status_ : 4;
+    uint8_t call_result_gas_left_factor_ : 4;
+
+
 private:
-    [[maybe_unused]] uint8_t padding_[21-8];
+    [[maybe_unused]] uint8_t padding_[8];
 
     FuzzEnv2() = default;
 
@@ -237,31 +245,20 @@ public:
 };
 static_assert(sizeof(FuzzEnv2) == 32);
 
+constexpr size_t min_required_size = sizeof(FuzzEnv2) + 1;  // One byte for code.
+
 FuzzEnv populate_fuzz_env(const uint8_t* data, size_t data_size) noexcept
 {
     const auto env = FuzzEnv2::load(data);
+    data += sizeof(env);
+    data_size -= sizeof(env);
 
     FuzzEnv in{};
-
-    const auto account_balance_8bits = data[18];
-    const auto account_storage_key1_8bits = data[19];
-    const auto account_storage_key2_8bits = data[20];
-    const auto account_codehash_8bits = data[21];
-    // TODO: Add another account?
-
-    const auto call_result_status_4bits = data[22] >> 4;
-    const auto call_result_gas_left_factor_4bits = uint8_t(data[23] & 0b1111);
-
     in.rev = env.rev();
 
-    data += 32;
-    data_size -= 32;
-
     in.msg.kind = env.msg_kind();
-
     in.msg.flags = env.msg_flags();
     in.msg.depth = env.depth();
-
     in.msg.gas = env.gas();
 
     const auto input_size = std::min(env.input_size(), data_size / 2);
@@ -286,20 +283,20 @@ FuzzEnv populate_fuzz_env(const uint8_t* data, size_t data_size) noexcept
     in.host.tx_context.chain_id = generate_interesting_value(env.chainid_);
 
     auto& account = in.host.accounts[in.msg.recipient];
-    account.balance = generate_interesting_value(account_balance_8bits);
-    const auto storage_key1 = generate_interesting_value(account_storage_key1_8bits);
-    const auto storage_key2 = generate_interesting_value(account_storage_key2_8bits);
+    account.balance = generate_interesting_value(env.account_balance_);
+    const auto storage_key1 = generate_interesting_value(env.account_storage_key1_);
+    const auto storage_key2 = generate_interesting_value(env.account_storage_key2_);
     account.storage[{}] = storage_key2;
     account.storage[storage_key1] = storage_key2;
 
     // Add dirty value as if it has been already modified in this transaction.
     account.storage[storage_key2] = {storage_key1, true};
 
-    account.codehash = generate_interesting_value(account_codehash_8bits);
+    account.codehash = generate_interesting_value(env.account_codehash_);
     account.code = {data, code_size};
 
-    in.host.call_result.status_code = static_cast<evmc_status_code>(call_result_status_4bits);
-    in.host.gas_left_factor = call_result_gas_left_factor_4bits;
+    in.host.call_result.status_code = static_cast<evmc_status_code>(env.call_result_status_);
+    in.host.gas_left_factor = env.call_result_gas_left_factor_;
 
     // Use 3/5 of the input from the and as the potential call output.
     const auto offset = in.msg.input_size * 2 / 5;
