@@ -184,7 +184,7 @@ inline int64_t expand_block_gas_limit(uint8_t x) noexcept
     return x == 0 ? 0 : std::numeric_limits<int64_t>::max() / x;
 }
 
-constexpr auto min_required_size = 24;
+constexpr auto min_required_size = 22;
 
 fuzz_input populate_input(const uint8_t* data, size_t data_size) noexcept
 {
@@ -197,36 +197,53 @@ fuzz_input populate_input(const uint8_t* data, size_t data_size) noexcept
     const auto kind_1bit = (data[0] >> 3) & 0b1;
     const auto static_1bit = (data[0] >> 2) & 0b1;
     const auto depth_2bits = uint8_t(data[0] & 0b11);
-    const auto gas_24bits = (data[1] << 16) | (data[2] << 8) | data[3];  // Max 16777216.
-    // const auto input_size_16bits = unsigned(data[4] << 8) | data[5];
-    const auto destination_8bits = data[6];
-    const auto sender_8bits = data[7];
-    const auto value_8bits = data[8];
-    const auto create2_salt_8bits = data[9];
+    const auto input_size_selector_2bit = (data[1] >> 6);
+    const auto gas_18bits = ((data[1] & 0b11) << 16) | (data[2] << 8) | data[3];
+    const auto destination_8bits = data[4];
+    const auto sender_8bits = data[5];
+    const auto value_8bits = data[6];
+    const auto create2_salt_8bits = data[7];
 
-    const auto tx_gas_price_8bits = data[10];
-    const auto tx_origin_8bits = data[11];
-    const auto block_coinbase_8bits = data[12];
-    const auto block_number_8bits = data[13];
-    const auto block_timestamp_8bits = data[14];
-    const auto block_gas_limit_8bits = data[15];
-    const auto block_difficulty_8bits = data[16];
-    const auto chainid_8bits = data[17];
+    const auto tx_gas_price_8bits = data[8];
+    const auto tx_origin_8bits = data[9];
+    const auto block_coinbase_8bits = data[10];
+    const auto block_number_8bits = data[11];
+    const auto block_timestamp_8bits = data[12];
+    const auto block_gas_limit_8bits = data[13];
+    const auto block_difficulty_8bits = data[14];
+    const auto chainid_8bits = data[15];
 
-    const auto account_balance_8bits = data[18];
-    const auto account_storage_key1_8bits = data[19];
-    const auto account_storage_key2_8bits = data[20];
-    const auto account_codehash_8bits = data[21];
+    const auto account_balance_8bits = data[16];
+    const auto account_storage_key1_8bits = data[17];
+    const auto account_storage_key2_8bits = data[18];
+    const auto account_codehash_8bits = data[19];
     // TODO: Add another account?
 
-    const auto call_result_status_4bits = data[22] >> 4;
-    const auto call_result_gas_left_factor_4bits = uint8_t(data[23] & 0b1111);
+    const auto call_result_status_4bits = data[20] >> 4;
+    const auto call_result_gas_left_factor_4bits = uint8_t(data[20] & 0b1111);
 
-    data += min_required_size;
-    data_size -= min_required_size;
+    data += 21;
+    data_size -= 21;
 
     // Split remaining data to input and code.
-    const auto input_size = data_size / 2;
+    size_t input_size = 0;
+    switch (input_size_selector_2bit)
+    {
+    case 0:
+        input_size = 0;
+        break;
+    case 1:
+        input_size = data_size / 4;
+        break;
+    case 2:
+        input_size = data_size / 2;
+        break;
+    case 3:
+        input_size = data_size > 32 ? 32 : 1;
+        break;
+    default:
+        __builtin_trap();
+    }
 
     in.rev = (rev_4bits > EVMC_LATEST_STABLE_REVISION) ? EVMC_LATEST_STABLE_REVISION :
                                                          static_cast<evmc_revision>(rev_4bits);
@@ -240,7 +257,7 @@ fuzz_input populate_input(const uint8_t* data, size_t data_size) noexcept
     // Set the gas limit. For old revisions cap the gas limit more because:
     // - they are less priority,
     // - pre Tangerine Whistle calls are extremely cheap and it is easy to find slow running units.
-    in.msg.gas = in.rev <= old_rev ? std::min(gas_24bits, old_rev_max_gas) : gas_24bits;
+    in.msg.gas = in.rev <= old_rev ? std::min(gas_18bits, old_rev_max_gas) : gas_18bits;
 
     in.msg.recipient = generate_interesting_address(destination_8bits);
     in.msg.sender = generate_interesting_address(sender_8bits);
