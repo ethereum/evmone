@@ -187,7 +187,22 @@ enum EnvItemId : size_t
     num_items,
 };
 
-using NormalizeFn = void (*)(uint8_t*);
+template <EnvItemId Id>
+struct EnvItem;
+
+template <>
+struct EnvItem<rev>
+{
+    using type = evmc_revision;
+
+    static type read(const uint8_t* data) noexcept
+    {
+        return static_cast<type>(std::min<int>(data[0] & 0b11111, EVMC_LATEST_STABLE_REVISION));
+    }
+    static void normalize(uint8_t* data) noexcept { *data = static_cast<uint8_t>(read(data)); }
+};
+
+using NormalizeFn = void (*)(uint8_t*) noexcept;
 
 struct DataRef
 {
@@ -198,9 +213,7 @@ struct DataRef
 
 static constexpr auto data_ref = [] {
     std::array<DataRef, 1> tbl{};
-    tbl[rev] = {0, 1, [](uint8_t* data) {
-                    *data = std::min<uint8_t>(EVMC_LATEST_STABLE_REVISION, *data & 0b11111);
-                }};
+    tbl[rev] = {0, 1, EnvItem<rev>::normalize};
     return tbl;
 }();
 
@@ -242,10 +255,10 @@ FuzzEnv populate_fuzz_env(const uint8_t* data, size_t data_size) noexcept
     const auto call_result_status_4bits = data[22] >> 4;
     const auto call_result_gas_left_factor_4bits = uint8_t(data[23] & 0b1111);
 
+    in.rev = EnvItem<rev>::read(data);
+
     data += 32;
     data_size -= 32;
-
-    in.rev = get<evmc_revision, rev>(data);
 
     // The message king should not matter but this 1 bit was free.
     in.msg.kind = kind_1bit ? EVMC_CREATE : EVMC_CALL;
@@ -317,6 +330,15 @@ inline evmc_status_code check_and_normalize(evmc_status_code status) noexcept
 
 extern "C" size_t LLVMFuzzerMutate(uint8_t* data, size_t size, size_t max_size);
 
+static void normalize(uint8_t* data) noexcept
+{
+    for (size_t i = 0; i < EnvItemId::num_items; ++i)
+    {
+        const auto& r = data_ref[i];
+        r.normalize(data + r.byte_offset);
+    }
+}
+
 extern "C" size_t LLVMFuzzerCustomMutator(
     uint8_t* data, size_t size, size_t max_size, unsigned int /*seed*/) noexcept
 {
@@ -327,11 +349,11 @@ extern "C" size_t LLVMFuzzerCustomMutator(
     size = LLVMFuzzerMutate(data, size, max_size);
     size = std::min(size, min_required_size);
 
-    for (size_t i = 0; i < EnvItemId::num_items; ++i)
-    {
-        const auto& r = data_ref[i];
-        r.normalize(data + r.byte_offset);
-    }
+    normalize(data);
+
+    if (data[0] > EVMC_LATEST_STABLE_REVISION)
+        __builtin_trap();
+
     return size;
 }
 
@@ -341,6 +363,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
         return 0;
 
     auto in = populate_fuzz_env(data, data_size);
+
+    if (in.rev > EVMC_LATEST_STABLE_REVISION)
+        __builtin_trap();
 
     auto ref_host = in.host;  // Copy Host.
     const auto& code = ref_host.accounts[in.msg.recipient].code;
