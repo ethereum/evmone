@@ -43,6 +43,10 @@ if(CABLE_COMPILER_GNULIKE)
         target_compile_options(evmone PRIVATE -fno-rtti)
     endif()
 endif()
+if(fuzzing_flags)
+    target_compile_options(evmone PRIVATE ${fuzzing_flags})
+endif()
+
 set_target_properties(
     evmone
     PROPERTIES
