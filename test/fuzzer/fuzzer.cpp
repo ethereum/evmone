@@ -181,50 +181,39 @@ inline int64_t expand_block_gas_limit(uint8_t x) noexcept
 
 constexpr size_t min_required_size = 33;
 
-enum EnvItemId : size_t
+class FuzzEnv2
 {
-    rev,
-    num_items,
-};
+    uint8_t rev_;
+    [[maybe_unused]] uint8_t padding_[31];
 
-template <EnvItemId Id>
-struct EnvItem;
+    FuzzEnv2() = default;
 
-template <>
-struct EnvItem<rev>
-{
-    using type = evmc_revision;
-
-    static type read(const uint8_t* data) noexcept
+public:
+    static FuzzEnv2 load(const uint8_t* data) noexcept
     {
-        return static_cast<type>(std::min<int>(data[0] & 0b11111, EVMC_LATEST_STABLE_REVISION));
+        FuzzEnv2 raw;
+        __builtin_memcpy(&raw, data, sizeof(raw));
+
+        FuzzEnv2 env{};
+        env.rev_ = std::min<uint8_t>(raw.rev_ & 0b11111, EVMC_LATEST_STABLE_REVISION);
+
+        return env;
     }
-    static void normalize(uint8_t* data) noexcept { *data = static_cast<uint8_t>(read(data)); }
+
+    static void normalize(uint8_t* data) noexcept
+    {
+        const auto env = load(data);
+        __builtin_memcpy(data, &env, sizeof(env));
+    }
+
+    evmc_revision rev() const noexcept { return static_cast<evmc_revision>(rev_); }
 };
-
-using NormalizeFn = void (*)(uint8_t*) noexcept;
-
-struct DataRef
-{
-    size_t byte_offset;
-    size_t length;
-    NormalizeFn normalize;
-};
-
-static constexpr auto data_ref = [] {
-    std::array<DataRef, 1> tbl{};
-    tbl[rev] = {0, 1, EnvItem<rev>::normalize};
-    return tbl;
-}();
-
-template <typename T, EnvItemId id>
-T get(const uint8_t* data) noexcept
-{
-    return static_cast<T>(data[data_ref[id].byte_offset]);
-}
+static_assert(sizeof(FuzzEnv2) == 32);
 
 FuzzEnv populate_fuzz_env(const uint8_t* data, size_t data_size) noexcept
 {
+    const auto env = FuzzEnv2::load(data);
+
     FuzzEnv in{};
 
     const auto kind_1bit = (data[1] >> 3) & 0b1;
@@ -255,7 +244,7 @@ FuzzEnv populate_fuzz_env(const uint8_t* data, size_t data_size) noexcept
     const auto call_result_status_4bits = data[22] >> 4;
     const auto call_result_gas_left_factor_4bits = uint8_t(data[23] & 0b1111);
 
-    in.rev = EnvItem<rev>::read(data);
+    in.rev = env.rev();
 
     data += 32;
     data_size -= 32;
@@ -330,15 +319,6 @@ inline evmc_status_code check_and_normalize(evmc_status_code status) noexcept
 
 extern "C" size_t LLVMFuzzerMutate(uint8_t* data, size_t size, size_t max_size);
 
-static void normalize(uint8_t* data) noexcept
-{
-    for (size_t i = 0; i < EnvItemId::num_items; ++i)
-    {
-        const auto& r = data_ref[i];
-        r.normalize(data + r.byte_offset);
-    }
-}
-
 extern "C" size_t LLVMFuzzerCustomMutator(
     uint8_t* data, size_t size, size_t max_size, unsigned int /*seed*/) noexcept
 {
@@ -349,7 +329,7 @@ extern "C" size_t LLVMFuzzerCustomMutator(
     size = LLVMFuzzerMutate(data, size, max_size);
     size = std::min(size, min_required_size);
 
-    normalize(data);
+    FuzzEnv2::normalize(data);
 
     if (data[0] > EVMC_LATEST_STABLE_REVISION)
         __builtin_trap();
