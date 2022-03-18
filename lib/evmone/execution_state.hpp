@@ -121,6 +121,7 @@ public:
 
 
 /// Generic execution state for generic instructions implementations.
+// NOLINTNEXTLINE(clang-analyzer-optin.performance.Padding)
 class ExecutionState
 {
 public:
@@ -131,9 +132,15 @@ public:
     evmc_revision rev = {};
     bytes return_data;
 
-    /// Reference to original EVM code.
+    /// Reference to original EVM code section.
+    /// For legacy code this is a reference to entire original code.
+    /// For EOF-formatted code this is a reference to code section only.
     /// TODO: Code should be accessed via code analysis only and this should be removed.
     bytes_view code;
+    /// Reference to original EVM code container.
+    /// For legacy code this is a reference to entire original code.
+    /// For EOF-formatted code this is a reference to entire container.
+    bytes_view original_code;
 
     evmc_status_code status = EVMC_SUCCESS;
     size_t output_offset = 0;
@@ -165,7 +172,8 @@ public:
         msg{&message},
         host{host_interface, host_ctx},
         rev{revision},
-        code{_code}
+        code{_code},
+        original_code{_code}
     {}
 
     /// Resets the contents of the ExecutionState so that it could be reused.
@@ -180,6 +188,7 @@ public:
         rev = revision;
         return_data.clear();
         code = _code;
+        original_code = _code;
         status = EVMC_SUCCESS;
         output_offset = 0;
         output_size = 0;

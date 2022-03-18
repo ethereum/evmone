@@ -31,7 +31,7 @@ static_assert(!std::is_copy_constructible_v<CodeAnalysis>);
 static_assert(!std::is_copy_assignable_v<CodeAnalysis>);
 
 /// Analyze the code to build the bitmap of valid JUMPDEST locations.
-EVMC_EXPORT CodeAnalysis analyze(bytes_view code);
+EVMC_EXPORT CodeAnalysis analyze(evmc_revision rev, bytes_view code);
 
 /// Executes in Baseline interpreter using EVMC-compatible parameters.
 evmc_result execute(evmc_vm* vm, const evmc_host_interface* host, evmc_host_context* ctx,

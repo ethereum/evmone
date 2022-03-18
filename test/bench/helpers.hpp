@@ -10,6 +10,7 @@
 #include <evmone/advanced_analysis.hpp>
 #include <evmone/advanced_execution.hpp>
 #include <evmone/baseline.hpp>
+#include <evmone/eof.hpp>
 #include <evmone/vm.hpp>
 
 namespace evmone::test
@@ -39,9 +40,9 @@ inline advanced::AdvancedCodeAnalysis advanced_analyse(evmc_revision rev, bytes_
     return advanced::analyze(rev, code);
 }
 
-inline baseline::CodeAnalysis baseline_analyse(evmc_revision /*rev*/, bytes_view code)
+inline baseline::CodeAnalysis baseline_analyse(evmc_revision rev, bytes_view code)
 {
-    return baseline::analyze(code);
+    return baseline::analyze(rev, code);
 }
 
 inline FakeCodeAnalysis evmc_analyse(evmc_revision /*rev*/, bytes_view /*code*/)
