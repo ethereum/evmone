@@ -50,6 +50,10 @@ commands:
       commit:
         type: string
     steps:
+      - run:
+          # Fix fixes the cache restore step in case the silkworm dir does not exist
+          name: "Make Silkworm dir"
+          command: mkdir -p ~/silkworm
       - restore_cache:
           name: "Restore Silkworm cache (<<parameters.branch>>-<<parameters.commit>>)"
           key: &silkworm-cache-key silkworm-<<parameters.branch>>-<<parameters.commit>>
