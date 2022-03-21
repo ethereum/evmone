@@ -22,9 +22,13 @@ struct CodeAnalysis
 {
     using JumpdestMap = std::vector<bool>;
 
-    const std::unique_ptr<uint8_t[]> padded_code;
-    const JumpdestMap jumpdest_map;
+    std::unique_ptr<uint8_t[]> padded_code;
+    JumpdestMap jumpdest_map;
 };
+static_assert(std::is_move_constructible_v<CodeAnalysis>);
+static_assert(std::is_move_assignable_v<CodeAnalysis>);
+static_assert(!std::is_copy_constructible_v<CodeAnalysis>);
+static_assert(!std::is_copy_assignable_v<CodeAnalysis>);
 
 /// Analyze the code to build the bitmap of valid JUMPDEST locations.
 EVMC_EXPORT CodeAnalysis analyze(bytes_view code);
