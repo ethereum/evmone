@@ -26,10 +26,36 @@ constexpr int get_revision_defined_in(size_t op) noexcept
     return unspecified;
 }
 
+constexpr bool is_terminating(evmc_opcode op) noexcept
+{
+    switch (op)
+    {
+    case OP_STOP:
+    case OP_RETURN:
+    case OP_REVERT:
+    case OP_INVALID:
+    case OP_SELFDESTRUCT:
+        return true;
+    default:
+        return false;
+    }
+}
+
 template <evmc_opcode Op>
 constexpr void validate_traits_of() noexcept
 {
     constexpr auto tr = instr::traits[Op];
+
+    // immediate_size
+    if constexpr (Op >= OP_PUSH1 && Op <= OP_PUSH32)
+        static_assert(tr.immediate_size == Op - OP_PUSH1 + 1);
+    else
+        static_assert(tr.immediate_size == 0);
+
+    // is_terminating
+    static_assert(tr.is_terminating == is_terminating(Op));
+    static_assert(!tr.is_terminating || tr.immediate_size == 0,
+        "terminating instructions must not have immediate bytes - this simplifies EOF validation");
 
     // since
     constexpr auto expected_rev = get_revision_defined_in(Op);
