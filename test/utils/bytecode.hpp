@@ -41,6 +41,11 @@ inline bytecode& operator+=(bytecode& a, bytecode b)
     return a = a + b;
 }
 
+inline bytecode& operator+=(bytecode& a, bytes b)
+{
+    return a = a + bytecode{b};
+}
+
 inline bool operator==(const bytecode& a, const bytecode& b) noexcept
 {
     return static_cast<const bytes&>(a) == static_cast<const bytes&>(b);
@@ -64,6 +69,36 @@ inline bytecode operator*(int n, evmc_opcode op)
     return n * bytecode{op};
 }
 
+inline bytes big_endian(uint16_t value)
+{
+    return {static_cast<uint8_t>(value >> 8), static_cast<uint8_t>(value)};
+}
+
+inline bytecode eof_header(uint8_t version, uint16_t code_size, uint16_t data_size)
+{
+    bytecode out{bytes{0xEF, 0x00, version}};
+
+    out += "01" + big_endian(code_size);
+
+    if (data_size != 0)
+        out += "02" + big_endian(data_size);
+
+    out += "00";
+    return out;
+}
+
+inline bytecode eof1_header(uint16_t code_size, uint16_t data_size = 0)
+{
+    return eof_header(1, code_size, data_size);
+}
+
+inline bytecode eof1_bytecode(bytecode code, bytecode data = {})
+{
+    assert(code.size() <= std::numeric_limits<uint16_t>::max());
+    assert(data.size() <= std::numeric_limits<uint16_t>::max());
+    return eof1_header(static_cast<uint16_t>(code.size()), static_cast<uint16_t>(data.size())) +
+           code + data;
+}
 
 inline bytecode push(bytes_view data)
 {
