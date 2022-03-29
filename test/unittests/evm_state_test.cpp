@@ -251,11 +251,11 @@ TEST_P(evm, tx_context)
     host.tx_context.chain_id.bytes[28] = 0xaa;
     host.tx_context.block_coinbase.bytes[1] = 0xcc;
     host.tx_context.tx_origin.bytes[2] = 0x55;
-    host.tx_context.block_difficulty.bytes[1] = 0xdd;
+    host.tx_context.block_prev_randao.bytes[1] = 0xdd;
     host.tx_context.tx_gas_price.bytes[2] = 0x66;
 
     auto const code = bytecode{} + OP_TIMESTAMP + OP_COINBASE + OP_OR + OP_GASPRICE + OP_OR +
-                      OP_NUMBER + OP_OR + OP_DIFFICULTY + OP_OR + OP_GASLIMIT + OP_OR + OP_ORIGIN +
+                      OP_NUMBER + OP_OR + OP_PREVRANDAO + OP_OR + OP_GASLIMIT + OP_OR + OP_ORIGIN +
                       OP_OR + OP_CHAINID + OP_OR + ret_top();
     execute(52, code);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);

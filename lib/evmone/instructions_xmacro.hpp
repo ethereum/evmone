@@ -51,7 +51,7 @@
     X(OP_COINBASE, coinbase)             \
     X(OP_TIMESTAMP, timestamp)           \
     X(OP_NUMBER, number)                 \
-    X(OP_DIFFICULTY, difficulty)         \
+    X(OP_PREVRANDAO, prevrandao)         \
     X(OP_GASLIMIT, gaslimit)             \
     X(OP_CHAINID, chainid)               \
     X(OP_SELFBALANCE, selfbalance)       \

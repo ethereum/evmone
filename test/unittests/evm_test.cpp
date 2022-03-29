@@ -717,13 +717,13 @@ TEST_P(evm, return_empty_buffer_at_offset_0)
 
 TEST_P(evm, return_empty_buffer_at_high_offset)
 {
-    host.tx_context.block_difficulty =
+    host.tx_context.block_prev_randao =
         0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff1_bytes32;
 
-    execute(push(0) + OP_DIFFICULTY + OP_RETURN);
+    execute(push(0) + OP_PREVRANDAO + OP_RETURN);
     EXPECT_STATUS(EVMC_SUCCESS);
 
-    execute(push(0) + OP_DIFFICULTY + OP_REVERT);
+    execute(push(0) + OP_PREVRANDAO + OP_REVERT);
     EXPECT_STATUS(EVMC_REVERT);
 }
 
