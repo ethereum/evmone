@@ -614,9 +614,9 @@ inline void number(StackTop stack, ExecutionState& state) noexcept
     stack.push(static_cast<uint64_t>(state.get_tx_context().block_number));
 }
 
-inline void difficulty(StackTop stack, ExecutionState& state) noexcept
+inline void prevrandao(StackTop stack, ExecutionState& state) noexcept
 {
-    stack.push(intx::be::load<uint256>(state.get_tx_context().block_difficulty));
+    stack.push(intx::be::load<uint256>(state.get_tx_context().block_prev_randao));
 }
 
 inline void gaslimit(StackTop stack, ExecutionState& state) noexcept
