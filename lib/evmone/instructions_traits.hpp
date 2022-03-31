@@ -202,12 +202,6 @@ inline constexpr bool has_const_gas_cost(evmc_opcode op) noexcept
     }
     return true;
 }
-static_assert(has_const_gas_cost(OP_STOP));
-static_assert(has_const_gas_cost(OP_ADD));
-static_assert(has_const_gas_cost(OP_PUSH1));
-static_assert(!has_const_gas_cost(OP_SHL));
-static_assert(!has_const_gas_cost(OP_BALANCE));
-static_assert(!has_const_gas_cost(OP_SLOAD));
 
 
 /// The global, EVM revision independent, table of traits of all known EVM instructions.
