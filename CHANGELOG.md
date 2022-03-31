@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
 
+## [0.9.0] — unreleased
+
+### Removed
+
+- `evmone-fuzzer` has removed [aleth-interpreter][Aleth] as it is not maintained and lacks the latest EVM features.
+  [#453](https://github.com/ethereum/evmone/pull/453)
+
+
 ## [0.8.2] — 2021-08-26
 
 ### Fixed
@@ -282,6 +290,7 @@ It delivers fully-compatible and high-speed EVM implementation.
 - The [intx 0.2.0](https://github.com/chfast/intx/releases/tag/v0.2.0) library is used for 256-bit precision arithmetic. 
 
 
+[0.9.0]: https://github.com/ethereum/evmone/compare/v0.8.2..master
 [0.8.2]: https://github.com/ethereum/evmone/releases/tag/v0.8.2
 [0.8.1]: https://github.com/ethereum/evmone/releases/tag/v0.8.1
 [0.8.0]: https://github.com/ethereum/evmone/releases/tag/v0.8.0
