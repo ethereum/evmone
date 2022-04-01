@@ -4,6 +4,7 @@
 
 #include "advanced_execution.hpp"
 #include "advanced_analysis.hpp"
+#include "eof.hpp"
 #include <memory>
 
 namespace evmone::advanced
@@ -27,9 +28,23 @@ evmc_result execute(AdvancedExecutionState& state, const AdvancedCodeAnalysis& a
 evmc_result execute(evmc_vm* /*unused*/, const evmc_host_interface* host, evmc_host_context* ctx,
     evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
 {
-    const auto analysis = analyze(rev, {code, code_size});
-    auto state = std::make_unique<AdvancedExecutionState>(
-        *msg, rev, *host, ctx, bytes_view{code, code_size});
+    AdvancedCodeAnalysis analysis;
+    const bytes_view container = {code, code_size};
+    if (is_eof_code(container))
+    {
+        if (rev >= EVMC_SHANGHAI)
+        {
+            const auto eof1_header = read_valid_eof1_header(container.begin());
+            analysis = analyze(rev, {&container[eof1_header.code_begin()], eof1_header.code_size});
+        }
+        else
+            // Skip analysis, because it will recognize 01 section id as OP_ADD and return
+            // EVMC_STACKUNDERFLOW.
+            return evmc::make_result(EVMC_UNDEFINED_INSTRUCTION, 0, nullptr, 0);
+    }
+    else
+        analysis = analyze(rev, container);
+    auto state = std::make_unique<AdvancedExecutionState>(*msg, rev, *host, ctx, container);
     return execute(*state, analysis);
 }
 }  // namespace evmone::advanced

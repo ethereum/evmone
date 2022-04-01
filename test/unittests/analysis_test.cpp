@@ -4,6 +4,7 @@
 
 #include <evmc/instructions.h>
 #include <evmone/advanced_analysis.hpp>
+#include <evmone/eof.hpp>
 #include <gtest/gtest.h>
 #include <test/utils/bytecode.hpp>
 #include <test/utils/utils.hpp>
@@ -176,4 +177,28 @@ TEST(analysis, jumpdests_groups)
     EXPECT_EQ(analysis.jumpdest_targets[4], 5);
     EXPECT_EQ(analysis.jumpdest_offsets[5], 7);
     EXPECT_EQ(analysis.jumpdest_targets[5], 6);
+}
+
+TEST(analysis, example1_eof1)
+{
+    const auto code = eof1_bytecode(
+        push(0x2a) + push(0x1e) + OP_MSTORE8 + OP_MSIZE + push(0) + OP_SSTORE, "deadbeef");
+    const auto header = evmone::read_valid_eof1_header(bytes_view(code).begin());
+    const auto analysis = analyze(EVMC_SHANGHAI, {&code[header.code_begin()], header.code_size});
+
+    ASSERT_EQ(analysis.instrs.size(), 8);
+
+    EXPECT_EQ(analysis.instrs[0].fn, op_tbl[OPX_BEGINBLOCK].fn);
+    EXPECT_EQ(analysis.instrs[1].fn, op_tbl[OP_PUSH1].fn);
+    EXPECT_EQ(analysis.instrs[2].fn, op_tbl[OP_PUSH1].fn);
+    EXPECT_EQ(analysis.instrs[3].fn, op_tbl[OP_MSTORE8].fn);
+    EXPECT_EQ(analysis.instrs[4].fn, op_tbl[OP_MSIZE].fn);
+    EXPECT_EQ(analysis.instrs[5].fn, op_tbl[OP_PUSH1].fn);
+    EXPECT_EQ(analysis.instrs[6].fn, op_tbl[OP_SSTORE].fn);
+    EXPECT_EQ(analysis.instrs[7].fn, op_tbl[OP_STOP].fn);
+
+    const auto& block = analysis.instrs[0].arg.block;
+    EXPECT_EQ(block.gas_cost, 14u);
+    EXPECT_EQ(block.stack_req, 0);
+    EXPECT_EQ(block.stack_max_growth, 2);
 }
