@@ -8,6 +8,10 @@
 #include <gtest/gtest.h>
 #include <test/utils/bytecode.hpp>
 
+using namespace evmone;
+
+namespace evmone::test
+{
 namespace
 {
 constexpr int unspecified = -1000000;
@@ -16,36 +20,82 @@ constexpr int get_revision_defined_in(size_t op) noexcept
 {
     for (size_t r = EVMC_FRONTIER; r <= EVMC_MAX_REVISION; ++r)
     {
-        if (evmone::instr::gas_costs[r][op] != evmone::instr::undefined)
+        if (instr::gas_costs[r][op] != instr::undefined)
             return static_cast<int>(r);
     }
     return unspecified;
 }
-}  // namespace
 
-TEST(instructions, validate_since)
+constexpr bool is_terminating(evmc_opcode op) noexcept
 {
-    for (size_t op = 0x00; op <= 0xff; ++op)
+    switch (op)
     {
-        const auto since = evmone::instr::traits[op].since;
-        const auto test_value = since.has_value() ? *since : unspecified;
-        const auto expected = get_revision_defined_in(op);
-        EXPECT_EQ(test_value, expected) << std::hex << op;
+    case OP_STOP:
+    case OP_RETURN:
+    case OP_REVERT:
+    case OP_INVALID:
+    case OP_SELFDESTRUCT:
+        return true;
+    default:
+        return false;
     }
 }
+
+template <evmc_opcode Op>
+constexpr void validate_traits_of() noexcept
+{
+    constexpr auto tr = instr::traits[Op];
+
+    // immediate_size
+    if constexpr (Op >= OP_PUSH1 && Op <= OP_PUSH32)
+        static_assert(tr.immediate_size == Op - OP_PUSH1 + 1);
+    else
+        static_assert(tr.immediate_size == 0);
+
+    // is_terminating
+    static_assert(tr.is_terminating == is_terminating(Op));
+    static_assert(!tr.is_terminating || tr.immediate_size == 0,
+        "terminating instructions must not have immediate bytes - this simplifies EOF validation");
+
+    // since
+    constexpr auto expected_rev = get_revision_defined_in(Op);
+    static_assert(tr.since.has_value() ? *tr.since == expected_rev : expected_rev == unspecified);
+}
+
+template <std::size_t... Ops>
+constexpr bool validate_traits(std::index_sequence<Ops...>)
+{
+    // Instantiate validate_traits_of for each opcode.
+    // Validation errors are going to be reported via static_asserts.
+    (validate_traits_of<static_cast<evmc_opcode>(Ops)>(), ...);
+    return true;
+}
+static_assert(validate_traits(std::make_index_sequence<256>{}));
+
+
+// Check some cases for has_const_gas_cost().
+static_assert(instr::has_const_gas_cost(OP_STOP));
+static_assert(instr::has_const_gas_cost(OP_ADD));
+static_assert(instr::has_const_gas_cost(OP_PUSH1));
+static_assert(!instr::has_const_gas_cost(OP_SHL));
+static_assert(!instr::has_const_gas_cost(OP_BALANCE));
+static_assert(!instr::has_const_gas_cost(OP_SLOAD));
+}  // namespace
+}  // namespace evmone::test
+
 
 TEST(instructions, compare_with_evmc_instruction_tables)
 {
     for (int r = EVMC_FRONTIER; r <= EVMC_MAX_REVISION; ++r)
     {
         const auto rev = static_cast<evmc_revision>(r);
-        const auto& instr_tbl = evmone::instr::gas_costs[rev];
-        const auto& evmone_tbl = evmone::advanced::get_op_table(rev);
+        const auto& instr_tbl = instr::gas_costs[rev];
+        const auto& evmone_tbl = advanced::get_op_table(rev);
         const auto* evmc_tbl = evmc_get_instruction_metrics_table(rev);
 
         for (size_t i = 0; i < evmone_tbl.size(); ++i)
         {
-            const auto gas_cost = (instr_tbl[i] != evmone::instr::undefined) ? instr_tbl[i] : 0;
+            const auto gas_cost = (instr_tbl[i] != instr::undefined) ? instr_tbl[i] : 0;
             const auto& metrics = evmone_tbl[i];
             const auto& ref_metrics = evmc_tbl[i];
 
@@ -69,19 +119,19 @@ TEST(instructions, compare_undefined_instructions)
     for (int r = EVMC_FRONTIER; r <= EVMC_MAX_REVISION; ++r)
     {
         const auto rev = static_cast<evmc_revision>(r);
-        const auto& instr_tbl = evmone::instr::gas_costs[rev];
+        const auto& instr_tbl = instr::gas_costs[rev];
         const auto* evmc_names_tbl = evmc_get_instruction_names_table(rev);
 
         for (size_t i = 0; i < instr_tbl.size(); ++i)
-            EXPECT_EQ(instr_tbl[i] == evmone::instr::undefined, evmc_names_tbl[i] == nullptr) << i;
+            EXPECT_EQ(instr_tbl[i] == instr::undefined, evmc_names_tbl[i] == nullptr) << i;
     }
 }
 
 TEST(instructions, compare_with_evmc_instruction_names)
 {
     const auto* evmc_tbl = evmc_get_instruction_names_table(EVMC_MAX_REVISION);
-    for (size_t i = 0; i < evmone::instr::traits.size(); ++i)
+    for (size_t i = 0; i < instr::traits.size(); ++i)
     {
-        EXPECT_STREQ(evmone::instr::traits[i].name, evmc_tbl[i]);
+        EXPECT_STREQ(instr::traits[i].name, evmc_tbl[i]);
     }
 }
