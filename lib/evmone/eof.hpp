@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
+#include <evmc/evmc.h>
 #include <evmc/utils.h>
 #include <cstddef>
 #include <cstdint>
@@ -28,4 +29,32 @@ struct EOF1Header
 /// (must be true for all EOF contracts on-chain)
 [[nodiscard]] EVMC_EXPORT EOF1Header read_valid_eof1_header(
     bytes_view::const_iterator code) noexcept;
+
+enum class EOFValidationError
+{
+    success,
+    starts_with_format,
+    invalid_prefix,
+    eof_version_mismatch,
+    eof_version_unknown,
+
+    incomplete_section_size,
+    code_section_missing,
+    multiple_code_sections,
+    multiple_data_sections,
+    unknown_section_id,
+    zero_section_size,
+    section_headers_not_terminated,
+    invalid_section_bodies_size,
+
+    impossible,
+};
+
+/// Determines the EOF version of the container by inspecting container's EOF prefix.
+/// If the prefix is missing or invalid, 0 is returned meaning legacy code.
+[[nodiscard]] uint8_t get_eof_version(bytes_view container) noexcept;
+
+/// Validates whether given container is a valid EOF according to the rules of given revision.
+[[nodiscard]] EVMC_EXPORT EOFValidationError validate_eof(
+    evmc_revision rev, bytes_view container) noexcept;
 }  // namespace evmone
