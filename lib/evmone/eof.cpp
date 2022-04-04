@@ -3,9 +3,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "eof.hpp"
+#include "instructions_traits.hpp"
 
 #include <array>
 #include <cassert>
+#include <limits>
 
 namespace evmone
 {
@@ -95,15 +97,46 @@ std::pair<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_view
     return {section_headers, EOFValidationError::success};
 }
 
-std::pair<EOF1Header, EOFValidationError> validate_eof1(bytes_view container) noexcept
+EOFValidationError validate_instructions(evmc_revision rev, bytes_view code) noexcept
 {
-    const auto [section_headers, error] = validate_eof_headers(container);
-    if (error != EOFValidationError::success)
-        return {{}, error};
+    assert(code.size() > 0);  // guaranteed by EOF headers validation
 
-    const EOF1Header header{section_headers[CODE_SECTION], section_headers[DATA_SECTION]};
+    size_t i = 0;
+    uint8_t op = code[0];
+    while (i < code.size())
+    {
+        op = code[i];
+        const auto& since = instr::traits[op].since;
+        if (!since.has_value() || *since > rev)
+            return EOFValidationError::undefined_instruction;
+
+        i += instr::traits[op].immediate_size;
+        ++i;
+    }
+
+    if (!instr::traits[op].is_terminating)
+        return EOFValidationError::missing_terminating_instruction;
+
+    return EOFValidationError::success;
+}
+
+std::pair<EOF1Header, EOFValidationError> validate_eof1(
+    evmc_revision rev, bytes_view container) noexcept
+{
+    const auto [section_headers, error_header] = validate_eof_headers(container);
+    if (error_header != EOFValidationError::success)
+        return {{}, error_header};
+
+    EOF1Header header{section_headers[CODE_SECTION], section_headers[DATA_SECTION]};
+
+    const auto error_instr =
+        validate_instructions(rev, {&container[header.code_begin()], header.code_size});
+    if (error_instr != EOFValidationError::success)
+        return {{}, error_instr};
+
     return {header, EOFValidationError::success};
 }
+
 }  // namespace
 
 size_t EOF1Header::code_begin() const noexcept
@@ -154,7 +187,7 @@ EOFValidationError validate_eof(evmc_revision rev, bytes_view container) noexcep
     {
         if (rev < EVMC_SHANGHAI)
             return EOFValidationError::eof_version_unknown;
-        return validate_eof1(container).second;
+        return validate_eof1(rev, container).second;
     }
     else
         return EOFValidationError::eof_version_unknown;
