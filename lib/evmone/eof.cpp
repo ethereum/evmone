@@ -9,6 +9,7 @@
 #include <cassert>
 #include <limits>
 #include <variant>
+#include <vector>
 
 namespace evmone
 {
@@ -121,6 +122,41 @@ EOFValidationError validate_instructions(evmc_revision rev, bytes_view code) noe
     return EOFValidationError::success;
 }
 
+bool validate_rjump_destinations(
+    const EOF1Header& header, bytes_view::const_iterator container) noexcept
+{
+    // Collect relative jump destinations and immediate locations
+    std::vector<size_t> rjumpdests;
+    std::vector<bool> immediate_map(header.code_end());
+    for (auto i = header.code_begin(); i < header.code_end(); ++i)
+    {
+        const auto op = container[i];
+
+        if (op == OP_RJUMP || op == OP_RJUMPI)
+        {
+            const auto offset_hi = container[i + 1];
+            const auto offset_lo = container[i + 2];
+            const auto offset = static_cast<int16_t>((offset_hi << 8) + offset_lo);
+            const auto jumpdest = static_cast<int32_t>(i) + 3 + offset;
+            if (jumpdest < static_cast<int32_t>(header.code_begin()) ||
+                jumpdest >= static_cast<int32_t>(header.code_end()))
+                return false;
+            rjumpdests.push_back(static_cast<size_t>(jumpdest));
+        }
+
+        const auto imm_size = instr::traits[op].immediate_size;
+        std::fill_n(immediate_map.begin() + static_cast<ptrdiff_t>(i) + 1, imm_size, true);
+        i += imm_size;
+    }
+
+    // Check relative jump destinations against immediate locations.
+    for (const auto rjumpdest : rjumpdests)
+        if (immediate_map[rjumpdest])
+            return false;
+
+    return true;
+}
+
 std::variant<EOF1Header, EOFValidationError> validate_eof1(
     evmc_revision rev, bytes_view container) noexcept
 {
@@ -136,6 +172,9 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(
     if (error_instr != EOFValidationError::success)
         return error_instr;
 
+    if (!validate_rjump_destinations(header, container.begin()))
+        return EOFValidationError::invalid_rjump_destination;
+
     return header;
 }
 
@@ -149,6 +188,11 @@ size_t EOF1Header::code_begin() const noexcept
         return 7;  // MAGIC + VERSION + SECTION_ID + SIZE + TERMINATOR
     else
         return 10;  // MAGIC + VERSION + SECTION_ID + SIZE + SECTION_ID + SIZE + TERMINATOR
+}
+
+size_t EOF1Header::code_end() const noexcept
+{
+    return code_begin() + code_size;
 }
 
 bool is_eof_container(bytes_view container) noexcept
@@ -234,6 +278,8 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "undefined_instruction";
     case EOFValidationError::missing_terminating_instruction:
         return "missing_terminating_instruction";
+    case EOFValidationError::invalid_rjump_destination:
+        return "invalid_rjump_destination";
     case EOFValidationError::impossible:
         return "impossible";
     }
