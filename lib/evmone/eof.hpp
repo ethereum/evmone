@@ -20,6 +20,7 @@ struct EOF1Header
 
     /// Returns offset of code section start.
     [[nodiscard]] EVMC_EXPORT size_t code_begin() const noexcept;
+    [[nodiscard]] EVMC_EXPORT size_t code_end() const noexcept;
 };
 
 /// Checks if code starts with EOF FORMAT + MAGIC, doesn't validate the format.
@@ -48,6 +49,7 @@ enum class EOFValidationError
     invalid_section_bodies_size,
     undefined_instruction,
     missing_terminating_instruction,
+    invalid_rjump_destination,
 
     impossible,
 };
