@@ -125,12 +125,16 @@ commands:
             cmake --version
             echo CMAKE_BUILD_PARALLEL_LEVEL: $CMAKE_BUILD_PARALLEL_LEVEL
 
-            # Create the toolchain.info file for cache key.
-            echo $TOOLCHAIN >> toolchain.info
-            $CXX --version >> toolchain.info
+            # Create the build.info file for cache key.
+            echo $TOOLCHAIN >> build.info
+            echo $CMAKE_OPTIONS >> build.info
+            $CXX --version >> build.info
+            
+            printf '\n-----------\nbuild.info:\n'
+            cat build.info
       - restore_cache:
           name: "Restore Hunter cache"
-          key: &hunter-cache-key hunter-{{arch}}-{{checksum "toolchain.info"}}-{{checksum "cmake/Hunter/init.cmake"}}
+          key: &hunter-cache-key hunter-{{arch}}-{{checksum "build.info"}}-{{checksum "cmake/Hunter/init.cmake"}}-{{checksum "cmake/Hunter/config.cmake"}}
       - run:
           name: "Configure"
           working_directory: ~/build
