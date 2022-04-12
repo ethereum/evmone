@@ -326,6 +326,35 @@ TEST_P(evm, jump_to_missing_push_data2)
     EXPECT_STATUS(EVMC_BAD_JUMP_DESTINATION);
 }
 
+TEST_P(evm, jump_dead_code)
+{
+    execute(push(6) + OP_JUMP + 3 * OP_INVALID + OP_JUMPDEST);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 12);
+}
+
+TEST_P(evm, stop_dead_code)
+{
+    execute(OP_STOP + 3 * OP_INVALID + OP_JUMPDEST);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 0);
+}
+
+TEST_P(evm, dead_code_at_the_end)
+{
+    execute(OP_STOP + 3 * OP_INVALID);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 0);
+}
+
+TEST_P(evm, jumpi_jumpdest)
+{
+    const auto code = calldataload(0) + push(6) + OP_JUMPI + OP_JUMPDEST;
+
+    execute(code, "00");
+    EXPECT_GAS_USED(EVMC_SUCCESS, 20);
+
+    execute(code, "ff");
+    EXPECT_GAS_USED(EVMC_SUCCESS, 20);
+}
+
 TEST_P(evm, pc_sum)
 {
     const auto code = 4 * OP_PC + 3 * OP_ADD + ret_top();

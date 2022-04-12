@@ -145,7 +145,8 @@ const Instruction* op_jumpi(const Instruction* instr, AdvancedExecutionState& st
     else
     {
         state.stack.pop();
-        ++instr;
+
+        instr = opx_beginblock(instr, state);
     }
 
     // OPT: The pc must be the BEGINBLOCK (even in fallback case),
@@ -233,7 +234,7 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
     table[OP_JUMPI] = op_jumpi;
     table[OP_PC] = op_pc;
     table[OP_GAS] = op_gas;
-    table[OPX_BEGINBLOCK] = opx_beginblock;
+    table[OP_JUMPDEST] = opx_beginblock;
 
     for (auto op = size_t{OP_PUSH1}; op <= OP_PUSH8; ++op)
         table[op] = op_push_small;
