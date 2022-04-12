@@ -142,6 +142,86 @@ TEST(analysis, terminated_last_block)
     EXPECT_EQ(analysis.instrs[4].fn, op_tbl[OP_STOP].fn);
 }
 
+TEST(analysis, jump_dead_code)
+{
+    constexpr auto jumpdest_offset = 6;
+    constexpr auto jumpdest_index = 3;
+
+    const auto code = push(jumpdest_offset) + OP_JUMP + 3 * OP_ADD + OP_JUMPDEST;
+    auto analysis = analyze(rev, code);
+
+    ASSERT_EQ(analysis.instrs.size(), 5);
+    EXPECT_EQ(analysis.instrs[0].arg.block.gas_cost, 3 + 8);
+    EXPECT_EQ(analysis.instrs[0].fn, op_tbl[OPX_BEGINBLOCK].fn);
+    EXPECT_EQ(analysis.instrs[1].fn, op_tbl[OP_PUSH1].fn);
+    EXPECT_EQ(analysis.instrs[2].fn, op_tbl[OP_JUMP].fn);
+
+    EXPECT_EQ(analysis.instrs[jumpdest_index].arg.block.gas_cost, 1);
+    EXPECT_EQ(analysis.instrs[jumpdest_index].fn, op_tbl[OP_JUMPDEST].fn);
+    EXPECT_EQ(analysis.instrs[4].fn, op_tbl[OP_STOP].fn);
+
+    ASSERT_EQ(analysis.jumpdest_offsets.size(), 1);
+    ASSERT_EQ(analysis.jumpdest_targets.size(), 1);
+    EXPECT_EQ(analysis.jumpdest_offsets[0], jumpdest_offset);
+    EXPECT_EQ(analysis.jumpdest_targets[0], jumpdest_index);
+}
+
+TEST(analysis, stop_dead_code)
+{
+    constexpr auto jumpdest_offset = 4;
+    constexpr auto jumpdest_index = 2;
+
+    const auto code = OP_STOP + 3 * OP_ADD + OP_JUMPDEST;
+    ASSERT_EQ(code[jumpdest_offset], OP_JUMPDEST);
+    auto analysis = analyze(rev, code);
+
+    ASSERT_EQ(analysis.instrs.size(), 4);
+    EXPECT_EQ(analysis.instrs[0].arg.block.gas_cost, 0);
+    EXPECT_EQ(analysis.instrs[0].fn, op_tbl[OPX_BEGINBLOCK].fn);
+    EXPECT_EQ(analysis.instrs[1].fn, op_tbl[OP_STOP].fn);
+
+    EXPECT_EQ(analysis.instrs[jumpdest_index].arg.block.gas_cost, 1);
+    EXPECT_EQ(analysis.instrs[jumpdest_index].fn, op_tbl[OP_JUMPDEST].fn);
+    EXPECT_EQ(analysis.instrs[3].fn, op_tbl[OP_STOP].fn);
+
+    ASSERT_EQ(analysis.jumpdest_offsets.size(), 1);
+    ASSERT_EQ(analysis.jumpdest_targets.size(), 1);
+    EXPECT_EQ(analysis.jumpdest_offsets[0], jumpdest_offset);
+    EXPECT_EQ(analysis.jumpdest_targets[0], jumpdest_index);
+}
+
+TEST(analysis, dead_code_at_the_end)
+{
+    const auto code = OP_STOP + 3 * OP_ADD;
+    auto analysis = analyze(rev, code);
+    ASSERT_EQ(analysis.instrs.size(), 3);
+
+    EXPECT_EQ(analysis.instrs[0].arg.block.gas_cost, 0);
+    EXPECT_EQ(analysis.instrs[0].fn, op_tbl[OPX_BEGINBLOCK].fn);
+    EXPECT_EQ(analysis.instrs[1].fn, op_tbl[OP_STOP].fn);
+    EXPECT_EQ(analysis.instrs[2].fn, op_tbl[OP_STOP].fn);
+
+    EXPECT_EQ(analysis.jumpdest_offsets.size(), 0);
+    EXPECT_EQ(analysis.jumpdest_targets.size(), 0);
+}
+
+TEST(analysis, jumpi_jumpdest)
+{
+    const auto code = push(0) + OP_JUMPI + OP_JUMPDEST;
+    auto analysis = analyze(rev, code);
+
+    ASSERT_EQ(analysis.instrs.size(), 5);
+    EXPECT_EQ(analysis.instrs[0].arg.block.gas_cost, 3 + 10);
+    EXPECT_EQ(analysis.instrs[0].fn, op_tbl[OPX_BEGINBLOCK].fn);
+    EXPECT_EQ(analysis.instrs[1].fn, op_tbl[OP_PUSH1].fn);
+    EXPECT_EQ(analysis.instrs[2].fn, op_tbl[OP_JUMPI].fn);
+    EXPECT_EQ(analysis.instrs[2].arg.block.gas_cost, 0);  // The block following JUMPI is empty.
+
+    EXPECT_EQ(analysis.instrs[3].arg.block.gas_cost, 1);
+    EXPECT_EQ(analysis.instrs[3].fn, op_tbl[OP_JUMPDEST].fn);
+    EXPECT_EQ(analysis.instrs[4].fn, op_tbl[OP_STOP].fn);
+}
+
 TEST(analysis, jumpdests_groups)
 {
     const auto code = 3 * OP_JUMPDEST + push(1) + 3 * OP_JUMPDEST + push(2) + OP_JUMPI;
