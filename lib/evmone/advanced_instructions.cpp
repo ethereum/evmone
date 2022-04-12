@@ -110,6 +110,23 @@ const Instruction* op_sstore(const Instruction* instr, AdvancedExecutionState& s
     return ++instr;
 }
 
+const Instruction* opx_beginblock(const Instruction* instr, AdvancedExecutionState& state) noexcept
+{
+    auto& block = instr->arg.block;
+
+    if ((state.gas_left -= block.gas_cost) < 0)
+        return state.exit(EVMC_OUT_OF_GAS);
+
+    if (static_cast<int>(state.stack.size()) < block.stack_req)
+        return state.exit(EVMC_STACK_UNDERFLOW);
+
+    if (static_cast<int>(state.stack.size()) + block.stack_max_growth > StackSpace::limit)
+        return state.exit(EVMC_STACK_OVERFLOW);
+
+    state.current_block_cost = block.gas_cost;
+    return ++instr;
+}
+
 const Instruction* op_jump(const Instruction*, AdvancedExecutionState& state) noexcept
 {
     const auto dst = state.stack.pop();
@@ -199,23 +216,6 @@ const Instruction* op_create(const Instruction* instr, AdvancedExecutionState& s
 const Instruction* op_undefined(const Instruction*, AdvancedExecutionState& state) noexcept
 {
     return state.exit(EVMC_UNDEFINED_INSTRUCTION);
-}
-
-const Instruction* opx_beginblock(const Instruction* instr, AdvancedExecutionState& state) noexcept
-{
-    auto& block = instr->arg.block;
-
-    if ((state.gas_left -= block.gas_cost) < 0)
-        return state.exit(EVMC_OUT_OF_GAS);
-
-    if (static_cast<int>(state.stack.size()) < block.stack_req)
-        return state.exit(EVMC_STACK_UNDERFLOW);
-
-    if (static_cast<int>(state.stack.size()) + block.stack_max_growth > StackSpace::limit)
-        return state.exit(EVMC_STACK_OVERFLOW);
-
-    state.current_block_cost = block.gas_cost;
-    return ++instr;
 }
 
 
