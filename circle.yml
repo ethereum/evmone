@@ -24,6 +24,12 @@ executors:
     resource_class: xlarge
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 8
+  fuzzing:
+    docker:
+      - image: ethereum/cpp-build-env:18-clang-14
+    resource_class: xlarge
+    environment:
+      CMAKE_BUILD_PARALLEL_LEVEL: 8
   linux-gcc-min:
     docker:
       - image: ethereum/cpp-build-env:15-gcc-8
@@ -399,6 +405,17 @@ jobs:
           path: ~/coverage
           destination: coverage
 
+  fuzzing:
+    executor: fuzzing
+    environment:
+      CMAKE_OPTIONS: -DEVMONE_FUZZING=ON
+    steps:
+      - build
+      - run:
+          name: "Run evmone-fuzzer"
+          working_directory: ~/build
+          command: |
+            bin/evmone-fuzzer -runs=10000000 -fork=$CMAKE_BUILD_PARALLEL_LEVEL -fork_corpus_groups=1 ~/corpus -create_missing_dirs=1 -max_len=100 -entropic_scale_per_exec_time=1 2>&1 | sed '/NEW_FUNC/d'
 
 
   macos-asan:
@@ -447,3 +464,4 @@ workflows:
       - clang-latest-coverage
       - macos-asan
       - gcc-32bit
+      - fuzzing
