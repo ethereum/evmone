@@ -8,4 +8,5 @@ target_link_libraries(evmone-state INTERFACE ethash::keccak)
 target_sources(
     evmone-state INTERFACE
     hash_utils.hpp
+    rlp.hpp
 )
