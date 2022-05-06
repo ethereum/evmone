@@ -4,6 +4,8 @@
 
 add_library(evmone-state INTERFACE)
 add_library(evmone::state ALIAS evmone-state)
+target_link_libraries(evmone-state INTERFACE ethash::keccak)
 target_sources(
     evmone-state INTERFACE
+    hash_utils.hpp
 )
