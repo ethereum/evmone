@@ -6,6 +6,8 @@
 
 namespace evmone::instr::core
 {
+using namespace evmc::literals;
+
 template <evmc_opcode Op>
 evmc_status_code call_impl(StackTop stack, ExecutionState& state) noexcept
 {
@@ -90,12 +92,28 @@ evmc_status_code call_impl(StackTop stack, ExecutionState& state) noexcept
     if (has_value && intx::be::load<uint256>(state.host.get_balance(state.msg->recipient)) < value)
         return EVMC_SUCCESS;
 
-    const auto result = state.host.call(msg);
+    evmc::result result{EVMC_INTERNAL_ERROR, 0, nullptr, 0};
+    if (!has_value && msg.code_address == 0x0000000000000000000000000000000000000004_address)
+    {
+        const auto gas_cost = 15 + 3 * num_words(msg.input_size);
+        const auto gas_left = msg.gas - gas_cost;
+        if (gas_left < 0)
+            result.status_code = EVMC_OUT_OF_GAS;
+        else
+        {
+            result.status_code = EVMC_SUCCESS;
+            result.gas_left = gas_left;
+            result.output_data = msg.input_data;
+            result.output_size = msg.input_size;
+        }
+    }
+    else
+        result = state.host.call(msg);
     state.return_data.assign(result.output_data, result.output_size);
     stack.top() = result.status_code == EVMC_SUCCESS;
 
     if (const auto copy_size = std::min(size_t(output_size), result.output_size); copy_size > 0)
-        std::memcpy(&state.memory[size_t(output_offset)], result.output_data, copy_size);
+        std::memmove(&state.memory[size_t(output_offset)], result.output_data, copy_size);
 
     const auto gas_used = msg.gas - result.gas_left;
     state.gas_left -= gas_used;
