@@ -4,10 +4,7 @@
 
 #include "statetest.hpp"
 #include <gtest/gtest.h>
-#include <filesystem>
 #include <iostream>
-
-namespace fs = std::filesystem;
 
 namespace
 {
@@ -20,7 +17,7 @@ public:
       : m_json_test_file{std::move(json_test_file)}
     {}
 
-    void TestBody() final { std::cout << m_json_test_file << "\n"; }
+    void TestBody() final { evmone::test::load_state_test(m_json_test_file); }
 };
 }  // namespace
 
