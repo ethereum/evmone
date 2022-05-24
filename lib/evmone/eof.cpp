@@ -99,7 +99,7 @@ std::pair<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_view
 
 EOFValidationError validate_instructions(evmc_revision rev, bytes_view code) noexcept
 {
-    assert(code.size() > 0);  // guaranteed by EOF headers validation
+    assert(!code.empty());  // guaranteed by EOF headers validation
 
     size_t i = 0;
     uint8_t op = code[0];

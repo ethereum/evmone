@@ -64,7 +64,7 @@ TEST(analysis, push)
     ASSERT_EQ(analysis.push_values.size(), 1);
     EXPECT_EQ(analysis.instrs[0].fn, op_tbl[OPX_BEGINBLOCK].fn);
     EXPECT_EQ(analysis.instrs[1].arg.small_push_value, push_value);
-    EXPECT_EQ(analysis.instrs[2].arg.push_value, &analysis.push_values[0]);
+    EXPECT_EQ(analysis.instrs[2].arg.push_value, analysis.push_values.data());
     EXPECT_EQ(analysis.push_values[0], intx::uint256{0xee} << 240);
 }
 
