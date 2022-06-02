@@ -25,18 +25,18 @@ TEST(eof, code_begin)
 
 TEST(eof, is_eof_code)
 {
-    EXPECT_FALSE(is_eof_code(from_hex("")));
-    EXPECT_FALSE(is_eof_code(from_hex("EF")));
-    EXPECT_FALSE(is_eof_code(from_hex("EF01")));
-    EXPECT_FALSE(is_eof_code(from_hex("EF02")));
-    EXPECT_FALSE(is_eof_code(from_hex("EFFF")));
-    EXPECT_FALSE(is_eof_code(from_hex("00")));
-    EXPECT_FALSE(is_eof_code(from_hex("FE")));
+    EXPECT_FALSE(is_eof_code(""_hex));
+    EXPECT_FALSE(is_eof_code("EF"_hex));
+    EXPECT_FALSE(is_eof_code("EF01"_hex));
+    EXPECT_FALSE(is_eof_code("EF02"_hex));
+    EXPECT_FALSE(is_eof_code("EFFF"_hex));
+    EXPECT_FALSE(is_eof_code("00"_hex));
+    EXPECT_FALSE(is_eof_code("FE"_hex));
 
-    EXPECT_TRUE(is_eof_code(from_hex("EF00")));
-    EXPECT_TRUE(is_eof_code(from_hex("EF00 01 010001 00 00")));
-    EXPECT_TRUE(is_eof_code(from_hex("EF00 01 010001 020004 00 00 AABBCCDD")));
-    EXPECT_TRUE(is_eof_code(from_hex("EF00 02 ABCFEF")));
+    EXPECT_TRUE(is_eof_code("EF00"_hex));
+    EXPECT_TRUE(is_eof_code("EF00 01 010001 00 00"_hex));
+    EXPECT_TRUE(is_eof_code("EF00 01 010001 020004 00 00 AABBCCDD"_hex));
+    EXPECT_TRUE(is_eof_code("EF00 02 ABCFEF"_hex));
 }
 
 TEST(eof, read_valid_eof1_header)

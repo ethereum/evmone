@@ -146,14 +146,14 @@ TEST_P(evm, eof1_codecopy_full)
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
-        from_hex("ef000101000c006013600060003960136000f3"));
+        "ef000101000c006013600060003960136000f3"_hex);
 
     code = eof1_bytecode(bytecode{26} + 0 + 0 + OP_CODECOPY + ret(0, 26), "deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
-        from_hex("ef000101000c02000400601a6000600039601a6000f3deadbeef"));
+        "ef000101000c02000400601a6000600039601a6000f3deadbeef"_hex);
 }
 
 TEST_P(evm, eof1_codecopy_header)
@@ -163,13 +163,13 @@ TEST_P(evm, eof1_codecopy_header)
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
-    EXPECT_EQ(bytes_view(result.output_data, result.output_size), from_hex("ef000101000c00"));
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size), "ef000101000c00"_hex);
 
     code = eof1_bytecode(bytecode{10} + 0 + 0 + OP_CODECOPY + ret(0, 10), "deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
-    EXPECT_EQ(bytes_view(result.output_data, result.output_size), from_hex("ef000101000c02000400"));
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size), "ef000101000c02000400"_hex);
 }
 
 TEST_P(evm, eof1_codecopy_code)
@@ -179,15 +179,13 @@ TEST_P(evm, eof1_codecopy_code)
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
-    EXPECT_EQ(
-        bytes_view(result.output_data, result.output_size), from_hex("600c6007600039600c6000f3"));
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size), "600c6007600039600c6000f3"_hex);
 
     code = eof1_bytecode(bytecode{12} + 10 + 0 + OP_CODECOPY + ret(0, 12), "deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
-    EXPECT_EQ(
-        bytes_view(result.output_data, result.output_size), from_hex("600c600a600039600c6000f3"));
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size), "600c600a600039600c6000f3"_hex);
 }
 
 TEST_P(evm, eof1_codecopy_data)
@@ -198,7 +196,7 @@ TEST_P(evm, eof1_codecopy_data)
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
-    EXPECT_EQ(bytes_view(result.output_data, result.output_size), from_hex("deadbeef"));
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size), "deadbeef"_hex);
 }
 
 TEST_P(evm, eof1_codecopy_out_of_bounds)
@@ -210,12 +208,12 @@ TEST_P(evm, eof1_codecopy_out_of_bounds)
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
-        from_hex("ef000101000c006017600060003960176000f300000000"));
+        "ef000101000c006017600060003960176000f300000000"_hex);
 
     code = eof1_bytecode(bytecode{30} + 0 + 0 + OP_CODECOPY + ret(0, 30), "deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
-        from_hex("ef000101000c02000400601e6000600039601e6000f3deadbeef00000000"));
+        "ef000101000c02000400601e6000600039601e6000f3deadbeef00000000"_hex);
 }

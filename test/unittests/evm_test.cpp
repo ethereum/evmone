@@ -434,10 +434,10 @@ TEST_P(evm, addmod_mulmod)
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(result.gas_left, 0);
     ASSERT_EQ(result.output_size, 64);
-    auto a = from_hex("65ef55f81fe142622955e990252cb5209a11d4db113d842408fd9c7ae2a29a5a");
-    EXPECT_EQ(a, bytes(&result.output_data[0], 32));
-    auto p = from_hex("34e04890131a297202753cae4c72efd508962c9129aed8b08c8e87ab425b7258");
-    EXPECT_EQ(p, bytes(&result.output_data[32], 32));
+    EXPECT_EQ(bytes_view(&result.output_data[0], 32),
+        "65ef55f81fe142622955e990252cb5209a11d4db113d842408fd9c7ae2a29a5a"_hex);
+    EXPECT_EQ(bytes_view(&result.output_data[32], 32),
+        "34e04890131a297202753cae4c72efd508962c9129aed8b08c8e87ab425b7258"_hex);
 }
 
 TEST_P(evm, divmod)
@@ -447,10 +447,10 @@ TEST_P(evm, divmod)
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(gas_used, 61);
     ASSERT_EQ(result.output_size, 64);
-    auto a = from_hex("0000000000000000000000000000000000000000000000000000000000000013");
-    EXPECT_EQ(a, bytes(&result.output_data[0], 32));
-    auto p = from_hex("08ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
-    EXPECT_EQ(p, bytes(&result.output_data[32], 32));
+    EXPECT_EQ(bytes_view(&result.output_data[0], 32),
+        "0000000000000000000000000000000000000000000000000000000000000013"_hex);
+    EXPECT_EQ(bytes_view(&result.output_data[32], 32),
+        "08ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"_hex);
 }
 
 TEST_P(evm, div_by_zero)
@@ -547,18 +547,11 @@ TEST_P(evm, signextend_fuzzing)
 
 TEST_P(evm, exp)
 {
-    std::string s;
-    s += "612019";      // 0x2019
-    s += "6003";        // 3
-    s += "0a";          // EXP
-    s += "600052";      // m[0..]
-    s += "60206000f3";  // RETURN(0,32)
-    execute(131, s);
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    EXPECT_EQ(result.gas_left, 0);
+    const auto code = push(0x2019) + push(3) + OP_EXP + ret_top();
+    execute(131, code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 131);
     ASSERT_EQ(result.output_size, 32);
-    auto a = from_hex("263cf24662b24c371a647c1340022619306e431bf3a4298d4b5998a3f1c1aaa3");
-    EXPECT_EQ(bytes(&result.output_data[0], 32), a);
+    EXPECT_OUTPUT_INT(0x263cf24662b24c371a647c1340022619306e431bf3a4298d4b5998a3f1c1aaa3_u256);
 }
 
 TEST_P(evm, exp_1_0)
@@ -592,32 +585,19 @@ TEST_P(evm, exp_oog)
 TEST_P(evm, exp_pre_spurious_dragon)
 {
     rev = EVMC_TANGERINE_WHISTLE;
-    std::string s;
-    s += "62012019";    // 0x012019
-    s += "6003";        // 3
-    s += "0a";          // EXP
-    s += "600052";      // m[0..]
-    s += "60206000f3";  // RETURN(0,32)
-    execute(131 - 70, s);
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    EXPECT_EQ(result.gas_left, 0);
-    ASSERT_EQ(result.output_size, 32);
-    auto a = from_hex("422ea3761c4f6517df7f102bb18b96abf4735099209ca21256a6b8ac4d1daaa3");
-    EXPECT_EQ(bytes(&result.output_data[0], 32), a);
+    const auto code = push(0x012019) + push(3) + OP_EXP + ret_top();
+    execute(131 - 70, code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 131 - 70);
+    EXPECT_OUTPUT_INT(0x422ea3761c4f6517df7f102bb18b96abf4735099209ca21256a6b8ac4d1daaa3_u256);
 }
 
 TEST_P(evm, calldataload)
 {
-    std::string s;
-    s += "600335";      // CALLDATALOAD(3)
-    s += "600052";      // m[0..]
-    s += "600a6000f3";  // RETURN(0,10)
-    execute(21, s, "0102030405");
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    EXPECT_EQ(result.gas_left, 0);
+    const auto code = calldataload(3) + mstore(0) + ret(0, 10);
+    execute(21, code, "0102030405");
+    EXPECT_GAS_USED(EVMC_SUCCESS, 21);
     ASSERT_EQ(result.output_size, 10);
-    auto a = from_hex("04050000000000000000");
-    EXPECT_EQ(bytes(&result.output_data[0], 10), a);
+    EXPECT_EQ(bytes(&result.output_data[0], 10), "04050000000000000000"_hex);
 }
 
 TEST_P(evm, calldataload_outofrange)
@@ -629,31 +609,23 @@ TEST_P(evm, calldataload_outofrange)
 
 TEST_P(evm, address)
 {
-    std::string s;
-    s += "30600052";    // ADDRESS MSTORE(0)
-    s += "600a600af3";  // RETURN(10,10)
     msg.recipient.bytes[0] = 0xcc;
-    execute(17, s);
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    EXPECT_EQ(result.gas_left, 0);
+    const auto code = mstore(0, OP_ADDRESS) + ret(10, 10);
+    execute(17, code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 17);
     ASSERT_EQ(result.output_size, 10);
-    auto a = from_hex("0000cc00000000000000");
-    EXPECT_EQ(bytes(&result.output_data[0], 10), a);
+    EXPECT_EQ(bytes_view(&result.output_data[0], 10), "0000cc00000000000000"_hex);
 }
 
 TEST_P(evm, caller_callvalue)
 {
-    std::string s;
-    s += "333401600052";  // CALLER CALLVALUE ADD MSTORE(0)
-    s += "600a600af3";    // RETURN(10,10)
     msg.sender.bytes[0] = 0xdd;
     msg.value.bytes[13] = 0xee;
-    execute(22, s);
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    EXPECT_EQ(result.gas_left, 0);
+    const auto code = add(OP_CALLVALUE, OP_CALLER) + mstore(0) + ret(10, 10);
+    execute(22, code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 22);
     ASSERT_EQ(result.output_size, 10);
-    auto a = from_hex("0000ddee000000000000");
-    EXPECT_EQ(bytes(&result.output_data[0], 10), a);
+    EXPECT_EQ(bytes_view(&result.output_data[0], 10), "0000ddee000000000000"_hex);
 }
 
 TEST_P(evm, undefined)
@@ -708,12 +680,9 @@ TEST_P(evm, inner_selfdestruct)
 
 TEST_P(evm, keccak256)
 {
-    execute("6108006103ff2060005260206000f3");
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    EXPECT_EQ(gas_used, 738);
-    ASSERT_EQ(result.output_size, 32);
-    auto hash = from_hex("aeffb38c06e111d84216396baefeb7fed397f303d5cb84a33f1e8b485c4a22da");
-    EXPECT_EQ(bytes(&result.output_data[0], 32), hash);
+    execute(push(0x0800) + push(0x03ff) + OP_KECCAK256 + ret_top());
+    EXPECT_GAS_USED(EVMC_SUCCESS, 738);
+    EXPECT_OUTPUT_INT(0xaeffb38c06e111d84216396baefeb7fed397f303d5cb84a33f1e8b485c4a22da_u256);
 }
 
 TEST_P(evm, keccak256_empty)

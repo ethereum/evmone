@@ -10,6 +10,11 @@ using evmc::bytes_view;
 using evmc::from_hex;
 using evmc::hex;
 
+inline bytes operator""_hex(const char* s, size_t size)
+{
+    return from_hex({s, size});
+}
+
 /// Decodes the hexx encoded string.
 ///
 /// The hexx encoding format is the hex format (base 16) with the extension
