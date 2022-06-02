@@ -25,7 +25,7 @@ struct bytecode : bytes
 
     template <typename T,
         typename = typename std::enable_if_t<std::is_convertible_v<T, std::string_view>>>
-    bytecode(T hex) : bytes{from_hex(hex)}
+    bytecode(T hex) : bytes{from_spaced_hex(hex).value()}
     {}
 
     bytecode(uint64_t n) : bytes{push(n)} {}
@@ -111,7 +111,7 @@ inline bytecode push(bytes_view data)
 
 inline bytecode push(std::string_view hex_data)
 {
-    return push(from_hex(hex_data));
+    return push(from_spaced_hex(hex_data).value());
 }
 
 inline bytecode push(const intx::uint256& value)
