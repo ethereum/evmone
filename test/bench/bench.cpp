@@ -292,8 +292,9 @@ std::tuple<int, std::vector<BenchmarkCase>> parseargs(int argc, char** argv)
                            [](auto x) { return std::isspace(x); }),
             code_hex.end());
 
-        BenchmarkCase b{code_hex_file, from_hex(code_hex)};
-        b.inputs.emplace_back("", from_hex(input_hex), from_hex(expected_output_hex));
+        BenchmarkCase b{code_hex_file, from_hex(code_hex).value()};
+        b.inputs.emplace_back(
+            "", from_hex(input_hex).value(), from_hex(expected_output_hex).value());
 
         return {0, {std::move(b)}};
     }
