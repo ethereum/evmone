@@ -40,8 +40,7 @@ TEST_P(evm, calldatacopy)
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(gas_used, 23);
     ASSERT_EQ(result.output_size, 10);
-    auto a = from_hex("02030405000000000000");
-    EXPECT_EQ(bytes(&result.output_data[0], 10), a);
+    EXPECT_EQ(bytes_view(&result.output_data[0], 10), "02030405000000000000"_hex);
 
     execute(s);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);

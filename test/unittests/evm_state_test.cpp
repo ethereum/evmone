@@ -47,10 +47,10 @@ TEST_P(evm, codecopy_combinations)
     EXPECT_EQ(output, bytes_view{});
 
     execute(code, "1301");
-    EXPECT_EQ(output, from_hex("00"));
+    EXPECT_EQ(output, "00"_hex);
 
     execute(code, "1401");
-    EXPECT_EQ(output, from_hex("00"));
+    EXPECT_EQ(output, "00"_hex);
 
     execute(code, "1201");
     EXPECT_EQ(output, code.substr(0x12, 1));
@@ -647,7 +647,7 @@ TEST_P(evm, extcodecopy_big_index)
     constexpr auto index = uint64_t{std::numeric_limits<uint32_t>::max()} + 1;
     const auto code = dup1(1) + push(index) + dup1(0) + OP_EXTCODECOPY + ret(0, {});
     execute(code);
-    EXPECT_EQ(output, from_hex("00"));
+    EXPECT_EQ(output, "00"_hex);
 }
 
 TEST_P(evm, extcodehash)

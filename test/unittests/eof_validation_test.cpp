@@ -162,7 +162,7 @@ TEST(eof_validation, EOF1_trailing_bytes)
 
 TEST(eof_validation, EOF1_undefined_opcodes)
 {
-    auto cont = from_hex("EF0001 010002 00 0000");
+    auto cont = "EF0001 010002 00 0000"_hex;
 
     const auto& gas_table = evmone::instr::gas_costs[EVMC_SHANGHAI];
 
@@ -180,12 +180,12 @@ TEST(eof_validation, EOF1_undefined_opcodes)
         EXPECT_EQ(validate_eof(cont), expected) << hex(cont);
     }
 
-    EXPECT_EQ(validate_eof(from_hex("EF0001 010001 00 FE")), EOFValidationError::success);
+    EXPECT_EQ(validate_eof("EF0001 010001 00 FE"), EOFValidationError::success);
 }
 
 TEST(eof_validation, EOF1_truncated_push)
 {
-    auto eof_header = from_hex("EF0001 010001 00");
+    auto eof_header = "EF0001 010001 00"_hex;
     auto& code_size_byte = eof_header[5];
     for (uint8_t opcode = OP_PUSH1; opcode <= OP_PUSH32; ++opcode)
     {
@@ -210,7 +210,7 @@ TEST(eof_validation, EOF1_truncated_push)
 
 TEST(eof_validation, EOF1_terminating_instructions)
 {
-    auto eof_header = from_hex("EF0001 010001 00");
+    auto eof_header = "EF0001 010001 00"_hex;
     auto& code_size_byte = eof_header[5];
 
     const auto& traits = evmone::instr::traits;
