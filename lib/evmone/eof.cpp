@@ -13,8 +13,7 @@ namespace evmone
 {
 namespace
 {
-constexpr uint8_t FORMAT = 0xef;
-constexpr uint8_t MAGIC = 0x00;
+constexpr uint8_t MAGIC[] = {0xef, 0x00};
 constexpr uint8_t TERMINATOR = 0x00;
 constexpr uint8_t CODE_SECTION = 0x01;
 constexpr uint8_t DATA_SECTION = 0x02;
@@ -35,7 +34,7 @@ std::pair<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_view
     uint8_t section_id = 0;
     EOFSectionHeaders section_headers{};
     const auto container_end = container.end();
-    auto it = container.begin() + 1 + sizeof(MAGIC) + 1;  // FORMAT + MAGIC + VERSION
+    auto it = container.begin() + std::size(MAGIC) + 1;  // MAGIC + VERSION
     while (it != container_end && state != State::terminated)
     {
         switch (state)
@@ -144,20 +143,20 @@ size_t EOF1Header::code_begin() const noexcept
     assert(code_size != 0);
 
     if (data_size == 0)
-        return 7;  // EF + MAGIC + VERSION + SECTION_ID + SIZE + TERMINATOR
+        return 7;  // MAGIC + VERSION + SECTION_ID + SIZE + TERMINATOR
     else
-        return 10;  // EF + MAGIC + VERSION + SECTION_ID + SIZE + SECTION_ID + SIZE + TERMINATOR
+        return 10;  // MAGIC + VERSION + SECTION_ID + SIZE + SECTION_ID + SIZE + TERMINATOR
 }
 
 bool is_eof_code(bytes_view code) noexcept
 {
-    return code.size() > 1 && code[0] == FORMAT && code[1] == MAGIC;
+    return code.size() > 1 && code[0] == MAGIC[0] && code[1] == MAGIC[1];
 }
 
 EOF1Header read_valid_eof1_header(bytes_view::const_iterator code) noexcept
 {
     EOF1Header header;
-    const auto code_size_offset = 4;  // FORMAT + MAGIC + VERSION + CODE_SECTION_ID
+    const auto code_size_offset = 4;  // MAGIC + VERSION + CODE_SECTION_ID
     header.code_size =
         static_cast<uint16_t>((code[code_size_offset] << 8) | code[code_size_offset + 1]);
     if (code[code_size_offset + 2] == 2)  // is data section present
@@ -171,7 +170,7 @@ EOF1Header read_valid_eof1_header(bytes_view::const_iterator code) noexcept
 
 uint8_t get_eof_version(bytes_view container) noexcept
 {
-    return (container.size() >= 3 && container[0] == FORMAT && container[1] == MAGIC) ?
+    return (container.size() >= 3 && container[0] == MAGIC[0] && container[1] == MAGIC[1]) ?
                container[2] :
                0;
 }
