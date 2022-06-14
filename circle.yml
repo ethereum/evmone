@@ -167,7 +167,9 @@ commands:
     - run:
         name: "Test"
         working_directory: ~/build
-        command: ctest -R ${TESTS_FILTER:-'.*'} --schedule-random --output-on-failure --parallel $CMAKE_BUILD_PARALLEL_LEVEL
+        command: ctest -R ${TESTS_FILTER:-'.*'} --schedule-random --output-on-failure --parallel $CMAKE_BUILD_PARALLEL_LEVEL --output-junit ~/test_results/evmone.xml
+    - store_test_results:
+        path: ~/test_results
 
   collect_coverage_gcc:
     description: "Collect coverage data (GCC)"
@@ -378,12 +380,7 @@ jobs:
       TESTS_FILTER: unittests|integration
     steps:
       - build
-      # TODO: use `test` command
-      - run:
-          name: "Run unit tests"
-          working_directory: ~/build
-          command: |
-            bin/evmone-unittests
+      - test
       - run:
           name: "Coverage report"
           working_directory: ~/build
