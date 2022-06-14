@@ -1,8 +1,14 @@
 // evmone: Fast Ethereum Virtual Machine implementation
-// Copyright 2018-2019 The evmone Authors.
+// Copyright 2018 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
 #include "utils.hpp"
+
+#if __GNUC__ >= 12
+// Workaround the bug related to std::regex and std::function:
+// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105562.
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
 #include <regex>
 
 bytes from_hexx(const std::string& hexx)
