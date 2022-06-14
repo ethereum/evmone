@@ -3,18 +3,24 @@ version: 2.1
 executors:
   lint:
     docker:
-      - image: ethereum/cpp-build-env:17-lint
+      - image: ethereum/cpp-build-env:18-lint
     resource_class: small
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
   linux-gcc-latest:
     docker:
-      - image: ethereum/cpp-build-env:17-gcc-11
+      - image: ethereum/cpp-build-env:18-gcc-12
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 4
+  linux-gcc-multilib:
+    docker:
+      - image: ethereum/cpp-build-env:18-gcc-12-multilib
+    resource_class: small
+    environment:
+      CMAKE_BUILD_PARALLEL_LEVEL: 2
   consensus-tests:
     docker:
-      - image: ethereum/cpp-build-env:17-gcc-11
+      - image: ethereum/cpp-build-env:18-gcc-12
     resource_class: xlarge
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 8
@@ -26,7 +32,7 @@ executors:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
   linux-clang-latest:
     docker:
-      - image: ethereum/cpp-build-env:17-clang-13
+      - image: ethereum/cpp-build-env:18-clang-14
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 4
   linux-clang-min:
@@ -37,7 +43,7 @@ executors:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
   macos:
     macos:
-      xcode: 13.2.0
+      xcode: 13.4
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
 
@@ -347,11 +353,8 @@ jobs:
           command: valgrind --vgdb=no --error-exitcode=99 bin/evmone-unittests
 
   gcc-32bit:
-    docker:
-      - image: ethereum/cpp-build-env:17-gcc-11-multilib
-    resource_class: small
+    executor: linux-gcc-multilib
     environment:
-      CMAKE_BUILD_PARALLEL_LEVEL: 2
       TOOLCHAIN: cxx17-32bit
     steps:
       - build
