@@ -141,18 +141,16 @@ const Instruction* op_jump(const Instruction*, AdvancedExecutionState& state) no
 const Instruction* op_jumpi(const Instruction* instr, AdvancedExecutionState& state) noexcept
 {
     if (state.stack[1] != 0)
-        instr = op_jump(instr, state);
+    {
+        instr = op_jump(instr, state);  // target
+        state.stack.pop();              // condition
+    }
     else
     {
-        state.stack.pop();
-
-        instr = opx_beginblock(instr, state);
+        state.stack.pop();                     // target
+        state.stack.pop();                     // condition
+        instr = opx_beginblock(instr, state);  // follow-by block
     }
-
-    // OPT: The pc must be the BEGINBLOCK (even in fallback case),
-    //      so we can execute it straight away.
-
-    state.stack.pop();
     return instr;
 }
 

@@ -134,6 +134,12 @@ TEST_P(evm, jumpi_jumpdest)
     EXPECT_GAS_USED(EVMC_SUCCESS, 20);
 }
 
+TEST_P(evm, jumpi_followed_by_stack_underflow)
+{
+    execute(push(0) + OP_DUP1 + OP_JUMPI + OP_POP);
+    EXPECT_STATUS(EVMC_STACK_UNDERFLOW);
+}
+
 TEST_P(evm, pc_sum)
 {
     const auto code = 4 * OP_PC + 3 * OP_ADD + ret_top();
