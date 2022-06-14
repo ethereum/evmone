@@ -8,18 +8,11 @@
 #include <evmc/evmc.hpp>
 #include <evmc/loader.h>
 #include <evmone/evmone.h>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 
-
-#if HAVE_STD_FILESYSTEM
-#include <evmone/baseline.hpp>
-#include <filesystem>
 namespace fs = std::filesystem;
-#else
-#include "filesystem.hpp"
-namespace fs = ghc::filesystem;
-#endif
 
 using namespace benchmark;
 
