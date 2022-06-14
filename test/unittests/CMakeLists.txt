@@ -15,6 +15,7 @@ add_executable(evmone-unittests
     evm_fixture.hpp
     evm_test.cpp
     evm_calls_test.cpp
+    evm_control_flow_test.cpp
     evm_eip2929_test.cpp
     evm_eip3198_basefee_test.cpp
     evm_eip3855_push0_test.cpp
