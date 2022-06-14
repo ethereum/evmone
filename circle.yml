@@ -288,9 +288,9 @@ jobs:
     steps:
       - build
       - build_silkworm:
-          commit: c75b07d26f19d1ce8439f9e73612cecf70dccaea
+          commit: af763de076ad8992db953d43e30ac3a4a441e2ad
       - download_consensus_tests:
-          rev: v10.3
+          rev: v10.4
       - run:
           name: "Silkworm-driven consensus tests (Advanced)"
           working_directory: ~/build
