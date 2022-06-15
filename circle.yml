@@ -413,7 +413,7 @@ jobs:
       - build
       - restore_cache:
           name: "Restore fuzzing corpus"
-          key: &fuzzing-corpus corpus-v1
+          key: fuzzing-corpus
       - run:
           name: "Run evmone-fuzzer"
           working_directory: ~/build
@@ -421,7 +421,7 @@ jobs:
             bin/evmone-fuzzer -runs=10000000 -fork=$CMAKE_BUILD_PARALLEL_LEVEL -fork_corpus_groups=1 ~/corpus -create_missing_dirs=1 -max_len=100 -entropic_scale_per_exec_time=1 2>&1 | sed '/NEW_FUNC/d'
       - save_cache:
           name: "Save fuzzing corpus"
-          key: *fuzzing-corpus
+          key: fuzzing-corpus-{{epoch}}
           paths:
             - ~/corpus
 
