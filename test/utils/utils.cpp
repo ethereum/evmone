@@ -30,5 +30,5 @@ bytes from_hexx(const std::string& hexx)
         hex.replace(pos, length, replacement);
         position_correction += replacement.length() - length;
     }
-    return from_hex(hex);
+    return from_spaced_hex(hex).value();
 }

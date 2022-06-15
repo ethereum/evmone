@@ -279,14 +279,11 @@ std::tuple<int, std::vector<BenchmarkCase>> parseargs(int argc, char** argv)
     if (!code_hex_file.empty())
     {
         std::ifstream file{code_hex_file};
-        std::string code_hex{
-            std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
-        code_hex.erase(std::remove_if(code_hex.begin(), code_hex.end(),
-                           [](auto x) { return std::isspace(x); }),
-            code_hex.end());
-
-        BenchmarkCase b{code_hex_file, from_hex(code_hex)};
-        b.inputs.emplace_back("", from_hex(input_hex), from_hex(expected_output_hex));
+        BenchmarkCase b{code_hex_file,
+            from_spaced_hex(std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{})
+                .value()};
+        b.inputs.emplace_back(
+            "", from_hex(input_hex).value(), from_hex(expected_output_hex).value());
 
         return {0, {std::move(b)}};
     }

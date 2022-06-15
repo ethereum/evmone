@@ -67,7 +67,7 @@ protected:
     /// The `gas_used` field  will be updated accordingly.
     void execute(int64_t gas, bytes_view code, std::string_view input_hex = {}) noexcept
     {
-        const auto input = from_hex(input_hex);
+        const auto input = from_hex(input_hex).value();
         msg.input_data = input.data();
         msg.input_size = input.size();
         msg.gas = gas;

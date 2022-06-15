@@ -1,5 +1,5 @@
 // evmone: Fast Ethereum Virtual Machine implementation
-// Copyright 2018-2019 The evmone Authors.
+// Copyright 2018 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
@@ -8,11 +8,13 @@
 using evmc::bytes;
 using evmc::bytes_view;
 using evmc::from_hex;
+using evmc::from_spaced_hex;
 using evmc::hex;
+
 
 inline bytes operator""_hex(const char* s, size_t size)
 {
-    return from_hex({s, size});
+    return from_spaced_hex({s, size}).value();
 }
 
 /// Decodes the hexx encoded string.
