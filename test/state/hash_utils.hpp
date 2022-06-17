@@ -11,14 +11,16 @@
 
 namespace evmone
 {
+using evmc::address;
 using evmc::bytes;
+using evmc::bytes32;
 using evmc::bytes_view;
 using namespace evmc::literals;
 
 /// Default type for 256-bit hash.
 ///
 /// Better than ethash::hash256 because has some additional handy constructors.
-using hash256 = evmc::bytes32;
+using hash256 = bytes32;
 
 /// Computes Keccak hash out of input bytes (wrapper of ethash::keccak256).
 inline hash256 keccak256(bytes_view data) noexcept
