@@ -28,12 +28,32 @@ public:
 
 int main(int argc, char* argv[])
 {
+    static constexpr std::string_view filter_flag_name = "--gtest_filter";
+    const auto has_user_filter = std::count_if(argv, argv + argc, [](const char* arg) noexcept {
+        return std::string_view{arg}.substr(0, filter_flag_name.size()) == filter_flag_name;
+    }) != 0;
+
     testing::InitGoogleTest(&argc, argv);  // Process GoogleTest flags.
 
     if (argc != 2)
     {
         std::cerr << "Missing argument with the path to the tests directory\n";
         return -1;
+    }
+
+    if (!has_user_filter)
+    {
+        // Set default test filter if none provided.
+        // To enable all tests use `--gtest_filter=*`.
+        testing::FLAGS_gtest_filter =
+            "-"
+            // Slow tests:
+            "stCreateTest.CreateOOGafterMaxCodesize:"      // pass
+            "stQuadraticComplexityTest.Call50000_sha256:"  // pass
+            "stTimeConsuming.static_Call50000_sha256:"     // pass
+            "stTimeConsuming.CALLBlake2f_MaxRounds:"       // pass
+            "VMTests/vmPerformance.*:"                     // pass
+            ;
     }
 
     evmc::VM vm{evmc_create_evmone(), {{"O", "0"}, /*{"trace", "1"}*/}};
