@@ -11,5 +11,7 @@ target_sources(
     hash_utils.hpp
     mpt.hpp
     mpt.cpp
+    mpt_hash.hpp
+    mpt_hash.cpp
     rlp.hpp
 )
