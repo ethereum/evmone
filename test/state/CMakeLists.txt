@@ -24,3 +24,23 @@ target_sources(
     state.hpp
     state.cpp
 )
+
+option(EVMONE_PRECOMPILES_SILKPRE "Enable precompiles support via silkpre library" OFF)
+if(EVMONE_PRECOMPILES_SILKPRE)
+    include(FetchContent)
+    FetchContent_Declare(
+        silkpre
+        GIT_REPOSITORY https://github.com/torquem-ch/silkpre
+        GIT_TAG 65a89f316ced2e25cbb455ae75eeed9e0bab8415
+    )
+    set(BUILD_SHARED_LIBS OFF)
+    FetchContent_MakeAvailable(silkpre)
+    set(DISABLE_WARNINGS -w)
+    target_compile_options(silkpre PRIVATE ${DISABLE_WARNINGS})
+    target_compile_options(secp256k1 PRIVATE ${DISABLE_WARNINGS})
+    target_compile_options(ff PRIVATE ${DISABLE_WARNINGS})
+    set_target_properties(silkpre secp256k1 ff PROPERTIES CXX_CLANG_TIDY "")
+
+    target_link_libraries(evmone-state PRIVATE silkpre)
+    target_compile_definitions(evmone-state PRIVATE EVMONE_PRECOMPILES_SILKPRE=1)
+endif()
