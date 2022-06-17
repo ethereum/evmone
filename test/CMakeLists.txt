@@ -15,9 +15,10 @@ add_subdirectory(bench)
 add_subdirectory(integration)
 add_subdirectory(internal_benchmarks)
 add_subdirectory(state)
+add_subdirectory(statetest)
 add_subdirectory(unittests)
 
-set(targets evmone-bench evmone-bench-internal evmone-unittests testutils)
+set(targets evmone-bench evmone-bench-internal evmone-state evmone-statetest evmone-unittests testutils)
 
 if(EVMONE_FUZZING)
     add_subdirectory(fuzzer)
