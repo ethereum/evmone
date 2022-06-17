@@ -7,6 +7,9 @@ include(${PROJECT_SOURCE_DIR}/evmc/cmake/EVMC.cmake)
 
 set(evmone_private_include_dir ${PROJECT_SOURCE_DIR}/lib)
 
+hunter_add_package(GTest)
+find_package(GTest CONFIG REQUIRED)
+
 hunter_add_package(benchmark)
 find_package(benchmark CONFIG REQUIRED)
 
