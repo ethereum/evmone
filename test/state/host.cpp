@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "host.hpp"
+#include "precompiles.hpp"
 #include "rlp.hpp"
 
 namespace evmone::state
@@ -250,6 +251,9 @@ evmc::Result Host::execute_message(const evmc_message& msg) noexcept
         m_state.get(msg.sender).balance -= value;
         recipient_acc.balance += value;
     }
+
+    if (auto precompiled_result = call_precompile(m_rev, msg); precompiled_result.has_value())
+        return std::move(*precompiled_result);
 
     // Copy of the code. Revert will invalidate the account.
     const auto code = code_acc != nullptr ? code_acc->code : bytes{};

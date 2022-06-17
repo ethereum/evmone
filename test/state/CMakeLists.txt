@@ -16,6 +16,8 @@ target_sources(
     mpt.cpp
     mpt_hash.hpp
     mpt_hash.cpp
+    precompiles.hpp
+    precompiles.cpp
     rlp.hpp
     state.hpp
     state.cpp
