@@ -12,4 +12,5 @@ target_sources(
     statetest.hpp
     statetest.cpp
     statetest_loader.cpp
+    statetest_runner.cpp
 )

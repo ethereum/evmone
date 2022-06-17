@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "statetest.hpp"
+#include <evmone/evmone.h>
 #include <gtest/gtest.h>
 #include <iostream>
 
@@ -11,13 +12,17 @@ namespace
 class StateTest : public testing::Test
 {
     fs::path m_json_test_file;
+    evmc::VM& m_vm;
 
 public:
-    explicit StateTest(fs::path json_test_file) noexcept
-      : m_json_test_file{std::move(json_test_file)}
+    explicit StateTest(fs::path json_test_file, evmc::VM& vm) noexcept
+      : m_json_test_file{std::move(json_test_file)}, m_vm{vm}
     {}
 
-    void TestBody() final { evmone::test::load_state_test(m_json_test_file); }
+    void TestBody() final
+    {
+        evmone::test::run_state_test(evmone::test::load_state_test(m_json_test_file), m_vm);
+    }
 };
 }  // namespace
 
@@ -31,6 +36,8 @@ int main(int argc, char* argv[])
         return -1;
     }
 
+    evmc::VM vm{evmc_create_evmone(), {{"O", "0"}, /*{"trace", "1"}*/}};
+
     std::vector<fs::path> test_files;
     const fs::path root_test_dir{argv[1]};
     std::copy_if(fs::recursive_directory_iterator{root_test_dir},
@@ -43,7 +50,8 @@ int main(int argc, char* argv[])
     {
         const auto d = fs::relative(p, root_test_dir);
         testing::RegisterTest(d.parent_path().string().c_str(), d.stem().string().c_str(), nullptr,
-            nullptr, p.string().c_str(), 0, [p]() -> testing::Test* { return new StateTest(p); });
+            nullptr, p.string().c_str(), 0,
+            [p, &vm]() -> testing::Test* { return new StateTest(p, vm); });
     }
 
     return RUN_ALL_TESTS();
