@@ -8,8 +8,13 @@
 
 namespace evmone::state
 {
-evmc::result call_precompiled(evmc_revision rev, const evmc_message& msg) noexcept
+using namespace evmc::literals;
+
+std::optional<evmc::result> call_precompiled(evmc_revision rev, const evmc_message& msg) noexcept
 {
+    if (evmc::is_zero(msg.code_address) || msg.code_address > 0x09_address)
+        return {};
+
     const auto id = msg.code_address.bytes[19];
     assert(id > 0);
     const auto index = id - 1;

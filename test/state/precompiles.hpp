@@ -5,8 +5,9 @@
 #pragma once
 
 #include <evmc/evmc.hpp>
+#include <optional>
 
 namespace evmone::state
 {
-evmc::result call_precompiled(evmc_revision rev, const evmc_message& msg) noexcept;
+std::optional<evmc::result> call_precompiled(evmc_revision rev, const evmc_message& msg) noexcept;
 }

@@ -106,10 +106,9 @@ std::optional<std::vector<Log>> transition(
         state.touch(*tx.to);
         evmc_message msg{EVMC_CALL, 0, 0, execution_gas_limit, *tx.to, tx.sender, tx.data.data(),
             tx.data.size(), value_be, {}, *tx.to};
-        if (!evmc::is_zero(msg.code_address) &&
-            msg.code_address <= 0x0000000000000000000000000000000000000009_address)
+        if (auto precompiled_result = call_precompiled(rev, msg); precompiled_result.has_value())
         {
-            result = call_precompiled(rev, msg);
+            result = std::move(*precompiled_result);
         }
         else
         {

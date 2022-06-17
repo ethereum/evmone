@@ -427,10 +427,10 @@ public:
                 m_state.get(msg.sender).balance -= value;
             }
 
-            if (!evmc::is_zero(msg.code_address) &&
-                msg.code_address <= 0x0000000000000000000000000000000000000009_address)
+            if (auto precompiled_result = call_precompiled(m_rev, msg);
+                precompiled_result.has_value())
             {
-                result = call_precompiled(m_rev, msg);
+                result = std::move(*precompiled_result);
             }
             else
             {
