@@ -60,4 +60,6 @@ struct StateTransitionTest
 
 StateTransitionTest load_state_test(const fs::path& test_file);
 
+void run_state_test(const StateTransitionTest& test);
+
 }  // namespace evmone::test

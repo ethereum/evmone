@@ -17,7 +17,10 @@ public:
       : m_json_test_file{std::move(json_test_file)}
     {}
 
-    void TestBody() final { evmone::test::load_state_test(m_json_test_file); }
+    void TestBody() final
+    {
+        evmone::test::run_state_test(evmone::test::load_state_test(m_json_test_file));
+    }
 };
 }  // namespace
 
