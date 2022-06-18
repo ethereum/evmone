@@ -1,5 +1,8 @@
 version: 2.1
 
+orbs:
+  win: circleci/windows@4.1
+
 executors:
   lint:
     docker:
@@ -142,8 +145,10 @@ commands:
       - run:
           name: "Update submodules"
           command: git submodule update --init --recursive
+      - run: choco install cmake -y
       - run:
           name: "Environment"
+          shell: bash.exe
           command: |
             CC=${CC:-cc}
             CXX=${CXX:-cpp}
@@ -166,12 +171,13 @@ commands:
           key: &hunter-cache-key hunter-{{arch}}-{{checksum "build.info"}}-{{checksum "cmake/Hunter/init.cmake"}}-{{checksum "cmake/Hunter/config.cmake"}}
       - run:
           name: "Configure"
+          shell: cmd.exe
           working_directory: ~/build
           command: |
-            if [ "$TOOLCHAIN" ]; then
-              export toolchain_option="-DTOOLCHAIN=$TOOLCHAIN"
-            fi
-            cmake ../project $toolchain_option -DCMAKE_INSTALL_PREFIX=~/install -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DEVMONE_TESTING=ON $CMAKE_OPTIONS
+            call "%ProgramFiles(x86)%\Microsoft Visual Studio\2019\Community\Common7\Tools\VsDevCmd" -arch=amd64
+            cmake --version
+            ninja --version
+            cmake ../project -DCMAKE_BUILD_TYPE= -DEVMONE_TESTING=ON
       - save_cache:
           name: "Save Hunter cache"
           key: *hunter-cache-key
@@ -255,6 +261,11 @@ commands:
           command: tar xz < evmone*.tar.gz
 
 jobs:
+
+  windows-2019:
+    executor: win/server-2019
+    steps:
+      - build
 
   lint:
     executor: lint
@@ -497,35 +508,35 @@ workflows:
   version: 2
   evmone:
     jobs:
-      - lint
-      - release-linux:
-          filters:
-            tags:
-              only: /.*/
-      - release-macos:
-          filters:
-            branches:
-              ignore: /.*/
-            tags:
-              only: /.*/
-      - deploy:
-          requires:
-            - release-linux
-            - release-macos
-          filters:
-            branches:
-              ignore: /.*/
-            tags:
-              only: /^v[0-9].*/
-      - state-tests
-      - consensus-tests
-      - cmake-min
-      - gcc-min
-      - clang-min
-      - gcc-latest-coverage
-      - gcc-latest-memcheck
-      - clang-latest-sanitizers
-      - clang-latest-coverage
-      - macos-asan
-      - gcc-32bit
-      - fuzzing
+      - windows-2019
+#      - lint
+#      - release-linux:
+#          filters:
+#            tags:
+#              only: /.*/
+#      - release-macos:
+#          filters:
+#            branches:
+#              ignore: /.*/
+#            tags:
+#              only: /.*/
+#      - deploy:
+#          requires:
+#            - release-linux
+#            - release-macos
+#          filters:
+#            branches:
+#              ignore: /.*/
+#            tags:
+#              only: /^v[0-9].*/
+#      - consensus-tests
+#      - cmake-min
+#      - gcc-min
+#      - clang-min
+#      - gcc-latest-coverage
+#      - gcc-latest-memcheck
+#      - clang-latest-sanitizers
+#      - clang-latest-coverage
+#      - macos-asan
+#      - gcc-32bit
+#      - fuzzing
