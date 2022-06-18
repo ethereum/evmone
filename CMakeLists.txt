@@ -2,7 +2,7 @@
 # Copyright 2019 The evmone Authors.
 # SPDX-License-Identifier: Apache-2.0
 
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.16...3.23)
 
 if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/evmc/.git)
     message(FATAL_ERROR "Git submodules not initialized, execute:\n  git submodule update --init")
