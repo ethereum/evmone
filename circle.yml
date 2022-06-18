@@ -47,6 +47,12 @@ executors:
     resource_class: small
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
+  linux-base:
+    docker:
+      - image: cimg/base:edge-22.04
+    resource_class: small
+    environment:
+      CMAKE_BUILD_PARALLEL_LEVEL: 2
   macos:
     macos:
       xcode: 13.4
@@ -54,6 +60,17 @@ executors:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
 
 commands:
+  install_cmake:
+    parameters:
+      version:
+        type: string
+    steps:
+      - run:
+          name: "Install CMake <<parameters.version>>"
+          working_directory: /usr/local
+          command: |
+            curl -L https://github.com/Kitware/CMake/releases/download/v<<parameters.version>>/cmake-<<parameters.version>>-linux-x86_64.tar.gz | sudo tar -xz --strip=1
+
   build_silkworm:
     parameters:
       branch:
@@ -438,6 +455,14 @@ jobs:
       - build
       - test
 
+  cmake-min:
+    executor: linux-base
+    steps:
+      - install_cmake:
+          version: 3.16.9
+      - build
+      - test
+
 workflows:
   version: 2
   evmone:
@@ -463,6 +488,7 @@ workflows:
             tags:
               only: /^v[0-9].*/
       - consensus-tests
+      - cmake-min
       - gcc-min
       - clang-min
       - gcc-latest-coverage
