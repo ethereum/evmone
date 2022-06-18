@@ -24,7 +24,7 @@ executors:
     resource_class: xlarge
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 8
-  fuzzing:
+  linux-clang-xlarge:
     docker:
       - image: ethereum/cpp-build-env:18-clang-14
     resource_class: xlarge
@@ -47,6 +47,12 @@ executors:
     resource_class: small
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
+  linux-base:
+    docker:
+      - image: cimg/base:edge-22.04
+    resource_class: small
+    environment:
+      CMAKE_BUILD_PARALLEL_LEVEL: 2
   macos:
     macos:
       xcode: 13.4
@@ -54,6 +60,17 @@ executors:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
 
 commands:
+  install_cmake:
+    parameters:
+      version:
+        type: string
+    steps:
+      - run:
+          name: "Install CMake <<parameters.version>>"
+          working_directory: /usr/local
+          command: |
+            curl -L https://github.com/Kitware/CMake/releases/download/v<<parameters.version>>/cmake-<<parameters.version>>-linux-x86_64.tar.gz | sudo tar -xz --strip=1
+
   build_silkworm:
     parameters:
       branch:
@@ -369,7 +386,7 @@ jobs:
       - test
 
   clang-latest-sanitizers:
-    executor: linux-clang-latest
+    executor: linux-clang-xlarge
     environment:
       CMAKE_OPTIONS: -DBUILD_SHARED_LIBS=NO -DSANITIZE=address,undefined,shift-exponent,implicit-conversion,nullability -DCMAKE_CXX_CLANG_TIDY=clang-tidy
       UBSAN_OPTIONS: halt_on_error=1
@@ -406,7 +423,7 @@ jobs:
           destination: coverage
 
   fuzzing:
-    executor: fuzzing
+    executor: linux-clang-xlarge
     environment:
       CMAKE_OPTIONS: -DEVMONE_FUZZING=ON
     steps:
@@ -438,6 +455,14 @@ jobs:
       - build
       - test
 
+  cmake-min:
+    executor: linux-base
+    steps:
+      - install_cmake:
+          version: 3.16.9
+      - build
+      - test
+
 workflows:
   version: 2
   evmone:
@@ -463,6 +488,7 @@ workflows:
             tags:
               only: /^v[0-9].*/
       - consensus-tests
+      - cmake-min
       - gcc-min
       - clang-min
       - gcc-latest-coverage
