@@ -336,6 +336,35 @@ jobs:
       - upload_coverage:
           flags: consensus
 
+  state-tests:
+    executor: consensus-tests
+    environment:
+      BUILD_TYPE: Coverage
+      CMAKE_OPTIONS: -DCMAKE_CXX_FLAGS=-Og
+    steps:
+      - build
+      - run:
+          # TODO: Merge with download_consensus_tests
+          name: "Download tests"
+          working_directory: ~/tests
+          command: |
+            git clone --depth=50 --single-branch https://github.com/ethereum/tests .
+            git checkout cde14b047d0d2549ed8fd46b4946aed0ec938cbf
+            git submodule init LegacyTests
+            git config -f .gitmodules submodule.LegacyTests.shallow true
+            git submodule update
+      - run:
+          name: "State tests"
+          working_directory: ~/build
+          command: bin/evmone-statetest ~/tests/GeneralStateTests
+      - run:
+          name: "State tests (legacy)"
+          working_directory: ~/build
+          command: bin/evmone-statetest ~/tests/LegacyTests/Constantinople/GeneralStateTests
+      - collect_coverage_gcc
+      - upload_coverage:
+          flags: statetests
+
   gcc-min:
     executor: linux-gcc-min
     steps:
@@ -487,6 +516,7 @@ workflows:
               ignore: /.*/
             tags:
               only: /^v[0-9].*/
+      - state-tests
       - consensus-tests
       - cmake-min
       - gcc-min
