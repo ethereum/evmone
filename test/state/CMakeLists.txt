@@ -4,7 +4,10 @@
 
 add_library(evmone-state STATIC)
 add_library(evmone::state ALIAS evmone-state)
-target_link_libraries(evmone-state PRIVATE evmone evmc::evmc_cpp ethash::keccak /home/chfast/Projects/ethereum/silkpre/build/release/lib/libsilkpre.so)
+target_link_libraries(evmone-state PRIVATE evmone evmc::evmc_cpp ethash::keccak
+    /home/chfast/Projects/ethereum/silkpre/build/release/lib/libsilkpre.so
+    /home/chfast/Projects/ethereum/evmc-precompiles/target/release/libevmc_precompiles_capi.a
+    )
 target_include_directories(evmone-state PRIVATE ${evmone_private_include_dir})
 target_sources(
     evmone-state PRIVATE

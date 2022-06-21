@@ -6,6 +6,17 @@
 #include "../../../silkpre/lib/silkpre/precompile.h"
 #include <cassert>
 
+extern "C" {
+
+// Declare functions from Rust precompiles.
+
+SilkpreResult ecadd_execute(
+    const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
+
+SilkpreResult ecpairing_execute(
+    const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
+}
+
 namespace evmone::state
 {
 using namespace evmc::literals;
@@ -106,6 +117,23 @@ std::optional<evmc::result> call_precompiled(evmc_revision rev, const evmc_messa
         if (static_cast<uint64_t>(msg.gas) < cost)
             return evmc::result{EVMC_OUT_OF_GAS, 0, nullptr, 0};
         const auto gas_left = msg.gas - static_cast<int64_t>(cost);
+
+        if (id == 6)
+        {
+            const auto [status, output_size] =
+                ecadd_execute(msg.input_data, msg.input_size, output_buf, 64);
+            if (status != EVMC_SUCCESS)
+                return evmc::result{EVMC_OUT_OF_GAS, 0, nullptr, 0};
+            return evmc::result{EVMC_SUCCESS, gas_left, output_buf, output_size};
+        }
+        else if (id == 8)
+        {
+            const auto [status, output_size] =
+                ecpairing_execute(msg.input_data, msg.input_size, output_buf, 32);
+            if (status != EVMC_SUCCESS)
+                return evmc::result{EVMC_OUT_OF_GAS, 0, nullptr, 0};
+            return evmc::result{EVMC_SUCCESS, gas_left, output_buf, 32};
+        }
 
         const auto out = contract.run(msg.input_data, msg.input_size);
         if (out.data == nullptr)  // Null output also means failure.
