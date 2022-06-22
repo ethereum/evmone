@@ -4,7 +4,9 @@
 
 #include "precompiles.hpp"
 #include "../../../silkpre/lib/silkpre/precompile.h"
+#include <intx/intx.hpp>
 #include <cassert>
+#include <limits>
 
 extern "C" {
 
@@ -34,31 +36,38 @@ int64_t cost_per_input_word(int64_t base_cost, int64_t word_cost, size_t input_s
     return base_cost + word_cost * ((static_cast<int64_t>(input_size) + 31) / 32);
 }
 
-PrecompiledCost sha256_cost(size_t input_size, evmc_revision /*rev*/) noexcept
+PrecompiledCost sha256_cost(const uint8_t*, size_t input_size, evmc_revision /*rev*/) noexcept
 {
     return {60 + 12 * ((static_cast<int64_t>(input_size) + 31) / 32), 32};
 }
 
-PrecompiledCost identity_cost(size_t input_size, evmc_revision /*rev*/) noexcept
+PrecompiledCost identity_cost(const uint8_t*, size_t input_size, evmc_revision /*rev*/) noexcept
 {
     return {15 + 3 * ((static_cast<int64_t>(input_size) + 31) / 32), input_size};
 }
 
-PrecompiledCost ecadd_cost(size_t /*input_size*/, evmc_revision rev) noexcept
+PrecompiledCost ecadd_cost(const uint8_t*, size_t /*input_size*/, evmc_revision rev) noexcept
 {
     return {rev >= EVMC_ISTANBUL ? 150 : 500, 64};
 }
 
-PrecompiledCost ecmul_cost(size_t /*input_size*/, evmc_revision rev) noexcept
+PrecompiledCost ecmul_cost(const uint8_t*, size_t /*input_size*/, evmc_revision rev) noexcept
 {
     return {rev >= EVMC_ISTANBUL ? 6'000 : 40'000, 64};
 }
 
-PrecompiledCost ecpairing_cost(size_t input_size, evmc_revision rev) noexcept
+PrecompiledCost ecpairing_cost(const uint8_t*, size_t input_size, evmc_revision rev) noexcept
 {
     const auto k = input_size / 192;
     return {static_cast<int64_t>(rev >= EVMC_ISTANBUL ? 34'000 * k + 45'000 : 80'000 * k + 100'000),
         32};
+}
+
+PrecompiledCost blake2bf_cost(const uint8_t* input, size_t input_size, evmc_revision) noexcept
+{
+    if (input_size < 4)
+        return {std::numeric_limits<int64_t>::max(), 0};
+    return {intx::be::unsafe::load<uint32_t>(input), 64};
 }
 
 SilkpreResult identity_exec(const uint8_t* input, size_t input_size, uint8_t* output,
@@ -79,13 +88,13 @@ struct PrecompiledTraits
 constexpr auto traits = [] {
     std::array<PrecompiledTraits, 10> tbl{};
     tbl[1] = {"ecrecover",
-        [](size_t, evmc_revision) noexcept {
+        [](const uint8_t*, size_t, evmc_revision) noexcept {
             return PrecompiledCost{3000, 32};
         },
         ethprecompiled_ecrecover};
     tbl[2] = {"sha256", sha256_cost, ethprecompiled_sha256};
     tbl[3] = {"ripemd160",
-        [](size_t input_size, evmc_revision) noexcept {
+        [](const uint8_t*, size_t input_size, evmc_revision) noexcept {
             return PrecompiledCost{cost_per_input_word(600, 120, input_size), 32};
         },
         ethprecompiled_ripemd160};
@@ -93,6 +102,7 @@ constexpr auto traits = [] {
     tbl[6] = {"ecadd", ecadd_cost, ecadd_execute};
     tbl[7] = {"ecmul", ecmul_cost, ethprecompiled_ecmul};
     tbl[8] = {"ecpairing", ecpairing_cost, ecpairing_execute};
+    tbl[9]  = {"blake2bf", blake2bf_cost, ethprecompiled_blake2bf};
     return tbl;
 }();
 }  // namespace
@@ -119,7 +129,7 @@ std::optional<evmc::result> call_precompiled(evmc_revision rev, const evmc_messa
     case 8:
     {
         const auto t = traits[id];
-        const auto cost = t.cost(msg.input_size, rev);
+        const auto cost = t.cost(msg.input_data, msg.input_size, rev);
         const auto gas_left = msg.gas - cost.gas_cost;
         if (gas_left < 0)
             return evmc::result{EVMC_OUT_OF_GAS, 0, nullptr, 0};
