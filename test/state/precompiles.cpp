@@ -34,14 +34,31 @@ int64_t cost_per_input_word(int64_t base_cost, int64_t word_cost, size_t input_s
     return base_cost + word_cost * ((static_cast<int64_t>(input_size) + 31) / 32);
 }
 
-PrecompiledCost sha256_cost(size_t input_size) noexcept
+PrecompiledCost sha256_cost(size_t input_size, evmc_revision /*rev*/) noexcept
 {
     return {60 + 12 * ((static_cast<int64_t>(input_size) + 31) / 32), 32};
 }
 
-PrecompiledCost identity_cost(size_t input_size) noexcept
+PrecompiledCost identity_cost(size_t input_size, evmc_revision /*rev*/) noexcept
 {
     return {15 + 3 * ((static_cast<int64_t>(input_size) + 31) / 32), input_size};
+}
+
+PrecompiledCost ecadd_cost(size_t /*input_size*/, evmc_revision rev) noexcept
+{
+    return {rev >= EVMC_ISTANBUL ? 150 : 500, 64};
+}
+
+PrecompiledCost ecmul_cost(size_t /*input_size*/, evmc_revision rev) noexcept
+{
+    return {rev >= EVMC_ISTANBUL ? 6'000 : 40'000, 64};
+}
+
+PrecompiledCost ecpairing_cost(size_t input_size, evmc_revision rev) noexcept
+{
+    const auto k = input_size / 192;
+    return {static_cast<int64_t>(rev >= EVMC_ISTANBUL ? 34'000 * k + 45'000 : 80'000 * k + 100'000),
+        32};
 }
 
 SilkpreResult identity_exec(const uint8_t* input, size_t input_size, uint8_t* output,
@@ -62,17 +79,20 @@ struct PrecompiledTraits
 constexpr auto traits = [] {
     std::array<PrecompiledTraits, 10> tbl{};
     tbl[1] = {"ecrecover",
-        [](size_t) noexcept {
+        [](size_t, evmc_revision) noexcept {
             return PrecompiledCost{3000, 32};
         },
         ethprecompiled_ecrecover};
     tbl[2] = {"sha256", sha256_cost, ethprecompiled_sha256};
     tbl[3] = {"ripemd160",
-        [](size_t input_size) noexcept {
+        [](size_t input_size, evmc_revision) noexcept {
             return PrecompiledCost{cost_per_input_word(600, 120, input_size), 32};
         },
         ethprecompiled_ripemd160};
     tbl[4] = {"identity", identity_cost, identity_exec};
+    tbl[6] = {"ecadd", ecadd_cost, ecadd_execute};
+    tbl[7] = {"ecmul", ecmul_cost, ethprecompiled_ecmul};
+    tbl[8] = {"ecpairing", ecpairing_cost, ecpairing_execute};
     return tbl;
 }();
 }  // namespace
@@ -94,16 +114,20 @@ std::optional<evmc::result> call_precompiled(evmc_revision rev, const evmc_messa
     case 2:
     case 3:
     case 4:
+    case 6:
+    case 7:
+    case 8:
     {
         const auto t = traits[id];
-        const auto cost = t.cost(msg.input_size);
+        const auto cost = t.cost(msg.input_size, rev);
         const auto gas_left = msg.gas - cost.gas_cost;
         if (gas_left < 0)
             return evmc::result{EVMC_OUT_OF_GAS, 0, nullptr, 0};
         assert(std::size(output_buf) >= cost.output_size);
         const auto r = t.exec(
             msg.input_data, static_cast<uint32_t>(msg.input_size), output_buf, cost.output_size);
-        assert(r.status_code == 0);
+        if (r.status_code != EVMC_SUCCESS)
+            return evmc::result{EVMC_OUT_OF_GAS, 0, nullptr, 0};
         return evmc::result{EVMC_SUCCESS, gas_left, output_buf, r.output_size};
     }
     default:
@@ -117,23 +141,6 @@ std::optional<evmc::result> call_precompiled(evmc_revision rev, const evmc_messa
         if (static_cast<uint64_t>(msg.gas) < cost)
             return evmc::result{EVMC_OUT_OF_GAS, 0, nullptr, 0};
         const auto gas_left = msg.gas - static_cast<int64_t>(cost);
-
-        if (id == 6)
-        {
-            const auto [status, output_size] =
-                ecadd_execute(msg.input_data, msg.input_size, output_buf, 64);
-            if (status != EVMC_SUCCESS)
-                return evmc::result{EVMC_OUT_OF_GAS, 0, nullptr, 0};
-            return evmc::result{EVMC_SUCCESS, gas_left, output_buf, output_size};
-        }
-        else if (id == 8)
-        {
-            const auto [status, output_size] =
-                ecpairing_execute(msg.input_data, msg.input_size, output_buf, 32);
-            if (status != EVMC_SUCCESS)
-                return evmc::result{EVMC_OUT_OF_GAS, 0, nullptr, 0};
-            return evmc::result{EVMC_SUCCESS, gas_left, output_buf, 32};
-        }
 
         const auto out = contract.run(msg.input_data, msg.input_size);
         if (out.data == nullptr)  // Null output also means failure.
