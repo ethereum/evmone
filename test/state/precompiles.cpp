@@ -70,6 +70,110 @@ PrecompiledCost blake2bf_cost(const uint8_t* input, size_t input_size, evmc_revi
     return {intx::be::unsafe::load<uint32_t>(input), 64};
 }
 
+intx::uint256 mult_complexity_eip198(const intx::uint256& x) noexcept
+{
+    const intx::uint256 x_squared{x * x};
+    if (x <= 64)
+    {
+        return x_squared;
+    }
+    else if (x <= 1024)
+    {
+        return (x_squared >> 2) + 96 * x - 3072;
+    }
+    else
+    {
+        return (x_squared >> 4) + 480 * x - 199680;
+    }
+}
+
+intx::uint256 mult_complexity_eip2565(const intx::uint256& max_length) noexcept
+{
+    const intx::uint256 words{(max_length + 7) >> 3};  // ⌈max_length/8⌉
+    return words * words;
+}
+
+PrecompiledCost internal_expmod_gas(const uint8_t* ptr, size_t len, evmc_revision rev) noexcept
+{
+    const int64_t min_gas{rev < EVMC_BERLIN ? 0 : 200};
+
+    std::basic_string<uint8_t> input(ptr, len);
+    if (input.size() < 3 * 32)
+        input.resize(3 * 32);
+
+    intx::uint256 base_len256{intx::be::unsafe::load<intx::uint256>(&input[0])};
+    intx::uint256 exp_len256{intx::be::unsafe::load<intx::uint256>(&input[32])};
+    intx::uint256 mod_len256{intx::be::unsafe::load<intx::uint256>(&input[64])};
+
+    if (base_len256 == 0 && mod_len256 == 0)
+    {
+        return {min_gas, 0};
+    }
+
+    if (intx::count_significant_words(base_len256) > 1 ||
+        intx::count_significant_words(exp_len256) > 1 ||
+        intx::count_significant_words(mod_len256) > 1)
+    {
+        return {std::numeric_limits<int64_t>::max(), 0};
+    }
+
+    uint64_t base_len64{static_cast<uint64_t>(base_len256)};
+    uint64_t exp_len64{static_cast<uint64_t>(exp_len256)};
+
+    input.erase(0, 3 * 32);
+
+    intx::uint256 exp_head{0};  // first 32 bytes of the exponent
+    if (input.length() > base_len64)
+    {
+        input.erase(0, base_len64);
+        if (input.size() < 3 * 32)
+            input.resize(3 * 32);
+        if (exp_len64 < 32)
+        {
+            input.erase(exp_len64);
+            input.insert(0, 32 - exp_len64, '\0');
+        }
+        exp_head = intx::be::unsafe::load<intx::uint256>(input.data());
+    }
+    unsigned bit_len{256 - clz(exp_head)};
+
+    intx::uint256 adjusted_exponent_len{0};
+    if (exp_len256 > 32)
+    {
+        adjusted_exponent_len = 8 * (exp_len256 - 32);
+    }
+    if (bit_len > 1)
+    {
+        adjusted_exponent_len += bit_len - 1;
+    }
+
+    if (adjusted_exponent_len < 1)
+    {
+        adjusted_exponent_len = 1;
+    }
+
+    const intx::uint256 max_length{std::max(mod_len256, base_len256)};
+
+    intx::uint256 gas;
+    if (rev < EVMC_BERLIN)
+    {
+        gas = mult_complexity_eip198(max_length) * adjusted_exponent_len / 20;
+    }
+    else
+    {
+        gas = mult_complexity_eip2565(max_length) * adjusted_exponent_len / 3;
+    }
+
+    if (gas > std::numeric_limits<int64_t>::max())
+    {
+        return {std::numeric_limits<int64_t>::max(), 0};
+    }
+    else
+    {
+        return {std::max(min_gas, static_cast<int64_t>(gas)), static_cast<size_t>(mod_len256)};
+    }
+}
+
 SilkpreResult identity_exec(const uint8_t* input, size_t input_size, uint8_t* output,
     [[maybe_unused]] size_t output_size) noexcept
 {
@@ -99,10 +203,11 @@ constexpr auto traits = [] {
         },
         ethprecompiled_ripemd160};
     tbl[4] = {"identity", identity_cost, identity_exec};
+    tbl[5] = {"expmod", internal_expmod_gas, ethprecompiled_expmod};
     tbl[6] = {"ecadd", ecadd_cost, ecadd_execute};
     tbl[7] = {"ecmul", ecmul_cost, ethprecompiled_ecmul};
     tbl[8] = {"ecpairing", ecpairing_cost, ecpairing_execute};
-    tbl[9]  = {"blake2bf", blake2bf_cost, ethprecompiled_blake2bf};
+    tbl[9] = {"blake2bf", blake2bf_cost, ethprecompiled_blake2bf};
     return tbl;
 }();
 }  // namespace
@@ -116,49 +221,18 @@ std::optional<evmc::result> call_precompiled(evmc_revision rev, const evmc_messa
     assert(id > 0);
     assert(msg.gas >= 0);
 
-    uint8_t output_buf[128];  // Big enough to handle all "identity" tests.
+    uint8_t output_buf[256];  // Big enough to handle all "expmod" tests.
 
-    switch (id)
-    {
-    case 1:
-    case 2:
-    case 3:
-    case 4:
-    case 6:
-    case 7:
-    case 8:
-    {
-        const auto t = traits[id];
-        const auto cost = t.cost(msg.input_data, msg.input_size, rev);
-        const auto gas_left = msg.gas - cost.gas_cost;
-        if (gas_left < 0)
-            return evmc::result{EVMC_OUT_OF_GAS, 0, nullptr, 0};
-        assert(std::size(output_buf) >= cost.output_size);
-        const auto r = t.exec(
-            msg.input_data, static_cast<uint32_t>(msg.input_size), output_buf, cost.output_size);
-        if (r.status_code != EVMC_SUCCESS)
-            return evmc::result{EVMC_OUT_OF_GAS, 0, nullptr, 0};
-        return evmc::result{EVMC_SUCCESS, gas_left, output_buf, r.output_size};
-    }
-    default:
-    {
-        const auto index = id - 1;
-        assert(index < SILKPRE_NUMBER_OF_ISTANBUL_CONTRACTS);
-
-        const auto contract = kSilkpreContracts[index];
-        const uint64_t cost = contract.gas(msg.input_data, msg.input_size, rev);
-
-        if (static_cast<uint64_t>(msg.gas) < cost)
-            return evmc::result{EVMC_OUT_OF_GAS, 0, nullptr, 0};
-        const auto gas_left = msg.gas - static_cast<int64_t>(cost);
-
-        const auto out = contract.run(msg.input_data, msg.input_size);
-        if (out.data == nullptr)  // Null output also means failure.
-            return evmc::result{EVMC_OUT_OF_GAS, 0, nullptr, 0};
-        evmc::result result{EVMC_SUCCESS, gas_left, out.data, out.size};
-        std::free(out.data);
-        return result;
-    }
-    }
+    const auto t = traits[id];
+    const auto cost = t.cost(msg.input_data, msg.input_size, rev);
+    const auto gas_left = msg.gas - cost.gas_cost;
+    if (gas_left < 0)
+        return evmc::result{EVMC_OUT_OF_GAS, 0, nullptr, 0};
+    assert(std::size(output_buf) >= cost.output_size);
+    const auto r =
+        t.exec(msg.input_data, static_cast<uint32_t>(msg.input_size), output_buf, cost.output_size);
+    if (r.status_code != EVMC_SUCCESS)
+        return evmc::result{EVMC_OUT_OF_GAS, 0, nullptr, 0};
+    return evmc::result{EVMC_SUCCESS, gas_left, output_buf, r.output_size};
 }
 }  // namespace evmone::state
