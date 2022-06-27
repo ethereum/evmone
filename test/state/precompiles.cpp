@@ -224,15 +224,15 @@ std::optional<evmc::result> call_precompiled(evmc_revision rev, const evmc_messa
     uint8_t output_buf[256];  // Big enough to handle all "expmod" tests.
 
     const auto t = traits[id];
-    const auto cost = t.cost(msg.input_data, msg.input_size, rev);
-    const auto gas_left = msg.gas - cost.gas_cost;
+    const auto [gas_cost, max_output_size] = t.cost(msg.input_data, msg.input_size, rev);
+    const auto gas_left = msg.gas - gas_cost;
     if (gas_left < 0)
         return evmc::result{EVMC_OUT_OF_GAS, 0, nullptr, 0};
-    assert(std::size(output_buf) >= cost.output_size);
-    const auto r =
-        t.exec(msg.input_data, static_cast<uint32_t>(msg.input_size), output_buf, cost.output_size);
-    if (r.status_code != EVMC_SUCCESS)
+    assert(std::size(output_buf) >= max_output_size);
+    const auto [status_code, output_size] =
+        t.exec(msg.input_data, msg.input_size, output_buf, max_output_size);
+    if (status_code != EVMC_SUCCESS)
         return evmc::result{EVMC_OUT_OF_GAS, 0, nullptr, 0};
-    return evmc::result{EVMC_SUCCESS, gas_left, output_buf, r.output_size};
+    return evmc::result{EVMC_SUCCESS, gas_left, output_buf, output_size};
 }
 }  // namespace evmone::state
