@@ -17,6 +17,9 @@ SilkpreResult ecadd_execute(
 
 SilkpreResult ecpairing_execute(
     const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
+
+SilkpreResult ripemd160_execute(
+    const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
 }
 
 namespace evmone::state
@@ -201,7 +204,7 @@ constexpr auto traits = [] {
         [](const uint8_t*, size_t input_size, evmc_revision) noexcept {
             return PrecompiledCost{cost_per_input_word(600, 120, input_size), 32};
         },
-        ethprecompiled_ripemd160};
+        ripemd160_execute};
     tbl[4] = {"identity", identity_cost, identity_exec};
     tbl[5] = {"expmod", internal_expmod_gas, ethprecompiled_expmod};
     tbl[6] = {"ecadd", ecadd_cost, ecadd_execute};
