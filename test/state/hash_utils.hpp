@@ -13,6 +13,7 @@ namespace evmone
 {
 using evmc::bytes;
 using evmc::bytes_view;
+using namespace evmc::literals;
 
 /// Default type for 256-bit hash.
 ///

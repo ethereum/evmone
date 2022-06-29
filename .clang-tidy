@@ -1,5 +1,5 @@
 FormatStyle: file
-HeaderFilterRegex: 'lib/evmone/'
+HeaderFilterRegex: 'lib/evmone/|test/state/'
 WarningsAsErrors: '*'
 Checks: >
   bugprone-*,
