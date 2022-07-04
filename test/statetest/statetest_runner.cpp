@@ -6,6 +6,7 @@
 #include "../state/rlp.hpp"
 #include "statetest.hpp"
 #include <gtest/gtest.h>
+#include <sstream>
 
 namespace evmone::state
 {
@@ -18,6 +19,34 @@ inline bytes rlp_encode(const Log& log)
 
 namespace evmone::test
 {
+namespace
+{
+std::string dump(state::State& state)
+{
+    std::ostringstream out;
+    out << "POST STATE DUMP:\n";
+
+    const auto& accounts = state.get_accounts();
+    std::vector<evmc::address> addresses;
+    addresses.reserve(accounts.size());
+    for (const auto& [addr, _] : accounts)
+        addresses.push_back(addr);
+    std::sort(addresses.begin(), addresses.end());
+    for (const auto& addr : addresses)
+    {
+        const auto& acc = accounts.at(addr);
+        out << "  " << hex(addr) << ":\n";
+        out << "    balance: " << to_string(acc.balance) << "\n";
+        out << "    nonce: " << acc.nonce << "\n";
+        out << "    storage:\n";
+
+        for (const auto& [k, v] : acc.storage)
+            out << "      " << hex(k) << ": " << hex(v.current) << "\n";
+    }
+    return out.str();
+}
+}  // namespace
+
 void run_state_test(const StateTransitionTest& test, evmc::VM& vm)
 {
     for (const auto& [rev, cases] : test.cases)
@@ -40,7 +69,7 @@ void run_state_test(const StateTransitionTest& test, evmc::VM& vm)
             else
                 EXPECT_TRUE(expected.exception);
 
-            EXPECT_EQ(state::mpt_hash(state.get_accounts()), expected.state_hash);
+            EXPECT_EQ(state::mpt_hash(state.get_accounts()), expected.state_hash) << dump(state);
         }
     }
 }
