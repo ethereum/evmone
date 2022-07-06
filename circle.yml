@@ -20,7 +20,7 @@ executors:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
   consensus-tests:
     docker:
-      - image: ethereum/cpp-build-env:18-gcc-12
+      - image: ethereum/cpp-build-env:17-gcc-11
     resource_class: xlarge
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 8
@@ -319,7 +319,7 @@ jobs:
     steps:
       - build
       - build_silkworm:
-          commit: af763de076ad8992db953d43e30ac3a4a441e2ad
+          commit: d38c7115852ac40071df66ec681debe081d71afa
       - download_consensus_tests:
           rev: v10.4
       - run:
