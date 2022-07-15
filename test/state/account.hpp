@@ -18,6 +18,9 @@ struct StorageValue
 {
     /// The current value.
     bytes32 current{};
+
+    /// The original value.
+    bytes32 original{};
 };
 
 /// The state account.

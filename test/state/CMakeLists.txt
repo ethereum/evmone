@@ -14,4 +14,5 @@ target_sources(
     mpt_hash.hpp
     mpt_hash.cpp
     rlp.hpp
+    state.hpp
 )

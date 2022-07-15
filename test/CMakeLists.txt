@@ -7,6 +7,9 @@ include(${PROJECT_SOURCE_DIR}/evmc/cmake/EVMC.cmake)
 
 set(evmone_private_include_dir ${PROJECT_SOURCE_DIR}/lib)
 
+hunter_add_package(GTest)
+find_package(GTest CONFIG REQUIRED)
+
 hunter_add_package(benchmark)
 find_package(benchmark CONFIG REQUIRED)
 
@@ -15,9 +18,10 @@ add_subdirectory(bench)
 add_subdirectory(integration)
 add_subdirectory(internal_benchmarks)
 add_subdirectory(state)
+add_subdirectory(statetest)
 add_subdirectory(unittests)
 
-set(targets evmone-bench evmone-bench-internal evmone-unittests testutils)
+set(targets evmone-bench evmone-bench-internal evmone-state evmone-statetest evmone-unittests testutils)
 
 if(EVMONE_FUZZING)
     add_subdirectory(fuzzer)

@@ -2,9 +2,6 @@
 # Copyright 2018-2020 The evmone Authors.
 # SPDX-License-Identifier: Apache-2.0
 
-hunter_add_package(GTest)
-find_package(GTest CONFIG REQUIRED)
-
 # The internal evmone unit tests. The generic EVM ones are also built in.
 add_executable(evmone-unittests
     analysis_test.cpp
