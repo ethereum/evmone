@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "precompiles.hpp"
+#include "precompiles_cache.hpp"
 #include <intx/intx.hpp>
 #include <bit>
 #include <cassert>
@@ -12,8 +13,6 @@
 
 namespace evmone::state
 {
-using evmc::bytes;
-using evmc::bytes_view;
 using namespace evmc::literals;
 
 namespace
@@ -204,6 +203,10 @@ std::optional<evmc::Result> call_precompile(evmc_revision rev, const evmc_messag
     if (gas_left < 0)
         return evmc::Result{EVMC_OUT_OF_GAS};
 
+    static Cache cache;
+    if (auto r = cache.find(static_cast<PrecompileId>(id), input, gas_left); r.has_value())
+        return r;
+
     uint8_t output_buf[256];  // Big enough to handle all "expmod" tests.
     assert(std::size(output_buf) >= max_output_size);
 
@@ -212,6 +215,9 @@ std::optional<evmc::Result> call_precompile(evmc_revision rev, const evmc_messag
 
     evmc::Result result{
         status_code, status_code == EVMC_SUCCESS ? gas_left : 0, 0, output_buf, output_size};
+
+    cache.insert(static_cast<PrecompileId>(id), input, result);
+
     return result;
 }
 }  // namespace evmone::state
