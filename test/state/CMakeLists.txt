@@ -18,6 +18,8 @@ target_sources(
     mpt_hash.cpp
     precompiles.hpp
     precompiles.cpp
+    precompiles_cache.hpp
+    precompiles_cache.cpp
     rlp.hpp
     state.hpp
     state.cpp
