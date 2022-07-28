@@ -49,6 +49,8 @@ constexpr void validate_traits_of() noexcept
     // immediate_size
     if constexpr (Op >= OP_PUSH1 && Op <= OP_PUSH32)
         static_assert(tr.immediate_size == Op - OP_PUSH1 + 1);
+    else if constexpr (Op == OP_RJUMP || Op == OP_RJUMPI)
+        static_assert(tr.immediate_size == 2);
     else
         static_assert(tr.immediate_size == 0);
 
