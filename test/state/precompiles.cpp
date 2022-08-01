@@ -11,6 +11,10 @@
 #include <limits>
 #include <unordered_map>
 
+#ifdef EVMONE_PRECOMPILES_SILKPRE
+#include "precompiles_silkpre.hpp"
+#endif
+
 namespace evmone::state
 {
 using namespace evmc::literals;
@@ -172,6 +176,16 @@ inline constexpr auto traits = []() noexcept {
         {ecpairing_analyze, dummy_execute<PrecompileId::ecpairing>},
         {blake2bf_analyze, dummy_execute<PrecompileId::blake2bf>},
     }};
+#ifdef EVMONE_PRECOMPILES_SILKPRE
+    tbl[static_cast<size_t>(PrecompileId::ecrecover)].execute = silkpre_ecrecover_execute;
+    tbl[static_cast<size_t>(PrecompileId::sha256)].execute = silkpre_sha256_execute;
+    tbl[static_cast<size_t>(PrecompileId::ripemd160)].execute = silkpre_ripemd160_execute;
+    tbl[static_cast<size_t>(PrecompileId::expmod)].execute = silkpre_expmod_execute;
+    tbl[static_cast<size_t>(PrecompileId::ecadd)].execute = silkpre_ecadd_execute;
+    tbl[static_cast<size_t>(PrecompileId::ecmul)].execute = silkpre_ecmul_execute;
+    tbl[static_cast<size_t>(PrecompileId::ecpairing)].execute = silkpre_ecpairing_execute;
+    tbl[static_cast<size_t>(PrecompileId::blake2bf)].execute = silkpre_blake2bf_execute;
+#endif
     return tbl;
 }();
 }  // namespace

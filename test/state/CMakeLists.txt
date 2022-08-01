@@ -52,4 +52,9 @@ if(EVMONE_PRECOMPILES_SILKPRE)
 
     target_link_libraries(evmone-state PRIVATE silkpre)
     target_compile_definitions(evmone-state PRIVATE EVMONE_PRECOMPILES_SILKPRE=1)
+    target_sources(
+        evmone-state PRIVATE
+        precompiles_silkpre.hpp
+        precompiles_silkpre.cpp
+    )
 endif()
