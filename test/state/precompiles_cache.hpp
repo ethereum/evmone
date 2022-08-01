@@ -20,6 +20,9 @@ class Cache
     std::array<std::unordered_map<hash256, std::optional<bytes>>, NumPrecompiles> m_cache;
 
 public:
+    Cache() noexcept;
+    ~Cache() noexcept;
+
     /// Lookups the precompiles cache.
     ///
     /// @param id        The precompile ID.
