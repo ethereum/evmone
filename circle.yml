@@ -349,11 +349,11 @@ jobs:
       - run:
           name: "State tests"
           working_directory: ~/build
-          command: bin/evmone-statetest ~/tests/GeneralStateTests
+          command: EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json bin/evmone-statetest ~/tests/GeneralStateTests
       - run:
           name: "State tests (legacy)"
           working_directory: ~/build
-          command: bin/evmone-statetest ~/tests/LegacyTests/Constantinople/GeneralStateTests
+          command: EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json bin/evmone-statetest ~/tests/LegacyTests/Constantinople/GeneralStateTests
       - collect_coverage_gcc
       - upload_coverage:
           flags: statetests
