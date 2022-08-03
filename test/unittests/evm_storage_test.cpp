@@ -22,7 +22,8 @@ TEST_P(evm, sstore_pop_stack)
     execute(100000, sstore(1, dup1(0)) + mstore8(0) + ret(0, 1));
     EXPECT_GAS_USED(EVMC_SUCCESS, 5024);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size), bytes{0x00});
-    EXPECT_EQ(host.accounts[msg.recipient].storage.find(0x01_bytes32)->second.value, 0x00_bytes32);
+    EXPECT_EQ(
+        host.accounts[msg.recipient].storage.find(0x01_bytes32)->second.current, 0x00_bytes32);
 }
 
 TEST_P(evm, sload_cost_pre_tangerine_whistle)
@@ -121,7 +122,7 @@ TEST_P(evm, sstore_cost)
 
         // Modified again:
         storage.clear();
-        storage[v1] = {v1, true};
+        storage[v1] = {v1, 0x00_bytes32};
         execute(sstore(1, 2));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         if (rev >= EVMC_ISTANBUL)

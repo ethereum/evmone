@@ -67,7 +67,7 @@ class FuzzHost : public evmc::MockedHost
 public:
     uint8_t gas_left_factor = 0;
 
-    evmc::result call(const evmc_message& msg) noexcept override
+    evmc::Result call(const evmc_message& msg) noexcept override
     {
         auto result = MockedHost::call(msg);
 
@@ -270,7 +270,7 @@ fuzz_input populate_input(const uint8_t* data, size_t data_size) noexcept
     account.storage[storage_key1] = storage_key2;
 
     // Add dirty value as if it has been already modified in this transaction.
-    account.storage[storage_key2] = {storage_key1, true};
+    account.storage[storage_key2] = {storage_key1, storage_key2};
 
     account.codehash = generate_interesting_value(account_codehash_8bits);
     account.code = {data, data_size};  // Use remaining data as code.

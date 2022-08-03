@@ -206,14 +206,14 @@ TEST_P(evm, eip2929_sstore_modify_cold)
     host.accounts[msg.recipient].storage[key] = evmc::bytes32{2};
     execute(5006, code);
     EXPECT_GAS_USED(EVMC_SUCCESS, 5006);
-    EXPECT_EQ(host.accounts[msg.recipient].storage[key].value, evmc::bytes32{3});
+    EXPECT_EQ(host.accounts[msg.recipient].storage[key].current, evmc::bytes32{3});
     EXPECT_EQ(host.accounts[msg.recipient].storage[key].access_status, EVMC_ACCESS_WARM);
 
     host.accounts[msg.recipient].storage[key] = evmc::bytes32{2};
     execute(5005, code);
     EXPECT_GAS_USED(EVMC_OUT_OF_GAS, 5005);
     // The storage will be modified anyway, because the cost is checked after.
-    EXPECT_EQ(host.accounts[msg.recipient].storage[key].value, evmc::bytes32{3});
+    EXPECT_EQ(host.accounts[msg.recipient].storage[key].current, evmc::bytes32{3});
     EXPECT_EQ(host.accounts[msg.recipient].storage[key].access_status, EVMC_ACCESS_WARM);
 }
 

@@ -201,28 +201,28 @@ TEST_P(evm, log_data_cost)
 TEST_P(evm, selfdestruct)
 {
     msg.recipient = 0x01_address;
-    const auto& selfdestructs = host.recorded_selfdestructs;
+    const auto& selfdestructs = host.recorded_selfdestructs[msg.recipient];
 
     rev = EVMC_SPURIOUS_DRAGON;
     execute(selfdestruct(0x09));
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(gas_used, 5003);
     ASSERT_EQ(selfdestructs.size(), 1);
-    EXPECT_EQ(selfdestructs[0].beneficiary, 0x09_address);
+    EXPECT_EQ(selfdestructs.back(), 0x09_address);
 
     rev = EVMC_HOMESTEAD;
     execute(selfdestruct(0x07));
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(gas_used, 3);
     ASSERT_EQ(selfdestructs.size(), 2);
-    EXPECT_EQ(selfdestructs[1].beneficiary, 0x07_address);
+    EXPECT_EQ(selfdestructs.back(), 0x07_address);
 
     rev = EVMC_TANGERINE_WHISTLE;
     execute(selfdestruct(0x08));
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(gas_used, 30003);
     ASSERT_EQ(selfdestructs.size(), 3);
-    EXPECT_EQ(selfdestructs[2].beneficiary, 0x08_address);
+    EXPECT_EQ(selfdestructs.back(), 0x08_address);
 }
 
 TEST_P(evm, selfdestruct_with_balance)
