@@ -892,7 +892,11 @@ inline StopToken selfdestruct(StackTop stack, ExecutionState& state) noexcept
         }
     }
 
-    state.host.selfdestruct(state.msg->recipient, beneficiary);
+    if (state.host.selfdestruct(state.msg->recipient, beneficiary))
+    {
+        if (state.rev < EVMC_LONDON)
+            state.gas_refund += 24000;
+    }
     return {EVMC_SUCCESS};
 }
 
