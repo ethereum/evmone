@@ -385,33 +385,36 @@ TEST_P(evm, log_data_cost)
 
 TEST_P(evm, selfdestruct)
 {
+    msg.recipient = 0x01_address;
+    const auto& selfdestructs = host.recorded_selfdestructs;
+
     rev = EVMC_SPURIOUS_DRAGON;
-    execute("6009ff");
+    execute(selfdestruct(0x09));
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(gas_used, 5003);
-    ASSERT_EQ(host.recorded_selfdestructs.size(), 1);
-    EXPECT_EQ(host.recorded_selfdestructs.back().beneficiary.bytes[19], 9);
+    ASSERT_EQ(selfdestructs.size(), 1);
+    EXPECT_EQ(selfdestructs[0].beneficiary, 0x09_address);
 
     rev = EVMC_HOMESTEAD;
-    execute("6007ff");
+    execute(selfdestruct(0x07));
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(gas_used, 3);
-    ASSERT_EQ(host.recorded_selfdestructs.size(), 2);
-    EXPECT_EQ(host.recorded_selfdestructs.back().beneficiary.bytes[19], 7);
+    ASSERT_EQ(selfdestructs.size(), 2);
+    EXPECT_EQ(selfdestructs[1].beneficiary, 0x07_address);
 
     rev = EVMC_TANGERINE_WHISTLE;
-    execute("6008ff");
+    execute(selfdestruct(0x08));
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(gas_used, 30003);
-    ASSERT_EQ(host.recorded_selfdestructs.size(), 3);
-    EXPECT_EQ(host.recorded_selfdestructs.back().beneficiary.bytes[19], 8);
+    ASSERT_EQ(selfdestructs.size(), 3);
+    EXPECT_EQ(selfdestructs[2].beneficiary, 0x08_address);
 }
 
 TEST_P(evm, selfdestruct_with_balance)
 {
-    constexpr auto beneficiary = 0x00000000000000000000000000000000000000be_address;
-    const auto code = push(beneficiary) + OP_SELFDESTRUCT;
-    msg.recipient = evmc_address{{0x5e}};
+    constexpr auto beneficiary = 0xbe_address;
+    const auto code = selfdestruct(beneficiary);
+    msg.recipient = 0x5e_address;
 
 
     host.accounts[msg.recipient].set_balance(0);
@@ -613,10 +616,7 @@ TEST_P(evm, blockhash)
 
 TEST_P(evm, extcode)
 {
-    auto addr = evmc_address{};
-    std::fill(std::begin(addr.bytes), std::end(addr.bytes), uint8_t{0xff});
-    addr.bytes[19]--;
-
+    constexpr auto addr = 0xfffffffffffffffffffffffffffffffffffffffe_address;
     host.accounts[addr].code = {'a', 'b', 'c', 'd'};
 
     auto code = std::string{};
@@ -630,8 +630,8 @@ TEST_P(evm, extcode)
     EXPECT_EQ(bytes_view(result.output_data, 3), bytes_view(host.accounts[addr].code.data(), 3));
     EXPECT_EQ(result.output_data[3], 0);
     ASSERT_EQ(host.recorded_account_accesses.size(), 2);
-    EXPECT_EQ(host.recorded_account_accesses[0].bytes[19], 0xfe);
-    EXPECT_EQ(host.recorded_account_accesses[1].bytes[19], 0xfe);
+    EXPECT_EQ(host.recorded_account_accesses[0], addr);
+    EXPECT_EQ(host.recorded_account_accesses[1], addr);
 }
 
 TEST_P(evm, extcodesize)
