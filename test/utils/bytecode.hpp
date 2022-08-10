@@ -14,6 +14,7 @@
 struct bytecode;
 
 inline bytecode push(uint64_t n);
+inline bytecode push(evmc::address addr);
 
 struct bytecode : bytes
 {
@@ -29,6 +30,8 @@ struct bytecode : bytes
     {}
 
     bytecode(uint64_t n) : bytes{push(n)} {}
+
+    bytecode(evmc::address addr) : bytes{push(addr)} {}
 };
 
 inline bytecode operator+(bytecode a, bytecode b)
@@ -246,6 +249,11 @@ inline bytecode ret(bytecode c)
 inline bytecode revert(bytecode index, bytecode size)
 {
     return size + index + OP_REVERT;
+}
+
+inline bytecode selfdestruct(bytecode beneficiary)
+{
+    return std::move(beneficiary) + OP_SELFDESTRUCT;
 }
 
 inline bytecode keccak256(bytecode index, bytecode size)
