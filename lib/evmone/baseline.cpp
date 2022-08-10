@@ -274,9 +274,10 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
 exit:
     const auto gas_left =
         (state.status == EVMC_SUCCESS || state.status == EVMC_REVERT) ? state.gas_left : 0;
+    const auto gas_refund = (state.status == EVMC_SUCCESS) ? state.gas_refund : 0;
 
     assert(state.output_size != 0 || state.output_offset == 0);
-    const auto result = evmc::make_result(state.status, gas_left, 0,
+    const auto result = evmc::make_result(state.status, gas_left, gas_refund,
         state.output_size != 0 ? &state.memory[state.output_offset] : nullptr, state.output_size);
 
     if constexpr (TracingEnabled)
