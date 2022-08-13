@@ -19,6 +19,7 @@ add_executable(evmone-unittests
     evm_eof_test.cpp
     evm_memory_test.cpp
     evm_state_test.cpp
+    evm_storage_test.cpp
     evm_other_test.cpp
     evm_benchmark_test.cpp
     evmone_test.cpp
