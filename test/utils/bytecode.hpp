@@ -351,6 +351,57 @@ inline call_instruction<OP_CALLCODE> callcode(bytecode address)
 }
 
 
+template <evmc_opcode kind>
+struct create_instruction
+{
+private:
+    bytecode m_value = 0;
+    bytecode m_input = 0;
+    bytecode m_input_size = 0;
+    bytecode m_salt = 0;
+
+public:
+    auto& value(bytecode v)
+    {
+        m_value = std::move(v);
+        return *this;
+    }
+
+    auto& input(bytecode index, bytecode size)
+    {
+        m_input = std::move(index);
+        m_input_size = std::move(size);
+        return *this;
+    }
+
+    template <evmc_opcode k = kind>
+    typename std::enable_if<k == OP_CREATE2, create_instruction&>::type salt(bytecode salt)
+    {
+        m_salt = std::move(salt);
+        return *this;
+    }
+
+    operator bytecode() const
+    {
+        bytecode code;
+        if constexpr (kind == OP_CREATE2)
+            code += m_salt;
+        code += m_input_size + m_input + m_value + kind;
+        return code;
+    }
+};
+
+inline auto create()
+{
+    return create_instruction<OP_CREATE>{};
+}
+
+inline auto create2()
+{
+    return create_instruction<OP_CREATE2>{};
+}
+
+
 inline std::string hex(evmc_opcode opcode) noexcept
 {
     return hex(static_cast<uint8_t>(opcode));

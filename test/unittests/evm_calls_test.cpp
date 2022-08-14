@@ -67,36 +67,38 @@ TEST_P(evm, delegatecall_oog_depth_limit)
 
 TEST_P(evm, create)
 {
-    auto& account = host.accounts[{}];
+    auto& account = host.accounts[msg.recipient];
     account.set_balance(1);
 
     auto call_output = bytes{0xa, 0xb, 0xc};
     host.call_result.output_data = call_output.data();
     host.call_result.output_size = call_output.size();
-    host.call_result.create_address.bytes[10] = 0xcc;
+    host.call_result.create_address = 0xcc010203040506070809010203040506070809ce_address;
     host.call_result.gas_left = 200000;
-    execute(300000, bytecode{"602060006001f0600155"});
+    execute(300000, sstore(1, create().value(1).input(0, 0x20)));
 
-    EXPECT_EQ(gas_used, 115816);
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 115816);
 
-    auto key = evmc_bytes32{};
-    key.bytes[31] = 1;
-    EXPECT_EQ(account.storage[key].value.bytes[22], 0xcc);
+    EXPECT_EQ(account.storage[0x01_bytes32].value,
+        0x000000000000000000000000cc010203040506070809010203040506070809ce_bytes32);
 
     ASSERT_EQ(host.recorded_calls.size(), 1);
     const auto& call_msg = host.recorded_calls.back();
+    EXPECT_EQ(call_msg.kind, EVMC_CREATE);
+    EXPECT_EQ(call_msg.gas, 263801);
+    EXPECT_EQ(call_msg.value, 0x01_bytes32);
     EXPECT_EQ(call_msg.input_size, 0x20);
+    EXPECT_EQ(call_msg.create2_salt, 0x00_bytes32);
 }
 
 TEST_P(evm, create_gas)
 {
-    auto c = size_t{0};
+    size_t c = 0;
     for (auto r : {EVMC_HOMESTEAD, EVMC_TANGERINE_WHISTLE})
     {
         ++c;
         rev = r;
-        execute(50000, "60008080f0");
+        execute(50000, create());
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         EXPECT_EQ(gas_used, rev == EVMC_HOMESTEAD ? 50000 : 49719) << rev;
         ASSERT_EQ(host.recorded_calls.size(), c);
@@ -107,38 +109,33 @@ TEST_P(evm, create_gas)
 TEST_P(evm, create2)
 {
     rev = EVMC_CONSTANTINOPLE;
-    auto& account = host.accounts[{}];
+    auto& account = host.accounts[msg.recipient];
     account.set_balance(1);
 
-    auto call_output = bytes{0xa, 0xb, 0xc};
+    const bytes call_output{0xa, 0xb, 0xc};
     host.call_result.output_data = call_output.data();
     host.call_result.output_size = call_output.size();
-    host.call_result.create_address.bytes[10] = 0xc2;
+    host.call_result.create_address = 0xc2010203040506070809010203040506070809ce_address;
     host.call_result.gas_left = 200000;
-    execute(300000, "605a604160006001f5600155");
-
-    EXPECT_EQ(gas_used, 115817);
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-
+    execute(300000, sstore(1, create2().value(1).input(0, 0x41).salt(0x5a)));
+    EXPECT_GAS_USED(EVMC_SUCCESS, 115817);
 
     ASSERT_EQ(host.recorded_calls.size(), 1);
     const auto& call_msg = host.recorded_calls.back();
-    EXPECT_EQ(call_msg.create2_salt.bytes[31], 0x5a);
-    EXPECT_EQ(call_msg.gas, 263775);
     EXPECT_EQ(call_msg.kind, EVMC_CREATE2);
-
-    auto key = evmc_bytes32{};
-    key.bytes[31] = 1;
-    EXPECT_EQ(account.storage[key].value.bytes[22], 0xc2);
-
+    EXPECT_EQ(call_msg.gas, 263775);
+    EXPECT_EQ(call_msg.value, 0x01_bytes32);
     EXPECT_EQ(call_msg.input_size, 0x41);
+    EXPECT_EQ(call_msg.create2_salt, 0x5a_bytes32);
+
+    EXPECT_EQ(account.storage[0x01_bytes32].value,
+        0x000000000000000000000000c2010203040506070809010203040506070809ce_bytes32);
 }
 
 TEST_P(evm, create2_salt_cost)
 {
     rev = EVMC_CONSTANTINOPLE;
-    auto code = "600060208180f5";
-
+    const auto code = create2().input(0, 0x20);
 
     execute(32021, code);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
@@ -150,13 +147,13 @@ TEST_P(evm, create2_salt_cost)
     execute(32021 - 1, code);
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
     EXPECT_EQ(result.gas_left, 0);
-    EXPECT_EQ(host.recorded_calls.size(), 1);  // No another CREATE2.
+    EXPECT_EQ(host.recorded_calls.size(), 1);  // No more CREATE2 recorded.
 }
 
 TEST_P(evm, create_balance_too_low)
 {
     rev = EVMC_CONSTANTINOPLE;
-    host.accounts[{}].set_balance(1);
+    host.accounts[msg.recipient].set_balance(1);
     for (auto op : {OP_CREATE, OP_CREATE2})
     {
         execute(push(2) + (3 * OP_DUP1) + hex(op) + ret_top());
@@ -322,11 +319,9 @@ TEST_P(evm, call_output)
 TEST_P(evm, call_high_gas)
 {
     rev = EVMC_HOMESTEAD;
-    auto call_dst = evmc_address{};
-    call_dst.bytes[19] = 0xaa;
-    host.accounts[call_dst] = {};
+    host.accounts[0xaa_address] = {};
 
-    for (auto call_opcode : {"f1", "f2", "f4"})
+    for (auto call_opcode : {OP_CALL, OP_CALLCODE, OP_DELEGATECALL})
     {
         execute(5000, 5 * push(0) + push(0xaa) + push(0x134c) + call_opcode);
         EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
