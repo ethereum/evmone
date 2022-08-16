@@ -36,7 +36,7 @@ TEST_P(evm, calldatacopy)
     bytecode s;
     s += "366001600037";  // CALLDATASIZE 1 0 CALLDATACOPY
     s += "600a6000f3";    // RETURN(0,10)
-    execute(s, "0102030405");
+    execute(s, "0102030405"_hex);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(gas_used, 23);
     ASSERT_EQ(result.output_size, 10);
@@ -68,11 +68,9 @@ TEST_P(evm, memory_grow_mstore8)
     const auto code = calldataload(0) + push(0) + OP_JUMPDEST + mstore8(OP_DUP1, OP_DUP1) + add(1) +
                       jumpi(5, iszero(eq(OP_DUP3, OP_DUP1))) + ret(0, OP_MSIZE);
 
-    const size_t size = 4 * 1024 + 256 + 1;
-    auto input = std::ostringstream{};
-    input << std::hex << std::setw(64) << std::setfill('0') << size;
+    constexpr size_t size = 4 * 1024 + 256 + 1;
 
-    execute(code, input.str());
+    execute(code, evmc::bytes32{size});
     EXPECT_STATUS(EVMC_SUCCESS);
     ASSERT_EQ(result.output_size, ((size + 31) / 32) * 32);
 

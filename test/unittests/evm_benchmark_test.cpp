@@ -9,6 +9,7 @@
 #include <numeric>
 #include <random>
 
+using namespace evmc::literals;
 using evmone::test::evm;
 
 TEST_P(evm, grow_memory_with_mload)
@@ -19,15 +20,15 @@ TEST_P(evm, grow_memory_with_mload)
     // EXPECT_EQ(hex(code), "");  // Uncomment to get the code dump.
 
     // Pokes the same offset 0 all the time.
-    execute(code, "0000000000000000000000000000000000000000000000000000000000000000");
+    execute(code, 0x00_bytes32);
     EXPECT_GAS_USED(EVMC_SUCCESS, 57356);
 
     // Pokes memory offset increasing by 1, memory grows every 32nd "iteration".
-    execute(code, "0000000000000000000000000000000000000000000000000000000000000001");
+    execute(code, 0x01_bytes32);
     EXPECT_GAS_USED(EVMC_SUCCESS, 57772);
 
     // Pokes memory offset increasing by 32, memory grows every "iteration".
-    execute(code, "0000000000000000000000000000000000000000000000000000000000000020");
+    execute(code, 0x20_bytes32);
     EXPECT_GAS_USED(EVMC_SUCCESS, 102409);
 }
 
@@ -39,15 +40,15 @@ TEST_P(evm, grow_memory_with_mstore)
     // EXPECT_EQ(hex(code), "");  // Uncomment to get the code dump.
 
     // Pokes the same offset 0 all the time.
-    execute(code, "0000000000000000000000000000000000000000000000000000000000000000");
+    execute(code, 0x00_bytes32);
     EXPECT_GAS_USED(EVMC_SUCCESS, 61452);
 
     // Pokes memory offset increasing by 1, memory grows every 32nd "iteration".
-    execute(code, "0000000000000000000000000000000000000000000000000000000000000001");
+    execute(code, 0x01_bytes32);
     EXPECT_GAS_USED(EVMC_SUCCESS, 61868);
 
     // Pokes memory offset increasing by 32, memory grows every "iteration".
-    execute(code, "0000000000000000000000000000000000000000000000000000000000000020");
+    execute(code, 0x20_bytes32);
     EXPECT_GAS_USED(EVMC_SUCCESS, 106505);
 }
 

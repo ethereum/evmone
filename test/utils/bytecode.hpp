@@ -20,7 +20,9 @@ struct bytecode : bytes
 {
     bytecode() noexcept = default;
 
-    bytecode(bytes b) : bytes(std::move(b)) {}
+    bytecode(bytes b) : bytes{std::move(b)} {}
+
+    bytecode(const uint8_t* data, size_t size) : bytes{data, size} {}
 
     bytecode(evmc_opcode opcode) : bytes{uint8_t(opcode)} {}
 

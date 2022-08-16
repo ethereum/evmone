@@ -28,31 +28,31 @@ TEST_P(evm, codecopy_combinations)
                       OP_CODECOPY + ret(0, {});
     EXPECT_EQ(code.size(), 0x13);
 
-    execute(code, "0013");
+    execute(code, "0013"_hex);
     EXPECT_EQ(output, code);
 
-    execute(code, "0012");
+    execute(code, "0012"_hex);
     EXPECT_EQ(output, code.substr(0, 0x12));
 
-    execute(code, "0014");
+    execute(code, "0014"_hex);
     EXPECT_EQ(output, code + "00");
 
-    execute(code, "1300");
+    execute(code, "1300"_hex);
     EXPECT_EQ(output, bytes_view{});
 
-    execute(code, "1400");
+    execute(code, "1400"_hex);
     EXPECT_EQ(output, bytes_view{});
 
-    execute(code, "1200");
+    execute(code, "1200"_hex);
     EXPECT_EQ(output, bytes_view{});
 
-    execute(code, "1301");
+    execute(code, "1301"_hex);
     EXPECT_EQ(output, "00"_hex);
 
-    execute(code, "1401");
+    execute(code, "1401"_hex);
     EXPECT_EQ(output, "00"_hex);
 
-    execute(code, "1201");
+    execute(code, "1201"_hex);
     EXPECT_EQ(output, code.substr(0x12, 1));
 }
 

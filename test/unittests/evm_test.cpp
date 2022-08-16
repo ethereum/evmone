@@ -11,10 +11,10 @@ using evmone::test::evm;
 
 TEST_P(evm, empty)
 {
-    execute(0, bytes_view{});
+    execute(0, {});
     EXPECT_GAS_USED(EVMC_SUCCESS, 0);
 
-    execute(1, bytes_view{});
+    execute(1, {});
     EXPECT_GAS_USED(EVMC_SUCCESS, 0);
 }
 
@@ -282,7 +282,7 @@ TEST_P(evm, addmod_mulmod)
 TEST_P(evm, divmod)
 {
     // Div and mod the -1 by the input and return.
-    execute(bytecode{"600035600160000381810460005281810660205260406000f3"}, "0d");
+    execute(bytecode{"600035600160000381810460005281810660205260406000f3"}, "0d"_hex);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(gas_used, 61);
     ASSERT_EQ(result.output_size, 64);
@@ -375,7 +375,7 @@ TEST_P(evm, signextend_fuzzing)
         for (uint8_t e = 0; e <= 32; ++e)
         {
             input[63] = e;
-            execute(code, hex({input, 64}));
+            execute(code, {input, 64});
             ASSERT_EQ(output.size(), sizeof(uint256));
             const auto out = be::unsafe::load<uint256>(output.data());
             const auto expected = signextend_reference(be::unsafe::load<uint256>(input), e);
@@ -432,11 +432,9 @@ TEST_P(evm, exp_pre_spurious_dragon)
 
 TEST_P(evm, calldataload)
 {
-    const auto code = calldataload(3) + mstore(0) + ret(0, 10);
-    execute(21, code, "0102030405");
+    execute(mstore(0, calldataload(3)) + ret(0, 10), "0102030405"_hex);
     EXPECT_GAS_USED(EVMC_SUCCESS, 21);
-    ASSERT_EQ(result.output_size, 10);
-    EXPECT_EQ(bytes(&result.output_data[0], 10), "04050000000000000000"_hex);
+    EXPECT_EQ(bytes(result.output_data, result.output_size), "04050000000000000000"_hex);
 }
 
 TEST_P(evm, calldataload_outofrange)

@@ -60,14 +60,13 @@ protected:
 
     /// Executes the supplied code.
     ///
-    /// @param gas        The gas limit for execution.
-    /// @param code       The EVM bytecode.
-    /// @param input_hex  The hex encoded EVM "calldata" input.
+    /// @param gas    The gas limit for execution.
+    /// @param code   The EVM bytecode.
+    /// @param input  The EVM "calldata" input.
     /// The execution result will be available in the `result` field.
     /// The `gas_used` field  will be updated accordingly.
-    void execute(int64_t gas, bytes_view code, std::string_view input_hex = {}) noexcept
+    void execute(int64_t gas, const bytecode& code, bytes_view input = {}) noexcept
     {
-        const auto input = from_hex(input_hex).value();
         msg.input_data = input.data();
         msg.input_size = input.size();
         msg.gas = gas;
@@ -83,20 +82,15 @@ protected:
         gas_used = msg.gas - result.gas_left;
     }
 
-    void execute(int64_t gas, const bytecode& code, std::string_view input_hex = {}) noexcept
-    {
-        execute(gas, {code.data(), code.size()}, input_hex);
-    }
-
     /// Executes the supplied code.
     ///
-    /// @param code       The EVM bytecode.
-    /// @param input_hex  The hex encoded EVM "calldata" input.
+    /// @param code   The EVM bytecode.
+    /// @param input  The EVM "calldata" input.
     /// The execution result will be available in the `result` field.
     /// The `gas_used` field  will be updated accordingly.
-    void execute(bytes_view code, std::string_view input_hex = {}) noexcept
+    void execute(const bytecode& code, bytes_view input = {}) noexcept
     {
-        execute(std::numeric_limits<int64_t>::max(), code, input_hex);
+        execute(std::numeric_limits<int64_t>::max(), code, input);
     }
 };
 }  // namespace evmone::test

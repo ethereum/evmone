@@ -360,7 +360,7 @@ TEST_P(evm, call_new_account_creation_cost)
 
     rev = EVMC_TANGERINE_WHISTLE;
     host.accounts[msg.recipient].set_balance(0);
-    execute(code, "00");
+    execute(code, "00"_hex);
     EXPECT_GAS_USED(EVMC_SUCCESS, 25000 + 739);
     EXPECT_OUTPUT_INT(1);
     ASSERT_EQ(host.recorded_calls.size(), 1);
@@ -374,7 +374,7 @@ TEST_P(evm, call_new_account_creation_cost)
 
     rev = EVMC_TANGERINE_WHISTLE;
     host.accounts[msg.recipient].set_balance(1);
-    execute(code, "0000000000000000000000000000000000000000000000000000000000000001");
+    execute(code, "0000000000000000000000000000000000000000000000000000000000000001"_hex);
     EXPECT_GAS_USED(EVMC_SUCCESS, 25000 + 9000 + 739);
     EXPECT_OUTPUT_INT(1);
     ASSERT_EQ(host.recorded_calls.size(), 1);
@@ -392,7 +392,7 @@ TEST_P(evm, call_new_account_creation_cost)
 
     rev = EVMC_SPURIOUS_DRAGON;
     host.accounts[msg.recipient].set_balance(0);
-    execute(code, "00");
+    execute(code, "00"_hex);
     EXPECT_GAS_USED(EVMC_SUCCESS, 739);
     EXPECT_OUTPUT_INT(1);
     ASSERT_EQ(host.recorded_calls.size(), 1);
@@ -408,7 +408,7 @@ TEST_P(evm, call_new_account_creation_cost)
 
     rev = EVMC_SPURIOUS_DRAGON;
     host.accounts[msg.recipient].set_balance(1);
-    execute(code, "0000000000000000000000000000000000000000000000000000000000000001");
+    execute(code, "0000000000000000000000000000000000000000000000000000000000000001"_hex);
     EXPECT_GAS_USED(EVMC_SUCCESS, 25000 + 9000 + 739);
     EXPECT_OUTPUT_INT(1);
     ASSERT_EQ(host.recorded_calls.size(), 1);
