@@ -33,7 +33,7 @@ TEST_P(evm, msize)
 
 TEST_P(evm, calldatacopy)
 {
-    std::string s;
+    bytecode s;
     s += "366001600037";  // CALLDATASIZE 1 0 CALLDATACOPY
     s += "600a6000f3";    // RETURN(0,10)
     execute(s, "0102030405");
@@ -46,7 +46,7 @@ TEST_P(evm, calldatacopy)
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(gas_used, 20);
 
-    execute("60ff66fffffffffffffa60003760ff6000f3");
+    execute(bytecode{"60ff66fffffffffffffa60003760ff6000f3"});
     EXPECT_EQ(gas_used, 66);
     ASSERT_EQ(result.output_size, 0xff);
     EXPECT_EQ(std::count(result.output_data, result.output_data + result.output_size, 0), 0xff);

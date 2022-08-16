@@ -98,10 +98,5 @@ protected:
     {
         execute(std::numeric_limits<int64_t>::max(), code, input_hex);
     }
-
-    void execute(const bytecode& code, std::string_view input_hex = {}) noexcept
-    {
-        execute({code.data(), code.size()}, input_hex);
-    }
 };
 }  // namespace evmone::test

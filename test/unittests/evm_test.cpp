@@ -65,7 +65,7 @@ TEST_P(evm, dup)
     // 0 7 3 5 20
     // 0 7 3 5 (20 0)
     // 0 7 3 5 3 0
-    execute("6000600760036005818180850101018452602084f3");
+    execute(bytecode{"6000600760036005818180850101018452602084f3"});
     EXPECT_GAS_USED(EVMC_SUCCESS, 48);
     EXPECT_OUTPUT_INT(20);
 }
@@ -184,7 +184,7 @@ TEST_P(evm, arith)
 
 TEST_P(evm, comparison)
 {
-    std::string s;
+    bytecode s;
     s += "60006001808203808001";  // 0 1 -1 -2
     s += "828210600053";          // m[0] = -1 < 1
     s += "828211600153";          // m[1] = -1 > 1
@@ -282,7 +282,7 @@ TEST_P(evm, addmod_mulmod)
 TEST_P(evm, divmod)
 {
     // Div and mod the -1 by the input and return.
-    execute("600035600160000381810460005281810660205260406000f3", "0d");
+    execute(bytecode{"600035600160000381810460005281810660205260406000f3"}, "0d");
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(gas_used, 61);
     ASSERT_EQ(result.output_size, 64);
@@ -310,7 +310,7 @@ TEST_P(evm, mod_by_zero)
 
 TEST_P(evm, addmod_mulmod_by_zero)
 {
-    execute("6000358080808008091560005260206000f3");
+    execute(bytecode{"6000358080808008091560005260206000f3"});
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(gas_used, 52);
     ASSERT_EQ(result.output_size, 32);
@@ -339,11 +339,11 @@ TEST_P(evm, signextend_31)
 {
     rev = EVMC_CONSTANTINOPLE;
 
-    execute("61010160000360081c601e0b60005260206000f3");
+    execute(bytecode{"61010160000360081c601e0b60005260206000f3"});
     EXPECT_GAS_USED(EVMC_SUCCESS, 38);
     EXPECT_OUTPUT_INT(0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe_u256);
 
-    execute("61010160000360081c601f0b60005260206000f3");
+    execute(bytecode{"61010160000360081c601f0b60005260206000f3"});
     EXPECT_GAS_USED(EVMC_SUCCESS, 38);
     EXPECT_OUTPUT_INT(0x00fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe_u256);
 }
@@ -535,7 +535,7 @@ TEST_P(evm, keccak256_empty)
 
 TEST_P(evm, revert)
 {
-    std::string s;
+    bytecode s;
     s += "60ee8053";    // m[ee] == e
     s += "600260edfd";  // REVERT(ee,1)
     execute(s);
@@ -566,7 +566,7 @@ TEST_P(evm, return_empty_buffer_at_high_offset)
 
 TEST_P(evm, shl)
 {
-    auto code = "600560011b6000526001601ff3";
+    const bytecode code = "600560011b6000526001601ff3";
     rev = EVMC_CONSTANTINOPLE;
     execute(code);
     EXPECT_EQ(gas_used, 24);
@@ -577,7 +577,7 @@ TEST_P(evm, shl)
 
 TEST_P(evm, shr)
 {
-    auto code = "600560011c6000526001601ff3";
+    const bytecode code = "600560011c6000526001601ff3";
     rev = EVMC_CONSTANTINOPLE;
     execute(code);
     EXPECT_EQ(gas_used, 24);
@@ -588,7 +588,7 @@ TEST_P(evm, shr)
 
 TEST_P(evm, sar)
 {
-    auto code = "600160000360021d60005260016000f3";
+    const bytecode code = "600160000360021d60005260016000f3";
     rev = EVMC_CONSTANTINOPLE;
     execute(code);
     EXPECT_EQ(gas_used, 30);
@@ -599,7 +599,7 @@ TEST_P(evm, sar)
 
 TEST_P(evm, sar_01)
 {
-    auto code = "600060011d60005260016000f3";
+    const bytecode code = "600060011d60005260016000f3";
     rev = EVMC_CONSTANTINOPLE;
     execute(code);
     EXPECT_EQ(gas_used, 24);

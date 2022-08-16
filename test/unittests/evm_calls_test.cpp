@@ -652,7 +652,7 @@ TEST_P(evm, create_oog_after)
 
 TEST_P(evm, returndatasize_before_call)
 {
-    execute("3d60005360016000f3");
+    execute(bytecode{"3d60005360016000f3"});
     EXPECT_EQ(gas_used, 17);
     ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 0);
@@ -692,7 +692,7 @@ TEST_P(evm, returndatacopy)
     host.call_result.output_size = std::size(call_output);
     host.call_result.output_data = std::begin(call_output);
 
-    auto code = "600080808060aa60fff4506020600060003e60206000f3";
+    const bytecode code = "600080808060aa60fff4506020600060003e60206000f3";
     execute(code);
     EXPECT_EQ(gas_used, 999);
     ASSERT_EQ(result.output_size, 32);
@@ -705,7 +705,7 @@ TEST_P(evm, returndatacopy)
 
 TEST_P(evm, returndatacopy_empty)
 {
-    auto code = "600080808060aa60fff4600080803e60016000f3";
+    const bytecode code = "600080808060aa60fff4600080803e60016000f3";
     execute(code);
     EXPECT_EQ(gas_used, 994);
     ASSERT_EQ(result.output_size, 1);

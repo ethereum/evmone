@@ -403,7 +403,7 @@ TEST_P(evm, blockhash)
     host.block_hash.bytes[13] = 0x13;
 
     host.tx_context.block_number = 0;
-    auto code = "60004060005260206000f3";
+    const auto code = push(0) + OP_BLOCKHASH + ret_top();
     execute(code);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(gas_used, 38);
@@ -434,7 +434,7 @@ TEST_P(evm, extcode)
     constexpr auto addr = 0xfffffffffffffffffffffffffffffffffffffffe_address;
     host.accounts[addr].code = {'a', 'b', 'c', 'd'};
 
-    auto code = std::string{};
+    bytecode code;
     code += "6002600003803b60019003";  // S = EXTCODESIZE(-2) - 1
     code += "90600080913c";            // EXTCODECOPY(-2, 0, 0, S)
     code += "60046000f3";              // RETURN(0, 4)
@@ -470,7 +470,7 @@ TEST_P(evm, extcodehash)
     auto& hash = host.accounts[{}].codehash;
     std::fill(std::begin(hash.bytes), std::end(hash.bytes), uint8_t{0xee});
 
-    auto code = "60003f60005260206000f3";
+    const auto code = push(0) + OP_EXTCODEHASH + ret_top();
 
     rev = EVMC_BYZANTIUM;
     execute(code);

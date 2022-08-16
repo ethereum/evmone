@@ -32,6 +32,8 @@ struct bytecode : bytes
     bytecode(uint64_t n) : bytes{push(n)} {}
 
     bytecode(evmc::address addr) : bytes{push(addr)} {}
+
+    operator bytes_view() const noexcept { return {data(), size()}; }
 };
 
 inline bytecode operator+(bytecode a, bytecode b)
