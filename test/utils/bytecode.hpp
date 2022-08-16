@@ -15,6 +15,7 @@ struct bytecode;
 
 inline bytecode push(uint64_t n);
 inline bytecode push(evmc::address addr);
+inline bytecode push(evmc::bytes32 bs);
 
 struct bytecode : bytes
 {
@@ -34,6 +35,8 @@ struct bytecode : bytes
     bytecode(uint64_t n) : bytes{push(n)} {}
 
     bytecode(evmc::address addr) : bytes{push(addr)} {}
+
+    bytecode(evmc::bytes32 bs) : bytes{push(bs)} {}
 
     operator bytes_view() const noexcept { return {data(), size()}; }
 };
