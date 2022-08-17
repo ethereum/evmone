@@ -22,6 +22,7 @@ add_library(evmone
     eof.hpp    
     instructions.hpp
     instructions_calls.cpp
+    instructions_storage.cpp
     instructions_traits.hpp
     instructions_xmacro.hpp
     opcodes_helpers.h
