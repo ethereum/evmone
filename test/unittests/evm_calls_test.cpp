@@ -738,3 +738,52 @@ TEST_P(evm, returndatacopy_outofrange)
     execute(735, "60008080808080fa6000600260003e");
     EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
 }
+
+TEST_P(evm, call_gas_refund_propagation)
+{
+    rev = EVMC_LONDON;
+    host.accounts[msg.recipient].set_balance(1);
+    host.call_result.status_code = EVMC_SUCCESS;
+    host.call_result.gas_refund = 1;
+
+    const auto code_prolog = 7 * push(1);
+    for (const auto op :
+        {OP_CALL, OP_CALLCODE, OP_DELEGATECALL, OP_STATICCALL, OP_CREATE, OP_CREATE2})
+    {
+        execute(code_prolog + op);
+        EXPECT_STATUS(EVMC_SUCCESS);
+        EXPECT_EQ(result.gas_refund, 1);
+    }
+}
+
+TEST_P(evm, call_gas_refund_aggregation_different_calls)
+{
+    rev = EVMC_LONDON;
+    host.accounts[msg.recipient].set_balance(1);
+    host.call_result.status_code = EVMC_SUCCESS;
+    host.call_result.gas_refund = 1;
+
+    const auto a = 0xaa_address;
+    const auto code =
+        call(a) + callcode(a) + delegatecall(a) + staticcall(a) + create() + create2();
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_EQ(result.gas_refund, 6);
+}
+
+TEST_P(evm, call_gas_refund_aggregation_same_calls)
+{
+    rev = EVMC_LONDON;
+    host.accounts[msg.recipient].set_balance(2);
+    host.call_result.status_code = EVMC_SUCCESS;
+    host.call_result.gas_refund = 1;
+
+    const auto code_prolog = 14 * push(1);
+    for (const auto op :
+        {OP_CALL, OP_CALLCODE, OP_DELEGATECALL, OP_STATICCALL, OP_CREATE, OP_CREATE2})
+    {
+        execute(code_prolog + 2 * op);
+        EXPECT_STATUS(EVMC_SUCCESS);
+        EXPECT_EQ(result.gas_refund, 2);
+    }
+}
