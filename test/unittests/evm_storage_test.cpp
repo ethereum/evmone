@@ -5,6 +5,7 @@
 /// This file contains EVM unit tests that access or modify the contract storage.
 
 #include "evm_fixture.hpp"
+#include <array>
 
 using namespace evmc::literals;
 using evmone::test::evm;
