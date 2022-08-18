@@ -709,29 +709,53 @@ inline evmc_status_code sstore(StackTop stack, ExecutionState& state) noexcept
 
     const auto status = state.host.set_storage(state.msg->recipient, key, value);
 
-    switch (status)
+    if (state.rev <= EVMC_BYZANTIUM || state.rev == EVMC_PETERSBURG)  // legacy
     {
-    case EVMC_STORAGE_UNCHANGED:
-    case EVMC_STORAGE_MODIFIED_AGAIN:
-        if (state.rev >= EVMC_BERLIN)
-            cost += instr::warm_storage_read_cost;
-        else if (state.rev == EVMC_ISTANBUL)
-            cost = 800;
-        else if (state.rev == EVMC_CONSTANTINOPLE)
-            cost = 200;
-        else
+        switch (status)
+        {
+        case EVMC_STORAGE_ASSIGNED:
+        case EVMC_STORAGE_MODIFIED_DELETED:
+        case EVMC_STORAGE_ADDED_DELETED:
+        case EVMC_STORAGE_MODIFIED_RESTORED:
+        case EVMC_STORAGE_MODIFIED:
+        case EVMC_STORAGE_DELETED:
             cost = 5000;
-        break;
-    case EVMC_STORAGE_MODIFIED:
-    case EVMC_STORAGE_DELETED:
-        if (state.rev >= EVMC_BERLIN)
-            cost += 5000 - instr::cold_sload_cost;
-        else
-            cost = 5000;
-        break;
-    case EVMC_STORAGE_ADDED:
-        cost += 20000;
-        break;
+            break;
+        case EVMC_STORAGE_ADDED:
+        case EVMC_STORAGE_DELETED_ADDED:
+        case EVMC_STORAGE_DELETED_RESTORED:
+            cost = 20000;
+            break;
+        }
+    }
+    else  // net gas cost metering
+    {
+        switch (status)
+        {
+        case EVMC_STORAGE_ASSIGNED:
+        case EVMC_STORAGE_DELETED_ADDED:
+        case EVMC_STORAGE_DELETED_RESTORED:
+        case EVMC_STORAGE_MODIFIED_DELETED:
+        case EVMC_STORAGE_ADDED_DELETED:
+        case EVMC_STORAGE_MODIFIED_RESTORED:
+            if (state.rev >= EVMC_BERLIN)
+                cost += instr::warm_storage_read_cost;
+            else if (state.rev == EVMC_ISTANBUL)
+                cost = 800;
+            else
+                cost = 200;  // Constantinople
+            break;
+        case EVMC_STORAGE_MODIFIED:
+        case EVMC_STORAGE_DELETED:
+            if (state.rev >= EVMC_BERLIN)
+                cost += 5000 - instr::cold_sload_cost;
+            else
+                cost = 5000;
+            break;
+        case EVMC_STORAGE_ADDED:
+            cost += 20000;
+            break;
+        }
     }
     if ((state.gas_left -= cost) < 0)
         return EVMC_OUT_OF_GAS;

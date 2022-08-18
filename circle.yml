@@ -319,7 +319,8 @@ jobs:
     steps:
       - build
       - build_silkworm:
-          commit: d38c7115852ac40071df66ec681debe081d71afa
+          branch: evmc10
+          commit: 0ac066055a6610c321f924c73d380bf860d2834b
       - download_consensus_tests:
           rev: v10.4
       - run:

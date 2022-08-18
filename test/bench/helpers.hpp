@@ -22,7 +22,7 @@ constexpr auto default_gas_limit = std::numeric_limits<int64_t>::max();
 
 
 template <typename ExecutionStateT, typename AnalysisT>
-using ExecuteFn = evmc::result(evmc::VM& vm, ExecutionStateT& exec_state, const AnalysisT&,
+using ExecuteFn = evmc::Result(evmc::VM& vm, ExecutionStateT& exec_state, const AnalysisT&,
     const evmc_message&, evmc_revision, evmc::Host&, bytes_view);
 
 template <typename AnalysisT>
@@ -51,24 +51,24 @@ inline FakeCodeAnalysis evmc_analyse(evmc_revision /*rev*/, bytes_view /*code*/)
 }
 
 
-inline evmc::result advanced_execute(evmc::VM& /*vm*/, advanced::AdvancedExecutionState& exec_state,
+inline evmc::Result advanced_execute(evmc::VM& /*vm*/, advanced::AdvancedExecutionState& exec_state,
     const advanced::AdvancedCodeAnalysis& analysis, const evmc_message& msg, evmc_revision rev,
     evmc::Host& host, bytes_view code)
 {
     exec_state.reset(msg, rev, host.get_interface(), host.to_context(), code);
-    return evmc::result{execute(exec_state, analysis)};
+    return evmc::Result{execute(exec_state, analysis)};
 }
 
-inline evmc::result baseline_execute(evmc::VM& c_vm, ExecutionState& exec_state,
+inline evmc::Result baseline_execute(evmc::VM& c_vm, ExecutionState& exec_state,
     const baseline::CodeAnalysis& analysis, const evmc_message& msg, evmc_revision rev,
     evmc::Host& host, bytes_view code)
 {
     const auto& vm = *static_cast<evmone::VM*>(c_vm.get_raw_pointer());
     exec_state.reset(msg, rev, host.get_interface(), host.to_context(), code);
-    return evmc::result{baseline::execute(vm, exec_state, analysis)};
+    return evmc::Result{baseline::execute(vm, exec_state, analysis)};
 }
 
-inline evmc::result evmc_execute(evmc::VM& vm, FakeExecutionState& /*exec_state*/,
+inline evmc::Result evmc_execute(evmc::VM& vm, FakeExecutionState& /*exec_state*/,
     const FakeCodeAnalysis& /*analysis*/, const evmc_message& msg, evmc_revision rev,
     evmc::Host& host, bytes_view code) noexcept
 {

@@ -44,8 +44,7 @@ protected:
     evmc_message msg{};
 
     /// The result of execution (available after execute() is invoked).
-    /// TODO: Add default constructor to evmc::result, update code here.
-    evmc::result result{{}};
+    evmc::Result result;
 
     /// The result output. Updated by execute().
     bytes_view output;
