@@ -147,16 +147,15 @@ commands:
           command: git submodule update --init --recursive
       - restore_cache:
           name: "Restore Hunter cache"
-          key: &hunter-cache-key hunter-{{arch}}-{{checksum "build.info"}}-{{checksum "cmake/Hunter/init.cmake"}}-{{checksum "cmake/Hunter/config.cmake"}}
+          key: &hunter-cache-key hunter-{{arch}}-{{checksum "cmake/Hunter/init.cmake"}}-{{checksum "cmake/Hunter/config.cmake"}}
       - run:
           name: "Configure"
-#          shell: cmd.exe
           working_directory: ~/build
           command: |
             & 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\Launch-VsDevShell.ps1' -Arch amd64
             cmake --version
             ninja --version
-            cmake ../project -DCMAKE_BUILD_TYPE= -DEVMONE_TESTING=ON
+            cmake ../project -G Ninja -DEVMONE_TESTING=ON
       - save_cache:
           name: "Save Hunter cache"
           key: *hunter-cache-key
