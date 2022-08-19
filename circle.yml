@@ -163,10 +163,14 @@ commands:
             - ~/.hunter/_Base/Cache
       - run:
           name: "Build"
-          command: cmake --build ~/build
+          command: |
+            & 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\Launch-VsDevShell.ps1' -Arch amd64
+            cmake --build ~/build
       - run:
           name: "Install"
-          command: cmake --build ~/build --target install
+          command: |
+            & 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\Launch-VsDevShell.ps1' -Arch amd64
+            cmake --build ~/build --target install
 
   test:
     description: "Test"
