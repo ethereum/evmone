@@ -99,6 +99,7 @@ evmc_status_code call_impl(StackTop stack, ExecutionState& state) noexcept
 
     const auto gas_used = msg.gas - result.gas_left;
     state.gas_left -= gas_used;
+    state.gas_refund += result.gas_refund;
     return EVMC_SUCCESS;
 }
 
@@ -161,6 +162,7 @@ evmc_status_code create_impl(StackTop stack, ExecutionState& state) noexcept
 
     const auto result = state.host.call(msg);
     state.gas_left -= msg.gas - result.gas_left;
+    state.gas_refund += result.gas_refund;
 
     state.return_data.assign(result.output_data, result.output_size);
     if (result.status_code == EVMC_SUCCESS)

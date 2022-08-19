@@ -397,6 +397,34 @@ TEST_P(evm, selfdestruct_with_balance)
     host.recorded_account_accesses.clear();
 }
 
+TEST_P(evm, selfdestruct_gas_refund)
+{
+    rev = EVMC_BERLIN;  // The last revision with gas refund.
+    const auto code = selfdestruct(0xbe);
+    execute(code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 7603);  // Cold access to 0xbe.
+    EXPECT_EQ(result.gas_refund, 24000);
+
+    // Second selfdestruct of the same account.
+    execute(code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 5003);  // Warm access to 0xbe.
+    EXPECT_EQ(result.gas_refund, 0);      // No refund.
+
+    // Third selfdestruct - from different account.
+    msg.recipient = 0x01_address;
+    execute(code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 5003);  // Warm access to 0xbe.
+    EXPECT_EQ(result.gas_refund, 24000);
+}
+
+TEST_P(evm, selfdestruct_no_gas_refund)
+{
+    rev = EVMC_LONDON;  // Since London there is no gas refund.
+    execute(selfdestruct(0xbe));
+    EXPECT_GAS_USED(EVMC_SUCCESS, 7603);
+    EXPECT_EQ(result.gas_refund, 0);
+}
+
 
 TEST_P(evm, blockhash)
 {
