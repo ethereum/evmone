@@ -145,27 +145,6 @@ commands:
       - run:
           name: "Update submodules"
           command: git submodule update --init --recursive
-#      - run: choco install cmake -y
-      - run:
-          name: "Environment"
-          shell: bash.exe
-          command: |
-            CC=${CC:-cc}
-            CXX=${CXX:-cpp}
-            echo CC: $CC
-            echo CXX: $CXX
-            $CC --version
-            $CXX --version
-            cmake --version
-            echo CMAKE_BUILD_PARALLEL_LEVEL: $CMAKE_BUILD_PARALLEL_LEVEL
-
-            # Create the build.info file for cache key.
-            echo $TOOLCHAIN >> build.info
-            echo $CMAKE_OPTIONS >> build.info
-            $CXX --version >> build.info
-            
-            printf '\n-----------\nbuild.info:\n'
-            cat build.info
       - restore_cache:
           name: "Restore Hunter cache"
           key: &hunter-cache-key hunter-{{arch}}-{{checksum "build.info"}}-{{checksum "cmake/Hunter/init.cmake"}}-{{checksum "cmake/Hunter/config.cmake"}}
