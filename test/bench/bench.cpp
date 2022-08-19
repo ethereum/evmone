@@ -150,10 +150,13 @@ void register_benchmarks(const std::vector<BenchmarkCase>& benchmark_cases)
 {
     evmc::VM* advanced_vm = nullptr;
     evmc::VM* baseline_vm = nullptr;
+    evmc::VM* basel_cg_vm = nullptr;
     if (const auto it = registered_vms.find("advanced"); it != registered_vms.end())
         advanced_vm = &it->second;
     if (const auto it = registered_vms.find("baseline"); it != registered_vms.end())
         baseline_vm = &it->second;
+    if (const auto it = registered_vms.find("bnocgoto"); it != registered_vms.end())
+        basel_cg_vm = &it->second;
 
     for (const auto& b : benchmark_cases)
     {
@@ -189,6 +192,14 @@ void register_benchmarks(const std::vector<BenchmarkCase>& benchmark_cases)
             {
                 const auto name = "baseline/execute/" + case_name;
                 RegisterBenchmark(name.c_str(), [&vm = *baseline_vm, &b, &input](State& state) {
+                    bench_baseline_execute(state, vm, b.code, input.input, input.expected_output);
+                })->Unit(kMicrosecond);
+            }
+
+            if (basel_cg_vm != nullptr)
+            {
+                const auto name = "bnocgoto/execute/" + case_name;
+                RegisterBenchmark(name.c_str(), [&vm = *basel_cg_vm, &b, &input](State& state) {
                     bench_baseline_execute(state, vm, b.code, input.input, input.expected_output);
                 })->Unit(kMicrosecond);
             }
@@ -308,6 +319,7 @@ int main(int argc, char** argv)
 
         registered_vms["advanced"] = evmc::VM{evmc_create_evmone(), {{"O", "2"}}};
         registered_vms["baseline"] = evmc::VM{evmc_create_evmone(), {{"O", "0"}}};
+        registered_vms["bnocgoto"] = evmc::VM{evmc_create_evmone(), {{"O", "0"}, {"cgoto", "no"}}};
         register_benchmarks(benchmark_cases);
         register_synthetic_benchmarks();
         RunSpecifiedBenchmarks();

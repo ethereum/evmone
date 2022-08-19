@@ -17,6 +17,10 @@ namespace evmone
 /// The evmone EVMC instance.
 class VM : public evmc_vm
 {
+public:
+    bool cgoto = EVMONE_CGOTO_SUPPORTED;
+
+private:
     std::unique_ptr<Tracer> m_first_tracer;
 
 public:

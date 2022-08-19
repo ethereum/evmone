@@ -325,10 +325,11 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     else
     {
 #if EVMONE_CGOTO_SUPPORTED
-        dispatch_cgoto(cost_table, state);
-#else
-        dispatch<false>(cost_table, state);
+        if (vm.cgoto)
+            dispatch_cgoto(cost_table, state);
+        else
 #endif
+            dispatch<false>(cost_table, state);
     }
 
     const auto gas_left =
