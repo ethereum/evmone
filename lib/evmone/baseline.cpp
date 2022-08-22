@@ -212,19 +212,8 @@ template <evmc_opcode Op>
 
 
 template <bool TracingEnabled>
-evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& analysis) noexcept
+void dispatch(const CostTable& cost_table, ExecutionState& state, Tracer* tracer = nullptr) noexcept
 {
-    state.analysis.baseline = &analysis;  // Assign code analysis for instruction implementations.
-
-    // Use padded code.
-    state.code = {analysis.padded_code.get(), state.code.size()};
-
-    auto* tracer = vm.get_tracer();
-    if constexpr (TracingEnabled)
-        tracer->notify_execution_start(state.rev, *state.msg, state.code);
-
-    const auto& cost_table = get_baseline_cost_table(state.rev);
-
     const auto* const code = state.code.data();
     const auto stack_bottom = state.stack_space.bottom();
 
@@ -247,11 +236,10 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
 #define X(OPCODE, IGNORED)                                                               \
     case OPCODE:                                                                         \
         ASM_COMMENT(OPCODE);                                                             \
-                                                                                         \
         if (const auto next = invoke<OPCODE>(cost_table, stack_bottom, position, state); \
             next.code_it == nullptr)                                                     \
         {                                                                                \
-            goto exit;                                                                   \
+            return;                                                                      \
         }                                                                                \
         else                                                                             \
         {                                                                                \
@@ -266,11 +254,30 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
 
         default:
             state.status = EVMC_UNDEFINED_INSTRUCTION;
-            goto exit;
+            return;
         }
     }
+}
+}  // namespace
 
-exit:
+evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& analysis) noexcept
+{
+    state.analysis.baseline = &analysis;  // Assign code analysis for instruction implementations.
+
+    // Use padded code.
+    state.code = {analysis.padded_code.get(), state.code.size()};
+
+    const auto& cost_table = get_baseline_cost_table(state.rev);
+
+    auto* tracer = vm.get_tracer();
+    if (tracer != nullptr)
+        tracer->notify_execution_start(state.rev, *state.msg, state.code);
+
+    if (INTX_UNLIKELY(tracer != nullptr))
+        dispatch<true>(cost_table, state, tracer);
+    else
+        dispatch<false>(cost_table, state);
+
     const auto gas_left =
         (state.status == EVMC_SUCCESS || state.status == EVMC_REVERT) ? state.gas_left : 0;
     const auto gas_refund = (state.status == EVMC_SUCCESS) ? state.gas_refund : 0;
@@ -279,19 +286,10 @@ exit:
     const auto result = evmc::make_result(state.status, gas_left, gas_refund,
         state.output_size != 0 ? &state.memory[state.output_offset] : nullptr, state.output_size);
 
-    if constexpr (TracingEnabled)
+    if (tracer != nullptr)
         tracer->notify_execution_end(result);
 
     return result;
-}
-}  // namespace
-
-evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& analysis) noexcept
-{
-    if (INTX_UNLIKELY(vm.get_tracer() != nullptr))
-        return execute<true>(vm, state, analysis);
-
-    return execute<false>(vm, state, analysis);
 }
 
 evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_context* ctx,
