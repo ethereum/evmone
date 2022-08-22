@@ -211,24 +211,6 @@ template <evmc_opcode Op>
 }
 
 
-/// Implementation of a generic instruction "case".
-#define DISPATCH_CASE(OPCODE)                                                            \
-    case OPCODE:                                                                         \
-        ASM_COMMENT(OPCODE);                                                             \
-                                                                                         \
-        if (const auto next = invoke<OPCODE>(cost_table, stack_bottom, position, state); \
-            next.code_it == nullptr)                                                     \
-        {                                                                                \
-            goto exit;                                                                   \
-        }                                                                                \
-        else                                                                             \
-        {                                                                                \
-            /* Update current position only when no error,                               \
-               this improves compiler optimization. */                                   \
-            position = next;                                                             \
-        }                                                                                \
-        break
-
 template <bool TracingEnabled>
 evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& analysis) noexcept
 {
@@ -262,9 +244,26 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
         const auto op = *position.code_it;
         switch (op)
         {
-#define X(OPCODE, IGNORED) DISPATCH_CASE(OPCODE);
+#define X(OPCODE, IGNORED)                                                               \
+    case OPCODE:                                                                         \
+        ASM_COMMENT(OPCODE);                                                             \
+                                                                                         \
+        if (const auto next = invoke<OPCODE>(cost_table, stack_bottom, position, state); \
+            next.code_it == nullptr)                                                     \
+        {                                                                                \
+            goto exit;                                                                   \
+        }                                                                                \
+        else                                                                             \
+        {                                                                                \
+            /* Update current position only when no error,                               \
+               this improves compiler optimization. */                                   \
+            position = next;                                                             \
+        }                                                                                \
+        break;
+
             MAP_OPCODE_TO_IDENTIFIER
 #undef X
+
         default:
             state.status = EVMC_UNDEFINED_INSTRUCTION;
             goto exit;
