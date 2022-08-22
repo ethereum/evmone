@@ -233,7 +233,7 @@ void dispatch(const CostTable& cost_table, ExecutionState& state, Tracer* tracer
         const auto op = *position.code_it;
         switch (op)
         {
-#define X(OPCODE, IGNORED)                                                               \
+#define ON_OPCODE(OPCODE)                                                                \
     case OPCODE:                                                                         \
         ASM_COMMENT(OPCODE);                                                             \
         if (const auto next = invoke<OPCODE>(cost_table, stack_bottom, position, state); \
@@ -249,8 +249,8 @@ void dispatch(const CostTable& cost_table, ExecutionState& state, Tracer* tracer
         }                                                                                \
         break;
 
-            MAP_OPCODE_TO_IDENTIFIER
-#undef X
+            MAP_OPCODES
+#undef ON_OPCODE
 
         default:
             state.status = EVMC_UNDEFINED_INSTRUCTION;

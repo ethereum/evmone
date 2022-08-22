@@ -222,9 +222,9 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
     std::array<instruction_exec_fn, 256> table{};
 
     // Init table with wrapped generic implementations.
-#define X(OPCODE, IGNORED) table[OPCODE] = op<instr::impl<(OPCODE)>>;
-    MAP_OPCODE_TO_IDENTIFIER
-#undef X
+#define ON_OPCODE(OPCODE) table[OPCODE] = op<instr::impl<(OPCODE)>>;
+    MAP_OPCODES
+#undef ON_OPCODE
 
     // Overwrite with Advanced-specific implementations.
     table[OP_SSTORE] = op_sstore;
