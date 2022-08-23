@@ -36,7 +36,8 @@ evmc_result execute(evmc_vm* /*unused*/, const evmc_host_interface* host, evmc_h
         if (rev >= EVMC_SHANGHAI)
         {
             const auto eof1_header = read_valid_eof1_header(container.begin());
-            analysis = analyze(rev, {&container[eof1_header.code_begin()], eof1_header.code_size});
+            analysis =
+                analyze(rev, {&container[eof1_header.code_begin(0)], eof1_header.code_sizes[0]});
         }
         else
             // Skip analysis, because it will recognize 01 section id as OP_ADD and return
