@@ -69,7 +69,7 @@ CodeAnalysis analyze_legacy(bytes_view code)
 
 CodeAnalysis analyze_eof1(bytes_view eof_container, const EOF1Header& header)
 {
-    const auto executable_code = eof_container.substr(header.code_begin(), header.code_size);
+    const auto executable_code = eof_container.substr(header.code_begin(0), header.code_sizes[0]);
 
     // FIXME: Better way of getting EOF version.
     return {executable_code, analyze_jumpdests(executable_code), eof_container[2]};
