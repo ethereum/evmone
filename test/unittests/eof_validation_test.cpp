@@ -77,7 +77,7 @@ TEST(eof_validation, minimal_valid_EOF1_code_with_data)
 TEST(eof_validation, EOF1_code_section_missing)
 {
     EXPECT_EQ(validate_eof("EF0001 00"), EOFValidationError::code_section_missing);
-    EXPECT_EQ(validate_eof("EF0001 020001 DA"), EOFValidationError::code_section_missing);
+    EXPECT_EQ(validate_eof("EF0001 020001 00 DA"), EOFValidationError::code_section_missing);
 }
 
 TEST(eof_validation, EOF1_code_section_0_size)
@@ -91,18 +91,19 @@ TEST(eof_validation, EOF1_data_section_0_size)
     EXPECT_EQ(validate_eof("EF0001 010001 020000 00 FE"), EOFValidationError::zero_section_size);
 }
 
-TEST(eof_validation, EOF1_multiple_code_sections)
-{
-    EXPECT_EQ(
-        validate_eof("EF0001 010001 010001 00 FE FE"), EOFValidationError::multiple_code_sections);
-    EXPECT_EQ(validate_eof("EF0001 010001 010001 020001 00 FE FE DA"),
-        EOFValidationError::multiple_code_sections);
-}
+// TEST(eof_validation, EOF1_multiple_code_sections)
+//{
+//     EXPECT_EQ(
+//         validate_eof("EF0001 010001 010001 00 FE FE"),
+//         EOFValidationError::multiple_code_sections);
+//     EXPECT_EQ(validate_eof("EF0001 010001 010001 020001 00 FE FE DA"),
+//         EOFValidationError::multiple_code_sections);
+// }
 
 TEST(eof_validation, EOF1_data_section_before_code_section)
 {
-    EXPECT_EQ(
-        validate_eof("EF0001 020001 010001 00 AA FE"), EOFValidationError::code_section_missing);
+    EXPECT_EQ(validate_eof("EF0001 020001 010001 00 AA FE"),
+        EOFValidationError::data_section_before_code_section);
 }
 
 TEST(eof_validation, EOF1_multiple_data_sections)
@@ -113,13 +114,13 @@ TEST(eof_validation, EOF1_multiple_data_sections)
 
 TEST(eof_validation, EOF1_unknown_section)
 {
-    EXPECT_EQ(validate_eof("EF0001 030001 00 FE"), EOFValidationError::unknown_section_id);
+    EXPECT_EQ(validate_eof("EF0001 040001 00 FE"), EOFValidationError::unknown_section_id);
     EXPECT_EQ(validate_eof("EF0001 FF0001 00 FE"), EOFValidationError::unknown_section_id);
     EXPECT_EQ(
-        validate_eof("EF0001 010001 030001 00 FE 00"), EOFValidationError::unknown_section_id);
+        validate_eof("EF0001 010001 040001 00 FE 00"), EOFValidationError::unknown_section_id);
     EXPECT_EQ(
         validate_eof("EF0001 010001 FF0001 00 FE 00"), EOFValidationError::unknown_section_id);
-    EXPECT_EQ(validate_eof("EF0001 010001 020001 030001 00 FE AA 00"),
+    EXPECT_EQ(validate_eof("EF0001 010001 020001 040001 00 FE AA 00"),
         EOFValidationError::unknown_section_id);
     EXPECT_EQ(validate_eof("EF0001 010001 020001 FF0001 00 FE AA 00"),
         EOFValidationError::unknown_section_id);
@@ -150,6 +151,20 @@ TEST(eof_validation, EOF1_truncated_section)
         EOFValidationError::invalid_section_bodies_size);
     EXPECT_EQ(validate_eof("EF0001 010001 020002 00 FE AA"),
         EOFValidationError::invalid_section_bodies_size);
+}
+
+TEST(eof_validation, EOF1_code_section_offset)
+{
+    const auto eof = "EF0001 030004 010002 010001 00 0000 0000 fefe fe"_hex;
+    ASSERT_EQ(validate_eof(EVMC_CANCUN, eof), EOFValidationError::success);
+
+    const auto header = read_valid_eof1_header(eof);
+    ASSERT_EQ(header.code_sizes.size(), 2);
+    EXPECT_EQ(header.code_sizes[0], 2);
+    EXPECT_EQ(header.code_sizes[1], 1);
+    ASSERT_EQ(header.code_offsets.size(), 2);
+    EXPECT_EQ(header.code_offsets[0], 17);
+    EXPECT_EQ(header.code_offsets[1], 19);
 }
 
 TEST(eof_validation, EOF1_trailing_bytes)
