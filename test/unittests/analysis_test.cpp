@@ -261,7 +261,7 @@ TEST(analysis, example1_eof1)
     const auto code = eof1_bytecode(
         push(0x2a) + push(0x1e) + OP_MSTORE8 + OP_MSIZE + push(0) + OP_SSTORE, "deadbeef");
     const auto header = evmone::read_valid_eof1_header(code);
-    const auto analysis = analyze(EVMC_CANCUN, {&code[header.code_begin()], header.code_size});
+    const auto analysis = analyze(EVMC_CANCUN, {&code[header.code_begin(0)], header.code_sizes[0]});
 
     ASSERT_EQ(analysis.instrs.size(), 8);
 
