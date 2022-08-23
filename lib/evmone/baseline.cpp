@@ -286,7 +286,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     const auto result = evmc::make_result(state.status, gas_left, gas_refund,
         state.output_size != 0 ? &state.memory[state.output_offset] : nullptr, state.output_size);
 
-    if (tracer != nullptr)
+    if (INTX_UNLIKELY(tracer != nullptr))
         tracer->notify_execution_end(result);
 
     return result;
