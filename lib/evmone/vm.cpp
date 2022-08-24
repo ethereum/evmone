@@ -47,6 +47,19 @@ evmc_set_option_result set_option(evmc_vm* c_vm, char const* c_name, char const*
         }
         return EVMC_SET_OPTION_INVALID_VALUE;
     }
+    else if (name == "cgoto")
+    {
+#if EVMONE_CGOTO_SUPPORTED
+        if (value == "no")
+        {
+            vm.cgoto = false;
+            return EVMC_SET_OPTION_SUCCESS;
+        }
+        return EVMC_SET_OPTION_INVALID_VALUE;
+#else
+        return EVMC_SET_OPTION_INVALID_NAME;
+#endif
+    }
     else if (name == "trace")
     {
         vm.add_tracer(create_instruction_tracer(std::cerr));

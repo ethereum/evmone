@@ -233,7 +233,7 @@ void dispatch(const CostTable& cost_table, ExecutionState& state, Tracer* tracer
         const auto op = *position.code_it;
         switch (op)
         {
-#define X(OPCODE, IGNORED)                                                               \
+#define ON_OPCODE(OPCODE)                                                                \
     case OPCODE:                                                                         \
         ASM_COMMENT(OPCODE);                                                             \
         if (const auto next = invoke<OPCODE>(cost_table, stack_bottom, position, state); \
@@ -249,8 +249,8 @@ void dispatch(const CostTable& cost_table, ExecutionState& state, Tracer* tracer
         }                                                                                \
         break;
 
-            MAP_OPCODE_TO_IDENTIFIER
-#undef X
+            MAP_OPCODES
+#undef ON_OPCODE
 
         default:
             state.status = EVMC_UNDEFINED_INSTRUCTION;
@@ -258,6 +258,53 @@ void dispatch(const CostTable& cost_table, ExecutionState& state, Tracer* tracer
         }
     }
 }
+
+#if EVMONE_CGOTO_SUPPORTED
+void dispatch_cgoto(const CostTable& cost_table, ExecutionState& state) noexcept
+{
+#pragma GCC diagnostic ignored "-Wpedantic"
+
+    static constexpr void* cgoto_table[] = {
+#define ON_OPCODE(OPCODE) &&TARGET_##OPCODE,
+#undef ON_OPCODE_UNDEFINED
+#define ON_OPCODE_UNDEFINED(_) &&TARGET_OP_UNDEFINED,
+        MAP_OPCODES
+#undef ON_OPCODE
+#undef ON_OPCODE_UNDEFINED
+#define ON_OPCODE_UNDEFINED ON_OPCODE_UNDEFINED_DEFAULT
+    };
+    static_assert(std::size(cgoto_table) == 256);
+
+    const auto* const code = state.code.data();
+    const auto stack_bottom = state.stack_space.bottom();
+
+    // Code iterator and stack top pointer for interpreter loop.
+    Position position{code, stack_bottom};
+
+    goto* cgoto_table[*position.code_it];
+
+#define ON_OPCODE(OPCODE)                                                            \
+    TARGET_##OPCODE : ASM_COMMENT(OPCODE);                                           \
+    if (const auto next = invoke<OPCODE>(cost_table, stack_bottom, position, state); \
+        next.code_it == nullptr)                                                     \
+    {                                                                                \
+        return;                                                                      \
+    }                                                                                \
+    else                                                                             \
+    {                                                                                \
+        /* Update current position only when no error,                               \
+           this improves compiler optimization. */                                   \
+        position = next;                                                             \
+    }                                                                                \
+    goto* cgoto_table[*position.code_it];
+
+    MAP_OPCODES
+#undef ON_OPCODE
+
+TARGET_OP_UNDEFINED:
+    state.status = EVMC_UNDEFINED_INSTRUCTION;
+}
+#endif
 }  // namespace
 
 evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& analysis) noexcept
@@ -276,7 +323,14 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
         dispatch<true>(cost_table, state, tracer);
     }
     else
-        dispatch<false>(cost_table, state);
+    {
+#if EVMONE_CGOTO_SUPPORTED
+        if (vm.cgoto)
+            dispatch_cgoto(cost_table, state);
+        else
+#endif
+            dispatch<false>(cost_table, state);
+    }
 
     const auto gas_left =
         (state.status == EVMC_SUCCESS || state.status == EVMC_REVERT) ? state.gas_left : 0;

@@ -910,10 +910,12 @@ inline StopToken selfdestruct(StackTop stack, ExecutionState& state) noexcept
 template <evmc_opcode Op>
 inline constexpr auto impl = nullptr;
 
-#define X(OPCODE, IDENTIFIER) \
-    template <>               \
+#undef ON_OPCODE_IDENTIFIER
+#define ON_OPCODE_IDENTIFIER(OPCODE, IDENTIFIER) \
+    template <>                                  \
     inline constexpr auto impl<OPCODE> = IDENTIFIER;  // opcode -> implementation
-MAP_OPCODE_TO_IDENTIFIER
-#undef X
+MAP_OPCODES
+#undef ON_OPCODE_IDENTIFIER
+#define ON_OPCODE_IDENTIFIER ON_OPCODE_IDENTIFIER_DEFAULT
 }  // namespace instr::core
 }  // namespace evmone
