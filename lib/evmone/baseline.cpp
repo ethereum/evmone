@@ -270,11 +270,11 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     const auto& cost_table = get_baseline_cost_table(state.rev);
 
     auto* tracer = vm.get_tracer();
-    if (tracer != nullptr)
-        tracer->notify_execution_start(state.rev, *state.msg, state.code);
-
     if (INTX_UNLIKELY(tracer != nullptr))
+    {
+        tracer->notify_execution_start(state.rev, *state.msg, state.code);
         dispatch<true>(cost_table, state, tracer);
+    }
     else
         dispatch<false>(cost_table, state);
 
@@ -286,7 +286,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     const auto result = evmc::make_result(state.status, gas_left, gas_refund,
         state.output_size != 0 ? &state.memory[state.output_offset] : nullptr, state.output_size);
 
-    if (tracer != nullptr)
+    if (INTX_UNLIKELY(tracer != nullptr))
         tracer->notify_execution_end(result);
 
     return result;
