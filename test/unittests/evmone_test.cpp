@@ -4,6 +4,7 @@
 
 #include <evmc/evmc.hpp>
 #include <evmone/evmone.h>
+#include <evmone/vm.hpp>
 #include <gtest/gtest.h>
 
 TEST(evmone, info)
@@ -43,4 +44,17 @@ TEST(evmone, set_option_optimization_level)
     EXPECT_EQ(vm.set_option("O", "20"), EVMC_SET_OPTION_INVALID_VALUE);
     EXPECT_EQ(vm.set_option("O", "21"), EVMC_SET_OPTION_INVALID_VALUE);
     EXPECT_EQ(vm.set_option("O", "22"), EVMC_SET_OPTION_INVALID_VALUE);
+}
+
+TEST(evmone, set_option_cgoto)
+{
+    evmc::VM vm{evmc_create_evmone()};
+
+#if EVMONE_CGOTO_SUPPORTED
+    EXPECT_EQ(vm.set_option("cgoto", ""), EVMC_SET_OPTION_INVALID_VALUE);
+    EXPECT_EQ(vm.set_option("cgoto", "yes"), EVMC_SET_OPTION_INVALID_VALUE);
+    EXPECT_EQ(vm.set_option("cgoto", "no"), EVMC_SET_OPTION_SUCCESS);
+#else
+    EXPECT_EQ(vm.set_option("cgoto", "no"), EVMC_SET_OPTION_INVALID_NAME);
+#endif
 }
