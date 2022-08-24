@@ -284,7 +284,7 @@ __attribute__((target("bmi,bmi2"))) static void keccakf1600_bmi(uint64_t state[2
     keccakf1600_implementation(state);
 }
 
-__attribute__((constructor)) static void select_keccakf1600_implementation()
+__attribute__((constructor)) static void select_keccakf1600_implementation(void)
 {
     // Init CPU information.
     // This is needed on macOS because of the bug: https://bugs.llvm.org/show_bug.cgi?id=48459.
