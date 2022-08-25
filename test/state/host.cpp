@@ -5,6 +5,7 @@
 #include "host.hpp"
 #include "precompiles.hpp"
 #include "rlp.hpp"
+#include <iostream>
 
 namespace evmone::state
 {
@@ -21,6 +22,23 @@ bytes32 Host::get_storage(const address& addr, const bytes32& key) const noexcep
         return it->second.current;
     return {};
 }
+
+struct HitMap
+{
+    std::array<std::array<bool, 9>, EVMC_MAX_REVISION + 1> tbl{};
+
+    ~HitMap()
+    {
+        for (auto& rev : tbl)
+        {
+            for (auto b : rev)
+                std::cerr << int(b);
+            std::cerr << "\n";
+        }
+    }
+};
+
+static HitMap hitmap;
 
 evmc_storage_status Host::set_storage(
     const address& addr, const bytes32& key, const bytes32& value) noexcept
@@ -63,6 +81,7 @@ evmc_storage_status Host::set_storage(
             status = EVMC_STORAGE_MODIFIED_RESTORED;  // X → Y → X
     }
 
+    hitmap.tbl[m_rev][status] = true;
     storage_slot.current = value;  // Update current value.
     return status;
 }
