@@ -82,7 +82,7 @@ inline constexpr VM::VM() noexcept
         "evmone",
         PROJECT_VERSION,
         evmone::destroy,
-        evmone::advanced::execute,
+        evmone::baseline::execute,
         evmone::get_capabilities,
         evmone::set_option,
     }

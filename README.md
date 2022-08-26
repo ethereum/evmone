@@ -21,8 +21,13 @@ The codebase of _evmone_ is optimized to provide fast and efficient execution of
 3. The [intx] library is used to provide 256-bit integer precision.
 4. The [ethash] library is used to provide Keccak hash function implementation
    needed for the special `KECCAK256` instruction.
-5. Contains two interpreters: **Advanced** (default) and **Baseline** (experimental).
-   
+5. Contains two interpreters: **Baseline** (default) and **Advanced**.
+
+### Baseline Interpreter
+
+1. Provides relatively straight-forward but efficient EVM implementation.
+2. Performs only minimalistic `JUMPDEST` analysis.
+
 ### Advanced Interpreter
 
 1. The _indirect call threading_ is the dispatch method used -
@@ -30,12 +35,6 @@ The codebase of _evmone_ is optimized to provide fast and efficient execution of
 2. The gas cost and stack requirements of block of instructions is precomputed 
    and applied once per block during execution.
 3. Performs extensive and expensive bytecode analysis before execution.
-
-### Baseline Interpreter
-
-1. Provides relatively straight-forward EVM implementation.
-2. Performs only minimalistic `JUMPDEST` analysis.
-3. Experimental. Can be enabled with `O=0` option.
 
 
 ## Usage
