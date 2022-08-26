@@ -55,10 +55,10 @@ template <typename T1, typename T2>
 static auto print_input = std::getenv("PRINT");
 
 /// The reference VM: evmone Baseline
-static auto ref_vm = evmc::VM{evmc_create_evmone(), {{"O", "0"}}};
+static auto ref_vm = evmc::VM{evmc_create_evmone()};
 
 static evmc::VM external_vms[] = {
-    evmc::VM{evmc_create_evmone(), {{"O", "2"}}},
+    evmc::VM{evmc_create_evmone(), {{"advanced", ""}}},
 };
 
 

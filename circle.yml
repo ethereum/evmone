@@ -327,12 +327,12 @@ jobs:
           name: "Silkworm-driven consensus tests (Advanced)"
           working_directory: ~/build
           no_output_timeout: 20m
-          command: ~/silkworm/consensus --evm lib/libevmone.so,O=2 --tests ~/tests --threads $CMAKE_BUILD_PARALLEL_LEVEL
+          command: ~/silkworm/consensus --evm lib/libevmone.so,advanced --tests ~/tests --threads $CMAKE_BUILD_PARALLEL_LEVEL
       - run:
           name: "Silkworm-driven consensus tests (Baseline)"
           working_directory: ~/build
           no_output_timeout: 20m
-          command: ~/silkworm/consensus --evm lib/libevmone.so,O=0 --tests ~/tests --threads $CMAKE_BUILD_PARALLEL_LEVEL
+          command: ~/silkworm/consensus --evm lib/libevmone.so --tests ~/tests --threads $CMAKE_BUILD_PARALLEL_LEVEL
       - collect_coverage_gcc
       - upload_coverage:
           flags: consensus

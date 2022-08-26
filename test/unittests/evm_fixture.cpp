@@ -9,9 +9,9 @@ namespace evmone::test
 {
 namespace
 {
-evmc::VM advanced_vm{evmc_create_evmone(), {{"O", "2"}}};
-evmc::VM baseline_vm{evmc_create_evmone(), {{"O", "0"}}};
-evmc::VM bnocgoto_vm{evmc_create_evmone(), {{"O", "0"}, {"cgoto", "no"}}};
+evmc::VM advanced_vm{evmc_create_evmone(), {{"advanced", ""}}};
+evmc::VM baseline_vm{evmc_create_evmone()};
+evmc::VM bnocgoto_vm{evmc_create_evmone(), {{"cgoto", "no"}}};
 
 const char* print_vm_name(const testing::TestParamInfo<evmc::VM*>& info) noexcept
 {

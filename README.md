@@ -21,7 +21,9 @@ The codebase of _evmone_ is optimized to provide fast and efficient execution of
 3. The [intx] library is used to provide 256-bit integer precision.
 4. The [ethash] library is used to provide Keccak hash function implementation
    needed for the special `KECCAK256` instruction.
-5. Contains two interpreters: **Baseline** (default) and **Advanced**.
+5. Contains two interpreters: 
+   - **Baseline** (default)
+   - **Advanced** (select with the `advanced` option)
 
 ### Baseline Interpreter
 

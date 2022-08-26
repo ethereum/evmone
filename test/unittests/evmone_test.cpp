@@ -32,18 +32,13 @@ TEST(evmone, set_option_invalid)
     vm->destroy(vm);
 }
 
-TEST(evmone, set_option_optimization_level)
+TEST(evmone, set_option_advanced)
 {
     auto vm = evmc::VM{evmc_create_evmone()};
-    EXPECT_EQ(vm.set_option("O", ""), EVMC_SET_OPTION_INVALID_VALUE);
-    EXPECT_EQ(vm.set_option("O", "0"), EVMC_SET_OPTION_SUCCESS);
-    EXPECT_EQ(vm.set_option("O", "1"), EVMC_SET_OPTION_INVALID_VALUE);
-    EXPECT_EQ(vm.set_option("O", "2"), EVMC_SET_OPTION_SUCCESS);
-    EXPECT_EQ(vm.set_option("O", "3"), EVMC_SET_OPTION_INVALID_VALUE);
+    EXPECT_EQ(vm.set_option("advanced", ""), EVMC_SET_OPTION_SUCCESS);
 
-    EXPECT_EQ(vm.set_option("O", "20"), EVMC_SET_OPTION_INVALID_VALUE);
-    EXPECT_EQ(vm.set_option("O", "21"), EVMC_SET_OPTION_INVALID_VALUE);
-    EXPECT_EQ(vm.set_option("O", "22"), EVMC_SET_OPTION_INVALID_VALUE);
+    // This will also enable Advanced.
+    EXPECT_EQ(vm.set_option("advanced", "no"), EVMC_SET_OPTION_SUCCESS);
 }
 
 TEST(evmone, set_option_cgoto)

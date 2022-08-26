@@ -23,7 +23,7 @@ protected:
     std::ostringstream trace_stream;
 
     tracing()
-      : m_baseline_vm{evmc_create_evmone(), {{"O", "0"}}},
+      : m_baseline_vm{evmc_create_evmone()},
         vm{*static_cast<evmone::VM*>(m_baseline_vm.get_raw_pointer())}
     {}
 

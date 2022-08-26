@@ -33,19 +33,10 @@ evmc_set_option_result set_option(evmc_vm* c_vm, char const* c_name, char const*
     const auto value = (c_value != nullptr) ? std::string_view{c_value} : std::string_view{};
     auto& vm = *static_cast<VM*>(c_vm);
 
-    if (name == "O")
+    if (name == "advanced")
     {
-        if (value == "0")
-        {
-            c_vm->execute = evmone::baseline::execute;
-            return EVMC_SET_OPTION_SUCCESS;
-        }
-        else if (value == "2")
-        {
-            c_vm->execute = evmone::advanced::execute;
-            return EVMC_SET_OPTION_SUCCESS;
-        }
-        return EVMC_SET_OPTION_INVALID_VALUE;
+        c_vm->execute = evmone::advanced::execute;
+        return EVMC_SET_OPTION_SUCCESS;
     }
     else if (name == "cgoto")
     {

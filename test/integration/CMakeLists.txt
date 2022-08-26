@@ -7,7 +7,7 @@ set(PREFIX ${PROJECT_NAME}/integration)
 get_target_property(EVMONE_LIB_TYPE evmone TYPE)
 if(EVMONE_LIB_TYPE STREQUAL SHARED_LIBRARY)
 
-    add_test(NAME ${PREFIX}/histogram COMMAND $<TARGET_FILE:evmc::tool> --vm $<TARGET_FILE:evmone>,O=0,histogram run 6000808080800101010200)
+    add_test(NAME ${PREFIX}/histogram COMMAND $<TARGET_FILE:evmc::tool> --vm $<TARGET_FILE:evmone>,histogram run 6000808080800101010200)
     set_tests_properties(
         ${PREFIX}/histogram PROPERTIES PASS_REGULAR_EXPRESSION
         "--- # HISTOGRAM depth=0
@@ -19,7 +19,7 @@ PUSH1,1
 DUP1,4
 ")
 
-    add_test(NAME ${PREFIX}/trace COMMAND $<TARGET_FILE:evmc::tool> --vm $<TARGET_FILE:evmone>,O=0,trace run 60006002800103)
+    add_test(NAME ${PREFIX}/trace COMMAND $<TARGET_FILE:evmc::tool> --vm $<TARGET_FILE:evmone>,trace run 60006002800103)
     set_tests_properties(
         ${PREFIX}/trace PROPERTIES PASS_REGULAR_EXPRESSION
         "{\"depth\":0,\"rev\":\"London\",\"static\":false}
