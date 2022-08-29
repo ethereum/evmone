@@ -8,9 +8,66 @@ and this project adheres to [Semantic Versioning].
 
 ## [0.9.0] — unreleased
 
+In this release we have been focused on improving performance of the Baseline interpreter.
+The end result is that the Baseline is **26% faster** than in previous version 0.8.0
+and **18% faster** than the current Advanced interpreter while having
+over **8x smaller** code analysis cost. The Baseline is now the _default_ interpreter because 
+it is simpler and has become better than the Advanced.
+
+The Advanced also has got **4% faster** than in the previous version.
+
+All numbers are from running the "main" benchmark suite
+on 4.0 GHz Intel Haswell CPU, using the Clang 15 compiler.
+
+Moreover, evmone now calculates _gas refund_ and reports it back using [EVMC 10][EVMC 10.0.0] API.
+
+Finally, the options `O=2` and `O=0` have been replaced by `advanced`. See below for details.
+
+### Added
+
+- Calculation of EVM gas refunds.
+  [#493](https://github.com/ethereum/evmone/pull/493)
+- `PUSH0` instruction implementation ([EIP-3855]), enabled in [Shanghai].
+  [#448](https://github.com/ethereum/evmone/pull/448)
+  [#432](https://github.com/ethereum/evmone/pull/432)
+- Experimental [EOF] validation and execution ([EIP-3540]), enabled in [Shanghai].
+  [#334](https://github.com/ethereum/evmone/pull/334)
+  [#366](https://github.com/ethereum/evmone/pull/366)
+  [#471](https://github.com/ethereum/evmone/pull/471)
+- _In progress_ State Transition execution tool for testing purposes. So far we've merged:
+  - RLP encoding,
+    [#463](https://github.com/ethereum/evmone/pull/463)
+  - Merkle Patricia Trie root hash computing,
+    [#477](https://github.com/ethereum/evmone/pull/477)
+    [#478](https://github.com/ethereum/evmone/pull/478)
+  - JSON State Transition Test loader.
+    [#479](https://github.com/ethereum/evmone/pull/479)
+
+### Changed
+
+- EVMC options `O=0` (use Baseline) and `O=2` (use Advanced) have been replaced with single
+  option `advanced` to use the non-default Advanced interpreter.
+  [#500](https://github.com/ethereum/evmone/pull/500)
+- Baseline has replaced Advanced as the default interpreter. The later can still be selected
+  with the `advanced` option. Reasons are explained in the introduction.
+  [#500](https://github.com/ethereum/evmone/pull/500)
+- _A lot_ of changes related to the optimization of the Baseline interpreter, including
+  refactoring and optimization of instructions' implementations.
+- The Baseline interpreter now uses "computed goto" dispatch if supported by C++ compiler.
+  The "switch" dispatch can be forced with the `cgoto=no` option.
+  [#495](https://github.com/ethereum/evmone/pull/495)
+- Improvements to basic block metadata placement in the Advanced interpreter.
+  [#457](https://github.com/ethereum/evmone/pull/457)
+  [#474](https://github.com/ethereum/evmone/pull/474)
+- [EVMC] has been upgraded to version [10.0.0][EVMC 10.0.0].
+  [#499](https://github.com/ethereum/evmone/pull/499)
+- [intx] has been upgrade to version [0.8.0][intx 0.8.0].
+  [#446](https://github.com/ethereum/evmone/pull/446)
+
 ### Removed
 
-- `evmone-fuzzer` has removed [aleth-interpreter][Aleth] as it is not maintained and lacks the latest EVM features.
+- `evmone-fuzzer` has removed [aleth-interpreter][Aleth] as it is not maintained
+  and lacks the latest EVM features.
   [#453](https://github.com/ethereum/evmone/pull/453)
 
 
@@ -33,7 +90,7 @@ and this project adheres to [Semantic Versioning].
 
 ## [0.8.0] — 2021-07-01
 
-## Added
+### Added
 
 - Full support for **[London]** EVM revision:
   - [EVMC] upgraded to version [9.0.0][EVMC 9.0.0].
@@ -312,12 +369,17 @@ It delivers fully-compatible and high-speed EVM implementation.
 [EIP-2929]: https://eips.ethereum.org/EIPS/eip-2929
 [EIP-3155]: https://eips.ethereum.org/EIPS/eip-3155
 [EIP-3198]: https://eips.ethereum.org/EIPS/eip-3198
+[EIP-3540]: https://eips.ethereum.org/EIPS/eip-3540
+[EIP-3855]: https://eips.ethereum.org/EIPS/eip-3855
 [Spurious Dragon]: https://eips.ethereum.org/EIPS/eip-607
 [Petersburg]: https://eips.ethereum.org/EIPS/eip-1716
 [Istanbul]: https://eips.ethereum.org/EIPS/eip-1679
-[Berlin]: https://github.com/ethereum/eth1.0-specs/blob/master/network-upgrades/mainnet-upgrades/berlin.md
-[London]: https://github.com/ethereum/eth1.0-specs/blob/master/network-upgrades/mainnet-upgrades/london.md
+[Berlin]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/berlin.md
+[London]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/london.md
+[Shanghai]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/shanghai.md
+[EOF]: https://notes.ethereum.org/@ipsilon/evm-object-format-overview
 [EVMC]: https://github.com/ethereum/evmc
+[EVMC 10.0.0]: https://github.com/ethereum/evmc/releases/tag/v10.0.0
 [EVMC 9.0.0]: https://github.com/ethereum/evmc/releases/tag/v9.0.0
 [EVMC 8.0.0]: https://github.com/ethereum/evmc/releases/tag/v8.0.0
 [EVMC 7.5.0]: https://github.com/ethereum/evmc/releases/tag/v7.5.0
@@ -325,6 +387,7 @@ It delivers fully-compatible and high-speed EVM implementation.
 [EVMC 7.1.0]: https://github.com/ethereum/evmc/releases/tag/v7.1.0
 [EVMC 7.0.0]: https://github.com/ethereum/evmc/releases/tag/v7.0.0
 [intx]: https://github.com/chfast/intx
+[intx 0.8.0]: https://github.com/chfast/intx/releases/tag/v0.8.0
 [intx 0.6.0]: https://github.com/chfast/intx/releases/tag/v0.6.0
 [intx 0.5.0]: https://github.com/chfast/intx/releases/tag/v0.5.0
 [ethash]: https://github.com/chfast/ethash
