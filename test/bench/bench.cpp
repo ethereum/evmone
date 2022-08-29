@@ -317,9 +317,9 @@ int main(int argc, char** argv)
         if (ec != 0)
             return ec;
 
-        registered_vms["advanced"] = evmc::VM{evmc_create_evmone(), {{"O", "2"}}};
-        registered_vms["baseline"] = evmc::VM{evmc_create_evmone(), {{"O", "0"}}};
-        registered_vms["bnocgoto"] = evmc::VM{evmc_create_evmone(), {{"O", "0"}, {"cgoto", "no"}}};
+        registered_vms["advanced"] = evmc::VM{evmc_create_evmone(), {{"advanced", ""}}};
+        registered_vms["baseline"] = evmc::VM{evmc_create_evmone()};
+        registered_vms["bnocgoto"] = evmc::VM{evmc_create_evmone(), {{"cgoto", "no"}}};
         register_benchmarks(benchmark_cases);
         register_synthetic_benchmarks();
         RunSpecifiedBenchmarks();
