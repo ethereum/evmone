@@ -41,12 +41,6 @@ The codebase of _evmone_ is optimized to provide fast and efficient execution of
 
 ## Usage
 
-### Optimization levels
-
-The option `O` controls the "optimization level":
-- `O=2` uses Advanced interpreter (default),
-- `O=0` uses Baseline interpreter.
-
 ### As geth plugin
 
 evmone implements the [EVMC] API for Ethereum Virtual Machines.
@@ -63,6 +57,7 @@ geth --vm.evm=./libevmone.so
 ```
 
 ### Building from source
+
 To build the evmone EVMC module (shared library), test, and benchmark:
 
 1. Fetch the source code:
@@ -94,6 +89,7 @@ To build the evmone EVMC module (shared library), test, and benchmark:
    build/bin/evmone-unittests
    build/bin/evmone-bench test/benchmarks
    ```
+
 ### Tools
 
 #### evm-test
