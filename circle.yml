@@ -18,7 +18,7 @@ executors:
     resource_class: small
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
-  consensus-tests:
+  blockchain-tests:
     docker:
       - image: ethereum/cpp-build-env:17-gcc-11
     resource_class: xlarge
@@ -106,13 +106,13 @@ commands:
             [ "$SILKWORM_BUILD" = true ] || exit 0
             git clone --no-checkout --single-branch https://github.com/torquem-ch/silkworm.git . --branch <<parameters.branch>>
             git checkout <<parameters.commit>>
-            git submodule update --init --recursive --progress
+            git submodule update --init --recursive --depth=1 --progress
       - run:
           name: "Configure Silkworm"
           working_directory: ~/silkworm
           command: |
             [ "$SILKWORM_BUILD" = true ] || exit 0
-            cmake -S src -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=$(pwd)
+            cmake -S src -B build -DCMAKE_BUILD_TYPE=Release -DHUNTER_CONFIGURATION_TYPES=Release -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=$(pwd)
       - run:
           name: "Build Silkworm cmd/consensus"
           working_directory: ~/silkworm
@@ -311,34 +311,33 @@ jobs:
             echo $name
             ghr -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME -n "$name" $prerelease_flag $CIRCLE_TAG ~/package
 
-  consensus-tests:
-    executor: consensus-tests
+  blockchain-tests:
+    executor: blockchain-tests
     environment:
       BUILD_TYPE: Coverage
       CMAKE_OPTIONS: -DEVMONE_TESTING=OFF -DCMAKE_CXX_FLAGS=-Og
     steps:
       - build
       - build_silkworm:
-          branch: evmc10
-          commit: 0ac066055a6610c321f924c73d380bf860d2834b
+          commit: 4f2c788477a6673a635876c42a5cc596794dd8c5
       - download_consensus_tests:
           rev: v10.4
       - run:
-          name: "Silkworm-driven consensus tests (Advanced)"
+          name: "Silkworm-driven blockchain tests (Advanced)"
           working_directory: ~/build
           no_output_timeout: 20m
           command: ~/silkworm/consensus --evm lib/libevmone.so,advanced --tests ~/tests --threads $CMAKE_BUILD_PARALLEL_LEVEL
       - run:
-          name: "Silkworm-driven consensus tests (Baseline)"
+          name: "Silkworm-driven blockchain tests (Baseline)"
           working_directory: ~/build
           no_output_timeout: 20m
           command: ~/silkworm/consensus --evm lib/libevmone.so --tests ~/tests --threads $CMAKE_BUILD_PARALLEL_LEVEL
       - collect_coverage_gcc
       - upload_coverage:
-          flags: consensus
+          flags: blockchaintests
 
   state-tests:
-    executor: consensus-tests
+    executor: blockchain-tests
     environment:
       BUILD_TYPE: Coverage
       CMAKE_OPTIONS: -DCMAKE_CXX_FLAGS=-Og
@@ -349,11 +348,9 @@ jobs:
           name: "Download tests"
           working_directory: ~/tests
           command: |
-            git clone --depth=50 --single-branch https://github.com/ethereum/tests .
+            git clone --no-checkout --depth=50 --single-branch https://github.com/ethereum/tests .
             git checkout cde14b047d0d2549ed8fd46b4946aed0ec938cbf
-            git submodule init LegacyTests
-            git config -f .gitmodules submodule.LegacyTests.shallow true
-            git submodule update
+            git submodule update --init --depth=1
       - run:
           name: "State tests"
           working_directory: ~/build
@@ -518,7 +515,7 @@ workflows:
             tags:
               only: /^v[0-9].*/
       - state-tests
-      - consensus-tests
+      - blockchain-tests
       - cmake-min
       - gcc-min
       - clang-min
