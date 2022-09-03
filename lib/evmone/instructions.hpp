@@ -243,13 +243,13 @@ inline void signextend(StackTop stack) noexcept
 inline void lt(StackTop stack) noexcept
 {
     const auto& x = stack.pop();
-    stack[0] = x < stack[0];
+    stack[0] = subc(x, stack[0]).carry;
 }
 
 inline void gt(StackTop stack) noexcept
 {
     const auto& x = stack.pop();
-    stack[0] = stack[0] < x;  // Arguments are swapped and < is used.
+    stack[0] = subc(stack[0], x).carry;  // Arguments are swapped and < is used.
 }
 
 inline void slt(StackTop stack) noexcept
