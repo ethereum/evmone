@@ -319,9 +319,9 @@ jobs:
     steps:
       - build
       - build_silkworm:
-          commit: 4f2c788477a6673a635876c42a5cc596794dd8c5
+          commit: 98e4908f57643def0069ac9ae85a26eba715d8a7
       - download_consensus_tests:
-          rev: v10.4
+          rev: v11.1
       - run:
           name: "Silkworm-driven blockchain tests (Advanced)"
           working_directory: ~/build
