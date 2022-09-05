@@ -133,7 +133,8 @@ commands:
       - run:
           name: "Download consensus tests: <<parameters.rev>>"
           working_directory: ~/tests
-          command: curl -L https://github.com/ethereum/tests/archive/<<parameters.rev>>.tar.gz | tar -xz --strip=1
+          command: |
+            git clone --depth=1 --recurse-submodules --shallow-submodules --single-branch https://github.com/ethereum/tests . --branch <<parameters.rev>>
 
   build:
     description: "Build"
@@ -319,9 +320,9 @@ jobs:
     steps:
       - build
       - build_silkworm:
-          commit: 4f2c788477a6673a635876c42a5cc596794dd8c5
+          commit: 98e4908f57643def0069ac9ae85a26eba715d8a7
       - download_consensus_tests:
-          rev: v10.4
+          rev: v11.1
       - run:
           name: "Silkworm-driven blockchain tests (Advanced)"
           working_directory: ~/build
@@ -343,14 +344,8 @@ jobs:
       CMAKE_OPTIONS: -DCMAKE_CXX_FLAGS=-Og
     steps:
       - build
-      - run:
-          # TODO: Merge with download_consensus_tests
-          name: "Download tests"
-          working_directory: ~/tests
-          command: |
-            git clone --no-checkout --depth=50 --single-branch https://github.com/ethereum/tests .
-            git checkout cde14b047d0d2549ed8fd46b4946aed0ec938cbf
-            git submodule update --init --depth=1
+      - download_consensus_tests:
+          rev: v11.1
       - run:
           name: "State tests"
           working_directory: ~/build
