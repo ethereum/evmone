@@ -183,6 +183,7 @@ public:
         bytes_view _code) noexcept
     {
         gas_left = message.gas;
+        gas_refund = 0;
         memory.clear();
         msg = &message;
         host = {host_interface, host_ctx};
