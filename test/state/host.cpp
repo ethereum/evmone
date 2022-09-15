@@ -315,8 +315,7 @@ evmc::Result Host::execute_message(const evmc_message& msg) noexcept
     if (is_precompile(m_rev, msg.code_address))
         return call_precompile(m_rev, msg);
 
-    // Copy of the code. Revert will invalidate the account.
-    const auto code = dst_acc != nullptr ? dst_acc->code : bytes{};
+    const auto code = dst_acc != nullptr ? bytes_view{dst_acc->code} : bytes_view{};
     return m_vm.execute(*this, m_rev, msg, code.data(), code.size());
 }
 

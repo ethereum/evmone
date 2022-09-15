@@ -393,7 +393,7 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
     gas_used -= refund;
     assert(gas_used > 0);
 
-    state.get(tx.sender).balance += tx_max_cost - gas_used * effective_gas_price;
+    sender_acc.balance += tx_max_cost - gas_used * effective_gas_price;
     state.touch(block.coinbase).balance += gas_used * priority_gas_price;
 
     // Apply destructs.
