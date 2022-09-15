@@ -8,6 +8,16 @@
 #include <gtest/gtest.h>
 #include <sstream>
 
+inline std::ostream& operator<<(std::ostream& os, const evmc::address& addr)
+{
+    return os << hex(addr);
+}
+
+inline std::ostream& operator<<(std::ostream& os, const evmc::bytes32& v)
+{
+    return os << hex(v);
+}
+
 namespace evmone::state
 {
 /// Defines how to RLP-encode a Log. This is only needed to compute "logs hash".
