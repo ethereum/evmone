@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
 
     if (argc != 2)
     {
-        std::cerr << "Missing argument with the path to the tests directory\n";
+        std::cerr << "Missing argument with the path to the test file or directory\n";
         return -1;
     }
 
@@ -58,20 +58,30 @@ int main(int argc, char* argv[])
 
     evmc::VM vm{evmc_create_evmone(), {{"O", "0"}, /*{"trace", "1"}*/}};
 
-    std::vector<fs::path> test_files;
-    const fs::path root_test_dir{argv[1]};
-    std::copy_if(fs::recursive_directory_iterator{root_test_dir},
-        fs::recursive_directory_iterator{}, std::back_inserter(test_files),
-        [](const fs::directory_entry& entry) {
-            return entry.is_regular_file() && entry.path().extension() == ".json";
-        });
-    std::sort(test_files.begin(), test_files.end());
-    for (const auto& p : test_files)
+    const fs::path arg{argv[1]};
+    if (fs::is_regular_file(arg))
     {
-        const auto d = fs::relative(p, root_test_dir);
-        testing::RegisterTest(d.parent_path().string().c_str(), d.stem().string().c_str(), nullptr,
-            nullptr, p.string().c_str(), 0,
-            [p, &vm]() -> testing::Test* { return new StateTest(p, vm); });
+        testing::RegisterTest("", arg.stem().string().c_str(), nullptr, nullptr,
+            arg.string().c_str(), 0,
+            [arg, &vm]() -> testing::Test* { return new StateTest(arg, vm); });
+    }
+    else
+    {
+        std::vector<fs::path> test_files;
+        const fs::path root_test_dir{argv[1]};
+        std::copy_if(fs::recursive_directory_iterator{root_test_dir},
+            fs::recursive_directory_iterator{}, std::back_inserter(test_files),
+            [](const fs::directory_entry& entry) {
+                return entry.is_regular_file() && entry.path().extension() == ".json";
+            });
+        std::sort(test_files.begin(), test_files.end());
+        for (const auto& p : test_files)
+        {
+            const auto d = fs::relative(p, root_test_dir);
+            testing::RegisterTest(d.parent_path().string().c_str(), d.stem().string().c_str(),
+                nullptr, nullptr, p.string().c_str(), 0,
+                [p, &vm]() -> testing::Test* { return new StateTest(p, vm); });
+        }
     }
 
     return RUN_ALL_TESTS();
