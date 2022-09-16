@@ -189,6 +189,7 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
     create_msg.recipient = new_addr;
     create_msg.sender = msg.sender;
     create_msg.value = msg.value;
+    create_msg.code_address = new_addr;
 
     // Execution can modify the state, iterators are invalidated.
     auto result = m_vm.execute(*this, m_rev, create_msg, msg.input_data, msg.input_size);
