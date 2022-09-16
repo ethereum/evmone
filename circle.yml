@@ -295,12 +295,12 @@ jobs:
 
   deploy:
     docker:
-      - image: circleci/golang
+      - image: cimg/go:1.19
     steps:
       - run:
           name: "Install GHR"
           command: |
-            GO111MODULE=on go get github.com/tcnksm/ghr@v0.12.1
+            go install github.com/tcnksm/ghr@v0.15.0
       - attach_workspace:
           at: ~/package
       - run:
@@ -489,7 +489,7 @@ workflows:
   version: 2
   evmone:
     jobs:
-      - lint
+#      - lint
       - release-linux:
           filters:
             tags:
@@ -505,19 +505,19 @@ workflows:
             - release-linux
             - release-macos
           filters:
-            branches:
-              ignore: /.*/
+#            branches:
+#              ignore: /.*/
             tags:
               only: /^v[0-9].*/
-      - state-tests
-      - blockchain-tests
-      - cmake-min
-      - gcc-min
-      - clang-min
-      - gcc-latest-coverage
-      - gcc-latest-memcheck
-      - clang-latest-sanitizers
-      - clang-latest-coverage
-      - macos-asan
-      - gcc-32bit
-      - fuzzing
+#      - state-tests
+#      - blockchain-tests
+#      - cmake-min
+#      - gcc-min
+#      - clang-min
+#      - gcc-latest-coverage
+#      - gcc-latest-memcheck
+#      - clang-latest-sanitizers
+#      - clang-latest-coverage
+#      - macos-asan
+#      - gcc-32bit
+#      - fuzzing
