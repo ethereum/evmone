@@ -151,18 +151,18 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
     assert(msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2);
 
     auto& sender_acc = m_state.get(msg.sender);
-    const auto sender_nonce = msg.depth == 0 ? sender_acc.nonce - 1 : sender_acc.nonce;
-    const auto new_addr = compute_new_address(msg, sender_nonce);
 
     if (msg.depth != 0)
     {
-        if (!m_state.get(msg.sender).bump_nonce())
+        if (!sender_acc.bump_nonce())
         {
             // This is light early check and gas it not consumed
             // nor the create-address is "accessed".
             return evmc::Result{EVMC_OUT_OF_GAS, msg.gas};
         }
     }
+
+    const auto new_addr = compute_new_address(msg, sender_acc.nonce - 1);  // Nonce before bump.
 
     m_accessed_addresses.insert(new_addr);
 
