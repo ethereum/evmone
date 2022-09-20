@@ -146,6 +146,11 @@ static address compute_new_address(const evmc_message& msg, uint64_t sender_nonc
     return new_addr;
 }
 
+static evmc_message prepare_msg(evmc_message msg, [[maybe_unused]] Account& sender_acc) noexcept
+{
+    return msg;
+}
+
 evmc::Result Host::create(const evmc_message& msg) noexcept
 {
     assert(msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2);
@@ -262,8 +267,11 @@ evmc::Result Host::execute_message(const evmc_message& msg) noexcept
     return m_vm.execute(*this, m_rev, msg, code.data(), code.size());
 }
 
-evmc::Result Host::call(const evmc_message& msg) noexcept
+evmc::Result Host::call(const evmc_message& evm_msg) noexcept
 {
+    auto& sender_acc = m_state.get(evm_msg.sender);
+    const auto msg = prepare_msg(evm_msg, sender_acc);
+
     auto state_snapshot = m_state;
     auto destructs_snapshot = m_destructs.size();
     auto access_addresses_snapshot = m_accessed_addresses;
