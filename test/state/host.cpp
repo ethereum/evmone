@@ -146,8 +146,27 @@ static address compute_new_address(const evmc_message& msg, uint64_t sender_nonc
     return new_addr;
 }
 
-static evmc_message prepare_msg(evmc_message msg, [[maybe_unused]] Account& sender_acc) noexcept
+static std::optional<evmc_message> prepare_msg(evmc_message msg, Account& sender_acc) noexcept
 {
+    if (msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2)
+    {
+        assert(msg.recipient == address{});
+        assert(msg.code_address == address{});
+
+        if (msg.depth != 0)
+        {
+            if (sender_acc.nonce == Account::NonceMax)
+            {
+                // This is light early check and gas it not consumed
+                // nor the create-address is "accessed".
+                return {};
+            }
+        }
+
+        msg.recipient = compute_new_address(msg, sender_acc.nonce - (msg.depth == 0));
+        msg.code_address = msg.recipient;
+    }
+
     return msg;
 }
 
@@ -155,53 +174,39 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
 {
     assert(msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2);
 
-    auto& sender_acc = m_state.get(msg.sender);
-
-    if (msg.depth != 0)
-    {
-        if (sender_acc.nonce == Account::NonceMax)
-        {
-            // This is light early check and gas it not consumed
-            // nor the create-address is "accessed".
-            return evmc::Result{EVMC_OUT_OF_GAS, msg.gas};
-        }
-        ++sender_acc.nonce;
-    }
-
-    const auto new_addr = compute_new_address(msg, sender_acc.nonce - 1);  // Nonce before bump.
-
-    m_accessed_addresses.insert(new_addr);
+    m_accessed_addresses.insert(msg.recipient);
 
     // Check collision as defined in pseudo-EIP https://github.com/ethereum/EIPs/issues/684.
     // All combinations of conditions (nonce, code, storage) are tested.
-    if (const auto collision_acc = m_state.get_or_null(new_addr);
+    if (const auto collision_acc = m_state.get_or_null(msg.recipient);
         collision_acc != nullptr && (collision_acc->nonce != 0 || !collision_acc->code.empty()))
-        return evmc::Result{EVMC_OUT_OF_GAS, 0, 0, new_addr};
+        return evmc::Result{EVMC_OUT_OF_GAS, 0, 0, msg.recipient};
 
-    auto& new_acc = m_state.get_or_create(new_addr);
+    auto& new_acc = m_state.get_or_create(msg.recipient);
     if (m_rev >= EVMC_SPURIOUS_DRAGON)
         new_acc.nonce = 1;
     new_acc.storage.clear();  // In case of collision.
 
+    auto& sender_acc = m_state.get(msg.sender);  // TODO: Duplicated account lookup.
     const auto value = intx::be::load<intx::uint256>(msg.value);
     assert(sender_acc.balance >= value && "EVM must guarantee balance");
+    if (msg.depth != 0)
+    {
+        assert(sender_acc.nonce != Account::NonceMax);
+        ++sender_acc.nonce;
+    }
     sender_acc.balance -= value;
     new_acc.balance += value;  // The new account may be prefunded.
 
-    evmc_message create_msg{};
-    create_msg.kind = msg.kind;
-    create_msg.depth = msg.depth;
-    create_msg.gas = msg.gas;
-    create_msg.recipient = new_addr;
-    create_msg.sender = msg.sender;
-    create_msg.value = msg.value;
-    create_msg.code_address = new_addr;
+    auto create_msg = msg;
+    create_msg.input_data = nullptr;
+    create_msg.input_size = 0;
 
     // Execution can modify the state, iterators are invalidated.
     auto result = m_vm.execute(*this, m_rev, create_msg, msg.input_data, msg.input_size);
     if (result.status_code != EVMC_SUCCESS)
     {
-        result.create_address = new_addr;
+        result.create_address = msg.recipient;
         return result;
     }
 
@@ -210,13 +215,13 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
 
     bytes_view code{result.output_data, result.output_size};
     if (m_rev >= EVMC_SPURIOUS_DRAGON && code.size() > 0x6000)
-        return evmc::Result{EVMC_OUT_OF_GAS, 0, 0, new_addr};
+        return evmc::Result{EVMC_OUT_OF_GAS, 0, 0, msg.recipient};
 
     const auto cost = static_cast<int64_t>(code.size()) * 200;
     gas_left -= cost;
     if (gas_left < 0)
     {
-        evmc::Result r{EVMC_OUT_OF_GAS, 0, 0, new_addr};
+        evmc::Result r{EVMC_OUT_OF_GAS, 0, 0, msg.recipient};
 
         if (m_rev == EVMC_FRONTIER)
         {
@@ -229,13 +234,13 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
 
     // Reject EF code.
     if (m_rev >= EVMC_LONDON && !code.empty() && code[0] == 0xEF)
-        return evmc::Result{EVMC_OUT_OF_GAS, 0, 0, new_addr};
+        return evmc::Result{EVMC_OUT_OF_GAS, 0, 0, msg.recipient};
 
     // TODO: The new_acc pointer is invalid because of the state revert implementation,
     //       but this should change if state journal is implemented.
-    m_state.get(new_addr).code = code;
+    m_state.get(msg.recipient).code = code;
 
-    return evmc::Result{result.status_code, gas_left, result.gas_refund, new_addr};
+    return evmc::Result{result.status_code, gas_left, result.gas_refund, msg.recipient};
 }
 
 evmc::Result Host::execute_message(const evmc_message& msg) noexcept
@@ -270,7 +275,10 @@ evmc::Result Host::execute_message(const evmc_message& msg) noexcept
 evmc::Result Host::call(const evmc_message& evm_msg) noexcept
 {
     auto& sender_acc = m_state.get(evm_msg.sender);
-    const auto msg = prepare_msg(evm_msg, sender_acc);
+    const auto opt_msg = prepare_msg(evm_msg, sender_acc);
+    if (!opt_msg)
+        return evmc::Result{EVMC_OUT_OF_GAS, evm_msg.gas};
+    const auto msg = *opt_msg;
 
     auto state_snapshot = m_state;
     auto destructs_snapshot = m_destructs.size();
