@@ -67,6 +67,8 @@ private:
 
     evmc_access_status access_storage(const address& addr, const bytes32& key) noexcept override;
 
+    std::optional<evmc_message> prepare_message(evmc_message msg);
+
     evmc::Result execute_message(const evmc_message& msg) noexcept;
 };
 }  // namespace evmone::state

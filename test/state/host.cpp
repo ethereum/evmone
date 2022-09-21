@@ -146,8 +146,13 @@ static address compute_new_address(const evmc_message& msg, uint64_t sender_nonc
     return new_addr;
 }
 
-static std::optional<evmc_message> prepare_msg(evmc_message msg, Account& sender_acc) noexcept
+std::optional<evmc_message> Host::prepare_message(evmc_message msg)
 {
+    auto& sender_acc = m_state.get(msg.sender);
+
+    if (msg.depth == 0)
+        ++sender_acc.nonce;
+
     if (msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2)
     {
         assert(msg.recipient == address{});
@@ -165,6 +170,18 @@ static std::optional<evmc_message> prepare_msg(evmc_message msg, Account& sender
 
         msg.recipient = compute_new_address(msg, sender_acc.nonce - (msg.depth == 0));
         msg.code_address = msg.recipient;
+    }
+
+    if (msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2)
+    {
+        if (msg.depth != 0)
+        {
+            assert(sender_acc.nonce != Account::NonceMax);
+            ++sender_acc.nonce;  // Nonce bump is not reverted.
+        }
+
+        // By EIP-2929, the  access to new created address is never reverted.
+        m_accessed_addresses.insert(msg.recipient);
     }
 
     return msg;
@@ -265,36 +282,18 @@ evmc::Result Host::execute_message(const evmc_message& msg) noexcept
     return m_vm.execute(*this, m_rev, msg, code.data(), code.size());
 }
 
-evmc::Result Host::call(const evmc_message& evm_msg) noexcept
+evmc::Result Host::call(const evmc_message& orig_msg) noexcept
 {
-    auto& sender_acc = m_state.get(evm_msg.sender);
-
-    if (evm_msg.depth == 0)
-        ++sender_acc.nonce;
-
-    const auto opt_msg = prepare_msg(evm_msg, sender_acc);
-    if (!opt_msg)
-        return evmc::Result{EVMC_OUT_OF_GAS, evm_msg.gas};
-    const auto msg = *opt_msg;
-
-    if (msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2)
-    {
-        if (msg.depth != 0)
-        {
-            assert(sender_acc.nonce != Account::NonceMax);
-            ++sender_acc.nonce;  // Nonce bump is not reverted.
-        }
-
-        // By EIP-2929, the  access to new created address is never reverted.
-        m_accessed_addresses.insert(msg.recipient);
-    }
+    const auto msg = prepare_message(orig_msg);
+    if (!msg.has_value())
+        return evmc::Result{EVMC_OUT_OF_GAS, orig_msg.gas};  // Light exception.
 
     auto state_snapshot = m_state;
     auto destructs_snapshot = m_destructs.size();
     auto access_addresses_snapshot = m_accessed_addresses;
     auto logs_snapshot = m_logs.size();
 
-    auto result = execute_message(msg);
+    auto result = execute_message(*msg);
 
     if (result.status_code != EVMC_SUCCESS)
     {
