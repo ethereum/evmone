@@ -103,12 +103,17 @@ std::optional<std::vector<Log>> transition(
     if (!sender_acc.code.empty())
         return {};  // Tx origin must not be a contract (EIP-3607).
 
-    const auto tx_max_cost_512 = intx::uint512{tx.gas_limit} * intx::uint512{tx.max_gas_price};
+    if (sender_acc.nonce == Account::NonceMax)
+        return {};
+
+    const auto tx_max_cost_512 = intx::umul(intx::uint256{tx.gas_limit}, tx.max_gas_price);
     auto sender_balance_check = sender_acc.balance;
     if (sender_balance_check < tx_max_cost_512)
         return {};
 
     sender_balance_check -= static_cast<intx::uint256>(tx_max_cost_512);
+    if (sender_balance_check < tx.value)
+        return {};
 
     const auto execution_gas_limit = tx.gas_limit - compute_tx_intrinsic_cost(rev, tx);
     if (execution_gas_limit < 0)
@@ -122,15 +127,8 @@ std::optional<std::vector<Log>> transition(
 
     assert(effective_gas_price <= tx.max_gas_price);
     const auto tx_max_cost = tx.gas_limit * effective_gas_price;
-    auto sender_balance = sender_acc.balance - tx_max_cost;
 
-    if (sender_balance_check < tx.value)
-        return {};
-
-    if (sender_acc.nonce == Account::NonceMax)
-        return {};
-
-    sender_acc.balance = sender_balance;  // Modify sender balance after all checks.
+    sender_acc.balance -= tx_max_cost;  // Modify sender balance after all checks.
 
     Host host{rev, vm, state, block, tx};
 
