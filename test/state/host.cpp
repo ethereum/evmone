@@ -190,11 +190,6 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
     auto& sender_acc = m_state.get(msg.sender);  // TODO: Duplicated account lookup.
     const auto value = intx::be::load<intx::uint256>(msg.value);
     assert(sender_acc.balance >= value && "EVM must guarantee balance");
-    if (msg.depth != 0)
-    {
-        assert(sender_acc.nonce != Account::NonceMax);
-        ++sender_acc.nonce;
-    }
     sender_acc.balance -= value;
     new_acc.balance += value;  // The new account may be prefunded.
 
@@ -280,6 +275,15 @@ evmc::Result Host::call(const evmc_message& evm_msg) noexcept
         return evmc::Result{EVMC_OUT_OF_GAS, evm_msg.gas};
     const auto msg = *opt_msg;
 
+    if (msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2)
+    {
+        if (msg.depth != 0)
+        {
+            assert(sender_acc.nonce != Account::NonceMax);
+            ++sender_acc.nonce;  // Nonce bump is not reverted.
+        }
+    }
+
     auto state_snapshot = m_state;
     auto destructs_snapshot = m_destructs.size();
     auto access_addresses_snapshot = m_accessed_addresses;
@@ -305,9 +309,6 @@ evmc::Result Host::call(const evmc_message& evm_msg) noexcept
 
         if (msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2)
         {
-            if (msg.depth != 0 && m_state.get(msg.sender).nonce != Account::NonceMax)
-                ++m_state.get(msg.sender).nonce;  // Nonce bump is not reverted.
-
             // By EIP-2929, the  access to new created address is never reverted.
             if (!evmc::is_zero(result.create_address))
                 m_accessed_addresses.insert(result.create_address);
