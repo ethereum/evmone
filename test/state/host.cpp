@@ -174,8 +174,6 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
 {
     assert(msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2);
 
-    m_accessed_addresses.insert(msg.recipient);
-
     // Check collision as defined in pseudo-EIP https://github.com/ethereum/EIPs/issues/684.
     // All combinations of conditions (nonce, code, storage) are tested.
     if (const auto collision_acc = m_state.get_or_null(msg.recipient);
@@ -282,6 +280,9 @@ evmc::Result Host::call(const evmc_message& evm_msg) noexcept
             assert(sender_acc.nonce != Account::NonceMax);
             ++sender_acc.nonce;  // Nonce bump is not reverted.
         }
+
+        // By EIP-2929, the  access to new created address is never reverted.
+        m_accessed_addresses.insert(msg.recipient);
     }
 
     auto state_snapshot = m_state;
@@ -306,13 +307,6 @@ evmc::Result Host::call(const evmc_message& evm_msg) noexcept
         // The 0x03 quirk: the touch on this address is never reverted.
         if (is_03_touched && m_rev >= EVMC_SPURIOUS_DRAGON)
             m_state.get_or_create(addr_03).touched = true;
-
-        if (msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2)
-        {
-            // By EIP-2929, the  access to new created address is never reverted.
-            if (!evmc::is_zero(result.create_address))
-                m_accessed_addresses.insert(result.create_address);
-        }
     }
     return result;
 }
