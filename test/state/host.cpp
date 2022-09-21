@@ -268,6 +268,10 @@ evmc::Result Host::execute_message(const evmc_message& msg) noexcept
 evmc::Result Host::call(const evmc_message& evm_msg) noexcept
 {
     auto& sender_acc = m_state.get(evm_msg.sender);
+
+    if (evm_msg.depth == 0)
+        ++sender_acc.nonce;
+
     const auto opt_msg = prepare_msg(evm_msg, sender_acc);
     if (!opt_msg)
         return evmc::Result{EVMC_OUT_OF_GAS, evm_msg.gas};

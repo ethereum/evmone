@@ -130,7 +130,6 @@ std::optional<std::vector<Log>> transition(
     if (sender_acc.nonce == Account::NonceMax)
         return {};
 
-    ++sender_acc.nonce;
     sender_acc.balance = sender_balance;  // Modify sender balance after all checks.
 
     Host host{rev, vm, state, block, tx};
