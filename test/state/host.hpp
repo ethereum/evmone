@@ -67,6 +67,12 @@ private:
 
     evmc_access_status access_storage(const address& addr, const bytes32& key) noexcept override;
 
+    /// Prepares message for execution.
+    ///
+    /// This contains mostly checks and logic related to the sender
+    /// which may finally be moved to EVM.
+    /// Any state modification is not reverted.
+    /// @return Modified message or std::nullopt in case of EVM exception.
     std::optional<evmc_message> prepare_message(evmc_message msg);
 
     evmc::Result execute_message(const evmc_message& msg) noexcept;
