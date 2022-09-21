@@ -127,11 +127,10 @@ std::optional<std::vector<Log>> transition(
     if (sender_balance_check < tx.value)
         return {};
 
-    // Bump sender nonce.
-    // This must be the last transaction validity check, because it modifies the state.
-    if (const auto nonce_ok = sender_acc.bump_nonce(); !nonce_ok)
+    if (sender_acc.nonce == Account::NonceMax)
         return {};
 
+    ++sender_acc.nonce;
     sender_acc.balance = sender_balance;  // Modify sender balance after all checks.
 
     Host host{rev, vm, state, block, tx};

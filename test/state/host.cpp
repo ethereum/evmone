@@ -154,12 +154,13 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
 
     if (msg.depth != 0)
     {
-        if (!sender_acc.bump_nonce())
+        if (sender_acc.nonce == Account::NonceMax)
         {
             // This is light early check and gas it not consumed
             // nor the create-address is "accessed".
             return evmc::Result{EVMC_OUT_OF_GAS, msg.gas};
         }
+        ++sender_acc.nonce;
     }
 
     const auto new_addr = compute_new_address(msg, sender_acc.nonce - 1);  // Nonce before bump.
@@ -288,9 +289,8 @@ evmc::Result Host::call(const evmc_message& msg) noexcept
 
         if (msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2)
         {
-            // FIXME: What if the reason of failure is max nonce?
-            if (msg.depth != 0)
-                (void)m_state.get(msg.sender).bump_nonce();  // Nonce bump is not reverted.
+            if (msg.depth != 0 && m_state.get(msg.sender).nonce != Account::NonceMax)
+                ++m_state.get(msg.sender).nonce;  // Nonce bump is not reverted.
 
             // By EIP-2929, the  access to new created address is never reverted.
             if (!evmc::is_zero(result.create_address))

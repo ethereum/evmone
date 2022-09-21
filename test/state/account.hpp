@@ -28,6 +28,9 @@ struct StorageValue
 /// The state account.
 struct Account
 {
+    /// The maximum allowed nonce value.
+    static constexpr auto NonceMax = std::numeric_limits<uint64_t>::max();
+
     /// The account nonce.
     uint64_t nonce = 0;
 
@@ -46,14 +49,6 @@ struct Account
     [[nodiscard]] bool is_empty() const noexcept
     {
         return code.empty() && nonce == 0 && balance == 0;
-    }
-
-    [[nodiscard]] bool bump_nonce() noexcept
-    {
-        if (nonce == std::numeric_limits<decltype(nonce)>::max())
-            return false;
-        ++nonce;
-        return true;
     }
 };
 }  // namespace evmone::state
