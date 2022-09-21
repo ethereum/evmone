@@ -149,36 +149,22 @@ static address compute_new_address(const evmc_message& msg, uint64_t sender_nonc
 std::optional<evmc_message> Host::prepare_message(evmc_message msg)
 {
     auto& sender_acc = m_state.get(msg.sender);
+    const auto sender_nonce = sender_acc.nonce;
 
-    if (msg.depth == 0)
-        ++sender_acc.nonce;
-
-    if (msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2)
+    // Bump sender nonce.
+    if (msg.depth == 0 || msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2)
     {
-        assert(msg.recipient == address{});
-        assert(msg.code_address == address{});
-
-        if (msg.depth != 0)
-        {
-            if (sender_acc.nonce == Account::NonceMax)
-            {
-                // This is light early check and gas it not consumed
-                // nor the create-address is "accessed".
-                return {};
-            }
-        }
-
-        msg.recipient = compute_new_address(msg, sender_acc.nonce - (msg.depth == 0));
-        msg.code_address = msg.recipient;
+        if (sender_nonce == Account::NonceMax)
+            return {};  // Light early exception, cannot happen for depth == 0.
+        ++sender_acc.nonce;
     }
 
     if (msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2)
     {
-        if (msg.depth != 0)
-        {
-            assert(sender_acc.nonce != Account::NonceMax);
-            ++sender_acc.nonce;  // Nonce bump is not reverted.
-        }
+        // Compute and fill create address.
+        assert(msg.recipient == address{});
+        assert(msg.code_address == address{});
+        msg.recipient = compute_new_address(msg, sender_nonce);
 
         // By EIP-2929, the  access to new created address is never reverted.
         m_accessed_addresses.insert(msg.recipient);
