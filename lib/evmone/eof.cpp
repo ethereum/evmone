@@ -225,18 +225,20 @@ std::pair<EOF1Header, EOFValidationError> validate_eof1(
 
     const auto header_size = eof_header_size(section_headers);
 
+    const auto [types, error_types] =
+        validate_types(container, header_size, section_headers[TYPE_SECTION]);
+    if (error_types != EOFValidationError::success)
+        return {{}, error_types};
+
     std::vector<uint16_t> code_offsets;
-    auto offset = header_size + (section_headers.empty() ? 0 : section_headers[TYPE_SECTION][0]);
+    const auto type_section_size =
+        section_headers[TYPE_SECTION].empty() ? 0u : section_headers[TYPE_SECTION][0];
+    auto offset = header_size + type_section_size;
     for (const auto code_size : code_sizes)
     {
         code_offsets.emplace_back(offset);
         offset += code_size;
     }
-
-    const auto [types, error_types] =
-        validate_types(container, eof_header_size(section_headers), section_headers[TYPE_SECTION]);
-    if (error_types != EOFValidationError::success)
-        return {{}, error_types};
 
     EOF1Header header{code_sizes, code_offsets, data_size, types};
 
