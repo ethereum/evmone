@@ -26,6 +26,7 @@ public:
     const uint8_t* executable_code;  ///< Pointer to the beginning of executable code section.
     JumpdestMap jumpdest_map;        ///< Map of valid jump destinations.
     uint8_t eof_version = 0;         ///< The EOF version, 0 means legacy code.
+    std::vector<uint16_t> code_offsets;
 
 private:
     /// Padded code for faster legacy code execution.

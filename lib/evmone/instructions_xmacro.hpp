@@ -298,8 +298,8 @@
     ON_OPCODE_UNDEFINED(0xf8)                               \
     ON_OPCODE_UNDEFINED(0xf9)                               \
     ON_OPCODE_IDENTIFIER(OP_STATICCALL, staticcall)         \
-    ON_OPCODE_UNDEFINED(0xfb)                               \
-    ON_OPCODE_UNDEFINED(0xfc)                               \
+    ON_OPCODE_IDENTIFIER(OP_CALLF, callf)                   \
+    ON_OPCODE_IDENTIFIER(OP_RETF, retf)                     \
     ON_OPCODE_IDENTIFIER(OP_REVERT, revert)                 \
     ON_OPCODE_IDENTIFIER(OP_INVALID, invalid)               \
     ON_OPCODE_IDENTIFIER(OP_SELFDESTRUCT, selfdestruct)
