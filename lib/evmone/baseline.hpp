@@ -37,6 +37,10 @@ public:
         jumpdest_map{std::move(map)},
         m_padded_code{std::move(padded_code)}
     {}
+
+    CodeAnalysis(const uint8_t* code, JumpdestMap map)
+      : executable_code{code}, jumpdest_map{std::move(map)}
+    {}
 };
 static_assert(std::is_move_constructible_v<CodeAnalysis>);
 static_assert(std::is_move_assignable_v<CodeAnalysis>);
