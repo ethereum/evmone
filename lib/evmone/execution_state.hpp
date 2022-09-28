@@ -16,7 +16,7 @@ struct AdvancedCodeAnalysis;
 }
 namespace baseline
 {
-struct CodeAnalysis;
+class CodeAnalysis;
 }
 
 using uint256 = intx::uint256;

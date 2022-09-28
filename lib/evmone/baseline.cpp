@@ -311,8 +311,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
 {
     state.analysis.baseline = &analysis;  // Assign code analysis for instruction implementations.
 
-    // Use padded code.
-    state.code = {analysis.padded_code.get(), state.code.size()};
+    state.code = {analysis.executable_code, state.code.size()};
 
     const auto& cost_table = get_baseline_cost_table(state.rev);
 
