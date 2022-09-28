@@ -226,7 +226,7 @@ void dispatch(const CostTable& cost_table, ExecutionState& state, const uint8_t*
         {
             const auto offset = static_cast<uint32_t>(position.code_it - code);
             const auto stack_height = static_cast<int>(position.stack_top - stack_bottom);
-            if (offset < state.code.size())  // Skip STOP from code padding.
+            if (offset < state.original_code.size())  // Skip STOP from code padding.
                 tracer->notify_instruction_start(offset, position.stack_top, stack_height, state);
         }
 
@@ -311,24 +311,24 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
 {
     state.analysis.baseline = &analysis;  // Assign code analysis for instruction implementations.
 
-    state.code = {analysis.executable_code, state.code.size()};
+    const auto code = analysis.executable_code;
 
     const auto& cost_table = get_baseline_cost_table(state.rev);
 
     auto* tracer = vm.get_tracer();
     if (INTX_UNLIKELY(tracer != nullptr))
     {
-        tracer->notify_execution_start(state.rev, *state.msg, state.code);
-        dispatch<true>(cost_table, state, state.code.data(), tracer);
+        tracer->notify_execution_start(state.rev, *state.msg, code);
+        dispatch<true>(cost_table, state, code, tracer);
     }
     else
     {
 #if EVMONE_CGOTO_SUPPORTED
         if (vm.cgoto)
-            dispatch_cgoto(cost_table, state, state.code.data());
+            dispatch_cgoto(cost_table, state, code);
         else
 #endif
-            dispatch<false>(cost_table, state, state.code.data());
+            dispatch<false>(cost_table, state, code);
     }
 
     const auto gas_left =

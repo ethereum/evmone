@@ -33,8 +33,6 @@ TEST(execution_state, construct)
     EXPECT_EQ(st.msg, &msg);
     EXPECT_EQ(st.rev, EVMC_MAX_REVISION);
     EXPECT_EQ(st.return_data.size(), 0);
-    EXPECT_EQ(st.code.data(), &code[0]);
-    EXPECT_EQ(st.code.size(), std::size(code));
     EXPECT_EQ(st.status, EVMC_SUCCESS);
     EXPECT_EQ(st.output_offset, 0);
     EXPECT_EQ(st.output_size, 0);
@@ -49,8 +47,6 @@ TEST(execution_state, default_construct)
     EXPECT_EQ(st.msg, nullptr);
     EXPECT_EQ(st.rev, EVMC_FRONTIER);
     EXPECT_EQ(st.return_data.size(), 0);
-    EXPECT_EQ(st.code.data(), nullptr);
-    EXPECT_EQ(st.code.size(), 0);
     EXPECT_EQ(st.status, EVMC_SUCCESS);
     EXPECT_EQ(st.output_offset, 0);
     EXPECT_EQ(st.output_size, 0);
@@ -66,8 +62,6 @@ TEST(execution_state, default_construct_advanced)
     EXPECT_EQ(st.msg, nullptr);
     EXPECT_EQ(st.rev, EVMC_FRONTIER);
     EXPECT_EQ(st.return_data.size(), 0);
-    EXPECT_EQ(st.code.data(), nullptr);
-    EXPECT_EQ(st.code.size(), 0);
     EXPECT_EQ(st.status, EVMC_SUCCESS);
     EXPECT_EQ(st.output_offset, 0);
     EXPECT_EQ(st.output_size, 0);
@@ -79,7 +73,6 @@ TEST(execution_state, default_construct_advanced)
 TEST(execution_state, reset_advanced)
 {
     const evmc_message msg{};
-    const uint8_t code[]{0xff};
     evmone::advanced::AdvancedCodeAnalysis analysis;
 
     evmone::advanced::AdvancedExecutionState st;
@@ -90,7 +83,6 @@ TEST(execution_state, reset_advanced)
     st.msg = &msg;
     st.rev = EVMC_BYZANTIUM;
     st.return_data.push_back('0');
-    st.code = {code, std::size(code)};
     st.status = EVMC_FAILURE;
     st.output_offset = 3;
     st.output_size = 4;
@@ -104,8 +96,6 @@ TEST(execution_state, reset_advanced)
     EXPECT_EQ(st.msg, &msg);
     EXPECT_EQ(st.rev, EVMC_BYZANTIUM);
     EXPECT_EQ(st.return_data.size(), 1);
-    EXPECT_EQ(st.code.data(), &code[0]);
-    EXPECT_EQ(st.code.size(), 1);
     EXPECT_EQ(st.status, EVMC_FAILURE);
     EXPECT_EQ(st.output_offset, 3);
     EXPECT_EQ(st.output_size, 4u);
@@ -129,8 +119,6 @@ TEST(execution_state, reset_advanced)
         EXPECT_EQ(st.msg, &msg2);
         EXPECT_EQ(st.rev, EVMC_HOMESTEAD);
         EXPECT_EQ(st.return_data.size(), 0);
-        EXPECT_EQ(st.code.data(), &code2[0]);
-        EXPECT_EQ(st.code.size(), 2);
         EXPECT_EQ(st.status, EVMC_SUCCESS);
         EXPECT_EQ(st.output_offset, 0);
         EXPECT_EQ(st.output_size, 0);
