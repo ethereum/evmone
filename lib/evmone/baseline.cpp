@@ -212,9 +212,9 @@ template <evmc_opcode Op>
 
 
 template <bool TracingEnabled>
-void dispatch(const CostTable& cost_table, ExecutionState& state, Tracer* tracer = nullptr) noexcept
+void dispatch(const CostTable& cost_table, ExecutionState& state, const uint8_t* code,
+    Tracer* tracer = nullptr) noexcept
 {
-    const auto* const code = state.code.data();
     const auto stack_bottom = state.stack_space.bottom();
 
     // Code iterator and stack top pointer for interpreter loop.
@@ -260,7 +260,8 @@ void dispatch(const CostTable& cost_table, ExecutionState& state, Tracer* tracer
 }
 
 #if EVMONE_CGOTO_SUPPORTED
-void dispatch_cgoto(const CostTable& cost_table, ExecutionState& state) noexcept
+void dispatch_cgoto(
+    const CostTable& cost_table, ExecutionState& state, const uint8_t* code) noexcept
 {
 #pragma GCC diagnostic ignored "-Wpedantic"
 
@@ -275,7 +276,6 @@ void dispatch_cgoto(const CostTable& cost_table, ExecutionState& state) noexcept
     };
     static_assert(std::size(cgoto_table) == 256);
 
-    const auto* const code = state.code.data();
     const auto stack_bottom = state.stack_space.bottom();
 
     // Code iterator and stack top pointer for interpreter loop.
@@ -320,16 +320,16 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     if (INTX_UNLIKELY(tracer != nullptr))
     {
         tracer->notify_execution_start(state.rev, *state.msg, state.code);
-        dispatch<true>(cost_table, state, tracer);
+        dispatch<true>(cost_table, state, state.code.data(), tracer);
     }
     else
     {
 #if EVMONE_CGOTO_SUPPORTED
         if (vm.cgoto)
-            dispatch_cgoto(cost_table, state);
+            dispatch_cgoto(cost_table, state, state.code.data());
         else
 #endif
-            dispatch<false>(cost_table, state);
+            dispatch<false>(cost_table, state, state.code.data());
     }
 
     const auto gas_left =
