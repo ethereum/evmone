@@ -69,10 +69,20 @@ CodeAnalysis analyze_legacy(bytes_view code)
 
 CodeAnalysis analyze_eof1(bytes_view eof_container, const EOF1Header& header)
 {
-    const auto executable_code = eof_container.substr(header.code_begin(0), header.code_sizes[0]);
+    auto beg = header.code_begin(0);
+    auto end = header.code_end(header.code_sizes.size() - 1);
+    const auto executable_code = eof_container.substr(beg, end - beg);
+
+    const auto o = header.code_offsets[0];
+    std::vector<uint16_t> offs;
+    for (auto x : header.code_offsets)
+        offs.push_back(x - o);
 
     // FIXME: Better way of getting EOF version.
-    return {executable_code, analyze_jumpdests(executable_code), eof_container[2]};
+    auto a =
+        CodeAnalysis{executable_code.data(), analyze_jumpdests(executable_code), eof_container[2]};
+    a.code_offsets = std::move(offs);
+    return a;
 }
 }  // namespace
 
