@@ -71,9 +71,8 @@ CodeAnalysis analyze_legacy(bytes_view code)
 
 CodeAnalysis analyze_eof1(bytes_view eof_container, const EOF1Header& header)
 {
-    // TODO: Padding code for EOF is not needed.
-    const auto code = eof_container.substr(header.code_begin(), header.code_size);
-    return {pad_code(code), analyze_jumpdests(code)};
+    const auto executable_code = eof_container.substr(header.code_begin(), header.code_size);
+    return {executable_code.data(), analyze_jumpdests(executable_code)};
 }
 }  // namespace
 
