@@ -166,6 +166,14 @@ EOFValidationError validate_instructions(evmc_revision rev, bytes_view code) noe
         if (!since.has_value() || *since > rev)
             return EOFValidationError::undefined_instruction;
 
+        // Deprecated instructions.
+        if (op == OP_CALLCODE || op == OP_SELFDESTRUCT)
+            return EOFValidationError::removed_instruction;
+
+        // Proposal to remove PC as the only remaining instruction using absolute code offsets.
+        if (op == OP_PC)
+            return EOFValidationError::removed_instruction;
+
         i += instr::traits[op].immediate_size;
         ++i;
     }

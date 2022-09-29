@@ -7,11 +7,14 @@
 #include <gtest/gtest.h>
 #include <test/utils/bytecode.hpp>
 #include <test/utils/utils.hpp>
+#include <unordered_set>
 
 using namespace evmone;
 
 namespace
 {
+const std::unordered_set<evmc_opcode> removed_opcodes{OP_SELFDESTRUCT, OP_CALLCODE, OP_PC};
+
 // Can be called as validate_eof(string_view hex, rev) or validate_eof(bytes_view cont, rev).
 inline EOFValidationError validate_eof(
     const bytecode& container, evmc_revision rev = EVMC_SHANGHAI) noexcept
@@ -192,9 +195,13 @@ TEST(eof_validation, EOF1_undefined_opcodes)
 
         cont[cont.size() - 2] = static_cast<uint8_t>(opcode);
 
-        const auto expected = (gas_table[opcode] == evmone::instr::undefined ?
-                                   EOFValidationError::undefined_instruction :
-                                   EOFValidationError::success);
+        auto expected = (gas_table[opcode] == evmone::instr::undefined ?
+                             EOFValidationError::undefined_instruction :
+                             EOFValidationError::success);
+
+        if (removed_opcodes.count(static_cast<evmc_opcode>(opcode)) != 0)
+            expected = evmone::EOFValidationError::removed_instruction;
+
         EXPECT_EQ(validate_eof(cont), expected) << hex(cont);
     }
 
@@ -244,11 +251,12 @@ TEST(eof_validation, EOF1_terminating_instructions)
         code_size_byte = static_cast<uint8_t>(code.size());
         const auto container = eof_header + code;
 
-        const auto expected =
-            ((opcode == OP_STOP || opcode == OP_RETURN || opcode == OP_RETF ||
-                 opcode == OP_REVERT || opcode == OP_INVALID || opcode == OP_SELFDESTRUCT) ?
-                    EOFValidationError::success :
-                    EOFValidationError::missing_terminating_instruction);
+        const auto expected = ((opcode == OP_STOP || opcode == OP_RETURN || opcode == OP_RETF ||
+                                   opcode == OP_REVERT || opcode == OP_INVALID) ?
+                                   EOFValidationError::success :
+                               (removed_opcodes.count(static_cast<evmc_opcode>(opcode)) != 0) ?
+                                   EOFValidationError::removed_instruction :
+                                   EOFValidationError::missing_terminating_instruction);
         EXPECT_EQ(validate_eof(container, EVMC_CANCUN), expected) << hex(code);
     }
 }

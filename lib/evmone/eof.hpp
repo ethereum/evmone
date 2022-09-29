@@ -61,6 +61,7 @@ enum class EOFValidationError
     data_section_before_code_section,
     invalid_type_section_size,
     invalid_fist_section_type,
+    removed_instruction,
 
     impossible,
 };
