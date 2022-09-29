@@ -60,7 +60,7 @@ enum class EOFValidationError
     too_many_code_sections,
     data_section_before_code_section,
     invalid_type_section_size,
-    invalid_fist_section_type,
+    invalid_first_section_type,
 
     impossible,
 };

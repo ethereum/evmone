@@ -148,7 +148,7 @@ std::pair<std::vector<std::pair<uint8_t, uint8_t>>, EOFValidationError> validate
 
     // check 1st section is (0, 0)
     if (types[0].first != 0 || types[0].second != 0)
-        return {{}, EOFValidationError::invalid_fist_section_type};
+        return {{}, EOFValidationError::invalid_first_section_type};
 
     return {types, EOFValidationError::success};
 }
