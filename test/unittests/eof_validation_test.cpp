@@ -74,6 +74,31 @@ TEST(eof_validation, minimal_valid_EOF1_code_with_data)
     EXPECT_EQ(validate_eof("EF0001 010001 020001 00 FE DA"), EOFValidationError::success);
 }
 
+TEST(eof_validation, minimal_valid_EOF1_code_with_type)
+{
+    // no data section
+    EXPECT_EQ(validate_eof("EF0001 030002 01000100 0000 FE"), EOFValidationError::success);
+    // with data section
+    EXPECT_EQ(
+        validate_eof("EF0001 030002 010001 020001 00 0000 FE DA"), EOFValidationError::success);
+}
+
+TEST(eof_validation, minimal_valid_EOF1_multiple_code_sections)
+{
+    // no data section
+    EXPECT_EQ(
+        validate_eof("EF0001 030004 010001 010001 00 00000000 FE FE"), EOFValidationError::success);
+    // with data section
+    EXPECT_EQ(validate_eof("EF0001 030004 010001 010001 020001 00 00000000 FE FE DA"),
+        EOFValidationError::success);
+
+    // non-void input and output types
+    EXPECT_EQ(
+        validate_eof(
+            "EF0001 030008 010001 010002 010002 010002 00 0000010000010203 FE 5000 3000 8000"),
+        EOFValidationError::success);
+}
+
 TEST(eof_validation, EOF1_code_section_missing)
 {
     EXPECT_EQ(validate_eof("EF0001 00"), EOFValidationError::code_section_missing);
@@ -90,15 +115,6 @@ TEST(eof_validation, EOF1_data_section_0_size)
 {
     EXPECT_EQ(validate_eof("EF0001 010001 020000 00 FE"), EOFValidationError::zero_section_size);
 }
-
-// TEST(eof_validation, EOF1_multiple_code_sections)
-//{
-//     EXPECT_EQ(
-//         validate_eof("EF0001 010001 010001 00 FE FE"),
-//         EOFValidationError::multiple_code_sections);
-//     EXPECT_EQ(validate_eof("EF0001 010001 010001 020001 00 FE FE DA"),
-//         EOFValidationError::multiple_code_sections);
-// }
 
 TEST(eof_validation, EOF1_data_section_before_code_section)
 {
@@ -173,6 +189,70 @@ TEST(eof_validation, EOF1_trailing_bytes)
         EOFValidationError::invalid_section_bodies_size);
     EXPECT_EQ(validate_eof("EF0001 010001 020002 00 FE AABB DEADBEEF"),
         EOFValidationError::invalid_section_bodies_size);
+}
+
+TEST(eof_validation, EOF1_no_type_section)
+{
+    EXPECT_EQ(validate_eof("EF0001 010001 010001 00 FE FE"),
+        EOFValidationError::mandatory_type_section_missing);
+}
+
+TEST(eof_validation, EOF1_multiple_type_sections)
+{
+    EXPECT_EQ(validate_eof("EF0001 030002 030002 010001 010001 00 0000 0000 FE FE"),
+        EOFValidationError::multiple_type_sections);
+
+    EXPECT_EQ(validate_eof("EF0001 030002 010001 010001 030002 00 0000 FE FE 0000"),
+        EOFValidationError::multiple_type_sections);
+}
+
+TEST(eof_validation, EOF1_type_section_not_first)
+{
+    EXPECT_EQ(validate_eof("EF0001 010001 030002 00 FE 0000"),
+        EOFValidationError::code_section_before_type_section);
+
+    EXPECT_EQ(validate_eof("EF0001 010001 030002 010001 00 FE 0000 FE"),
+        EOFValidationError::code_section_before_type_section);
+
+    EXPECT_EQ(validate_eof("EF0001 010001 030002 020003 00 FE 0000 AABBCC"),
+        EOFValidationError::code_section_before_type_section);
+
+    EXPECT_EQ(validate_eof("EF0001 010001 020003 030002 00 FE AABBCC 0000"),
+        EOFValidationError::code_section_before_type_section);
+}
+
+TEST(eof_validation, EOF1_invalid_type_section_size)
+{
+    EXPECT_EQ(validate_eof("EF0001 030001 010001 00 00 FE"),
+        EOFValidationError::invalid_type_section_size);
+    EXPECT_EQ(validate_eof("EF0001 030004 010001 00 00000000 FE"),
+        EOFValidationError::invalid_type_section_size);
+
+    EXPECT_EQ(validate_eof("EF0001 030004 010001 010001 010001 00 00000000 FE FE FE"),
+        EOFValidationError::invalid_type_section_size);
+    EXPECT_EQ(validate_eof("EF0001 030008 010001 010001 010001 00 0000000000000000 FE FE FE"),
+        EOFValidationError::invalid_type_section_size);
+}
+
+TEST(eof_validation, EOF1_invalid_section_0_type)
+{
+    EXPECT_EQ(validate_eof("EF0001 030002 010003 00 0001 60005C"),
+        EOFValidationError::invalid_first_section_type);
+    EXPECT_EQ(validate_eof("EF0001 030002 010002 00 0100 5000"),
+        EOFValidationError::invalid_first_section_type);
+    EXPECT_EQ(validate_eof("EF0001 030002 010003 00 0203 60005C"),
+        EOFValidationError::invalid_first_section_type);
+}
+
+TEST(eof_validation, EOF1_too_many_code_sections)
+{
+    const auto valid = "EF0001 030800" + 1024 * bytecode{"010001"} + "00" +
+                       1024 * bytecode{"0000"} + 1024 * bytecode{"FE"};
+    EXPECT_EQ(validate_eof(valid), EOFValidationError::success);
+
+    const auto invalid = "EF0001 030801" + 1025 * bytecode{"010001"} + "00" +
+                         1025 * bytecode{"0000"} + 1025 * bytecode{"FE"};
+    EXPECT_EQ(validate_eof(invalid), EOFValidationError::too_many_code_sections);
 }
 
 TEST(eof_validation, EOF1_undefined_opcodes)
