@@ -40,8 +40,7 @@ public:
         m_padded_code{std::move(padded_code)}
     {}
 
-    CodeAnalysis(const uint8_t* code, JumpdestMap map, uint8_t eof_ver)
-      : executable_code{code}, jumpdest_map{std::move(map)}, eof_version{eof_ver}
+    CodeAnalysis(const uint8_t* code, uint8_t eof_ver) : executable_code{code}, eof_version{eof_ver}
     {}
 };
 static_assert(std::is_move_constructible_v<CodeAnalysis>);

@@ -174,6 +174,9 @@ EOFValidationError validate_instructions(evmc_revision rev, bytes_view code) noe
         if (op == OP_PC)
             return EOFValidationError::removed_instruction;
 
+        if (op == OP_JUMPDEST || op == OP_JUMP || op == OP_JUMPI)
+            return EOFValidationError::removed_instruction;
+
         i += instr::traits[op].immediate_size;
         ++i;
     }

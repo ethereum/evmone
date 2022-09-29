@@ -13,7 +13,8 @@ using namespace evmone;
 
 namespace
 {
-const std::unordered_set<evmc_opcode> removed_opcodes{OP_SELFDESTRUCT, OP_CALLCODE, OP_PC};
+const std::unordered_set<evmc_opcode> removed_opcodes{
+    OP_SELFDESTRUCT, OP_CALLCODE, OP_PC, OP_JUMPDEST, OP_JUMP, OP_JUMPI};
 
 // Can be called as validate_eof(string_view hex, rev) or validate_eof(bytes_view cont, rev).
 inline EOFValidationError validate_eof(
