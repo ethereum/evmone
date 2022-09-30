@@ -28,13 +28,8 @@ namespace evmone::baseline
 {
 namespace
 {
-CodeAnalysis analyze_jumpdests(bytes_view code)
+CodeAnalysis::JumpdestMap analyze_jumpdests(bytes_view code)
 {
-    // We need at most 33 bytes of code padding: 32 for possible missing all data bytes of PUSH32
-    // at the very end of the code; and one more byte for STOP to guarantee there is a terminating
-    // instruction at the code end.
-    constexpr auto padding = 32 + 1;
-
     // To find if op is any PUSH opcode (OP_PUSH1 <= op <= OP_PUSH32)
     // it can be noticed that OP_PUSH32 is INT8_MAX (0x7f) therefore
     // static_cast<int8_t>(op) <= OP_PUSH32 is always true and can be skipped.
@@ -50,24 +45,34 @@ CodeAnalysis analyze_jumpdests(bytes_view code)
             map[i] = true;
     }
 
+    return map;
+}
+
+std::unique_ptr<uint8_t[]> pad_code(bytes_view code)
+{
+    // We need at most 33 bytes of code padding: 32 for possible missing all data bytes of PUSH32
+    // at the very end of the code; and one more byte for STOP to guarantee there is a terminating
+    // instruction at the code end.
+    constexpr auto padding = 32 + 1;
+
     // Using "raw" new operator instead of std::make_unique() to get uninitialized array.
     std::unique_ptr<uint8_t[]> padded_code{new uint8_t[code.size() + padding]};
     std::copy(std::begin(code), std::end(code), padded_code.get());
     std::fill_n(&padded_code[code.size()], padding, uint8_t{OP_STOP});
-
-    // TODO: The padded code buffer and jumpdest bitmap can be created with single allocation.
-    return CodeAnalysis{std::move(padded_code), std::move(map)};
+    return padded_code;
 }
 
 
 CodeAnalysis analyze_legacy(bytes_view code)
 {
-    return analyze_jumpdests(code);
+    // TODO: The padded code buffer and jumpdest bitmap can be created with single allocation.
+    return {pad_code(code), analyze_jumpdests(code)};
 }
 
-CodeAnalysis analyze_eof1(bytes_view::const_iterator code, const EOF1Header& header)
+CodeAnalysis analyze_eof1(bytes_view eof_container, const EOF1Header& header)
 {
-    return analyze_jumpdests({&code[header.code_begin()], header.code_size});
+    const auto executable_code = eof_container.substr(header.code_begin(), header.code_size);
+    return {executable_code.data(), analyze_jumpdests(executable_code)};
 }
 }  // namespace
 
@@ -77,7 +82,7 @@ CodeAnalysis analyze(evmc_revision rev, bytes_view code)
         return analyze_legacy(code);
 
     const auto eof1_header = read_valid_eof1_header(code.begin());
-    return analyze_eof1(code.begin(), eof1_header);
+    return analyze_eof1(code, eof1_header);
 }
 
 namespace
@@ -212,9 +217,9 @@ template <evmc_opcode Op>
 
 
 template <bool TracingEnabled>
-void dispatch(const CostTable& cost_table, ExecutionState& state, Tracer* tracer = nullptr) noexcept
+void dispatch(const CostTable& cost_table, ExecutionState& state, const uint8_t* code,
+    Tracer* tracer = nullptr) noexcept
 {
-    const auto* const code = state.code.data();
     const auto stack_bottom = state.stack_space.bottom();
 
     // Code iterator and stack top pointer for interpreter loop.
@@ -226,7 +231,7 @@ void dispatch(const CostTable& cost_table, ExecutionState& state, Tracer* tracer
         {
             const auto offset = static_cast<uint32_t>(position.code_it - code);
             const auto stack_height = static_cast<int>(position.stack_top - stack_bottom);
-            if (offset < state.code.size())  // Skip STOP from code padding.
+            if (offset < state.original_code.size())  // Skip STOP from code padding.
                 tracer->notify_instruction_start(offset, position.stack_top, stack_height, state);
         }
 
@@ -260,7 +265,8 @@ void dispatch(const CostTable& cost_table, ExecutionState& state, Tracer* tracer
 }
 
 #if EVMONE_CGOTO_SUPPORTED
-void dispatch_cgoto(const CostTable& cost_table, ExecutionState& state) noexcept
+void dispatch_cgoto(
+    const CostTable& cost_table, ExecutionState& state, const uint8_t* code) noexcept
 {
 #pragma GCC diagnostic ignored "-Wpedantic"
 
@@ -275,7 +281,6 @@ void dispatch_cgoto(const CostTable& cost_table, ExecutionState& state) noexcept
     };
     static_assert(std::size(cgoto_table) == 256);
 
-    const auto* const code = state.code.data();
     const auto stack_bottom = state.stack_space.bottom();
 
     // Code iterator and stack top pointer for interpreter loop.
@@ -311,25 +316,24 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
 {
     state.analysis.baseline = &analysis;  // Assign code analysis for instruction implementations.
 
-    // Use padded code.
-    state.code = {analysis.padded_code.get(), state.code.size()};
+    const auto code = analysis.executable_code;
 
     const auto& cost_table = get_baseline_cost_table(state.rev);
 
     auto* tracer = vm.get_tracer();
     if (INTX_UNLIKELY(tracer != nullptr))
     {
-        tracer->notify_execution_start(state.rev, *state.msg, state.code);
-        dispatch<true>(cost_table, state, tracer);
+        tracer->notify_execution_start(state.rev, *state.msg, code);
+        dispatch<true>(cost_table, state, code, tracer);
     }
     else
     {
 #if EVMONE_CGOTO_SUPPORTED
         if (vm.cgoto)
-            dispatch_cgoto(cost_table, state);
+            dispatch_cgoto(cost_table, state, code);
         else
 #endif
-            dispatch<false>(cost_table, state);
+            dispatch<false>(cost_table, state, code);
     }
 
     const auto gas_left =
