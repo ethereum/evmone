@@ -19,6 +19,22 @@ public:
 
     void TestBody() final { evmone::test::load_state_test(m_json_test_file); }
 };
+
+void register_test_files(const fs::path& root_dir)
+{
+    std::vector<fs::path> test_files;
+    std::copy_if(fs::recursive_directory_iterator{root_dir}, fs::recursive_directory_iterator{},
+        std::back_inserter(test_files), [](const fs::directory_entry& entry) {
+            return entry.is_regular_file() && entry.path().extension() == ".json";
+        });
+    std::sort(test_files.begin(), test_files.end());
+    for (const auto& p : test_files)
+    {
+        const auto d = fs::relative(p, root_dir);
+        testing::RegisterTest(d.parent_path().string().c_str(), d.stem().string().c_str(), nullptr,
+            nullptr, p.string().c_str(), 0, [p]() -> testing::Test* { return new StateTest(p); });
+    }
+}
 }  // namespace
 
 int main(int argc, char* argv[])
@@ -31,20 +47,6 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    std::vector<fs::path> test_files;
-    const fs::path root_test_dir{argv[1]};
-    std::copy_if(fs::recursive_directory_iterator{root_test_dir},
-        fs::recursive_directory_iterator{}, std::back_inserter(test_files),
-        [](const fs::directory_entry& entry) {
-            return entry.is_regular_file() && entry.path().extension() == ".json";
-        });
-    std::sort(test_files.begin(), test_files.end());
-    for (const auto& p : test_files)
-    {
-        const auto d = fs::relative(p, root_test_dir);
-        testing::RegisterTest(d.parent_path().string().c_str(), d.stem().string().c_str(), nullptr,
-            nullptr, p.string().c_str(), 0, [p]() -> testing::Test* { return new StateTest(p); });
-    }
-
+    register_test_files(argv[1]);
     return RUN_ALL_TESTS();
 }
