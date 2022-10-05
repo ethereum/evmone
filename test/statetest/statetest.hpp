@@ -56,6 +56,7 @@ struct StateTransitionTest
     state::BlockInfo block;
     TestMultiTransaction multi_tx;
     std::vector<Case> cases;
+    std::unordered_map<uint64_t, std::string> input_labels;
 };
 
 StateTransitionTest load_state_test(const fs::path& test_file);
