@@ -108,6 +108,8 @@ evmc_revision to_rev(std::string_view s)
         return EVMC_LONDON;
     if (s == "Merge")
         return EVMC_PARIS;
+    if (s == "London+3540+3670")
+        return EVMC_SHANGHAI;
     throw std::invalid_argument{"unknown revision: " + std::string{s}};
 }
 }  // namespace
