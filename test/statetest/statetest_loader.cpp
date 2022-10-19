@@ -50,8 +50,7 @@ template <>
 intx::uint256 from_json<intx::uint256>(const json::json& j)
 {
     const auto s = j.get<std::string>();
-    static constexpr std::string_view bigint_marker{"0x:bigint "};
-    if (std::string_view{s}.substr(0, bigint_marker.size()) == bigint_marker)
+    if (s.starts_with("0x:bigint "))
         return std::numeric_limits<intx::uint256>::max();  // Fake it
     return intx::from_string<intx::uint256>(s);
 }

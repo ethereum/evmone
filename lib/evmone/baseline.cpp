@@ -12,8 +12,7 @@
 #include <memory>
 
 #ifdef NDEBUG
-// TODO: msvc::forceinline can be used in C++20.
-#define release_inline gnu::always_inline
+#define release_inline gnu::always_inline, msvc::forceinline
 #else
 #define release_inline
 #endif

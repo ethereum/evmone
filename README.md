@@ -17,7 +17,7 @@ The codebase of _evmone_ is optimized to provide fast and efficient execution of
 ### Characteristic of evmone
 
 1. Exposes the [EVMC] API.
-2. Requires C++17 standard.
+2. Requires C++20 standard.
 3. The [intx] library is used to provide 256-bit integer precision.
 4. The [ethash] library is used to provide Keccak hash function implementation
    needed for the special `KECCAK256` instruction.
@@ -73,7 +73,6 @@ To build the evmone EVMC module (shared library), test, and benchmark:
    ```
 
    ##### Windows
-   *Note: >= Visual Studio 2019 is required since evmone makes heavy use of C++17*
    ```
    cmake -S . -B build -DEVMONE_TESTING=ON -G "Visual Studio 16 2019" -A x64
    ```

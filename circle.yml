@@ -32,7 +32,7 @@ executors:
       CMAKE_BUILD_PARALLEL_LEVEL: 8
   linux-gcc-min:
     docker:
-      - image: ethereum/cpp-build-env:15-gcc-8
+      - image: ethereum/cpp-build-env:15-gcc-10
     resource_class: small
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
@@ -43,7 +43,7 @@ executors:
       CMAKE_BUILD_PARALLEL_LEVEL: 4
   linux-clang-min:
     docker:
-      - image: ethereum/cpp-build-env:15-clang-9
+      - image: ethereum/cpp-build-env:16-clang-11
     resource_class: small
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
