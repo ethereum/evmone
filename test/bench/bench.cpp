@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <span>
 
 namespace fs = std::filesystem;
 
@@ -146,7 +147,7 @@ std::vector<BenchmarkCase> load_benchmarks_from_dir(  // NOLINT(misc-no-recursio
     return benchmark_cases;
 }
 
-void register_benchmarks(const std::vector<BenchmarkCase>& benchmark_cases)
+void register_benchmarks(std::span<const BenchmarkCase> benchmark_cases)
 {
     evmc::VM* advanced_vm = nullptr;
     evmc::VM* baseline_vm = nullptr;
