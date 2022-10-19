@@ -2,11 +2,9 @@
 # Copyright 2019 The evmone Authors.
 # SPDX-License-Identifier: Apache-2.0
 
-include(CheckIncludeFileCXX)
-
 add_executable(evmone-bench)
 target_include_directories(evmone-bench PRIVATE ${evmone_private_include_dir})
-target_link_libraries(evmone-bench PRIVATE evmone testutils evmc::loader benchmark::benchmark $<$<CXX_COMPILER_ID:GNU>:stdc++fs>)
+target_link_libraries(evmone-bench PRIVATE evmone testutils evmc::loader benchmark::benchmark)
 target_sources(
     evmone-bench PRIVATE
     bench.cpp
