@@ -31,7 +31,10 @@ DUP1,4
 {\"error\":null,\"gas\":999985,\"gasUsed\":15,\"output\":\"\"}
 ")
 
-
-    get_property(ALL_TESTS DIRECTORY PROPERTY TESTS)
-    set_tests_properties(${ALL_TESTS} PROPERTIES ENVIRONMENT LLVM_PROFILE_FILE=${CMAKE_BINARY_DIR}/integration-%p.profraw)
 endif()
+
+add_subdirectory(statetest)
+
+get_property(ALL_TESTS DIRECTORY PROPERTY TESTS)
+set_tests_properties(${ALL_TESTS} PROPERTIES ENVIRONMENT LLVM_PROFILE_FILE=${CMAKE_BINARY_DIR}/integration-%p.profraw)
+
