@@ -5,11 +5,16 @@
 hunter_add_package(nlohmann_json)
 find_package(nlohmann_json CONFIG REQUIRED)
 
-add_executable(evmone-statetest)
-target_link_libraries(evmone-statetest PRIVATE evmone evmone::state nlohmann_json::nlohmann_json GTest::gtest)
+add_library(evmone-statetestutils STATIC)
+add_library(evmone::statetestutils ALIAS evmone-statetestutils)
+target_compile_features(evmone-statetestutils PUBLIC cxx_std_20)
+target_link_libraries(evmone-statetestutils PRIVATE evmone::state nlohmann_json::nlohmann_json)
 target_sources(
-    evmone-statetest PRIVATE
+    evmone-statetestutils PRIVATE
     statetest.hpp
-    statetest.cpp
     statetest_loader.cpp
 )
+
+add_executable(evmone-statetest)
+target_link_libraries(evmone-statetest PRIVATE evmone::statetestutils evmone GTest::gtest)
+target_sources(evmone-statetest PRIVATE statetest.cpp)
