@@ -24,6 +24,9 @@ public:
         assert(r.second);
         return r.first->second;
     }
+
+    /// Get an account from the address
+    Account& get(const address& addr) { return m_accounts.at(addr); }
 };
 
 struct BlockInfo

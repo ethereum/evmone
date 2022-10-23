@@ -2,6 +2,7 @@
 // Copyright 2019 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+#include "../statetest/statetest.hpp"
 #include "helpers.hpp"
 #include "synthetic_benchmarks.hpp"
 #include <benchmark/benchmark.h>
@@ -31,7 +32,7 @@ struct BenchmarkCase
         bytes input;
         bytes expected_output;
 
-        Input(std::string _name, bytes _input, bytes _expected_output) noexcept
+        Input(std::string _name, bytes _input, bytes _expected_output = {}) noexcept
           : name{std::move(_name)},
             input{std::move(_input)},
             expected_output{std::move(_expected_output)}
@@ -41,76 +42,31 @@ struct BenchmarkCase
     std::string name;
     bytes code;
     std::vector<Input> inputs;
-
-    /// Create a benchmark case without input.
-    BenchmarkCase(std::string _name, bytes _code) noexcept
-      : name{std::move(_name)}, code{std::move(_code)}
-    {}
 };
 
-
-constexpr auto runtime_code_extension = ".bin-runtime";
-constexpr auto inputs_extension = ".inputs";
-
 /// Loads the benchmark case's inputs from the inputs file at the given path.
-std::vector<BenchmarkCase::Input> load_inputs(const fs::path& path)
+std::vector<BenchmarkCase::Input> load_inputs(const StateTransitionTest& state_test)
 {
-    enum class state
-    {
-        name,
-        input,
-        expected_output
-    };
-
-    auto inputs_file = std::ifstream{path};
-
     std::vector<BenchmarkCase::Input> inputs;
-    auto st = state::name;
-    std::string input_name;
-    bytes input;
-    for (std::string l; std::getline(inputs_file, l);)
+    inputs.reserve(state_test.multi_tx.inputs.size());
+    for (size_t i = 0; i < state_test.multi_tx.inputs.size(); ++i)
     {
-        switch (st)
-        {
-        case state::name:
-            if (l.empty())
-                continue;  // Skip any empty line.
-            input_name = std::move(l);
-            st = state::input;
-            break;
-
-        case state::input:
-            input = from_hexx(l);
-            st = state::expected_output;
-            break;
-
-        case state::expected_output:
-            inputs.emplace_back(std::move(input_name), std::move(input), from_hexx(l));
-            input_name = {};
-            input = {};
-            st = state::name;
-            break;
-        }
+        inputs.emplace_back(
+            BenchmarkCase::Input{state_test.input_labels.at(i), state_test.multi_tx.inputs[i]});
     }
-
     return inputs;
 }
 
 /// Loads a benchmark case from a file at `path` and all its inputs from the matching inputs file.
 BenchmarkCase load_benchmark(const fs::path& path, const std::string& name_prefix)
 {
+    auto state_test = evmone::test::load_state_test(path);
+
     const auto name = name_prefix + path.stem().string();
+    const auto code = state_test.pre_state.get(state_test.multi_tx.to.value()).code;
+    const auto inputs = load_inputs(state_test);
 
-    std::ifstream file{path};
-    std::string code_hexx{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
-    BenchmarkCase b{name, from_hexx(code_hexx)};
-
-    auto inputs_path = path;
-    inputs_path.replace_extension(inputs_extension);
-    if (fs::exists(inputs_path))
-        b.inputs = load_inputs(inputs_path);
-
-    return b;
+    return BenchmarkCase{name, code, inputs};
 }
 
 /// Loads all benchmark cases from the given directory and all its subdirectories.
@@ -124,7 +80,7 @@ std::vector<BenchmarkCase> load_benchmarks_from_dir(  // NOLINT(misc-no-recursio
     {
         if (e.is_directory())
             subdirs.emplace_back(e);
-        else if (e.path().extension() == runtime_code_extension)
+        else if (e.path().extension() == ".json")
             code_files.emplace_back(e);
     }
 
@@ -291,13 +247,12 @@ std::tuple<int, std::vector<BenchmarkCase>> parseargs(int argc, char** argv)
     if (!code_hex_file.empty())
     {
         std::ifstream file{code_hex_file};
-        BenchmarkCase b{code_hex_file,
-            from_spaced_hex(std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{})
-                .value()};
-        b.inputs.emplace_back(
-            "", from_hex(input_hex).value(), from_hex(expected_output_hex).value());
-
-        return {0, {std::move(b)}};
+        return {0, {BenchmarkCase{code_hex_file,
+                       from_spaced_hex(
+                           std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{})
+                           .value(),
+                       {BenchmarkCase::Input{"", from_hex(input_hex).value(),
+                           from_hex(expected_output_hex).value()}}}}};
     }
 
     return {0, {}};
