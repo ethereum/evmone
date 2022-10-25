@@ -64,3 +64,12 @@ SuiteA\.
   test2
 ]]
 )
+
+add_test(
+    NAME ${PREFIX}/invalid_path
+    COMMAND evmone-statetest invalid.json
+)
+set_tests_properties(
+    ${PREFIX}/invalid_path PROPERTIES
+    PASS_REGULAR_EXPRESSION "invalid path: invalid\\.json"
+)

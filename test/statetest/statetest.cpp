@@ -40,18 +40,28 @@ void register_test_files(const fs::path& root)
         for (const auto& p : test_files)
             register_test(fs::relative(p, root).parent_path().string(), p);
     }
-    else  // Assume regular file.
+    else if (is_regular_file(root))
     {
         register_test(root.parent_path().string(), root);
     }
+    else
+        throw std::invalid_argument("invalid path: " + root.string());
 }
 }  // namespace
 
 
 int main(int argc, char* argv[])
 {
-    testing::InitGoogleTest(&argc, argv);  // Process GoogleTest flags.
-    for (int i = 1; i < argc; ++i)
-        register_test_files(argv[i]);
-    return RUN_ALL_TESTS();
+    try
+    {
+        testing::InitGoogleTest(&argc, argv);  // Process GoogleTest flags.
+        for (int i = 1; i < argc; ++i)
+            register_test_files(argv[i]);
+        return RUN_ALL_TESTS();
+    }
+    catch (const std::exception& ex)
+    {
+        std::cerr << ex.what() << "\n";
+        return -1;
+    }
 }
