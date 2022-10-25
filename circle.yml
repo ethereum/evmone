@@ -349,11 +349,7 @@ jobs:
       - run:
           name: "State tests"
           working_directory: ~/build
-          command: bin/evmone-statetest ~/tests/GeneralStateTests
-      - run:
-          name: "State tests (legacy)"
-          working_directory: ~/build
-          command: bin/evmone-statetest ~/tests/LegacyTests/Constantinople/GeneralStateTests
+          command: bin/evmone-statetest ~/tests/GeneralStateTests ~/tests/LegacyTests/Constantinople/GeneralStateTests
       - collect_coverage_gcc
       - upload_coverage:
           flags: statetests
