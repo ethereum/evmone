@@ -109,7 +109,7 @@ namespace
 ///          or EVMC_SUCCESS if everything is fine.
 template <Opcode Op>
 inline evmc_status_code check_requirements(const CostTable& cost_table, int64_t& gas_left,
-    const uint256* stack_top, const uint256* stack_bottom) noexcept
+    const uint256* /*stack_top*/, const uint256* /*stack_bottom*/) noexcept
 {
     static_assert(
         !instr::has_const_gas_cost(Op) || instr::gas_costs[EVMC_FRONTIER][Op] != instr::undefined,
@@ -128,20 +128,20 @@ inline evmc_status_code check_requirements(const CostTable& cost_table, int64_t&
 
     // Check stack requirements first. This is order is not required,
     // but it is nicer because complete gas check may need to inspect operands.
-    if constexpr (instr::traits[Op].stack_height_change > 0)
-    {
-        static_assert(instr::traits[Op].stack_height_change == 1,
-            "unexpected instruction with multiple results");
-        if (INTX_UNLIKELY(stack_top == stack_bottom + StackSpace::limit))
-            return EVMC_STACK_OVERFLOW;
-    }
-    if constexpr (instr::traits[Op].stack_height_required > 0)
-    {
-        // Check stack underflow using pointer comparison <= (better optimization).
-        static constexpr auto min_offset = instr::traits[Op].stack_height_required - 1;
-        if (INTX_UNLIKELY(stack_top <= stack_bottom + min_offset))
-            return EVMC_STACK_UNDERFLOW;
-    }
+    // if constexpr (instr::traits[Op].stack_height_change > 0)
+    // {
+    //     static_assert(instr::traits[Op].stack_height_change == 1,
+    //         "unexpected instruction with multiple results");
+    //     if (INTX_UNLIKELY(stack_top == stack_bottom + StackSpace::limit))
+    //         return EVMC_STACK_OVERFLOW;
+    // }
+    // if constexpr (instr::traits[Op].stack_height_required > 0)
+    // {
+    //     // Check stack underflow using pointer comparison <= (better optimization).
+    //     static constexpr auto min_offset = instr::traits[Op].stack_height_required - 1;
+    //     if (INTX_UNLIKELY(stack_top <= stack_bottom + min_offset))
+    //         return EVMC_STACK_UNDERFLOW;
+    // }
 
     if (INTX_UNLIKELY((gas_left -= gas_cost) < 0))
         return EVMC_OUT_OF_GAS;
