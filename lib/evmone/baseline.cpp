@@ -100,8 +100,8 @@ namespace
 /// @return  Status code with information which check has failed
 ///          or EVMC_SUCCESS if everything is fine.
 template <evmc_opcode Op>
-inline evmc_status_code check_requirements(
-    const CostTable& cost_table, int64_t& gas_left, ptrdiff_t stack_size) noexcept
+inline evmc_status_code check_requirements(const CostTable& cost_table, int64_t& gas_left,
+    const uint256* stack_top, const uint256* stack_bottom) noexcept
 {
     static_assert(
         !instr::has_const_gas_cost(Op) || instr::gas_costs[EVMC_FRONTIER][Op] != instr::undefined,
@@ -117,6 +117,8 @@ inline evmc_status_code check_requirements(
         if (INTX_UNLIKELY(gas_cost < 0))
             return EVMC_UNDEFINED_INSTRUCTION;
     }
+
+    const auto stack_size = stack_top - stack_bottom;
 
     // Check stack requirements first. This is order is not required,
     // but it is nicer because complete gas check may need to inspect operands.
@@ -202,8 +204,8 @@ template <evmc_opcode Op>
 [[release_inline]] inline Position invoke(const CostTable& cost_table, const uint256* stack_bottom,
     Position pos, ExecutionState& state) noexcept
 {
-    const auto stack_size = pos.stack_top - stack_bottom;
-    if (const auto status = check_requirements<Op>(cost_table, state.gas_left, stack_size);
+    if (const auto status =
+            check_requirements<Op>(cost_table, state.gas_left, pos.stack_top, stack_bottom);
         status != EVMC_SUCCESS)
     {
         state.status = status;
