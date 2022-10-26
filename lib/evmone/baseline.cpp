@@ -125,6 +125,9 @@ inline evmc_status_code check_requirements(const CostTable& cost_table, int64_t&
             return EVMC_UNDEFINED_INSTRUCTION;
     }
 
+    if (INTX_UNLIKELY((gas_left -= gas_cost) < 0))
+        return EVMC_OUT_OF_GAS;
+
     // Check stack requirements first. This is order is not required,
     // but it is nicer because complete gas check may need to inspect operands.
     if constexpr (instr::traits[Op].stack_height_change > 0)
@@ -141,9 +144,6 @@ inline evmc_status_code check_requirements(const CostTable& cost_table, int64_t&
         if (INTX_UNLIKELY(stack_top <= stack_bottom + min_offset))
             return EVMC_STACK_UNDERFLOW;
     }
-
-    if (INTX_UNLIKELY((gas_left -= gas_cost) < 0))
-        return EVMC_OUT_OF_GAS;
 
     return EVMC_SUCCESS;
 }
