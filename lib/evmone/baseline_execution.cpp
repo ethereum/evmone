@@ -77,9 +77,13 @@ inline evmc_status_code check_requirements(const CostTable& cost_table, int64_t&
             return EVMC_STACK_UNDERFLOW;
     }
 
-    if (INTX_UNLIKELY((gas_left -= gas_cost) < 0))
+    uint64_t h;
+    const auto o = __builtin_usubl_overflow(
+        static_cast<uint64_t>(gas_left), static_cast<uint64_t>(gas_cost), &h);
+    if (o)
         return EVMC_OUT_OF_GAS;
 
+    gas_left = static_cast<int64_t>(h);
     return EVMC_SUCCESS;
 }
 
