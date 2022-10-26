@@ -118,15 +118,14 @@ inline evmc_status_code check_requirements(const CostTable& cost_table, int64_t&
     if constexpr (!instr::has_const_gas_cost(Op))
     {
         gas_cost = cost_table[Op];  // If not, load the cost from the table.
-
-        // Negative cost marks an undefined instruction.
-        // This check must be first to produce correct error code.
-        if (INTX_UNLIKELY(gas_cost < 0))
-            return EVMC_UNDEFINED_INSTRUCTION;
     }
 
-    if (INTX_UNLIKELY((gas_left -= gas_cost) < 0))
-        return EVMC_OUT_OF_GAS;
+    uint64_t h = 0;
+    const auto c = static_cast<uint64_t>(int64_t{gas_cost});
+    const auto o = __builtin_usubl_overflow(static_cast<uint64_t>(gas_left), c, &h);
+    if (INTX_UNLIKELY(o))
+        return (gas_cost < 0) ? EVMC_UNDEFINED_INSTRUCTION : EVMC_OUT_OF_GAS;
+    gas_left = static_cast<int64_t>(h);
 
     // Check stack requirements first. This is order is not required,
     // but it is nicer because complete gas check may need to inspect operands.
