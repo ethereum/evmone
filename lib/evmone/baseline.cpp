@@ -93,10 +93,12 @@ namespace
 /// - if stack height requirements are fulfilled (stack overflow, stack underflow)
 /// - charges the instruction base gas cost and checks is there is any gas left.
 ///
-/// @tparam         Op          Instruction opcode.
-/// @param          cost_table  Table of base gas costs.
-/// @param [in,out] gas_left    Gas left.
-/// @param          stack_size  Current stack height.
+/// @tparam         Op            Instruction opcode.
+/// @param          cost_table    Table of base gas costs.
+/// @param [in,out] gas_left      Gas left.
+/// @param          stack_top     Pointer to the stack top item.
+/// @param          stack_bottom  Pointer to the stack bottom.
+///                               The stack height is stack_top - stack_bottom.
 /// @return  Status code with information which check has failed
 ///          or EVMC_SUCCESS if everything is fine.
 template <evmc_opcode Op>
@@ -118,19 +120,20 @@ inline evmc_status_code check_requirements(const CostTable& cost_table, int64_t&
             return EVMC_UNDEFINED_INSTRUCTION;
     }
 
-    const auto stack_size = stack_top - stack_bottom;
-
     // Check stack requirements first. This is order is not required,
     // but it is nicer because complete gas check may need to inspect operands.
     if constexpr (instr::traits[Op].stack_height_change > 0)
     {
-        static_assert(instr::traits[Op].stack_height_change == 1);
-        if (INTX_UNLIKELY(stack_size == StackSpace::limit))
+        static_assert(instr::traits[Op].stack_height_change == 1,
+            "unexpected instruction with multiple results");
+        if (INTX_UNLIKELY(stack_top == stack_bottom + StackSpace::limit))
             return EVMC_STACK_OVERFLOW;
     }
     if constexpr (instr::traits[Op].stack_height_required > 0)
     {
-        if (INTX_UNLIKELY(stack_size < instr::traits[Op].stack_height_required))
+        // Check stack underflow using pointer comparison <= (better optimization).
+        static constexpr auto min_offset = instr::traits[Op].stack_height_required - 1;
+        if (INTX_UNLIKELY(stack_top <= stack_bottom + min_offset))
             return EVMC_STACK_UNDERFLOW;
     }
 
