@@ -167,18 +167,15 @@ static void from_json(const json::json& j, StateTransitionTest& o)
 
     for (const auto& [j_addr, j_acc] : j_t.at("pre").items())
     {
-        const auto addr = from_json<address>(j_addr);
-        auto& acc = o.pre_state.create(addr);
-        acc.balance = from_json<intx::uint256>(j_acc.at("balance"));
-        acc.nonce = from_json<uint64_t>(j_acc.at("nonce"));
-        acc.code = from_json<bytes>(j_acc.at("code"));
+        auto& acc = o.pre_state.insert(from_json<address>(j_addr),
+            {.nonce = from_json<uint64_t>(j_acc.at("nonce")),
+                .balance = from_json<intx::uint256>(j_acc.at("balance")),
+                .code = from_json<bytes>(j_acc.at("code"))});
 
         for (const auto& [j_key, j_value] : j_acc.at("storage").items())
         {
-            auto& slot = acc.storage[from_json<bytes32>(j_key)];
             const auto value = from_json<bytes32>(j_value);
-            slot.original = value;
-            slot.current = value;
+            acc.storage.insert({from_json<bytes32>(j_key), {.current = value, .original = value}});
         }
     }
 

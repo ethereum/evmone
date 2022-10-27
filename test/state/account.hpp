@@ -17,10 +17,10 @@ using evmc::bytes32;
 struct StorageValue
 {
     /// The current value.
-    bytes32 current{};
+    bytes32 current = {};
 
     /// The original value.
-    bytes32 original{};
+    bytes32 original = {};
 };
 
 /// The state account.
@@ -30,12 +30,12 @@ struct Account
     uint64_t nonce = 0;
 
     /// The account balance.
-    intx::uint256 balance;
+    intx::uint256 balance = {};
 
     /// The account storage map.
-    std::unordered_map<bytes32, StorageValue> storage;
+    std::unordered_map<bytes32, StorageValue> storage = {};
 
     /// The account code.
-    bytes code;
+    bytes code = {};
 };
 }  // namespace evmone::state

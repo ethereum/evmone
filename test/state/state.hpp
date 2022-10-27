@@ -17,15 +17,16 @@ class State
     std::unordered_map<address, Account> m_accounts;
 
 public:
-    /// Creates new account under the address.
-    Account& create(const address& addr)
+    /// Inserts the new account at the address.
+    /// There must not exist any account under this address before.
+    Account& insert(const address& addr, Account account = {})
     {
-        const auto r = m_accounts.insert({addr, {}});
+        const auto r = m_accounts.insert({addr, std::move(account)});
         assert(r.second);
         return r.first->second;
     }
 
-    /// Get an account from the address
+    /// Gets the account at the address (the account must exist).
     Account& get(const address& addr) { return m_accounts.at(addr); }
 };
 
