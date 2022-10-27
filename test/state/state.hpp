@@ -26,8 +26,40 @@ public:
         return r.first->second;
     }
 
+    /// Returns the pointer to the account at the address if the account exists. Null otherwise.
+    Account* find(const address& addr) noexcept
+    {
+        const auto it = m_accounts.find(addr);
+        if (it != m_accounts.end())
+            return &it->second;
+        return nullptr;
+    }
+
     /// Gets the account at the address (the account must exist).
-    Account& get(const address& addr) { return m_accounts.at(addr); }
+    Account& get(const address& addr) noexcept
+    {
+        auto acc = find(addr);
+        assert(acc != nullptr);
+        return *acc;
+    }
+
+    /// Gets an existing account or inserts new account.
+    Account& get_or_insert(const address& addr, Account account = {})
+    {
+        if (const auto acc = find(addr); acc != nullptr)
+            return *acc;
+        return insert(addr, std::move(account));
+    }
+
+    /// Touches (as in EIP-161) an existing account or inserts new erasable account.
+    Account& touch(const address& addr)
+    {
+        auto& acc = get_or_insert(addr);
+        acc.erasable = true;
+        return acc;
+    }
+
+    [[nodiscard]] auto& get_accounts() noexcept { return m_accounts; }
 };
 
 struct BlockInfo
@@ -60,4 +92,16 @@ struct Transaction
     intx::uint256 value;
     AccessList access_list;
 };
+
+struct Log
+{
+    address addr;
+    bytes data;
+    std::vector<hash256> topics;
+};
+
+
+[[nodiscard]] std::optional<std::vector<Log>> transition(
+    State& state, const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm);
+
 }  // namespace evmone::state

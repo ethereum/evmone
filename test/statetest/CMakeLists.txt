@@ -13,6 +13,7 @@ target_sources(
     evmone-statetestutils PRIVATE
     statetest.hpp
     statetest_loader.cpp
+    statetest_runner.cpp
 )
 
 add_executable(evmone-statetest)

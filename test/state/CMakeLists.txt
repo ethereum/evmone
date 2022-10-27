@@ -4,15 +4,21 @@
 
 add_library(evmone-state STATIC)
 add_library(evmone::state ALIAS evmone-state)
-target_link_libraries(evmone-state PUBLIC evmc::evmc_cpp PRIVATE ethash::keccak)
+target_link_libraries(evmone-state PUBLIC evmc::evmc_cpp PRIVATE evmone ethash::keccak)
+target_include_directories(evmone-state PRIVATE ${evmone_private_include_dir})
 target_sources(
     evmone-state PRIVATE
     account.hpp
     hash_utils.hpp
+    host.hpp
+    host.cpp
     mpt.hpp
     mpt.cpp
     mpt_hash.hpp
     mpt_hash.cpp
+    precompiles.hpp
+    precompiles.cpp
     rlp.hpp
     state.hpp
+    state.cpp
 )
