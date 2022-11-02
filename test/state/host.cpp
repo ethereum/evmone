@@ -5,6 +5,7 @@
 #include "host.hpp"
 #include "precompiles.hpp"
 #include "rlp.hpp"
+#include <evmone/eof.hpp>
 
 namespace evmone::state
 {
@@ -219,8 +220,12 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
                                           evmc::Result{EVMC_FAILURE};
     }
 
-    // Reject EF code.
-    if (m_rev >= EVMC_LONDON && !code.empty() && code[0] == 0xEF)
+    if (m_rev >= EVMC_SHANGHAI && is_eof_code(code))
+    {
+        if (validate_eof(m_rev, code) != EOFValidationError::success)
+            return evmc::Result{EVMC_CONTRACT_VALIDATION_FAILURE};
+    }
+    else if (m_rev >= EVMC_LONDON && !code.empty() && code[0] == 0xEF)  // Reject EF code.
         return evmc::Result{EVMC_CONTRACT_VALIDATION_FAILURE};
 
     // TODO: The new_acc pointer is invalid because of the state revert implementation,
