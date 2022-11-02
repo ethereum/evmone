@@ -102,6 +102,7 @@ class InstructionTracer : public Tracer
         m_out << R"("depth":)" << msg.depth;
         m_out << R"(,"rev":")" << rev << '"';
         m_out << R"(,"static":)" << (((msg.flags & EVMC_STATIC) != 0) ? "true" : "false");
+        m_out << R"(,"input":")" << evmc::hex({msg.input_data, msg.input_size}) << '"';
         m_out << "}\n";
     }
 
