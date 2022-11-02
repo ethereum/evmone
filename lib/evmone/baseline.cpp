@@ -356,6 +356,26 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
 evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_context* ctx,
     evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
 {
+    if (rev >= EVMC_SHANGHAI && is_eof_code({code, code_size}))
+    {
+        // TODO(EOF): The initcode must be validated. Doing this just before execution is
+        //   good because validation can be combined with analysis/loading. But consider also
+        //   other places like create instructions.
+        if (validate_eof(rev, {code, code_size}) != EOFValidationError::success)
+        {
+            if ((msg->kind == EVMC_CREATE || msg->kind == EVMC_CREATE2))
+            {
+                // TODO(EOF): Should this be light error (gas is returned)?
+                return evmc::Result{EVMC_CONTRACT_VALIDATION_FAILURE, msg->gas}.release_raw();
+            }
+            else
+            {
+                // TODO(EOF): This should never happen but protects against invalid tests for now.
+                return evmc::Result{EVMC_INTERNAL_ERROR}.release_raw();
+            }
+        }
+    }
+
     auto vm = static_cast<VM*>(c_vm);
     const auto jumpdest_map = analyze(rev, {code, code_size});
     auto state =
