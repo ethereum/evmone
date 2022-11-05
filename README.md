@@ -86,7 +86,7 @@ To build the evmone EVMC module (shared library), test, and benchmark:
 3. Run the unit tests or benchmarking tool:
    ```
    build/bin/evmone-unittests
-   build/bin/evmone-bench test/benchmarks
+   build/bin/evmone-bench test/evm-benchmarks/benchmarks
    ```
 
 ### Tools
