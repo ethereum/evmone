@@ -93,18 +93,20 @@ namespace
 /// - if stack height requirements are fulfilled (stack overflow, stack underflow)
 /// - charges the instruction base gas cost and checks is there is any gas left.
 ///
-/// @tparam         Op          Instruction opcode.
-/// @param          cost_table  Table of base gas costs.
-/// @param [in,out] gas_left    Gas left.
-/// @param          stack_size  Current stack height.
+/// @tparam         Op            Instruction opcode.
+/// @param          cost_table    Table of base gas costs.
+/// @param [in,out] gas_left      Gas left.
+/// @param          stack_top     Pointer to the stack top item.
+/// @param          stack_bottom  Pointer to the stack bottom.
+///                               The stack height is stack_top - stack_bottom.
 /// @return  Status code with information which check has failed
 ///          or EVMC_SUCCESS if everything is fine.
 template <evmc_opcode Op>
-inline evmc_status_code check_requirements(
-    const CostTable& cost_table, int64_t& gas_left, ptrdiff_t stack_size) noexcept
+inline evmc_status_code check_requirements(const CostTable& cost_table, int64_t& gas_left,
+    const uint256* stack_top, const uint256* stack_bottom) noexcept
 {
     static_assert(
-        !(instr::has_const_gas_cost(Op) && instr::gas_costs[EVMC_FRONTIER][Op] == instr::undefined),
+        !instr::has_const_gas_cost(Op) || instr::gas_costs[EVMC_FRONTIER][Op] != instr::undefined,
         "undefined instructions must not be handled by check_requirements()");
 
     auto gas_cost = instr::gas_costs[EVMC_FRONTIER][Op];  // Init assuming const cost.
@@ -122,13 +124,16 @@ inline evmc_status_code check_requirements(
     // but it is nicer because complete gas check may need to inspect operands.
     if constexpr (instr::traits[Op].stack_height_change > 0)
     {
-        static_assert(instr::traits[Op].stack_height_change == 1);
-        if (INTX_UNLIKELY(stack_size == StackSpace::limit))
+        static_assert(instr::traits[Op].stack_height_change == 1,
+            "unexpected instruction with multiple results");
+        if (INTX_UNLIKELY(stack_top == stack_bottom + StackSpace::limit))
             return EVMC_STACK_OVERFLOW;
     }
     if constexpr (instr::traits[Op].stack_height_required > 0)
     {
-        if (INTX_UNLIKELY(stack_size < instr::traits[Op].stack_height_required))
+        // Check stack underflow using pointer comparison <= (better optimization).
+        static constexpr auto min_offset = instr::traits[Op].stack_height_required - 1;
+        if (INTX_UNLIKELY(stack_top <= stack_bottom + min_offset))
             return EVMC_STACK_UNDERFLOW;
     }
 
@@ -202,8 +207,8 @@ template <evmc_opcode Op>
 [[release_inline]] inline Position invoke(const CostTable& cost_table, const uint256* stack_bottom,
     Position pos, ExecutionState& state) noexcept
 {
-    const auto stack_size = pos.stack_top - stack_bottom;
-    if (const auto status = check_requirements<Op>(cost_table, state.gas_left, stack_size);
+    if (const auto status =
+            check_requirements<Op>(cost_table, state.gas_left, pos.stack_top, stack_bottom);
         status != EVMC_SUCCESS)
     {
         state.status = status;
