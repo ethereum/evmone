@@ -14,6 +14,15 @@ namespace evmone
 {
 using code_iterator = const uint8_t*;
 
+inline constexpr bool subtract_gas_cost(int64_t& gas_left, int64_t gas_cost) noexcept
+{
+    const auto d = gas_left - gas_cost;
+    if (INTX_UNLIKELY(d < 0))
+        return false;
+    gas_left = d;
+    return true;
+}
+
 /// Represents the pointer to the stack top item
 /// and allows retrieving stack items and manipulating the pointer.
 class StackTop
