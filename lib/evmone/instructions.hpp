@@ -10,17 +10,34 @@
 #include "instructions_xmacro.hpp"
 #include <ethash/keccak.hpp>
 
+#ifndef __has_builtin
+#define __has_builtin(NAME) 0
+#endif
+
 namespace evmone
 {
 using code_iterator = const uint8_t*;
 
 inline constexpr bool subtract_gas_cost(int64_t& gas_left, int64_t gas_cost) noexcept
 {
+#if __has_builtin(__builtin_usubl_overflow)
+    // Use builtin to workaround clang optimization issue
+    // https://github.com/llvm/llvm-project/issues/58636.
+    // Not needed for GCC, but does no harm.
+    uint64_t d = 0;
+    const auto o = __builtin_usubl_overflow(
+        static_cast<uint64_t>(gas_left), static_cast<uint64_t>(gas_cost), &d);
+    if (INTX_UNLIKELY(o))
+        return false;
+    gas_left = static_cast<int64_t>(d);
+    return true;
+#else
     const auto d = gas_left - gas_cost;
     if (INTX_UNLIKELY(d < 0))
         return false;
     gas_left = d;
     return true;
+#endif
 }
 
 /// Represents the pointer to the stack top item
