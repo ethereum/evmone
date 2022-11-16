@@ -802,7 +802,19 @@ template <int N>
 inline void swap(StackTop stack) noexcept
 {
     static_assert(N >= 1 && N <= 16);
-    std::swap(stack.top(), stack[N]);
+    auto& a = stack[N];
+    auto& t = stack.top();
+    // auto tmp = a;
+    auto t0 = t[0];
+    auto t1 = t[1];
+    auto t2 = t[2];
+    auto t3 = t[3];
+    t = a;
+    a[0] = t0;
+    a[1] = t1;
+    a[2] = t2;
+    a[3] = t3;
+    // std::swap(stack.top(), stack[N]);
 }
 
 template <size_t NumTopics>
