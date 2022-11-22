@@ -2,5 +2,12 @@ comment:
   layout: "diff, flags, files"
 
 flags:
-  consensus:
+  statetests:
+    paths:
+      - lib/evmone
+      - test/state
+      - test/statetest
+  blockchaintests:
     joined: false
+    paths:
+      - lib/evmone
