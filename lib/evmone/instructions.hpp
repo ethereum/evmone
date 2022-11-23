@@ -642,7 +642,12 @@ inline evmc_status_code mload(StackTop stack, ExecutionState& state) noexcept
     if (!check_memory(state, index, 32))
         return EVMC_OUT_OF_GAS;
 
-    index = intx::be::unsafe::load<uint256>(&state.memory[static_cast<size_t>(index)]);
+    const auto* src = &state.memory[static_cast<size_t>(index)];
+    const auto v = intx::le::unsafe::load<uint256>(src);
+    index[0] = intx::bswap(v[3]);
+    index[1] = intx::bswap(v[2]);
+    index[2] = intx::bswap(v[1]);
+    index[3] = intx::bswap(v[0]);
     return EVMC_SUCCESS;
 }
 
