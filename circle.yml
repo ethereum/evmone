@@ -55,7 +55,7 @@ executors:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
   macos:
     macos:
-      xcode: 13.4
+      xcode: 14.1.0
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
 
