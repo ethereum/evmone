@@ -55,6 +55,8 @@ constexpr void validate_traits_of() noexcept
     // immediate_size
     if constexpr (Op >= OP_PUSH1 && Op <= OP_PUSH32)
         static_assert(tr.immediate_size == Op - OP_PUSH1 + 1);
+    else if constexpr (Op == OP_DUPN || Op == OP_SWAPN)
+        static_assert(tr.immediate_size == 1);
     else
         static_assert(tr.immediate_size == 0);
 
@@ -101,6 +103,10 @@ TEST(instructions, compare_with_evmc_instruction_tables)
 
         for (size_t i = 0; i < evmone_tbl.size(); ++i)
         {
+            // Skip DUPN and SWAPN for Cancun. They are not defined in evmc
+            // TODO: Define DUPN and SWAPN in evmc
+            if (r == EVMC_CANCUN && (Opcode(i) == OP_DUPN || Opcode(i) == OP_SWAPN))
+                continue;
             const auto gas_cost = (instr_tbl[i] != instr::undefined) ? instr_tbl[i] : 0;
             const auto& metrics = evmone_tbl[i];
             const auto& ref_metrics = evmc_tbl[i];
@@ -129,7 +135,13 @@ TEST(instructions, compare_undefined_instructions)
         const auto* evmc_names_tbl = evmc_get_instruction_names_table(rev);
 
         for (size_t i = 0; i < instr_tbl.size(); ++i)
+        {
+            // Skip DUPN and SWAPN. They are not defined in evmc
+            // TODO: Define DUPN and SWAPN in evmc
+            if (Opcode(i) == OP_DUPN || Opcode(i) == OP_SWAPN)
+                continue;
             EXPECT_EQ(instr_tbl[i] == instr::undefined, evmc_names_tbl[i] == nullptr) << i;
+        }
     }
 }
 
@@ -138,6 +150,10 @@ TEST(instructions, compare_with_evmc_instruction_names)
     const auto* evmc_tbl = evmc_get_instruction_names_table(EVMC_MAX_REVISION);
     for (size_t i = 0; i < instr::traits.size(); ++i)
     {
+        // Skip DUPN and SWAPN. They are not defined in evmc
+        // TODO: Define DUPN and SWAPN in evmc
+        if (Opcode(i) == OP_DUPN || Opcode(i) == OP_SWAPN)
+            continue;
         EXPECT_STREQ(instr::traits[i].name, evmc_tbl[i]);
     }
 }

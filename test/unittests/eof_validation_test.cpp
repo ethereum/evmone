@@ -219,7 +219,8 @@ TEST(eof_validation, EOF1_terminating_instructions)
     {
         const auto& op_traits = traits[opcode];
         // Skip undefined opcodes.
-        if (op_traits.name == nullptr)
+        // TODO: iterate over all EOF revisions.
+        if (op_traits.name == nullptr || op_traits.since == EVMC_CANCUN)
             continue;
 
         bytes code{static_cast<uint8_t>(opcode) + bytes(op_traits.immediate_size, 0)};
