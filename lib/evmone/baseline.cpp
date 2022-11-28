@@ -327,7 +327,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     auto* tracer = vm.get_tracer();
     if (INTX_UNLIKELY(tracer != nullptr))
     {
-        tracer->notify_execution_start(state.rev, *state.msg, code);
+        tracer->notify_execution_start(state.rev, *state.msg, state.original_code);
         dispatch<true>(cost_table, state, code, tracer);
     }
     else
