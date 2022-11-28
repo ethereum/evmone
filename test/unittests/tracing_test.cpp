@@ -44,15 +44,15 @@ protected:
     {
         std::string m_name;
         std::ostringstream& m_trace;
-        const uint8_t* m_code = nullptr;
+        bytes_view m_code;
 
         void on_execution_start(
             evmc_revision /*rev*/, const evmc_message& /*msg*/, bytes_view code) noexcept override
         {
-            m_code = code.data();
+            m_code = code;
         }
 
-        void on_execution_end(const evmc_result& /*result*/) noexcept override { m_code = nullptr; }
+        void on_execution_end(const evmc_result& /*result*/) noexcept override { m_code = {}; }
 
         void on_instruction_start(uint32_t pc, const intx::uint256* /*stack_top*/,
             int /*stack_height*/, const evmone::ExecutionState& /*state*/) noexcept override
@@ -66,6 +66,28 @@ protected:
         explicit OpcodeTracer(tracing& parent, std::string name) noexcept
           : m_name{std::move(name)}, m_trace{parent.trace_stream}
         {}
+    };
+
+    class Inspector final : public evmone::Tracer
+    {
+        bytes m_last_code;
+
+        void on_execution_start(
+            evmc_revision /*rev*/, const evmc_message& /*msg*/, bytes_view code) noexcept override
+        {
+            m_last_code = code;
+        }
+
+        void on_execution_end(const evmc_result& /*result*/) noexcept override {}
+
+        void on_instruction_start(uint32_t /*pc*/, const intx::uint256* /*stack_top*/,
+            int /*stack_height*/, const evmone::ExecutionState& /*state*/) noexcept override
+        {}
+
+    public:
+        explicit Inspector() noexcept = default;
+
+        [[nodiscard]] const bytes& get_last_code() const noexcept { return m_last_code; }
     };
 };
 
@@ -254,4 +276,17 @@ TEST_F(tracing, trace_undefined_instruction)
 {"pc":1,"op":239,"opName":"0xef","gas":999999,"stack":[],"memorySize":0}
 {"error":"undefined instruction","gas":0,"gasUsed":1000000,"output":""}
 )");
+}
+
+TEST_F(tracing, trace_code_containing_zero)
+{
+    auto tracer_ptr = std::make_unique<Inspector>();
+    const auto& tracer = *tracer_ptr;
+    vm.add_tracer(std::move(tracer_ptr));
+
+    const auto code = bytecode{} + "602a6000556101c960015560068060166000396000f3600035600055";
+
+    trace(code);
+
+    EXPECT_EQ(tracer.get_last_code().size(), code.size());
 }
