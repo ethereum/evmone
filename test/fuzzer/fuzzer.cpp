@@ -306,12 +306,12 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
     auto ref_host = in.host;  // Copy Host.
     const auto& code = ref_host.accounts[in.msg.recipient].code;
 
-    if (print_input)
+    if (print_input != nullptr)
     {
         std::cout << "rev: " << int{in.rev} << "\n";
         std::cout << "depth: " << int{in.msg.depth} << "\n";
         std::cout << "code: " << hex(code) << "\n";
-        std::cout << "decoded: " << decode(code, in.rev) << "\n";
+        std::cout << "decoded: " << decode(code) << "\n";
         std::cout << "input: " << hex({in.msg.input_data, in.msg.input_size}) << "\n";
         std::cout << "account: " << hex(in.msg.recipient) << "\n";
         std::cout << "caller: " << hex(in.msg.sender) << "\n";

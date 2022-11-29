@@ -6,6 +6,7 @@
 /// about accounts, without storage.
 
 #include "evm_fixture.hpp"
+#include <evmone/instructions_traits.hpp>
 
 using namespace evmc::literals;
 using evmone::test::evm;
@@ -193,7 +194,7 @@ TEST_P(evm, log_data_cost)
         EXPECT_EQ(host.recorded_logs.size(), 0);
         execute(cost - 1, code);
         EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
-        EXPECT_EQ(host.recorded_logs.size(), 0) << to_name(op);
+        EXPECT_EQ(host.recorded_logs.size(), 0) << evmone::instr::traits[op].name;
         host.recorded_logs.clear();
     }
 }
