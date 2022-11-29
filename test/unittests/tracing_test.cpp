@@ -6,6 +6,7 @@
 #include <evmc/evmc.hpp>
 #include <evmc/mocked_host.hpp>
 #include <evmone/evmone.h>
+#include <evmone/instructions_traits.hpp>
 #include <evmone/tracing.hpp>
 #include <evmone/vm.hpp>
 #include <gmock/gmock.h>
@@ -58,8 +59,7 @@ protected:
             int /*stack_height*/, const evmone::ExecutionState& /*state*/) noexcept override
         {
             const auto opcode = m_code[pc];
-            m_trace << m_name << pc << ":"
-                    << evmc_get_instruction_names_table(EVMC_MAX_REVISION)[opcode] << " ";
+            m_trace << m_name << pc << ":" << evmone::instr::traits[opcode].name << " ";
         }
 
     public:
