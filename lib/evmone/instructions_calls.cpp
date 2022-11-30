@@ -6,7 +6,7 @@
 
 namespace evmone::instr::core
 {
-template <evmc_opcode Op>
+template <Opcode Op>
 evmc_status_code call_impl(StackTop stack, ExecutionState& state) noexcept
 {
     static_assert(
@@ -110,7 +110,7 @@ template evmc_status_code call_impl<OP_DELEGATECALL>(
 template evmc_status_code call_impl<OP_CALLCODE>(StackTop stack, ExecutionState& state) noexcept;
 
 
-template <evmc_opcode Op>
+template <Opcode Op>
 evmc_status_code create_impl(StackTop stack, ExecutionState& state) noexcept
 {
     static_assert(Op == OP_CREATE || Op == OP_CREATE2);

@@ -5,7 +5,6 @@
 #include "synthetic_benchmarks.hpp"
 #include "helpers.hpp"
 #include "test/utils/bytecode.hpp"
-#include <evmc/instructions.h>
 #include <evmone/instructions_traits.hpp>
 
 using namespace benchmark;
@@ -36,7 +35,7 @@ enum class InstructionCategory : char
     other = 'X',   ///< Not any of the categories above.
 };
 
-constexpr InstructionCategory get_instruction_category(evmc_opcode opcode) noexcept
+constexpr InstructionCategory get_instruction_category(Opcode opcode) noexcept
 {
     const auto trait = instr::traits[opcode];
     if (opcode >= OP_PUSH1 && opcode <= OP_PUSH32)
@@ -59,7 +58,7 @@ constexpr InstructionCategory get_instruction_category(evmc_opcode opcode) noexc
 
 struct CodeParams
 {
-    evmc_opcode opcode;
+    Opcode opcode;
     Mode mode;
 };
 
@@ -241,16 +240,16 @@ void register_synthetic_benchmarks()
             params_list.end(), {{opcode, Mode::min_stack}, {opcode, Mode::full_stack}});
 
     // PUSH.
-    for (auto opcode = OP_PUSH1; opcode <= OP_PUSH32; opcode = static_cast<evmc_opcode>(opcode + 1))
+    for (auto opcode = OP_PUSH1; opcode <= OP_PUSH32; opcode = static_cast<Opcode>(opcode + 1))
         params_list.insert(
             params_list.end(), {{opcode, Mode::min_stack}, {opcode, Mode::full_stack}});
 
     // SWAP.
-    for (auto opcode = OP_SWAP1; opcode <= OP_SWAP16; opcode = static_cast<evmc_opcode>(opcode + 1))
+    for (auto opcode = OP_SWAP1; opcode <= OP_SWAP16; opcode = static_cast<Opcode>(opcode + 1))
         params_list.insert(params_list.end(), {{opcode, Mode::min_stack}});
 
     // DUP.
-    for (auto opcode = OP_DUP1; opcode <= OP_DUP16; opcode = static_cast<evmc_opcode>(opcode + 1))
+    for (auto opcode = OP_DUP1; opcode <= OP_DUP16; opcode = static_cast<Opcode>(opcode + 1))
         params_list.insert(
             params_list.end(), {{opcode, Mode::min_stack}, {opcode, Mode::full_stack}});
 

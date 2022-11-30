@@ -22,6 +22,7 @@ add_library(evmone
     eof.hpp    
     instructions.hpp
     instructions_calls.cpp
+    instructions_opcodes.hpp
     instructions_storage.cpp
     instructions_traits.hpp
     instructions_xmacro.hpp
@@ -32,7 +33,7 @@ add_library(evmone
     vm.hpp
 )
 target_compile_features(evmone PUBLIC cxx_std_20)
-target_link_libraries(evmone PUBLIC evmc::evmc intx::intx PRIVATE evmc::instructions ethash::keccak)
+target_link_libraries(evmone PUBLIC evmc::evmc intx::intx PRIVATE ethash::keccak)
 target_include_directories(evmone PUBLIC
     $<BUILD_INTERFACE:${include_dir}>$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )

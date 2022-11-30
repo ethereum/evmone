@@ -4,8 +4,8 @@
 #pragma once
 
 #include "execution_state.hpp"
+#include "instructions_opcodes.hpp"
 #include <evmc/evmc.hpp>
-#include <evmc/instructions.h>
 #include <evmc/utils.h>
 #include <intx/intx.hpp>
 #include <array>

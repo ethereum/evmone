@@ -17,6 +17,10 @@ inline bytecode push(uint64_t n);
 inline bytecode push(evmc::address addr);
 inline bytecode push(evmc::bytes32 bs);
 
+using enum evmone::Opcode;
+using evmone::Opcode;
+
+// TODO: Pull bytecode in evmone namespace
 struct bytecode : bytes
 {
     bytecode() noexcept = default;
@@ -25,7 +29,7 @@ struct bytecode : bytes
 
     bytecode(const uint8_t* data, size_t size) : bytes{data, size} {}
 
-    bytecode(evmc_opcode opcode) : bytes{uint8_t(opcode)} {}
+    bytecode(Opcode opcode) : bytes{uint8_t(opcode)} {}
 
     template <typename T,
         typename = typename std::enable_if_t<std::is_convertible_v<T, std::string_view>>>
@@ -74,7 +78,7 @@ inline bytecode operator*(int n, bytecode c)
     return out;
 }
 
-inline bytecode operator*(int n, evmc_opcode op)
+inline bytecode operator*(int n, Opcode op)
 {
     return n * bytecode{op};
 }
@@ -116,7 +120,7 @@ inline bytecode push(bytes_view data)
         throw std::invalid_argument{"push data empty"};
     if (data.size() > (OP_PUSH32 - OP_PUSH1 + 1))
         throw std::invalid_argument{"push data too long"};
-    return evmc_opcode(data.size() + OP_PUSH1 - 1) + bytes{data};
+    return Opcode(data.size() + OP_PUSH1 - 1) + bytes{data};
 }
 
 inline bytecode push(std::string_view hex_data)
@@ -131,9 +135,9 @@ inline bytecode push(const intx::uint256& value)
     return push({data, std::size(data)});
 }
 
-bytecode push(evmc_opcode opcode) = delete;
+bytecode push(Opcode opcode) = delete;
 
-inline bytecode push(evmc_opcode opcode, const bytecode& data)
+inline bytecode push(Opcode opcode, const bytecode& data)
 {
     if (opcode < OP_PUSH1 || opcode > OP_PUSH32)
         throw std::invalid_argument{"invalid push opcode " + std::to_string(opcode)};
@@ -283,7 +287,7 @@ inline bytecode sload(bytecode index)
     return index + OP_SLOAD;
 }
 
-template <evmc_opcode kind>
+template <Opcode kind>
 struct call_instruction
 {
 private:
@@ -305,7 +309,7 @@ public:
     }
 
 
-    template <evmc_opcode k = kind>
+    template <Opcode k = kind>
     typename std::enable_if<k == OP_CALL || k == OP_CALLCODE, call_instruction&>::type value(
         bytecode v)
     {
@@ -358,7 +362,7 @@ inline call_instruction<OP_CALLCODE> callcode(bytecode address)
 }
 
 
-template <evmc_opcode kind>
+template <Opcode kind>
 struct create_instruction
 {
 private:
@@ -381,7 +385,7 @@ public:
         return *this;
     }
 
-    template <evmc_opcode k = kind>
+    template <Opcode k = kind>
     typename std::enable_if<k == OP_CREATE2, create_instruction&>::type salt(bytecode salt)
     {
         m_salt = std::move(salt);
@@ -409,7 +413,7 @@ inline auto create2()
 }
 
 
-inline std::string hex(evmc_opcode opcode) noexcept
+inline std::string hex(Opcode opcode) noexcept
 {
     return hex(static_cast<uint8_t>(opcode));
 }

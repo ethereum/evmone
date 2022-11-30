@@ -2,7 +2,6 @@
 // Copyright 2018-2019 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-#include <evmc/instructions.h>
 #include <evmone/advanced_analysis.hpp>
 #include <evmone/eof.hpp>
 #include <gtest/gtest.h>

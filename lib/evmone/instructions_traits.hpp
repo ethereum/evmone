@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
-#include <evmc/instructions.h>
+#include "instructions_opcodes.hpp"
 #include <array>
 #include <optional>
 
@@ -199,7 +199,7 @@ struct Traits
 /// Determines if an instruction has constant base gas cost across all revisions.
 /// Note that this is not true for instructions with constant base gas cost but
 /// not available in the first revision (e.g. SHL).
-inline constexpr bool has_const_gas_cost(evmc_opcode op) noexcept
+inline constexpr bool has_const_gas_cost(Opcode op) noexcept
 {
     const auto g = gas_costs[EVMC_FRONTIER][op];
     for (size_t r = EVMC_FRONTIER + 1; r <= EVMC_MAX_REVISION; ++r)
