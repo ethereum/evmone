@@ -32,7 +32,7 @@ executors:
       CMAKE_BUILD_PARALLEL_LEVEL: 8
   linux-gcc-min:
     docker:
-      - image: ethereum/cpp-build-env:15-gcc-10
+      - image: ethereum/cpp-build-env:17-gcc-11
     resource_class: small
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
@@ -43,7 +43,7 @@ executors:
       CMAKE_BUILD_PARALLEL_LEVEL: 4
   linux-clang-min:
     docker:
-      - image: ethereum/cpp-build-env:16-clang-11
+      - image: ethereum/cpp-build-env:18-clang-13
     resource_class: small
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
@@ -57,7 +57,12 @@ executors:
     macos:
       xcode: 14.1.0
     environment:
-      CMAKE_BUILD_PARALLEL_LEVEL: 2
+      CMAKE_BUILD_PARALLEL_LEVEL: 4
+  macos-xcode-min:
+    macos:
+      xcode: 13.4.1
+    environment:
+      CMAKE_BUILD_PARALLEL_LEVEL: 4
 
 commands:
   install_cmake:
@@ -454,7 +459,7 @@ jobs:
           name: "Run evmone-fuzzer"
           working_directory: ~/build
           command: |
-            bin/evmone-fuzzer -runs=10000000 -fork=$CMAKE_BUILD_PARALLEL_LEVEL -fork_corpus_groups=1 ~/corpus -create_missing_dirs=1 -max_len=100 -entropic_scale_per_exec_time=1 2>&1 | sed '/NEW_FUNC/d'
+            bin/evmone-fuzzer -runs=5000000 -fork=$CMAKE_BUILD_PARALLEL_LEVEL -fork_corpus_groups=1 ~/corpus -create_missing_dirs=1 -max_len=100 -entropic_scale_per_exec_time=1 2>&1 | sed '/NEW_FUNC/d'
       - save_cache:
           name: "Save fuzzing corpus"
           key: fuzzing-corpus-{{epoch}}
@@ -467,6 +472,15 @@ jobs:
       BUILD_TYPE: RelWithDebInfo
       CMAKE_OPTIONS: -DSANITIZE=address
       TESTS_FILTER: unittests
+    steps:
+      - run:
+          name: "Install System Dependencies"
+          command: HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake
+      - build
+      - test
+
+  xcode-min:
+    executor: macos-xcode-min
     steps:
       - run:
           name: "Install System Dependencies"
@@ -516,5 +530,6 @@ workflows:
       - clang-latest-sanitizers
       - clang-latest-coverage
       - macos-asan
+      - xcode-min
       - gcc-32bit
       - fuzzing
