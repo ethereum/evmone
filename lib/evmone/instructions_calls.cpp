@@ -137,10 +137,21 @@ evmc_status_code create_impl(StackTop stack, ExecutionState& state) noexcept
     const auto init_code_offset = static_cast<size_t>(init_code_offset_u256);
     const auto init_code_size = static_cast<size_t>(init_code_size_u256);
 
+    if (state.rev >= EVMC_SHANGHAI && init_code_size > 0xC000)
+        return EVMC_SUCCESS;  // "Light" failure.
+
+    const auto init_code_words = num_words(init_code_size);
     if constexpr (Op == OP_CREATE2)
     {
-        const auto salt_cost = num_words(init_code_size) * 6;
+        const auto salt_cost = init_code_words * 6;
         if ((state.gas_left -= salt_cost) < 0)
+            return EVMC_OUT_OF_GAS;
+    }
+    if (state.rev >= EVMC_SHANGHAI)
+    {
+        // TODO: Merge two init code cost checks.
+        const auto init_code_cost = init_code_words * 2;
+        if ((state.gas_left -= init_code_cost) < 0)
             return EVMC_OUT_OF_GAS;
     }
 
