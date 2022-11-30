@@ -224,8 +224,8 @@
     ON_OPCODE_UNDEFINED(0xb2)                               \
     ON_OPCODE_UNDEFINED(0xb3)                               \
     ON_OPCODE_UNDEFINED(0xb4)                               \
-    ON_OPCODE_UNDEFINED(0xb5)                               \
-    ON_OPCODE_UNDEFINED(0xb6)                               \
+    ON_OPCODE_IDENTIFIER(OP_DUPN, dupn)                     \
+    ON_OPCODE_IDENTIFIER(OP_SWAPN, swapn)                   \
     ON_OPCODE_UNDEFINED(0xb7)                               \
     ON_OPCODE_UNDEFINED(0xb8)                               \
     ON_OPCODE_UNDEFINED(0xb9)                               \
