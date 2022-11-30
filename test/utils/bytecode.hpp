@@ -4,7 +4,7 @@
 #pragma once
 
 #include <evmc/evmc.hpp>
-#include <evmc/instructions.h>
+#include <evmone/instructions_traits.hpp>
 #include <intx/intx.hpp>
 #include <test/utils/utils.hpp>
 #include <algorithm>
@@ -414,23 +414,13 @@ inline std::string hex(evmc_opcode opcode) noexcept
     return hex(static_cast<uint8_t>(opcode));
 }
 
-inline std::string to_name(evmc_opcode opcode, evmc_revision rev = EVMC_MAX_REVISION) noexcept
-{
-    const auto names = evmc_get_instruction_names_table(rev);
-    if (const auto name = names[opcode]; name)
-        return name;
-
-    return "UNDEFINED_INSTRUCTION:" + hex(opcode);
-}
-
-inline std::string decode(bytes_view bytecode, evmc_revision rev)
+inline std::string decode(bytes_view bytecode)
 {
     auto s = std::string{"bytecode{}"};
-    const auto names = evmc_get_instruction_names_table(rev);
     for (auto it = bytecode.begin(); it != bytecode.end(); ++it)
     {
         const auto opcode = *it;
-        if (const auto name = names[opcode]; name)
+        if (const auto name = evmone::instr::traits[opcode].name; name)
         {
             s += std::string{" + OP_"} + name;
 

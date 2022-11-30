@@ -11,8 +11,4 @@ add_library(testutils STATIC
 )
 
 target_link_libraries(testutils PRIVATE evmc::instructions)
-target_include_directories(testutils PUBLIC ${PROJECT_SOURCE_DIR})
-
-add_library(testutils-dump STATIC dump.cpp dump.hpp)
-target_link_libraries(testutils-dump PRIVATE testutils evmone intx::intx)
-target_include_directories(testutils-dump PRIVATE ${evmone_private_include_dir})
+target_include_directories(testutils PUBLIC ${PROJECT_SOURCE_DIR} ${evmone_private_include_dir})

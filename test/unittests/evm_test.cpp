@@ -623,12 +623,10 @@ TEST_P(evm, undefined_instructions)
 {
     for (auto i = 0; i <= EVMC_MAX_REVISION; ++i)
     {
-        auto r = evmc_revision(i);
-        auto names = evmc_get_instruction_names_table(r);
-
+        const auto r = evmc_revision(i);
         for (uint8_t opcode = 0; opcode <= 0xfe; ++opcode)
         {
-            if (names[opcode] != nullptr)
+            if (evmone::instr::gas_costs[r][opcode] != evmone::instr::undefined)
                 continue;
 
             auto res = vm.execute(host, r, {}, &opcode, sizeof(opcode));

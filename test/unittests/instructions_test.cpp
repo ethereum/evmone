@@ -101,7 +101,7 @@ TEST(instructions, compare_with_evmc_instruction_tables)
 
             const auto case_descr = [rev](size_t opcode) {
                 auto case_descr_str = std::ostringstream{};
-                case_descr_str << "opcode " << to_name(evmc_opcode(opcode), rev);
+                case_descr_str << "opcode " << instr::traits[opcode].name;
                 case_descr_str << " on revision " << rev;
                 return case_descr_str.str();
             };
