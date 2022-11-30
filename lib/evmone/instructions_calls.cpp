@@ -125,17 +125,29 @@ evmc_status_code create_impl(StackTop stack, ExecutionState& state) noexcept
     if (!check_memory(state, init_code_offset, init_code_size))
         return EVMC_OUT_OF_GAS;
 
+    const auto init_code_words = num_words(static_cast<size_t>(init_code_size));
+
     auto salt = uint256{};
     if constexpr (Op == OP_CREATE2)
     {
         salt = stack.pop();
-        auto salt_cost = num_words(static_cast<size_t>(init_code_size)) * 6;
+        const auto salt_cost = init_code_words * 6;
         if ((state.gas_left -= salt_cost) < 0)
             return EVMC_OUT_OF_GAS;
     }
 
     stack.push(0);
     state.return_data.clear();
+
+    if (state.rev >= EVMC_SHANGHAI)
+    {
+        if (init_code_size > 0xC000)
+            return EVMC_SUCCESS;
+
+        const auto init_code_cost = init_code_words * 2;
+        if ((state.gas_left -= init_code_cost) < 0)
+            return EVMC_OUT_OF_GAS;
+    }
 
     if (state.msg->depth >= 1024)
         return EVMC_SUCCESS;
