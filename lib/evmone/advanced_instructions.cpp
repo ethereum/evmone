@@ -14,22 +14,21 @@ using namespace evmone::instr;
 
 /// Instruction implementations - "core" instruction + stack height adjustment.
 /// @{
-template <evmc_opcode Op, void CoreFn(StackTop) noexcept = core::impl<Op>>
+template <Opcode Op, void CoreFn(StackTop) noexcept = core::impl<Op>>
 inline void impl(AdvancedExecutionState& state) noexcept
 {
     CoreFn(state.stack.top_item);
     state.stack.top_item += instr::traits[Op].stack_height_change;
 }
 
-template <evmc_opcode Op, void CoreFn(StackTop, ExecutionState&) noexcept = core::impl<Op>>
+template <Opcode Op, void CoreFn(StackTop, ExecutionState&) noexcept = core::impl<Op>>
 inline void impl(AdvancedExecutionState& state) noexcept
 {
     CoreFn(state.stack.top_item, state);
     state.stack.top_item += instr::traits[Op].stack_height_change;
 }
 
-template <evmc_opcode Op,
-    evmc_status_code CoreFn(StackTop, ExecutionState&) noexcept = core::impl<Op>>
+template <Opcode Op, evmc_status_code CoreFn(StackTop, ExecutionState&) noexcept = core::impl<Op>>
 inline evmc_status_code impl(AdvancedExecutionState& state) noexcept
 {
     const auto status = CoreFn(state.stack.top_item, state);
@@ -37,20 +36,20 @@ inline evmc_status_code impl(AdvancedExecutionState& state) noexcept
     return status;
 }
 
-template <evmc_opcode Op, StopToken CoreFn() noexcept = core::impl<Op>>
+template <Opcode Op, StopToken CoreFn() noexcept = core::impl<Op>>
 inline StopToken impl(AdvancedExecutionState& /*state*/) noexcept
 {
     return CoreFn();
 }
 
-template <evmc_opcode Op, StopToken CoreFn(StackTop, ExecutionState&) noexcept = core::impl<Op>>
+template <Opcode Op, StopToken CoreFn(StackTop, ExecutionState&) noexcept = core::impl<Op>>
 inline StopToken impl(AdvancedExecutionState& state) noexcept
 {
     // Stack height adjustment may be omitted.
     return CoreFn(state.stack.top_item, state);
 }
 
-template <evmc_opcode Op,
+template <Opcode Op,
     code_iterator CoreFn(StackTop, ExecutionState&, code_iterator) noexcept = core::impl<Op>>
 inline code_iterator impl(AdvancedExecutionState& state, code_iterator pos) noexcept
 {
@@ -180,7 +179,7 @@ const Instruction* op_push_full(const Instruction* instr, AdvancedExecutionState
     return ++instr;
 }
 
-template <evmc_opcode Op>
+template <Opcode Op>
 const Instruction* op_call(const Instruction* instr, AdvancedExecutionState& state) noexcept
 {
     const auto gas_left_correction = state.current_block_cost - instr->arg.number;
@@ -196,7 +195,7 @@ const Instruction* op_call(const Instruction* instr, AdvancedExecutionState& sta
     return ++instr;
 }
 
-template <evmc_opcode Op>
+template <Opcode Op>
 const Instruction* op_create(const Instruction* instr, AdvancedExecutionState& state) noexcept
 {
     const auto gas_left_correction = state.current_block_cost - instr->arg.number;

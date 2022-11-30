@@ -10,5 +10,5 @@ add_library(testutils STATIC
     utils.hpp
 )
 
-target_link_libraries(testutils PRIVATE evmc::instructions)
+target_link_libraries(testutils PRIVATE evmc::evmc_cpp)
 target_include_directories(testutils PUBLIC ${PROJECT_SOURCE_DIR} ${evmone_private_include_dir})

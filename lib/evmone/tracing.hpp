@@ -3,7 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
-#include <evmc/instructions.h>
+#include <evmc/evmc.h>
+#include <evmc/utils.h>
 #include <intx/intx.hpp>
 #include <memory>
 #include <ostream>

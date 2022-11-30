@@ -8,7 +8,6 @@
 #include "execution_state.hpp"
 #include "instructions.hpp"
 #include "vm.hpp"
-#include <evmc/instructions.h>
 #include <memory>
 
 #ifdef NDEBUG
@@ -101,7 +100,7 @@ namespace
 ///                               The stack height is stack_top - stack_bottom.
 /// @return  Status code with information which check has failed
 ///          or EVMC_SUCCESS if everything is fine.
-template <evmc_opcode Op>
+template <Opcode Op>
 inline evmc_status_code check_requirements(const CostTable& cost_table, int64_t& gas_left,
     const uint256* stack_top, const uint256* stack_bottom) noexcept
 {
@@ -203,7 +202,7 @@ struct Position
 /// @}
 
 /// A helper to invoke the instruction implementation of the given opcode Op.
-template <evmc_opcode Op>
+template <Opcode Op>
 [[release_inline]] inline Position invoke(const CostTable& cost_table, const uint256* stack_bottom,
     Position pos, ExecutionState& state) noexcept
 {

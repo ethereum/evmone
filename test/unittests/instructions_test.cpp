@@ -2,11 +2,17 @@
 // Copyright 2019 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-#include <evmc/instructions.h>
 #include <evmone/advanced_analysis.hpp>
 #include <evmone/instructions_traits.hpp>
 #include <gtest/gtest.h>
 #include <test/utils/bytecode.hpp>
+
+namespace
+{
+// Temporarily include EVMC instructions in an inline namespace so that evmc_opcode enum
+// doesn't name clash with evmone::Opcode but the evmc_ functions are accessible.
+#include <evmc/instructions.h>
+}  // namespace
 
 using namespace evmone;
 
@@ -26,7 +32,7 @@ constexpr int get_revision_defined_in(size_t op) noexcept
     return unspecified;
 }
 
-constexpr bool is_terminating(evmc_opcode op) noexcept
+constexpr bool is_terminating(Opcode op) noexcept
 {
     switch (op)
     {
@@ -41,7 +47,7 @@ constexpr bool is_terminating(evmc_opcode op) noexcept
     }
 }
 
-template <evmc_opcode Op>
+template <Opcode Op>
 constexpr void validate_traits_of() noexcept
 {
     constexpr auto tr = instr::traits[Op];
@@ -67,7 +73,7 @@ constexpr bool validate_traits(std::index_sequence<Ops...>)
 {
     // Instantiate validate_traits_of for each opcode.
     // Validation errors are going to be reported via static_asserts.
-    (validate_traits_of<static_cast<evmc_opcode>(Ops)>(), ...);
+    (validate_traits_of<static_cast<Opcode>(Ops)>(), ...);
     return true;
 }
 static_assert(validate_traits(std::make_index_sequence<256>{}));

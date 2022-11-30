@@ -851,14 +851,14 @@ inline evmc_status_code log(StackTop stack, ExecutionState& state) noexcept
 }
 
 
-template <evmc_opcode Op>
+template <Opcode Op>
 evmc_status_code call_impl(StackTop stack, ExecutionState& state) noexcept;
 inline constexpr auto call = call_impl<OP_CALL>;
 inline constexpr auto callcode = call_impl<OP_CALLCODE>;
 inline constexpr auto delegatecall = call_impl<OP_DELEGATECALL>;
 inline constexpr auto staticcall = call_impl<OP_STATICCALL>;
 
-template <evmc_opcode Op>
+template <Opcode Op>
 evmc_status_code create_impl(StackTop stack, ExecutionState& state) noexcept;
 inline constexpr auto create = create_impl<OP_CREATE>;
 inline constexpr auto create2 = create_impl<OP_CREATE2>;
@@ -922,7 +922,7 @@ inline StopToken selfdestruct(StackTop stack, ExecutionState& state) noexcept
 /// implementing the instruction identified by the opcode.
 ///     instr::impl<OP_DUP1>(/*...*/);
 /// The unspecialized template is invalid and should never to used.
-template <evmc_opcode Op>
+template <Opcode Op>
 inline constexpr auto impl = nullptr;
 
 #undef ON_OPCODE_IDENTIFIER

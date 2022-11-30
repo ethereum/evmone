@@ -110,7 +110,7 @@ TEST_P(evm, calldatacopy_memory_cost)
 
 struct memory_access_opcode
 {
-    evmc_opcode opcode;
+    Opcode opcode;
     int memory_index_arg;
     int memory_size_arg;
 };
