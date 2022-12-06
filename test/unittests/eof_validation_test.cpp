@@ -237,3 +237,99 @@ TEST(eof_validation, EOF1_terminating_instructions)
         EXPECT_EQ(validate_eof(container), expected) << hex(code);
     }
 }
+
+TEST(eof_validation, EOF1_valid_rjump)
+{
+    // offset = 0
+    EXPECT_EQ(validate_eof("EF0001 010004 00 5C000000"), EOFValidationError::success);
+
+    // offset = 3
+    EXPECT_EQ(validate_eof("EF0001 010007 00 5C000300000000"), EOFValidationError::success);
+
+    // offset = -4
+    EXPECT_EQ(validate_eof("EF0001 010005 00 005CFFFC00"), EOFValidationError::success);
+}
+
+TEST(eof_validation, EOF1_valid_rjumpi)
+{
+    // offset = 0
+    EXPECT_EQ(validate_eof("EF0001 010006 00 60005D000000"), EOFValidationError::success);
+
+    // offset = 3
+    EXPECT_EQ(validate_eof("EF0001 010009 00 60005D000300000000"), EOFValidationError::success);
+
+    // offset = -5
+    EXPECT_EQ(validate_eof("EF0001 010006 00 60005DFFFB00"), EOFValidationError::success);
+}
+
+TEST(eof_validation, EOF1_rjump_truncated)
+{
+    EXPECT_EQ(
+        validate_eof("EF0001 010001 00 5C"), EOFValidationError::missing_terminating_instruction);
+
+    EXPECT_EQ(
+        validate_eof("EF0001 010002 00 5C00"), EOFValidationError::missing_terminating_instruction);
+}
+
+TEST(eof_validation, EOF1_rjumpi_truncated)
+{
+    EXPECT_EQ(validate_eof("EF0001 010003 00 60005D"),
+        EOFValidationError::missing_terminating_instruction);
+
+    EXPECT_EQ(validate_eof("EF0001 010004 00 60005D00"),
+        EOFValidationError::missing_terminating_instruction);
+}
+
+TEST(eof_validation, EOF1_rjump_invalid_destination)
+{
+    // Into header (offset = -5)
+    EXPECT_EQ(
+        validate_eof("EF0001 010004 00 5CFFFB00"), EOFValidationError::invalid_rjump_destination);
+
+    // To before code begin (offset = -13)
+    EXPECT_EQ(
+        validate_eof("EF0001 010004 00 5CFFF300"), EOFValidationError::invalid_rjump_destination);
+
+    // To after code end (offset = 2)
+    EXPECT_EQ(
+        validate_eof("EF0001 010004 00 5C000200"), EOFValidationError::invalid_rjump_destination);
+
+    // To code end (offset = 1)
+    EXPECT_EQ(
+        validate_eof("EF0001 010004 00 5C000100"), EOFValidationError::invalid_rjump_destination);
+
+    // To the same RJUMP immediate (offset = -1)
+    EXPECT_EQ(
+        validate_eof("EF0001 010004 00 5CFFFF00"), EOFValidationError::invalid_rjump_destination);
+
+    // To PUSH immediate (offset = -4)
+    EXPECT_EQ(validate_eof("EF0001 010006 00 60005CFFFC00"),
+        EOFValidationError::invalid_rjump_destination);
+}
+
+TEST(eof_validation, EOF1_rjumpi_invalid_destination)
+{
+    // Into header (offset = -7)
+    EXPECT_EQ(validate_eof("EF0001 010006 00 60005DFFF900"),
+        EOFValidationError::invalid_rjump_destination);
+
+    // To before code begin (offset = -15)
+    EXPECT_EQ(validate_eof("EF0001 010006 00 60005DFFF100"),
+        EOFValidationError::invalid_rjump_destination);
+
+    // To after code end (offset = 2)
+    EXPECT_EQ(validate_eof("EF0001 010006 00 60005D000200"),
+        EOFValidationError::invalid_rjump_destination);
+
+    // To code end (offset = 1)
+    EXPECT_EQ(validate_eof("EF0001 010006 00 60005D000100"),
+        EOFValidationError::invalid_rjump_destination);
+
+    // To the same RJUMPI immediate (offset = -1)
+    EXPECT_EQ(validate_eof("EF0001 010006 00 60005DFFFF00"),
+        EOFValidationError::invalid_rjump_destination);
+
+    // To PUSH immediate (offset = -4)
+    EXPECT_EQ(validate_eof("EF0001 010006 00 60005DFFFC00"),
+        EOFValidationError::invalid_rjump_destination);
+}
