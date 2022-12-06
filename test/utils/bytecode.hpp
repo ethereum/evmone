@@ -83,7 +83,9 @@ inline bytecode operator*(int n, Opcode op)
     return n * bytecode{op};
 }
 
-inline bytes big_endian(uint16_t value)
+template <typename T>
+inline typename std::enable_if_t<std::is_same_v<T, uint16_t> || std::is_same_v<T, int16_t>, bytes>
+big_endian(T value)
 {
     return {static_cast<uint8_t>(value >> 8), static_cast<uint8_t>(value)};
 }
@@ -240,6 +242,16 @@ inline bytecode jump(bytecode target)
 inline bytecode jumpi(bytecode target, bytecode condition)
 {
     return condition + target + OP_JUMPI;
+}
+
+inline bytecode rjump(int16_t offset)
+{
+    return OP_RJUMP + big_endian(offset);
+}
+
+inline bytecode rjumpi(int16_t offset, bytecode condition)
+{
+    return condition + OP_RJUMPI + bytecode{big_endian(offset)};
 }
 
 inline bytecode ret(bytecode index, bytecode size)
