@@ -168,8 +168,11 @@ TEST(eof_validation, EOF1_undefined_opcodes)
 
     for (uint16_t opcode = 0; opcode <= 0xff; ++opcode)
     {
-        // PUSH* require immediate argument to be valid, checked in a separate test
+        // Skip opcodes requiring immediate arguments.
+        // They're all valid in Shanghai and checked in other tests below.
         if (opcode >= OP_PUSH1 && opcode <= OP_PUSH32)
+            continue;
+        if (opcode == OP_RJUMP || opcode == OP_RJUMPI)
             continue;
 
         cont[cont.size() - 2] = static_cast<uint8_t>(opcode);
