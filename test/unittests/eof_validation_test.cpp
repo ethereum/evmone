@@ -181,6 +181,8 @@ TEST(eof_validation, EOF1_undefined_opcodes)
             continue;
         if (opcode == OP_DUPN || opcode == OP_SWAPN)
             continue;
+        if (opcode == OP_RJUMP || opcode == OP_RJUMPI)
+            continue;
 
         cont[cont.size() - 2] = static_cast<uint8_t>(opcode);
 
