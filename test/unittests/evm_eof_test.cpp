@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "evm_fixture.hpp"
+#include "evmone/eof.hpp"
 
 using evmone::test::evm;
 
@@ -360,4 +361,24 @@ TEST_P(evm, relative_jumps_undefined_in_legacy)
 
     execute(code);
     EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
+}
+
+TEST_P(evm, eof_function_example1)
+{
+    // Relative jumps are not implemented in Advanced.
+    if (isAdvanced())
+        return;
+
+    rev = EVMC_SHANGHAI;
+    const auto code =
+        "EF00 01 030004 01000f 010002 00"
+        "0000 0201"
+        "6001 6008 b00001 " +
+        ret_top() + "03b1";
+
+    ASSERT_EQ((int)evmone::validate_eof(rev, code), (int)evmone::EOFValidationError{});
+
+    execute(code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 32);
+    EXPECT_OUTPUT_INT(7);
 }

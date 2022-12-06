@@ -226,7 +226,7 @@ std::pair<EOF1Header, EOFValidationError> validate_eof1(
     const auto header_size = eof_header_size(section_headers);
 
     std::vector<uint16_t> code_offsets;
-    auto offset = header_size;
+    auto offset = header_size + (section_headers.empty() ? 0 : section_headers[TYPE_SECTION][0]);
     for (const auto code_size : code_sizes)
     {
         code_offsets.emplace_back(offset);
