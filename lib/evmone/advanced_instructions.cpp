@@ -216,7 +216,6 @@ const Instruction* op_undefined(const Instruction*, AdvancedExecutionState& stat
     return state.exit(EVMC_UNDEFINED_INSTRUCTION);
 }
 
-
 constexpr std::array<instruction_exec_fn, 256> instruction_implementations = []() noexcept {
     std::array<instruction_exec_fn, 256> table{};
 
@@ -244,6 +243,9 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
     table[OP_DELEGATECALL] = op_call<OP_DELEGATECALL>;
     table[OP_CREATE2] = op_create<OP_CREATE2>;
     table[OP_STATICCALL] = op_call<OP_STATICCALL>;
+
+    table[OP_RJUMP] = op_undefined;
+    table[OP_RJUMPI] = op_undefined;
 
     table[OP_DUPN] = op_undefined;
     table[OP_SWAPN] = op_undefined;
