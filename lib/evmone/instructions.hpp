@@ -701,6 +701,21 @@ inline code_iterator jumpi(StackTop stack, ExecutionState& state, code_iterator 
     return cond ? jump_impl(state, dst) : pos + 1;
 }
 
+inline code_iterator rjump(StackTop /*stack*/, ExecutionState& /*state*/, code_iterator pc) noexcept
+{
+    // Reading next 2 bytes is guaranteed to be safe by deploy-time validation.
+    const auto offset_hi = pc[1];
+    const auto offset_lo = pc[2];
+    const auto offset = static_cast<int16_t>((offset_hi << 8) + offset_lo);
+    return pc + 3 + offset;  // PC_post_rjump + offset
+}
+
+inline code_iterator rjumpi(StackTop stack, ExecutionState& state, code_iterator pc) noexcept
+{
+    const auto cond = stack.pop();
+    return cond ? rjump(stack, state, pc) : pc + 3;
+}
+
 inline code_iterator pc(StackTop stack, ExecutionState& state, code_iterator pos) noexcept
 {
     stack.push(static_cast<uint64_t>(pos - state.analysis.baseline->executable_code.data()));
