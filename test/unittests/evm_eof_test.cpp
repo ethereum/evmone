@@ -217,3 +217,132 @@ TEST_P(evm, eof1_codecopy_out_of_bounds)
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
         "ef000101000c02000400601e6000600039601e6000f3deadbeef00000000"_hex);
 }
+
+TEST_P(evm, eof2_rjump)
+{
+    // Relative jumps are not implemented in Advanced.
+    if (isAdvanced())
+        return;
+
+    rev = EVMC_SHANGHAI;
+    auto code = eof1_bytecode(rjump(1) + OP_INVALID + mstore8(0, 1) + ret(0, 1));
+
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 1);
+
+    code = eof1_bytecode(rjump(1) + OP_INVALID + mstore8(0, 1) + ret(0, 1), "deadbeef");
+
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 1);
+}
+
+TEST_P(evm, eof2_rjump_backward)
+{
+    // Relative jumps are not implemented in Advanced.
+    if (isAdvanced())
+        return;
+
+    rev = EVMC_SHANGHAI;
+    auto code =
+        eof1_bytecode(rjump(11) + OP_INVALID + mstore8(0, 1) + ret(0, 1) + rjump(-13) + OP_STOP);
+
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 1);
+
+    code = eof1_bytecode(
+        rjump(11) + OP_INVALID + mstore8(0, 1) + ret(0, 1) + rjump(-13) + OP_STOP, "deadbeef");
+
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 1);
+}
+
+TEST_P(evm, eof2_rjump_0_offset)
+{
+    // Relative jumps are not implemented in Advanced.
+    if (isAdvanced())
+        return;
+
+    rev = EVMC_SHANGHAI;
+    auto code = eof1_bytecode(rjump(0) + mstore8(0, 1) + ret(0, 1));
+
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 1);
+}
+
+TEST_P(evm, eof2_rjumpi)
+{
+    // Relative jumps are not implemented in Advanced.
+    if (isAdvanced())
+        return;
+
+    rev = EVMC_SHANGHAI;
+    auto code = eof1_bytecode(
+        rjumpi(10, calldataload(0)) + mstore8(0, 2) + ret(0, 1) + mstore8(0, 1) + ret(0, 1));
+
+    // RJUMPI condition is true
+    execute(code, "01"_hex);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 1);
+
+    // RJUMPI condition is false
+    execute(code, "00"_hex);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 2);
+}
+
+TEST_P(evm, eof2_rjumpi_backwards)
+{
+    // Relative jumps are not implemented in Advanced.
+    if (isAdvanced())
+        return;
+
+    rev = EVMC_SHANGHAI;
+    auto code = eof1_bytecode(rjump(11) + OP_INVALID + mstore8(0, 1) + ret(0, 1) +
+                              rjumpi(-16, calldataload(0)) + mstore8(0, 2) + ret(0, 1));
+
+    // RJUMPI condition is true
+    execute(code, "01"_hex);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 1);
+
+    // RJUMPI condition is false
+    execute(code, "00"_hex);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 2);
+}
+
+TEST_P(evm, eof2_rjumpi_0_offset)
+{
+    // Relative jumps are not implemented in Advanced.
+    if (isAdvanced())
+        return;
+
+    rev = EVMC_SHANGHAI;
+    auto code = eof1_bytecode(rjumpi(0, calldataload(0)) + mstore8(0, 1) + ret(0, 1));
+
+    // RJUMPI condition is true
+    execute(code, "01"_hex);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 1);
+
+    // RJUMPI condition is false
+    execute(code, "00"_hex);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 1);
+    EXPECT_EQ(result.output_data[0], 1);
+}
