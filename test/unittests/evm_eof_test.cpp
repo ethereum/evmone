@@ -382,3 +382,34 @@ TEST_P(evm, eof_function_example1)
     EXPECT_GAS_USED(EVMC_SUCCESS, 32);
     EXPECT_OUTPUT_INT(7);
 }
+
+TEST_P(evm, eof_function_example2)
+{
+    // Relative jumps are not implemented in Advanced.
+    if (isAdvanced())
+        return;
+
+    rev = EVMC_SHANGHAI;
+    const auto code =
+        "ef0001 030006 01003b 010017 01001d 00 000001010101"
+        "60043560003560e01c63c766526781145d001c63c6c2ea1781145d00065050600080fd50b00002600052602060"
+        "00f350b0000160005260206000f3"
+        "600181115d0004506001b160018103b0000181029050b1"
+        "600281115d0004506001b160028103b0000260018203b00002019050b1"_hex;
+
+    ASSERT_EQ((int)evmone::validate_eof(rev, code), (int)evmone::EOFValidationError{});
+
+    // Call fac(5)
+    const auto calldata_fac =
+        "c76652670000000000000000000000000000000000000000000000000000000000000005"_hex;
+    execute(bytecode{code}, calldata_fac);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 246);
+    EXPECT_EQ(output, "0000000000000000000000000000000000000000000000000000000000000078"_hex);
+
+    // Call fib(15)
+    const auto calldata_fib =
+        "c6c2ea17000000000000000000000000000000000000000000000000000000000000000f"_hex;
+    execute(bytecode{code}, calldata_fib);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 44544);
+    EXPECT_EQ(output, "0000000000000000000000000000000000000000000000000000000000000262"_hex);
+}
