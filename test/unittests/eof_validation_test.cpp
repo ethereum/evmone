@@ -172,7 +172,7 @@ TEST(eof_validation, EOF1_undefined_opcodes)
         // They're all valid in Shanghai and checked in other tests below.
         if (opcode >= OP_PUSH1 && opcode <= OP_PUSH32)
             continue;
-        if (opcode == OP_RJUMP || opcode == OP_RJUMPI)
+        if (opcode == OP_RJUMP || opcode == OP_RJUMPI || opcode == OP_CALLF)
             continue;
 
         cont[cont.size() - 2] = static_cast<uint8_t>(opcode);
@@ -230,10 +230,11 @@ TEST(eof_validation, EOF1_terminating_instructions)
         code_size_byte = static_cast<uint8_t>(code.size());
         const auto container = eof_header + code;
 
-        const auto expected = ((opcode == OP_STOP || opcode == OP_RETURN || opcode == OP_REVERT ||
-                                   opcode == OP_INVALID || opcode == OP_SELFDESTRUCT) ?
-                                   EOFValidationError::success :
-                                   EOFValidationError::missing_terminating_instruction);
+        const auto expected =
+            ((opcode == OP_STOP || opcode == OP_RETURN || opcode == OP_RETF ||
+                 opcode == OP_REVERT || opcode == OP_INVALID || opcode == OP_SELFDESTRUCT) ?
+                    EOFValidationError::success :
+                    EOFValidationError::missing_terminating_instruction);
         EXPECT_EQ(validate_eof(container), expected) << hex(code);
     }
 }
