@@ -913,6 +913,22 @@ evmc_status_code create_impl(StackTop stack, ExecutionState& state) noexcept;
 inline constexpr auto create = create_impl<OP_CREATE>;
 inline constexpr auto create2 = create_impl<OP_CREATE2>;
 
+inline code_iterator callf(StackTop /*stack*/, ExecutionState& state, code_iterator pos) noexcept
+{
+    const auto index = (size_t{pos[1]} << 8) | pos[2];
+    state.call_stack.push_back(pos + 3);
+    const auto offset = state.analysis.baseline->code_offsets[index];
+    auto code = state.analysis.baseline->executable_code;
+    return code + offset;
+}
+
+inline code_iterator retf(StackTop /*stack*/, ExecutionState& state, code_iterator /*pos*/) noexcept
+{
+    const auto p = state.call_stack.back();
+    state.call_stack.pop_back();
+    return p;
+}
+
 template <evmc_status_code StatusCode>
 inline StopToken return_impl(StackTop stack, ExecutionState& state) noexcept
 {
