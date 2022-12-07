@@ -346,3 +346,18 @@ TEST_P(evm, eof2_rjumpi_0_offset)
     ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 1);
 }
+
+
+TEST_P(evm, relative_jumps_undefined_in_legacy)
+{
+    rev = EVMC_SHANGHAI;
+    auto code = rjump(1) + OP_INVALID + mstore8(0, 1) + ret(0, 1);
+
+    execute(code);
+    EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
+
+    code = rjumpi(10, 1) + mstore8(0, 2) + ret(0, 1) + mstore8(0, 1) + ret(0, 1);
+
+    execute(code);
+    EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
+}

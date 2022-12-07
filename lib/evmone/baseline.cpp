@@ -70,7 +70,9 @@ CodeAnalysis analyze_legacy(bytes_view code)
 CodeAnalysis analyze_eof1(bytes_view eof_container, const EOF1Header& header)
 {
     const auto executable_code = eof_container.substr(header.code_begin(), header.code_size);
-    return {executable_code, analyze_jumpdests(executable_code)};
+
+    // FIXME: Better way of getting EOF version.
+    return {executable_code, analyze_jumpdests(executable_code), eof_container[2]};
 }
 }  // namespace
 
@@ -321,7 +323,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
 
     const auto code = analysis.executable_code;
 
-    const auto& cost_table = get_baseline_cost_table(state.rev);
+    const auto& cost_table = get_baseline_cost_table(state.rev, analysis.eof_version);
 
     auto* tracer = vm.get_tracer();
     if (INTX_UNLIKELY(tracer != nullptr))

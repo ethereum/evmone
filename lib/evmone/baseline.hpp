@@ -25,6 +25,7 @@ public:
 
     bytes_view executable_code;  ///< Executable code section.
     JumpdestMap jumpdest_map;    ///< Map of valid jump destinations.
+    uint8_t eof_version = 0;     ///< The EOF version, 0 means legacy code.
 
 private:
     /// Padded code for faster legacy code execution.
@@ -38,8 +39,8 @@ public:
         m_padded_code{std::move(padded_code)}
     {}
 
-    CodeAnalysis(bytes_view code, JumpdestMap map)
-      : executable_code{code}, jumpdest_map{std::move(map)}
+    CodeAnalysis(bytes_view code, JumpdestMap map, uint8_t eof_ver)
+      : executable_code{code}, jumpdest_map{std::move(map)}, eof_version{eof_ver}
     {}
 };
 static_assert(std::is_move_constructible_v<CodeAnalysis>);
