@@ -219,8 +219,8 @@
     ON_OPCODE_UNDEFINED(0xae)                               \
     ON_OPCODE_UNDEFINED(0xaf)                               \
                                                             \
-    ON_OPCODE_UNDEFINED(0xb0)                               \
-    ON_OPCODE_UNDEFINED(0xb1)                               \
+    ON_OPCODE_IDENTIFIER(OP_CALLF, callf)                   \
+    ON_OPCODE_IDENTIFIER(OP_RETF, retf)                     \
     ON_OPCODE_UNDEFINED(0xb2)                               \
     ON_OPCODE_UNDEFINED(0xb3)                               \
     ON_OPCODE_UNDEFINED(0xb4)                               \
