@@ -38,6 +38,7 @@ constexpr bool is_terminating(Opcode op) noexcept
     {
     case OP_STOP:
     case OP_RETURN:
+    case OP_RETF:
     case OP_REVERT:
     case OP_INVALID:
     case OP_SELFDESTRUCT:
@@ -55,7 +56,7 @@ constexpr void validate_traits_of() noexcept
     // immediate_size
     if constexpr (Op >= OP_PUSH1 && Op <= OP_PUSH32)
         static_assert(tr.immediate_size == Op - OP_PUSH1 + 1);
-    else if constexpr (Op == OP_RJUMP || Op == OP_RJUMPI)
+    else if constexpr (Op == OP_RJUMP || Op == OP_RJUMPI || Op == OP_CALLF)
         static_assert(tr.immediate_size == 2);
     else
         static_assert(tr.immediate_size == 0);
@@ -104,7 +105,8 @@ TEST(instructions, compare_with_evmc_instruction_tables)
         for (size_t i = 0; i < evmone_tbl.size(); ++i)
         {
             // TODO pending update in EVMC
-            if (r >= EVMC_SHANGHAI && (i == OP_RJUMP || i == OP_RJUMPI))
+            if (r >= EVMC_SHANGHAI &&
+                (i == OP_RJUMP || i == OP_RJUMPI || i == OP_CALLF || i == OP_RETF))
                 continue;
 
             const auto gas_cost = (instr_tbl[i] != instr::undefined) ? instr_tbl[i] : 0;
@@ -137,7 +139,8 @@ TEST(instructions, compare_undefined_instructions)
         for (size_t i = 0; i < instr_tbl.size(); ++i)
         {
             // TODO pending update in EVMC
-            if (r >= EVMC_SHANGHAI && (i == OP_RJUMP || i == OP_RJUMPI))
+            if (r >= EVMC_SHANGHAI &&
+                (i == OP_RJUMP || i == OP_RJUMPI || i == OP_CALLF || i == OP_RETF))
                 continue;
 
             EXPECT_EQ(instr_tbl[i] == instr::undefined, evmc_names_tbl[i] == nullptr) << i;
@@ -151,7 +154,7 @@ TEST(instructions, compare_with_evmc_instruction_names)
     for (size_t i = 0; i < instr::traits.size(); ++i)
     {
         // TODO pending update in EVMC
-        if (i == OP_RJUMP || i == OP_RJUMPI)
+        if (i == OP_RJUMP || i == OP_RJUMPI || i == OP_CALLF || i == OP_RETF)
             continue;
 
         EXPECT_STREQ(instr::traits[i].name, evmc_tbl[i]);
