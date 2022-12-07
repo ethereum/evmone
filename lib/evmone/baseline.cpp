@@ -64,13 +64,13 @@ std::unique_ptr<uint8_t[]> pad_code(bytes_view code)
 CodeAnalysis analyze_legacy(bytes_view code)
 {
     // TODO: The padded code buffer and jumpdest bitmap can be created with single allocation.
-    return {pad_code(code), analyze_jumpdests(code)};
+    return {pad_code(code), code.size(), analyze_jumpdests(code)};
 }
 
 CodeAnalysis analyze_eof1(bytes_view eof_container, const EOF1Header& header)
 {
     const auto executable_code = eof_container.substr(header.code_begin(), header.code_size);
-    return {executable_code.data(), analyze_jumpdests(executable_code)};
+    return {executable_code, analyze_jumpdests(executable_code)};
 }
 }  // namespace
 
@@ -326,17 +326,17 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     auto* tracer = vm.get_tracer();
     if (INTX_UNLIKELY(tracer != nullptr))
     {
-        tracer->notify_execution_start(state.rev, *state.msg, state.original_code);
-        dispatch<true>(cost_table, state, code, tracer);
+        tracer->notify_execution_start(state.rev, *state.msg, analysis.executable_code);
+        dispatch<true>(cost_table, state, code.data(), tracer);
     }
     else
     {
 #if EVMONE_CGOTO_SUPPORTED
         if (vm.cgoto)
-            dispatch_cgoto(cost_table, state, code);
+            dispatch_cgoto(cost_table, state, code.data());
         else
 #endif
-            dispatch<false>(cost_table, state, code);
+            dispatch<false>(cost_table, state, code.data());
     }
 
     const auto gas_left =

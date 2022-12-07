@@ -28,14 +28,15 @@ protected:
         vm{*static_cast<evmone::VM*>(m_baseline_vm.get_raw_pointer())}
     {}
 
-    std::string trace(bytes_view code, int32_t depth = 0, uint32_t flags = 0)
+    std::string trace(
+        bytes_view code, int32_t depth = 0, uint32_t flags = 0, evmc_revision rev = EVMC_BERLIN)
     {
         evmc::MockedHost host;
         evmc_message msg{};
-        msg.flags = flags;
         msg.depth = depth;
+        msg.flags = flags;
         msg.gas = 1000000;
-        m_baseline_vm.execute(host, EVMC_BERLIN, msg, code.data(), code.size());
+        m_baseline_vm.execute(host, rev, msg, code.data(), code.size());
         auto result = trace_stream.str();
         trace_stream.str({});
         return result;
@@ -289,4 +290,19 @@ TEST_F(tracing, trace_code_containing_zero)
     trace(code);
 
     EXPECT_EQ(tracer.get_last_code().size(), code.size());
+}
+
+TEST_F(tracing, trace_eof)
+{
+    vm.add_tracer(evmone::create_instruction_tracer(trace_stream));
+
+    trace_stream << '\n';
+    EXPECT_EQ(trace(eof1_bytecode(add(2, 3) + OP_STOP), 0, 0, EVMC_SHANGHAI), R"(
+{"depth":0,"rev":"Shanghai","static":false}
+{"pc":0,"op":96,"opName":"PUSH1","gas":1000000,"stack":[],"memorySize":0}
+{"pc":2,"op":96,"opName":"PUSH1","gas":999997,"stack":["0x3"],"memorySize":0}
+{"pc":4,"op":1,"opName":"ADD","gas":999994,"stack":["0x3","0x2"],"memorySize":0}
+{"pc":5,"op":0,"opName":"STOP","gas":999991,"stack":["0x5"],"memorySize":0}
+{"error":null,"gas":999991,"gasUsed":9,"output":""}
+)");
 }

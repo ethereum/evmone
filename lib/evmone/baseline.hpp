@@ -23,8 +23,8 @@ class CodeAnalysis
 public:
     using JumpdestMap = std::vector<bool>;
 
-    const uint8_t* executable_code;  ///< Pointer to the beginning of executable code section.
-    JumpdestMap jumpdest_map;        ///< Map of valid jump destinations.
+    bytes_view executable_code;  ///< Executable code section.
+    JumpdestMap jumpdest_map;    ///< Map of valid jump destinations.
 
 private:
     /// Padded code for faster legacy code execution.
@@ -32,13 +32,13 @@ private:
     std::unique_ptr<uint8_t[]> m_padded_code;
 
 public:
-    CodeAnalysis(std::unique_ptr<uint8_t[]> padded_code, JumpdestMap map)
-      : executable_code{padded_code.get()},
+    CodeAnalysis(std::unique_ptr<uint8_t[]> padded_code, size_t code_size, JumpdestMap map)
+      : executable_code{padded_code.get(), code_size},
         jumpdest_map{std::move(map)},
         m_padded_code{std::move(padded_code)}
     {}
 
-    CodeAnalysis(const uint8_t* code, JumpdestMap map)
+    CodeAnalysis(bytes_view code, JumpdestMap map)
       : executable_code{code}, jumpdest_map{std::move(map)}
     {}
 };
