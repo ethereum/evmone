@@ -263,8 +263,11 @@ inline void slt(StackTop stack) noexcept
 
 inline void sgt(StackTop stack) noexcept
 {
-    const auto& x = stack.pop();
-    stack[0] = slt(stack[0], x);  // Arguments are swapped and SLT is used.
+    auto& x = stack.pop();
+    auto& y = stack[0];
+    x[3] ^= 0x8000000000000000;
+    y[3] ^= 0x8000000000000000;
+    y = intx::subc(y, x).carry;  // Arguments are swapped and SLT is used.
 }
 
 inline void eq(StackTop stack) noexcept
