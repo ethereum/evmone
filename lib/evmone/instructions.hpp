@@ -254,8 +254,11 @@ inline void gt(StackTop stack) noexcept
 
 inline void slt(StackTop stack) noexcept
 {
-    const auto& x = stack.pop();
-    stack[0] = slt(x, stack[0]);
+    auto& x = stack.pop();
+    auto& y = stack[0];
+    x[3] ^= 0x8000000000000000;
+    y[3] ^= 0x8000000000000000;
+    y = x < y;
 }
 
 inline void sgt(StackTop stack) noexcept
