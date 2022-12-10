@@ -258,7 +258,7 @@ inline void slt(StackTop stack) noexcept
     auto& y = stack[0];
     x[3] ^= 0x8000000000000000;
     y[3] ^= 0x8000000000000000;
-    y = x < y;
+    y = intx::subc(x, y).carry;
 }
 
 inline void sgt(StackTop stack) noexcept
