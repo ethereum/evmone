@@ -4,12 +4,14 @@
 
 #pragma once
 
-/// The list of EVM opcodes from every EVM revision.
-///
-/// TODO: Change to `enum class Opcode: uint8_t`.
 namespace evmone
 {
-enum Opcode
+
+/// The list of EVM opcodes from every EVM revision.
+///
+/// This is not enum class because we want implicit conversion to integers,
+/// e.g. for usage as an array index.
+enum Opcode : uint8_t
 {
     OP_STOP = 0x00,
     OP_ADD = 0x01,
