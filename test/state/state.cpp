@@ -11,6 +11,11 @@ namespace evmone::state
 {
 namespace
 {
+inline constexpr int64_t num_words(size_t size_in_bytes) noexcept
+{
+    return static_cast<int64_t>((size_in_bytes + 31) / 32);
+}
+
 int64_t compute_tx_data_cost(evmc_revision rev, bytes_view data) noexcept
 {
     constexpr int64_t zero_byte_cost = 4;
@@ -36,9 +41,13 @@ int64_t compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& tx) noex
 {
     static constexpr auto call_tx_cost = 21000;
     static constexpr auto create_tx_cost = 53000;
-    const bool is_create = !tx.to.has_value();
+    static constexpr auto initcode_word_cost = 2;
+    const auto is_create = !tx.to.has_value();
+    const auto initcode_cost =
+        is_create && rev >= EVMC_SHANGHAI ? initcode_word_cost * num_words(tx.data.size()) : 0;
     const auto tx_cost = is_create && rev >= EVMC_HOMESTEAD ? create_tx_cost : call_tx_cost;
-    return tx_cost + compute_tx_data_cost(rev, tx.data) + compute_access_list_cost(tx.access_list);
+    return tx_cost + compute_tx_data_cost(rev, tx.data) + compute_access_list_cost(tx.access_list) +
+           initcode_cost;
 }
 
 /// Validates transaction and computes its execution gas limit (the amount of gas provided to EVM).
@@ -67,6 +76,9 @@ int64_t validate_transaction(const Account& sender_acc, const BlockInfo& block,
 
     if (sender_acc.nonce == Account::NonceMax)
         return -1;
+
+    if (rev >= EVMC_SHANGHAI && !tx.to.has_value() && tx.data.size() > max_initcode_size)
+        return -1;  // initcode size is limited by EIP-3860.
 
     // Compute and check if sender has enough balance for the theoretical maximum transaction cost.
     // Note this is different from tx_max_cost computed with effective gas price later.
