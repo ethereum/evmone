@@ -221,7 +221,7 @@ TEST_P(evm, eof1_codecopy_out_of_bounds)
 TEST_P(evm, eof2_rjump)
 {
     // Relative jumps are not implemented in Advanced.
-    if (isAdvanced())
+    if (is_advanced())
         return;
 
     rev = EVMC_SHANGHAI;
@@ -243,7 +243,7 @@ TEST_P(evm, eof2_rjump)
 TEST_P(evm, eof2_rjump_backward)
 {
     // Relative jumps are not implemented in Advanced.
-    if (isAdvanced())
+    if (is_advanced())
         return;
 
     rev = EVMC_SHANGHAI;
@@ -267,7 +267,7 @@ TEST_P(evm, eof2_rjump_backward)
 TEST_P(evm, eof2_rjump_0_offset)
 {
     // Relative jumps are not implemented in Advanced.
-    if (isAdvanced())
+    if (is_advanced())
         return;
 
     rev = EVMC_SHANGHAI;
@@ -282,7 +282,7 @@ TEST_P(evm, eof2_rjump_0_offset)
 TEST_P(evm, eof2_rjumpi)
 {
     // Relative jumps are not implemented in Advanced.
-    if (isAdvanced())
+    if (is_advanced())
         return;
 
     rev = EVMC_SHANGHAI;
@@ -305,7 +305,7 @@ TEST_P(evm, eof2_rjumpi)
 TEST_P(evm, eof2_rjumpi_backwards)
 {
     // Relative jumps are not implemented in Advanced.
-    if (isAdvanced())
+    if (is_advanced())
         return;
 
     rev = EVMC_SHANGHAI;
@@ -328,7 +328,7 @@ TEST_P(evm, eof2_rjumpi_backwards)
 TEST_P(evm, eof2_rjumpi_0_offset)
 {
     // Relative jumps are not implemented in Advanced.
-    if (isAdvanced())
+    if (is_advanced())
         return;
 
     rev = EVMC_SHANGHAI;
