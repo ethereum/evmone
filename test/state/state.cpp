@@ -36,9 +36,17 @@ int64_t compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& tx) noex
 {
     static constexpr auto call_tx_cost = 21000;
     static constexpr auto create_tx_cost = 53000;
+    static constexpr auto initcode_word_cost = 2;
+    static constexpr auto word_size = 32;
     const bool is_create = !tx.to.has_value();
+    const auto num_full_words = tx.data.size() / word_size;
+    const auto num_word = tx.data.size() % word_size != 0 ? num_full_words + 1 : num_full_words;
+    const auto init_code_cost =
+        is_create && rev >= EVMC_SHANGHAI ? initcode_word_cost * num_word : 0;
     const auto tx_cost = is_create && rev >= EVMC_HOMESTEAD ? create_tx_cost : call_tx_cost;
-    return tx_cost + compute_tx_data_cost(rev, tx.data) + compute_access_list_cost(tx.access_list);
+
+    return tx_cost + compute_tx_data_cost(rev, tx.data) + compute_access_list_cost(tx.access_list) +
+           int64_t(init_code_cost);
 }
 
 /// Validates transaction and computes its execution gas limit (the amount of gas provided to EVM).
