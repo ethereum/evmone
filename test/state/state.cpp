@@ -76,6 +76,10 @@ int64_t validate_transaction(const Account& sender_acc, const BlockInfo& block,
     if (sender_acc.nonce == Account::NonceMax)
         return -1;
 
+    static constexpr auto max_code_size = 24576;
+    if (rev >= EVMC_SHANGHAI && !tx.to.has_value() && tx.data.size() > 2 * max_code_size)
+        return -1;  // initcode size is limited (EIP-3860).
+
     // Compute and check if sender has enough balance for the theoretical maximum transaction cost.
     // Note this is different from tx_max_cost computed with effective gas price later.
     // The computation cannot overflow if done with 512-bit precision.
