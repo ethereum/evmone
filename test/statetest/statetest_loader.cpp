@@ -127,7 +127,7 @@ evmc_revision to_rev(std::string_view s)
         }
 
         auto rev = EVMC_SHANGHAI;
-        for (auto e : eips)
+        for (const auto& e : eips)
         {
             if (e == "3540")
                 rev = add_eip(rev, EIP3540);

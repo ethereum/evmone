@@ -390,7 +390,7 @@ jobs:
     steps:
       - build
       - download_consensus_tests:
-          rev: v11.1
+          rev: develop
       - run:
           name: "State tests"
           working_directory: ~/build
