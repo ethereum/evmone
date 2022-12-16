@@ -4,6 +4,7 @@
 
 #include "state.hpp"
 #include "host.hpp"
+#include <evmone/eips.hpp>
 #include <evmone/evmone.h>
 #include <evmone/execution_state.hpp>
 
@@ -42,7 +43,7 @@ int64_t compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& tx) noex
     const auto num_full_words = tx.data.size() / word_size;
     const auto num_word = tx.data.size() % word_size != 0 ? num_full_words + 1 : num_full_words;
     const auto init_code_cost =
-        is_create && rev >= EVMC_SHANGHAI ? initcode_word_cost * num_word : 0;
+        is_create && has_eip(rev, EIP3860) ? initcode_word_cost * num_word : 0;
     const auto tx_cost = is_create && rev >= EVMC_HOMESTEAD ? create_tx_cost : call_tx_cost;
 
     return tx_cost + compute_tx_data_cost(rev, tx.data) + compute_access_list_cost(tx.access_list) +
@@ -77,7 +78,7 @@ int64_t validate_transaction(const Account& sender_acc, const BlockInfo& block,
         return -1;
 
     static constexpr auto max_code_size = 24576;
-    if (rev >= EVMC_SHANGHAI && !tx.to.has_value() && tx.data.size() > 2 * max_code_size)
+    if (has_eip(rev, EIP3860) && !tx.to.has_value() && tx.data.size() > 2 * max_code_size)
         return -1;  // initcode size is limited (EIP-3860).
 
     // Compute and check if sender has enough balance for the theoretical maximum transaction cost.

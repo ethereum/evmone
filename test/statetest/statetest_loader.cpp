@@ -3,8 +3,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "statetest.hpp"
+#include <evmone/eips.hpp>
 #include <nlohmann/json.hpp>
+#include <cassert>
 #include <fstream>
+#include <sstream>
+#include <string>
 
 namespace evmone::test
 {
@@ -112,7 +116,34 @@ evmc_revision to_rev(std::string_view s)
     if (s == "London+3540+3670")
         return EVMC_SHANGHAI;
     if (s.starts_with("Merge+"))
-        return EVMC_SHANGHAI;
+    {
+        std::stringstream ss(std::string(s.substr(6)));
+        std::string token;
+
+        std::vector<std::string> eips;
+        while (std::getline(ss, token, '+'))
+        {
+            eips.push_back(token);
+        }
+
+        auto rev = EVMC_SHANGHAI;
+        for (auto e : eips)
+        {
+            if (e == "3540")
+                rev = add_eip(rev, EIP3540);
+            else if (e == "3670")
+                rev = add_eip(rev, EIP3670);
+            else if (e == "3860")
+                rev = add_eip(rev, EIP3860);
+            else if (e == "3855")
+                rev = add_eip(rev, EIP3855);
+            else
+                assert(false);  // Unknown EIP
+        }
+
+        return rev;
+    }
+
     throw std::invalid_argument{"unknown revision: " + std::string{s}};
 }
 }  // namespace

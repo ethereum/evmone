@@ -2,6 +2,7 @@
 // Copyright 2019 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+#include "eips.hpp"
 #include "instructions.hpp"
 
 namespace evmone::instr::core
@@ -139,7 +140,7 @@ evmc_status_code create_impl(StackTop stack, ExecutionState& state) noexcept
     stack.push(0);
     state.return_data.clear();
 
-    if (state.rev >= EVMC_SHANGHAI)
+    if (has_eip(state.rev, EIP3860))
     {
         if (init_code_size > 0xC000)
             return EVMC_SUCCESS;

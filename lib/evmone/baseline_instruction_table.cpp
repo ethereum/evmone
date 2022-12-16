@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "baseline_instruction_table.hpp"
+#include "eips.hpp"
 #include "instructions_traits.hpp"
 
 namespace evmone::baseline
@@ -33,6 +34,7 @@ constexpr auto legacy_cost_tables = []() noexcept {
 
 const CostTable& get_baseline_cost_table(evmc_revision rev, uint8_t eof_version) noexcept
 {
+    rev = clear_eips(rev);
     const auto& tables = (eof_version == 0) ? legacy_cost_tables : eof_cost_tables;
     return tables[rev];
 }

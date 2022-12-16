@@ -2,6 +2,7 @@
 // Copyright 2019 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+#include "eips.hpp"
 #include "instructions.hpp"
 
 namespace evmone::instr::core
@@ -130,7 +131,7 @@ evmc_status_code sstore(StackTop stack, ExecutionState& state) noexcept
             0;
     const auto status = state.host.set_storage(state.msg->recipient, key, value);
 
-    const auto [gas_cost_warm, gas_refund] = sstore_costs[state.rev][status];
+    const auto [gas_cost_warm, gas_refund] = sstore_costs[clear_eips(state.rev)][status];
     const auto gas_cost = gas_cost_warm + gas_cost_cold;
     if ((state.gas_left -= gas_cost) < 0)
         return EVMC_OUT_OF_GAS;
