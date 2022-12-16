@@ -27,6 +27,7 @@ add_library(evmone
     instructions_traits.hpp
     instructions_xmacro.hpp
     opcodes_helpers.h
+    eips.hpp
     tracing.cpp
     tracing.hpp
     vm.cpp
