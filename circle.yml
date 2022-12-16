@@ -1,4 +1,6 @@
 version: 2.1
+orbs:
+  win: circleci/windows@5.0
 
 executors:
   lint:
@@ -76,6 +78,12 @@ commands:
           command: |
             curl -L https://github.com/Kitware/CMake/releases/download/v<<parameters.version>>/cmake-<<parameters.version>>-linux-x86_64.tar.gz | sudo tar -xz --strip=1
 
+  checkout_submodules:
+    steps:
+      - run:
+          name: "Update submodules"
+          command: git submodule update --init --recursive
+
   build_silkworm:
     parameters:
       branch:
@@ -145,9 +153,7 @@ commands:
     description: "Build"
     steps:
       - checkout
-      - run:
-          name: "Update submodules"
-          command: git submodule update --init --recursive
+      - checkout_submodules
       - run:
           name: "Environment"
           command: |
@@ -195,6 +201,7 @@ commands:
     steps:
     - run:
         name: "Test"
+        shell: bash
         working_directory: ~/build
         command: ctest -R ${TESTS_FILTER:-'.*'} --schedule-random --output-on-failure --parallel $CMAKE_BUILD_PARALLEL_LEVEL --output-junit ~/test_results/evmone.xml
     - store_test_results:
@@ -241,8 +248,9 @@ commands:
     steps:
       - run:
           name: "Build Package"
+          shell: bash
           working_directory: ~/package
-          command: cmake --build ~/build --target package && mv ~/build/evmone*.tar.gz* .
+          command: cmake --build ~/build --target package && mv ~/build/evmone-*.* .
       - store_artifacts:
           path: ~/package
           destination: package
@@ -285,6 +293,38 @@ jobs:
       - build
       - test
       - package
+
+  release-windows:
+    executor: win/server-2022
+    environment:
+      CMAKE_BUILD_TYPE: Release
+      CMAKE_BUILD_PARALLEL_LEVEL: 4
+    steps:
+      - checkout
+      - checkout_submodules
+      - run:
+          name: "Setup environment (bash)"
+          shell: bash
+          command: |
+            echo 'export PATH=$PATH:"/c/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin"' >> $BASH_ENV
+      - run:
+          name: 'Configure'
+          shell: powershell
+          command: |
+            $ErrorActionPreference = "Stop"
+            & 'C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\Launch-VsDevShell.ps1' -Arch amd64
+            which cmake
+            cmake -S . -B ~/build -G Ninja -DCMAKE_INSTALL_PREFIX=C:\install -DEVMONE_TESTING=ON
+      - run:
+          name: 'Build'
+          shell: powershell
+          command: |
+            $ErrorActionPreference = "Stop"
+            & 'C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\Launch-VsDevShell.ps1' -Arch amd64
+            cmake --build ~/build
+      - test
+      - package
+
 
   release-macos:
     executor: macos
@@ -505,15 +545,18 @@ workflows:
           filters:
             tags:
               only: /.*/
+      - release-windows:
+          filters:
+            tags:
+              only: /.*/
       - release-macos:
           filters:
-            branches:
-              ignore: /.*/
             tags:
               only: /.*/
       - deploy:
           requires:
             - release-linux
+            - release-windows
             - release-macos
           filters:
             branches:
