@@ -366,7 +366,7 @@ TEST_P(evm, relative_jumps_undefined_in_legacy)
 TEST_P(evm, eof_function_example1)
 {
     // Relative jumps are not implemented in Advanced.
-    if (isAdvanced())
+    if (is_advanced())
         return;
 
     rev = EVMC_SHANGHAI;
@@ -386,7 +386,7 @@ TEST_P(evm, eof_function_example1)
 TEST_P(evm, eof_function_example2)
 {
     // Relative jumps are not implemented in Advanced.
-    if (isAdvanced())
+    if (is_advanced())
         return;
 
     rev = EVMC_SHANGHAI;

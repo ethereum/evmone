@@ -79,8 +79,7 @@ CodeAnalysis analyze_eof1(bytes_view eof_container, const EOF1Header& header)
         offs.push_back(x - o);
 
     // FIXME: Better way of getting EOF version.
-    auto a =
-        CodeAnalysis{executable_code.data(), analyze_jumpdests(executable_code), eof_container[2]};
+    auto a = CodeAnalysis{executable_code, analyze_jumpdests(executable_code), eof_container[2]};
     a.code_offsets = std::move(offs);
     return a;
 }

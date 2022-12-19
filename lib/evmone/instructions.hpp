@@ -919,7 +919,7 @@ inline code_iterator callf(StackTop /*stack*/, ExecutionState& state, code_itera
     state.call_stack.push_back(pos + 3);
     const auto offset = state.analysis.baseline->code_offsets[index];
     auto code = state.analysis.baseline->executable_code;
-    return code + offset;
+    return code.data() + offset;
 }
 
 inline code_iterator retf(StackTop /*stack*/, ExecutionState& state, code_iterator /*pos*/) noexcept
