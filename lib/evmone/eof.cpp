@@ -17,23 +17,26 @@ namespace
 {
 constexpr uint8_t MAGIC[] = {0xef, 0x00};
 constexpr uint8_t TERMINATOR = 0x00;
-constexpr uint8_t CODE_SECTION = 0x01;
-constexpr uint8_t DATA_SECTION = 0x02;
-constexpr uint8_t TYPE_SECTION = 0x03;
-constexpr uint8_t MAX_SECTION = TYPE_SECTION;
+constexpr uint8_t TYPE_SECTION = 0x01;
+constexpr uint8_t CODE_SECTION = 0x02;
+constexpr uint8_t DATA_SECTION = 0x03;
+constexpr uint8_t MAX_SECTION = DATA_SECTION;
 constexpr auto CODE_SECTION_NUMBER_LIMIT = 1024;
+constexpr auto MAX_STACK_HEIGHT = 0x0400;
 
 using EOFSectionHeaders = std::array<std::vector<uint16_t>, MAX_SECTION + 1>;
 
 size_t eof_header_size(const EOFSectionHeaders& headers) noexcept
 {
-    const auto section_count =
-        headers[TYPE_SECTION].size() + headers[CODE_SECTION].size() + headers[DATA_SECTION].size();
+    const auto non_code_section_count = headers[TYPE_SECTION].size() + headers[DATA_SECTION].size();
+    const auto code_section_count = headers[CODE_SECTION].size();
 
-    constexpr auto section_header_size = 3;  // (SECTION_ID + SIZE) per each section
+    constexpr auto non_code_section_header_size = 3;  // (SECTION_ID + SIZE) per each section
+    constexpr auto code_section_size_size = 2;
 
     return sizeof(MAGIC) + 1 +  // 1 version byte
-           section_count * section_header_size + sizeof(TERMINATOR);
+           non_code_section_count * non_code_section_header_size + sizeof(CODE_SECTION) + 2 +
+           code_section_count * code_section_size_size + sizeof(TERMINATOR);
 }
 
 std::pair<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_view container)
@@ -47,6 +50,7 @@ std::pair<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_view
 
     auto state = State::section_id;
     uint8_t section_id = 0;
+    uint16_t section_num = 0;
     EOFSectionHeaders section_headers{};
     const auto container_end = container.end();
     auto it = container.begin() + std::size(MAGIC) + 1;  // MAGIC + VERSION
@@ -80,12 +84,19 @@ std::pair<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_view
                 state = State::section_size;
                 break;
             case CODE_SECTION:
+            {
                 if (section_headers[CODE_SECTION].size() == CODE_SECTION_NUMBER_LIMIT)
                     return {{}, EOFValidationError::too_many_code_sections};
                 if (!section_headers[DATA_SECTION].empty())
                     return {{}, EOFValidationError::data_section_before_code_section};
+                const auto section_number_hi = *it++;
+                if (it == container_end)
+                    return {{}, EOFValidationError::incomplete_section_number};
+                const auto section_number_lo = *it++;
+                section_num = static_cast<uint16_t>((section_number_hi << 8) | section_number_lo);
                 state = State::section_size;
                 break;
+            }
             default:
                 return {{}, EOFValidationError::unknown_section_id};
             }
@@ -93,15 +104,19 @@ std::pair<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_view
         }
         case State::section_size:
         {
-            const auto size_hi = *it++;
-            if (it == container_end)
-                return {{}, EOFValidationError::incomplete_section_size};
-            const auto size_lo = *it++;
-            const auto section_size = static_cast<uint16_t>((size_hi << 8) | size_lo);
-            if (section_size == 0)
-                return {{}, EOFValidationError::zero_section_size};
+            for (size_t i = 0; i < (section_id == CODE_SECTION ? section_num : 1); ++i)
+            {
+                const auto size_hi = *it++;
+                if (it == container_end)
+                    return {{}, EOFValidationError::incomplete_section_size};
+                const auto size_lo = *it++;
+                const auto section_size = static_cast<uint16_t>((size_hi << 8) | size_lo);
+                if (section_size == 0)
+                    return {{}, EOFValidationError::zero_section_size};
 
-            section_headers[section_id].emplace_back(section_size);
+                section_headers[section_id].emplace_back(section_size);
+            }
+
             state = State::section_id;
             break;
         }
@@ -123,32 +138,38 @@ std::pair<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_view
         return {{}, EOFValidationError::invalid_section_bodies_size};
 
     if (!section_headers[TYPE_SECTION].empty() &&
-        section_headers[TYPE_SECTION][0] != section_headers[CODE_SECTION].size() * 2)
+        section_headers[TYPE_SECTION][0] != section_headers[CODE_SECTION].size() * 4)
         return {{}, EOFValidationError::invalid_type_section_size};
 
     return {section_headers, EOFValidationError::success};
 }
 
-std::pair<std::vector<std::pair<uint8_t, uint8_t>>, EOFValidationError> validate_types(
+std::pair<std::vector<EOF1TypeHeader>, EOFValidationError> validate_types(
     bytes_view container, size_t header_size, std::vector<uint16_t> type_section_sizes) noexcept
 {
     assert(!container.empty());              // guaranteed by EOF headers validation
     assert(type_section_sizes.size() <= 1);  // guaranteed by EOF headers validation
 
     if (type_section_sizes.empty())
-        return {{{0, 0}}, EOFValidationError::success};
+        return {{{0, 0, 0}}, EOFValidationError::success};
 
-    std::vector<std::pair<uint8_t, uint8_t>> types;
+    std::vector<EOF1TypeHeader> types;
 
     // guaranteed by EOF headers validation
     assert(header_size + type_section_sizes[0] < container.size());
 
-    for (auto offset = header_size; offset < header_size + type_section_sizes[0]; offset += 2)
-        types.emplace_back(container[offset], container[offset + 1]);
+    for (auto offset = header_size; offset < header_size + type_section_sizes[0]; offset += 4)
+    {
+        types.emplace_back(EOF1TypeHeader{container[offset], container[offset + 1],
+            static_cast<uint16_t>(container[offset + 2] << 8 | container[offset + 3])});
+    }
 
     // check 1st section is (0, 0)
-    if (types[0].first != 0 || types[0].second != 0)
+    if (types[0].inputs_num != 0 || types[0].outputs_num != 0)
         return {{}, EOFValidationError::invalid_first_section_type};
+
+    if (types[0].max_stack_height > MAX_STACK_HEIGHT)
+        return {{}, EOFValidationError::invalid_max_stack_height};
 
     return {types, EOFValidationError::success};
 }
@@ -283,22 +304,43 @@ EOF1Header read_valid_eof1_header(bytes_view container)
     while (*it != TERMINATOR)
     {
         const auto section_id = *it++;
-        const auto section_size_hi = *it++;
-        const auto section_size_lo = *it++;
-        const auto section_size = static_cast<uint16_t>((section_size_hi << 8) | section_size_lo);
-        section_headers[section_id].emplace_back(section_size);
+        if (section_id == CODE_SECTION)
+        {
+            const auto code_section_num_hi = *it++;
+            const auto code_section_num_lo = *it++;
+            const auto code_section_num =
+                static_cast<uint16_t>((code_section_num_hi << 8) | code_section_num_lo);
+            for (uint16_t i = 0; i < code_section_num; ++i)
+            {
+                const auto section_size_hi = *it++;
+                const auto section_size_lo = *it++;
+                const auto section_size =
+                    static_cast<uint16_t>((section_size_hi << 8) | section_size_lo);
+                section_headers[section_id].emplace_back(section_size);
+            }
+        }
+        else
+        {
+            const auto section_size_hi = *it++;
+            const auto section_size_lo = *it++;
+            const auto section_size =
+                static_cast<uint16_t>((section_size_hi << 8) | section_size_lo);
+            section_headers[section_id].emplace_back(section_size);
+        }
     }
     const auto header_size = eof_header_size(section_headers);
 
     EOF1Header header;
 
     if (section_headers[TYPE_SECTION].empty())
-        header.types.emplace_back(0, 0);
+        header.types.emplace_back(0, 0, 0);
     else
     {
         for (auto type_offset = header_size;
-             type_offset < header_size + section_headers[TYPE_SECTION][0]; type_offset += 2)
-            header.types.emplace_back(container[type_offset], container[type_offset + 1]);
+             type_offset < header_size + section_headers[TYPE_SECTION][0]; type_offset += 4)
+
+            header.types.emplace_back(container[type_offset], container[type_offset + 1],
+                container[type_offset + 2] << 8 | container[type_offset + 3]);
     }
 
     header.code_sizes = section_headers[CODE_SECTION];

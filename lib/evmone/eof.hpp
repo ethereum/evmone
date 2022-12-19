@@ -14,6 +14,17 @@ namespace evmone
 {
 using bytes_view = std::basic_string_view<uint8_t>;
 
+struct EOF1TypeHeader
+{
+    uint8_t inputs_num;
+    uint8_t outputs_num;
+    uint16_t max_stack_height;
+
+    EOF1TypeHeader(uint8_t inputs_num_, uint8_t outputs_num_, uint16_t max_stack_height_)
+      : inputs_num(inputs_num_), outputs_num(outputs_num_), max_stack_height(max_stack_height_)
+    {}
+};
+
 struct EOF1Header
 {
     /// Size of every code section.
@@ -22,7 +33,7 @@ struct EOF1Header
     std::vector<uint16_t> code_offsets;
     uint16_t data_size = 0;
 
-    std::vector<std::pair<uint8_t, uint8_t>> types;
+    std::vector<EOF1TypeHeader> types;
 
     /// Returns offset of code section start.
     [[nodiscard]] EVMC_EXPORT size_t code_begin(size_t index) const noexcept;
@@ -45,6 +56,7 @@ enum class EOFValidationError
     eof_version_unknown,
 
     incomplete_section_size,
+    incomplete_section_number,
     code_section_missing,
     multiple_data_sections,
     unknown_section_id,
@@ -61,6 +73,7 @@ enum class EOFValidationError
     data_section_before_code_section,
     invalid_type_section_size,
     invalid_first_section_type,
+    invalid_max_stack_height,
 
     impossible,
 };
