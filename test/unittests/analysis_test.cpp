@@ -260,7 +260,7 @@ TEST(analysis, example1_eof1)
 {
     const auto code = eof1_bytecode(
         push(0x2a) + push(0x1e) + OP_MSTORE8 + OP_MSIZE + push(0) + OP_SSTORE, "deadbeef");
-    const auto header = evmone::read_valid_eof1_header(bytes_view(code).begin());
+    const auto header = evmone::read_valid_eof1_header(bytes_view(code));
     const auto analysis =
         analyze(EVMC_SHANGHAI, {&code[header.code_begin(0)], header.code_sizes[0]});
 

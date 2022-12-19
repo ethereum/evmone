@@ -90,7 +90,7 @@ CodeAnalysis analyze(evmc_revision rev, bytes_view code)
     if (rev < EVMC_SHANGHAI || !is_eof_code(code))
         return analyze_legacy(code);
 
-    const auto eof1_header = read_valid_eof1_header(code.begin());
+    const auto eof1_header = read_valid_eof1_header(code);
     return analyze_eof1(code, eof1_header);
 }
 
