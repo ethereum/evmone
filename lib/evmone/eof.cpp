@@ -238,7 +238,7 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(
     auto offset = header_size + type_section_size;
     for (const auto code_size : code_sizes)
     {
-        code_offsets.emplace_back(offset);
+        code_offsets.emplace_back(static_cast<uint16_t>(offset));
         offset += code_size;
     }
 
@@ -310,7 +310,7 @@ EOF1Header read_valid_eof1_header(bytes_view container)
         (section_headers[TYPE_SECTION].empty() ? uint16_t{0} : section_headers[TYPE_SECTION][0]);
     for (const auto code_size : header.code_sizes)
     {
-        header.code_offsets.emplace_back(code_offset);
+        header.code_offsets.emplace_back(static_cast<uint16_t>(code_offset));
         code_offset += code_size;
     }
 
