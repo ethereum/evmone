@@ -93,13 +93,11 @@ big_endian(T value)
 inline bytecode eof_header(uint8_t version, uint16_t code_size, uint16_t data_size)
 {
     bytecode out{bytes{0xEF, 0x00, version}};
-
-    out += "01" + big_endian(code_size);
-
-    if (data_size != 0)
-        out += "02" + big_endian(data_size);
-
+    out += "01" + big_endian(uint16_t{4});  // type header
+    out += "02"_hex + big_endian(uint16_t{1}) + big_endian(code_size);
+    out += "03" + big_endian(data_size);
     out += "00";
+    out += "00000000";  // type section
     return out;
 }
 
