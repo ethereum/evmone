@@ -164,13 +164,15 @@ TEST_P(evm, eof1_codecopy_header)
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
-    EXPECT_EQ(bytes_view(result.output_data, result.output_size), "ef0001010004020001000c03000000"_hex);
+    EXPECT_EQ(
+        bytes_view(result.output_data, result.output_size), "ef0001010004020001000c03000000"_hex);
 
     code = eof1_bytecode(bytecode{15} + 0 + 0 + OP_CODECOPY + ret(0, 15), "deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
-    EXPECT_EQ(bytes_view(result.output_data, result.output_size), "ef0001010004020001000c03000400"_hex);
+    EXPECT_EQ(
+        bytes_view(result.output_data, result.output_size), "ef0001010004020001000c03000400"_hex);
 }
 
 TEST_P(evm, eof1_codecopy_code)
