@@ -111,7 +111,7 @@ std::pair<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_view
                     return {{}, EOFValidationError::incomplete_section_size};
                 const auto size_lo = *it++;
                 const auto section_size = static_cast<uint16_t>((size_hi << 8) | size_lo);
-                if (section_size == 0)
+                if (section_size == 0 && section_id != DATA_SECTION)
                     return {{}, EOFValidationError::zero_section_size};
 
                 section_headers[section_id].emplace_back(section_size);
