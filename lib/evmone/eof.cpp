@@ -79,21 +79,29 @@ std::pair<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_view
                 state = State::section_size;
                 break;
             case DATA_SECTION:
+                if (section_headers[TYPE_SECTION].empty())
+                    return {{}, EOFValidationError::data_section_before_types_section};
+                if (section_headers[CODE_SECTION].empty())
+                    return {{}, EOFValidationError::data_section_before_code_section};
                 if (!section_headers[DATA_SECTION].empty())
                     return {{}, EOFValidationError::multiple_data_sections};
                 state = State::section_size;
                 break;
             case CODE_SECTION:
             {
-                if (section_headers[CODE_SECTION].size() == CODE_SECTION_NUMBER_LIMIT)
-                    return {{}, EOFValidationError::too_many_code_sections};
+                if (section_headers[TYPE_SECTION].empty())
+                    return {{}, EOFValidationError::code_section_before_type_section};
                 if (!section_headers[DATA_SECTION].empty())
                     return {{}, EOFValidationError::data_section_before_code_section};
+                if (it == container_end)
+                    return {{}, EOFValidationError::incomplete_section_number};
                 const auto section_number_hi = *it++;
                 if (it == container_end)
                     return {{}, EOFValidationError::incomplete_section_number};
                 const auto section_number_lo = *it++;
                 section_num = static_cast<uint16_t>((section_number_hi << 8) | section_number_lo);
+                if (section_num == 0)
+                    return {{}, EOFValidationError::zero_section_size};
                 state = State::section_size;
                 break;
             }
@@ -114,6 +122,8 @@ std::pair<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_view
                 if (section_size == 0 && section_id != DATA_SECTION)
                     return {{}, EOFValidationError::zero_section_size};
 
+                if (section_headers[CODE_SECTION].size() == CODE_SECTION_NUMBER_LIMIT)
+                    return {{}, EOFValidationError::too_many_code_sections};
                 section_headers[section_id].emplace_back(section_size);
             }
 
