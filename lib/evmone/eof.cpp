@@ -202,9 +202,6 @@ EOFValidationError validate_instructions(evmc_revision rev, bytes_view code) noe
         ++i;
     }
 
-    if (!instr::traits[op].is_terminating)
-        return EOFValidationError::missing_terminating_instruction;
-
     return EOFValidationError::success;
 }
 
