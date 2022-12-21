@@ -340,7 +340,7 @@ TEST(eof_validation, EOF1_truncated_push)
             code_size_byte = static_cast<uint8_t>(code.size());
             const auto container = eof_header + code;
 
-            EXPECT_EQ(validate_eof(container), EOFValidationError::missing_terminating_instruction)
+            EXPECT_EQ(validate_eof(container), EOFValidationError::truncated_instruction)
                 << hex(container);
         }
 
@@ -349,34 +349,6 @@ TEST(eof_validation, EOF1_truncated_push)
         const auto container = eof_header + code;
 
         EXPECT_EQ(validate_eof(container), EOFValidationError::success) << hex(container);
-    }
-}
-
-TEST(eof_validation, EOF1_terminating_instructions)
-{
-    auto eof_header = "EF0001 010004 0200010001 00 00000000"_hex;
-    auto& code_size_byte = eof_header[10];
-
-    const auto& traits = evmone::instr::traits;
-
-    for (uint16_t opcode = 0; opcode <= 0xff; ++opcode)
-    {
-        const auto& op_traits = traits[opcode];
-        // Skip undefined opcodes.
-        // TODO: iterate over all EOF revisions.
-        if (op_traits.name == nullptr || op_traits.since == EVMC_CANCUN)
-            continue;
-
-        bytes code{static_cast<uint8_t>(opcode) + bytes(op_traits.immediate_size, 0)};
-        code_size_byte = static_cast<uint8_t>(code.size());
-        const auto container = eof_header + code;
-
-        const auto expected =
-            ((opcode == OP_STOP || opcode == OP_RETURN || opcode == OP_RETF ||
-                 opcode == OP_REVERT || opcode == OP_INVALID || opcode == OP_SELFDESTRUCT) ?
-                    EOFValidationError::success :
-                    EOFValidationError::missing_terminating_instruction);
-        EXPECT_EQ(validate_eof(container), expected) << hex(code);
     }
 }
 
@@ -413,19 +385,19 @@ TEST(eof_validation, EOF1_valid_rjumpi)
 TEST(eof_validation, EOF1_rjump_truncated)
 {
     EXPECT_EQ(validate_eof("EF0001 010004 0200010001 00 00000000 5C"),
-        EOFValidationError::missing_terminating_instruction);
+        EOFValidationError::truncated_instruction);
 
     EXPECT_EQ(validate_eof("EF0001 010004 0200010002 00 00000000 5C00"),
-        EOFValidationError::missing_terminating_instruction);
+        EOFValidationError::truncated_instruction);
 }
 
 TEST(eof_validation, EOF1_rjumpi_truncated)
 {
     EXPECT_EQ(validate_eof("EF0001 010004 0200010003 00 00000000 60005D"),
-        EOFValidationError::missing_terminating_instruction);
+        EOFValidationError::truncated_instruction);
 
     EXPECT_EQ(validate_eof("EF0001 010004 0200010004 00 00000000 60005D00"),
-        EOFValidationError::missing_terminating_instruction);
+        EOFValidationError::truncated_instruction);
 }
 
 TEST(eof_validation, EOF1_rjump_invalid_destination)
