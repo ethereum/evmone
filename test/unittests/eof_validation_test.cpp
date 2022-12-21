@@ -116,6 +116,11 @@ TEST(eof_validation, EOF1_types_section_0_size)
         EOFValidationError::zero_section_size);
 }
 
+TEST(eof_validation, EOF1_type_section_missing)
+{
+    EXPECT_EQ(validate_eof("EF0001 00"), EOFValidationError::type_section_missing);
+}
+
 TEST(eof_validation, EOF1_code_section_missing)
 {
     EXPECT_EQ(validate_eof("EF0001 010004 00"), EOFValidationError::code_section_missing);

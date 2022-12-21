@@ -54,6 +54,8 @@ std::pair<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_view
     EOFSectionHeaders section_headers{};
     const auto container_end = container.end();
     auto it = container.begin() + std::size(MAGIC) + 1;  // MAGIC + VERSION
+    // TODO: Since all sections are mandatory and they have to be ordered (Types, Code+, Data)
+    // TODO: this fragment of code can be much simpler. Rewriting needed.
     while (it != container_end && state != State::terminated)
     {
         switch (state)
@@ -64,11 +66,10 @@ std::pair<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_view
             switch (section_id)
             {
             case TERMINATOR:
+                if (section_headers[TYPE_SECTION].empty())
+                    return {{}, EOFValidationError::type_section_missing};
                 if (section_headers[CODE_SECTION].empty())
                     return {{}, EOFValidationError::code_section_missing};
-                if (section_headers[CODE_SECTION].size() > 1 &&
-                    section_headers[TYPE_SECTION].empty())
-                    return {{}, EOFValidationError::mandatory_type_section_missing};
                 state = State::terminated;
                 break;
             case TYPE_SECTION:
