@@ -190,7 +190,7 @@ EOFValidationError validate_instructions(evmc_revision rev, bytes_view code) noe
     assert(!code.empty());  // guaranteed by EOF headers validation
 
     size_t i = 0;
-    uint8_t op = code[0];
+    uint8_t op = 0;
     while (i < code.size())
     {
         op = code[i];
@@ -201,7 +201,7 @@ EOFValidationError validate_instructions(evmc_revision rev, bytes_view code) noe
         if (op == OP_RJUMPV)
         {
             if (i + 1 < code.size())
-                i += 1 /* count */ + code[i + 1] * 2 /* tbl */;
+                i += static_cast<size_t>(1 /* count */ + code[i + 1] * 2 /* tbl */);
             else
                 return EOFValidationError::truncated_instruction;
         }
@@ -245,7 +245,8 @@ bool validate_rjump_destinations(
 
             const auto count = container[op_pos + 1];
 
-            const int32_t post_offset = 1 + 1 /* count */ + count * REL_OFFSET_SIZE /* tbl */;
+            const auto post_offset =
+                static_cast<int32_t>(1 + 1 /* count */ + count * REL_OFFSET_SIZE /* tbl */);
 
             for (size_t k = 0; k < count; ++k)
             {
