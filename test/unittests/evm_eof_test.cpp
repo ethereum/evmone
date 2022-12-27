@@ -31,7 +31,7 @@ TEST_P(evm, eof1_execution_with_data_section)
     EXPECT_EQ(result.output_size, 0);
 }
 
-TEST_P(evm, eof1_pc)
+TEST_P(evm, DISABLED_eof1_pc)
 {
     rev = EVMC_SHANGHAI;
     auto code = eof1_bytecode(OP_PC + mstore8(0) + ret(0, 1), 2);
@@ -49,7 +49,7 @@ TEST_P(evm, eof1_pc)
     EXPECT_EQ(result.output_data[0], 4);
 }
 
-TEST_P(evm, eof1_jump_inside_code_section)
+TEST_P(evm, DISABLED_eof1_jump_inside_code_section)
 {
     rev = EVMC_SHANGHAI;
     auto code = eof1_bytecode(jump(4) + OP_INVALID + OP_JUMPDEST + mstore8(0, 1) + ret(0, 1), 2);
@@ -68,7 +68,7 @@ TEST_P(evm, eof1_jump_inside_code_section)
     EXPECT_EQ(result.output_data[0], 1);
 }
 
-TEST_P(evm, eof1_jumpi_inside_code_section)
+TEST_P(evm, DISABLED_eof1_jumpi_inside_code_section)
 {
     rev = EVMC_SHANGHAI;
     auto code = eof1_bytecode(jumpi(6, 1) + OP_INVALID + OP_JUMPDEST + mstore8(0, 1) + ret(0, 1));
@@ -87,7 +87,7 @@ TEST_P(evm, eof1_jumpi_inside_code_section)
     EXPECT_EQ(result.output_data[0], 1);
 }
 
-TEST_P(evm, eof1_jump_into_data_section)
+TEST_P(evm, DISABLED_eof1_jump_into_data_section)
 {
     rev = EVMC_SHANGHAI;
     // data section contains OP_JUMPDEST + mstore8(0, 1) + ret(0, 1)
@@ -97,7 +97,7 @@ TEST_P(evm, eof1_jump_into_data_section)
     EXPECT_STATUS(EVMC_BAD_JUMP_DESTINATION);
 }
 
-TEST_P(evm, eof1_jumpi_into_data_section)
+TEST_P(evm, DISABLED_eof1_jumpi_into_data_section)
 {
     rev = EVMC_SHANGHAI;
     // data section contains OP_JUMPDEST + mstore8(0, 1) + ret(0, 1)
@@ -108,7 +108,7 @@ TEST_P(evm, eof1_jumpi_into_data_section)
     EXPECT_STATUS(EVMC_BAD_JUMP_DESTINATION);
 }
 
-TEST_P(evm, eof1_push_byte_in_header)
+TEST_P(evm, DISABLED_eof1_push_byte_in_header)
 {
     rev = EVMC_SHANGHAI;
     // data section is 0x65 bytes long, so header contains 0x65 (PUSH6) byte,

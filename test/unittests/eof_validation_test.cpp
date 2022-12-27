@@ -580,3 +580,11 @@ TEST(eof_validation, EOF1_section_order)
     EXPECT_EQ(validate_eof("EF0001 030002 0200010006 010004 00 AABB 60005D000000 00000000"),
         EOFValidationError::data_section_before_types_section);
 }
+
+TEST(eof_validation, deprecated_instructions)
+{
+    for (auto op : {OP_CALLCODE, OP_SELFDESTRUCT, OP_JUMP, OP_JUMPI, OP_PC})
+    {
+        EXPECT_EQ(validate_eof(eof1_bytecode(op)), EOFValidationError::undefined_instruction);
+    }
+}
