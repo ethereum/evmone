@@ -95,8 +95,9 @@ TEST(eof_validation, minimal_valid_EOF1_multiple_code_sections)
         EOFValidationError::success);
 
     // non-void input and output types
-    EXPECT_EQ(validate_eof("EF0001 010010 0200040001000200020002 00  00000000 01000000 00010000 "
-                           "02030000  FE 5000 3000 8000"),
+    EXPECT_EQ(validate_eof("EF0001 010010 0200040001000200020002 00 "
+                           "00000000 01000001 00010001 02030003"
+                           "FE 5000 3000 8000"),
         EOFValidationError::success);
 }
 
@@ -211,16 +212,16 @@ TEST(eof_validation, EOF1_truncated_section)
 TEST(eof_validation, EOF1_code_section_offset)
 {
     const auto eof =
-        "EF0001 010008 02000200020001 030004 00 0000000000000000 fefe fe 0000 0000"_hex;
+        "EF0001 010008 02000200030001 030004 00 00000001 00000000 6001fe fe 0000 0000"_hex;
     ASSERT_EQ(validate_eof(EVMC_CANCUN, eof), EOFValidationError::success);
 
     const auto header = read_valid_eof1_header(eof);
     ASSERT_EQ(header.code_sizes.size(), 2);
-    EXPECT_EQ(header.code_sizes[0], 2);
+    EXPECT_EQ(header.code_sizes[0], 3);
     EXPECT_EQ(header.code_sizes[1], 1);
     ASSERT_EQ(header.code_offsets.size(), 2);
     EXPECT_EQ(header.code_offsets[0], 25);
-    EXPECT_EQ(header.code_offsets[1], 27);
+    EXPECT_EQ(header.code_offsets[1], 28);
 }
 
 TEST(eof_validation, EOF1_trailing_bytes)
@@ -303,25 +304,39 @@ TEST(eof_validation, EOF1_too_many_code_sections)
 
 TEST(eof_validation, EOF1_undefined_opcodes)
 {
-    auto cont = "EF0001 010004 0200010002 00 00000000 0000"_hex;
-
     const auto& gas_table = evmone::instr::gas_costs[EVMC_SHANGHAI];
 
     for (uint16_t opcode = 0; opcode <= 0xff; ++opcode)
     {
+        auto cont =
+            "EF0001 010004 0200010014 00 00000000 6001"
+            "80808080808080808080808080808080 "
+            ""_hex;
+
         // Skip opcodes requiring immediate arguments.
         // They're all valid in Shanghai and checked in other tests below.
         if (opcode >= OP_PUSH1 && opcode <= OP_PUSH32)
             continue;
-        if (opcode == OP_RJUMP || opcode == OP_RJUMPI || opcode == OP_CALLF)
+        if (opcode == OP_RJUMP || opcode == OP_RJUMPI || opcode == OP_RJUMPV ||
+            opcode == OP_CALLF || opcode == OP_RETF || opcode == OP_INVALID || opcode == OP_STOP ||
+            opcode == OP_RETURN || opcode == OP_REVERT || opcode == OP_SELFDESTRUCT)
             continue;
 
-        cont[cont.size() - 2] = static_cast<uint8_t>(opcode);
+        cont += static_cast<uint8_t>(opcode);
+        if (!instr::traits[opcode].is_terminating)
+            cont += "00"_hex;
+        else
+            cont[10] = 0x13;
+
+
+        auto op_stack_change = instr::traits[opcode].stack_height_change;
+        cont[15] = static_cast<uint8_t>(op_stack_change <= 0 ? 17 : 17 + op_stack_change);
 
         const auto expected = (gas_table[opcode] == evmone::instr::undefined ?
                                    EOFValidationError::undefined_instruction :
                                    EOFValidationError::success);
-        EXPECT_EQ(validate_eof(cont), expected) << hex(cont);
+        auto result = validate_eof(cont);
+        EXPECT_EQ(result, expected) << hex(cont);
     }
 
     EXPECT_EQ(validate_eof("EF0001 010004 0200010001 00 00000000 FE"), EOFValidationError::success);
@@ -346,6 +361,9 @@ TEST(eof_validation, EOF1_truncated_push)
 
         const bytes code{opcode + bytes(required_bytes, 0) + uint8_t{OP_STOP}};
         code_size_byte = static_cast<uint8_t>(code.size());
+
+        eof_header[15] = static_cast<uint8_t>(instr::traits[opcode].stack_height_change);
+
         const auto container = eof_header + code;
 
         EXPECT_EQ(validate_eof(container), EOFValidationError::success) << hex(container);
@@ -359,45 +377,45 @@ TEST(eof_validation, EOF1_valid_rjump)
         validate_eof("EF0001 010004 0200010004 00 00000000 5C000000"), EOFValidationError::success);
 
     // offset = 3
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010007 00 00000000 5C000300000000"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010009 00 00000001 5C00036001005CFFFA"),
         EOFValidationError::success);
 
     // offset = -4
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 00 00000000 005CFFFC00"),
-        EOFValidationError::success);
+    EXPECT_EQ(
+        validate_eof("EF0001 010004 0200010004 00 00000000 5B5CFFFC"), EOFValidationError::success);
 }
 
 TEST(eof_validation, EOF1_valid_rjumpi)
 {
     // offset = 0
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 00 00000000 60005D000000"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 00 00000001 60005D000000"),
         EOFValidationError::success);
 
     // offset = 3
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010009 00 00000000 60005D000300000000"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010009 00 00000001 60005D00035B5B5B00"),
         EOFValidationError::success);
 
     // offset = -5
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 00 00000000 60005DFFFB00"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 00 00000001 60005DFFFB00"),
         EOFValidationError::success);
 }
 
 TEST(eof_validation, EOF1_valid_rjumpv)
 {
     // table = [0] case = 0
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010008 00 00000000 60005E0100006001"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010009 00 00000001 60005E010000600100"),
         EOFValidationError::success);
 
     // table = [0,3] case = 0
-    EXPECT_EQ(validate_eof("EF0001 010004 020001000D 00 00000000 60005E02000000036001006002"),
+    EXPECT_EQ(validate_eof("EF0001 010004 020001000E 00 00000001 60005E0200000003600100600200"),
         EOFValidationError::success);
 
     // table = [0,3] case = 2
-    EXPECT_EQ(validate_eof("EF0001 010004 020001000D 00 00000000 60025E02000000036001006002"),
+    EXPECT_EQ(validate_eof("EF0001 010004 020001000E 00 00000001 60025E0200000003600100600200"),
         EOFValidationError::success);
 
     // table = [0,3,-10] case = 2
-    EXPECT_EQ(validate_eof("EF0001 010004 020001000F 00 00000000 60025E0300000003FFF66001006002"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010010 00 00000001 60025E0300000003FFF6600100600200"),
         EOFValidationError::success);
 }
 
@@ -536,10 +554,10 @@ TEST(eof_validation, EOF1_rjumpv_invalid_destination)
         EOFValidationError::invalid_rjump_destination);
 }
 
-TEST(oef_validation, EOF1_section_order)
+TEST(eof_validation, EOF1_section_order)
 {
     // 01 02 03
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 030002 00 00000000 60005D000000 AABB"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 030002 00 00000001 60005D000000 AABB"),
         EOFValidationError::success);
 
     // 01 03 02

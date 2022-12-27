@@ -5,10 +5,12 @@
 #include "eof.hpp"
 #include "instructions_traits.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <limits>
 #include <numeric>
+#include <stack>
 #include <vector>
 
 namespace evmone
@@ -284,6 +286,129 @@ bool validate_rjump_destinations(
     return true;
 }
 
+std::pair<EOFValidationError, int32_t> validate_max_stack_height(
+    bytes_view code, size_t func_index, const std::vector<EOF1TypeHeader>& funcs_in_outs)
+{
+    assert(code.size() > 0);
+    std::vector<int32_t> stack_heights = std::vector<int32_t>(code.size(), -1);
+    std::stack<size_t> worklist;
+
+    int32_t stack_height = 0;
+    stack_heights[0] = funcs_in_outs[func_index].inputs_num;
+    worklist.push(0);
+
+    size_t i = 0;
+    Opcode opcode = {};
+    std::vector<size_t> successors;
+    while (!worklist.empty())
+    {
+        i = worklist.top();
+        opcode = static_cast<Opcode>(code[i]);
+        worklist.pop();
+
+        auto stack_height_required = instr::traits[opcode].stack_height_required;
+        auto stack_height_change = instr::traits[opcode].stack_height_change;
+
+        if (opcode == OP_CALLF)
+        {
+            auto fid_hi = code[i + 1];
+            auto fid_lo = code[i + 2];
+            auto fid = static_cast<uint16_t>((fid_hi << 8) | fid_lo);
+
+            stack_height_required = static_cast<int8_t>(funcs_in_outs[fid].inputs_num);
+            auto d = funcs_in_outs[fid].outputs_num - stack_height_required;
+            stack_height_change = static_cast<int8_t>(d);
+        }
+
+        stack_height = stack_heights[i];
+        assert(stack_height != -1);
+
+        if (stack_height < stack_height_required)
+            return {EOFValidationError::stack_underflow, -1};
+
+        successors.clear();
+
+        // immediate_size for RJUMPV depends on the code. It's calculater below.
+        if (opcode != OP_RJUMP && !instr::traits[opcode].is_terminating && opcode != OP_RJUMPV)
+        {
+            auto next = i + instr::traits[opcode].immediate_size + 1;
+            if (next >= code.size())
+                return {EOFValidationError::no_terminating_instruction, -1};
+
+            successors.push_back(next);
+        }
+
+        if (opcode == OP_RJUMP || opcode == OP_RJUMPI)
+        {
+            auto target_rel_offset_hi = code[i + 1];
+            auto target_rel_offset_lo = code[i + 2];
+            auto target_rel_offset =
+                static_cast<int16_t>((target_rel_offset_hi << 8) | target_rel_offset_lo);
+            successors.push_back(
+                static_cast<size_t>(target_rel_offset + 3 + static_cast<int32_t>(i)));
+        }
+
+        if (opcode == OP_RJUMPV)
+        {
+            auto count = code[i + 1];
+
+            auto next = i + count * 2 + 2;
+            if (next >= code.size())
+                return {EOFValidationError::no_terminating_instruction, -1};
+
+            auto beg = stack_heights.begin() + static_cast<int32_t>(i) + 1;
+            auto end = beg + count * 2 + 1;
+            for (auto it = beg; it < end; ++it)
+                *it = -2;
+
+            successors.push_back(next);
+
+            for (uint16_t k = 0; k < count; ++k)
+            {
+                auto target_rel_offset_hi = code[i + k * 2 + 2];
+                auto target_rel_offset_lo = code[i + k * 2 + 3];
+                auto target_rel_offset =
+                    static_cast<uint16_t>((target_rel_offset_hi << 8) | target_rel_offset_lo);
+                if (target_rel_offset != 0)  // Already added before the loop
+                    successors.push_back(i + 2 * count + target_rel_offset + 2);
+            }
+        }
+        else
+        {
+            auto beg = stack_heights.begin() + static_cast<int32_t>(i) + 1;
+            auto end = beg + instr::traits[opcode].immediate_size;
+            for (auto it = beg; it < end; ++it)
+                *it = -2;
+        }
+
+        stack_height += stack_height_change;
+
+        for (auto& s : successors)
+        {
+            if (stack_heights[s] == -1)
+            {
+                stack_heights[s] = stack_height;
+                worklist.push(s);
+            }
+            else if (stack_heights[s] != stack_height)
+                return {EOFValidationError::stack_height_mismatch, -1};
+        }
+
+        if (opcode == OP_RETF && stack_height != funcs_in_outs[func_index].outputs_num)
+            return {EOFValidationError::non_empty_stack_on_terminating_instruction, -1};
+    }
+
+    auto msh_it = std::max_element(stack_heights.begin(), stack_heights.end());
+
+    if (*msh_it > 1023)
+        return {EOFValidationError::max_stack_height_above_limit, -1};
+
+    if (std::find(stack_heights.begin(), stack_heights.end(), -1) != stack_heights.end())
+        return {EOFValidationError::unreachable_instructions, -1};
+
+    return {EOFValidationError::success, *msh_it};
+}
+
 std::pair<EOF1Header, EOFValidationError> validate_eof1(
     evmc_revision rev, bytes_view container) noexcept
 {
@@ -323,6 +448,14 @@ std::pair<EOF1Header, EOFValidationError> validate_eof1(
 
         if (!validate_rjump_destinations(header, code_idx, container.begin()))
             return {{}, EOFValidationError::invalid_rjump_destination};
+
+        auto msh_validation_result = validate_max_stack_height(
+            {&container[header.code_begin(code_idx)], header.code_sizes[code_idx]}, code_idx,
+            header.types);
+        if (msh_validation_result.first != EOFValidationError::success)
+            return {{}, msh_validation_result.first};
+        if (msh_validation_result.second != header.types[code_idx].max_stack_height)
+            return {{}, EOFValidationError::invalid_max_stack_height};
     }
 
     return {header, EOFValidationError::success};
