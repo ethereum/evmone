@@ -4,6 +4,7 @@
 
 #include "eof.hpp"
 #include "instructions_traits.hpp"
+#include "baseline_instruction_table.hpp"
 
 #include <algorithm>
 #include <array>
@@ -191,13 +192,14 @@ EOFValidationError validate_instructions(evmc_revision rev, bytes_view code) noe
 {
     assert(!code.empty());  // guaranteed by EOF headers validation
 
+    const auto& cost_table = baseline::get_baseline_cost_table(rev, 1);
+
     size_t i = 0;
     uint8_t op = 0;
     while (i < code.size())
     {
         op = code[i];
-        const auto& since = instr::traits[op].since;
-        if (!since.has_value() || *since > rev)
+        if (cost_table[op] == instr::undefined)
             return EOFValidationError::undefined_instruction;
 
         if (op == OP_RJUMPV)
