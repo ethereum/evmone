@@ -297,7 +297,7 @@ TEST_F(tracing, trace_eof)
     vm.add_tracer(evmone::create_instruction_tracer(trace_stream));
 
     trace_stream << '\n';
-    EXPECT_EQ(trace(eof1_bytecode(add(2, 3) + OP_STOP), 0, 0, EVMC_SHANGHAI), R"(
+    EXPECT_EQ(trace(eof1_bytecode(add(2, 3) + OP_STOP, 2), 0, 0, EVMC_SHANGHAI), R"(
 {"depth":0,"rev":"Shanghai","static":false}
 {"pc":0,"op":96,"opName":"PUSH1","gas":1000000,"stack":[],"memorySize":0}
 {"pc":2,"op":96,"opName":"PUSH1","gas":999997,"stack":["0x3"],"memorySize":0}

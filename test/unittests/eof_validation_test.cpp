@@ -317,17 +317,26 @@ TEST(eof_validation, EOF1_undefined_opcodes)
         // They're all valid in Shanghai and checked in other tests below.
         if (opcode >= OP_PUSH1 && opcode <= OP_PUSH32)
             continue;
-        if (opcode == OP_RJUMP || opcode == OP_RJUMPI || opcode == OP_RJUMPV ||
-            opcode == OP_CALLF || opcode == OP_RETF || opcode == OP_INVALID || opcode == OP_STOP ||
-            opcode == OP_RETURN || opcode == OP_REVERT || opcode == OP_SELFDESTRUCT)
+        if (opcode == OP_RJUMP || opcode == OP_RJUMPI || opcode == OP_RJUMPV || opcode == OP_CALLF)
+            continue;
+        if (opcode == OP_JUMP || opcode == OP_JUMPI || opcode == OP_PC || opcode == OP_CALLCODE ||
+            opcode == OP_SELFDESTRUCT)
             continue;
 
-        cont += static_cast<uint8_t>(opcode);
-        if (!instr::traits[opcode].is_terminating)
-            cont += "00"_hex;
+        if (opcode == OP_RETF)
+        {
+            cont += "5050505050505050505050505050505050"_hex;
+            cont += static_cast<uint8_t>(opcode);
+            cont[10] = 0x24;
+        }
         else
-            cont[10] = 0x13;
-
+        {
+            cont += static_cast<uint8_t>(opcode);
+            if (!instr::traits[opcode].is_terminating)
+                cont += "00"_hex;
+            else
+                cont[10] = 0x13;
+        }
 
         auto op_stack_change = instr::traits[opcode].stack_height_change;
         cont[15] = static_cast<uint8_t>(op_stack_change <= 0 ? 17 : 17 + op_stack_change);

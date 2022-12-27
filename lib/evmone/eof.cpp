@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "eof.hpp"
-#include "instructions_traits.hpp"
 #include "baseline_instruction_table.hpp"
+#include "instructions_traits.hpp"
 
 #include <algorithm>
 #include <array>
@@ -330,7 +330,7 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
 
         successors.clear();
 
-        // immediate_size for RJUMPV depends on the code. It's calculater below.
+        // immediate_size for RJUMPV depends on the code. It's calculated below.
         if (opcode != OP_RJUMP && !instr::traits[opcode].is_terminating && opcode != OP_RJUMPV)
         {
             auto next = i + instr::traits[opcode].immediate_size + 1;
@@ -359,9 +359,7 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
                 return {EOFValidationError::no_terminating_instruction, -1};
 
             auto beg = stack_heights.begin() + static_cast<int32_t>(i) + 1;
-            auto end = beg + count * 2 + 1;
-            for (auto it = beg; it < end; ++it)
-                *it = -2;
+            std::fill_n(beg, count * 2 + 1, -2);
 
             successors.push_back(next);
 
@@ -378,9 +376,7 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
         else
         {
             auto beg = stack_heights.begin() + static_cast<int32_t>(i) + 1;
-            auto end = beg + instr::traits[opcode].immediate_size;
-            for (auto it = beg; it < end; ++it)
-                *it = -2;
+            std::fill_n(beg, instr::traits[opcode].immediate_size, -2);
         }
 
         stack_height += stack_height_change;
