@@ -6,6 +6,7 @@
 #include "evmone/eof.hpp"
 
 using evmone::test::evm;
+using namespace evmc::literals;
 
 TEST_P(evm, eof1_execution)
 {
@@ -438,4 +439,55 @@ TEST_P(evm, eof_data_only_contract)
     intx::be::unsafe::store(data_size_ptr, uint16_t{256});
     execute(code + bytes(256, 0x01));
     EXPECT_STATUS(EVMC_INVALID_INSTRUCTION);
+}
+
+TEST_P(evm, eof_creates_valid_eof_contract_only)
+{
+    rev = EVMC_SHANGHAI;
+    host.call_result.create_address = 0x02_address;
+    {
+        // invalid eof contract (push1 truncated)
+        auto new_contract = "EF0001 010004 0200010001 030000 00 00000000 60";
+        auto code =
+            eof1_bytecode(bytecode{20} + 41 + 0 + OP_CODECOPY + 20 + 0 + 0 + OP_CREATE + ret_top(),
+                3, new_contract);
+
+        execute(code);
+        EXPECT_STATUS(EVMC_SUCCESS);
+        EXPECT_OUTPUT_INT(0);
+    }
+
+    {
+        // valid eof contract
+        auto new_contract = "EF0001 010004 0200010001 030000 00 00000000 FE";
+        auto code =
+            eof1_bytecode(bytecode{20} + 41 + 0 + OP_CODECOPY + 20 + 0 + 0 + OP_CREATE + ret_top(),
+                3, new_contract);
+
+        execute(code);
+        EXPECT_STATUS(EVMC_SUCCESS);
+        EXPECT_OUTPUT_INT(2);
+    }
+
+    {
+        // non-eof contract
+        auto new_contract = "FE";
+        auto code =
+            eof1_bytecode(bytecode{1} + 34 + 0 + OP_CODECOPY + 1 + 0 + 0 + OP_CREATE + ret_top(), 3,
+                new_contract);
+
+        execute(code);
+        EXPECT_STATUS(EVMC_SUCCESS);
+        EXPECT_OUTPUT_INT(0);
+    }
+
+    {
+        // empty contract
+        auto code = eof1_bytecode(
+            bytecode{0} + 34 + 0 + OP_CODECOPY + 0 + 0 + 0 + OP_CREATE + ret_top(), 3);
+
+        execute(code);
+        EXPECT_STATUS(EVMC_SUCCESS);
+        EXPECT_OUTPUT_INT(0);
+    }
 }
