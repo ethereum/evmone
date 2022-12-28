@@ -730,8 +730,8 @@ inline code_iterator rjumpv(StackTop stack, ExecutionState& /*state*/, code_iter
     }
     else
     {
-        const auto rel_offset_hi = pc[1 + static_cast<uint16_t>(case_) * REL_OFFSET_SIZE];
-        const auto rel_offset_lo = pc[2 + static_cast<uint16_t>(case_) * REL_OFFSET_SIZE];
+        const auto rel_offset_hi = pc[2 + static_cast<uint16_t>(case_) * REL_OFFSET_SIZE];
+        const auto rel_offset_lo = pc[3 + static_cast<uint16_t>(case_) * REL_OFFSET_SIZE];
         const auto rel_offset = static_cast<int16_t>((rel_offset_hi << 8) + rel_offset_lo);
 
         return pc_post + rel_offset;
