@@ -22,6 +22,7 @@ evmc_status_code call_impl(StackTop stack, ExecutionState& state) noexcept
     const auto output_size_u256 = stack.pop();
 
     stack.push(0);  // Assume failure.
+    state.return_data.clear();
 
     if (state.rev >= EVMC_BERLIN && state.host.access_account(dst) == EVMC_ACCESS_COLD)
     {
@@ -88,13 +89,11 @@ evmc_status_code call_impl(StackTop stack, ExecutionState& state) noexcept
         state.gas_left += 2300;
     }
 
-    state.return_data.clear();
-
     if (state.msg->depth >= 1024)
-        return EVMC_SUCCESS;
+        return EVMC_SUCCESS;  // "Light" failure.
 
     if (has_value && intx::be::load<uint256>(state.host.get_balance(state.msg->recipient)) < value)
-        return EVMC_SUCCESS;
+        return EVMC_SUCCESS;  // "Light" failure.
 
     const auto result = state.host.call(msg);
     state.return_data.assign(result.output_data, result.output_size);
@@ -127,6 +126,10 @@ evmc_status_code create_impl(StackTop stack, ExecutionState& state) noexcept
     const auto endowment = stack.pop();
     const auto init_code_offset_u256 = stack.pop();
     const auto init_code_size_u256 = stack.pop();
+    const auto salt = (Op == OP_CREATE2) ? stack.pop() : uint256{};
+
+    stack.push(0);  // Assume failure.
+    state.return_data.clear();
 
     if (!check_memory(state, init_code_offset_u256, init_code_size_u256))
         return EVMC_OUT_OF_GAS;
@@ -134,24 +137,19 @@ evmc_status_code create_impl(StackTop stack, ExecutionState& state) noexcept
     const auto init_code_offset = static_cast<size_t>(init_code_offset_u256);
     const auto init_code_size = static_cast<size_t>(init_code_size_u256);
 
-    auto salt = uint256{};
     if constexpr (Op == OP_CREATE2)
     {
-        salt = stack.pop();
         const auto salt_cost = num_words(init_code_size) * 6;
         if ((state.gas_left -= salt_cost) < 0)
             return EVMC_OUT_OF_GAS;
     }
 
-    stack.push(0);
-    state.return_data.clear();
-
     if (state.msg->depth >= 1024)
-        return EVMC_SUCCESS;
+        return EVMC_SUCCESS;  // "Light" failure.
 
     if (endowment != 0 &&
         intx::be::load<uint256>(state.host.get_balance(state.msg->recipient)) < endowment)
-        return EVMC_SUCCESS;
+        return EVMC_SUCCESS;  // "Light" failure.
 
     auto msg = evmc_message{};
     msg.gas = state.gas_left;
