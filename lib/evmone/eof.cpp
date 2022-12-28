@@ -368,9 +368,9 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
                 auto target_rel_offset_hi = code[i + k * 2 + 2];
                 auto target_rel_offset_lo = code[i + k * 2 + 3];
                 auto target_rel_offset =
-                    static_cast<uint16_t>((target_rel_offset_hi << 8) | target_rel_offset_lo);
-                if (target_rel_offset != 0)  // Already added before the loop
-                    successors.push_back(i + 2 * count + target_rel_offset + 2);
+                    static_cast<int16_t>((target_rel_offset_hi << 8) | target_rel_offset_lo);
+                successors.push_back(static_cast<size_t>(
+                    static_cast<int32_t>(i) + 2 * count + target_rel_offset + 2));
             }
         }
         else
