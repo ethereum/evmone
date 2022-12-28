@@ -374,16 +374,8 @@ evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_co
         //   other places like create instructions.
         if (validate_eof(rev, {code, code_size}) != EOFValidationError::success)
         {
-            if ((msg->kind == EVMC_CREATE || msg->kind == EVMC_CREATE2))
-            {
-                // TODO(EOF): Should this be light error (gas is returned)?
-                return evmc::Result{EVMC_CONTRACT_VALIDATION_FAILURE, msg->gas}.release_raw();
-            }
-            else
-            {
-                // TODO(EOF): This should never happen but protects against invalid tests for now.
-                return evmc::Result{EVMC_INTERNAL_ERROR}.release_raw();
-            }
+            // TODO(EOF): This should never happen but protects against invalid tests for now.
+            return evmc::Result{EVMC_INTERNAL_ERROR}.release_raw();
         }
     }
 

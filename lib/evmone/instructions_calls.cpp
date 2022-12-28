@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "eips.hpp"
+#include "eof.hpp"
 #include "instructions.hpp"
 
 namespace evmone::instr::core
@@ -165,6 +166,12 @@ evmc_status_code create_impl(StackTop stack, ExecutionState& state) noexcept
         msg.input_data = &state.memory[init_code_offset];
         msg.input_size = init_code_size;
     }
+
+    if (is_eof_code(state.original_code))
+        if (validate_eof(state.rev, {msg.input_data, msg.input_size}) !=
+            EOFValidationError::success)
+            return EVMC_SUCCESS;
+
     msg.sender = state.msg->recipient;
     msg.depth = state.msg->depth + 1;
     msg.create2_salt = intx::be::store<evmc::bytes32>(salt);
