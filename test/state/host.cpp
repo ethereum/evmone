@@ -194,6 +194,7 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
     new_acc.balance += value;  // The new account may be prefunded.
 
     auto create_msg = msg;
+    const bytes_view initcode{msg.input_data, msg.input_size};
     create_msg.input_data = nullptr;
     create_msg.input_size = 0;
 
@@ -220,7 +221,7 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
                                           evmc::Result{EVMC_FAILURE};
     }
 
-    if (m_rev >= EVMC_SHANGHAI && is_eof_code(code))
+    if (m_rev >= EVMC_SHANGHAI && (is_eof_code(initcode) || is_eof_code(code)))
     {
         if (validate_eof(m_rev, code) != EOFValidationError::success)
             return evmc::Result{EVMC_CONTRACT_VALIDATION_FAILURE};
