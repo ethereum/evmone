@@ -416,3 +416,26 @@ TEST_P(evm, eof_function_example2)
     EXPECT_GAS_USED(EVMC_SUCCESS, 44544);
     EXPECT_EQ(output, "0000000000000000000000000000000000000000000000000000000000000262"_hex);
 }
+
+
+TEST_P(evm, eof_data_only_contract)
+{
+    if (is_advanced())
+        return;
+
+    rev = EVMC_SHANGHAI;
+    auto code = "EF0001 010004 020001 0001 03daaa 00 00000000 FE"_hex;
+    const auto data_size_ptr = &code[code.find(0xda)];
+
+    intx::be::unsafe::store(data_size_ptr, uint16_t{0});
+    execute(code);
+    EXPECT_STATUS(EVMC_INVALID_INSTRUCTION);
+
+    intx::be::unsafe::store(data_size_ptr, uint16_t{1});
+    execute(code + "aa"_hex);
+    EXPECT_STATUS(EVMC_INVALID_INSTRUCTION);
+
+    intx::be::unsafe::store(data_size_ptr, uint16_t{256});
+    execute(code + bytes(256, 0x01));
+    EXPECT_STATUS(EVMC_INVALID_INSTRUCTION);
+}
