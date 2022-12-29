@@ -370,6 +370,46 @@ TEST_P(evm, eof1_rjumpv_single_offset)
         "ef000101000402000100010300000000000000fe"_hex);
 }
 
+TEST_P(evm, eof1_rjumpv_multiple_offsets)
+{
+    // Relative jumps are not implemented in Advanced.
+    if (is_advanced())
+        return;
+
+    rev = EVMC_SHANGHAI;
+    auto code = eof1_bytecode(rjump(12) + 10 + 68 + 0 + OP_CODECOPY + ret(0, 10) + rjumpv({12, -22, 0}, 1) + 10 + 78 + 0 + OP_CODECOPY + ret(0, 10) + 20 + 68 + 0 +
+                                  OP_CODECOPY + ret(0, 20),
+        3, "ef000101000402000100010300000000000000fe");
+
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 10);
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+        "ef000101000402000100"_hex);
+
+    auto& rjumpv_cond = code[35];
+
+    rjumpv_cond = 2;
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 10);
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+        "010300000000000000fe"_hex);
+
+    rjumpv_cond = 0;
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 20);
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+        "ef000101000402000100010300000000000000fe"_hex);
+
+    rjumpv_cond = 12; // case >= count, same behaviour as for case == 2
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    ASSERT_EQ(result.output_size, 10);
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+        "010300000000000000fe"_hex);
+}
 
 TEST_P(evm, relative_jumps_undefined_in_legacy)
 {
