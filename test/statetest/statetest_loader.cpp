@@ -83,6 +83,7 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
         from_json<uint64_t>(j.value("currentBaseFee", std::string{"0"})),
     };
 }
+}  // namespace
 
 evmc_revision to_rev(std::string_view s)
 {
@@ -114,7 +115,6 @@ evmc_revision to_rev(std::string_view s)
         return EVMC_SHANGHAI;
     throw std::invalid_argument{"unknown revision: " + std::string{s}};
 }
-}  // namespace
 
 static void from_json(const json::json& j, TestMultiTransaction& o)
 {

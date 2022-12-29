@@ -10,6 +10,10 @@ namespace fs = std::filesystem;
 
 namespace evmone::test
 {
+
+/// Translates tests fork name to EVM revision
+evmc_revision to_rev(std::string_view s);
+
 struct TestMultiTransaction : state::Transaction
 {
     struct Indexes
