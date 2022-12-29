@@ -16,12 +16,13 @@ evmc_status_code call_impl(StackTop stack, ExecutionState& state) noexcept
     const auto dst = intx::be::trunc<evmc::address>(stack.pop());
     const auto value = (Op == OP_STATICCALL || Op == OP_DELEGATECALL) ? 0 : stack.pop();
     const auto has_value = value != 0;
-    const auto input_offset = stack.pop();
-    const auto input_size = stack.pop();
-    const auto output_offset = stack.pop();
-    const auto output_size = stack.pop();
+    const auto input_offset_u256 = stack.pop();
+    const auto input_size_u256 = stack.pop();
+    const auto output_offset_u256 = stack.pop();
+    const auto output_size_u256 = stack.pop();
 
     stack.push(0);  // Assume failure.
+    state.return_data.clear();
 
     if (state.rev >= EVMC_BERLIN && state.host.access_account(dst) == EVMC_ACCESS_COLD)
     {
@@ -29,11 +30,16 @@ evmc_status_code call_impl(StackTop stack, ExecutionState& state) noexcept
             return EVMC_OUT_OF_GAS;
     }
 
-    if (!check_memory(state, input_offset, input_size))
+    if (!check_memory(state, input_offset_u256, input_size_u256))
         return EVMC_OUT_OF_GAS;
 
-    if (!check_memory(state, output_offset, output_size))
+    if (!check_memory(state, output_offset_u256, output_size_u256))
         return EVMC_OUT_OF_GAS;
+
+    const auto input_offset = static_cast<size_t>(input_offset_u256);
+    const auto input_size = static_cast<size_t>(input_size_u256);
+    const auto output_offset = static_cast<size_t>(output_offset_u256);
+    const auto output_size = static_cast<size_t>(output_size_u256);
 
     auto msg = evmc_message{};
     msg.kind = (Op == OP_DELEGATECALL) ? EVMC_DELEGATECALL :
@@ -47,10 +53,11 @@ evmc_status_code call_impl(StackTop stack, ExecutionState& state) noexcept
     msg.value =
         (Op == OP_DELEGATECALL) ? state.msg->value : intx::be::store<evmc::uint256be>(value);
 
-    if (size_t(input_size) > 0)
+    if (input_size > 0)
     {
-        msg.input_data = &state.memory[size_t(input_offset)];
-        msg.input_size = size_t(input_size);
+        // input_offset may be garbage if input_size == 0.
+        msg.input_data = &state.memory[input_offset];
+        msg.input_size = input_size;
     }
 
     auto cost = has_value ? 9000 : 0;
@@ -82,20 +89,18 @@ evmc_status_code call_impl(StackTop stack, ExecutionState& state) noexcept
         state.gas_left += 2300;
     }
 
-    state.return_data.clear();
-
     if (state.msg->depth >= 1024)
-        return EVMC_SUCCESS;
+        return EVMC_SUCCESS;  // "Light" failure.
 
     if (has_value && intx::be::load<uint256>(state.host.get_balance(state.msg->recipient)) < value)
-        return EVMC_SUCCESS;
+        return EVMC_SUCCESS;  // "Light" failure.
 
     const auto result = state.host.call(msg);
     state.return_data.assign(result.output_data, result.output_size);
     stack.top() = result.status_code == EVMC_SUCCESS;
 
-    if (const auto copy_size = std::min(size_t(output_size), result.output_size); copy_size > 0)
-        std::memcpy(&state.memory[size_t(output_offset)], result.output_data, copy_size);
+    if (const auto copy_size = std::min(output_size, result.output_size); copy_size > 0)
+        std::memcpy(&state.memory[output_offset], result.output_data, copy_size);
 
     const auto gas_used = msg.gas - result.gas_left;
     state.gas_left -= gas_used;
@@ -119,30 +124,32 @@ evmc_status_code create_impl(StackTop stack, ExecutionState& state) noexcept
         return EVMC_STATIC_MODE_VIOLATION;
 
     const auto endowment = stack.pop();
-    const auto init_code_offset = stack.pop();
-    const auto init_code_size = stack.pop();
+    const auto init_code_offset_u256 = stack.pop();
+    const auto init_code_size_u256 = stack.pop();
+    const auto salt = (Op == OP_CREATE2) ? stack.pop() : uint256{};
 
-    if (!check_memory(state, init_code_offset, init_code_size))
+    stack.push(0);  // Assume failure.
+    state.return_data.clear();
+
+    if (!check_memory(state, init_code_offset_u256, init_code_size_u256))
         return EVMC_OUT_OF_GAS;
 
-    auto salt = uint256{};
+    const auto init_code_offset = static_cast<size_t>(init_code_offset_u256);
+    const auto init_code_size = static_cast<size_t>(init_code_size_u256);
+
     if constexpr (Op == OP_CREATE2)
     {
-        salt = stack.pop();
-        auto salt_cost = num_words(static_cast<size_t>(init_code_size)) * 6;
+        const auto salt_cost = num_words(init_code_size) * 6;
         if ((state.gas_left -= salt_cost) < 0)
             return EVMC_OUT_OF_GAS;
     }
 
-    stack.push(0);
-    state.return_data.clear();
-
     if (state.msg->depth >= 1024)
-        return EVMC_SUCCESS;
+        return EVMC_SUCCESS;  // "Light" failure.
 
     if (endowment != 0 &&
         intx::be::load<uint256>(state.host.get_balance(state.msg->recipient)) < endowment)
-        return EVMC_SUCCESS;
+        return EVMC_SUCCESS;  // "Light" failure.
 
     auto msg = evmc_message{};
     msg.gas = state.gas_left;
@@ -150,10 +157,11 @@ evmc_status_code create_impl(StackTop stack, ExecutionState& state) noexcept
         msg.gas = msg.gas - msg.gas / 64;
 
     msg.kind = (Op == OP_CREATE) ? EVMC_CREATE : EVMC_CREATE2;
-    if (size_t(init_code_size) > 0)
+    if (init_code_size > 0)
     {
-        msg.input_data = &state.memory[size_t(init_code_offset)];
-        msg.input_size = size_t(init_code_size);
+        // init_code_offset may be garbage if init_code_size == 0.
+        msg.input_data = &state.memory[init_code_offset];
+        msg.input_size = init_code_size;
     }
     msg.sender = state.msg->recipient;
     msg.depth = state.msg->depth + 1;
