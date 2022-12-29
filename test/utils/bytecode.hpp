@@ -258,7 +258,8 @@ inline bytecode rjumpv(const std::initializer_list<int16_t> offsets, bytecode co
 {
     bytecode ret = condition + OP_RJUMPV + static_cast<Opcode>(offsets.size());
     for (const auto offset : offsets)
-        ret += bytecode{big_endian(offset)}; // TODO: Make sure that big_endian works fine for signed type
+        ret += bytecode{big_endian(offset)};  // TODO: Make sure that big_endian works fine for
+                                              // signed type
     return ret;
 }
 
