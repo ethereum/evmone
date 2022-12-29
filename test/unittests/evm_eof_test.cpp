@@ -409,6 +409,33 @@ TEST_P(evm, eof1_rjumpv_multiple_offsets)
     EXPECT_EQ(bytes_view(result.output_data, result.output_size), "010300000000000000fe"_hex);
 }
 
+TEST_P(evm, eof1_rjumpv_long_jumps)
+{
+    // Relative jumps are not implemented in Advanced.
+    if (is_advanced())
+        return;
+
+    rev = EVMC_SHANGHAI;
+    auto code =
+        rjump(0x7fff - 3 - 5) + (0x7fff - 3 - 2 - 8 - 5) * bytecode{OP_JUMPDEST} + 7 + ret_top();
+
+    code += rjumpv({-0x7FFF, 0x7FFF - 8 - 2 - 8}, 0) +
+            (0x7fff - 8 - 2 - 8) * bytecode{OP_JUMPDEST} + 5 + ret_top();
+
+    code = eof1_bytecode(code, 2);
+    auto& rjumpv_cond = code[0x7fff - 3 - 5 + 3 + 1 + 19];
+
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(7);
+
+    rjumpv_cond = 1;
+
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_OUTPUT_INT(5);
+}
+
 TEST_P(evm, relative_jumps_undefined_in_legacy)
 {
     rev = EVMC_SHANGHAI;
