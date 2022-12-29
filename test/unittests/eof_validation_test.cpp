@@ -465,6 +465,13 @@ TEST(eof_validation, EOF1_rjumpv_truncated)
         EOFValidationError::truncated_instruction);
 }
 
+TEST(eof_validation, EOF1_rjumpv_0_count)
+{
+    auto code = eof1_bytecode(rjumpv({}, 0) + OP_STOP, 1);
+
+    EXPECT_EQ(validate_eof(code), EOFValidationError::invalid_rjumpv_count);
+}
+
 TEST(eof_validation, EOF1_rjump_invalid_destination)
 {
     // Into header (offset = -5)
