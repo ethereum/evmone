@@ -71,6 +71,9 @@ T from_json(const json::json& j) = delete;
 template <>
 state::BlockInfo from_json<state::BlockInfo>(const json::json& j);
 
+template <>
+state::State from_json<state::State>(const json::json& j);
+
 StateTransitionTest load_state_test(const fs::path& test_file);
 
 void run_state_test(const StateTransitionTest& test, evmc::VM& vm);

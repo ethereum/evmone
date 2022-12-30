@@ -79,6 +79,26 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
     };
 }
 
+template <>
+state::State from_json<state::State>(const json::json& j)
+{
+    state::State o;
+    for (const auto& [j_addr, j_acc] : j.items())
+    {
+        auto& acc = o.insert(from_json<address>(j_addr),
+            {.nonce = from_json<uint64_t>(j_acc.at("nonce")),
+                .balance = from_json<intx::uint256>(j_acc.at("balance")),
+                .code = from_json<bytes>(j_acc.at("code"))});
+
+        for (const auto& [j_key, j_value] : j_acc.at("storage").items())
+        {
+            const auto value = from_json<bytes32>(j_value);
+            acc.storage.insert({from_json<bytes32>(j_key), {.current = value, .original = value}});
+        }
+    }
+    return o;
+}
+
 evmc_revision to_rev(std::string_view s)
 {
     if (s == "Frontier")
@@ -163,19 +183,7 @@ static void from_json(const json::json& j, StateTransitionTest& o)
 {
     const auto& j_t = j.begin().value();  // Content is in a dict with the test name.
 
-    for (const auto& [j_addr, j_acc] : j_t.at("pre").items())
-    {
-        auto& acc = o.pre_state.insert(from_json<address>(j_addr),
-            {.nonce = from_json<uint64_t>(j_acc.at("nonce")),
-                .balance = from_json<intx::uint256>(j_acc.at("balance")),
-                .code = from_json<bytes>(j_acc.at("code"))});
-
-        for (const auto& [j_key, j_value] : j_acc.at("storage").items())
-        {
-            const auto value = from_json<bytes32>(j_value);
-            acc.storage.insert({from_json<bytes32>(j_key), {.current = value, .original = value}});
-        }
-    }
+    o.pre_state = from_json<state::State>(j_t.at("pre"));
 
     o.multi_tx = j_t.at("transaction").get<TestMultiTransaction>();
 
