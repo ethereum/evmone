@@ -305,6 +305,8 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
     bytes_view code, size_t func_index, const std::vector<EOF1TypeHeader>& funcs_in_outs)
 {
     assert(code.size() > 0);
+
+    // Changing this type to smaller integer (uint16_t) have in mind that it can overflow.
     std::vector<int32_t> stack_heights = std::vector<int32_t>(code.size(), -1);
     std::stack<size_t> worklist;
 
@@ -410,9 +412,6 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
     }
 
     auto msh_it = std::max_element(stack_heights.begin(), stack_heights.end());
-
-    if (*msh_it > 1023)
-        return {EOFValidationError::max_stack_height_above_limit, -1};
 
     if (std::find(stack_heights.begin(), stack_heights.end(), -1) != stack_heights.end())
         return {EOFValidationError::unreachable_instructions, -1};
