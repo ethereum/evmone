@@ -605,30 +605,16 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "incomplete_section_number";
     case EOFValidationError::code_section_missing:
         return "code_section_missing";
-    case EOFValidationError::multiple_data_sections:
-        return "multiple_data_sections";
-    case EOFValidationError::unknown_section_id:
-        return "unknown_section_id";
-    case EOFValidationError::zero_section_size:
-        return "zero_section_size";
-    case EOFValidationError::section_headers_not_terminated:
-        return "section_headers_not_terminated";
-    case EOFValidationError::invalid_section_bodies_size:
-        return "invalid_section_bodies_size";
-    case EOFValidationError::undefined_instruction:
-        return "undefined_instruction";
-    case EOFValidationError::missing_terminating_instruction:
-        return "missing_terminating_instruction";
-    case EOFValidationError::invalid_rjump_destination:
-        return "invalid_rjump_destination";
-    case EOFValidationError::code_section_before_type_section:
-        return "code_section_before_type_section";
-    case EOFValidationError::multiple_type_sections:
-        return "multiple_type_sections";
+    case EOFValidationError::type_section_missing:
+        return "type_section_missing";
+    case EOFValidationError::mandatory_type_section_missing:
+        return "mandatory_type_section_missing";
     case EOFValidationError::too_many_code_sections:
         return "too_many_code_sections";
     case EOFValidationError::data_section_before_code_section:
         return "data_section_before_code_section";
+    case EOFValidationError::data_section_before_types_section:
+        return "data_section_before_types_section";
     case EOFValidationError::invalid_type_section_size:
         return "invalid_type_section_size";
     case EOFValidationError::invalid_first_section_type:
