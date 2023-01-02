@@ -577,4 +577,80 @@ EOFValidationError validate_eof(evmc_revision rev, bytes_view container) noexcep
     else
         return EOFValidationError::eof_version_unknown;
 }
+
+std::string_view get_error_message(EOFValidationError err) noexcept
+{
+    switch (err)
+    {
+    case EOFValidationError::success:
+        return "success";
+    case EOFValidationError::starts_with_format:
+        return "starts_with_format";
+    case EOFValidationError::invalid_prefix:
+        return "invalid_prefix";
+    case EOFValidationError::eof_version_mismatch:
+        return "eof_version_mismatch";
+    case EOFValidationError::eof_version_unknown:
+        return "eof_version_unknown";
+    case EOFValidationError::incomplete_section_size:
+        return "incomplete_section_size";
+    case EOFValidationError::incomplete_section_number:
+        return "incomplete_section_number";
+    case EOFValidationError::code_section_missing:
+        return "code_section_missing";
+    case EOFValidationError::type_section_missing:
+        return "type_section_missing";
+    case EOFValidationError::multiple_data_sections:
+        return "multiple_data_sections";
+    case EOFValidationError::unknown_section_id:
+        return "unknown_section_id";
+    case EOFValidationError::zero_section_size:
+        return "zero_section_size";
+    case EOFValidationError::section_headers_not_terminated:
+        return "section_headers_not_terminated";
+    case EOFValidationError::invalid_section_bodies_size:
+        return "invalid_section_bodies_size";
+    case EOFValidationError::undefined_instruction:
+        return "undefined_instruction";
+    case EOFValidationError::truncated_instruction:
+        return "truncated_instruction";
+    case EOFValidationError::invalid_rjumpv_count:
+        return "invalid_rjumpv_count";
+    case EOFValidationError::invalid_rjump_destination:
+        return "invalid_rjump_destination";
+    case EOFValidationError::code_section_before_type_section:
+        return "code_section_before_type_section";
+    case EOFValidationError::multiple_type_sections:
+        return "multiple_type_sections";
+    case EOFValidationError::too_many_code_sections:
+        return "too_many_code_sections";
+    case EOFValidationError::data_section_before_code_section:
+        return "data_section_before_code_section";
+    case EOFValidationError::data_section_before_types_section:
+        return "data_section_before_types_section";
+    case EOFValidationError::invalid_type_section_size:
+        return "invalid_type_section_size";
+    case EOFValidationError::invalid_first_section_type:
+        return "invalid_first_section_type";
+    case EOFValidationError::invalid_max_stack_height:
+        return "invalid_max_stack_height";
+    case EOFValidationError::no_terminating_instruction:
+        return "no_terminating_instruction";
+    case EOFValidationError::stack_height_mismatch:
+        return "stack_height_mismatch";
+    case EOFValidationError::non_empty_stack_on_terminating_instruction:
+        return "non_empty_stack_on_terminating_instruction";
+    case EOFValidationError::max_stack_height_above_limit:
+        return "max_stack_height_above_limit";
+    case EOFValidationError::inputs_outputs_num_above_limit:
+        return "inputs_outputs_num_above_limit";
+    case EOFValidationError::unreachable_instructions:
+        return "unreachable_instructions";
+    case EOFValidationError::stack_underflow:
+        return "stack_underflow";
+    case EOFValidationError::impossible:
+        return "impossible";
+    }
+    return "<unknown>";
+}
 }  // namespace evmone
