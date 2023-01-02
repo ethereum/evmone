@@ -26,6 +26,7 @@ constexpr uint8_t DATA_SECTION = 0x03;
 constexpr uint8_t MAX_SECTION = DATA_SECTION;
 constexpr auto CODE_SECTION_NUMBER_LIMIT = 1024;
 constexpr auto MAX_STACK_HEIGHT = 0x0400;
+constexpr auto OUTPUTS_INPUTS_NUMBER_LIMIT = 0x7F;
 
 using EOFSectionHeaders = std::array<std::vector<uint16_t>, MAX_SECTION + 1>;
 
@@ -182,8 +183,15 @@ std::pair<std::vector<EOF1TypeHeader>, EOFValidationError> validate_types(
     if (types[0].inputs_num != 0 || types[0].outputs_num != 0)
         return {{}, EOFValidationError::invalid_first_section_type};
 
-    if (types[0].max_stack_height > MAX_STACK_HEIGHT)
-        return {{}, EOFValidationError::invalid_max_stack_height};
+    for (const auto& t : types)
+    {
+        if (t.max_stack_height > MAX_STACK_HEIGHT)
+            return {{}, EOFValidationError::max_stack_height_above_limit};
+
+        if (t.outputs_num > OUTPUTS_INPUTS_NUMBER_LIMIT ||
+            t.inputs_num > OUTPUTS_INPUTS_NUMBER_LIMIT)
+            return {{}, EOFValidationError::inputs_outputs_num_above_limit};
+    }
 
     return {types, EOFValidationError::success};
 }

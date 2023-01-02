@@ -604,3 +604,40 @@ TEST(eof_validation, deprecated_instructions)
         EXPECT_EQ(validate_eof(eof1_bytecode(op)), EOFValidationError::undefined_instruction);
     }
 }
+
+TEST(eof_valication, max_arguments_count)
+{
+    EXPECT_EQ(validate_eof("EF0001 010008 02000200010001 030000 00 00000000 7F7F007F B1 B1"),
+        EOFValidationError::success);
+
+    EXPECT_EQ(validate_eof("EF0001 010008 02000200010001 030000 00 00000000 80800080 B1 B1"),
+        EOFValidationError::inputs_outputs_num_above_limit);
+
+    {
+        auto code = "EF0001 010008 020002000100FF 030000 00 00000000 007F007F B1" +
+                    127 * bytecode{1} + OP_RETF;
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+    }
+
+    {
+        auto code = "EF0001 010008 02000200010101 030000 00 00000000 00800080 B1" +
+                    128 * bytecode{1} + OP_RETF;
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::inputs_outputs_num_above_limit);
+    }
+
+    {
+        auto code =
+            "EF0001 010008 02000200010080 030000 00 00000000 7F00007F B1" + 127 * OP_POP + OP_RETF;
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+    }
+
+    {
+        auto code =
+            "EF0001 010008 02000200010081 030000 00 00000000 80000080 B1" + 128 * OP_POP + OP_RETF;
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::inputs_outputs_num_above_limit);
+    }
+}

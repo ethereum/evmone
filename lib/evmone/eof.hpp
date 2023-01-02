@@ -80,6 +80,7 @@ enum class EOFValidationError
     stack_height_mismatch,
     non_empty_stack_on_terminating_instruction,
     max_stack_height_above_limit,
+    inputs_outputs_num_above_limit,
     unreachable_instructions,
     stack_underflow,
 
