@@ -333,6 +333,9 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
             auto fid_lo = code[i + 2];
             auto fid = static_cast<uint16_t>((fid_hi << 8) | fid_lo);
 
+            if (fid >= funcs_in_outs.size())
+                return {EOFValidationError::invalid_code_section_index, 0};
+
             stack_height_required = static_cast<int8_t>(funcs_in_outs[fid].inputs_num);
             auto d = funcs_in_outs[fid].outputs_num - stack_height_required;
             stack_height_change = static_cast<int8_t>(d);
@@ -635,6 +638,8 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "unreachable_instructions";
     case EOFValidationError::stack_underflow:
         return "stack_underflow";
+    case EOFValidationError::invalid_code_section_index:
+        return "invalid_code_section_index";
     case EOFValidationError::impossible:
         return "impossible";
     }
