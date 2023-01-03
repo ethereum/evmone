@@ -123,6 +123,8 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_v
                 assert(section_num > 0);  // Guaranteed by previous validation step.
                 for (size_t i = 0; i < section_num; ++i)
                 {
+                    if (it == container_end)
+                        return {{}, EOFValidationError::incomplete_section_size};
                     const auto size_hi = *it++;
                     if (it == container_end)
                         return EOFValidationError::incomplete_section_size;
