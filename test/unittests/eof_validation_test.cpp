@@ -694,3 +694,9 @@ TEST(eof_valication, max_stack_heigh)
         EXPECT_EQ(validate_eof(code), EOFValidationError::invalid_max_stack_height);
     }
 }
+
+TEST(eof_validation, callf_invalid_code_section_index)
+{
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 00 00000000 b0000100"),
+        EOFValidationError::invalid_code_section_index);
+}
