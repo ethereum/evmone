@@ -701,6 +701,12 @@ TEST(eof_validation, callf_invalid_code_section_index)
         EOFValidationError::invalid_code_section_index);
 }
 
+TEST(eof_validation, incomplete_section_size)
+{
+    EXPECT_EQ(
+        validate_eof("ef0001 010100 02003f 0100"), EOFValidationError::incomplete_section_size);
+}
+
 TEST(eof_validation, many_code_sections_1023)
 {
     auto code =
