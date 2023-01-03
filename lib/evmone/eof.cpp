@@ -118,7 +118,25 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_v
         }
         case State::section_size:
         {
-            for (size_t i = 0; i < (section_id == CODE_SECTION ? section_num : 1); ++i)
+            if (section_id == CODE_SECTION)
+            {
+                assert(section_num > 0);  // Guaranteed by previous validation step.
+                for (size_t i = 0; i < section_num; ++i)
+                {
+                    const auto size_hi = *it++;
+                    if (it == container_end)
+                        return EOFValidationError::incomplete_section_size;
+                    const auto size_lo = *it++;
+                    const auto section_size = static_cast<uint16_t>((size_hi << 8) | size_lo);
+                    if (section_size == 0)
+                        return EOFValidationError::zero_section_size;
+
+                    if (section_headers[CODE_SECTION].size() == CODE_SECTION_NUMBER_LIMIT)
+                        return EOFValidationError::too_many_code_sections;
+                    section_headers[section_id].emplace_back(section_size);
+                }
+            }
+            else  // TYPES_SECTION or DATA_SECTION
             {
                 const auto size_hi = *it++;
                 if (it == container_end)
@@ -128,8 +146,6 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_v
                 if (section_size == 0 && section_id != DATA_SECTION)
                     return EOFValidationError::zero_section_size;
 
-                if (section_headers[CODE_SECTION].size() == CODE_SECTION_NUMBER_LIMIT)
-                    return EOFValidationError::too_many_code_sections;
                 section_headers[section_id].emplace_back(section_size);
             }
 
@@ -424,7 +440,7 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
 }
 
 std::variant<EOF1Header, EOFValidationError> validate_eof1(
-    evmc_revision rev, bytes_view container) noexcept
+    evmc_revision rev, view container) noexcept
 {
     const auto section_headers_or_error = validate_eof_headers(container);
     if (const auto* error = std::get_if<EOFValidationError>(&section_headers_or_error))
