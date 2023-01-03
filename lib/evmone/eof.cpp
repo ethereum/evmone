@@ -75,6 +75,8 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_v
                     return EOFValidationError::type_section_missing;
                 if (section_headers[CODE_SECTION].empty())
                     return EOFValidationError::code_section_missing;
+                if (section_headers[DATA_SECTION].empty())
+                    return EOFValidationError::data_section_missing;
                 state = State::terminated;
                 break;
             case TYPE_SECTION:
@@ -628,8 +630,30 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "code_section_missing";
     case EOFValidationError::type_section_missing:
         return "type_section_missing";
-    case EOFValidationError::mandatory_type_section_missing:
-        return "mandatory_type_section_missing";
+    case EOFValidationError::data_section_missing:
+        return "data_section_missing";
+    case EOFValidationError::multiple_data_sections:
+        return "multiple_data_sections";
+    case EOFValidationError::unknown_section_id:
+        return "unknown_section_id";
+    case EOFValidationError::zero_section_size:
+        return "zero_section_size";
+    case EOFValidationError::section_headers_not_terminated:
+        return "section_headers_not_terminated";
+    case EOFValidationError::invalid_section_bodies_size:
+        return "invalid_section_bodies_size";
+    case EOFValidationError::undefined_instruction:
+        return "undefined_instruction";
+    case EOFValidationError::truncated_instruction:
+        return "truncated_instruction";
+    case EOFValidationError::invalid_rjumpv_count:
+        return "invalid_rjumpv_count";
+    case EOFValidationError::invalid_rjump_destination:
+        return "invalid_rjump_destination";
+    case EOFValidationError::code_section_before_type_section:
+        return "code_section_before_type_section";
+    case EOFValidationError::multiple_type_sections:
+        return "multiple_type_sections";
     case EOFValidationError::too_many_code_sections:
         return "too_many_code_sections";
     case EOFValidationError::data_section_before_code_section:

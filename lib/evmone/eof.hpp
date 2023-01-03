@@ -60,6 +60,7 @@ enum class EOFValidationError
     incomplete_section_number,
     code_section_missing,
     type_section_missing,
+    data_section_missing,
     multiple_data_sections,
     unknown_section_id,
     zero_section_size,
