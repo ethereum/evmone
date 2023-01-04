@@ -8,8 +8,8 @@
 #include "execution_state.hpp"
 #include "instructions.hpp"
 #include "vm.hpp"
-#include <memory>
 #include <iostream>
+#include <memory>
 
 #ifdef NDEBUG
 #define release_inline gnu::always_inline, msvc::forceinline
