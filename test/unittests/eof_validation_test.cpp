@@ -724,6 +724,13 @@ TEST(eof_validation, data_section_missing)
         EOFValidationError::data_section_missing);
 }
 
+TEST(eof_validation, multiple_code_sections_headers)
+{
+    EXPECT_EQ(validate_eof("0xef0001 010008 020001 0004 020001 0005 030000 00 00040000 045c0000 "
+                           "00405c00 00002e0005"),
+        EOFValidationError::multiple_code_sections_headers);
+}
+
 TEST(eof_validation, many_code_sections_1023)
 {
     auto code =

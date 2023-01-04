@@ -101,6 +101,8 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_v
                     return EOFValidationError::code_section_before_type_section;
                 if (!section_headers[DATA_SECTION].empty())
                     return EOFValidationError::data_section_before_code_section;
+                if (!section_headers[CODE_SECTION].empty())
+                    return EOFValidationError::multiple_code_sections_headers;
                 if (it == container_end)
                     return EOFValidationError::incomplete_section_number;
                 const auto section_number_hi = *it++;
@@ -126,7 +128,7 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_v
                 for (size_t i = 0; i < section_num; ++i)
                 {
                     if (it == container_end)
-                        return {{}, EOFValidationError::incomplete_section_size};
+                        return EOFValidationError::incomplete_section_size;
                     const auto size_hi = *it++;
                     if (it == container_end)
                         return EOFValidationError::incomplete_section_size;
@@ -654,6 +656,8 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "code_section_before_type_section";
     case EOFValidationError::multiple_type_sections:
         return "multiple_type_sections";
+    case EOFValidationError::multiple_code_sections_headers:
+        return "multiple_code_sections_headers";
     case EOFValidationError::too_many_code_sections:
         return "too_many_code_sections";
     case EOFValidationError::data_section_before_code_section:
