@@ -9,6 +9,7 @@
 #include "instructions.hpp"
 #include "vm.hpp"
 #include <memory>
+#include <iostream>
 
 #ifdef NDEBUG
 #define release_inline gnu::always_inline, msvc::forceinline
@@ -372,9 +373,11 @@ evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_co
         // TODO(EOF): The initcode must be validated. Doing this just before execution is
         //   good because validation can be combined with analysis/loading. But consider also
         //   other places like create instructions.
-        if (validate_eof(rev, {code, code_size}) != EOFValidationError::success)
+        if (const auto err = validate_eof(rev, {code, code_size});
+            err != EOFValidationError::success)
         {
             // TODO(EOF): This should never happen but protects against invalid tests for now.
+            std::cerr << "EOF validation failed: " << get_error_message(err) << '\n';
             return evmc::Result{EVMC_INTERNAL_ERROR}.release_raw();
         }
     }
