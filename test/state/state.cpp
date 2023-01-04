@@ -6,6 +6,7 @@
 #include "errors.hpp"
 #include "host.hpp"
 #include <evmone/eips.hpp>
+#include <evmone/eof.hpp>
 #include <evmone/evmone.h>
 #include <evmone/execution_state.hpp>
 
@@ -82,6 +83,10 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
     // initcode size is limited by EIP-3860.
     if (rev >= EVMC_SHANGHAI && !tx.to.has_value() && tx.data.size() > max_initcode_size)
         return make_error_code(INIT_CODE_SIZE_LIMIT_EXCEEDED);
+
+    if (rev >= EVMC_SHANGHAI && !tx.to.has_value() && is_eof_code(tx.data))
+        if (validate_eof(rev, tx.data) != evmone::EOFValidationError::success)
+            return -1;
 
     // Compute and check if sender has enough balance for the theoretical maximum transaction cost.
     // Note this is different from tx_max_cost computed with effective gas price later.
