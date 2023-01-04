@@ -72,6 +72,7 @@ enum class EOFValidationError
     invalid_rjump_destination,
     code_section_before_type_section,
     multiple_type_sections,
+    multiple_code_sections_headers,
     too_many_code_sections,
     data_section_before_code_section,
     data_section_before_types_section,
