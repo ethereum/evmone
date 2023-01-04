@@ -167,7 +167,8 @@ evmc_status_code create_impl(StackTop stack, ExecutionState& state) noexcept
         msg.input_size = init_code_size;
     }
 
-    if (is_eof_container(state.original_code) || is_eof_container({msg.input_data, msg.input_size}))
+    if (state.rev >= EVMC_SHANGHAI &&
+        (is_eof_container(state.original_code) || is_eof_container({msg.input_data, msg.input_size})))
         if (validate_eof(state.rev, {msg.input_data, msg.input_size}) !=
             EOFValidationError::success)
             return EVMC_SUCCESS;
