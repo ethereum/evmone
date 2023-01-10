@@ -137,12 +137,13 @@ evmc_status_code create_impl(StackTop stack, ExecutionState& state) noexcept
     const auto init_code_offset = static_cast<size_t>(init_code_offset_u256);
     const auto init_code_size = static_cast<size_t>(init_code_size_u256);
 
-    if constexpr (Op == OP_CREATE2)
-    {
-        const auto salt_cost = num_words(init_code_size) * 6;
-        if ((state.gas_left -= salt_cost) < 0)
-            return EVMC_OUT_OF_GAS;
-    }
+    if (state.rev >= EVMC_SHANGHAI && init_code_size > 0xC000)
+        return EVMC_OUT_OF_GAS;
+
+    const auto init_code_word_cost = 6 * (Op == OP_CREATE2) + 2 * (state.rev >= EVMC_SHANGHAI);
+    const auto init_code_cost = num_words(init_code_size) * init_code_word_cost;
+    if ((state.gas_left -= init_code_cost) < 0)
+        return EVMC_OUT_OF_GAS;
 
     if (state.msg->depth >= 1024)
         return EVMC_SUCCESS;  // "Light" failure.
