@@ -397,11 +397,10 @@ jobs:
     steps:
       - build
       - download_execution_tests:
-          rev: v11.1
+          commit: e279c3d0a53e2f3055c7d7f72f993b62dde18e36
       - run:
           name: "State tests"
           working_directory: ~/build
-          # TODO: Some state tests are expected to fail because precompiles are not implemented.
           command: EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json bin/evmone-statetest ~/tests/GeneralStateTests ~/tests/LegacyTests/Constantinople/GeneralStateTests
       - collect_coverage_gcc
       - upload_coverage:
