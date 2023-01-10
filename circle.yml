@@ -138,16 +138,23 @@ commands:
           paths:
             - ~/silkworm/consensus
 
-  download_consensus_tests:
+  download_execution_tests:
     parameters:
       rev:
         type: string
+        default: develop
+      commit:
+        type: string
+        default: ""
     steps:
       - run:
-          name: "Download consensus tests: <<parameters.rev>>"
+          name: "Download execution tests: <<parameters.rev>> <<parameters.commit>>"
           working_directory: ~/tests
           command: |
-            git clone --depth=1 --recurse-submodules --shallow-submodules --single-branch https://github.com/ethereum/tests . --branch <<parameters.rev>>
+            git clone --no-checkout --depth=250 --single-branch https://github.com/ethereum/tests . --branch <<parameters.rev>>
+            <<#parameters.rev>>git checkout <<parameters.rev>><</parameters.rev>>
+            <<#parameters.commit>>git checkout <<parameters.commit>><</parameters.commit>>
+            git submodule update --init --recursive --depth=1 --progress
 
   build:
     description: "Build"
@@ -366,7 +373,7 @@ jobs:
       - build
       - build_silkworm:
           commit: 98e4908f57643def0069ac9ae85a26eba715d8a7
-      - download_consensus_tests:
+      - download_execution_tests:
           rev: v11.1
       - run:
           name: "Silkworm-driven blockchain tests (Advanced)"
@@ -389,12 +396,11 @@ jobs:
       CMAKE_OPTIONS: -DCMAKE_CXX_FLAGS=-Og
     steps:
       - build
-      - download_consensus_tests:
-          rev: v11.1
+      - download_execution_tests:
+          commit: e279c3d0a53e2f3055c7d7f72f993b62dde18e36
       - run:
           name: "State tests"
           working_directory: ~/build
-          # TODO: Some state tests are expected to fail because precompiles are not implemented.
           command: EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json bin/evmone-statetest ~/tests/GeneralStateTests ~/tests/LegacyTests/Constantinople/GeneralStateTests
       - collect_coverage_gcc
       - upload_coverage:

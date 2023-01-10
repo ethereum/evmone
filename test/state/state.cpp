@@ -116,7 +116,12 @@ std::optional<std::vector<Log>> transition(
     auto& sender_acc = state.get(tx.sender);
     const auto execution_gas_limit = validate_transaction(sender_acc, block, tx, rev);
     if (execution_gas_limit < 0)
+    {
+        // Pre EIP-158 coinbase has to be touched also for invalid tx.
+        if (rev <= EVMC_TANGERINE_WHISTLE)
+            state.touch(block.coinbase);
         return {};
+    }
 
     const auto base_fee = (rev >= EVMC_LONDON) ? block.base_fee : 0;
     assert(tx.max_gas_price >= base_fee);                   // Checked at the front.
