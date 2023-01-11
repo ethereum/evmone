@@ -9,12 +9,12 @@ set(TESTS1 ${CMAKE_CURRENT_SOURCE_DIR}/tests1)
 set(TESTS2 ${CMAKE_CURRENT_SOURCE_DIR}/tests2)
 
 add_test(
-    NAME ${PREFIX}/no_tests
+    NAME ${PREFIX}/no_arguments
     COMMAND evmone-statetest
 )
 set_tests_properties(
-    ${PREFIX}/no_tests PROPERTIES
-    PASS_REGULAR_EXPRESSION "Running 0 tests from 0 test suites"
+    ${PREFIX}/no_arguments PROPERTIES
+    PASS_REGULAR_EXPRESSION "path is required"
 )
 
 add_test(
@@ -71,5 +71,14 @@ add_test(
 )
 set_tests_properties(
     ${PREFIX}/invalid_path PROPERTIES
-    PASS_REGULAR_EXPRESSION "invalid path: invalid\\.json"
+    PASS_REGULAR_EXPRESSION "path: Path does not exist: invalid\\.json"
+)
+
+add_test(
+    NAME ${PREFIX}/trace
+    COMMAND evmone-statetest ${TESTS1}/SuiteA/test1.json --trace
+)
+set_tests_properties(
+    ${PREFIX}/trace PROPERTIES
+    PASS_REGULAR_EXPRESSION [=[\{"pc":4,"op":1,"opName":"ADD","gas":378994,"stack":\["0x1","0x1"\],"memorySize":0\}]=]
 )
