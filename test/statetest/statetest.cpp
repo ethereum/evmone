@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "statetest.hpp"
+#include <CLI/CLI.hpp>
 #include <evmone/evmone.h>
 #include <gtest/gtest.h>
 #include <iostream>
@@ -46,12 +47,10 @@ void register_test_files(const fs::path& root, evmc::VM& vm)
         for (const auto& p : test_files)
             register_test(fs::relative(p, root).parent_path().string(), p, vm);
     }
-    else if (is_regular_file(root))
+    else  // Treat as a file.
     {
         register_test(root.parent_path().string(), root, vm);
     }
-    else
-        throw std::invalid_argument("invalid path: " + root.string());
 }
 }  // namespace
 
@@ -73,11 +72,28 @@ int main(int argc, char* argv[])
 
     try
     {
-        evmc::VM vm{evmc_create_evmone(), {{"O", "0"}, /*{"trace", "1"}*/}};
-
         testing::InitGoogleTest(&argc, argv);  // Process GoogleTest flags.
-        for (int i = 1; i < argc; ++i)
-            register_test_files(argv[i], vm);
+
+        CLI::App app{"evmone state test runner"};
+
+        std::vector<std::string> paths;
+        app.add_option("path", paths, "Path to test file or directory")
+            ->required()
+            ->check(CLI::ExistingPath);
+
+        bool trace_flag = false;
+        app.add_flag("--trace", trace_flag, "Enable EVM tracing");
+
+        CLI11_PARSE(app, argc, argv);
+
+        evmc::VM vm{evmc_create_evmone(), {{"O", "0"}}};
+
+        if (trace_flag)
+            vm.set_option("trace", "1");
+
+        for (const auto& p : paths)
+            register_test_files(p, vm);
+
         return RUN_ALL_TESTS();
     }
     catch (const std::exception& ex)
