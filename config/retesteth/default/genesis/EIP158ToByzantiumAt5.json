@@ -1,0 +1,10 @@
+{
+    "params" : {
+        "fork" : "EIP158ToByzantiumAt5",
+        "byzantiumForkBlock" : "0x05",
+        "homesteadForkBlock" : "0x00",
+        "chainID" : "0x01"
+    },
+    "accounts" : {
+    }
+}

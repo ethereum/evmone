@@ -1,0 +1,8 @@
+{
+    "params" : {
+        "fork" : "Frontier",
+        "chainID" : "0x01"
+    },
+    "accounts" : {
+    }
+}
