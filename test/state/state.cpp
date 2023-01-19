@@ -84,10 +84,6 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
     if (rev >= EVMC_SHANGHAI && !tx.to.has_value() && tx.data.size() > max_initcode_size)
         return make_error_code(INIT_CODE_SIZE_LIMIT_EXCEEDED);
 
-    if (rev >= EVMC_SHANGHAI && !tx.to.has_value() && is_eof_code(tx.data))
-        if (validate_eof(rev, tx.data) != evmone::EOFValidationError::success)
-            return -1;
-
     // Compute and check if sender has enough balance for the theoretical maximum transaction cost.
     // Note this is different from tx_max_cost computed with effective gas price later.
     // The computation cannot overflow if done with 512-bit precision.
@@ -168,7 +164,16 @@ std::variant<TransactionReceipt, std::error_code> transition(
     if (rev >= EVMC_SHANGHAI)
         host.access_account(block.coinbase);
 
-    const auto result = host.call(build_message(tx, execution_gas_limit));
+    auto is_valid_tx = true;
+    auto result = evmc::Result{};
+
+    if (rev >= EVMC_SHANGHAI && !tx.to.has_value() && is_eof_code(tx.data))
+        is_valid_tx = (validate_eof(rev, tx.data) == evmone::EOFValidationError::success);
+
+    if (is_valid_tx)
+        result = host.call(build_message(tx, execution_gas_limit));
+    else
+        result = evmc::Result(EVMC_OUT_OF_GAS);
 
     auto gas_used = tx.gas_limit - result.gas_left;
 
