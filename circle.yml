@@ -332,6 +332,36 @@ jobs:
       - test
       - package
 
+  release-windows-32bit:
+    executor: win/server-2022
+    environment:
+      CMAKE_BUILD_TYPE: Release
+      CMAKE_BUILD_PARALLEL_LEVEL: 4
+    steps:
+      - checkout
+      - checkout_submodules
+      - run:
+          name: "Setup environment (bash)"
+          shell: bash
+          command: |
+            echo 'export PATH=$PATH:"/c/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin"' >> $BASH_ENV
+      - run:
+          name: 'Configure'
+          shell: powershell
+          command: |
+            $ErrorActionPreference = "Stop"
+            & 'C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\Launch-VsDevShell.ps1' -Arch x86
+            which cmake
+            cmake -S . -B ~/build -G Ninja -DCMAKE_INSTALL_PREFIX=C:\install -DEVMONE_TESTING=ON
+      - run:
+          name: 'Build'
+          shell: powershell
+          command: |
+            $ErrorActionPreference = "Stop"
+            & 'C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\Launch-VsDevShell.ps1' -Arch x86
+            cmake --build ~/build
+      - test
+      - package
 
   release-macos:
     executor: macos
@@ -555,6 +585,9 @@ workflows:
           filters:
             tags:
               only: /.*/
+      - release-windows-32bit:
+          requires:
+            - release-windows
       - release-macos:
           filters:
             tags:
