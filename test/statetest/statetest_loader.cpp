@@ -255,6 +255,37 @@ static void from_json(const json::json& j, StateTransitionTest& o)
     }
 }
 
+template <>
+state::Transaction from_json<state::Transaction>(const json::json& j)
+{
+    state::Transaction o;
+    o.data = from_json<bytes>(j.at("input"));
+    o.gas_limit = from_json<int64_t>(j.at("gas"));
+    o.value = from_json<intx::uint256>(j.at("value"));
+    o.sender = from_json<evmc::address>(j.at("sender"));
+
+    if (!j.at("to").get<std::string>().empty())
+        o.to = from_json<evmc::address>(j.at("to"));
+
+    if (j.contains("gasPrice"))
+    {
+        o.kind = state::Transaction::Kind::legacy;
+        o.max_gas_price = from_json<intx::uint256>(j.at("gasPrice"));
+        o.max_priority_gas_price = o.max_gas_price;
+    }
+    else
+    {
+        o.kind = state::Transaction::Kind::eip1559;
+        o.max_gas_price = from_json<intx::uint256>(j.at("maxFeePerGas"));
+        o.max_priority_gas_price = from_json<intx::uint256>(j.at("maxPriorityFeePerGas"));
+    }
+
+    if (j.contains("accessList"))
+        o.access_list = from_json<state::AccessList>(j.at("accessList"));
+
+    return o;
+}
+
 StateTransitionTest load_state_test(const fs::path& test_file)
 {
     return json::json::parse(std::ifstream{test_file}).get<StateTransitionTest>();
