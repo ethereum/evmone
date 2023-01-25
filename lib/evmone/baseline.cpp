@@ -159,34 +159,29 @@ struct Position
 
 /// Helpers for invoking instruction implementations of different signatures.
 /// @{
-[[release_inline]] inline code_iterator invoke(
-    void (*instr_fn)(StackTop) noexcept, Position pos, ExecutionState& /*state*/) noexcept
+[[release_inline]] inline code_iterator invoke(void (*instr_fn)(StackTop) noexcept, Position pos,
+    int64_t& /*gas*/, ExecutionState& /*state*/) noexcept
 {
     instr_fn(pos.stack_top);
     return pos.code_it + 1;
 }
 
 [[release_inline]] inline code_iterator invoke(
-    StopToken (*instr_fn)() noexcept, Position /*pos*/, ExecutionState& state) noexcept
-{
-    state.status = instr_fn().status;
-    return nullptr;
-}
-
-[[release_inline]] inline code_iterator invoke(
-    evmc_status_code (*instr_fn)(StackTop, ExecutionState&) noexcept, Position pos,
+    Result (*instr_fn)(StackTop, int64_t, ExecutionState&) noexcept, Position pos, int64_t& gas,
     ExecutionState& state) noexcept
 {
-    if (const auto status = instr_fn(pos.stack_top, state); status != EVMC_SUCCESS)
+    const auto o = instr_fn(pos.stack_top, gas, state);
+    gas = o.gas_left;
+    if (o.status != EVMC_SUCCESS)
     {
-        state.status = status;
+        state.status = o.status;
         return nullptr;
     }
     return pos.code_it + 1;
 }
 
 [[release_inline]] inline code_iterator invoke(void (*instr_fn)(StackTop, ExecutionState&) noexcept,
-    Position pos, ExecutionState& state) noexcept
+    Position pos, int64_t& /*gas*/, ExecutionState& state) noexcept
 {
     instr_fn(pos.stack_top, state);
     return pos.code_it + 1;
@@ -194,16 +189,18 @@ struct Position
 
 [[release_inline]] inline code_iterator invoke(
     code_iterator (*instr_fn)(StackTop, ExecutionState&, code_iterator) noexcept, Position pos,
-    ExecutionState& state) noexcept
+    int64_t& /*gas*/, ExecutionState& state) noexcept
 {
     return instr_fn(pos.stack_top, state, pos.code_it);
 }
 
 [[release_inline]] inline code_iterator invoke(
-    StopToken (*instr_fn)(StackTop, ExecutionState&) noexcept, Position pos,
+    TermResult (*instr_fn)(StackTop, int64_t, ExecutionState&) noexcept, Position pos, int64_t& gas,
     ExecutionState& state) noexcept
 {
-    state.status = instr_fn(pos.stack_top, state).status;
+    const auto result = instr_fn(pos.stack_top, gas, state);
+    gas = result.gas_left;
+    state.status = result.status;
     return nullptr;
 }
 /// @}
@@ -211,16 +208,15 @@ struct Position
 /// A helper to invoke the instruction implementation of the given opcode Op.
 template <Opcode Op>
 [[release_inline]] inline Position invoke(const CostTable& cost_table, const uint256* stack_bottom,
-    Position pos, ExecutionState& state) noexcept
+    Position pos, int64_t& gas, ExecutionState& state) noexcept
 {
-    if (const auto status =
-            check_requirements<Op>(cost_table, state.gas_left, pos.stack_top, stack_bottom);
+    if (const auto status = check_requirements<Op>(cost_table, gas, pos.stack_top, stack_bottom);
         status != EVMC_SUCCESS)
     {
         state.status = status;
         return {nullptr, pos.stack_top};
     }
-    const auto new_pos = invoke(instr::core::impl<Op>, pos, state);
+    const auto new_pos = invoke(instr::core::impl<Op>, pos, gas, state);
     const auto new_stack_top = pos.stack_top + instr::traits[Op].stack_height_change;
     return {new_pos, new_stack_top};
 }
@@ -231,6 +227,8 @@ void dispatch(const CostTable& cost_table, ExecutionState& state, const uint8_t*
     Tracer* tracer = nullptr) noexcept
 {
     const auto stack_bottom = state.stack_space.bottom();
+
+    auto gas = state.gas_left;
 
     // Code iterator and stack top pointer for interpreter loop.
     Position position{code, stack_bottom};
@@ -244,27 +242,28 @@ void dispatch(const CostTable& cost_table, ExecutionState& state, const uint8_t*
             if (offset < state.original_code.size())  // Skip STOP from code padding.
             {
                 tracer->notify_instruction_start(
-                    offset, position.stack_top, stack_height, state.gas_left, state);
+                    offset, position.stack_top, stack_height, gas, state);
             }
         }
 
         const auto op = *position.code_it;
         switch (op)
         {
-#define ON_OPCODE(OPCODE)                                                                \
-    case OPCODE:                                                                         \
-        ASM_COMMENT(OPCODE);                                                             \
-        if (const auto next = invoke<OPCODE>(cost_table, stack_bottom, position, state); \
-            next.code_it == nullptr)                                                     \
-        {                                                                                \
-            return;                                                                      \
-        }                                                                                \
-        else                                                                             \
-        {                                                                                \
-            /* Update current position only when no error,                               \
-               this improves compiler optimization. */                                   \
-            position = next;                                                             \
-        }                                                                                \
+#define ON_OPCODE(OPCODE)                                                                     \
+    case OPCODE:                                                                              \
+        ASM_COMMENT(OPCODE);                                                                  \
+        if (const auto next = invoke<OPCODE>(cost_table, stack_bottom, position, gas, state); \
+            next.code_it == nullptr)                                                          \
+        {                                                                                     \
+            state.gas_left = gas;                                                             \
+            return;                                                                           \
+        }                                                                                     \
+        else                                                                                  \
+        {                                                                                     \
+            /* Update current position only when no error,                                    \
+               this improves compiler optimization. */                                        \
+            position = next;                                                                  \
+        }                                                                                     \
         break;
 
             MAP_OPCODES
@@ -272,9 +271,11 @@ void dispatch(const CostTable& cost_table, ExecutionState& state, const uint8_t*
 
         default:
             state.status = EVMC_UNDEFINED_INSTRUCTION;
+            state.gas_left = gas;
             return;
         }
     }
+    INTX_UNREACHABLE();
 }
 
 #if EVMONE_CGOTO_SUPPORTED
@@ -299,21 +300,24 @@ void dispatch_cgoto(
     // Code iterator and stack top pointer for interpreter loop.
     Position position{code, stack_bottom};
 
+    auto gas = state.gas_left;
+
     goto* cgoto_table[*position.code_it];
 
-#define ON_OPCODE(OPCODE)                                                            \
-    TARGET_##OPCODE : ASM_COMMENT(OPCODE);                                           \
-    if (const auto next = invoke<OPCODE>(cost_table, stack_bottom, position, state); \
-        next.code_it == nullptr)                                                     \
-    {                                                                                \
-        return;                                                                      \
-    }                                                                                \
-    else                                                                             \
-    {                                                                                \
-        /* Update current position only when no error,                               \
-           this improves compiler optimization. */                                   \
-        position = next;                                                             \
-    }                                                                                \
+#define ON_OPCODE(OPCODE)                                                                 \
+    TARGET_##OPCODE : ASM_COMMENT(OPCODE);                                                \
+    if (const auto next = invoke<OPCODE>(cost_table, stack_bottom, position, gas, state); \
+        next.code_it == nullptr)                                                          \
+    {                                                                                     \
+        state.gas_left = gas;                                                             \
+        return;                                                                           \
+    }                                                                                     \
+    else                                                                                  \
+    {                                                                                     \
+        /* Update current position only when no error,                                    \
+           this improves compiler optimization. */                                        \
+        position = next;                                                                  \
+    }                                                                                     \
     goto* cgoto_table[*position.code_it];
 
     MAP_OPCODES
@@ -321,6 +325,7 @@ void dispatch_cgoto(
 
 TARGET_OP_UNDEFINED:
     state.status = EVMC_UNDEFINED_INSTRUCTION;
+    state.gas_left = gas;
 }
 #endif
 }  // namespace

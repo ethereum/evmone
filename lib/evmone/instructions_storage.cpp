@@ -91,7 +91,7 @@ constexpr auto sstore_costs = []() noexcept {
 }();
 }  // namespace
 
-evmc_status_code sload(StackTop stack, ExecutionState& state) noexcept
+Result sload(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     auto& x = stack.top();
     const auto key = intx::be::store<evmc::bytes32>(x);
@@ -103,22 +103,22 @@ evmc_status_code sload(StackTop stack, ExecutionState& state) noexcept
         // Here we need to apply additional cold storage access cost.
         constexpr auto additional_cold_sload_cost =
             instr::cold_sload_cost - instr::warm_storage_read_cost;
-        if ((state.gas_left -= additional_cold_sload_cost) < 0)
-            return EVMC_OUT_OF_GAS;
+        if ((gas_left -= additional_cold_sload_cost) < 0)
+            return {EVMC_OUT_OF_GAS, gas_left};
     }
 
     x = intx::be::load<uint256>(state.host.get_storage(state.msg->recipient, key));
 
-    return EVMC_SUCCESS;
+    return {EVMC_SUCCESS, gas_left};
 }
 
-evmc_status_code sstore(StackTop stack, ExecutionState& state) noexcept
+Result sstore(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     if (state.in_static_mode())
-        return EVMC_STATIC_MODE_VIOLATION;
+        return {EVMC_STATIC_MODE_VIOLATION, gas_left};
 
-    if (state.rev >= EVMC_ISTANBUL && state.gas_left <= 2300)
-        return EVMC_OUT_OF_GAS;
+    if (state.rev >= EVMC_ISTANBUL && gas_left <= 2300)
+        return {EVMC_OUT_OF_GAS, gas_left};
 
     const auto key = intx::be::store<evmc::bytes32>(stack.pop());
     const auto value = intx::be::store<evmc::bytes32>(stack.pop());
@@ -132,9 +132,9 @@ evmc_status_code sstore(StackTop stack, ExecutionState& state) noexcept
 
     const auto [gas_cost_warm, gas_refund] = sstore_costs[state.rev][status];
     const auto gas_cost = gas_cost_warm + gas_cost_cold;
-    if ((state.gas_left -= gas_cost) < 0)
-        return EVMC_OUT_OF_GAS;
+    if ((gas_left -= gas_cost) < 0)
+        return {EVMC_OUT_OF_GAS, gas_left};
     state.gas_refund += gas_refund;
-    return EVMC_SUCCESS;
+    return {EVMC_SUCCESS, gas_left};
 }
 }  // namespace evmone::instr::core
