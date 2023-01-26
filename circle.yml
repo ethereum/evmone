@@ -572,6 +572,20 @@ jobs:
       - build
       - test
 
+  x86-64-v1:
+    executor: linux-gcc-latest
+    environment:
+      BUILD_TYPE: Release
+      CMAKE_OPTIONS: -DCMAKE_CROSSCOMPILING_EMULATOR=qemu-x86_64-static
+      QEMU_CPU: core2duo  # The lowest 64-bit CPU I could find, but qemu64 should be good too.
+    steps:
+      - run:
+          name: "Install qemu"
+          command: sudo apt update -y && sudo apt install -y qemu-user-static
+      - build
+      - test
+
+
 workflows:
   version: 2
   evmone:
@@ -612,4 +626,5 @@ workflows:
       - macos-asan
       - xcode-min
       - gcc-32bit
+      - x86-64-v1
       - fuzzing
