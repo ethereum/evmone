@@ -586,14 +586,21 @@ jobs:
     executor: linux-gcc-latest
     environment:
       BUILD_TYPE: Release
-      CMAKE_OPTIONS: -DCMAKE_CROSSCOMPILING_EMULATOR=qemu-x86_64-static
       QEMU_CPU: core2duo  # The lowest 64-bit CPU I could find, but qemu64 should be good too.
     steps:
       - run:
           name: "Install qemu"
           command: sudo apt update -y && sudo apt install -y qemu-user-static
       - build
-      - test
+      - run:
+          name: "Check evmone.so"
+          working_directory: ~/build
+          command: (! qemu-x86_64-static bin/evmc run --vm ./lib/libevmone.so,trace 6000 2>&1) | grep "CPU does not support"
+      - run:
+          name: "Check unittests"
+          working_directory: ~/build
+          command: (! qemu-x86_64-static bin/evmone-unittests 2>&1) | grep "CPU does not support"
+
 
 
 workflows:
