@@ -619,10 +619,10 @@ workflows:
 #      - cmake-min
 #      - gcc-min
 #      - clang-min
-3      - gcc-latest-coverage
+#      - gcc-latest-coverage
 #      - gcc-latest-memcheck
 #      - clang-latest-sanitizers
-3      - clang-latest-coverage
+#      - clang-latest-coverage
 #      - macos-asan
 #      - xcode-min
 #      - gcc-32bit
