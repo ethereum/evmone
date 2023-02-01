@@ -16,7 +16,7 @@ if(NOT WASI_SDK_PREFIX STREQUAL /opt/wasi-sdk)
     set(CMAKE_SYSROOT ${WASI_SDK_PREFIX}/share/wasi-sysroot)
 endif()
 
-include(${WASI_SDK_PREFIX}/share/cmake/wasi-sdk.cmake)
+include(${WASI_SDK_PREFIX}/share/cmake/wasi-sdk-pthread.cmake)
 
 # Override the default in wasi-sdk.cmake which sets it at "WASI"
 # That does not exists in CMake Platforms, and as a result falls back to the host
