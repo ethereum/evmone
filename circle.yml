@@ -577,6 +577,7 @@ jobs:
     resource_class: small
     environment:
       TOOLCHAIN: wasm32-wasi
+      CMAKE_OPTIONS: -DEVMONE_TESTING=OFF
     steps:
       - run:
           name: "Install WASI SDK"
