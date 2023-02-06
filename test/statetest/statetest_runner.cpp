@@ -34,11 +34,16 @@ void run_state_test(const StateTransitionTest& test, evmc::VM& vm)
             const auto tx = test.multi_tx.get(expected.indexes);
             auto state = test.pre_state;
 
-            const auto tx_logs = state::transition(state, test.block, tx, rev, vm);
-            if (tx_logs.has_value())
-                EXPECT_EQ(keccak256(rlp::encode(*tx_logs)), expected.logs_hash);
+            const auto res = state::transition(state, test.block, tx, rev, vm);
+            if (holds_alternative<state::TransactionReceipt>(res))
+            {
+                EXPECT_EQ(keccak256(rlp::encode(get<state::TransactionReceipt>(res).logs)),
+                    expected.logs_hash);
+            }
             else
+            {
                 EXPECT_TRUE(expected.exception);
+            }
 
             EXPECT_EQ(state::mpt_hash(state.get_accounts()), expected.state_hash);
         }
