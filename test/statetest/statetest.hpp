@@ -81,4 +81,18 @@ StateTransitionTest load_state_test(const fs::path& test_file);
 
 void run_state_test(const StateTransitionTest& test, evmc::VM& vm);
 
+/// Converts an integer to hex string representation with 0x prefix.
+///
+/// This handles also builtin types like uint64_t. Not optimal but works for now.
+inline std::string hex0x(const intx::uint256& v)
+{
+    return "0x" + intx::hex(v);
+}
+
+/// Encodes bytes as hex with 0x prefix.
+inline std::string hex0x(const bytes_view& v)
+{
+    return "0x" + evmc::hex(v);
+}
+
 }  // namespace evmone::test
