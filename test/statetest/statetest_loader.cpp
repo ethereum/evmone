@@ -67,14 +67,22 @@ state::AccessList from_json<state::AccessList>(const json::json& j)
 template <>
 state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
 {
+    evmc::bytes32 difficulty;
     const auto prev_randao_it = j.find("currentRandom");
+    const auto current_difficulty_it = j.find("currentDifficulty");
+    const auto parent_difficulty_it = j.find("parentDifficulty");
+    if (prev_randao_it != j.end())
+        difficulty = from_json<evmc::bytes32>(*prev_randao_it);
+    else if (current_difficulty_it != j.end())
+        difficulty = from_json<evmc::bytes32>(*current_difficulty_it);
+    else if (parent_difficulty_it != j.end())
+        difficulty = from_json<evmc::bytes32>(*parent_difficulty_it);
     return {
         from_json<int64_t>(j.at("currentNumber")),
         from_json<int64_t>(j.at("currentTimestamp")),
         from_json<int64_t>(j.at("currentGasLimit")),
         from_json<evmc::address>(j.at("currentCoinbase")),
-        from_json<evmc::bytes32>(
-            (prev_randao_it != j.end()) ? *prev_randao_it : j.at("currentDifficulty")),
+        difficulty,
         from_json<uint64_t>(j.value("currentBaseFee", std::string{"0"})),
     };
 }
