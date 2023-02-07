@@ -4,12 +4,18 @@
 #pragma once
 
 #include "../state/state.hpp"
+#include <nlohmann/json.hpp>
 #include <filesystem>
 
 namespace fs = std::filesystem;
+namespace json = nlohmann;
 
 namespace evmone::test
 {
+
+/// Translates tests fork name to EVM revision
+evmc_revision to_rev(std::string_view s);
+
 struct TestMultiTransaction : state::Transaction
 {
     struct Indexes
@@ -59,8 +65,34 @@ struct StateTransitionTest
     std::unordered_map<uint64_t, std::string> input_labels;
 };
 
+template <typename T>
+T from_json(const json::json& j) = delete;
+
+template <>
+state::BlockInfo from_json<state::BlockInfo>(const json::json& j);
+
+template <>
+state::State from_json<state::State>(const json::json& j);
+
+template <>
+state::Transaction from_json<state::Transaction>(const json::json& j);
+
 StateTransitionTest load_state_test(const fs::path& test_file);
 
 void run_state_test(const StateTransitionTest& test, evmc::VM& vm);
+
+/// Converts an integer to hex string representation with 0x prefix.
+///
+/// This handles also builtin types like uint64_t. Not optimal but works for now.
+inline std::string hex0x(const intx::uint256& v)
+{
+    return "0x" + intx::hex(v);
+}
+
+/// Encodes bytes as hex with 0x prefix.
+inline std::string hex0x(const bytes_view& v)
+{
+    return "0x" + evmc::hex(v);
+}
 
 }  // namespace evmone::test

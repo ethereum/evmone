@@ -8,6 +8,7 @@
 #include "hash_utils.hpp"
 #include <cassert>
 #include <optional>
+#include <variant>
 #include <vector>
 
 namespace evmone::state
@@ -100,8 +101,13 @@ struct Log
     std::vector<hash256> topics;
 };
 
+struct TransactionReceipt
+{
+    int64_t gas_used = 0;
+    std::vector<Log> logs;
+};
 
-[[nodiscard]] std::optional<std::vector<Log>> transition(
+[[nodiscard]] std::variant<TransactionReceipt, std::error_code> transition(
     State& state, const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm);
 
 }  // namespace evmone::state
