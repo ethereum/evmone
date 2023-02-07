@@ -11,11 +11,6 @@ namespace evmone::test
 namespace json = nlohmann;
 using evmc::from_hex;
 
-namespace
-{
-template <typename T>
-T from_json(const json::json& j) = delete;
-
 template <>
 int64_t from_json<int64_t>(const json::json& j)
 {
@@ -83,7 +78,6 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
         from_json<uint64_t>(j.value("currentBaseFee", std::string{"0"})),
     };
 }
-}  // namespace
 
 evmc_revision to_rev(std::string_view s)
 {

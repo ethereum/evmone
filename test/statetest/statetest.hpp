@@ -4,9 +4,11 @@
 #pragma once
 
 #include "../state/state.hpp"
+#include <nlohmann/json.hpp>
 #include <filesystem>
 
 namespace fs = std::filesystem;
+namespace json = nlohmann;
 
 namespace evmone::test
 {
@@ -62,6 +64,12 @@ struct StateTransitionTest
     std::vector<Case> cases;
     std::unordered_map<uint64_t, std::string> input_labels;
 };
+
+template <typename T>
+T from_json(const json::json& j) = delete;
+
+template <>
+state::BlockInfo from_json<state::BlockInfo>(const json::json& j);
 
 StateTransitionTest load_state_test(const fs::path& test_file);
 
