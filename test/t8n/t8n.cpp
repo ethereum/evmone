@@ -37,7 +37,7 @@ int main(int argc, const char* argv[])
 
         if (arg == "-v")
         {
-            std::cout << "evmone dev\n";  // FIXME: Return proper version.
+            std::cout << "evmone-t8n " PROJECT_VERSION "\n";
             return 0;
         }
         if (arg == "--state.fork" && ++i < argc)
