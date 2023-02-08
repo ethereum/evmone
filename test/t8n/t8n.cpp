@@ -30,6 +30,7 @@ int main(int argc, const char* argv[])
     fs::path output_dir;
     fs::path output_result_file;
     fs::path output_alloc_file;
+    intx::uint256 state_reward;
 
     for (int i = 0; i < argc; ++i)
     {
@@ -54,6 +55,13 @@ int main(int argc, const char* argv[])
             output_result_file = argv[i];
         else if (arg == "--output.alloc" && ++i < argc)
             output_alloc_file = argv[i];
+        else if (arg == "--state.reward" && ++i < argc)
+        {
+            if (std::string(argv[i]) == "-1")
+                state_reward = std::numeric_limits<intx::uint256>::max();
+            else
+                state_reward = intx::from_string<intx::uint256>(argv[i]);
+        }
     }
 
     state::BlockInfo block;
@@ -126,6 +134,16 @@ int main(int argc, const char* argv[])
 
                     idx++;
                 }
+            }
+
+            if (state_reward != 0 && state_reward != std::numeric_limits<intx::uint256>::max())
+                state.get_or_insert(block.coinbase).balance += state_reward;
+            else if (state_reward == 0)
+                state.touch(block.coinbase);
+            else if (state_reward == std::numeric_limits<intx::uint256>::max())
+            {
+                if (state.get_or_insert(block.coinbase).is_empty())
+                    state.get_accounts().erase(block.coinbase);
             }
 
             j_result["logsHash"] = hex0x(logs_hash(txs_logs));
