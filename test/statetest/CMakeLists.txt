@@ -13,6 +13,7 @@ target_sources(
     evmone-statetestutils PRIVATE
     statetest.hpp
     statetest_loader.cpp
+    statetest_logs_hash.cpp
 )
 
 add_executable(evmone-statetest)
