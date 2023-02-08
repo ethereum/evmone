@@ -81,6 +81,10 @@ StateTransitionTest load_state_test(const fs::path& test_file);
 
 void run_state_test(const StateTransitionTest& test, evmc::VM& vm);
 
+/// Computes the hash of the RLP-encoded list of transaction logs.
+/// This method is only used in tests.
+hash256 logs_hash(const std::vector<state::Log>& logs);
+
 /// Converts an integer to hex string representation with 0x prefix.
 ///
 /// This handles also builtin types like uint64_t. Not optimal but works for now.

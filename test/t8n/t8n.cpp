@@ -21,16 +21,6 @@ static const auto NULL_HEXSTRING_256 = "0x" + std::string(512, '0');
 static const auto NULL_HEXSTRING_32 = "0x" + std::string(64, '0');
 static const auto NULL_HEXSTRING_20 = "0x" + std::string(40, '0');
 
-namespace evmone::state
-{
-/// Defines how to RLP-encode a Log. This is only needed to compute "logs hash".
-/// FIXME: Deduplicate by providing log_hash() function.
-inline bytes rlp_encode(const Log& log)
-{
-    return rlp::encode_tuple(log.addr, log.topics, log.data);
-}
-}  // namespace evmone::state
-
 int main(int argc, const char* argv[])
 {
     evmc_revision rev = {};
@@ -138,7 +128,7 @@ int main(int argc, const char* argv[])
                 }
             }
 
-            j_result["logsHash"] = hex0x(keccak256(rlp::encode(txs_logs)));
+            j_result["logsHash"] = hex0x(logs_hash(txs_logs));
             j_result["stateRoot"] = hex0x(state::mpt_hash(state.get_accounts()));
         }
 

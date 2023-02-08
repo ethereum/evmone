@@ -7,15 +7,6 @@
 #include "statetest.hpp"
 #include <gtest/gtest.h>
 
-namespace evmone::state
-{
-/// Defines how to RLP-encode a Log. This is only needed to compute "logs hash".
-inline bytes rlp_encode(const Log& log)
-{
-    return rlp::encode_tuple(log.addr, log.topics, log.data);
-}
-}  // namespace evmone::state
-
 namespace evmone::test
 {
 void run_state_test(const StateTransitionTest& test, evmc::VM& vm)
@@ -36,14 +27,9 @@ void run_state_test(const StateTransitionTest& test, evmc::VM& vm)
 
             const auto res = state::transition(state, test.block, tx, rev, vm);
             if (holds_alternative<state::TransactionReceipt>(res))
-            {
-                EXPECT_EQ(keccak256(rlp::encode(get<state::TransactionReceipt>(res).logs)),
-                    expected.logs_hash);
-            }
+                EXPECT_EQ(logs_hash(get<state::TransactionReceipt>(res).logs), expected.logs_hash);
             else
-            {
                 EXPECT_TRUE(expected.exception);
-            }
 
             EXPECT_EQ(state::mpt_hash(state.get_accounts()), expected.state_hash);
         }
