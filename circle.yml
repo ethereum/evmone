@@ -585,9 +585,7 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - release-windows-32bit:
-          requires:
-            - release-windows
+      - release-windows-32bit
       - release-macos:
           filters:
             tags:
