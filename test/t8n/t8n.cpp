@@ -57,7 +57,7 @@ int main(int argc, const char* argv[])
             output_alloc_file = argv[i];
         else if (arg == "--state.reward" && ++i < argc)
         {
-            if (std::string(argv[i]) == "-1")
+            if (std::string_view(argv[i]) == "-1")
                 block_reward = {};
             else
                 block_reward = intx::from_string<intx::uint256>(argv[i]);
@@ -137,13 +137,8 @@ int main(int argc, const char* argv[])
             }
 
             if (block_reward.has_value())
-            {
-                if (*block_reward == 0)
-                    state.touch(block.coinbase);
-                else
-                    state.get_or_insert(block.coinbase).balance += *block_reward;
-            }
-            else if (rev <= EVMC_TANGERINE_WHISTLE)
+                state.touch(block.coinbase).balance += *block_reward;
+            else if (rev <= EVMC_TANGERINE_WHISTLE)  // This behaviour is required by retesteth
                 state.get_accounts().erase(block.coinbase);
 
             j_result["logsHash"] = hex0x(logs_hash(txs_logs));
