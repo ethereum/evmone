@@ -30,7 +30,7 @@ int main(int argc, const char* argv[])
     fs::path output_dir;
     fs::path output_result_file;
     fs::path output_alloc_file;
-    intx::uint256 state_reward;
+    std::optional<intx::uint256> block_reward;
 
     for (int i = 0; i < argc; ++i)
     {
@@ -58,9 +58,9 @@ int main(int argc, const char* argv[])
         else if (arg == "--state.reward" && ++i < argc)
         {
             if (std::string(argv[i]) == "-1")
-                state_reward = std::numeric_limits<intx::uint256>::max();
+                block_reward = {};
             else
-                state_reward = intx::from_string<intx::uint256>(argv[i]);
+                block_reward = intx::from_string<intx::uint256>(argv[i]);
         }
     }
 
@@ -136,15 +136,15 @@ int main(int argc, const char* argv[])
                 }
             }
 
-            if (state_reward != 0 && state_reward != std::numeric_limits<intx::uint256>::max())
-                state.get_or_insert(block.coinbase).balance += state_reward;
-            else if (state_reward == 0)
-                state.touch(block.coinbase);
-            else if (state_reward == std::numeric_limits<intx::uint256>::max())
+            if (block_reward.has_value())
             {
-                if (state.get_or_insert(block.coinbase).is_empty())
-                    state.get_accounts().erase(block.coinbase);
+                if (*block_reward == 0)
+                    state.touch(block.coinbase);
+                else
+                    state.get_or_insert(block.coinbase).balance += *block_reward;
             }
+            else if (rev <= EVMC_TANGERINE_WHISTLE)
+                state.get_accounts().erase(block.coinbase);
 
             j_result["logsHash"] = hex0x(logs_hash(txs_logs));
             j_result["stateRoot"] = hex0x(state::mpt_hash(state.get_accounts()));
