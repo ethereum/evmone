@@ -16,6 +16,7 @@ namespace fs = std::filesystem;
 namespace json = nlohmann;
 using namespace evmone;
 using namespace evmone::test;
+using namespace std::literals;
 
 static const auto NULL_HEXSTRING_256 = "0x" + std::string(512, '0');
 static const auto NULL_HEXSTRING_32 = "0x" + std::string(64, '0');
@@ -55,13 +56,8 @@ int main(int argc, const char* argv[])
             output_result_file = argv[i];
         else if (arg == "--output.alloc" && ++i < argc)
             output_alloc_file = argv[i];
-        else if (arg == "--state.reward" && ++i < argc)
-        {
-            if (std::string_view(argv[i]) == "-1")
-                block_reward = {};
-            else
-                block_reward = intx::from_string<intx::uint256>(argv[i]);
-        }
+        else if (arg == "--state.reward" && ++i < argc && argv[i] != "-1"sv)
+            block_reward = intx::from_string<intx::uint256>(argv[i]);
     }
 
     state::BlockInfo block;
@@ -138,8 +134,6 @@ int main(int argc, const char* argv[])
 
             if (block_reward.has_value())
                 state.touch(block.coinbase).balance += *block_reward;
-            else if (rev <= EVMC_TANGERINE_WHISTLE)  // This behaviour is required by retesteth
-                state.get_accounts().erase(block.coinbase);
 
             j_result["logsHash"] = hex0x(logs_hash(txs_logs));
             j_result["stateRoot"] = hex0x(state::mpt_hash(state.get_accounts()));
