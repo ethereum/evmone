@@ -10,18 +10,18 @@ TEST_P(evm, eof1_execution)
 {
     const auto code = eof1_bytecode(OP_STOP);
 
-    rev = EVMC_PARIS;
+    rev = EVMC_SHANGHAI;
     execute(code);
     EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
 
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
 }
 
 TEST_P(evm, eof1_execution_with_data_section)
 {
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     // data section contains ret(0, 1)
     const auto code = eof1_bytecode(mstore8(0, 1) + OP_STOP, ret(0, 1));
 
@@ -32,7 +32,7 @@ TEST_P(evm, eof1_execution_with_data_section)
 
 TEST_P(evm, eof1_pc)
 {
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     auto code = eof1_bytecode(OP_PC + mstore8(0) + ret(0, 1));
 
     execute(code);
@@ -50,7 +50,7 @@ TEST_P(evm, eof1_pc)
 
 TEST_P(evm, eof1_jump_inside_code_section)
 {
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     auto code = eof1_bytecode(jump(4) + OP_INVALID + OP_JUMPDEST + mstore8(0, 1) + ret(0, 1));
 
     execute(code);
@@ -69,7 +69,7 @@ TEST_P(evm, eof1_jump_inside_code_section)
 
 TEST_P(evm, eof1_jumpi_inside_code_section)
 {
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     auto code = eof1_bytecode(jumpi(6, 1) + OP_INVALID + OP_JUMPDEST + mstore8(0, 1) + ret(0, 1));
 
     execute(code);
@@ -88,7 +88,7 @@ TEST_P(evm, eof1_jumpi_inside_code_section)
 
 TEST_P(evm, eof1_jump_into_data_section)
 {
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     // data section contains OP_JUMPDEST + mstore8(0, 1) + ret(0, 1)
     const auto code = eof1_bytecode(jump(4) + OP_STOP, OP_JUMPDEST + mstore8(0, 1) + ret(0, 1));
 
@@ -98,7 +98,7 @@ TEST_P(evm, eof1_jump_into_data_section)
 
 TEST_P(evm, eof1_jumpi_into_data_section)
 {
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     // data section contains OP_JUMPDEST + mstore8(0, 1) + ret(0, 1)
     const auto code = eof1_bytecode(jumpi(6, 1) + OP_STOP, OP_JUMPDEST + mstore8(0, 1) + ret(0, 1));
 
@@ -108,7 +108,7 @@ TEST_P(evm, eof1_jumpi_into_data_section)
 
 TEST_P(evm, eof1_push_byte_in_header)
 {
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     // data section is 0x65 bytes long, so header contains 0x65 (PUSH6) byte,
     // but it must not affect jumpdest analysis (OP_JUMPDEST stays valid)
     auto code = eof1_bytecode(
@@ -122,7 +122,7 @@ TEST_P(evm, eof1_push_byte_in_header)
 
 TEST_P(evm, eof1_codesize)
 {
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     auto code = eof1_bytecode(mstore8(0, OP_CODESIZE) + ret(0, 1));
 
     execute(code);
@@ -140,7 +140,7 @@ TEST_P(evm, eof1_codesize)
 
 TEST_P(evm, eof1_codecopy_full)
 {
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     auto code = eof1_bytecode(bytecode{19} + 0 + 0 + OP_CODECOPY + ret(0, 19));
 
     execute(code);
@@ -158,7 +158,7 @@ TEST_P(evm, eof1_codecopy_full)
 
 TEST_P(evm, eof1_codecopy_header)
 {
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     auto code = eof1_bytecode(bytecode{7} + 0 + 0 + OP_CODECOPY + ret(0, 7));
 
     execute(code);
@@ -174,7 +174,7 @@ TEST_P(evm, eof1_codecopy_header)
 
 TEST_P(evm, eof1_codecopy_code)
 {
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     auto code = eof1_bytecode(bytecode{12} + 7 + 0 + OP_CODECOPY + ret(0, 12));
 
     execute(code);
@@ -190,7 +190,7 @@ TEST_P(evm, eof1_codecopy_code)
 
 TEST_P(evm, eof1_codecopy_data)
 {
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
 
     const auto code = eof1_bytecode(bytecode{4} + 22 + 0 + OP_CODECOPY + ret(0, 4), "deadbeef");
 
@@ -202,7 +202,7 @@ TEST_P(evm, eof1_codecopy_data)
 TEST_P(evm, eof1_codecopy_out_of_bounds)
 {
     // 4 bytes out of container bounds - result is implicitly 0-padded
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     auto code = eof1_bytecode(bytecode{23} + 0 + 0 + OP_CODECOPY + ret(0, 23));
 
     execute(code);
