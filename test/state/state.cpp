@@ -156,6 +156,11 @@ std::variant<TransactionReceipt, std::error_code> transition(
         for (const auto& key : storage_keys)
             storage[key].access_status = EVMC_ACCESS_WARM;
     }
+    // EIP-3651: Warm COINBASE.
+    // This may create an empty coinbase account. The account cannot be created unconditionally
+    // because this breaks old revisions.
+    if (rev >= EVMC_SHANGHAI)
+        host.access_account(block.coinbase);
 
     const auto result = host.call(build_message(tx, execution_gas_limit));
 
