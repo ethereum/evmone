@@ -14,7 +14,7 @@ namespace
 {
 // Can be called as validate_eof(string_view hex, rev) or validate_eof(bytes_view cont, rev).
 inline EOFValidationError validate_eof(
-    const bytecode& container, evmc_revision rev = EVMC_SHANGHAI) noexcept
+    const bytecode& container, evmc_revision rev = EVMC_CANCUN) noexcept
 {
     return evmone::validate_eof(rev, container);
 }
@@ -164,12 +164,14 @@ TEST(eof_validation, EOF1_undefined_opcodes)
 {
     auto cont = "EF0001 010002 00 0000"_hex;
 
-    const auto& gas_table = evmone::instr::gas_costs[EVMC_SHANGHAI];
+    const auto& gas_table = evmone::instr::gas_costs[EVMC_CANCUN];
 
     for (uint16_t opcode = 0; opcode <= 0xff; ++opcode)
     {
-        // PUSH* require immediate argument to be valid, checked in a separate test
+        // PUSH*, DUPN, SWAPN require immediate argument to be valid, checked in a separate test
         if (opcode >= OP_PUSH1 && opcode <= OP_PUSH32)
+            continue;
+        if (opcode == OP_DUPN || opcode == OP_SWAPN)
             continue;
 
         cont[cont.size() - 2] = static_cast<uint8_t>(opcode);

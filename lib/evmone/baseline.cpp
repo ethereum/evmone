@@ -76,7 +76,7 @@ CodeAnalysis analyze_eof1(bytes_view eof_container, const EOF1Header& header)
 
 CodeAnalysis analyze(evmc_revision rev, bytes_view code)
 {
-    if (rev < EVMC_SHANGHAI || !is_eof_code(code))
+    if (rev < EVMC_CANCUN || !is_eof_code(code))
         return analyze_legacy(code);
 
     const auto eof1_header = read_valid_eof1_header(code.begin());
