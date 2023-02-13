@@ -151,7 +151,7 @@ TEST(instructions, compare_undefined_instructions)
 
             // Skip DUPN and SWAPN. They are not defined in evmc
             // TODO: Define DUPN and SWAPN in evmc
-            if (Opcode(i) == OP_DUPN || Opcode(i) == OP_SWAPN)
+            if (r >= EVMC_CANCUN && (Opcode(i) == OP_DUPN || Opcode(i) == OP_SWAPN))
                 continue;
             EXPECT_EQ(instr_tbl[i] == instr::undefined, evmc_names_tbl[i] == nullptr) << i;
         }

@@ -324,13 +324,15 @@ TEST(eof_validation, EOF1_undefined_opcodes)
             ""_hex;
 
         // Skip opcodes requiring immediate arguments.
-        // They're all valid in Shanghai and checked in other tests below.
+        // They're all valid in Cancun and checked in other tests below.
         if (opcode >= OP_PUSH1 && opcode <= OP_PUSH32)
             continue;
         if (opcode == OP_RJUMP || opcode == OP_RJUMPI || opcode == OP_RJUMPV || opcode == OP_CALLF)
             continue;
         if (opcode == OP_JUMP || opcode == OP_JUMPI || opcode == OP_PC || opcode == OP_CALLCODE ||
             opcode == OP_SELFDESTRUCT)
+            continue;
+        if (opcode == OP_DUPN || opcode == OP_SWAPN)
             continue;
 
         if (opcode == OP_RETF)

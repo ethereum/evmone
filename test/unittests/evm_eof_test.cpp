@@ -358,7 +358,7 @@ TEST_P(evm, eof1_rjumpv_single_offset)
     if (is_advanced())
         return;
 
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     auto code = eof1_bytecode(rjumpv({3}, 0) + OP_JUMPDEST + OP_JUMPDEST + OP_STOP + 20 + 40 + 0 +
                                   OP_CODECOPY + ret(0, 20),
         3, "ef000101000402000100010300000000000000fe");
@@ -376,7 +376,7 @@ TEST_P(evm, eof1_rjumpv_multiple_offsets)
     if (is_advanced())
         return;
 
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     auto code = eof1_bytecode(rjump(12) + 10 + 68 + 0 + OP_CODECOPY + ret(0, 10) +
                                   rjumpv({12, -22, 0}, 1) + 10 + 78 + 0 + OP_CODECOPY + ret(0, 10) +
                                   20 + 68 + 0 + OP_CODECOPY + ret(0, 20),
@@ -415,7 +415,7 @@ TEST_P(evm, eof1_rjumpv_long_jumps)
     if (is_advanced())
         return;
 
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     auto code =
         rjump(0x7fff - 3 - 5) + (0x7fff - 3 - 2 - 8 - 5) * bytecode{OP_JUMPDEST} + 7 + ret_top();
 
@@ -507,7 +507,7 @@ TEST_P(evm, eof_data_only_contract)
     if (is_advanced())
         return;
 
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     auto code = "EF0001 010004 020001 0001 03daaa 00 00000000 FE"_hex;
     const auto data_size_ptr = &code[code.find(0xda)];
 
@@ -526,7 +526,7 @@ TEST_P(evm, eof_data_only_contract)
 
 TEST_P(evm, eof_creates_valid_eof_contract_only)
 {
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     host.call_result.create_address = 0x02_address;
     {
         // invalid eof contract (push1 truncated)
