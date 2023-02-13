@@ -368,7 +368,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
 evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_context* ctx,
     evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
 {
-    if (rev >= EVMC_SHANGHAI && is_eof_container({code, code_size}))
+    if (rev >= EVMC_CANCUN && is_eof_container({code, code_size}))
     {
         // TODO(EOF): The initcode must be validated. Doing this just before execution is
         //   good because validation can be combined with analysis/loading. But consider also

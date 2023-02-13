@@ -221,7 +221,7 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
                                           evmc::Result{EVMC_FAILURE};
     }
 
-    if (m_rev >= EVMC_SHANGHAI && (is_eof_container(initcode) || is_eof_container(code)))
+    if (m_rev >= EVMC_CANCUN && (is_eof_container(initcode) || is_eof_container(code)))
     {
         if (validate_eof(m_rev, code) != EOFValidationError::success)
             return evmc::Result{EVMC_CONTRACT_VALIDATION_FAILURE};

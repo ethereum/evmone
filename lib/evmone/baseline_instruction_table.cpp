@@ -25,18 +25,18 @@ constexpr auto common_cost_tables = []() noexcept {
 
 constexpr auto legacy_cost_tables = []() noexcept {
     auto tables = common_cost_tables;
-    tables[EVMC_SHANGHAI][OP_RJUMP] = instr::undefined;
-    tables[EVMC_SHANGHAI][OP_RJUMPI] = instr::undefined;
+    tables[EVMC_CANCUN][OP_RJUMP] = instr::undefined;
+    tables[EVMC_CANCUN][OP_RJUMPI] = instr::undefined;
     return tables;
 }();
 
 constexpr auto eof_cost_tables = []() noexcept {
     auto tables = common_cost_tables;
-    tables[EVMC_SHANGHAI][OP_JUMP] = instr::undefined;
-    tables[EVMC_SHANGHAI][OP_JUMPI] = instr::undefined;
-    tables[EVMC_SHANGHAI][OP_PC] = instr::undefined;
-    tables[EVMC_SHANGHAI][OP_CALLCODE] = instr::undefined;
-    tables[EVMC_SHANGHAI][OP_SELFDESTRUCT] = instr::undefined;
+    tables[EVMC_CANCUN][OP_JUMP] = instr::undefined;
+    tables[EVMC_CANCUN][OP_JUMPI] = instr::undefined;
+    tables[EVMC_CANCUN][OP_PC] = instr::undefined;
+    tables[EVMC_CANCUN][OP_CALLCODE] = instr::undefined;
+    tables[EVMC_CANCUN][OP_SELFDESTRUCT] = instr::undefined;
     return tables;
 }();
 

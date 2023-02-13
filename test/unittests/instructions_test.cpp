@@ -107,8 +107,8 @@ TEST(instructions, compare_with_evmc_instruction_tables)
         for (size_t i = 0; i < evmone_tbl.size(); ++i)
         {
             // TODO pending update in EVMC
-            if (r >= EVMC_SHANGHAI && (i == OP_RJUMP || i == OP_RJUMPI || i == OP_RJUMPV ||
-                                          i == OP_CALLF || i == OP_RETF))
+            if (r >= EVMC_CANCUN && (i == OP_RJUMP || i == OP_RJUMPI || i == OP_RJUMPV ||
+                                        i == OP_CALLF || i == OP_RETF))
                 continue;
 
             // Skip DUPN and SWAPN for Cancun. They are not defined in evmc
@@ -145,13 +145,13 @@ TEST(instructions, compare_undefined_instructions)
         for (size_t i = 0; i < instr_tbl.size(); ++i)
         {
             // TODO pending update in EVMC
-            if (r >= EVMC_SHANGHAI && (i == OP_RJUMP || i == OP_RJUMPI || i == OP_RJUMPV ||
-                                          i == OP_CALLF || i == OP_RETF))
+            if (r >= EVMC_CANCUN && (i == OP_RJUMP || i == OP_RJUMPI || i == OP_RJUMPV ||
+                                        i == OP_CALLF || i == OP_RETF))
                 continue;
 
             // Skip DUPN and SWAPN. They are not defined in evmc
             // TODO: Define DUPN and SWAPN in evmc
-            if (Opcode(i) == OP_DUPN || Opcode(i) == OP_SWAPN)
+            if (r >= EVMC_CANCUN && (Opcode(i) == OP_DUPN || Opcode(i) == OP_SWAPN))
                 continue;
             EXPECT_EQ(instr_tbl[i] == instr::undefined, evmc_names_tbl[i] == nullptr) << i;
         }

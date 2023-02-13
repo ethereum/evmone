@@ -229,7 +229,7 @@ TEST_P(evm, eof2_rjump)
     if (is_advanced())
         return;
 
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     auto code = eof1_bytecode(rjumpi(3, 0) + rjump(1) + OP_INVALID + mstore8(0, 1) + ret(0, 1), 2);
 
     execute(code);
@@ -252,7 +252,7 @@ TEST_P(evm, eof2_rjump_backward)
     if (is_advanced())
         return;
 
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     auto code = eof1_bytecode(rjump(10) + mstore8(0, 1) + ret(0, 1) + rjump(-13), 2);
 
     execute(code);
@@ -274,7 +274,7 @@ TEST_P(evm, eof2_rjump_0_offset)
     if (is_advanced())
         return;
 
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     auto code = eof1_bytecode(rjump(0) + mstore8(0, 1) + ret(0, 1), 2);
 
     execute(code);
@@ -289,7 +289,7 @@ TEST_P(evm, eof2_rjumpi)
     if (is_advanced())
         return;
 
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     auto code = eof1_bytecode(
         rjumpi(10, calldataload(0)) + mstore8(0, 2) + ret(0, 1) + mstore8(0, 1) + ret(0, 1), 2);
 
@@ -312,7 +312,7 @@ TEST_P(evm, eof2_rjumpi_backwards)
     if (is_advanced())
         return;
 
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     auto code = eof1_bytecode(rjump(10) + mstore8(0, 1) + ret(0, 1) + rjumpi(-16, calldataload(0)) +
                                   mstore8(0, 2) + ret(0, 1),
         2);
@@ -336,7 +336,7 @@ TEST_P(evm, eof2_rjumpi_0_offset)
     if (is_advanced())
         return;
 
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     auto code = eof1_bytecode(rjumpi(0, calldataload(0)) + mstore8(0, 1) + ret(0, 1), 2);
 
     // RJUMPI condition is true
@@ -358,7 +358,7 @@ TEST_P(evm, eof1_rjumpv_single_offset)
     if (is_advanced())
         return;
 
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     auto code = eof1_bytecode(rjumpv({3}, 0) + OP_JUMPDEST + OP_JUMPDEST + OP_STOP + 20 + 40 + 0 +
                                   OP_CODECOPY + ret(0, 20),
         3, "ef000101000402000100010300000000000000fe");
@@ -376,7 +376,7 @@ TEST_P(evm, eof1_rjumpv_multiple_offsets)
     if (is_advanced())
         return;
 
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     auto code = eof1_bytecode(rjump(12) + 10 + 68 + 0 + OP_CODECOPY + ret(0, 10) +
                                   rjumpv({12, -22, 0}, 1) + 10 + 78 + 0 + OP_CODECOPY + ret(0, 10) +
                                   20 + 68 + 0 + OP_CODECOPY + ret(0, 20),
@@ -415,7 +415,7 @@ TEST_P(evm, eof1_rjumpv_long_jumps)
     if (is_advanced())
         return;
 
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     auto code =
         rjump(0x7fff - 3 - 5) + (0x7fff - 3 - 2 - 8 - 5) * bytecode{OP_JUMPDEST} + 7 + ret_top();
 
@@ -438,7 +438,7 @@ TEST_P(evm, eof1_rjumpv_long_jumps)
 
 TEST_P(evm, relative_jumps_undefined_in_legacy)
 {
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     auto code = rjump(1) + OP_INVALID + mstore8(0, 1) + ret(0, 1);
 
     execute(code);
@@ -456,7 +456,7 @@ TEST_P(evm, eof_function_example1)
     if (is_advanced())
         return;
 
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     const auto code =
         "EF00 01 010008 020002 000f 0002 030000 00"
         "00000002 02010002"
@@ -476,7 +476,7 @@ TEST_P(evm, eof_function_example2)
     if (is_advanced())
         return;
 
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     const auto code =
         "ef0001 01000c 020003 003b 0017 001d 030000 00 00000004 01010003 01010004"
         "60043560003560e01c63c766526781145d001c63c6c2ea1781145d00065050600080fd50b00002600052602060"
@@ -507,7 +507,7 @@ TEST_P(evm, eof_data_only_contract)
     if (is_advanced())
         return;
 
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     auto code = "EF0001 010004 020001 0001 03daaa 00 00000000 FE"_hex;
     const auto data_size_ptr = &code[code.find(0xda)];
 
@@ -526,7 +526,7 @@ TEST_P(evm, eof_data_only_contract)
 
 TEST_P(evm, eof_creates_valid_eof_contract_only)
 {
-    rev = EVMC_SHANGHAI;
+    rev = EVMC_CANCUN;
     host.call_result.create_address = 0x02_address;
     {
         // invalid eof contract (push1 truncated)
