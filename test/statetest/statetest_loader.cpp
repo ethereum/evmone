@@ -195,6 +195,11 @@ static void from_json_tx_common(const json::json& j, state::Transaction& o)
         o.kind = state::Transaction::Kind::legacy;
         o.max_gas_price = from_json<intx::uint256>(*gas_price_it);
         o.max_priority_gas_price = o.max_gas_price;
+        if (j.contains("maxFeePerGas") || j.contains("maxPriorityFeePerGas"))
+        {
+            throw std::invalid_argument(
+                "Misformatted transaction -- contains both legacy and 1559 fees");
+        }
     }
     else
     {

@@ -101,14 +101,6 @@ TEST(statetest_loader, tx_confusing)
         "accessList": []
     })";
 
-    const auto tx = test::from_json<state::Transaction>(json::json::parse(input));
-    EXPECT_EQ(tx.kind, state::Transaction::Kind::legacy);
-    EXPECT_EQ(tx.data, (bytes{0xb0, 0xb1}));
-    EXPECT_EQ(tx.gas_limit, 0x9091);
-    EXPECT_EQ(tx.value, 0xe0e1);
-    EXPECT_EQ(tx.sender, 0xa0a1_address);
-    EXPECT_EQ(tx.to, 0xc0c1_address);
-    EXPECT_EQ(tx.max_gas_price, 0x8081);
-    EXPECT_EQ(tx.max_priority_gas_price, 0x8081);
-    EXPECT_TRUE(tx.access_list.empty());
+    EXPECT_THROW(
+        test::from_json<state::Transaction>(json::json::parse(input)), std::invalid_argument);
 }
