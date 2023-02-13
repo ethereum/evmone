@@ -4,7 +4,6 @@
 
 #include "statetest.hpp"
 #include <nlohmann/json.hpp>
-#include <fstream>
 
 namespace evmone::test
 {
@@ -302,8 +301,8 @@ static void from_json(const json::json& j, StateTransitionTest& o)
     }
 }
 
-StateTransitionTest load_state_test(const fs::path& test_file)
+StateTransitionTest load_state_test(std::istream& input)
 {
-    return json::json::parse(std::ifstream{test_file}).get<StateTransitionTest>();
+    return json::json::parse(input).get<StateTransitionTest>();
 }
 }  // namespace evmone::test

@@ -60,7 +60,8 @@ std::vector<BenchmarkCase::Input> load_inputs(const StateTransitionTest& state_t
 /// Loads a benchmark case from a file at `path` and all its inputs from the matching inputs file.
 BenchmarkCase load_benchmark(const fs::path& path, const std::string& name_prefix)
 {
-    auto state_test = evmone::test::load_state_test(path);
+    std::ifstream f{path};
+    auto state_test = evmone::test::load_state_test(f);
 
     const auto name = name_prefix + path.stem().string();
     const auto code = state_test.pre_state.get(state_test.multi_tx.to.value()).code;

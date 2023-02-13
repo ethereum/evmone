@@ -22,7 +22,8 @@ public:
 
     void TestBody() final
     {
-        evmone::test::run_state_test(evmone::test::load_state_test(m_json_test_file), m_vm);
+        std::ifstream f{m_json_test_file};
+        evmone::test::run_state_test(evmone::test::load_state_test(f), m_vm);
     }
 };
 

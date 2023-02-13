@@ -77,7 +77,7 @@ state::State from_json<state::State>(const json::json& j);
 template <>
 state::Transaction from_json<state::Transaction>(const json::json& j);
 
-StateTransitionTest load_state_test(const fs::path& test_file);
+StateTransitionTest load_state_test(std::istream& input);
 
 void run_state_test(const StateTransitionTest& test, evmc::VM& vm);
 
