@@ -182,13 +182,24 @@ evmc_revision to_rev(std::string_view s)
     throw std::invalid_argument{"unknown revision: " + std::string{s}};
 }
 
-static void from_json(const json::json& j, TestMultiTransaction& o)
+/// Load common parts of Transaction or TestMultiTransaction.
+static void from_json_tx_common(const json::json& j, state::Transaction& o)
 {
-    if (j.contains("gasPrice"))
+    o.sender = from_json<evmc::address>(j.at("sender"));
+
+    if (const auto& to = j.at("to"); !to.get<std::string>().empty())
+        o.to = from_json<evmc::address>(to);
+
+    if (const auto gas_price_it = j.find("gasPrice"); gas_price_it != j.end())
     {
         o.kind = state::Transaction::Kind::legacy;
-        o.max_gas_price = from_json<intx::uint256>(j.at("gasPrice"));
+        o.max_gas_price = from_json<intx::uint256>(*gas_price_it);
         o.max_priority_gas_price = o.max_gas_price;
+        if (j.contains("maxFeePerGas") || j.contains("maxPriorityFeePerGas"))
+        {
+            throw std::invalid_argument(
+                "Misformatted transaction -- contains both legacy and 1559 fees");
+        }
     }
     else
     {
@@ -196,9 +207,26 @@ static void from_json(const json::json& j, TestMultiTransaction& o)
         o.max_gas_price = from_json<intx::uint256>(j.at("maxFeePerGas"));
         o.max_priority_gas_price = from_json<intx::uint256>(j.at("maxPriorityFeePerGas"));
     }
-    o.sender = from_json<evmc::address>(j.at("sender"));
-    if (!j.at("to").get<std::string>().empty())
-        o.to = from_json<evmc::address>(j["to"]);
+}
+
+template <>
+state::Transaction from_json<state::Transaction>(const json::json& j)
+{
+    state::Transaction o;
+    from_json_tx_common(j, o);
+    o.data = from_json<bytes>(j.at("input"));
+    o.gas_limit = from_json<int64_t>(j.at("gas"));
+    o.value = from_json<intx::uint256>(j.at("value"));
+
+    if (const auto ac_it = j.find("accessList"); ac_it != j.end())
+        o.access_list = from_json<state::AccessList>(*ac_it);
+
+    return o;
+}
+
+static void from_json(const json::json& j, TestMultiTransaction& o)
+{
+    from_json_tx_common(j, o);
 
     for (const auto& j_data : j.at("data"))
         o.inputs.emplace_back(from_json<bytes>(j_data));
@@ -253,37 +281,6 @@ static void from_json(const json::json& j, StateTransitionTest& o)
         o.cases.push_back({to_rev(rev_name),
             expectations.get<std::vector<StateTransitionTest::Case::Expectation>>()});
     }
-}
-
-template <>
-state::Transaction from_json<state::Transaction>(const json::json& j)
-{
-    state::Transaction o;
-    o.data = from_json<bytes>(j.at("input"));
-    o.gas_limit = from_json<int64_t>(j.at("gas"));
-    o.value = from_json<intx::uint256>(j.at("value"));
-    o.sender = from_json<evmc::address>(j.at("sender"));
-
-    if (!j.at("to").get<std::string>().empty())
-        o.to = from_json<evmc::address>(j.at("to"));
-
-    if (j.contains("gasPrice"))
-    {
-        o.kind = state::Transaction::Kind::legacy;
-        o.max_gas_price = from_json<intx::uint256>(j.at("gasPrice"));
-        o.max_priority_gas_price = o.max_gas_price;
-    }
-    else
-    {
-        o.kind = state::Transaction::Kind::eip1559;
-        o.max_gas_price = from_json<intx::uint256>(j.at("maxFeePerGas"));
-        o.max_priority_gas_price = from_json<intx::uint256>(j.at("maxPriorityFeePerGas"));
-    }
-
-    if (j.contains("accessList"))
-        o.access_list = from_json<state::AccessList>(j.at("accessList"));
-
-    return o;
 }
 
 StateTransitionTest load_state_test(const fs::path& test_file)
