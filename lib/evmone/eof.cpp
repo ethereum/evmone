@@ -8,6 +8,7 @@
 #include <array>
 #include <cassert>
 #include <limits>
+#include <variant>
 
 namespace evmone
 {
@@ -21,7 +22,8 @@ constexpr uint8_t MAX_SECTION = DATA_SECTION;
 
 using EOFSectionHeaders = std::array<uint16_t, MAX_SECTION + 1>;
 
-std::pair<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_view container) noexcept
+std::variant<EOFSectionHeaders, EOFValidationError> validate_eof_headers(
+    bytes_view container) noexcept
 {
     enum class State
     {
@@ -46,23 +48,23 @@ std::pair<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_view
             {
             case TERMINATOR:
                 if (section_headers[CODE_SECTION] == 0)
-                    return {{}, EOFValidationError::code_section_missing};
+                    return EOFValidationError::code_section_missing;
                 state = State::terminated;
                 break;
             case DATA_SECTION:
                 if (section_headers[CODE_SECTION] == 0)
-                    return {{}, EOFValidationError::code_section_missing};
+                    return EOFValidationError::code_section_missing;
                 if (section_headers[DATA_SECTION] != 0)
-                    return {{}, EOFValidationError::multiple_data_sections};
+                    return EOFValidationError::multiple_data_sections;
                 state = State::section_size;
                 break;
             case CODE_SECTION:
                 if (section_headers[CODE_SECTION] != 0)
-                    return {{}, EOFValidationError::multiple_code_sections};
+                    return EOFValidationError::multiple_code_sections;
                 state = State::section_size;
                 break;
             default:
-                return {{}, EOFValidationError::unknown_section_id};
+                return EOFValidationError::unknown_section_id;
             }
             break;
         }
@@ -70,30 +72,30 @@ std::pair<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_view
         {
             const auto size_hi = *it++;
             if (it == container_end)
-                return {{}, EOFValidationError::incomplete_section_size};
+                return EOFValidationError::incomplete_section_size;
             const auto size_lo = *it++;
             const auto section_size = static_cast<uint16_t>((size_hi << 8) | size_lo);
             if (section_size == 0)
-                return {{}, EOFValidationError::zero_section_size};
+                return EOFValidationError::zero_section_size;
 
             section_headers[section_id] = section_size;
             state = State::section_id;
             break;
         }
         case State::terminated:
-            return {{}, EOFValidationError::impossible};
+            return EOFValidationError::impossible;
         }
     }
 
     if (state != State::terminated)
-        return {{}, EOFValidationError::section_headers_not_terminated};
+        return EOFValidationError::section_headers_not_terminated;
 
     const auto section_bodies_size = section_headers[CODE_SECTION] + section_headers[DATA_SECTION];
     const auto remaining_container_size = container_end - it;
     if (section_bodies_size != remaining_container_size)
-        return {{}, EOFValidationError::invalid_section_bodies_size};
+        return EOFValidationError::invalid_section_bodies_size;
 
-    return {section_headers, EOFValidationError::success};
+    return section_headers;
 }
 
 EOFValidationError validate_instructions(evmc_revision rev, bytes_view code) noexcept
@@ -119,21 +121,22 @@ EOFValidationError validate_instructions(evmc_revision rev, bytes_view code) noe
     return EOFValidationError::success;
 }
 
-std::pair<EOF1Header, EOFValidationError> validate_eof1(
+std::variant<EOF1Header, EOFValidationError> validate_eof1(
     evmc_revision rev, bytes_view container) noexcept
 {
-    const auto [section_headers, error_header] = validate_eof_headers(container);
-    if (error_header != EOFValidationError::success)
-        return {{}, error_header};
+    const auto section_headers_or_error = validate_eof_headers(container);
+    if (const auto* error = std::get_if<EOFValidationError>(&section_headers_or_error))
+        return *error;
 
+    const auto& section_headers = std::get<EOFSectionHeaders>(section_headers_or_error);
     EOF1Header header{section_headers[CODE_SECTION], section_headers[DATA_SECTION]};
 
     const auto error_instr =
         validate_instructions(rev, {&container[header.code_begin()], header.code_size});
     if (error_instr != EOFValidationError::success)
-        return {{}, error_instr};
+        return error_instr;
 
-    return {header, EOFValidationError::success};
+    return header;
 }
 
 }  // namespace
@@ -186,7 +189,12 @@ EOFValidationError validate_eof(evmc_revision rev, bytes_view container) noexcep
     {
         if (rev < EVMC_CANCUN)
             return EOFValidationError::eof_version_unknown;
-        return validate_eof1(rev, container).second;
+
+        const auto header_or_error = validate_eof1(rev, container);
+        if (const auto* error = std::get_if<EOFValidationError>(&header_or_error))
+            return *error;
+        else
+            return EOFValidationError::success;
     }
     else
         return EOFValidationError::eof_version_unknown;
