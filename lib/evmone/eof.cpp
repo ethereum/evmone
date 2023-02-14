@@ -88,7 +88,7 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_v
                 break;
             case DATA_SECTION:
                 if (section_headers[TYPE_SECTION].empty())
-                    return  EOFValidationError::data_section_before_types_section;
+                    return EOFValidationError::data_section_before_types_section;
                 if (section_headers[CODE_SECTION].empty())
                     return EOFValidationError::data_section_before_code_section;
                 if (!section_headers[DATA_SECTION].empty())
@@ -182,14 +182,14 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_v
     return section_headers;
 }
 
-std::pair<std::vector<EOF1TypeHeader>, EOFValidationError> validate_types(
+std::variant<std::vector<EOF1TypeHeader>, EOFValidationError> validate_types(
     bytes_view container, size_t header_size, std::vector<uint16_t> type_section_sizes) noexcept
 {
     assert(!container.empty());              // guaranteed by EOF headers validation
     assert(type_section_sizes.size() <= 1);  // guaranteed by EOF headers validation
 
     if (type_section_sizes.empty())
-        return {{{0, 0, 0}}, EOFValidationError::success};
+        return std::vector{EOF1TypeHeader{0, 0, 0}};
 
     std::vector<EOF1TypeHeader> types;
 
@@ -204,19 +204,19 @@ std::pair<std::vector<EOF1TypeHeader>, EOFValidationError> validate_types(
 
     // check 1st section is (0, 0)
     if (types[0].inputs_num != 0 || types[0].outputs_num != 0)
-        return {{}, EOFValidationError::invalid_first_section_type};
+        return EOFValidationError::invalid_first_section_type;
 
     for (const auto& t : types)
     {
         if (t.max_stack_height > MAX_STACK_HEIGHT)
-            return {{}, EOFValidationError::max_stack_height_above_limit};
+            return EOFValidationError::max_stack_height_above_limit;
 
         if (t.outputs_num > OUTPUTS_INPUTS_NUMBER_LIMIT ||
             t.inputs_num > OUTPUTS_INPUTS_NUMBER_LIMIT)
-            return {{}, EOFValidationError::inputs_outputs_num_above_limit};
+            return EOFValidationError::inputs_outputs_num_above_limit;
     }
 
-    return {types, EOFValidationError::success};
+    return types;
 }
 
 EOFValidationError validate_instructions(evmc_revision rev, bytes_view code) noexcept
@@ -459,10 +459,11 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(
 
     const auto header_size = eof_header_size(section_headers);
 
-    const auto [types, error_types] =
+    const auto types_or_error =
         validate_types(container, header_size, section_headers[TYPE_SECTION]);
-    if (error_types != EOFValidationError::success)
-        return error_types;
+    if (const auto* error = std::get_if<EOFValidationError>(&types_or_error))
+        return *error;
+    const auto& types = std::get<std::vector<EOF1TypeHeader>>(types_or_error);
 
     std::vector<uint16_t> code_offsets;
     const auto type_section_size =
