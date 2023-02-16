@@ -356,6 +356,11 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
 evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_context* ctx,
     evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
 {
+    if (rev >= EVMC_CANCUN && is_eof_code({code, code_size}) &&
+        validate_eof(rev, {code, code_size}) != EOFValidationError::success)
+        return evmc::make_result(
+            evmc_status_code::EVMC_CONTRACT_VALIDATION_FAILURE, 0, 0, nullptr, 0);
+
     auto vm = static_cast<VM*>(c_vm);
     const auto jumpdest_map = analyze(rev, {code, code_size});
     auto state =
