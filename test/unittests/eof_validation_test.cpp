@@ -20,6 +20,14 @@ inline EOFValidationError validate_eof(
 }
 }  // namespace
 
+TEST(eof_validation, get_error_message)
+{
+    EXPECT_EQ(evmone::get_error_message(EOFValidationError::success), "success");
+    EXPECT_EQ(evmone::get_error_message(EOFValidationError::invalid_prefix), "invalid_prefix");
+    EXPECT_EQ(evmone::get_error_message(EOFValidationError::impossible), "impossible");
+    EXPECT_EQ(evmone::get_error_message(static_cast<EOFValidationError>(-1)), "<unknown>");
+}
+
 TEST(eof_validation, validate_empty_code)
 {
     EXPECT_EQ(validate_eof(""), EOFValidationError::invalid_prefix);
