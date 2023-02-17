@@ -191,4 +191,44 @@ EOFValidationError validate_eof(evmc_revision rev, bytes_view container) noexcep
     else
         return EOFValidationError::eof_version_unknown;
 }
+
+std::string_view get_error_message(EOFValidationError err) noexcept
+{
+    switch (err)
+    {
+    case EOFValidationError::success:
+        return "success";
+    case EOFValidationError::starts_with_format:
+        return "starts_with_format";
+    case EOFValidationError::invalid_prefix:
+        return "invalid_prefix";
+    case EOFValidationError::eof_version_mismatch:
+        return "eof_version_mismatch";
+    case EOFValidationError::eof_version_unknown:
+        return "eof_version_unknown";
+    case EOFValidationError::incomplete_section_size:
+        return "incomplete_section_size";
+    case EOFValidationError::code_section_missing:
+        return "code_section_missing";
+    case EOFValidationError::multiple_code_sections:
+        return "multiple_code_sections";
+    case EOFValidationError::multiple_data_sections:
+        return "multiple_data_sections";
+    case EOFValidationError::unknown_section_id:
+        return "unknown_section_id";
+    case EOFValidationError::zero_section_size:
+        return "zero_section_size";
+    case EOFValidationError::section_headers_not_terminated:
+        return "section_headers_not_terminated";
+    case EOFValidationError::invalid_section_bodies_size:
+        return "invalid_section_bodies_size";
+    case EOFValidationError::undefined_instruction:
+        return "undefined_instruction";
+    case EOFValidationError::missing_terminating_instruction:
+        return "missing_terminating_instruction";
+    case EOFValidationError::impossible:
+        return "impossible";
+    }
+    return "<unknown>";
+}
 }  // namespace evmone

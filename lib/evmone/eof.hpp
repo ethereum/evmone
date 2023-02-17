@@ -59,4 +59,7 @@ enum class EOFValidationError
 /// Validates whether given container is a valid EOF according to the rules of given revision.
 [[nodiscard]] EVMC_EXPORT EOFValidationError validate_eof(
     evmc_revision rev, bytes_view container) noexcept;
+
+/// Returns the error message corresponding to an error code.
+[[nodiscard]] EVMC_EXPORT std::string_view get_error_message(EOFValidationError err) noexcept;
 }  // namespace evmone
