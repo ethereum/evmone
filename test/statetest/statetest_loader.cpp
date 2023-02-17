@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "statetest.hpp"
-#include <evmone/eips.hpp>
 #include <nlohmann/json.hpp>
 #include <cassert>
 #include <fstream>
