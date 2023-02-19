@@ -279,6 +279,9 @@ static void from_json(const json::json& j, StateTransitionTest::Case::Expectatio
 
 static void from_json(const json::json& j, StateTransitionTest& o)
 {
+    if (!j.is_object() || j.empty())
+        throw std::invalid_argument{"JSON test must be an object with single key of the test name"};
+
     const auto& j_t = j.begin().value();  // Content is in a dict with the test name.
 
     o.pre_state = from_json<state::State>(j_t.at("pre"));
