@@ -59,7 +59,7 @@ int main()
                 continue;
             }
 
-            const auto header = evmone::read_valid_eof1_header(evmone::bytes_view{eof}.begin());
+            const auto header = evmone::read_valid_eof1_header(eof);
             std::cout << "OK " << evmc::hex({&eof[header.code_begin()], header.code_size}) << "\n";
         }
         return 0;

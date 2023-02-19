@@ -58,7 +58,7 @@ TEST(eof, read_valid_eof1_header)
     for (const auto& test_case : test_cases)
     {
         const auto code = from_spaced_hex(test_case.code).value();
-        const auto header = read_valid_eof1_header(bytes_view(code).begin());
+        const auto header = read_valid_eof1_header(code);
         EXPECT_EQ(header.code_size, test_case.code_size) << test_case.code;
         EXPECT_EQ(header.data_size, test_case.data_size) << test_case.code;
     }

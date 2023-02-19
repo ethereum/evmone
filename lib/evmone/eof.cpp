@@ -153,17 +153,17 @@ bool is_eof_code(bytes_view code) noexcept
     return code.size() > 1 && code[0] == MAGIC[0] && code[1] == MAGIC[1];
 }
 
-EOF1Header read_valid_eof1_header(bytes_view::const_iterator code) noexcept
+EOF1Header read_valid_eof1_header(bytes_view container) noexcept
 {
     EOF1Header header;
     const auto code_size_offset = 4;  // MAGIC + VERSION + CODE_SECTION_ID
     header.code_size =
-        static_cast<uint16_t>((code[code_size_offset] << 8) | code[code_size_offset + 1]);
-    if (code[code_size_offset + 2] == 2)  // is data section present
+        static_cast<uint16_t>((container[code_size_offset] << 8) | container[code_size_offset + 1]);
+    if (container[code_size_offset + 2] == 2)  // is data section present
     {
         const auto data_size_offset = code_size_offset + 3;
-        header.data_size =
-            static_cast<uint16_t>((code[data_size_offset] << 8) | code[data_size_offset + 1]);
+        header.data_size = static_cast<uint16_t>(
+            (container[data_size_offset] << 8) | container[data_size_offset + 1]);
     }
     return header;
 }
