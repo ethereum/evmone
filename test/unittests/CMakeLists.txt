@@ -31,6 +31,7 @@ add_executable(evmone-unittests
     state_mpt_hash_test.cpp
     state_mpt_test.cpp
     state_rlp_test.cpp
+    statetest_loader_test.cpp
     statetest_loader_tx_test.cpp
     statetest_logs_hash_test.cpp
     tracing_test.cpp
