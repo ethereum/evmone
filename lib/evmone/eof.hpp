@@ -23,7 +23,7 @@ struct EOF1Header
 };
 
 /// Checks if code starts with EOF FORMAT + MAGIC, doesn't validate the format.
-[[nodiscard]] EVMC_EXPORT bool is_eof_code(bytes_view code) noexcept;
+[[nodiscard]] EVMC_EXPORT bool is_eof_container(bytes_view code) noexcept;
 
 /// Reads the section sizes assuming that container has valid format.
 /// (must be true for all EOF contracts on-chain)

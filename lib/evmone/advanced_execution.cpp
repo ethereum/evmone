@@ -31,7 +31,7 @@ evmc_result execute(evmc_vm* /*unused*/, const evmc_host_interface* host, evmc_h
 {
     AdvancedCodeAnalysis analysis;
     const bytes_view container = {code, code_size};
-    if (is_eof_code(container))
+    if (is_eof_container(container))
     {
         if (rev >= EVMC_CANCUN)
         {

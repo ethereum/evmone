@@ -148,9 +148,9 @@ size_t EOF1Header::code_begin() const noexcept
         return 10;  // MAGIC + VERSION + SECTION_ID + SIZE + SECTION_ID + SIZE + TERMINATOR
 }
 
-bool is_eof_code(bytes_view code) noexcept
+bool is_eof_container(bytes_view container) noexcept
 {
-    return code.size() > 1 && code[0] == MAGIC[0] && code[1] == MAGIC[1];
+    return container.size() > 1 && container[0] == MAGIC[0] && container[1] == MAGIC[1];
 }
 
 EOF1Header read_valid_eof1_header(bytes_view container) noexcept
@@ -177,7 +177,7 @@ uint8_t get_eof_version(bytes_view container) noexcept
 
 EOFValidationError validate_eof(evmc_revision rev, bytes_view container) noexcept
 {
-    if (!is_eof_code(container))
+    if (!is_eof_container(container))
         return EOFValidationError::invalid_prefix;
 
     const auto version = get_eof_version(container);
