@@ -105,7 +105,7 @@ TEST(instructions, compare_with_evmc_instruction_tables)
         {
             // Skip DUPN and SWAPN for Cancun. They are not defined in evmc
             // TODO: Define DUPN and SWAPN in evmc
-            if (r == EVMC_CANCUN && (Opcode(i) == OP_DUPN || Opcode(i) == OP_SWAPN))
+            if (r >= EVMC_CANCUN && (Opcode(i) == OP_DUPN || Opcode(i) == OP_SWAPN))
                 continue;
             const auto gas_cost = (instr_tbl[i] != instr::undefined) ? instr_tbl[i] : 0;
             const auto& metrics = evmone_tbl[i];

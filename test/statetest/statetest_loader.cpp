@@ -179,6 +179,10 @@ evmc_revision to_rev(std::string_view s)
         return EVMC_SHANGHAI;
     if (s == "Shanghai")
         return EVMC_SHANGHAI;
+    if (s == "Cancun")
+        return EVMC_CANCUN;
+    if (s == "Prague")
+        return EVMC_PRAGUE;
     throw std::invalid_argument{"unknown revision: " + std::string{s}};
 }
 
