@@ -23,20 +23,20 @@ TEST(eof, code_begin)
     EXPECT_EQ(header4.code_begin(), 10);
 }
 
-TEST(eof, is_eof_code)
+TEST(eof, is_eof_container)
 {
-    EXPECT_FALSE(is_eof_code(""_hex));
-    EXPECT_FALSE(is_eof_code("EF"_hex));
-    EXPECT_FALSE(is_eof_code("EF01"_hex));
-    EXPECT_FALSE(is_eof_code("EF02"_hex));
-    EXPECT_FALSE(is_eof_code("EFFF"_hex));
-    EXPECT_FALSE(is_eof_code("00"_hex));
-    EXPECT_FALSE(is_eof_code("FE"_hex));
+    EXPECT_FALSE(is_eof_container(""_hex));
+    EXPECT_FALSE(is_eof_container("EF"_hex));
+    EXPECT_FALSE(is_eof_container("EF01"_hex));
+    EXPECT_FALSE(is_eof_container("EF02"_hex));
+    EXPECT_FALSE(is_eof_container("EFFF"_hex));
+    EXPECT_FALSE(is_eof_container("00"_hex));
+    EXPECT_FALSE(is_eof_container("FE"_hex));
 
-    EXPECT_TRUE(is_eof_code("EF00"_hex));
-    EXPECT_TRUE(is_eof_code("EF00 01 010001 00 00"_hex));
-    EXPECT_TRUE(is_eof_code("EF00 01 010001 020004 00 00 AABBCCDD"_hex));
-    EXPECT_TRUE(is_eof_code("EF00 02 ABCFEF"_hex));
+    EXPECT_TRUE(is_eof_container("EF00"_hex));
+    EXPECT_TRUE(is_eof_container("EF00 01 010001 00 00"_hex));
+    EXPECT_TRUE(is_eof_container("EF00 01 010001 020004 00 00 AABBCCDD"_hex));
+    EXPECT_TRUE(is_eof_container("EF00 02 ABCFEF"_hex));
 }
 
 TEST(eof, read_valid_eof1_header)
@@ -58,7 +58,7 @@ TEST(eof, read_valid_eof1_header)
     for (const auto& test_case : test_cases)
     {
         const auto code = from_spaced_hex(test_case.code).value();
-        const auto header = read_valid_eof1_header(bytes_view(code).begin());
+        const auto header = read_valid_eof1_header(code);
         EXPECT_EQ(header.code_size, test_case.code_size) << test_case.code;
         EXPECT_EQ(header.data_size, test_case.data_size) << test_case.code;
     }

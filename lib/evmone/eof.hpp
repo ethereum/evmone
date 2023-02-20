@@ -23,12 +23,11 @@ struct EOF1Header
 };
 
 /// Checks if code starts with EOF FORMAT + MAGIC, doesn't validate the format.
-[[nodiscard]] EVMC_EXPORT bool is_eof_code(bytes_view code) noexcept;
+[[nodiscard]] EVMC_EXPORT bool is_eof_container(bytes_view code) noexcept;
 
-/// Reads the section sizes assuming that code has valid format.
+/// Reads the section sizes assuming that container has valid format.
 /// (must be true for all EOF contracts on-chain)
-[[nodiscard]] EVMC_EXPORT EOF1Header read_valid_eof1_header(
-    bytes_view::const_iterator code) noexcept;
+[[nodiscard]] EVMC_EXPORT EOF1Header read_valid_eof1_header(bytes_view container) noexcept;
 
 enum class EOFValidationError
 {

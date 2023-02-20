@@ -31,11 +31,11 @@ evmc_result execute(evmc_vm* /*unused*/, const evmc_host_interface* host, evmc_h
 {
     AdvancedCodeAnalysis analysis;
     const bytes_view container = {code, code_size};
-    if (is_eof_code(container))
+    if (is_eof_container(container))
     {
         if (rev >= EVMC_CANCUN)
         {
-            const auto eof1_header = read_valid_eof1_header(container.begin());
+            const auto eof1_header = read_valid_eof1_header(container);
             analysis = analyze(rev, {&container[eof1_header.code_begin()], eof1_header.code_size});
         }
         else
