@@ -167,6 +167,8 @@ constexpr inline GasCostTable gas_costs = []() noexcept {
     table[EVMC_CANCUN][OP_DUPN] = 3;
     table[EVMC_CANCUN][OP_SWAPN] = 3;
 
+    table[EVMC_PRAGUE] = table[EVMC_CANCUN];
+
     return table;
 }();
 
