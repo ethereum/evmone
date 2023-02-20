@@ -167,7 +167,7 @@ std::variant<TransactionReceipt, std::error_code> transition(
     auto is_valid_tx = true;
     auto result = evmc::Result{};
 
-    if (rev >= EVMC_CANCUN && !tx.to.has_value() && is_eof_code(tx.data))
+    if (rev >= EVMC_CANCUN && !tx.to.has_value() && is_eof_container(tx.data))
         is_valid_tx = (validate_eof(rev, tx.data) == evmone::EOFValidationError::success);
 
     if (is_valid_tx)

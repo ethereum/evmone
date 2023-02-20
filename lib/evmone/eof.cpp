@@ -446,7 +446,7 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
 }
 
 std::variant<EOF1Header, EOFValidationError> validate_eof1(
-    evmc_revision rev, view container) noexcept
+    evmc_revision rev, bytes_view container) noexcept
 {
     const auto section_headers_or_error = validate_eof_headers(container);
     if (const auto* error = std::get_if<EOFValidationError>(&section_headers_or_error))
