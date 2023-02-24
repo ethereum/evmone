@@ -47,7 +47,8 @@ cable_configure_compiler(NO_STACK_PROTECTION)
 if(CABLE_COMPILER_GNULIKE)
     add_compile_options(
         -Wmissing-declarations
-        -Wno-attributes  # Allow using unknown attributes.
+        $<$<CXX_COMPILER_ID:Clang>:-Wno-unknown-attributes>
+#        -Wno-attributes  # Allow using unknown attributes.
         $<$<COMPILE_LANGUAGE:CXX>:-Wextra-semi>
 
         -Warray-bounds
