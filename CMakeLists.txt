@@ -67,6 +67,8 @@ if(CABLE_COMPILER_GNULIKE)
         $<$<CXX_COMPILER_ID:Clang>:-Wduplicate-enum>
         $<$<CXX_COMPILER_ID:Clang>:-Wnewline-eof>
         $<$<CXX_COMPILER_ID:Clang>:-Wunreachable-code-aggressive>
+        -Wcovered-switch-default
+        -Wextra-semi-stmt
     )
     cable_add_cxx_compiler_flag_if_supported(-Wduplicated-cond)
     cable_add_cxx_compiler_flag_if_supported(-Wduplicate-enum)
@@ -97,6 +99,7 @@ if(CABLE_COMPILER_GNULIKE)
             -Wno-unsafe-buffer-usage
             -Wno-deprecated-copy-with-dtor
             -Wno-switch-enum
+            -Wno-used-but-marked-unused
         )
         set(CMAKE_CXX_FLAGS_COVERAGE "-fprofile-instr-generate -fcoverage-mapping")
     elseif(CABLE_COMPILER_GNU)
