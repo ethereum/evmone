@@ -18,7 +18,6 @@ using namespace evmone;
 using namespace evmone::test;
 using namespace std::literals;
 
-static const auto NULL_HEXSTRING_256 = "0x" + std::string(512, '0');
 static const auto NULL_HEXSTRING_32 = "0x" + std::string(64, '0');
 static const auto NULL_HEXSTRING_20 = "0x" + std::string(40, '0');
 
@@ -32,39 +31,42 @@ int main(int argc, const char* argv[])
     fs::path output_result_file;
     fs::path output_alloc_file;
     std::optional<intx::uint256> block_reward;
+    uint64_t chain_id = 0;
 
-    for (int i = 0; i < argc; ++i)
+    try
     {
-        const std::string_view arg{argv[i]};
-
-        if (arg == "-v")
+        for (int i = 0; i < argc; ++i)
         {
-            std::cout << "evmone-t8n " PROJECT_VERSION "\n";
-            return 0;
+            const std::string_view arg{argv[i]};
+
+            if (arg == "-v")
+            {
+                std::cout << "evmone-t8n " PROJECT_VERSION "\n";
+                return 0;
+            }
+            if (arg == "--state.fork" && ++i < argc)
+                rev = evmone::test::to_rev(argv[i]);
+            else if (arg == "--input.alloc" && ++i < argc)
+                alloc_file = argv[i];
+            else if (arg == "--input.env" && ++i < argc)
+                env_file = argv[i];
+            else if (arg == "--input.txs" && ++i < argc)
+                txs_file = argv[i];
+            else if (arg == "--output.basedir" && ++i < argc)
+                output_dir = argv[i];
+            else if (arg == "--output.result" && ++i < argc)
+                output_result_file = argv[i];
+            else if (arg == "--output.alloc" && ++i < argc)
+                output_alloc_file = argv[i];
+            else if (arg == "--state.reward" && ++i < argc && argv[i] != "-1"sv)
+                block_reward = intx::from_string<intx::uint256>(argv[i]);
+            else if (arg == "--state.chainid" && ++i < argc)
+                chain_id = intx::from_string<uint64_t>(argv[i]);
         }
-        if (arg == "--state.fork" && ++i < argc)
-            rev = evmone::test::to_rev(argv[i]);
-        else if (arg == "--input.alloc" && ++i < argc)
-            alloc_file = argv[i];
-        else if (arg == "--input.env" && ++i < argc)
-            env_file = argv[i];
-        else if (arg == "--input.txs" && ++i < argc)
-            txs_file = argv[i];
-        else if (arg == "--output.basedir" && ++i < argc)
-            output_dir = argv[i];
-        else if (arg == "--output.result" && ++i < argc)
-            output_result_file = argv[i];
-        else if (arg == "--output.alloc" && ++i < argc)
-            output_alloc_file = argv[i];
-        else if (arg == "--state.reward" && ++i < argc && argv[i] != "-1"sv)
-            block_reward = intx::from_string<intx::uint256>(argv[i]);
-    }
 
-    state::BlockInfo block;
-    state::State state;
+        state::BlockInfo block;
+        state::State state;
 
-    try  // FIXME: Remove and use noexcept json::parse function
-    {
         if (!alloc_file.empty())
         {
             const auto j = json::json::parse(std::ifstream{alloc_file}, nullptr, false);
@@ -81,6 +83,9 @@ int main(int argc, const char* argv[])
         j_result["currentDifficulty"] = "0x20000";
         j_result["currentBaseFee"] = hex0x(block.base_fee);
 
+        std::vector<state::Transaction> transactions;
+        std::vector<state::TransactionReceipt> receipts;
+
         // Parse and execute transactions
         if (!txs_file.empty())
         {
@@ -94,41 +99,44 @@ int main(int argc, const char* argv[])
             {
                 j_result["receipts"] = json::json::array();
                 j_result["rejected"] = json::json::array();
-                auto idx = 0;
-                for (const auto& j_tx : j_txs)
+
+                for (size_t i = 0; i < j_txs.size(); ++i)
                 {
-                    const auto tx = test::from_json<state::Transaction>(j_tx);
-                    const auto res = state::transition(state, block, tx, rev, vm);
+                    auto tx = test::from_json<state::Transaction>(j_txs[i]);
+                    tx.chain_id = chain_id;
+
+                    auto res = state::transition(state, block, tx, rev, vm);
                     if (holds_alternative<std::error_code>(res))
                     {
                         const auto ec = std::get<std::error_code>(res);
                         json::json j_rejected_tx;
-                        j_rejected_tx["hash"] = j_tx["hash"];
-                        j_rejected_tx["index"] = idx;
+                        j_rejected_tx["hash"] = j_txs[i]["hash"];
+                        j_rejected_tx["index"] = i;
                         j_rejected_tx["error"] = ec.message();
                         j_result["rejected"].push_back(j_rejected_tx);
                     }
                     else
                     {
-                        const auto& receipt = get<state::TransactionReceipt>(res);
+                        auto& receipt = get<state::TransactionReceipt>(res);
+
                         const auto& tx_logs = receipt.logs;
 
                         txs_logs.insert(txs_logs.end(), tx_logs.begin(), tx_logs.end());
                         auto& j_receipt = j_result["receipts"][j_result["receipts"].size()];
-                        j_receipt["transactionHash"] = j_tx["hash"];
+                        j_receipt["transactionHash"] = j_txs[i]["hash"];
                         j_receipt["gasUsed"] = hex0x(static_cast<uint64_t>(receipt.gas_used));
                         j_receipt["cumulativeGasUsed"] = j_receipt["gasUsed"];
 
                         j_receipt["blockHash"] = NULL_HEXSTRING_32;
                         j_receipt["contractAddress"] = NULL_HEXSTRING_20;
-                        j_receipt["logsBloom"] = NULL_HEXSTRING_256;
+                        j_receipt["logsBloom"] = hex0x(receipt.logs_bloom_filter);
                         j_receipt["logs"] = json::json::array();  // FIXME: Add to_json<state:Log>
                         j_receipt["root"] = "";
                         j_receipt["status"] = "0x1";
-                        j_receipt["transactionIndex"] = hex0x(idx);
+                        j_receipt["transactionIndex"] = hex0x(i);
+                        transactions.emplace_back(std::move(tx));
+                        receipts.emplace_back(std::move(receipt));
                     }
-
-                    idx++;
                 }
             }
 
@@ -139,9 +147,9 @@ int main(int argc, const char* argv[])
             j_result["stateRoot"] = hex0x(state::mpt_hash(state.get_accounts()));
         }
 
-        j_result["logsBloom"] = NULL_HEXSTRING_256;
-        j_result["receiptsRoot"] = NULL_HEXSTRING_32;
-        j_result["txRoot"] = NULL_HEXSTRING_32;
+        j_result["logsBloom"] = hex0x(compute_bloom_filter(receipts));
+        j_result["receiptsRoot"] = hex0x(state::mpt_hash(receipts));
+        j_result["txRoot"] = hex0x(state::mpt_hash(transactions));
 
         std::ofstream{output_dir / output_result_file} << j_result;
 
