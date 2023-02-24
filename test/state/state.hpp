@@ -5,6 +5,7 @@
 #pragma once
 
 #include "account.hpp"
+#include "bloom_filter.hpp"
 #include "hash_utils.hpp"
 #include <cassert>
 #include <optional>
@@ -92,6 +93,11 @@ struct Transaction
     std::optional<address> to;
     intx::uint256 value;
     AccessList access_list;
+    uint64_t chain_id = 0;
+    uint64_t nonce = 0;
+    intx::uint256 r;
+    intx::uint256 s;
+    uint8_t v = 0;
 };
 
 struct Log
@@ -103,11 +109,23 @@ struct Log
 
 struct TransactionReceipt
 {
+    Transaction::Kind kind = Transaction::Kind::legacy;
+    evmc_status_code status = EVMC_INTERNAL_ERROR;
     int64_t gas_used = 0;
     std::vector<Log> logs;
+    BloomFilter logs_bloom_filter;
 };
 
 [[nodiscard]] std::variant<TransactionReceipt, std::error_code> transition(
     State& state, const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm);
+
+/// Defines how to RLP-encode a Transaction.
+[[nodiscard]] bytes rlp_encode(const Transaction& tx);
+
+/// Defines how to RLP-encode a TransactionReceipt.
+[[nodiscard]] bytes rlp_encode(const TransactionReceipt& receipt);
+
+/// Defines how to RLP-encode a Log.
+[[nodiscard]] bytes rlp_encode(const Log& log);
 
 }  // namespace evmone::state

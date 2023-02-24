@@ -6,6 +6,7 @@
 #include "account.hpp"
 #include "mpt.hpp"
 #include "rlp.hpp"
+#include "state.hpp"
 
 namespace evmone::state
 {
@@ -33,4 +34,23 @@ hash256 mpt_hash(const std::unordered_map<address, Account>& accounts)
     }
     return trie.hash();
 }
+
+hash256 mpt_hash(std::span<const Transaction> transactions)
+{
+    MPT trie;
+    for (size_t i = 0; i < transactions.size(); ++i)
+        trie.insert(rlp::encode(i), rlp::encode(transactions[i]));
+
+    return trie.hash();
+}
+
+hash256 mpt_hash(std::span<const TransactionReceipt> receipts)
+{
+    MPT trie;
+    for (size_t i = 0; i < receipts.size(); ++i)
+        trie.insert(rlp::encode(i), rlp::encode(receipts[i]));
+
+    return trie.hash();
+}
+
 }  // namespace evmone::state
