@@ -3,9 +3,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <gtest/gtest.h>
+#include <intx/intx.hpp>
 #include <test/statetest/statetest.hpp>
 
 using namespace evmone;
+using namespace intx;
+
+// TODO: Add specific test of loading nonce, chainId, r, s, v
 
 TEST(statetest_loader, tx_create_legacy)
 {
@@ -15,7 +19,11 @@ TEST(statetest_loader, tx_create_legacy)
         "value": "0xe0e1",
         "sender": "a0a1",
         "to": "",
-        "gasPrice": "0x7071"
+        "gasPrice": "0x7071",
+        "nonce": "0",
+        "r": "0x1111111111111111111111111111111111111111111111111111111111111111",
+        "s": "0x2222222222222222222222222222222222222222222222222222222222222222",
+        "v": "1"
     })";
 
     const auto tx = test::from_json<state::Transaction>(json::json::parse(input));
@@ -28,6 +36,10 @@ TEST(statetest_loader, tx_create_legacy)
     EXPECT_EQ(tx.max_gas_price, 0x7071);
     EXPECT_EQ(tx.max_priority_gas_price, 0x7071);
     EXPECT_TRUE(tx.access_list.empty());
+    EXPECT_EQ(tx.nonce, 0);
+    EXPECT_EQ(tx.r, 0x1111111111111111111111111111111111111111111111111111111111111111_u256);
+    EXPECT_EQ(tx.s, 0x2222222222222222222222222222222222222222222222222222222222222222_u256);
+    EXPECT_EQ(tx.v, 1);
 }
 
 TEST(statetest_loader, tx_eip1559)
@@ -40,7 +52,11 @@ TEST(statetest_loader, tx_eip1559)
         "to": "c0c1",
         "maxFeePerGas": "0x7071",
         "maxPriorityFeePerGas": "0x6061",
-        "accessList": []
+        "accessList": [],
+        "nonce": "0",
+        "r": "0x1111111111111111111111111111111111111111111111111111111111111111",
+        "s": "0x2222222222222222222222222222222222222222222222222222222222222222",
+        "v": "1"
     })";
 
     const auto tx = test::from_json<state::Transaction>(json::json::parse(input));
@@ -53,6 +69,10 @@ TEST(statetest_loader, tx_eip1559)
     EXPECT_EQ(tx.max_gas_price, 0x7071);
     EXPECT_EQ(tx.max_priority_gas_price, 0x6061);
     EXPECT_TRUE(tx.access_list.empty());
+    EXPECT_EQ(tx.nonce, 0);
+    EXPECT_EQ(tx.r, 0x1111111111111111111111111111111111111111111111111111111111111111_u256);
+    EXPECT_EQ(tx.s, 0x2222222222222222222222222222222222222222222222222222222222222222_u256);
+    EXPECT_EQ(tx.v, 1);
 }
 
 TEST(statetest_loader, tx_access_list)
@@ -68,7 +88,11 @@ TEST(statetest_loader, tx_access_list)
         "accessList": [
             {"address": "ac01", "storageKeys": []},
             {"address": "ac02", "storageKeys": ["fe", "00"]}
-        ]
+        ],
+        "nonce": "0",
+        "r": "0x1111111111111111111111111111111111111111111111111111111111111111",
+        "s": "0x2222222222222222222222222222222222222222222222222222222222222222",
+        "v": "1"
     })";
 
     const auto tx = test::from_json<state::Transaction>(json::json::parse(input));
@@ -85,6 +109,10 @@ TEST(statetest_loader, tx_access_list)
     EXPECT_EQ(tx.access_list[0].second.size(), 0);
     EXPECT_EQ(tx.access_list[1].first, 0xac02_address);
     EXPECT_EQ(tx.access_list[1].second, (std::vector{0xfe_bytes32, 0x00_bytes32}));
+    EXPECT_EQ(tx.nonce, 0);
+    EXPECT_EQ(tx.r, 0x1111111111111111111111111111111111111111111111111111111111111111_u256);
+    EXPECT_EQ(tx.s, 0x2222222222222222222222222222222222222222222222222222222222222222_u256);
+    EXPECT_EQ(tx.v, 1);
 }
 
 TEST(statetest_loader, tx_confusing)
@@ -98,9 +126,39 @@ TEST(statetest_loader, tx_confusing)
         "gasPrice": "0x8081",
         "maxFeePerGas": "0x7071",
         "maxPriorityFeePerGas": "0x6061",
-        "accessList": []
+        "accessList": [],
+        "nonce": "0",
+        "r": "0x1111111111111111111111111111111111111111111111111111111111111111",
+        "s": "0x2222222222222222222222222222222222222222222222222222222222222222",
+        "v": "1"
     })";
 
     EXPECT_THROW(
         test::from_json<state::Transaction>(json::json::parse(input)), std::invalid_argument);
+}
+
+namespace evmone::test
+{
+// This function is used only by the following test case and in `statetest_loader.cpp` where it is
+// defined.
+template <>
+uint8_t from_json<uint8_t>(const json::json& j);
+}  // namespace evmone::test
+
+TEST(statetest_loader, load_uint8_t)
+{
+    {
+        constexpr std::string_view input = R"({
+            "v": "0xFF"
+        })";
+
+        EXPECT_EQ(test::from_json<uint8_t>(json::json::parse(input)["v"]), 255);
+    }
+    {
+        constexpr std::string_view input = R"({
+            "v": "0x100"
+        })";
+
+        EXPECT_THROW(test::from_json<uint8_t>(json::json::parse(input)["v"]), std::out_of_range);
+    }
 }

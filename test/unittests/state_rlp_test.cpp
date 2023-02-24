@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 #include <test/state/hash_utils.hpp>
 #include <test/state/rlp.hpp>
+#include <test/state/state.hpp>
 #include <test/utils/utils.hpp>
 #include <bit>
 
@@ -194,4 +195,191 @@ TEST(state_rlp, encode_uint64_custom)
     EXPECT_EQ(rlp_encode_uint64(uint64_t{0xffffffffffffff}), "87ffffffffffffff"_hex);
     EXPECT_EQ(rlp_encode_uint64(uint64_t{0x0100000000000000}), "880100000000000000"_hex);
     EXPECT_EQ(rlp_encode_uint64(uint64_t{0xffffffffffffffff}), "88ffffffffffffffff"_hex);
+}
+
+TEST(state_rlp, tx_to_rlp_legacy)
+{
+    // Example from
+    // https://eips.ethereum.org/EIPS/eip-155
+
+    state::Transaction tx{};
+    tx.kind = evmone::state::Transaction::Kind::legacy;
+    tx.data = ""_b;
+    tx.gas_limit = 21000;
+    tx.max_gas_price = 20000000000;
+    tx.max_priority_gas_price = 20000000000;
+    tx.sender = 0x0000000000000000000000000000000000000000_address;
+    tx.to = 0x3535353535353535353535353535353535353535_address;
+    tx.value = 1000000000000000000_u256;
+    tx.access_list = {};
+    tx.nonce = 9;
+    tx.r = {};
+    tx.s = {};
+    tx.v = 1;
+    tx.chain_id = 1;
+
+    auto rlp_rep = rlp::encode(tx);
+
+    EXPECT_EQ(rlp_rep, from_hexx("0xec"
+                                 "09"
+                                 "8504a817c800"
+                                 "825208"
+                                 "943535353535353535353535353535353535353535"
+                                 "880de0b6b3a7640000"
+                                 "80"
+                                 "01"
+                                 "80"
+                                 "80"));
+}
+
+TEST(state_rlp, tx_to_rlp_legacy_with_data)
+{
+    // Example from
+    // https://etherscan.io/tx/0x033e9f8db737193d4666911a164e218d58d80edc64f4ed393d0c48c1ce2673e7
+
+    state::Transaction tx{};
+
+    tx.kind = evmone::state::Transaction::Kind::legacy;
+    tx.data =
+        from_hexx("0xa0712d680000000000000000000000000000000000000000000000000000000000000003");
+    tx.gas_limit = 421566;
+    tx.max_gas_price = 14829580649;
+    tx.max_priority_gas_price = 14829580649;
+    tx.sender = 0xc9d955665d6f90ef483a1ac0bd2443c17a550db7_address;
+    tx.to = 0x963eda46936b489f4a0d153c20e47653d8bbf222_address;
+    tx.value = 480000000000000000_u256;
+    tx.access_list = {};
+    tx.nonce = 0;
+    tx.r = 0x3bcaa4f1603d2b3ebe6126f57e0ddefc6c6c58d8bbef7f3b29e14a915bf1828d_u256;
+    tx.s = 0x00f37b7a0b6007ef4335a35198485e443051d45b42fea8bacc054721ecccdb5f_u256;
+    tx.v = 27;
+    tx.chain_id = 1;
+
+    auto rlp_rep = rlp::encode(tx);
+
+    EXPECT_EQ(rlp_rep,
+        from_hexx("0xf890"
+                  "80"
+                  "850373e97169"
+                  "83066ebe"
+                  "94963eda46936b489f4a0d153c20e47653d8bbf222"
+                  "8806a94d74f4300000"
+                  "a4a0712d680000000000000000000000000000000000000000000000000000000000000003"
+                  "1b"
+                  "a03bcaa4f1603d2b3ebe6126f57e0ddefc6c6c58d8bbef7f3b29e14a915bf1828d"
+                  "9ff37b7a0b6007ef4335a35198485e443051d45b42fea8bacc054721ecccdb5f"));
+
+    EXPECT_EQ(keccak256(rlp_rep),
+        0x033e9f8db737193d4666911a164e218d58d80edc64f4ed393d0c48c1ce2673e7_bytes32);
+}
+
+TEST(state_rlp, tx_to_rlp_eip1559)
+{
+    // Example from
+    // https://etherscan.io/tx/0xee8d0f04073a6792b1bd6b1cb0b88cb57984905979d2668f84b9c3dcb8894da6
+
+    state::Transaction tx{};
+
+    tx.kind = evmone::state::Transaction::Kind::eip1559;
+    tx.data = ""_b;
+    tx.gas_limit = 30000;
+    tx.max_gas_price = 14237787676;
+    tx.max_priority_gas_price = 0;
+    tx.sender = 0x95222290dd7278aa3ddd389cc1e1d165cc4bafe5_address;
+    tx.to = 0x535b918f3724001fd6fb52fcc6cbc220592990a3_address;
+    tx.value = 73360267083380739_u256;
+    tx.access_list = {};
+    tx.nonce = 132949;
+    tx.r = 0x2fe690e16de3534bee626150596573d57cb56d0c2e48a02f64c0a03c1636ce2a_u256;
+    tx.s = 0x4814f3dc7dac2ee153a2456aa3968717af7400972167dfb00b1cce1c23b6dd9f_u256;
+    tx.v = 1;
+    tx.chain_id = 1;
+
+    auto rlp_rep = rlp::encode(tx);
+    EXPECT_EQ(
+        rlp_rep, from_hexx("0x02"
+                           "f872"
+                           "01"
+                           "83020755"
+                           "80"
+                           "850350a3661c"
+                           "827530"
+                           "94535b918f3724001fd6fb52fcc6cbc220592990a3"
+                           "880104a0c63421f803"
+                           "80"
+                           "c0"
+                           "01"
+                           "a02fe690e16de3534bee626150596573d57cb56d0c2e48a02f64c0a03c1636ce2a"
+                           "a04814f3dc7dac2ee153a2456aa3968717af7400972167dfb00b1cce1c23b6dd9f"));
+
+    EXPECT_EQ(keccak256(rlp_rep),
+        0xee8d0f04073a6792b1bd6b1cb0b88cb57984905979d2668f84b9c3dcb8894da6_bytes32);
+}
+
+TEST(state_rlp, tx_to_rlp_eip1559_with_data)
+{
+    using namespace intx;
+
+    // Example taken from
+    // https://etherscan.io/tx/0xf9400dd4722908fa7b8d514429aebfd4cd04aaa9faaf044554d2f550422baef9
+
+    state::Transaction tx{};
+    tx.kind = evmone::state::Transaction::Kind::eip1559;
+    tx.data = from_hexx(
+        "0x095ea7b30000000000000000000000001111111254eeb25477b68fb85ed929f73a960582ffffffffffffffff"
+        "ffffffffffffffffffffffffffffffffffffffffffffffff");
+    tx.gas_limit = 53319;
+    tx.max_gas_price = 14358031378;
+    tx.max_priority_gas_price = 576312105;
+    tx.sender = 0xb24df1ff03fa211458fbd855d08b3d21704bdf2d_address;
+    tx.to = 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2_address;
+    tx.value = 0;
+    tx.access_list = {};
+    tx.nonce = 47;
+    tx.r = 0x67d25d27169ab09afb516849b85ae96d51e1dfc0853257b2b7401a73cef2b08b_u256;
+    tx.s = 0x3d8162a0f285284e02ed4ff387435c2742235a0534964f9b1415d4d10f28ce06_u256;
+    tx.v = 1;
+    tx.chain_id = 1;
+
+    auto rlp_rep = rlp::encode(tx);
+    EXPECT_EQ(
+        rlp_rep, from_hexx("0x02"
+                           "f8b0"
+                           "012f"
+                           "842259d329"
+                           "850357ce2c12"
+                           "82d047"
+                           "94c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+                           "80"
+                           "b844095ea7b30000000000000000000000001111111254eeb25477b68fb85ed929f73a9"
+                           "60582ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+                           "c0"
+                           "01a067d25d27169ab09afb516849b85ae96d51e1dfc0853257b2b7401a73cef2b08b"
+                           "a03d8162a0f285284e02ed4ff387435c2742235a0534964f9b1415d4d10f28ce06"));
+
+    EXPECT_EQ(keccak256(rlp_rep),
+        0xf9400dd4722908fa7b8d514429aebfd4cd04aaa9faaf044554d2f550422baef9_bytes32);
+}
+
+TEST(state_rlp, tx_to_rlp_eip1559_invalid_v_value)
+{
+    using namespace intx;
+
+    state::Transaction tx{};
+    tx.kind = evmone::state::Transaction::Kind::eip1559;
+    tx.data = ""_hex;
+    tx.gas_limit = 1;
+    tx.max_gas_price = 1;
+    tx.max_priority_gas_price = 1;
+    tx.sender = 0x0000000000000000000000000000000000000000_address;
+    tx.to = 0x0000000000000000000000000000000000000000_address;
+    tx.value = 0;
+    tx.access_list = {};
+    tx.nonce = 47;
+    tx.r = 0x0000000000000000000000000000000000000000000000000000000000000000_u256;
+    tx.s = 0x0000000000000000000000000000000000000000000000000000000000000000_u256;
+    tx.v = 2;
+    tx.chain_id = 1;
+
+    EXPECT_THROW(rlp::encode(tx), std::invalid_argument);
 }

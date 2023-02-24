@@ -12,6 +12,16 @@ namespace json = nlohmann;
 using evmc::from_hex;
 
 template <>
+uint8_t from_json<uint8_t>(const json::json& j)
+{
+    const auto ret = std::stoul(j.get<std::string>(), nullptr, 16);
+    if (ret > std::numeric_limits<uint8_t>::max())
+        throw std::out_of_range("from_json<uint8_t>: value > 0xFF");
+
+    return static_cast<uint8_t>(ret);
+}
+
+template <>
 int64_t from_json<int64_t>(const json::json& j)
 {
     return static_cast<int64_t>(std::stoll(j.get<std::string>(), nullptr, 16));
@@ -224,6 +234,11 @@ state::Transaction from_json<state::Transaction>(const json::json& j)
 
     if (const auto ac_it = j.find("accessList"); ac_it != j.end())
         o.access_list = from_json<state::AccessList>(*ac_it);
+
+    o.nonce = from_json<uint64_t>(j.at("nonce"));
+    o.r = from_json<intx::uint256>(j.at("r"));
+    o.s = from_json<intx::uint256>(j.at("s"));
+    o.v = from_json<uint8_t>(j.at("v"));
 
     return o;
 }

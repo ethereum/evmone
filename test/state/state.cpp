@@ -5,6 +5,7 @@
 #include "state.hpp"
 #include "errors.hpp"
 #include "host.hpp"
+#include "rlp.hpp"
 #include <evmone/evmone.h>
 #include <evmone/execution_state.hpp>
 
@@ -181,11 +182,49 @@ std::variant<TransactionReceipt, std::error_code> transition(
         return acc.destructed || (rev >= EVMC_SPURIOUS_DRAGON && acc.erasable && acc.is_empty());
     });
 
-    auto receipt = TransactionReceipt{gas_used, host.take_logs(), {}};
+    auto receipt = TransactionReceipt{tx.kind, result.status_code, gas_used, host.take_logs(), {}};
 
     // Cannot put it into constructor call because logs are std::moved from host instance.
     receipt.logs_bloom_filter = compute_bloom_filter(receipt.logs);
 
     return receipt;
 }
+
+[[nodiscard]] bytes rlp_encode(const Log& log)
+{
+    return rlp::encode_tuple(log.addr, log.topics, log.data);
+}
+
+[[nodiscard]] bytes rlp_encode(const Transaction& tx)
+{
+    if (tx.kind == Transaction::Kind::legacy)
+    {
+        // rlp [nonce, gas_price, gas_limit, to, value, data, v, r, s];
+        return rlp::encode_tuple(tx.nonce, tx.max_gas_price, static_cast<uint64_t>(tx.gas_limit),
+            tx.to.has_value() ? tx.to.value() : bytes_view(), tx.value, tx.data, tx.v, tx.r, tx.s);
+    }
+    else
+    {
+        if (tx.v > 1)
+            throw std::invalid_argument("`v` value for eip1559 transaction must be 0 or 1");
+        // TODO: Implement AccessList encoding
+        // tx_type +
+        // rlp [chain_id, nonce, max_priority_fee_per_gas, max_fee_per_gas, gas_limit, to, value,
+        // data, access_list, sig_parity, r, s];
+        return bytes{0x02} +  // Transaction type (eip1559 type == 2)
+               rlp::encode_tuple(tx.chain_id, tx.nonce, tx.max_priority_gas_price, tx.max_gas_price,
+                   static_cast<uint64_t>(tx.gas_limit),
+                   tx.to.has_value() ? tx.to.value() : bytes_view(), tx.value, tx.data,
+                   std::vector<uint8_t>(), static_cast<bool>(tx.v), tx.r, tx.s);
+    }
+}
+
+[[nodiscard]] bytes rlp_encode(const TransactionReceipt& receipt)
+{
+    const auto prefix = receipt.kind == Transaction::Kind::eip1559 ? bytes{0x02} : bytes{};
+    return prefix + rlp::encode_tuple(receipt.status == EVMC_SUCCESS,
+                        static_cast<uint64_t>(receipt.gas_used),
+                        bytes_view(receipt.logs_bloom_filter), receipt.logs);
+}
+
 }  // namespace evmone::state
