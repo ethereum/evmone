@@ -5,6 +5,7 @@
 #pragma once
 
 #include "account.hpp"
+#include "bloom_filter.hpp"
 #include "hash_utils.hpp"
 #include <cassert>
 #include <optional>
@@ -105,6 +106,7 @@ struct TransactionReceipt
 {
     int64_t gas_used = 0;
     std::vector<Log> logs;
+    BloomFilter logs_bloom_filter;
 };
 
 [[nodiscard]] std::variant<TransactionReceipt, std::error_code> transition(

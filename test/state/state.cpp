@@ -181,6 +181,11 @@ std::variant<TransactionReceipt, std::error_code> transition(
         return acc.destructed || (rev >= EVMC_SPURIOUS_DRAGON && acc.erasable && acc.is_empty());
     });
 
-    return TransactionReceipt{gas_used, host.take_logs()};
+    auto receipt = TransactionReceipt{gas_used, host.take_logs(), {}};
+
+    // Cannot put it into constructor call because logs are std::moved from host instance.
+    receipt.logs_bloom_filter = compute_bloom_filter(receipt.logs);
+
+    return receipt;
 }
 }  // namespace evmone::state
