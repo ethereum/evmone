@@ -62,6 +62,8 @@ public:
     }
 
     [[nodiscard]] auto& get_accounts() noexcept { return m_accounts; }
+
+    [[nodiscard]] const auto& get_accounts() const noexcept { return m_accounts; }
 };
 
 struct BlockInfo
