@@ -18,9 +18,6 @@ using namespace evmone;
 using namespace evmone::test;
 using namespace std::literals;
 
-static const auto NULL_HEXSTRING_32 = "0x" + std::string(64, '0');
-static const auto NULL_HEXSTRING_20 = "0x" + std::string(40, '0');
-
 int main(int argc, const char* argv[])
 {
     evmc_revision rev = {};
@@ -127,8 +124,8 @@ int main(int argc, const char* argv[])
                         j_receipt["gasUsed"] = hex0x(static_cast<uint64_t>(receipt.gas_used));
                         j_receipt["cumulativeGasUsed"] = j_receipt["gasUsed"];
 
-                        j_receipt["blockHash"] = NULL_HEXSTRING_32;
-                        j_receipt["contractAddress"] = NULL_HEXSTRING_20;
+                        j_receipt["blockHash"] = hex0x(bytes32{});
+                        j_receipt["contractAddress"] = hex0x(address{});
                         j_receipt["logsBloom"] = hex0x(receipt.logs_bloom_filter);
                         j_receipt["logs"] = json::json::array();  // FIXME: Add to_json<state:Log>
                         j_receipt["root"] = "";
