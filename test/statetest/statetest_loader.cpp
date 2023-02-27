@@ -4,7 +4,6 @@
 
 #include "statetest.hpp"
 #include <nlohmann/json.hpp>
-#include <fstream>
 
 namespace evmone::test
 {
@@ -280,6 +279,9 @@ static void from_json(const json::json& j, StateTransitionTest::Case::Expectatio
 
 static void from_json(const json::json& j, StateTransitionTest& o)
 {
+    if (!j.is_object() || j.empty())
+        throw std::invalid_argument{"JSON test must be an object with single key of the test name"};
+
     const auto& j_t = j.begin().value();  // Content is in a dict with the test name.
 
     o.pre_state = from_json<state::State>(j_t.at("pre"));
@@ -302,8 +304,8 @@ static void from_json(const json::json& j, StateTransitionTest& o)
     }
 }
 
-StateTransitionTest load_state_test(const fs::path& test_file)
+StateTransitionTest load_state_test(std::istream& input)
 {
-    return json::json::parse(std::ifstream{test_file}).get<StateTransitionTest>();
+    return json::json::parse(input).get<StateTransitionTest>();
 }
 }  // namespace evmone::test
