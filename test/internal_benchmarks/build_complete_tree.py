@@ -2,7 +2,7 @@
 
 # The PoC of generating complete binary trees from sorted list
 # and packing the tree into an array.
-# This transformation can be use to speed up jumpdest search.
+# This transformation can be used to speed up jumpdest search.
 
 import sys
 
