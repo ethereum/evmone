@@ -110,27 +110,26 @@ bool Host::selfdestruct(const address& addr, const address& beneficiary) noexcep
     return !std::exchange(acc.destructed, true);
 }
 
-static address compute_new_address(const evmc_message& msg, uint64_t sender_nonce) noexcept
+address compute_new_account_address(const address& sender, uint64_t sender_nonce,
+    const std::optional<bytes32>& salt, bytes_view init_code) noexcept
 {
     hash256 addr_base_hash;
-    if (msg.kind == EVMC_CREATE)
+    if (!salt.has_value())  // CREATE
     {
         // TODO: Compute CREATE address without using RLP library.
-        const auto rlp_list = rlp::encode_tuple(address{msg.sender}, sender_nonce);
+        const auto rlp_list = rlp::encode_tuple(sender, sender_nonce);
         addr_base_hash = keccak256(rlp_list);
     }
-    else
+    else  // CREATE2
     {
-        assert(msg.kind == EVMC_CREATE2);
-        const auto init_code_hash = keccak256({msg.input_data, msg.input_size});
-        uint8_t buffer[1 + sizeof(msg.sender) + sizeof(msg.create2_salt) + sizeof(init_code_hash)];
+        const auto init_code_hash = keccak256(init_code);
+        uint8_t buffer[1 + sizeof(sender) + sizeof(*salt) + sizeof(init_code_hash)];
         static_assert(std::size(buffer) == 85);
         buffer[0] = 0xff;
-        std::copy_n(msg.sender.bytes, sizeof(msg.sender), &buffer[1]);
-        std::copy_n(
-            msg.create2_salt.bytes, sizeof(msg.create2_salt), &buffer[1 + sizeof(msg.sender)]);
+        std::copy_n(sender.bytes, sizeof(sender), &buffer[1]);
+        std::copy_n(salt->bytes, sizeof(salt->bytes), &buffer[1 + sizeof(sender)]);
         std::copy_n(init_code_hash.bytes, sizeof(init_code_hash),
-            &buffer[1 + sizeof(msg.sender) + sizeof(msg.create2_salt)]);
+            &buffer[1 + sizeof(sender) + sizeof(salt->bytes)]);
         addr_base_hash = keccak256({buffer, std::size(buffer)});
     }
     evmc_address new_addr{};
@@ -156,7 +155,9 @@ std::optional<evmc_message> Host::prepare_message(evmc_message msg)
         // Compute and fill create address.
         assert(msg.recipient == address{});
         assert(msg.code_address == address{});
-        msg.recipient = compute_new_address(msg, sender_nonce);
+        msg.recipient = compute_new_account_address(msg.sender, sender_nonce,
+            (msg.kind == EVMC_CREATE2) ? std::optional{msg.create2_salt} : std::nullopt,
+            {msg.input_data, msg.input_size});
 
         // By EIP-2929, the  access to new created address is never reverted.
         access_account(msg.recipient);

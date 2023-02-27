@@ -15,6 +15,19 @@ using evmc::uint256be;
 inline constexpr size_t max_code_size = 0x6000;
 inline constexpr size_t max_initcode_size = 2 * max_code_size;
 
+/// Computes the address of to-be-created contract.
+///
+/// Computes the new account address for the contract creation context
+/// as defined by 𝐀𝐃𝐃𝐑 in Yellow Paper, 7. Contract Creation, (86).
+///
+/// @param sender        The address of the message sender. YP: 𝑠.
+/// @param sender_nonce  The sender's nonce before the increase. YP: 𝑛.
+/// @param salt          The salt for CREATE2. If null, CREATE address is computed. YP: ζ.
+/// @param init_code     The contract creation init code. Value only affects CREATE2. YP: 𝐢.
+/// @return              The computed address for CREATE or CREATE2 scheme.
+address compute_new_account_address(const address& sender, uint64_t sender_nonce,
+    const std::optional<bytes32>& salt, bytes_view init_code) noexcept;
+
 class Host : public evmc::Host
 {
     evmc_revision m_rev;
