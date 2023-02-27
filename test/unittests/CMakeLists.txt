@@ -30,6 +30,7 @@ add_executable(evmone-unittests
     state_bloom_filter_test.cpp
     state_mpt_hash_test.cpp
     state_mpt_test.cpp
+    state_new_account_address_test.cpp
     state_rlp_test.cpp
     statetest_loader_test.cpp
     statetest_loader_tx_test.cpp

@@ -110,7 +110,7 @@ bool Host::selfdestruct(const address& addr, const address& beneficiary) noexcep
     return !std::exchange(acc.destructed, true);
 }
 
-static address compute_new_address(const evmc_message& msg, uint64_t sender_nonce) noexcept
+address compute_new_account_address(const evmc_message& msg, uint64_t sender_nonce) noexcept
 {
     hash256 addr_base_hash;
     if (msg.kind == EVMC_CREATE)
@@ -156,7 +156,7 @@ std::optional<evmc_message> Host::prepare_message(evmc_message msg)
         // Compute and fill create address.
         assert(msg.recipient == address{});
         assert(msg.code_address == address{});
-        msg.recipient = compute_new_address(msg, sender_nonce);
+        msg.recipient = compute_new_account_address(msg, sender_nonce);
 
         // By EIP-2929, the  access to new created address is never reverted.
         access_account(msg.recipient);

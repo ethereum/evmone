@@ -15,6 +15,12 @@ using evmc::uint256be;
 inline constexpr size_t max_code_size = 0x6000;
 inline constexpr size_t max_initcode_size = 2 * max_code_size;
 
+/// Computes the address of to-be-created contract.
+///
+/// Computes the new account address for the contract creation context
+/// as defined by `ADDR()` in Yellow Paper, 7. Contract Creation, (86).
+address compute_new_account_address(const evmc_message& msg, uint64_t sender_nonce) noexcept;
+
 class Host : public evmc::Host
 {
     evmc_revision m_rev;
