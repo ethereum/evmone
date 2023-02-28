@@ -10,10 +10,8 @@ namespace evmmax
 {
 namespace
 {
-// TODO(intx): Add ""_u384.
-constexpr auto BLS12384Mod = from_string<uint512>(
-    "0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffff"
-    "aaab");
+constexpr auto BLS12384Mod =
+    0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab_u384;
 
 inline constexpr uint64_t mul_inv64(uint64_t base) noexcept
 {
