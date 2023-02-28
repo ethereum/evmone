@@ -38,6 +38,7 @@ constexpr bool is_terminating(Opcode op) noexcept
     {
     case OP_STOP:
     case OP_RETURN:
+    case OP_RETF:
     case OP_REVERT:
     case OP_INVALID:
     case OP_SELFDESTRUCT:
@@ -55,7 +56,7 @@ constexpr void validate_traits_of() noexcept
     // immediate_size
     if constexpr (Op >= OP_PUSH1 && Op <= OP_PUSH32)
         static_assert(tr.immediate_size == Op - OP_PUSH1 + 1);
-    else if constexpr (Op == OP_RJUMP || Op == OP_RJUMPI)
+    else if constexpr (Op == OP_RJUMP || Op == OP_RJUMPI || Op == OP_CALLF)
         static_assert(tr.immediate_size == 2);
     else if constexpr (Op == OP_DUPN || Op == OP_SWAPN)
         static_assert(tr.immediate_size == 1);
@@ -105,6 +106,8 @@ constexpr bool instruction_only_in_evmone(evmc_revision rev, Opcode op) noexcept
     case OP_RJUMP:
     case OP_RJUMPI:
     case OP_RJUMPV:
+    case OP_CALLF:
+    case OP_RETF:
     case OP_DUPN:
     case OP_SWAPN:
         return true;

@@ -157,6 +157,9 @@ enum Opcode : uint8_t
     OP_LOG3 = 0xa3,
     OP_LOG4 = 0xa4,
 
+    OP_CALLF = 0xb0,
+    OP_RETF = 0xb1,
+
     OP_DUPN = 0xb5,
     OP_SWAPN = 0xb6,
 

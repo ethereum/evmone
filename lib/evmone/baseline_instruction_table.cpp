@@ -27,6 +27,8 @@ constexpr auto legacy_cost_tables = []() noexcept {
     tables[EVMC_CANCUN][OP_RJUMP] = instr::undefined;
     tables[EVMC_CANCUN][OP_RJUMPI] = instr::undefined;
     tables[EVMC_CANCUN][OP_RJUMPV] = instr::undefined;
+    tables[EVMC_CANCUN][OP_CALLF] = instr::undefined;
+    tables[EVMC_CANCUN][OP_RETF] = instr::undefined;
     return tables;
 }();
 
