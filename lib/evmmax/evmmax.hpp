@@ -27,6 +27,13 @@ public:
     uint64_t mod_inv;
     size_t num_elems = 0;
     std::unique_ptr<uint[]> elems;
+
+    uint to_mont(const uint& x) noexcept;
+    uint from_mont(const uint& x) noexcept;
+
+    uint mul(const uint& x, const uint& y) noexcept;
+
+
 };
 
 std::unique_ptr<ModState> setup(bytes_view modulus, size_t vals_used);

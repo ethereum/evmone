@@ -23,6 +23,14 @@ inline constexpr uint64_t mul_inv64(uint64_t base) noexcept
     }
     return result;
 }
+
+inline constexpr std::pair<uint64_t, uint64_t> addmul(
+    uint64_t t, uint64_t a, uint64_t b, uint64_t c) noexcept
+{
+    const auto p = umul(a, b) + t + c;
+    return {p[1], p[0]};
+}
+
 }  // namespace
 
 std::unique_ptr<ModState> setup(bytes_view modulus, size_t vals_used)
@@ -47,5 +55,57 @@ std::unique_ptr<ModState> setup(bytes_view modulus, size_t vals_used)
     state->num_elems = vals_used;
     state->elems = std::unique_ptr<uint384[]>(new uint384[vals_used]);
     return state;
+}
+
+ModState::uint ModState::mul(const ModState::uint& a, const ModState::uint& b) noexcept
+{
+    static constexpr auto S = ModState::uint::num_words;
+
+    uint64_t t[S + 2]{};
+    for (size_t i = 0; i != S; ++i)
+    {
+        uint64_t c = 0;
+        for (size_t j = 0; j != S; ++j)
+        {
+            std::tie(c, t[j]) = addmul(t[j], a[j], b[i], c);
+        }
+        auto tmp = addc(t[S], c);
+        t[S] = tmp.value;
+        t[S + 1] = tmp.carry;
+
+        c = 0;
+        auto m = t[0] * mod_inv;
+        for (size_t j = 0; j != S; ++j)
+        {
+            std::tie(c, t[j]) = addmul(t[j], m, mod[j], c);
+        }
+        tmp = addc(t[S], c);
+        t[S] = tmp.value;
+        t[S + 1] += tmp.carry;
+
+        for (size_t j = 0; j != S + 1; ++j)
+        {
+            t[j] = t[j + 1];
+        }
+    }
+
+    intx::uint<(S + 1) * 64> tt;
+    for (size_t j = 0; j != S + 1; ++j)
+        tt[j] = t[j];
+
+    if (tt >= mod)
+        tt -= mod;
+
+    return static_cast<ModState::uint>(tt);
+}
+
+ModState::uint ModState::to_mont(const ModState::uint& x) noexcept
+{
+    return mul(x, r_squared);
+}
+
+ModState::uint ModState::from_mont(const ModState::uint& x) noexcept
+{
+    return mul(x, 1);
 }
 }  // namespace evmmax
