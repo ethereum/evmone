@@ -154,6 +154,8 @@ public:
         const advanced::AdvancedCodeAnalysis* advanced;
     } analysis{};
 
+    std::vector<const uint8_t*> call_stack;
+
     /// Stack space allocation.
     ///
     /// This is the last field to make other fields' offsets of reasonable values.
