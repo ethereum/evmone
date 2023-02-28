@@ -16,3 +16,41 @@ TEST(evmmax, setup_bls12_384)
     EXPECT_EQ(s->num_elems, 0);
     EXPECT_EQ(s->mod_inv, 0x89f3fffcfffcfffd);
 }
+
+TEST(evmmax, r_squared)
+{
+    const auto s = evmmax::setup(BLS12384ModBytes, 0);
+    EXPECT_EQ(s->r_squared,
+        0x11988fe592cae3aa9a793e85b519952d67eb88a9939d83c08de5476c4c95b6d50a76e6a609d104f1f4df1f341c341746_u384);
+}
+
+TEST(evmmax, to_mont)
+{
+    const auto s = evmmax::setup(BLS12384ModBytes, 0);
+    EXPECT_EQ(s->to_mont(1),
+        0x15f65ec3fa80e4935c071a97a256ec6d77ce5853705257455f48985753c758baebf4000bc40c0002760900000002fffd_u384);
+}
+
+TEST(evmmax, from_mont)
+{
+    const auto s = evmmax::setup(BLS12384ModBytes, 0);
+    EXPECT_EQ(
+        s->from_mont(
+            0x15f65ec3fa80e4935c071a97a256ec6d77ce5853705257455f48985753c758baebf4000bc40c0002760900000002fffd_u384),
+        1_u384);
+}
+
+TEST(evmmax, mul_mont_384)
+{
+    const auto s = evmmax::setup(BLS12384ModBytes, 0);
+
+    const auto a = 2_u384;
+    const auto b = s->mod - 1;
+
+    const auto am = s->to_mont(a);
+    const auto bm = s->to_mont(b);
+    const auto pm = s->mul(am, bm);
+    const auto p = s->from_mont(pm);
+
+    EXPECT_EQ(p, udivrem(umul(a, b), s->mod).rem);
+}
