@@ -55,6 +55,8 @@ constexpr void validate_traits_of() noexcept
     // immediate_size
     if constexpr (Op >= OP_PUSH1 && Op <= OP_PUSH32)
         static_assert(tr.immediate_size == Op - OP_PUSH1 + 1);
+    else if constexpr (Op == OP_RJUMP || Op == OP_RJUMPI)
+        static_assert(tr.immediate_size == 2);
     else if constexpr (Op == OP_DUPN || Op == OP_SWAPN)
         static_assert(tr.immediate_size == 1);
     else
@@ -87,6 +89,7 @@ static_assert(!instr::has_const_gas_cost(OP_SHL));
 static_assert(!instr::has_const_gas_cost(OP_BALANCE));
 static_assert(!instr::has_const_gas_cost(OP_SLOAD));
 }  // namespace
+
 }  // namespace evmone::test
 
 namespace
@@ -99,6 +102,8 @@ constexpr bool instruction_only_in_evmone(evmc_revision rev, Opcode op) noexcept
 
     switch (op)
     {
+    case OP_RJUMP:
+    case OP_RJUMPI:
     case OP_DUPN:
     case OP_SWAPN:
         return true;
@@ -121,6 +126,7 @@ TEST(instructions, compare_with_evmc_instruction_tables)
         {
             if (instruction_only_in_evmone(rev, Opcode(i)))
                 continue;
+
             const auto gas_cost = (instr_tbl[i] != instr::undefined) ? instr_tbl[i] : 0;
             const auto& metrics = evmone_tbl[i];
             const auto& ref_metrics = evmc_tbl[i];
@@ -152,6 +158,7 @@ TEST(instructions, compare_undefined_instructions)
         {
             if (instruction_only_in_evmone(rev, Opcode(i)))
                 continue;
+
             EXPECT_EQ(instr_tbl[i] == instr::undefined, evmc_names_tbl[i] == nullptr) << i;
         }
     }
@@ -164,6 +171,7 @@ TEST(instructions, compare_with_evmc_instruction_names)
     {
         if (instruction_only_in_evmone(EVMC_MAX_REVISION, Opcode(i)))
             continue;
+
         EXPECT_STREQ(instr::traits[i].name, evmc_tbl[i]);
     }
 }
