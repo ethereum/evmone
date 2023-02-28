@@ -21,6 +21,7 @@ target_sources(
     evm_eip3855_push0_test.cpp
     evm_eip3860_initcode_test.cpp
     evm_eof_test.cpp
+    evm_eof_rjump_test.cpp
     evm_memory_test.cpp
     evm_state_test.cpp
     evm_storage_test.cpp
