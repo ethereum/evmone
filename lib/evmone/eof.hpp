@@ -72,6 +72,7 @@ enum class EOFValidationError
     invalid_section_bodies_size,
     undefined_instruction,
     truncated_instruction,
+    invalid_rjump_destination,
     too_many_code_sections,
     invalid_type_section_size,
     invalid_first_section_type,
@@ -95,9 +96,11 @@ enum class EOFValidationError
 
 /// Loads big endian int16_t from data. Unsafe.
 /// TODO: Move it to intx
-inline int16_t read_int16_be(const uint8_t* data) noexcept
+inline int16_t read_int16_be(auto it) noexcept
 {
-    return static_cast<int16_t>(data[0] << 8 | data[1]);
+    const uint8_t h = *it++;
+    const uint8_t l = *it;
+    return static_cast<int16_t>((h << 8) | l);
 }
 
 /// Loads big endian uint16_t from data. Unsafe.

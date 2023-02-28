@@ -214,6 +214,54 @@ EOFValidationError validate_instructions(evmc_revision rev, bytes_view code) noe
     return EOFValidationError::success;
 }
 
+/// Validates that that we don't rjump inside an instruction's immediate.
+/// Requires that the input is validated against truncation.
+bool validate_rjump_destinations(bytes_view code) noexcept
+{
+    static constexpr auto REL_OFFSET_SIZE = sizeof(int16_t);
+
+    // Collect relative jump destinations and immediate locations
+    const auto code_size = code.size();
+    // list of all possible absolute rjumps destinations positions
+    std::vector<size_t> rjumpdests;
+    // bool map of immediate arguments positions in the code
+    std::vector<bool> immediate_map(code_size);
+
+    /// Validates relative jump destination. If valid pushes the destination to the rjumpdests.
+    const auto check_rjump_destination = [code_size, &rjumpdests](
+                                             auto rel_offset_data_it, size_t post_pos) -> bool {
+        const auto rel_offset = read_int16_be(rel_offset_data_it);
+        const auto jumpdest = static_cast<int32_t>(post_pos) + rel_offset;
+        if (jumpdest < 0 || static_cast<size_t>(jumpdest) >= code_size)
+            return false;
+
+        rjumpdests.emplace_back(static_cast<size_t>(jumpdest));
+        return true;
+    };
+
+    for (size_t i = 0; i < code_size; ++i)
+    {
+        const auto op = code[i];
+        size_t imm_size = instr::traits[op].immediate_size;
+
+        if (op == OP_RJUMP || op == OP_RJUMPI)
+        {
+            if (!check_rjump_destination(&code[i + 1], i + REL_OFFSET_SIZE + 1))
+                return false;
+        }
+
+        std::fill_n(immediate_map.begin() + static_cast<ptrdiff_t>(i) + 1, imm_size, true);
+        i += imm_size;
+    }
+
+    // Check relative jump destinations against immediate locations.
+    for (const auto rjumpdest : rjumpdests)
+        if (immediate_map[rjumpdest])
+            return false;
+
+    return true;
+}
+
 std::variant<EOF1Header, EOFValidationError> validate_eof1(
     evmc_revision rev, bytes_view container) noexcept
 {
@@ -250,6 +298,9 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(
         const auto error_instr = validate_instructions(rev, header.get_code(container, code_idx));
         if (error_instr != EOFValidationError::success)
             return error_instr;
+
+        if (!validate_rjump_destinations(header.get_code(container, code_idx)))
+            return EOFValidationError::invalid_rjump_destination;
     }
 
     return header;
@@ -378,6 +429,8 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "undefined_instruction";
     case EOFValidationError::truncated_instruction:
         return "truncated_instruction";
+    case EOFValidationError::invalid_rjump_destination:
+        return "invalid_rjump_destination";
     case EOFValidationError::too_many_code_sections:
         return "too_many_code_sections";
     case EOFValidationError::invalid_type_section_size:
