@@ -73,6 +73,7 @@ enum class EOFValidationError
     invalid_section_bodies_size,
     undefined_instruction,
     truncated_instruction,
+    invalid_rjump_destination,
     code_section_before_type_section,
     multiple_type_sections,
     multiple_code_sections_headers,
@@ -98,4 +99,19 @@ enum class EOFValidationError
 
 /// Returns the error message corresponding to an error code.
 [[nodiscard]] EVMC_EXPORT std::string_view get_error_message(EOFValidationError err) noexcept;
+
+/// Loads big endian int16_t from data. Unsafe.
+/// TODO: Move it to intx
+inline int16_t read16bes(const uint8_t* data) noexcept
+{
+    return static_cast<int16_t>(data[0] << 8 | data[1]);
+}
+
+/// Loads big endian uint16_t from data. Unsafe.
+/// TODO: Move it to intx
+inline uint16_t read16beu(const uint8_t* data) noexcept
+{
+    return static_cast<uint16_t>(data[0] << 8 | data[1]);
+}
+
 }  // namespace evmone

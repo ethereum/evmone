@@ -237,6 +237,39 @@ EOFValidationError validate_instructions(evmc_revision rev, bytes_view code) noe
     return EOFValidationError::success;
 }
 
+bool validate_rjump_destinations(bytes_view code) noexcept
+{
+    // Collect relative jump destinations and immediate locations
+    const auto code_size = code.size();
+    std::vector<size_t> rjumpdests;
+    std::vector<bool> immediate_map(code_size);
+
+    for (size_t i = 0; i < code_size; ++i)
+    {
+        const auto op = code[i];
+
+        if (op == OP_RJUMP || op == OP_RJUMPI)
+        {
+            const auto offset = read16bes(&code[i + 1]);
+            const auto jumpdest = static_cast<int32_t>(i) + 3 + offset;
+            if (jumpdest < 0 || static_cast<size_t>(jumpdest) >= code_size)
+                return false;
+            rjumpdests.push_back(static_cast<size_t>(jumpdest));
+        }
+
+        const auto imm_size = instr::traits[op].immediate_size;
+        std::fill_n(immediate_map.begin() + static_cast<ptrdiff_t>(i) + 1, imm_size, true);
+        i += imm_size;
+    }
+
+    // Check relative jump destinations against immediate locations.
+    for (const auto rjumpdest : rjumpdests)
+        if (immediate_map[rjumpdest])
+            return false;
+
+    return true;
+}
+
 std::variant<EOF1Header, EOFValidationError> validate_eof1(
     evmc_revision rev, bytes_view container) noexcept
 {
@@ -274,6 +307,9 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(
         const auto error_instr = validate_instructions(rev, header.get_code(container, code_idx));
         if (error_instr != EOFValidationError::success)
             return error_instr;
+
+        if (!validate_rjump_destinations(header.get_code(container, code_idx)))
+            return EOFValidationError::invalid_rjump_destination;
     }
 
     return header;
@@ -416,6 +452,8 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "undefined_instruction";
     case EOFValidationError::truncated_instruction:
         return "truncated_instruction";
+    case EOFValidationError::invalid_rjump_destination:
+        return "invalid_rjump_destination";
     case EOFValidationError::code_section_before_type_section:
         return "code_section_before_type_section";
     case EOFValidationError::multiple_type_sections:

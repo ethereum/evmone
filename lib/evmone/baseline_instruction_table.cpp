@@ -24,6 +24,8 @@ constexpr auto common_cost_tables = []() noexcept {
 
 constexpr auto legacy_cost_tables = []() noexcept {
     auto tables = common_cost_tables;
+    tables[EVMC_CANCUN][OP_RJUMP] = instr::undefined;
+    tables[EVMC_CANCUN][OP_RJUMPI] = instr::undefined;
     return tables;
 }();
 
