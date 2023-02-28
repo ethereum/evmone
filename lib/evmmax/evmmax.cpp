@@ -39,8 +39,12 @@ std::unique_ptr<ModState> setup(bytes_view modulus, size_t vals_used)
     if (mod_arg != BLS12384Mod)
         throw std::invalid_argument{"only BLS12-384 supported"};
 
+    const auto r_squared = intx::uint<384 * 2 + 64>{1} << 384 * 2;
+    const auto r_squared_mod = intx::udivrem(r_squared, mod_arg).rem;
+
     auto state = std::make_unique<ModState>();
     state->mod = mod_arg;
+    state->r_squared = r_squared_mod;
     state->mod_inv = mul_inv64(-mod_arg[0]);
     state->num_elems = vals_used;
     state->elems = std::unique_ptr<uint384[]>(new uint384[vals_used]);

@@ -15,6 +15,7 @@ class ModState
 {
 public:
     intx::uint384 mod;
+    intx::uint384 r_squared;
     uint64_t mod_inv;
     size_t num_elems = 0;
     std::unique_ptr<intx::uint384[]> elems;
