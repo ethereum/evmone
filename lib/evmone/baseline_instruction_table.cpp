@@ -9,7 +9,7 @@ namespace evmone::baseline
 {
 namespace
 {
-constexpr auto eof_cost_tables = []() noexcept {
+constexpr auto common_cost_tables = []() noexcept {
     std::array<CostTable, EVMC_MAX_REVISION + 1> tables{};
     for (size_t r = EVMC_FRONTIER; r <= EVMC_MAX_REVISION; ++r)
     {
@@ -23,7 +23,17 @@ constexpr auto eof_cost_tables = []() noexcept {
 }();
 
 constexpr auto legacy_cost_tables = []() noexcept {
-    auto tables = eof_cost_tables;
+    auto tables = common_cost_tables;
+    return tables;
+}();
+
+constexpr auto eof_cost_tables = []() noexcept {
+    auto tables = common_cost_tables;
+    tables[EVMC_CANCUN][OP_JUMP] = instr::undefined;
+    tables[EVMC_CANCUN][OP_JUMPI] = instr::undefined;
+    tables[EVMC_CANCUN][OP_PC] = instr::undefined;
+    tables[EVMC_CANCUN][OP_CALLCODE] = instr::undefined;
+    tables[EVMC_CANCUN][OP_SELFDESTRUCT] = instr::undefined;
     return tables;
 }();
 
