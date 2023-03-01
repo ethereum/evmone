@@ -179,7 +179,6 @@ Point bn254_add(const Point& pt1, const Point& pt2) noexcept
     // https://eprint.iacr.org/2015/1060 algorithm 2.
     // Simplified with z3 == 1, a == 0, b3 == 9.
 
-    auto zero = s.to_mont(0);
     auto b3 = s.to_mont(9);
 
     auto x1 = s.to_mont(pt1.x);
@@ -197,15 +196,10 @@ Point bn254_add(const Point& pt1, const Point& pt2) noexcept
     t3 = s.mul(t3, t4);
     t4 = s.add(t0, t1);
     t3 = s.sub(t3, t4);
-    t4 = x2;
-    t4 = s.add(t4, x1);
-    t5 = y2;
-    t5 = s.add(t5, y1);
-    z3 = zero;
-    x3 = b3;
-    z3 = s.add(x3, z3);
-    x3 = s.sub(t1, z3);
-    z3 = s.add(t1, z3);
+    t4 = s.add(x2, x1);
+    t5 = s.add(y2, y1);
+    x3 = s.sub(t1, b3);
+    z3 = s.add(t1, b3);
     y3 = s.mul(x3, z3);
     t1 = s.add(t0, t0);
     t1 = s.add(t1, t0);
