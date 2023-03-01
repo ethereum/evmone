@@ -135,5 +135,6 @@ UintT ModArith<UintT>::sub(const UintT& x, const UintT& y) const noexcept
     return (d.carry) ? s : d.value;
 }
 
+template class ModArith<uint256>;
 template class ModArith<uint384>;
 }  // namespace evmmax
