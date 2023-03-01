@@ -188,7 +188,7 @@ Point bn254_add(const Point& pt1, const Point& pt2) noexcept
     auto x2 = s.to_mont(pt2.x);
     auto y2 = s.to_mont(pt2.y);
 
-    uint256 x3, y3, z3, t0, t1, t2, t3, t4, t5;
+    uint256 x3, y3, z3, t0, t1, t3, t4, t5;
 
     t0 = s.mul(x1, x2);
     t1 = s.mul(y1, y2);
@@ -209,12 +209,7 @@ Point bn254_add(const Point& pt1, const Point& pt2) noexcept
     y3 = s.mul(x3, z3);
     t1 = s.add(t0, t0);
     t1 = s.add(t1, t0);
-    t2 = zero;
     t4 = s.mul(b3, t4);
-    t1 = s.add(t1, t2);
-    t2 = s.sub(t0, t2);
-    t2 = zero;
-    t4 = s.add(t4, t2);
     t0 = s.mul(t1, t4);
     y3 = s.add(y3, t0);
     t0 = s.mul(t5, t4);
