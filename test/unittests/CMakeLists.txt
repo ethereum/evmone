@@ -29,6 +29,7 @@ target_sources(
     evm_other_test.cpp
     evm_benchmark_test.cpp
     evmmax_test.cpp
+    evmmax_bn254_test.cpp
     evmone_test.cpp
     execution_state_test.cpp
     instructions_test.cpp
