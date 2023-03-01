@@ -4,6 +4,7 @@
 
 #include "precompiles.hpp"
 #include "precompiles_cache.hpp"
+#include <evmmax/bn254.hpp>
 #include <intx/intx.hpp>
 #include <bit>
 #include <cassert>
@@ -146,6 +147,17 @@ ExecutionResult identity_execute(const uint8_t* input, size_t input_size, uint8_
     return {EVMC_SUCCESS, input_size};
 }
 
+ExecutionResult bn254_add_execute(const uint8_t* input, size_t input_size, uint8_t* output,
+    [[maybe_unused]] size_t output_size) noexcept
+{
+    assert(output_size == 64);
+    const auto res = evmmax::bn254::bn254_add_precompile(input, input_size, output);
+    if (res)
+        return {EVMC_SUCCESS, output_size};
+    else
+        return {EVMC_PRECOMPILE_FAILURE, 0};
+}
+
 struct PrecompileTraits
 {
     decltype(identity_analyze)* analyze = nullptr;
@@ -167,7 +179,7 @@ inline constexpr auto traits = []() noexcept {
         {ripemd160_analyze, dummy_execute<PrecompileId::ripemd160>},
         {identity_analyze, identity_execute},
         {expmod_analyze, dummy_execute<PrecompileId::expmod>},
-        {ecadd_analyze, dummy_execute<PrecompileId::ecadd>},
+        {ecadd_analyze, bn254_add_execute},
         {ecmul_analyze, dummy_execute<PrecompileId::ecmul>},
         {ecpairing_analyze, dummy_execute<PrecompileId::ecpairing>},
         {blake2bf_analyze, dummy_execute<PrecompileId::blake2bf>},

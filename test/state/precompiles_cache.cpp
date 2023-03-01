@@ -52,6 +52,9 @@ Cache::Cache() noexcept
         const auto j = nlohmann::json::parse(std::ifstream{stub_file});
         for (size_t id = 0; id < j.size(); ++id)
         {
+            if (id == stdx::to_underlying(PrecompileId::ecadd))
+                continue;
+
             auto& cache = m_cache.at(id);
             for (const auto& [h_str, j_input] : j[id].items())
             {
