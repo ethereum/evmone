@@ -10,4 +10,6 @@ target_sources(
     evmmax PRIVATE
     evmmax.hpp
     evmmax.cpp
+    bn254.hpp
+    bn254.cpp
 )
