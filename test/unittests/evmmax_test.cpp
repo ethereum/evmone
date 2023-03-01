@@ -70,3 +70,31 @@ TEST(evmmax, add)
     const auto ax = intx::uint<evmmax::ModState::uint::num_bits + 64>{a};
     EXPECT_EQ(p, udivrem(ax + b, s->mod).rem);
 }
+
+TEST(evmmax, sub_10_1)
+{
+    const auto s = evmmax::setup(BLS12384ModBytes, 0);
+
+    const auto a = 10_u384;
+    const auto b = 1_u384;
+
+    const auto am = s->to_mont(a);
+    const auto bm = s->to_mont(b);
+    const auto pm = s->sub(am, bm);
+    const auto p = s->from_mont(pm);
+    EXPECT_EQ(p, 9_u384);
+}
+
+TEST(evmmax, sub_1_10)
+{
+    const auto s = evmmax::setup(BLS12384ModBytes, 0);
+
+    const auto a = 1_u384;
+    const auto b = 10_u384;
+
+    const auto am = s->to_mont(a);
+    const auto bm = s->to_mont(b);
+    const auto pm = s->sub(am, bm);
+    const auto p = s->from_mont(pm);
+    EXPECT_EQ(p, s->mod - 9_u384);
+}

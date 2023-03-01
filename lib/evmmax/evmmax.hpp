@@ -35,6 +35,7 @@ public:
 
     uint add(const uint& x, const uint& y) const noexcept;
 
+    uint sub(const uint& x, const uint& y) const noexcept;
 };
 
 std::unique_ptr<ModState> setup(bytes_view modulus, size_t vals_used);

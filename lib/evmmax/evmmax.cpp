@@ -115,4 +115,11 @@ ModState::uint ModState::add(const ModState::uint& x, const ModState::uint& y) c
     const auto d = subc(s.value, mod);
     return (!s.carry && d.carry) ? s.value : d.value;
 }
+
+ModState::uint ModState::sub(const ModState::uint& x, const ModState::uint& y) const noexcept
+{
+    const auto d = subc(x, y);
+    const auto s = d.value + mod;
+    return (d.carry) ? s : d.value;
+}
 }  // namespace evmmax
