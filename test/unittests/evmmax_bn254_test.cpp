@@ -123,6 +123,11 @@ uint256 expmod(const evmmax::ModArith<uint256>& s, uint256 base, uint256 exponen
     return result;
 }
 
+uint256 inv(const evmmax::ModArith<uint256>& s, const uint256& x) noexcept
+{
+    return expmod(s, x, s.mod - 2);
+}
+
 struct Point
 {
     uint256 x;
@@ -261,4 +266,15 @@ TEST(evmmax, expmod_1)
     const auto p = expmod(s, b, e);
     EXPECT_EQ(
         s.from_mont(p), 0x6e140df17432311190232a91a38daed3ee9ed7f038645dd0278da7ca6e497dd_u256);
+}
+
+TEST(evmmax, inv_1)
+{
+    const evmmax::ModArith s{BN254Mod};
+
+    const auto a =
+        s.to_mont(0x6e140df17432311190232a91a38daed3ee9ed7f038645dd0278da7ca6e497de_u256);
+    const auto a_inv = inv(s, a);
+    const auto p = s.mul(a, a_inv);
+    EXPECT_EQ(s.from_mont(p), 1);
 }
