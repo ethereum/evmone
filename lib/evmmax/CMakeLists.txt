@@ -11,4 +11,6 @@ target_sources(
     evmmax PRIVATE
     ${PROJECT_SOURCE_DIR}/include/evmmax/evmmax.hpp
     evmmax.cpp
+    bn254.hpp
+    bn254.cpp
 )
