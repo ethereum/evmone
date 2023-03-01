@@ -6,6 +6,7 @@ add_executable(
     evmone-bench-internal
     find_jumpdest_bench.cpp
     memory_allocation.cpp
+    precompiles_bench.cpp
 )
-
-target_link_libraries(evmone-bench-internal PRIVATE benchmark::benchmark)
+target_include_directories(evmone-bench-internal PRIVATE ${evmone_private_include_dir})
+target_link_libraries(evmone-bench-internal PRIVATE benchmark::benchmark evmone::evmmax evmc::evmc_cpp)
