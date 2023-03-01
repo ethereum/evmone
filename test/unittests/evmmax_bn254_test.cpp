@@ -14,6 +14,12 @@ struct TestCase
 {
     bytes input;
     bytes expected_output;
+
+    TestCase(bytes i, bytes o) : input{std::move(i)}, expected_output{std::move(o)}
+    {
+        input.resize(128);
+        expected_output.resize(64);
+    }
 };
 
 static const TestCase
@@ -230,6 +236,9 @@ TEST(evmmax, bn254_validate_inputs)
 
     for (const auto& t : test_cases)
     {
+        ASSERT_EQ(t.input.size(), 128);
+        ASSERT_EQ(t.expected_output.size(), 64);
+
         const Point a{
             be::unsafe::load<uint256>(&t.input[0]), be::unsafe::load<uint256>(&t.input[32])};
         const Point b{
