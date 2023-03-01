@@ -109,6 +109,20 @@ static const TestCase
 
 namespace
 {
+uint256 expmod(const evmmax::ModArith<uint256>& s, uint256 base, uint256 exponent) noexcept
+{
+    auto result = s.to_mont(1);
+
+    while (exponent != 0)
+    {
+        if ((exponent & 1) != 0)
+            result = s.mul(result, base);
+        base = s.mul(base, base);
+        exponent >>= 1;
+    }
+    return result;
+}
+
 struct Point
 {
     uint256 x;
@@ -236,4 +250,15 @@ TEST(evmmax, bn254_pt_add)
 
         EXPECT_EQ(bn254_add(a, b), e);
     }
+}
+
+TEST(evmmax, expmod_1)
+{
+    const evmmax::ModArith s{BN254Mod};
+
+    const auto b = s.to_mont(0x74382901437109);
+    const auto e = 0x7348168_u256;
+    const auto p = expmod(s, b, e);
+    EXPECT_EQ(
+        s.from_mont(p), 0x6e140df17432311190232a91a38daed3ee9ed7f038645dd0278da7ca6e497dd_u256);
 }
