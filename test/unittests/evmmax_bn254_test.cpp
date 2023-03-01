@@ -177,14 +177,13 @@ Point bn254_add(const Point& pt1, const Point& pt2) noexcept
     const evmmax::ModArith s{BN254Mod};
 
     // https://eprint.iacr.org/2015/1060 algorithm 2.
+    // Simplified with z3 == 1, a == 0, b3 == 9.
 
-    auto a = s.to_mont(0);
-    auto b = s.to_mont(3);
-    auto b3 = s.mul(b, s.to_mont(3));
+    auto zero = s.to_mont(0);
+    auto b3 = s.to_mont(9);
 
     auto x1 = s.to_mont(pt1.x);
     auto y1 = s.to_mont(pt1.y);
-    auto z1 = s.to_mont(1);
 
     auto x2 = s.to_mont(pt2.x);
     auto y2 = s.to_mont(pt2.y);
@@ -198,23 +197,23 @@ Point bn254_add(const Point& pt1, const Point& pt2) noexcept
     t3 = s.mul(t3, t4);
     t4 = s.add(t0, t1);
     t3 = s.sub(t3, t4);
-    t4 = s.mul(x2, z1);
+    t4 = x2;
     t4 = s.add(t4, x1);
-    t5 = s.mul(y2, z1);
+    t5 = y2;
     t5 = s.add(t5, y1);
-    z3 = s.mul(a, t4);
-    x3 = s.mul(b3, z1);
+    z3 = zero;
+    x3 = b3;
     z3 = s.add(x3, z3);
     x3 = s.sub(t1, z3);
     z3 = s.add(t1, z3);
     y3 = s.mul(x3, z3);
     t1 = s.add(t0, t0);
     t1 = s.add(t1, t0);
-    t2 = s.mul(a, z1);
+    t2 = zero;
     t4 = s.mul(b3, t4);
     t1 = s.add(t1, t2);
     t2 = s.sub(t0, t2);
-    t2 = s.mul(a, t2);
+    t2 = zero;
     t4 = s.add(t4, t2);
     t0 = s.mul(t1, t4);
     y3 = s.add(y3, t0);
