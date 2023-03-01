@@ -169,6 +169,11 @@ bool validate(const Point& pt) noexcept
 
 Point bn254_add(const Point& pt1, const Point& pt2) noexcept
 {
+    if (is_at_infinity(pt1))
+        return pt2;
+    if (is_at_infinity(pt2))
+        return pt1;
+
     const evmmax::ModArith s{BN254Mod};
 
     // https://eprint.iacr.org/2015/1060 algorithm 2.
@@ -264,9 +269,6 @@ TEST(evmmax, bn254_pt_add)
             be::unsafe::load<uint256>(&t.input[64]), be::unsafe::load<uint256>(&t.input[96])};
         const Point e{be::unsafe::load<uint256>(&t.expected_output[0]),
             be::unsafe::load<uint256>(&t.expected_output[32])};
-
-        if (is_at_infinity(a) || is_at_infinity(b))
-            continue;
 
         EXPECT_EQ(bn254_add(a, b), e);
     }
