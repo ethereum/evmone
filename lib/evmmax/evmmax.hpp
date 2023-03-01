@@ -17,26 +17,35 @@ namespace evmmax
 {
 using bytes_view = std::basic_string_view<uint8_t>;
 
-class ModState
+template <typename UintT>
+class ModArith
 {
 public:
-    using uint = intx::uint384;
+    using uint = UintT;
 
     uint mod;
     uint r_squared;
-    uint64_t mod_inv;
-    size_t num_elems = 0;
-    std::unique_ptr<uint[]> elems;
+    uint64_t mod_inv = 0;
 
-    uint to_mont(const uint& x) noexcept;
-    uint from_mont(const uint& x) noexcept;
+    explicit ModArith(const UintT& modulus);
 
-    uint mul(const uint& x, const uint& y) noexcept;
+    uint to_mont(const uint& x) const noexcept;
+    uint from_mont(const uint& x) const noexcept;
+
+    uint mul(const uint& x, const uint& y) const noexcept;
 
     uint add(const uint& x, const uint& y) const noexcept;
 
     uint sub(const uint& x, const uint& y) const noexcept;
 };
 
-std::unique_ptr<ModState> setup(bytes_view modulus, size_t vals_used);
+// class ModState
+// {
+// public:
+//     ModArith arith = // TODO
+//     size_t num_elems = 0;
+//     std::unique_ptr<uint[]> elems;
+// };
+
+// std::unique_ptr<ModState> setup(bytes_view modulus, size_t vals_used);
 }  // namespace evmmax
