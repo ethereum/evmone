@@ -8,6 +8,7 @@
 #include "execution_state.hpp"
 #include "instructions.hpp"
 #include "vm.hpp"
+#include <iostream>
 #include <memory>
 
 #ifdef NDEBUG
@@ -372,6 +373,20 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
 evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_context* ctx,
     evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
 {
+    if (rev >= EVMC_CANCUN && is_eof_container({code, code_size}))
+    {
+        // TODO(EOF): The initcode must be validated. Doing this just before execution is
+        //   good because validation can be combined with analysis/loading. But consider also
+        //   other places like create instructions.
+        if (const auto err = validate_eof(rev, {code, code_size});
+            err != EOFValidationError::success)
+        {
+            // TODO(EOF): This should never happen but protects against invalid tests for now.
+            std::cerr << "EOF validation failed: " << get_error_message(err) << '\n';
+            return evmc::Result{EVMC_INTERNAL_ERROR}.release_raw();
+        }
+    }
+
     auto vm = static_cast<VM*>(c_vm);
     const auto jumpdest_map = analyze(rev, {code, code_size});
     auto state =
