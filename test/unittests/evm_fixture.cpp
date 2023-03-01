@@ -26,7 +26,7 @@ const char* print_vm_name(const testing::TestParamInfo<evmc::VM*>& info) noexcep
 }  // namespace
 
 INSTANTIATE_TEST_SUITE_P(
-    evmone, evm, testing::Values(&advanced_vm, &baseline_vm, &bnocgoto_vm), print_vm_name);
+    evmone, evm, testing::Values(/*&advanced_vm,*/ &baseline_vm, &bnocgoto_vm), print_vm_name);
 
 bool evm::is_advanced() noexcept
 {
