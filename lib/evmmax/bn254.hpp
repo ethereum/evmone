@@ -51,4 +51,6 @@ inline bool is_at_infinity(const Point& pt) noexcept
 bool validate(const Point& pt) noexcept;
 
 Point bn254_add(const Point& pt1, const Point& pt2) noexcept;
+
+bool bn254_add_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept;
 }  // namespace evmmax::bn254
