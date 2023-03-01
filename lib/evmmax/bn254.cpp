@@ -72,4 +72,23 @@ Point bn254_add(const Point& pt1, const Point& pt2) noexcept
 
     return {x3, y3};
 }
+
+bool bn254_add_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept
+{
+    uint8_t input_padded[128]{};
+    std::copy_n(input, std::min(input_size, sizeof(input_padded)), input_padded);
+
+    const Point a{
+        be::unsafe::load<uint256>(&input_padded[0]), be::unsafe::load<uint256>(&input_padded[32])};
+    const Point b{
+        be::unsafe::load<uint256>(&input_padded[64]), be::unsafe::load<uint256>(&input_padded[96])};
+
+    if (!validate(a) || !validate(b))
+        return false;
+
+    const auto s = bn254_add(a, b);
+    be::unsafe::store(output, s.x);
+    be::unsafe::store(output + 32, s.y);
+    return true;
+}
 }  // namespace evmmax::bn254
