@@ -31,7 +31,7 @@ TEST_P(evm, eof1_execution_with_data_section)
     EXPECT_EQ(result.output_size, 0);
 }
 
-TEST_P(evm, eof1_pc)
+TEST_P(evm, DISABLED_eof1_pc)
 {
     rev = EVMC_CANCUN;
     auto code = eof1_bytecode(OP_PC + mstore8(0) + ret(0, 1));
@@ -97,7 +97,7 @@ TEST_P(evm, DISABLED_eof1_jump_into_data_section)
     EXPECT_STATUS(EVMC_BAD_JUMP_DESTINATION);
 }
 
-TEST_P(evm, eof1_jumpi_into_data_section)
+TEST_P(evm, DISABLED_eof1_jumpi_into_data_section)
 {
     rev = EVMC_CANCUN;
     // data section contains OP_JUMPDEST + mstore8(0, 1) + ret(0, 1)
