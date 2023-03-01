@@ -31,24 +31,6 @@ TEST_P(evm, eof1_execution_with_data_section)
     EXPECT_EQ(result.output_size, 0);
 }
 
-TEST_P(evm, eof1_pc)
-{
-    rev = EVMC_CANCUN;
-    auto code = eof1_bytecode(OP_PC + mstore8(0) + ret(0, 1));
-
-    execute(code);
-    EXPECT_STATUS(EVMC_SUCCESS);
-    ASSERT_EQ(result.output_size, 1);
-    EXPECT_EQ(result.output_data[0], 0);
-
-    code = eof1_bytecode(4 * bytecode{OP_JUMPDEST} + OP_PC + mstore8(0) + ret(0, 1));
-
-    execute(code);
-    EXPECT_STATUS(EVMC_SUCCESS);
-    ASSERT_EQ(result.output_size, 1);
-    EXPECT_EQ(result.output_data[0], 4);
-}
-
 TEST_P(evm, eof1_codesize)
 {
     rev = EVMC_CANCUN;
