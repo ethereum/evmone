@@ -214,6 +214,12 @@ Point bn254_add(const Point& pt1, const Point& pt2) noexcept
     z3 = s.mul(t5, z3);
     z3 = s.add(z3, t0);
 
+    auto z3_inv = inv(s, z3);
+    x3 = s.mul(x3, z3_inv);
+    y3 = s.mul(y3, z3_inv);
+    x3 = s.from_mont(x3);
+    y3 = s.from_mont(y3);
+
     return {x3, y3};
 }
 }  // namespace
