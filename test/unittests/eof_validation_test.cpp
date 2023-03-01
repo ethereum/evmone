@@ -320,9 +320,12 @@ TEST(eof_validation, EOF1_undefined_opcodes)
     for (uint16_t opcode = 0; opcode <= 0xff; ++opcode)
     {
         // PUSH*, DUPN, SWAPN require immediate argument to be valid, checked in a separate test
-        if (opcode >= OP_PUSH1 && opcode <= OP_PUSH32)
+        if ((opcode >= OP_PUSH1 && opcode <= OP_PUSH32) || opcode == OP_DUPN || opcode == OP_SWAPN)
             continue;
-        if (opcode == OP_DUPN || opcode == OP_SWAPN)
+        // These opcodes are deprecated since Cancun.
+        // gas_cost table current implementation does not allow to undef instructions.
+        if (opcode == OP_JUMP || opcode == OP_JUMPI || opcode == OP_PC || opcode == OP_CALLCODE ||
+            opcode == OP_SELFDESTRUCT)
             continue;
 
         cont[cont.size() - 2] = static_cast<uint8_t>(opcode);
@@ -389,6 +392,13 @@ TEST(eof_validation, EOF1_section_order)
         EOFValidationError::type_section_missing);
 }
 
+TEST(eof_validation, deprecated_instructions)
+{
+    for (auto op : {OP_CALLCODE, OP_SELFDESTRUCT, OP_JUMP, OP_JUMPI, OP_PC})
+    {
+        EXPECT_EQ(validate_eof(eof1_bytecode(op)), EOFValidationError::undefined_instruction);
+    }
+}
 
 TEST(eof_validation, incomplete_section_size)
 {
