@@ -33,6 +33,7 @@ public:
 
     uint mul(const uint& x, const uint& y) noexcept;
 
+    uint add(const uint& x, const uint& y) const noexcept;
 
 };
 

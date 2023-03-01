@@ -108,4 +108,11 @@ ModState::uint ModState::from_mont(const ModState::uint& x) noexcept
 {
     return mul(x, 1);
 }
+
+ModState::uint ModState::add(const ModState::uint& x, const ModState::uint& y) const noexcept
+{
+    const auto s = addc(x, y);  // FIXME: can overflow only if prime is max size (e.g. 255 bits).
+    const auto d = subc(s.value, mod);
+    return (!s.carry && d.carry) ? s.value : d.value;
+}
 }  // namespace evmmax
