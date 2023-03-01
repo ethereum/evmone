@@ -113,6 +113,12 @@ struct Point
 {
     uint256 x;
     uint256 y;
+
+    friend bool operator==(const Point& a, const Point& b) noexcept
+    {
+        // TODO(intx): C++20 operator<=> = default does not work for uint256.
+        return a.x == b.x && a.y == b.y;
+    }
 };
 
 bool is_at_infinity(const Point& pt) noexcept
@@ -135,6 +141,12 @@ bool validate(const Point& pt) noexcept
     const auto x3_3 = s.add(x3, _3);
     return y2 == x3_3;
 }
+
+Point bn254_add(const Point& pt1, const Point& pt2) noexcept
+{
+    (void)pt2;
+    return pt1;
+}
 }  // namespace
 
 TEST(evmmax, bn254_validate_inputs)
@@ -153,5 +165,25 @@ TEST(evmmax, bn254_validate_inputs)
         EXPECT_TRUE(validate(a));
         EXPECT_TRUE(validate(b));
         EXPECT_TRUE(validate(e));
+    }
+}
+
+TEST(evmmax, bn254_pt_add)
+{
+    const evmmax::ModArith s{BN254Mod};
+
+    for (const auto& t : test_cases)
+    {
+        const Point a{
+            be::unsafe::load<uint256>(&t.input[0]), be::unsafe::load<uint256>(&t.input[32])};
+        const Point b{
+            be::unsafe::load<uint256>(&t.input[64]), be::unsafe::load<uint256>(&t.input[96])};
+        const Point e{be::unsafe::load<uint256>(&t.expected_output[0]),
+            be::unsafe::load<uint256>(&t.expected_output[32])};
+
+        if (is_at_infinity(a) || is_at_infinity(b))
+            continue;
+
+        EXPECT_EQ(bn254_add(a, b), e);
     }
 }
