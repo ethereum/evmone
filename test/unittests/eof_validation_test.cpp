@@ -323,6 +323,9 @@ TEST(eof_validation, EOF1_undefined_opcodes)
         // PUSH*, DUPN, SWAPN require immediate argument to be valid, checked in a separate test
         if (opcode >= OP_PUSH1 && opcode <= OP_PUSH32)
             continue;
+        if (opcode == OP_JUMP || opcode == OP_JUMPI || opcode == OP_PC || opcode == OP_CALLCODE ||
+            opcode == OP_SELFDESTRUCT)
+            continue;
         if (opcode == OP_DUPN || opcode == OP_SWAPN)
             continue;
 
@@ -390,6 +393,13 @@ TEST(oef_validation, EOF1_section_order)
         EOFValidationError::data_section_before_types_section);
 }
 
+TEST(eof_validation, deprecated_instructions)
+{
+    for (auto op : {OP_CALLCODE, OP_SELFDESTRUCT, OP_JUMP, OP_JUMPI, OP_PC})
+    {
+        EXPECT_EQ(validate_eof(eof1_bytecode(op)), EOFValidationError::undefined_instruction);
+    }
+}
 
 TEST(eof_validation, incomplete_section_size)
 {
