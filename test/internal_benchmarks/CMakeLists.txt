@@ -9,4 +9,4 @@ add_executable(
     precompiles_bench.cpp
 )
 target_include_directories(evmone-bench-internal PRIVATE ${evmone_private_include_dir})
-target_link_libraries(evmone-bench-internal PRIVATE benchmark::benchmark evmone::evmmax evmc::evmc_cpp)
+target_link_libraries(evmone-bench-internal PRIVATE benchmark::benchmark evmone::evmmax evmc::evmc_cpp evmone::state)
