@@ -67,9 +67,13 @@ ModArith<UintT>::ModArith(const UintT& modulus) : mod{modulus}, mod_inv{mul_inv6
 template <typename UintT>
 UintT ModArith<UintT>::mul(const UintT& a, const UintT& b) const noexcept
 {
+    // Coarsely Integrated Op erand Scanning (CIOS) Method
+    // Based on 2.3.2 from
+    // https://www.microsoft.com/en-us/research/wp-content/uploads/1998/06/97Acar.pdf
+
     static constexpr auto S = UintT::num_words;
 
-    uint64_t t[S + 2]{};
+    intx::uint<UintT::num_bits + 64> t;
     for (size_t i = 0; i != S; ++i)
     {
         uint64_t c = 0;
@@ -79,32 +83,24 @@ UintT ModArith<UintT>::mul(const UintT& a, const UintT& b) const noexcept
         }
         auto tmp = addc(t[S], c);
         t[S] = tmp.value;
-        t[S + 1] = tmp.carry;
+        auto d = tmp.carry;
 
         c = 0;
         auto m = t[0] * mod_inv;
-        for (size_t j = 0; j != S; ++j)
+        std::tie(c, t[0]) = addmul(t[0], m, mod[0], c);
+        for (size_t j = 1; j != S; ++j)
         {
-            std::tie(c, t[j]) = addmul(t[j], m, mod[j], c);
+            std::tie(c, t[j - 1]) = addmul(t[j], m, mod[j], c);
         }
         tmp = addc(t[S], c);
-        t[S] = tmp.value;
-        t[S + 1] += tmp.carry;
-
-        for (size_t j = 0; j != S + 1; ++j)
-        {
-            t[j] = t[j + 1];
-        }
+        t[S - 1] = tmp.value;
+        t[S] = d + tmp.carry;  // TODO: Untested.
     }
 
-    intx::uint<(S + 1) * 64> tt;
-    for (size_t j = 0; j != S + 1; ++j)
-        tt[j] = t[j];
+    if (t >= mod)
+        t -= mod;
 
-    if (tt >= mod)
-        tt -= mod;
-
-    return static_cast<UintT>(tt);
+    return static_cast<UintT>(t);
 }
 
 template <typename UintT>
