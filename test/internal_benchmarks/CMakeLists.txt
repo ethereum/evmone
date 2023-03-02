@@ -9,5 +9,5 @@ add_executable(
     memory_allocation.cpp
     precompiles_bench.cpp
 )
-
-target_link_libraries(evmone-bench-internal PRIVATE evmone::evmmax evmc::evmc_cpp benchmark::benchmark)
+target_include_directories(evmone-bench-internal PRIVATE ${evmone_private_include_dir})
+target_link_libraries(evmone-bench-internal PRIVATE evmone::evmmax evmone::state evmc::evmc_cpp benchmark::benchmark)

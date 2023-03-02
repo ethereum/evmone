@@ -5,6 +5,7 @@
 #include <benchmark/benchmark.h>
 #include <evmc/evmc.hpp>
 #include <evmmax/bn254.hpp>
+#include "../state/precompiles_silkpre.hpp"
 
 template <decltype(evmmax::bn254::bn254_add_precompile) Fn>
 void bn254_add(benchmark::State& state)
@@ -27,4 +28,5 @@ void bn254_add(benchmark::State& state)
         benchmark::Counter(static_cast<double>(total_gas_used), benchmark::Counter::kIsRate);
 }
 
+BENCHMARK_TEMPLATE(bn254_add, evmone::state::silkpre_ecadd_execute);
 BENCHMARK_TEMPLATE(bn254_add, evmmax::bn254::bn254_add_precompile);
