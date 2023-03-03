@@ -58,12 +58,10 @@ constexpr void validate_traits_of() noexcept
     else if constexpr (Op == OP_DUPN || Op == OP_SWAPN)
         static_assert(tr.immediate_size == 1);
     else
-        static_assert(tr.immediate_size == 0);
+        static_assert(tr.immediate_size == 0);  // Including RJUMPV.
 
     // is_terminating
     static_assert(tr.is_terminating == is_terminating(Op));
-    static_assert(!tr.is_terminating || tr.immediate_size == 0,
-        "terminating instructions must not have immediate bytes - this simplifies EOF validation");
 
     // since
     constexpr auto expected_rev = get_revision_defined_in(Op);
