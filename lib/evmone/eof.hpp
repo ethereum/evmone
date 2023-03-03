@@ -5,21 +5,45 @@
 
 #include <evmc/evmc.h>
 #include <evmc/utils.h>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace evmone
 {
 using bytes_view = std::basic_string_view<uint8_t>;
 
+struct EOFCodeType
+{
+    uint8_t inputs;             ///< Number of code inputs.
+    uint8_t outputs;            ///< Number of code outputs.
+    uint16_t max_stack_height;  ///< Maximum stack height reached in the code.
+
+    EOFCodeType(uint8_t inputs_, uint8_t outputs_, uint16_t max_stack_height_)
+      : inputs{inputs_}, outputs{outputs_}, max_stack_height{max_stack_height_}
+    {}
+};
+
 struct EOF1Header
 {
-    uint16_t code_size = 0;
+    /// Size of every code section.
+    std::vector<uint16_t> code_sizes;
+
+    /// Offset of every code section from the beginning of the EOF container.
+    std::vector<uint16_t> code_offsets;
+
     uint16_t data_size = 0;
 
-    /// Returns offset of code section start.
-    [[nodiscard]] EVMC_EXPORT size_t code_begin() const noexcept;
+    std::vector<EOFCodeType> types;
+
+    /// A helper to extract reference to a specific code section.
+    [[nodiscard]] bytes_view get_code(bytes_view container, size_t code_idx) const noexcept
+    {
+        assert(code_idx < code_offsets.size());
+        return container.substr(code_offsets[code_idx], code_sizes[code_idx]);
+    }
 };
 
 /// Checks if code starts with EOF FORMAT + MAGIC, doesn't validate the format.
@@ -27,7 +51,7 @@ struct EOF1Header
 
 /// Reads the section sizes assuming that container has valid format.
 /// (must be true for all EOF contracts on-chain)
-[[nodiscard]] EVMC_EXPORT EOF1Header read_valid_eof1_header(bytes_view container) noexcept;
+[[nodiscard]] EVMC_EXPORT EOF1Header read_valid_eof1_header(bytes_view container);
 
 enum class EOFValidationError
 {
@@ -38,15 +62,22 @@ enum class EOFValidationError
     eof_version_unknown,
 
     incomplete_section_size,
+    incomplete_section_number,
+    header_terminator_missing,
+    type_section_missing,
     code_section_missing,
-    multiple_code_sections,
-    multiple_data_sections,
-    unknown_section_id,
+    data_section_missing,
     zero_section_size,
     section_headers_not_terminated,
     invalid_section_bodies_size,
     undefined_instruction,
-    missing_terminating_instruction,
+    truncated_instruction,
+    too_many_code_sections,
+    invalid_type_section_size,
+    invalid_first_section_type,
+    invalid_max_stack_height,
+    max_stack_height_above_limit,
+    inputs_outputs_num_above_limit,
 
     impossible,
 };
@@ -61,4 +92,21 @@ enum class EOFValidationError
 
 /// Returns the error message corresponding to an error code.
 [[nodiscard]] EVMC_EXPORT std::string_view get_error_message(EOFValidationError err) noexcept;
+
+/// Loads big endian int16_t from data. Unsafe.
+/// TODO: Move it to intx
+inline int16_t read_int16_be(const uint8_t* data) noexcept
+{
+    return static_cast<int16_t>(data[0] << 8 | data[1]);
+}
+
+/// Loads big endian uint16_t from data. Unsafe.
+/// TODO: Move it to intx
+inline uint16_t read_uint16_be(auto it) noexcept
+{
+    const uint8_t h = *it++;
+    const uint8_t l = *it;
+    return static_cast<uint16_t>((h << 8) | l);
+}
+
 }  // namespace evmone
