@@ -215,7 +215,21 @@ EOFValidationError validate_instructions(evmc_revision rev, bytes_view code) noe
         if (cost_table[op] == instr::undefined)
             return EOFValidationError::undefined_instruction;
 
-        i += instr::traits[op].immediate_size;
+        if (op == OP_RJUMPV)
+        {
+            if (i + 1 < code.size())
+            {
+                const auto count = code[i + 1];
+                if (count < 1)
+                    return EOFValidationError::invalid_rjumpv_count;
+                i += static_cast<size_t>(1 /* count */ + count * 2 /* tbl */);
+            }
+            else
+                return EOFValidationError::truncated_instruction;
+        }
+        else
+            i += instr::traits[op].immediate_size;
+
         if (i >= code.size())
             return EOFValidationError::truncated_instruction;
     }
@@ -241,6 +255,29 @@ bool validate_rjump_destinations(bytes_view code) noexcept
             if (jumpdest < 0 || static_cast<size_t>(jumpdest) >= code_size)
                 return false;
             rjumpdests.push_back(static_cast<size_t>(jumpdest));
+        }
+        else if (op == OP_RJUMPV)
+        {
+            constexpr auto REL_OFFSET_SIZE = sizeof(int16_t);
+
+            const auto count = code[i + 1];
+
+            const auto post_offset = 1 + 1 /* count */ + count * REL_OFFSET_SIZE /* tbl */;
+
+            for (size_t k = 0; k < count * REL_OFFSET_SIZE; k += REL_OFFSET_SIZE)
+            {
+                const auto rel_offset = read_int16_be(&code[i + 1 + 1 + static_cast<uint16_t>(k)]);
+                const auto jumpdest = static_cast<int>(i + post_offset) + rel_offset;
+                if (jumpdest < 0 || static_cast<size_t>(jumpdest) >= code_size)
+                    return false;
+                rjumpdests.push_back(static_cast<size_t>(jumpdest));
+            }
+
+            const auto rjumpv_imm_size = size_t{1} + count * REL_OFFSET_SIZE;
+            std::fill_n(
+                immediate_map.begin() + static_cast<ptrdiff_t>(i) + 1, rjumpv_imm_size, true);
+            i += rjumpv_imm_size;
+            continue;
         }
 
         const auto imm_size = instr::traits[op].immediate_size;
@@ -301,7 +338,8 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
 
         successors.clear();
 
-        if (opcode != OP_RJUMP && !instr::traits[opcode].is_terminating)
+        // immediate_size for RJUMPV depends on the code. It's calculated below.
+        if (opcode != OP_RJUMP && !instr::traits[opcode].is_terminating && opcode != OP_RJUMPV)
         {
             auto next = i + instr::traits[opcode].immediate_size + 1;
             if (next >= code.size())
@@ -317,8 +355,31 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
                 static_cast<size_t>(target_rel_offset + 3 + static_cast<int32_t>(i)));
         }
 
-        auto beg = stack_heights.begin() + static_cast<int32_t>(i) + 1;
-        std::fill_n(beg, instr::traits[opcode].immediate_size, -2);
+        if (opcode == OP_RJUMPV)
+        {
+            auto count = code[i + 1];
+
+            auto next = i + count * 2 + 2;
+            if (next >= code.size())
+                return {EOFValidationError::no_terminating_instruction, -1};
+
+            auto beg = stack_heights.begin() + static_cast<int32_t>(i) + 1;
+            std::fill_n(beg, count * 2 + 1, -2);
+
+            successors.push_back(next);
+
+            for (uint16_t k = 0; k < count; ++k)
+            {
+                auto target_rel_offset = read_int16_be(&code[i + k * 2 + 2]);
+                successors.push_back(static_cast<size_t>(
+                    static_cast<int32_t>(i) + 2 * count + target_rel_offset + 2));
+            }
+        }
+        else
+        {
+            auto beg = stack_heights.begin() + static_cast<int32_t>(i) + 1;
+            std::fill_n(beg, instr::traits[opcode].immediate_size, -2);
+        }
 
         stack_height += stack_height_change;
 
@@ -528,6 +589,8 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "undefined_instruction";
     case EOFValidationError::truncated_instruction:
         return "truncated_instruction";
+    case EOFValidationError::invalid_rjumpv_count:
+        return "invalid_rjumpv_count";
     case EOFValidationError::invalid_rjump_destination:
         return "invalid_rjump_destination";
     case EOFValidationError::too_many_code_sections:
