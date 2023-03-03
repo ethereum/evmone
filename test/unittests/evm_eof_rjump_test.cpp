@@ -15,14 +15,15 @@ TEST_P(evm, eof1_rjump)
         return;
 
     rev = EVMC_CANCUN;
-    auto code = eof1_bytecode(rjump(1) + OP_INVALID + mstore8(0, 1) + ret(0, 1));
+    auto code = eof1_bytecode(rjumpi(3, 0) + rjump(1) + OP_INVALID + mstore8(0, 1) + ret(0, 1), 2);
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 1);
 
-    code = eof1_bytecode(rjump(1) + OP_INVALID + mstore8(0, 1) + ret(0, 1), "deadbeef");
+    code = eof1_bytecode(
+        rjumpi(3, 0) + rjump(1) + OP_INVALID + mstore8(0, 1) + ret(0, 1), 2, "deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -37,16 +38,14 @@ TEST_P(evm, eof1_rjump_backward)
         return;
 
     rev = EVMC_CANCUN;
-    auto code =
-        eof1_bytecode(rjump(11) + OP_INVALID + mstore8(0, 1) + ret(0, 1) + rjump(-13) + OP_STOP);
+    auto code = eof1_bytecode(rjump(10) + mstore8(0, 1) + ret(0, 1) + rjump(-13), 2);
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 1);
 
-    code = eof1_bytecode(
-        rjump(11) + OP_INVALID + mstore8(0, 1) + ret(0, 1) + rjump(-13) + OP_STOP, "deadbeef");
+    code = eof1_bytecode(rjump(10) + mstore8(0, 1) + ret(0, 1) + rjump(-13), 2, "deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -61,7 +60,7 @@ TEST_P(evm, eof1_rjump_0_offset)
         return;
 
     rev = EVMC_CANCUN;
-    auto code = eof1_bytecode(rjump(0) + mstore8(0, 1) + ret(0, 1));
+    auto code = eof1_bytecode(rjump(0) + mstore8(0, 1) + ret(0, 1), 2);
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -77,7 +76,7 @@ TEST_P(evm, eof1_rjumpi)
 
     rev = EVMC_CANCUN;
     auto code = eof1_bytecode(
-        rjumpi(10, calldataload(0)) + mstore8(0, 2) + ret(0, 1) + mstore8(0, 1) + ret(0, 1));
+        rjumpi(10, calldataload(0)) + mstore8(0, 2) + ret(0, 1) + mstore8(0, 1) + ret(0, 1), 2);
 
     // RJUMPI condition is true
     execute(code, "01"_hex);
@@ -99,8 +98,9 @@ TEST_P(evm, eof1_rjumpi_backwards)
         return;
 
     rev = EVMC_CANCUN;
-    auto code = eof1_bytecode(rjump(11) + OP_INVALID + mstore8(0, 1) + ret(0, 1) +
-                              rjumpi(-16, calldataload(0)) + mstore8(0, 2) + ret(0, 1));
+    auto code = eof1_bytecode(rjump(10) + mstore8(0, 1) + ret(0, 1) + rjumpi(-16, calldataload(0)) +
+                                  mstore8(0, 2) + ret(0, 1),
+        2);
 
     // RJUMPI condition is true
     execute(code, "01"_hex);
@@ -122,7 +122,7 @@ TEST_P(evm, eof1_rjumpi_0_offset)
         return;
 
     rev = EVMC_CANCUN;
-    auto code = eof1_bytecode(rjumpi(0, calldataload(0)) + mstore8(0, 1) + ret(0, 1));
+    auto code = eof1_bytecode(rjumpi(0, calldataload(0)) + mstore8(0, 1) + ret(0, 1), 2);
 
     // RJUMPI condition is true
     execute(code, "01"_hex);
