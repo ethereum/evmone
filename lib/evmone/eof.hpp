@@ -5,21 +5,45 @@
 
 #include <evmc/evmc.h>
 #include <evmc/utils.h>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace evmone
 {
 using bytes_view = std::basic_string_view<uint8_t>;
 
+struct EOF1TypeHeader
+{
+    uint8_t inputs_num;
+    uint8_t outputs_num;
+    uint16_t max_stack_height;
+
+    EOF1TypeHeader(uint8_t inputs_num_, uint8_t outputs_num_, uint16_t max_stack_height_)
+      : inputs_num(inputs_num_), outputs_num(outputs_num_), max_stack_height(max_stack_height_)
+    {}
+};
+
 struct EOF1Header
 {
-    uint16_t code_size = 0;
+    /// Size of every code section.
+    std::vector<uint16_t> code_sizes;
+
+    /// Offset of every code section from the beginning of the EOF container.
+    std::vector<uint16_t> code_offsets;
+
     uint16_t data_size = 0;
 
-    /// Returns offset of code section start.
-    [[nodiscard]] EVMC_EXPORT size_t code_begin() const noexcept;
+    std::vector<EOF1TypeHeader> types;
+
+    /// A helper to extract reference to a specific code section.
+    [[nodiscard]] bytes_view get_code(bytes_view container, size_t code_idx) const noexcept
+    {
+        assert(code_idx < code_offsets.size());
+        return container.substr(code_offsets[code_idx], code_sizes[code_idx]);
+    }
 };
 
 /// Checks if code starts with EOF FORMAT + MAGIC, doesn't validate the format.
@@ -27,7 +51,7 @@ struct EOF1Header
 
 /// Reads the section sizes assuming that container has valid format.
 /// (must be true for all EOF contracts on-chain)
-[[nodiscard]] EVMC_EXPORT EOF1Header read_valid_eof1_header(bytes_view container) noexcept;
+[[nodiscard]] EVMC_EXPORT EOF1Header read_valid_eof1_header(bytes_view container);
 
 enum class EOFValidationError
 {
@@ -38,15 +62,28 @@ enum class EOFValidationError
     eof_version_unknown,
 
     incomplete_section_size,
+    incomplete_section_number,
     code_section_missing,
-    multiple_code_sections,
+    type_section_missing,
+    data_section_missing,
     multiple_data_sections,
     unknown_section_id,
     zero_section_size,
     section_headers_not_terminated,
     invalid_section_bodies_size,
     undefined_instruction,
-    missing_terminating_instruction,
+    truncated_instruction,
+    code_section_before_type_section,
+    multiple_type_sections,
+    multiple_code_sections_headers,
+    too_many_code_sections,
+    data_section_before_code_section,
+    data_section_before_types_section,
+    invalid_type_section_size,
+    invalid_first_section_type,
+    invalid_max_stack_height,
+    max_stack_height_above_limit,
+    inputs_outputs_num_above_limit,
 
     impossible,
 };
