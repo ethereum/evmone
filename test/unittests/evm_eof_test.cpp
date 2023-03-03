@@ -24,7 +24,7 @@ TEST_P(evm, eof1_execution_with_data_section)
 {
     rev = EVMC_CANCUN;
     // data section contains ret(0, 1)
-    const auto code = eof1_bytecode(mstore8(0, 1) + OP_STOP, ret(0, 1));
+    const auto code = eof1_bytecode(mstore8(0, 1) + OP_STOP, 2, ret(0, 1));
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -34,14 +34,14 @@ TEST_P(evm, eof1_execution_with_data_section)
 TEST_P(evm, DISABLED_eof1_pc)
 {
     rev = EVMC_CANCUN;
-    auto code = eof1_bytecode(OP_PC + mstore8(0) + ret(0, 1));
+    auto code = eof1_bytecode(OP_PC + mstore8(0) + ret(0, 1), 2);
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 0);
 
-    code = eof1_bytecode(4 * bytecode{OP_JUMPDEST} + OP_PC + mstore8(0) + ret(0, 1));
+    code = eof1_bytecode(4 * bytecode{OP_JUMPDEST} + OP_PC + mstore8(0) + ret(0, 1), 2);
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -52,15 +52,15 @@ TEST_P(evm, DISABLED_eof1_pc)
 TEST_P(evm, DISABLED_eof1_jump_inside_code_section)
 {
     rev = EVMC_CANCUN;
-    auto code = eof1_bytecode(jump(4) + OP_INVALID + OP_JUMPDEST + mstore8(0, 1) + ret(0, 1));
+    auto code = eof1_bytecode(jump(4) + OP_INVALID + OP_JUMPDEST + mstore8(0, 1) + ret(0, 1), 2);
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 1);
 
-    code =
-        eof1_bytecode(jump(4) + OP_INVALID + OP_JUMPDEST + mstore8(0, 1) + ret(0, 1), "deadbeef");
+    code = eof1_bytecode(
+        jump(4) + OP_INVALID + OP_JUMPDEST + mstore8(0, 1) + ret(0, 1), 3, "deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -79,7 +79,7 @@ TEST_P(evm, DISABLED_eof1_jumpi_inside_code_section)
     EXPECT_EQ(result.output_data[0], 1);
 
     code = eof1_bytecode(
-        jumpi(6, 1) + OP_INVALID + OP_JUMPDEST + mstore8(0, 1) + ret(0, 1), "deadbeef");
+        jumpi(6, 1) + OP_INVALID + OP_JUMPDEST + mstore8(0, 1) + ret(0, 1), 2, "deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -91,7 +91,7 @@ TEST_P(evm, DISABLED_eof1_jump_into_data_section)
 {
     rev = EVMC_CANCUN;
     // data section contains OP_JUMPDEST + mstore8(0, 1) + ret(0, 1)
-    const auto code = eof1_bytecode(jump(4) + OP_STOP, OP_JUMPDEST + mstore8(0, 1) + ret(0, 1));
+    const auto code = eof1_bytecode(jump(4) + OP_STOP, 1, OP_JUMPDEST + mstore8(0, 1) + ret(0, 1));
 
     execute(code);
     EXPECT_STATUS(EVMC_BAD_JUMP_DESTINATION);
@@ -101,7 +101,8 @@ TEST_P(evm, DISABLED_eof1_jumpi_into_data_section)
 {
     rev = EVMC_CANCUN;
     // data section contains OP_JUMPDEST + mstore8(0, 1) + ret(0, 1)
-    const auto code = eof1_bytecode(jumpi(6, 1) + OP_STOP, OP_JUMPDEST + mstore8(0, 1) + ret(0, 1));
+    const auto code =
+        eof1_bytecode(jumpi(6, 1) + OP_STOP, 2, OP_JUMPDEST + mstore8(0, 1) + ret(0, 1));
 
     execute(code);
     EXPECT_STATUS(EVMC_BAD_JUMP_DESTINATION);
@@ -113,7 +114,7 @@ TEST_P(evm, DISABLED_eof1_push_byte_in_header)
     // data section is 0x65 bytes long, so header contains 0x65 (PUSH6) byte,
     // but it must not affect jumpdest analysis (OP_JUMPDEST stays valid)
     auto code = eof1_bytecode(
-        jump(4) + OP_INVALID + OP_JUMPDEST + mstore8(0, 1) + ret(0, 1), bytes(0x65, '\0'));
+        jump(4) + OP_INVALID + OP_JUMPDEST + mstore8(0, 1) + ret(0, 1), 2, bytes(0x65, '\0'));
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -124,14 +125,14 @@ TEST_P(evm, DISABLED_eof1_push_byte_in_header)
 TEST_P(evm, eof1_codesize)
 {
     rev = EVMC_CANCUN;
-    auto code = eof1_bytecode(mstore8(0, OP_CODESIZE) + ret(0, 1));
+    auto code = eof1_bytecode(mstore8(0, OP_CODESIZE) + ret(0, 1), 2);
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 28);
 
-    code = eof1_bytecode(mstore8(0, OP_CODESIZE) + ret(0, 1), "deadbeef");
+    code = eof1_bytecode(mstore8(0, OP_CODESIZE) + ret(0, 1), 2, "deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -142,32 +143,32 @@ TEST_P(evm, eof1_codesize)
 TEST_P(evm, eof1_codecopy_full)
 {
     rev = EVMC_CANCUN;
-    auto code = eof1_bytecode(bytecode{31} + 0 + 0 + OP_CODECOPY + ret(0, 31));
+    auto code = eof1_bytecode(bytecode{31} + 0 + 0 + OP_CODECOPY + ret(0, 31), 3);
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
-        "ef0001010004020001000c0300000000000000601f6000600039601f6000f3"_hex);
+        "ef0001010004020001000c0300000000000003601f6000600039601f6000f3"_hex);
 
-    code = eof1_bytecode(bytecode{35} + 0 + 0 + OP_CODECOPY + ret(0, 35), "deadbeef");
+    code = eof1_bytecode(bytecode{35} + 0 + 0 + OP_CODECOPY + ret(0, 35), 3, "deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
-        "ef0001010004020001000c03000400000000006023600060003960236000f3deadbeef"_hex);
+        "ef0001010004020001000c03000400000000036023600060003960236000f3deadbeef"_hex);
 }
 
 TEST_P(evm, eof1_codecopy_header)
 {
     rev = EVMC_CANCUN;
-    auto code = eof1_bytecode(bytecode{15} + 0 + 0 + OP_CODECOPY + ret(0, 15));
+    auto code = eof1_bytecode(bytecode{15} + 0 + 0 + OP_CODECOPY + ret(0, 15), 3);
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(
         bytes_view(result.output_data, result.output_size), "ef0001010004020001000c03000000"_hex);
 
-    code = eof1_bytecode(bytecode{15} + 0 + 0 + OP_CODECOPY + ret(0, 15), "deadbeef");
+    code = eof1_bytecode(bytecode{15} + 0 + 0 + OP_CODECOPY + ret(0, 15), 3, "deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -178,13 +179,13 @@ TEST_P(evm, eof1_codecopy_header)
 TEST_P(evm, eof1_codecopy_code)
 {
     rev = EVMC_CANCUN;
-    auto code = eof1_bytecode(bytecode{12} + 19 + 0 + OP_CODECOPY + ret(0, 12));
+    auto code = eof1_bytecode(bytecode{12} + 19 + 0 + OP_CODECOPY + ret(0, 12), 3);
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size), "600c6013600039600c6000f3"_hex);
 
-    code = eof1_bytecode(bytecode{12} + 19 + 0 + OP_CODECOPY + ret(0, 12), "deadbeef");
+    code = eof1_bytecode(bytecode{12} + 19 + 0 + OP_CODECOPY + ret(0, 12), 3, "deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -195,7 +196,7 @@ TEST_P(evm, eof1_codecopy_data)
 {
     rev = EVMC_CANCUN;
 
-    const auto code = eof1_bytecode(bytecode{4} + 31 + 0 + OP_CODECOPY + ret(0, 4), "deadbeef");
+    const auto code = eof1_bytecode(bytecode{4} + 31 + 0 + OP_CODECOPY + ret(0, 4), 3, "deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -206,19 +207,19 @@ TEST_P(evm, eof1_codecopy_out_of_bounds)
 {
     // 4 bytes out of container bounds - result is implicitly 0-padded
     rev = EVMC_CANCUN;
-    auto code = eof1_bytecode(bytecode{35} + 0 + 0 + OP_CODECOPY + ret(0, 35));
+    auto code = eof1_bytecode(bytecode{35} + 0 + 0 + OP_CODECOPY + ret(0, 35), 3);
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
-        "ef0001010004020001000c03000000000000006023600060003960236000f300000000"_hex);
+        "ef0001010004020001000c03000000000000036023600060003960236000f300000000"_hex);
 
-    code = eof1_bytecode(bytecode{39} + 0 + 0 + OP_CODECOPY + ret(0, 39), "deadbeef");
+    code = eof1_bytecode(bytecode{39} + 0 + 0 + OP_CODECOPY + ret(0, 39), 3, "deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
-        "ef0001010004020001000c03000400000000006027600060003960276000f3deadbeef00000000"_hex);
+        "ef0001010004020001000c03000400000000036027600060003960276000f3deadbeef00000000"_hex);
 }
 
 TEST_P(evm, eof2_rjump)
@@ -228,14 +229,15 @@ TEST_P(evm, eof2_rjump)
         return;
 
     rev = EVMC_CANCUN;
-    auto code = eof1_bytecode(rjump(1) + OP_INVALID + mstore8(0, 1) + ret(0, 1));
+    auto code = eof1_bytecode(rjumpi(3, 0) + rjump(1) + OP_INVALID + mstore8(0, 1) + ret(0, 1), 2);
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 1);
 
-    code = eof1_bytecode(rjump(1) + OP_INVALID + mstore8(0, 1) + ret(0, 1), "deadbeef");
+    code = eof1_bytecode(
+        rjumpi(3, 0) + rjump(1) + OP_INVALID + mstore8(0, 1) + ret(0, 1), 2, "deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -250,16 +252,14 @@ TEST_P(evm, eof2_rjump_backward)
         return;
 
     rev = EVMC_CANCUN;
-    auto code =
-        eof1_bytecode(rjump(11) + OP_INVALID + mstore8(0, 1) + ret(0, 1) + rjump(-13) + OP_STOP);
+    auto code = eof1_bytecode(rjump(10) + mstore8(0, 1) + ret(0, 1) + rjump(-13), 2);
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 1);
 
-    code = eof1_bytecode(
-        rjump(11) + OP_INVALID + mstore8(0, 1) + ret(0, 1) + rjump(-13) + OP_STOP, "deadbeef");
+    code = eof1_bytecode(rjump(10) + mstore8(0, 1) + ret(0, 1) + rjump(-13), 2, "deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -274,7 +274,7 @@ TEST_P(evm, eof2_rjump_0_offset)
         return;
 
     rev = EVMC_CANCUN;
-    auto code = eof1_bytecode(rjump(0) + mstore8(0, 1) + ret(0, 1));
+    auto code = eof1_bytecode(rjump(0) + mstore8(0, 1) + ret(0, 1), 2);
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -290,7 +290,7 @@ TEST_P(evm, eof2_rjumpi)
 
     rev = EVMC_CANCUN;
     auto code = eof1_bytecode(
-        rjumpi(10, calldataload(0)) + mstore8(0, 2) + ret(0, 1) + mstore8(0, 1) + ret(0, 1));
+        rjumpi(10, calldataload(0)) + mstore8(0, 2) + ret(0, 1) + mstore8(0, 1) + ret(0, 1), 2);
 
     // RJUMPI condition is true
     execute(code, "01"_hex);
@@ -312,8 +312,9 @@ TEST_P(evm, eof2_rjumpi_backwards)
         return;
 
     rev = EVMC_CANCUN;
-    auto code = eof1_bytecode(rjump(11) + OP_INVALID + mstore8(0, 1) + ret(0, 1) +
-                              rjumpi(-16, calldataload(0)) + mstore8(0, 2) + ret(0, 1));
+    auto code = eof1_bytecode(rjump(10) + mstore8(0, 1) + ret(0, 1) + rjumpi(-16, calldataload(0)) +
+                                  mstore8(0, 2) + ret(0, 1),
+        2);
 
     // RJUMPI condition is true
     execute(code, "01"_hex);
@@ -335,7 +336,7 @@ TEST_P(evm, eof2_rjumpi_0_offset)
         return;
 
     rev = EVMC_CANCUN;
-    auto code = eof1_bytecode(rjumpi(0, calldataload(0)) + mstore8(0, 1) + ret(0, 1));
+    auto code = eof1_bytecode(rjumpi(0, calldataload(0)) + mstore8(0, 1) + ret(0, 1), 2);
 
     // RJUMPI condition is true
     execute(code, "01"_hex);
