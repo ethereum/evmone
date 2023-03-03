@@ -44,6 +44,12 @@ size_t eof_header_size(const EOFSectionHeaders& headers) noexcept
            code_section_count * code_section_size_size + sizeof(TERMINATOR);
 }
 
+EOFValidationError get_section_missing_error(uint8_t section_id) noexcept
+{
+    return static_cast<EOFValidationError>(
+        static_cast<uint8_t>(EOFValidationError::header_terminator_missing) + section_id);
+}
+
 std::variant<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_view container)
 {
     enum class State
@@ -61,6 +67,7 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_v
     auto it = container.begin() + std::size(MAGIC) + 1;  // MAGIC + VERSION
     // TODO: Since all sections are mandatory and they have to be ordered (Types, Code+, Data)
     // TODO: this fragment of code can be much simpler. Rewriting needed.
+    uint8_t expected_section_id = TYPE_SECTION;
     while (it != container_end && state != State::terminated)
     {
         switch (state)
@@ -68,52 +75,37 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_v
         case State::section_id:
         {
             section_id = *it++;
+
+            if (section_id != expected_section_id)
+                return get_section_missing_error(expected_section_id);
+
             switch (section_id)
             {
             case TERMINATOR:
-                if (section_headers[TYPE_SECTION].empty())
-                    return EOFValidationError::type_section_missing;
-                if (section_headers[CODE_SECTION].empty())
-                    return EOFValidationError::code_section_missing;
-                if (section_headers[DATA_SECTION].empty())
-                    return EOFValidationError::data_section_missing;
                 state = State::terminated;
                 break;
             case TYPE_SECTION:
-                if (!section_headers[TYPE_SECTION].empty())
-                    return EOFValidationError::multiple_type_sections;
-                if (!section_headers[CODE_SECTION].empty())
-                    return EOFValidationError::code_section_before_type_section;
-                state = State::section_size;
-                break;
-            case DATA_SECTION:
-                if (section_headers[TYPE_SECTION].empty())
-                    return EOFValidationError::data_section_before_types_section;
-                if (section_headers[CODE_SECTION].empty())
-                    return EOFValidationError::data_section_before_code_section;
-                if (!section_headers[DATA_SECTION].empty())
-                    return EOFValidationError::multiple_data_sections;
+                expected_section_id = CODE_SECTION;
                 state = State::section_size;
                 break;
             case CODE_SECTION:
             {
-                if (section_headers[TYPE_SECTION].empty())
-                    return EOFValidationError::code_section_before_type_section;
-                if (!section_headers[DATA_SECTION].empty())
-                    return EOFValidationError::data_section_before_code_section;
-                if (!section_headers[CODE_SECTION].empty())
-                    return EOFValidationError::multiple_code_sections_headers;
                 if (it >= container_end - 2)
                     return EOFValidationError::incomplete_section_number;
                 section_num = read_uint16_be(it);
                 it += 2;
                 if (section_num == 0)
                     return EOFValidationError::zero_section_size;
+                expected_section_id = DATA_SECTION;
                 state = State::section_size;
                 break;
             }
+            case DATA_SECTION:
+                expected_section_id = TERMINATOR;
+                state = State::section_size;
+                break;
             default:
-                return EOFValidationError::unknown_section_id;
+                assert(false);
             }
             break;
         }
@@ -580,16 +572,14 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "incomplete_section_size";
     case EOFValidationError::incomplete_section_number:
         return "incomplete_section_number";
-    case EOFValidationError::code_section_missing:
-        return "code_section_missing";
+    case EOFValidationError::header_terminator_missing:
+        return "header_terminator_missing";
     case EOFValidationError::type_section_missing:
         return "type_section_missing";
+    case EOFValidationError::code_section_missing:
+        return "code_section_missing";
     case EOFValidationError::data_section_missing:
         return "data_section_missing";
-    case EOFValidationError::multiple_data_sections:
-        return "multiple_data_sections";
-    case EOFValidationError::unknown_section_id:
-        return "unknown_section_id";
     case EOFValidationError::zero_section_size:
         return "zero_section_size";
     case EOFValidationError::section_headers_not_terminated:
@@ -604,18 +594,8 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "invalid_rjumpv_count";
     case EOFValidationError::invalid_rjump_destination:
         return "invalid_rjump_destination";
-    case EOFValidationError::code_section_before_type_section:
-        return "code_section_before_type_section";
-    case EOFValidationError::multiple_type_sections:
-        return "multiple_type_sections";
-    case EOFValidationError::multiple_code_sections_headers:
-        return "multiple_code_sections_headers";
     case EOFValidationError::too_many_code_sections:
         return "too_many_code_sections";
-    case EOFValidationError::data_section_before_code_section:
-        return "data_section_before_code_section";
-    case EOFValidationError::data_section_before_types_section:
-        return "data_section_before_types_section";
     case EOFValidationError::invalid_type_section_size:
         return "invalid_type_section_size";
     case EOFValidationError::invalid_first_section_type:
