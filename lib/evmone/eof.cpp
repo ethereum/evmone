@@ -6,11 +6,13 @@
 #include "baseline_instruction_table.hpp"
 #include "instructions_traits.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <limits>
 #include <numeric>
 #include <span>
+#include <stack>
 #include <variant>
 #include <vector>
 
@@ -25,8 +27,9 @@ constexpr uint8_t CODE_SECTION = 0x02;
 constexpr uint8_t DATA_SECTION = 0x03;
 constexpr uint8_t MAX_SECTION = DATA_SECTION;
 constexpr auto CODE_SECTION_NUMBER_LIMIT = 1024;
-constexpr auto MAX_STACK_HEIGHT = 0x0400;
+constexpr auto MAX_STACK_HEIGHT = 0x03FF;
 constexpr auto OUTPUTS_INPUTS_NUMBER_LIMIT = 0x7F;
+constexpr auto REL_OFFSET_SIZE = sizeof(int16_t);
 
 using EOFSectionHeaders = std::array<std::vector<uint16_t>, MAX_SECTION + 1>;
 
@@ -230,8 +233,6 @@ EOFValidationError validate_instructions(evmc_revision rev, bytes_view code) noe
 /// Requires that the input is validated against truncation.
 bool validate_rjump_destinations(bytes_view code) noexcept
 {
-    static constexpr auto REL_OFFSET_SIZE = sizeof(int16_t);
-
     // Collect relative jump destinations and immediate locations
     const auto code_size = code.size();
     // list of all possible absolute rjumps destinations positions
@@ -286,6 +287,120 @@ bool validate_rjump_destinations(bytes_view code) noexcept
     return true;
 }
 
+/// Requires that the input is validated against truncation.
+std::variant<EOFValidationError, int32_t> validate_max_stack_height(
+    bytes_view code, size_t func_index, const std::vector<EOFCodeType>& code_types)
+{
+    assert(!code.empty());
+
+    // Special values used for detecting errors.
+    static constexpr int32_t LOC_UNVISITED = -1;  // Unvisited byte.
+    static constexpr int32_t LOC_IMMEDIATE = -2;  // Immediate byte.
+
+    // Stack height in the header is limited to uint16_t,
+    // but keeping larger size for ease of calculation.
+    std::vector<int32_t> stack_heights(code.size(), LOC_UNVISITED);
+    stack_heights[0] = code_types[func_index].inputs;
+
+    std::stack<size_t> worklist;
+    worklist.push(0);
+
+    while (!worklist.empty())
+    {
+        const auto i = worklist.top();
+        worklist.pop();
+
+        const auto opcode = static_cast<Opcode>(code[i]);
+
+        auto stack_height_required = instr::traits[opcode].stack_height_required;
+        auto stack_height_change = instr::traits[opcode].stack_height_change;
+
+        if (opcode == OP_CALLF)
+        {
+            const auto fid = read_uint16_be(&code[i + 1]);
+
+            if (fid >= code_types.size())
+                return EOFValidationError::invalid_code_section_index;
+
+            stack_height_required = static_cast<int8_t>(code_types[fid].inputs);
+            stack_height_change =
+                static_cast<int8_t>(code_types[fid].outputs - stack_height_required);
+        }
+
+        auto stack_height = stack_heights[i];
+        assert(stack_height != LOC_UNVISITED);
+
+        if (stack_height < stack_height_required)
+            return EOFValidationError::stack_underflow;
+
+        stack_height += stack_height_change;
+
+        // Determine size of immediate, including the special case of RJUMPV.
+        const size_t imm_size = (opcode == OP_RJUMPV) ?
+                                    (1 + /*count*/ size_t{code[i + 1]} * REL_OFFSET_SIZE) :
+                                    instr::traits[opcode].immediate_size;
+
+        // Mark immediate locations.
+        std::fill_n(&stack_heights[i + 1], imm_size, LOC_IMMEDIATE);
+
+        // Validates the successor instruction and updates its stack height.
+        const auto validate_successor = [&stack_heights, &worklist](size_t successor_offset,
+                                            int32_t expected_stack_height) {
+            auto& successor_stack_height = stack_heights[successor_offset];
+            if (successor_stack_height == LOC_UNVISITED)
+            {
+                successor_stack_height = expected_stack_height;
+                worklist.push(successor_offset);
+                return true;
+            }
+            else
+                return successor_stack_height == expected_stack_height;
+        };
+
+        const auto next = i + imm_size + 1;  // Offset of the next instruction (may be invalid).
+
+        // Check validity of next instruction. We skip RJUMP and terminating instructions.
+        if (!instr::traits[opcode].is_terminating && opcode != OP_RJUMP)
+        {
+            if (next >= code.size())
+                return EOFValidationError::no_terminating_instruction;
+            if (!validate_successor(next, stack_height))
+                return EOFValidationError::stack_height_mismatch;
+        }
+
+        // Validate non-fallthrough successors of relative jumps.
+        if (opcode == OP_RJUMP || opcode == OP_RJUMPI)
+        {
+            const auto target_rel_offset = read_int16_be(&code[i + 1]);
+            const auto target = static_cast<int32_t>(i) + target_rel_offset + 3;
+            if (!validate_successor(static_cast<size_t>(target), stack_height))
+                return EOFValidationError::stack_height_mismatch;
+        }
+        else if (opcode == OP_RJUMPV)
+        {
+            const auto count = code[i + 1];
+
+            // Insert all jump targets.
+            for (size_t k = 0; k < count; ++k)
+            {
+                const auto target_rel_offset = read_int16_be(&code[i + k * REL_OFFSET_SIZE + 2]);
+                const auto target = static_cast<int32_t>(next) + target_rel_offset;
+                if (!validate_successor(static_cast<size_t>(target), stack_height))
+                    return EOFValidationError::stack_height_mismatch;
+            }
+        }
+        else if (opcode == OP_RETF && stack_height != code_types[func_index].outputs)
+            return EOFValidationError::non_empty_stack_on_terminating_instruction;
+    }
+
+    const auto max_stack_height = *std::max_element(stack_heights.begin(), stack_heights.end());
+
+    if (std::find(stack_heights.begin(), stack_heights.end(), LOC_UNVISITED) != stack_heights.end())
+        return EOFValidationError::unreachable_instructions;
+
+    return max_stack_height;
+}
+
 std::variant<EOF1Header, EOFValidationError> validate_eof1(
     evmc_revision rev, bytes_view container) noexcept
 {
@@ -325,6 +440,13 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(
 
         if (!validate_rjump_destinations(header.get_code(container, code_idx)))
             return EOFValidationError::invalid_rjump_destination;
+
+        auto msh_or_error =
+            validate_max_stack_height(header.get_code(container, code_idx), code_idx, header.types);
+        if (const auto* error = std::get_if<EOFValidationError>(&msh_or_error))
+            return *error;
+        if (std::get<int32_t>(msh_or_error) != header.types[code_idx].max_stack_height)
+            return EOFValidationError::invalid_max_stack_height;
     }
 
     return header;
@@ -469,6 +591,18 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "max_stack_height_above_limit";
     case EOFValidationError::inputs_outputs_num_above_limit:
         return "inputs_outputs_num_above_limit";
+    case EOFValidationError::no_terminating_instruction:
+        return "no_terminating_instruction";
+    case EOFValidationError::stack_height_mismatch:
+        return "stack_height_mismatch";
+    case EOFValidationError::non_empty_stack_on_terminating_instruction:
+        return "non_empty_stack_on_terminating_instruction";
+    case EOFValidationError::unreachable_instructions:
+        return "unreachable_instructions";
+    case EOFValidationError::stack_underflow:
+        return "stack_underflow";
+    case EOFValidationError::invalid_code_section_index:
+        return "invalid_code_section_index";
     case EOFValidationError::impossible:
         return "impossible";
     }

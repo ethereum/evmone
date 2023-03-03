@@ -78,8 +78,14 @@ enum class EOFValidationError
     invalid_type_section_size,
     invalid_first_section_type,
     invalid_max_stack_height,
+    no_terminating_instruction,
+    stack_height_mismatch,
+    non_empty_stack_on_terminating_instruction,
     max_stack_height_above_limit,
     inputs_outputs_num_above_limit,
+    unreachable_instructions,
+    stack_underflow,
+    invalid_code_section_index,
 
     impossible,
 };
