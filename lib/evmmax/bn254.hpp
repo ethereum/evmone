@@ -26,10 +26,7 @@ inline uint256 expmod(const evmmax::ModArith<uint256>& s, uint256 base, uint256 
     return result;
 }
 
-inline uint256 inv(const evmmax::ModArith<uint256>& s, const uint256& x) noexcept
-{
-    return expmod(s, x, s.mod - 2);
-}
+uint256 inv(const evmmax::ModArith<uint256>& s, const uint256& x) noexcept;
 
 struct Point
 {

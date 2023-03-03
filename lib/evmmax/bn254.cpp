@@ -91,4 +91,9 @@ bool bn254_add_precompile(const uint8_t* input, size_t input_size, uint8_t* outp
     be::unsafe::store(output + 32, s.y);
     return true;
 }
+
+uint256 inv(const evmmax::ModArith<uint256>& s, const uint256& x) noexcept
+{
+    return expmod(s, x, s.mod - 2);
+}
 }  // namespace evmmax::bn254
