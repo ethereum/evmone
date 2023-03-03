@@ -67,10 +67,28 @@ CodeAnalysis analyze_legacy(bytes_view code)
     return {pad_code(code), code.size(), analyze_jumpdests(code)};
 }
 
-CodeAnalysis analyze_eof1(bytes_view eof_container, const EOF1Header& header)
+CodeAnalysis analyze_eof1(bytes_view container)
 {
-    const auto executable_code = eof_container.substr(header.code_begin(), header.code_size);
-    return {executable_code, analyze_jumpdests(executable_code)};
+    const auto header = read_valid_eof1_header(container);
+
+    // Extract all code sections as single buffer reference.
+    // TODO: It would be much easier if header had code_sections_offset and data_section_offset
+    //       with code_offsets[] being relative to code_sections_offset.
+    const auto code_sections_offset = header.code_offsets[0];
+    const auto code_sections_end = size_t{header.code_offsets.back()} + header.code_sizes.back();
+    const auto executable_code =
+        container.substr(code_sections_offset, code_sections_end - code_sections_offset);
+
+    // Offsets relative to first code section.
+    std::vector<uint16_t> relative_offsets;
+    relative_offsets.reserve(header.code_offsets.size());
+    for (const auto offset : header.code_offsets)
+        relative_offsets.push_back(offset - code_sections_offset);
+
+    // FIXME: Better way of getting EOF version.
+    auto analysis = CodeAnalysis{executable_code, {}, container[2]};
+    analysis.code_offsets = std::move(relative_offsets);
+    return analysis;
 }
 }  // namespace
 
@@ -78,9 +96,7 @@ CodeAnalysis analyze(evmc_revision rev, bytes_view code)
 {
     if (rev < EVMC_CANCUN || !is_eof_container(code))
         return analyze_legacy(code);
-
-    const auto eof1_header = read_valid_eof1_header(code);
-    return analyze_eof1(code, eof1_header);
+    return analyze_eof1(code);
 }
 
 namespace
@@ -321,7 +337,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
 
     const auto code = analysis.executable_code;
 
-    const auto& cost_table = get_baseline_cost_table(state.rev);
+    const auto& cost_table = get_baseline_cost_table(state.rev, analysis.eof_version);
 
     auto* tracer = vm.get_tracer();
     if (INTX_UNLIKELY(tracer != nullptr))
