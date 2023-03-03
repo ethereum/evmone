@@ -131,7 +131,7 @@
     ON_OPCODE_IDENTIFIER(OP_JUMPDEST, jumpdest)             \
     ON_OPCODE_IDENTIFIER(OP_RJUMP, rjump)                   \
     ON_OPCODE_IDENTIFIER(OP_RJUMPI, rjumpi)                 \
-    ON_OPCODE_UNDEFINED(0x5e)                               \
+    ON_OPCODE_IDENTIFIER(OP_RJUMPV, rjumpv)                 \
     ON_OPCODE_IDENTIFIER(OP_PUSH0, push0)                   \
                                                             \
     ON_OPCODE_IDENTIFIER(OP_PUSH1, push<1>)                 \

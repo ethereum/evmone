@@ -84,6 +84,7 @@ enum Opcode : uint8_t
     OP_JUMPDEST = 0x5b,
     OP_RJUMP = 0x5c,
     OP_RJUMPI = 0x5d,
+    OP_RJUMPV = 0x5e,
 
     OP_PUSH0 = 0x5f,
     OP_PUSH1 = 0x60,

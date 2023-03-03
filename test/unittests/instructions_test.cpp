@@ -104,6 +104,7 @@ constexpr bool instruction_only_in_evmone(evmc_revision rev, Opcode op) noexcept
     {
     case OP_RJUMP:
     case OP_RJUMPI:
+    case OP_RJUMPV:
     case OP_DUPN:
     case OP_SWAPN:
         return true;

@@ -72,6 +72,7 @@ enum class EOFValidationError
     invalid_section_bodies_size,
     undefined_instruction,
     truncated_instruction,
+    invalid_rjumpv_count,
     invalid_rjump_destination,
     too_many_code_sections,
     invalid_type_section_size,

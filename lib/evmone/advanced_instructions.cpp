@@ -247,6 +247,7 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
 
     table[OP_RJUMP] = op_undefined;
     table[OP_RJUMPI] = op_undefined;
+    table[OP_RJUMPV] = op_undefined;
 
     table[OP_DUPN] = op_undefined;
     table[OP_SWAPN] = op_undefined;
