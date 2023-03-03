@@ -715,6 +715,27 @@ inline code_iterator rjumpi(StackTop stack, ExecutionState& state, code_iterator
     return cond ? rjump(stack, state, pc) : pc + 3;
 }
 
+inline code_iterator rjumpv(StackTop stack, ExecutionState& /*state*/, code_iterator pc) noexcept
+{
+    constexpr auto REL_OFFSET_SIZE = sizeof(int16_t);
+    const auto case_ = stack.pop();
+
+    const auto count = pc[1];
+    const auto pc_post = pc + 1 + 1 /* count */ + count * REL_OFFSET_SIZE /* tbl */;
+
+    if (case_ >= count)
+    {
+        return pc_post;
+    }
+    else
+    {
+        const auto rel_offset =
+            read_int16_be(&pc[2 + static_cast<uint16_t>(case_) * REL_OFFSET_SIZE]);
+
+        return pc_post + rel_offset;
+    }
+}
+
 inline code_iterator pc(StackTop stack, ExecutionState& state, code_iterator pos) noexcept
 {
     stack.push(static_cast<uint64_t>(pos - state.analysis.baseline->executable_code.data()));
