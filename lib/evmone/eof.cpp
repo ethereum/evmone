@@ -201,12 +201,12 @@ std::variant<std::vector<EOF1TypeHeader>, EOFValidationError> validate_types(
 
     for (const auto& t : types)
     {
-        if (t.max_stack_height > MAX_STACK_HEIGHT)
-            return EOFValidationError::max_stack_height_above_limit;
-
         if (t.outputs_num > OUTPUTS_INPUTS_NUMBER_LIMIT ||
             t.inputs_num > OUTPUTS_INPUTS_NUMBER_LIMIT)
             return EOFValidationError::inputs_outputs_num_above_limit;
+
+        if (t.max_stack_height > MAX_STACK_HEIGHT)
+            return EOFValidationError::max_stack_height_above_limit;
     }
 
     return types;
