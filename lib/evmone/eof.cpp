@@ -448,6 +448,7 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(
     auto offset = header_size + type_section_size;
     for (const auto code_size : code_sizes)
     {
+        assert(offset <= std::numeric_limits<uint16_t>::max());
         code_offsets.emplace_back(static_cast<uint16_t>(offset));
         offset += code_size;
     }
