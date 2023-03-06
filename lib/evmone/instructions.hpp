@@ -705,7 +705,7 @@ inline code_iterator jumpi(StackTop stack, ExecutionState& state, code_iterator 
 inline code_iterator rjump(StackTop /*stack*/, ExecutionState& /*state*/, code_iterator pc) noexcept
 {
     // Reading next 2 bytes is guaranteed to be safe by deploy-time validation.
-    const auto offset = read16bes(&pc[1]);
+    const auto offset = read_int16_be(&pc[1]);
     return pc + 3 + offset;  // PC_post_rjump + offset
 }
 
@@ -729,7 +729,8 @@ inline code_iterator rjumpv(StackTop stack, ExecutionState& /*state*/, code_iter
     }
     else
     {
-        const auto rel_offset = read16bes(&pc[2 + static_cast<uint16_t>(case_) * REL_OFFSET_SIZE]);
+        const auto rel_offset =
+            read_int16_be(&pc[2 + static_cast<uint16_t>(case_) * REL_OFFSET_SIZE]);
 
         return pc_post + rel_offset;
     }
@@ -934,7 +935,7 @@ inline constexpr auto create2 = create_impl<OP_CREATE2>;
 
 inline code_iterator callf(StackTop /*stack*/, ExecutionState& state, code_iterator pos) noexcept
 {
-    const auto index = read16beu(&pos[1]);
+    const auto index = read_uint16_be(&pos[1]);
     state.call_stack.push_back(pos + 3);
     const auto offset = state.analysis.baseline->code_offsets[index];
     auto code = state.analysis.baseline->executable_code;

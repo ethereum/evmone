@@ -109,14 +109,14 @@ enum class EOFValidationError
 
 /// Loads big endian int16_t from data. Unsafe.
 /// TODO: Move it to intx
-inline int16_t read16bes(const uint8_t* data) noexcept
+inline int16_t read_int16_be(const uint8_t* data) noexcept
 {
     return static_cast<int16_t>(data[0] << 8 | data[1]);
 }
 
 /// Loads big endian uint16_t from data. Unsafe.
 /// TODO: Move it to intx
-inline uint16_t read16beu(const uint8_t* data) noexcept
+inline uint16_t read_uint16_be(const uint8_t* data) noexcept
 {
     return static_cast<uint16_t>(data[0] << 8 | data[1]);
 }

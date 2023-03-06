@@ -266,7 +266,7 @@ bool validate_rjump_destinations(bytes_view code) noexcept
 
         if (op == OP_RJUMP || op == OP_RJUMPI)
         {
-            const auto offset = read16bes(&code[i + 1]);
+            const auto offset = read_int16_be(&code[i + 1]);
             const auto jumpdest = static_cast<int32_t>(i) + 3 + offset;
             if (jumpdest < 0 || static_cast<size_t>(jumpdest) >= code_size)
                 return false;
@@ -282,7 +282,7 @@ bool validate_rjump_destinations(bytes_view code) noexcept
 
             for (size_t k = 0; k < count * REL_OFFSET_SIZE; k += REL_OFFSET_SIZE)
             {
-                const auto rel_offset = read16bes(&code[i + 1 + 1 + static_cast<uint16_t>(k)]);
+                const auto rel_offset = read_int16_be(&code[i + 1 + 1 + static_cast<uint16_t>(k)]);
                 const auto jumpdest = static_cast<int>(i + post_offset) + rel_offset;
                 if (jumpdest < 0 || static_cast<size_t>(jumpdest) >= code_size)
                     return false;
@@ -336,7 +336,7 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
 
         if (opcode == OP_CALLF)
         {
-            auto fid = read16beu(&code[i + 1]);
+            auto fid = read_uint16_be(&code[i + 1]);
 
             if (fid >= funcs_in_outs.size())
                 return {EOFValidationError::invalid_code_section_index, 0};
@@ -366,7 +366,7 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
 
         if (opcode == OP_RJUMP || opcode == OP_RJUMPI)
         {
-            auto target_rel_offset = read16bes(&code[i + 1]);
+            auto target_rel_offset = read_int16_be(&code[i + 1]);
             successors.push_back(
                 static_cast<size_t>(target_rel_offset + 3 + static_cast<int32_t>(i)));
         }
@@ -386,7 +386,7 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
 
             for (uint16_t k = 0; k < count; ++k)
             {
-                auto target_rel_offset = read16bes(&code[i + k * 2 + 2]);
+                auto target_rel_offset = read_int16_be(&code[i + k * 2 + 2]);
                 successors.push_back(static_cast<size_t>(
                     static_cast<int32_t>(i) + 2 * count + target_rel_offset + 2));
             }
