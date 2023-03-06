@@ -116,9 +116,11 @@ inline int16_t read_int16_be(const uint8_t* data) noexcept
 
 /// Loads big endian uint16_t from data. Unsafe.
 /// TODO: Move it to intx
-inline uint16_t read_uint16_be(const uint8_t* data) noexcept
+inline uint16_t read_uint16_be(auto it) noexcept
 {
-    return static_cast<uint16_t>(data[0] << 8 | data[1]);
+    const uint8_t h = *it++;
+    const uint8_t l = *it;
+    return static_cast<uint16_t>((h << 8) | l);
 }
 
 }  // namespace evmone
