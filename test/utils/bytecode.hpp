@@ -251,7 +251,7 @@ inline bytecode rjump(int16_t offset)
 
 inline bytecode rjumpi(int16_t offset, bytecode condition)
 {
-    return condition + OP_RJUMPI + bytecode{big_endian(offset)};
+    return condition + (OP_RJUMPI + big_endian(offset));
 }
 
 inline bytecode rjumpv(const std::initializer_list<int16_t> offsets, bytecode condition)
