@@ -6,7 +6,6 @@
 #include "errors.hpp"
 #include "host.hpp"
 #include "rlp.hpp"
-#include <evmone/eof.hpp>
 #include <evmone/evmone.h>
 #include <evmone/execution_state.hpp>
 
@@ -164,16 +163,7 @@ std::variant<TransactionReceipt, std::error_code> transition(
     if (rev >= EVMC_SHANGHAI)
         host.access_account(block.coinbase);
 
-    auto is_valid_tx = true;
-    auto result = evmc::Result{};
-
-    if (rev >= EVMC_CANCUN && !tx.to.has_value() && is_eof_container(tx.data))
-        is_valid_tx = (validate_eof(rev, tx.data) == evmone::EOFValidationError::success);
-
-    if (is_valid_tx)
-        result = host.call(build_message(tx, execution_gas_limit));
-    else
-        result = evmc::Result(EVMC_OUT_OF_GAS);
+    const auto result = host.call(build_message(tx, execution_gas_limit));
 
     auto gas_used = tx.gas_limit - result.gas_left;
 
