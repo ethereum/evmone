@@ -31,7 +31,7 @@ TEST(state_transition, eof_invalid_initcode)
         << std::get<std::error_code>(res).message();
     const auto& receipt = std::get<TransactionReceipt>(res);
     EXPECT_EQ(receipt.status, EVMC_SUCCESS);
-    EXPECT_EQ(receipt.gas_used, 53765);  // FIXME: too low, CREATE should burn all gas.
+    EXPECT_EQ(receipt.gas_used, 985960);
     EXPECT_EQ(receipt.logs.at(0).topics.at(0), 0x00_bytes32) << "CREATE must fail";
 
     EXPECT_EQ(state.get(tx.sender).nonce, 4);

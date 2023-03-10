@@ -199,6 +199,12 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
     create_msg.input_data = nullptr;
     create_msg.input_size = 0;
 
+    if (m_rev >= EVMC_CANCUN && (is_eof_container(initcode) || is_eof_container(sender_acc.code)))
+    {
+        if (validate_eof(m_rev, initcode) != EOFValidationError::success)
+            return evmc::Result{EVMC_CONTRACT_VALIDATION_FAILURE};
+    }
+
     auto result = m_vm.execute(*this, m_rev, create_msg, msg.input_data, msg.input_size);
     if (result.status_code != EVMC_SUCCESS)
     {
