@@ -98,8 +98,7 @@ TEST(analysis, jump1)
 
 TEST(analysis, empty)
 {
-    bytes code;
-    auto analysis = analyze(rev, code);
+    const auto analysis = analyze(rev, {});
 
     ASSERT_EQ(analysis.instrs.size(), 2);
     EXPECT_EQ(analysis.instrs[0].fn, op_tbl[OPX_BEGINBLOCK].fn);
@@ -109,7 +108,7 @@ TEST(analysis, empty)
 TEST(analysis, only_jumpdest)
 {
     const auto code = bytecode{OP_JUMPDEST};
-    auto analysis = analyze(rev, code);
+    const auto analysis = analyze(rev, code);
 
     ASSERT_EQ(analysis.jumpdest_offsets.size(), 1);
     ASSERT_EQ(analysis.jumpdest_targets.size(), 1);
@@ -120,7 +119,7 @@ TEST(analysis, only_jumpdest)
 TEST(analysis, jumpi_at_the_end)
 {
     const auto code = bytecode{OP_JUMPI};
-    auto analysis = analyze(rev, code);
+    const auto analysis = analyze(rev, code);
 
     ASSERT_EQ(analysis.instrs.size(), 3);
     EXPECT_EQ(analysis.instrs[0].fn, op_tbl[OPX_BEGINBLOCK].fn);
@@ -133,7 +132,7 @@ TEST(analysis, terminated_last_block)
     // TODO: Even if the last basic block is properly terminated an additional artificial block
     // is going to be created with only STOP instruction.
     const auto code = ret(0, 0);
-    auto analysis = analyze(rev, code);
+    const auto analysis = analyze(rev, code);
 
     ASSERT_EQ(analysis.instrs.size(), 5);
     EXPECT_EQ(analysis.instrs[0].fn, op_tbl[OPX_BEGINBLOCK].fn);
@@ -147,7 +146,7 @@ TEST(analysis, jump_dead_code)
     constexpr auto jumpdest_index = 3;
 
     const auto code = push(jumpdest_offset) + OP_JUMP + 3 * OP_ADD + OP_JUMPDEST;
-    auto analysis = analyze(rev, code);
+    const auto analysis = analyze(rev, code);
 
     ASSERT_EQ(analysis.instrs.size(), 5);
     EXPECT_EQ(analysis.instrs[0].arg.block.gas_cost, 3 + 8);

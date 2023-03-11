@@ -165,7 +165,7 @@ TEST(state_mpt, trie_topologies)
     };
 
     // clang-format off
-    std::vector<KVH> tests[] = {
+    const std::vector<KVH> tests[] = {
         { // {0:0, 7:0, f:0}
             {"00", "v_______________________0___0", "5cb26357b95bb9af08475be00243ceb68ade0b66b5cd816b0c18a18c612d2d21"},
             {"70", "v_______________________0___1", "8ff64309574f7a437a7ad1628e690eb7663cfde10676f8a904a8c8291dbc1603"},

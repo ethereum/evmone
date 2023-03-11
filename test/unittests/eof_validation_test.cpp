@@ -233,7 +233,7 @@ TEST(eof_validation, EOF1_terminating_instructions)
         if (op_traits.name == nullptr || op_traits.since == EVMC_CANCUN)
             continue;
 
-        bytes code{static_cast<uint8_t>(opcode) + bytes(op_traits.immediate_size, 0)};
+        const auto code = static_cast<uint8_t>(opcode) + bytes(op_traits.immediate_size, 0);
         code_size_byte = static_cast<uint8_t>(code.size());
         const auto container = eof_header + code;
 

@@ -61,7 +61,7 @@ TEST(state_rlp, encode_string_long)
 
 TEST(state_rlp, encode_c_array)
 {
-    uint64_t a[]{1, 2, 3};
+    const uint64_t a[]{1, 2, 3};
     EXPECT_EQ(hex(rlp::encode(a)), "c3010203");
 }
 
@@ -70,7 +70,7 @@ TEST(state_rlp, encode_vector)
     const auto x = 0xe1e2e3e4e5e6e7d0d1d2d3d4d5d6d7c0c1c2c3c4c5c6c7b0b1b2b3b4b5b6b7_u256;
     EXPECT_EQ(
         rlp::encode(x), "9fe1e2e3e4e5e6e7d0d1d2d3d4d5d6d7c0c1c2c3c4c5c6c7b0b1b2b3b4b5b6b7"_hex);
-    std::vector<uint256> v(0xffffff / 32, x);
+    const std::vector<uint256> v(0xffffff / 32, x);
     const auto r = rlp::encode(v);
     EXPECT_EQ(r.size(), v.size() * 32 + 4);
 }
@@ -122,7 +122,7 @@ TEST(state_rlp, encode_custom_struct)
 
 TEST(state_rlp, encode_custom_struct_list)
 {
-    std::vector<CustomStruct> v{{1, {0x02, 0x03}}, {4, {0x05, 0x06}}};
+    const std::vector<CustomStruct> v{{1, {0x02, 0x03}}, {4, {0x05, 0x06}}};
     EXPECT_EQ(rlp::encode(v), "ca c401820203 c404820506"_hex);
 }
 

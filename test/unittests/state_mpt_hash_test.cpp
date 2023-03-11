@@ -100,16 +100,13 @@ TEST(state_mpt_hash, one_transactions)
     tx.sender = 0x3a091a68661d40dafc2a532f8ba89ad2c0b4f184_address;
     tx.to = 0xacd9a09eb3123602937cb30ff717e746c57a5132_address;
     tx.value = 0;
-    AccessList access_list = {};
     tx.nonce = 10246;
     tx.r = 0xdf2ff0c61a24ece7b4c24d9a1a7061881043fd8285ea0be8ea55b42c8a119225_u256;
     tx.s = 0x644cd7390b5f274ee947121837da3deab1638c0c7d9f5aa4ebe9f9a3149f192d_u256;
     tx.v = 1;
     tx.chain_id = 11155111;
 
-    std::array transactions{tx};
-    auto tx_root = mpt_hash(transactions);
-
+    const auto tx_root = mpt_hash(std::array{tx});
     EXPECT_EQ(tx_root, 0x6ce50bfaaebabe884433c144fa4d8a4c1087e443587a9788b30381636dedbeb2_bytes32);
 }
 
@@ -189,7 +186,6 @@ TEST(state_mpt_hash, legacy_and_eip1559_receipt_three_logs_no_logs)
     //}
 
     TransactionReceipt receipt0{};
-
     receipt0.kind = evmone::state::Transaction::Kind::legacy;
     receipt0.status = EVMC_SUCCESS;
     receipt0.gas_used = 0x24522;
@@ -240,14 +236,11 @@ TEST(state_mpt_hash, legacy_and_eip1559_receipt_three_logs_no_logs)
     //}
 
     TransactionReceipt receipt1{};
-
     receipt1.kind = evmone::state::Transaction::Kind::eip1559;
     receipt1.status = EVMC_SUCCESS;
     receipt1.gas_used = 0x2cd9b;
     receipt1.logs_bloom_filter = compute_bloom_filter(receipt1.logs);
 
-    std::array receipts{receipt0, receipt1};
-
-    EXPECT_EQ(mpt_hash(receipts),
+    EXPECT_EQ(mpt_hash(std::array{receipt0, receipt1}),
         0x7199a3a86010634dc205a1cdd6ec609f70b954167583cb3acb6a2e3057916016_bytes32);
 }

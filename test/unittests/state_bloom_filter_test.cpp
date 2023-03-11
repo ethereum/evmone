@@ -14,12 +14,11 @@ using namespace evmone::state;
 
 namespace
 {
-inline BloomFilter bloom_filter_from_bytes(const bytes_view& data)
+BloomFilter bloom_filter_from_bytes(const bytes_view& data) noexcept
 {
     assert(data.size() == 256);
     BloomFilter res;
     std::copy(std::begin(data), std::end(data), std::begin(res.bytes));
-
     return res;
 }
 }  // namespace
@@ -67,10 +66,8 @@ TEST(state_bloom_filter, combine_blooms)
     TransactionReceipt r4;
     r4.logs_bloom_filter = bloom_filter_from_bytes(bloom_4);
 
-    std::array receipts{r1, r2, r4};
-
-    BloomFilter res = compute_bloom_filter(receipts);
-
+    const std::array receipts{r1, r2, r4};
+    const auto res = compute_bloom_filter(receipts);
     EXPECT_EQ(bytes_view(res), block_bloom);
 }
 
@@ -86,12 +83,11 @@ TEST(state_bloom_filter, combine_blooms_simgle_transaction)
         "000000000000000000000000000004000000000000000020000000000000000000000000060000000000000000"
         "00000000000000000000000000000000000000000000010000000000000000"_hex;
 
-    Log log{0x6e397a41f9fa7362e2c726bff032b4cd3fbc0b3c_address, {},
+    const Log log{0x6e397a41f9fa7362e2c726bff032b4cd3fbc0b3c_address, {},
         {0x01a1249f2caa0445b8391e02413d26f0d409dabe5330cd1d04d3d0801fc42db3_bytes32,
             0x497f3c9f61479c1cfa53f0373d39d2bf4e5f73f71411da62f1d6b85c03a60735_bytes32}};
 
-    std::array logs{log};
-    BloomFilter res = compute_bloom_filter(logs);
-
+    const std::array logs{log};
+    const auto res = compute_bloom_filter(logs);
     EXPECT_EQ(bytes_view(res), expected_result);
 }
