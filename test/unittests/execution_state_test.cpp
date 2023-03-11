@@ -73,7 +73,7 @@ TEST(execution_state, default_construct_advanced)
 TEST(execution_state, reset_advanced)
 {
     const evmc_message msg{};
-    evmone::advanced::AdvancedCodeAnalysis analysis;
+    const evmone::advanced::AdvancedCodeAnalysis analysis;
 
     evmone::advanced::AdvancedExecutionState st;
     st.gas_left = 1;
@@ -161,7 +161,7 @@ TEST(execution_state, memory_view)
     evmone::Memory memory;
     memory.grow(32);
 
-    evmone::bytes_view view{memory.data(), memory.size()};
+    const evmone::bytes_view view{memory.data(), memory.size()};
     ASSERT_EQ(view.size(), 32);
     EXPECT_EQ(view[0], 0x00);
     EXPECT_EQ(view[1], 0x00);
