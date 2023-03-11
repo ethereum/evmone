@@ -4,11 +4,15 @@
 
 find_package(intx CONFIG REQUIRED)
 
-add_library(testutils STATIC
-    bytecode.hpp
-    utils.cpp
-    utils.hpp
-)
+add_library(testutils INTERFACE)
+add_library(evmone::testutils ALIAS testutils)
+target_link_libraries(testutils INTERFACE evmc::evmc_cpp)
+target_include_directories(testutils INTERFACE ${PROJECT_SOURCE_DIR} ${evmone_private_include_dir})
 
-target_link_libraries(testutils PRIVATE evmc::evmc_cpp)
-target_include_directories(testutils PUBLIC ${PROJECT_SOURCE_DIR} ${evmone_private_include_dir})
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
+    target_sources(
+        testutils PRIVATE
+        bytecode.hpp
+        utils.hpp
+    )
+endif()
