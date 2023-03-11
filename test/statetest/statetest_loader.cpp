@@ -78,32 +78,32 @@ inline uint64_t calculate_current_base_fee_eip1559(
     uint64_t parent_gas_used, uint64_t parent_gas_limit, uint64_t parent_base_fee)
 {
     // TODO: Make sure that 64-bit precision is good enough.
-    static const auto BASE_FEE_MAX_CHANGE_DENOMINATOR = 8;
-    static const auto ELASTICITY_MULTIPLIER = 2;
+    static constexpr auto BASE_FEE_MAX_CHANGE_DENOMINATOR = 8;
+    static constexpr auto ELASTICITY_MULTIPLIER = 2;
 
     uint64_t base_fee = 0;
 
-    uint64_t parent_gas_target = parent_gas_limit / ELASTICITY_MULTIPLIER;
+    const auto parent_gas_target = parent_gas_limit / ELASTICITY_MULTIPLIER;
 
     if (parent_gas_used == parent_gas_target)
         base_fee = parent_base_fee;
     else if (parent_gas_used > parent_gas_target)
     {
-        uint64_t gas_used_delta = parent_gas_used - parent_gas_target;
-        uint64_t formula =
+        const auto gas_used_delta = parent_gas_used - parent_gas_target;
+        const auto formula =
             parent_base_fee * gas_used_delta / parent_gas_target / BASE_FEE_MAX_CHANGE_DENOMINATOR;
-        uint64_t base_fee_per_gas_delta = formula > 1 ? formula : 1;
+        const auto base_fee_per_gas_delta = formula > 1 ? formula : 1;
         base_fee = parent_base_fee + base_fee_per_gas_delta;
     }
     else
     {
-        uint64_t gas_used_delta = parent_gas_target - parent_gas_used;
+        const auto gas_used_delta = parent_gas_target - parent_gas_used;
 
-        auto base_fee_per_gas_delta_u128 = intx::uint128(parent_base_fee, 0) *
-                                           intx::uint128(gas_used_delta, 0) / parent_gas_target /
-                                           BASE_FEE_MAX_CHANGE_DENOMINATOR;
+        const auto base_fee_per_gas_delta_u128 =
+            intx::uint128(parent_base_fee, 0) * intx::uint128(gas_used_delta, 0) /
+            parent_gas_target / BASE_FEE_MAX_CHANGE_DENOMINATOR;
 
-        uint64_t base_fee_per_gas_delta = base_fee_per_gas_delta_u128[0];
+        const auto base_fee_per_gas_delta = base_fee_per_gas_delta_u128[0];
         if (parent_base_fee > base_fee_per_gas_delta)
             base_fee = parent_base_fee - base_fee_per_gas_delta;
         else
