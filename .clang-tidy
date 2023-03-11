@@ -3,8 +3,10 @@ HeaderFilterRegex: 'lib/evmone/|test/state/'
 WarningsAsErrors: '*'
 Checks: >
   bugprone-*,
+  -bugprone-assignment-in-if-condition,
   -bugprone-easily-swappable-parameters,
   -bugprone-implicit-widening-of-multiplication-result,
+  -bugprone-unchecked-optional-access,
   cert-dcl21-cpp,
   cert-dcl50-cpp,
   cert-dcl58-cpp,
@@ -61,7 +63,5 @@ Checks: >
   -readability-uppercase-literal-suffix,
 
 CheckOptions:
-  - key: readability-identifier-naming.ClassCase
-    value: CamelCase
-  - key: readability-identifier-naming.UnionCase
-    value: CamelCase
+  readability-identifier-naming.ClassCase: CamelCase
+  readability-identifier-naming.UnionCase: CamelCase
