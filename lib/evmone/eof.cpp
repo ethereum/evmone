@@ -320,13 +320,13 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
 
         if (opcode == OP_CALLF)
         {
-            auto fid = read_uint16_be(&code[i + 1]);
+            const auto fid = read_uint16_be(&code[i + 1]);
 
             if (fid >= funcs_in_outs.size())
                 return {EOFValidationError::invalid_code_section_index, 0};
 
             stack_height_required = static_cast<int8_t>(funcs_in_outs[fid].inputs);
-            auto d = funcs_in_outs[fid].outputs - stack_height_required;
+            const auto d = funcs_in_outs[fid].outputs - stack_height_required;
             stack_height_change = static_cast<int8_t>(d);
         }
 
@@ -341,7 +341,7 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
         // immediate_size for RJUMPV depends on the code. It's calculated below.
         if (opcode != OP_RJUMP && !instr::traits[opcode].is_terminating && opcode != OP_RJUMPV)
         {
-            auto next = i + instr::traits[opcode].immediate_size + 1;
+            const auto next = i + instr::traits[opcode].immediate_size + 1;
             if (next >= code.size())
                 return {EOFValidationError::no_terminating_instruction, -1};
 
@@ -350,40 +350,40 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
 
         if (opcode == OP_RJUMP || opcode == OP_RJUMPI)
         {
-            auto target_rel_offset = read_int16_be(&code[i + 1]);
+            const auto target_rel_offset = read_int16_be(&code[i + 1]);
             successors.push_back(
                 static_cast<size_t>(target_rel_offset + 3 + static_cast<int32_t>(i)));
         }
 
         if (opcode == OP_RJUMPV)
         {
-            auto count = code[i + 1];
+            const auto count = code[i + 1];
 
-            auto next = i + count * 2 + 2;
+            const auto next = i + count * 2 + 2;
             if (next >= code.size())
                 return {EOFValidationError::no_terminating_instruction, -1};
 
-            auto beg = stack_heights.begin() + static_cast<int32_t>(i) + 1;
+            const auto beg = stack_heights.begin() + static_cast<int32_t>(i) + 1;
             std::fill_n(beg, count * 2 + 1, -2);
 
             successors.push_back(next);
 
             for (uint16_t k = 0; k < count; ++k)
             {
-                auto target_rel_offset = read_int16_be(&code[i + k * 2 + 2]);
+                const auto target_rel_offset = read_int16_be(&code[i + k * 2 + 2]);
                 successors.push_back(static_cast<size_t>(
                     static_cast<int32_t>(i) + 2 * count + target_rel_offset + 2));
             }
         }
         else
         {
-            auto beg = stack_heights.begin() + static_cast<int32_t>(i) + 1;
+            const auto beg = stack_heights.begin() + static_cast<int32_t>(i) + 1;
             std::fill_n(beg, instr::traits[opcode].immediate_size, -2);
         }
 
         stack_height += stack_height_change;
 
-        for (auto& s : successors)
+        for (const auto& s : successors)
         {
             if (stack_heights[s] == -1)
             {
@@ -398,7 +398,7 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
             return {EOFValidationError::non_empty_stack_on_terminating_instruction, -1};
     }
 
-    auto msh_it = std::max_element(stack_heights.begin(), stack_heights.end());
+    const auto msh_it = std::max_element(stack_heights.begin(), stack_heights.end());
 
     if (std::find(stack_heights.begin(), stack_heights.end(), -1) != stack_heights.end())
         return {EOFValidationError::unreachable_instructions, -1};
