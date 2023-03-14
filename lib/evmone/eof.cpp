@@ -466,6 +466,7 @@ bool is_eof_container(bytes_view container) noexcept
     return container.size() > 1 && container[0] == MAGIC[0] && container[1] == MAGIC[1];
 }
 
+/// This function expects the prefix and version to be valid, as it ignores it.
 EOF1Header read_valid_eof1_header(bytes_view container)
 {
     EOFSectionHeaders section_headers;
