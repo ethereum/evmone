@@ -338,7 +338,7 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
 
         successors.clear();
 
-        // immediate_size for RJUMPV depends on the code. It's calculated below.
+        // Skip RJUMPV because its immediate_size depends on the code. It's calculated below.
         if (opcode != OP_RJUMP && !instr::traits[opcode].is_terminating && opcode != OP_RJUMPV)
         {
             const auto next = i + instr::traits[opcode].immediate_size + 1;
