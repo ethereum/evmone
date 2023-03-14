@@ -237,12 +237,26 @@ EOFValidationError validate_instructions(evmc_revision rev, bytes_view code) noe
     return EOFValidationError::success;
 }
 
+/// Validates that that we don't rjump inside an instruction's immediate.
+/// Requires that the input is validated against truncation.
 bool validate_rjump_destinations(bytes_view code) noexcept
 {
     // Collect relative jump destinations and immediate locations
     const auto code_size = code.size();
+    // list of all possible absolute rjumps destinations positions
     std::vector<size_t> rjumpdests;
+    // bool map of immediate arguments positions in the code
     std::vector<bool> immediate_map(code_size);
+
+    const auto check_rjump_destination = [code_size](auto rel_offset_data_it,
+                                             size_t post_pos) -> std::optional<size_t> {
+        const auto rel_offset = read_int16_be(rel_offset_data_it);
+        const auto jumpdest = static_cast<int32_t>(post_pos) + rel_offset;
+        if (jumpdest < 0 || static_cast<size_t>(jumpdest) >= code_size)
+            return {};
+        else
+            return static_cast<size_t>(jumpdest);
+    };
 
     for (size_t i = 0; i < code_size; ++i)
     {
@@ -251,11 +265,10 @@ bool validate_rjump_destinations(bytes_view code) noexcept
 
         if (op == OP_RJUMP || op == OP_RJUMPI)
         {
-            const auto offset = read_int16_be(&code[i + 1]);
-            const auto jumpdest = static_cast<int32_t>(i) + 3 + offset;
-            if (jumpdest < 0 || static_cast<size_t>(jumpdest) >= code_size)
+            if (auto jumpdest_opt = check_rjump_destination(&code[i + 1], i + 3); jumpdest_opt)
+                rjumpdests.push_back(jumpdest_opt.value());
+            else
                 return false;
-            rjumpdests.push_back(static_cast<size_t>(jumpdest));
         }
         else if (op == OP_RJUMPV)
         {
@@ -263,18 +276,20 @@ bool validate_rjump_destinations(bytes_view code) noexcept
 
             const auto count = code[i + 1];
 
-            const auto post_offset = 1 + 1 /* count */ + count * REL_OFFSET_SIZE /* tbl */;
+            imm_size = size_t{1} /* count */ + count * REL_OFFSET_SIZE /* tbl */;
+
+            const size_t post_pos = i + 1 + imm_size;
 
             for (size_t k = 0; k < count * REL_OFFSET_SIZE; k += REL_OFFSET_SIZE)
             {
-                const auto rel_offset = read_int16_be(&code[i + 1 + 1 + static_cast<uint16_t>(k)]);
-                const auto jumpdest = static_cast<int>(i + post_offset) + rel_offset;
-                if (jumpdest < 0 || static_cast<size_t>(jumpdest) >= code_size)
-                    return false;
-                rjumpdests.push_back(static_cast<size_t>(jumpdest));
-            }
+                auto jumpdest_opt =
+                    check_rjump_destination(&code[i + 1 + 1 + static_cast<uint16_t>(k)], post_pos);
 
-            imm_size = size_t{1} + count * REL_OFFSET_SIZE;
+                if (jumpdest_opt)
+                    rjumpdests.push_back(jumpdest_opt.value());
+                else
+                    return false;
+            }
         }
 
         std::fill_n(immediate_map.begin() + static_cast<ptrdiff_t>(i) + 1, imm_size, true);
