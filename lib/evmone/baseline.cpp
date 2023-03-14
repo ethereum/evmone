@@ -80,15 +80,15 @@ CodeAnalysis analyze_eof1(bytes_view container)
     const auto executable_code =
         container.substr(code_sections_offset, code_sections_end - code_sections_offset);
 
-    // Offsets relative to first code section.
-    std::vector<uint16_t> relative_offsets;
+    // Offsets relative from the beginning of the first code section.
+    CodeAnalysis::CodeOffsets relative_offsets;
     relative_offsets.reserve(header.code_offsets.size());
     for (const auto offset : header.code_offsets)
         relative_offsets.push_back(offset - code_sections_offset);
 
     // FIXME: Better way of getting EOF version.
-    auto analysis = CodeAnalysis{executable_code, {}, container[2]};
-    analysis.code_offsets = std::move(relative_offsets);
+    const auto eof_version = container[2];
+    auto analysis = CodeAnalysis{executable_code, {}, eof_version, relative_offsets};
     return analysis;
 }
 }  // namespace
