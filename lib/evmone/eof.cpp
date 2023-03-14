@@ -326,8 +326,8 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
                 return {EOFValidationError::invalid_code_section_index, 0};
 
             stack_height_required = static_cast<int8_t>(funcs_in_outs[fid].inputs);
-            const auto d = funcs_in_outs[fid].outputs - stack_height_required;
-            stack_height_change = static_cast<int8_t>(d);
+            stack_height_change =
+                static_cast<int8_t>(funcs_in_outs[fid].outputs - stack_height_required);
         }
 
         stack_height = stack_heights[i];
