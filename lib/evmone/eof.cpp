@@ -217,15 +217,13 @@ EOFValidationError validate_instructions(evmc_revision rev, bytes_view code) noe
 
         if (op == OP_RJUMPV)
         {
-            if (i + 1 < code.size())
-            {
-                const auto count = code[i + 1];
-                if (count < 1)
-                    return EOFValidationError::invalid_rjumpv_count;
-                i += static_cast<size_t>(1 /* count */ + count * 2 /* tbl */);
-            }
-            else
+            if (i + 1 >= code.size())
                 return EOFValidationError::truncated_instruction;
+
+            const auto count = code[i + 1];
+            if (count < 1)
+                return EOFValidationError::invalid_rjumpv_count;
+            i += static_cast<size_t>(1 /* count */ + count * 2 /* tbl */);
         }
         else
             i += instr::traits[op].immediate_size;
