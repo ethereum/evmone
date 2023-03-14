@@ -247,6 +247,7 @@ bool validate_rjump_destinations(bytes_view code) noexcept
     for (size_t i = 0; i < code_size; ++i)
     {
         const auto op = code[i];
+        auto imm_size = instr::traits[op].immediate_size;
 
         if (op == OP_RJUMP || op == OP_RJUMPI)
         {
@@ -273,14 +274,9 @@ bool validate_rjump_destinations(bytes_view code) noexcept
                 rjumpdests.push_back(static_cast<size_t>(jumpdest));
             }
 
-            const auto rjumpv_imm_size = size_t{1} + count * REL_OFFSET_SIZE;
-            std::fill_n(
-                immediate_map.begin() + static_cast<ptrdiff_t>(i) + 1, rjumpv_imm_size, true);
-            i += rjumpv_imm_size;
-            continue;
+            imm_size = size_t{1} + count * REL_OFFSET_SIZE;
         }
 
-        const auto imm_size = instr::traits[op].immediate_size;
         std::fill_n(immediate_map.begin() + static_cast<ptrdiff_t>(i) + 1, imm_size, true);
         i += imm_size;
     }
