@@ -22,6 +22,7 @@ class CodeAnalysis
 {
 public:
     using JumpdestMap = std::vector<bool>;
+    using CodeOffsets = std::vector<uint16_t>;
 
     bytes_view executable_code;  ///< Executable code section.
     JumpdestMap jumpdest_map;    ///< Map of valid jump destinations.
@@ -40,8 +41,11 @@ public:
         m_padded_code{std::move(padded_code)}
     {}
 
-    CodeAnalysis(bytes_view code, JumpdestMap map, uint8_t version)
-      : executable_code{code}, jumpdest_map{std::move(map)}, eof_version{version}
+    CodeAnalysis(bytes_view code, JumpdestMap map, uint8_t version, CodeOffsets offsets)
+      : executable_code{code},
+        jumpdest_map{std::move(map)},
+        eof_version{version},
+        code_offsets{std::move(offsets)}
     {}
 };
 static_assert(std::is_move_constructible_v<CodeAnalysis>);
