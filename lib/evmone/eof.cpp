@@ -353,6 +353,16 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
         if (opcode == OP_RJUMP || opcode == OP_RJUMPI)
         {
             const auto target_rel_offset = read_int16_be(&code[i + 1]);
+
+            const auto next = i + imm_size + 1;
+            if (next >= code.size())
+                return {EOFValidationError::no_terminating_instruction, -1};
+
+            // Conditional jump has the fallthrough as successor too.
+            if (opcode == OP_RJUMPI)
+                successors.push_back(next);
+
+            // Insert jump target.
             successors.push_back(
                 static_cast<size_t>(target_rel_offset + 3 + static_cast<int32_t>(i)));
         }
@@ -365,8 +375,10 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
             if (next >= code.size())
                 return {EOFValidationError::no_terminating_instruction, -1};
 
+            // Insert fall through.
             successors.push_back(next);
 
+            // Insert all jump targets.
             for (uint16_t k = 0; k < count; ++k)
             {
                 const auto target_rel_offset = read_int16_be(&code[i + k * 2 + 2]);
