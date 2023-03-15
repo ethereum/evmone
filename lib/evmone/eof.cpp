@@ -303,14 +303,14 @@ bool validate_rjump_destinations(bytes_view code) noexcept
 }
 
 std::pair<EOFValidationError, int32_t> validate_max_stack_height(
-    bytes_view code, size_t func_index, const std::vector<EOFCodeType>& funcs_in_outs)
+    bytes_view code, size_t func_index, const std::vector<EOFCodeType>& code_types)
 {
     assert(!code.empty());
 
     // Stack height in the header is limited to uint16_t, but keeping larger size for ease of
     // calculation.
     std::vector<int32_t> stack_heights = std::vector<int32_t>(code.size(), -1);
-    stack_heights[0] = funcs_in_outs[func_index].inputs;
+    stack_heights[0] = code_types[func_index].inputs;
 
     std::stack<size_t> worklist;
     worklist.push(0);
@@ -329,12 +329,12 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
         {
             const auto fid = read_uint16_be(&code[i + 1]);
 
-            if (fid >= funcs_in_outs.size())
+            if (fid >= code_types.size())
                 return {EOFValidationError::invalid_code_section_index, 0};
 
-            stack_height_required = static_cast<int8_t>(funcs_in_outs[fid].inputs);
+            stack_height_required = static_cast<int8_t>(code_types[fid].inputs);
             stack_height_change =
-                static_cast<int8_t>(funcs_in_outs[fid].outputs - stack_height_required);
+                static_cast<int8_t>(code_types[fid].outputs - stack_height_required);
         }
 
         auto stack_height = stack_heights[i];
@@ -403,7 +403,7 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
                 return {EOFValidationError::stack_height_mismatch, -1};
         }
 
-        if (opcode == OP_RETF && stack_height != funcs_in_outs[func_index].outputs)
+        if (opcode == OP_RETF && stack_height != code_types[func_index].outputs)
             return {EOFValidationError::non_empty_stack_on_terminating_instruction, -1};
     }
 
