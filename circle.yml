@@ -22,7 +22,7 @@ executors:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
   blockchain-tests:
     docker:
-      - image: ethereum/cpp-build-env:17-gcc-11
+      - image: ethereum/cpp-build-env:18-gcc-12
     resource_class: xlarge
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 8
@@ -98,7 +98,7 @@ commands:
           command: mkdir -p ~/silkworm
       - restore_cache:
           name: "Restore Silkworm cache (<<parameters.branch>>-<<parameters.commit>>)"
-          key: &silkworm-cache-key silkworm-<<parameters.branch>>-<<parameters.commit>>
+          key: &silkworm-cache-key silkworm-v2-<<parameters.branch>>-<<parameters.commit>>
       - run:
           name: "Check Silkworm cache"
           command: |
@@ -108,10 +108,9 @@ commands:
               echo 'export SILKWORM_BUILD=true' >> $BASH_ENV
             fi
       - run:
-          name: "Install GMP-dev"
+          name: "Install build dependencies"
           command: |
-            [ "$SILKWORM_BUILD" = true ] || exit 0
-            sudo apt-get -q update && sudo apt-get -qy install --no-install-recommends libgmp-dev
+            sudo apt-get -q update && sudo apt-get -qy install --no-install-recommends binutils m4 texinfo
       - run:
           name: "Checkout Silkworm"
           working_directory: ~/silkworm/src
@@ -119,7 +118,7 @@ commands:
             [ "$SILKWORM_BUILD" = true ] || exit 0
             git clone --no-checkout --single-branch https://github.com/torquem-ch/silkworm.git . --branch <<parameters.branch>>
             git checkout <<parameters.commit>>
-            git submodule update --init --recursive --depth=1 --progress
+            git submodule update --init --recursive --progress
       - run:
           name: "Configure Silkworm"
           working_directory: ~/silkworm
@@ -402,9 +401,9 @@ jobs:
     steps:
       - build
       - build_silkworm:
-          commit: 98e4908f57643def0069ac9ae85a26eba715d8a7
+          commit: 30ca8b324fcffb574c23c09fcba6386e57a7a5af
       - download_execution_tests:
-          rev: v11.1
+          rev: v11.3
       - run:
           name: "Silkworm-driven blockchain tests (Advanced)"
           working_directory: ~/build
