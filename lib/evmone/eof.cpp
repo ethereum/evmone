@@ -348,6 +348,8 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
 
         std::vector<size_t> successors;
 
+        auto imm_size = instr::traits[opcode].immediate_size;
+
         if (opcode == OP_RJUMP || opcode == OP_RJUMPI)
         {
             const auto target_rel_offset = read_int16_be(&code[i + 1]);
@@ -357,13 +359,11 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
         else if (opcode == OP_RJUMPV)
         {
             const auto count = code[i + 1];
+            imm_size = 1 + count * 2;
 
-            const auto next = i + count * 2 + 2;
+            const auto next = i + imm_size + 1;
             if (next >= code.size())
                 return {EOFValidationError::no_terminating_instruction, -1};
-
-            const auto beg = stack_heights.begin() + static_cast<int32_t>(i) + 1;
-            std::fill_n(beg, count * 2 + 1, LOC_IMMEDIATE);
 
             successors.push_back(next);
 
@@ -376,19 +376,16 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
         }
         else if (!instr::traits[opcode].is_terminating)
         {
-            const auto next = i + instr::traits[opcode].immediate_size + 1;
+            const auto next = i + imm_size + 1;
             if (next >= code.size())
                 return {EOFValidationError::no_terminating_instruction, -1};
 
             successors.push_back(next);
         }
 
-        // Ignore RJUMPV, because it has this already filled out.
-        if (opcode != OP_RJUMPV)
-        {
-            const auto beg = stack_heights.begin() + static_cast<int32_t>(i) + 1;
-            std::fill_n(beg, instr::traits[opcode].immediate_size, LOC_IMMEDIATE);
-        }
+        // Mark immediate locations.
+        const auto beg = stack_heights.begin() + static_cast<int32_t>(i) + 1;
+        std::fill_n(beg, imm_size, LOC_IMMEDIATE);
 
         stack_height += stack_height_change;
 
