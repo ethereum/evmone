@@ -310,20 +310,17 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
     // Stack height in the header is limited to uint16_t, but keeping larger size for ease of
     // calculation.
     std::vector<int32_t> stack_heights = std::vector<int32_t>(code.size(), -1);
-    std::stack<size_t> worklist;
-
-    int32_t stack_height = 0;
     stack_heights[0] = funcs_in_outs[func_index].inputs;
+
+    std::stack<size_t> worklist;
     worklist.push(0);
 
-    size_t i = 0;
-    Opcode opcode = {};
-    std::vector<size_t> successors;
     while (!worklist.empty())
     {
-        i = worklist.top();
-        opcode = static_cast<Opcode>(code[i]);
+        const auto i = worklist.top();
         worklist.pop();
+
+        const auto opcode = static_cast<Opcode>(code[i]);
 
         auto stack_height_required = instr::traits[opcode].stack_height_required;
         auto stack_height_change = instr::traits[opcode].stack_height_change;
@@ -340,13 +337,13 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
                 static_cast<int8_t>(funcs_in_outs[fid].outputs - stack_height_required);
         }
 
-        stack_height = stack_heights[i];
+        auto stack_height = stack_heights[i];
         assert(stack_height != -1);
 
         if (stack_height < stack_height_required)
             return {EOFValidationError::stack_underflow, -1};
 
-        successors.clear();
+        std::vector<size_t> successors;
 
         // Skip RJUMP because next may not be its successor. It's calculated below.
         // Skip terminating opcodes because they do not have successors.
