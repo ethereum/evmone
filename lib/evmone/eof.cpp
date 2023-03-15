@@ -274,7 +274,7 @@ bool validate_rjump_destinations(bytes_view code) noexcept
 
             const auto count = code[i + 1];
 
-            imm_size = size_t{1} /* count */ + count * REL_OFFSET_SIZE /* tbl */;
+            imm_size += size_t{1} /* count */ + count * REL_OFFSET_SIZE /* tbl */;
 
             const size_t post_pos = i + 1 + imm_size;
 
