@@ -27,6 +27,8 @@ public:
     bytes_view executable_code;  ///< Executable code section.
     JumpdestMap jumpdest_map;    ///< Map of valid jump destinations.
     uint8_t eof_version = 0;     ///< The EOF version, 0 means legacy code.
+    /// Offset of each code section relative to the beginning of the first code
+    /// section. We flatten the sections for cheap execution.
     std::vector<uint16_t> code_offsets;
 
 private:
