@@ -348,7 +348,7 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
 
         std::vector<size_t> successors;
 
-        auto imm_size = instr::traits[opcode].immediate_size;
+        size_t imm_size = instr::traits[opcode].immediate_size;
 
         if (opcode == OP_RJUMP || opcode == OP_RJUMPI)
         {
@@ -369,7 +369,7 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
         else if (opcode == OP_RJUMPV)
         {
             const auto count = code[i + 1];
-            imm_size = 1 + count * 2;
+            imm_size = 1 + size_t{count} * 2;
 
             const auto next = i + imm_size + 1;
             if (next >= code.size())
