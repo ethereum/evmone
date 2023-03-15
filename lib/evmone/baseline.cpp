@@ -88,8 +88,7 @@ CodeAnalysis analyze_eof1(bytes_view container)
 
     // FIXME: Better way of getting EOF version.
     const auto eof_version = container[2];
-    auto analysis = CodeAnalysis{executable_code, {}, eof_version, relative_offsets};
-    return analysis;
+    return CodeAnalysis{executable_code, {}, eof_version, relative_offsets};
 }
 }  // namespace
 
