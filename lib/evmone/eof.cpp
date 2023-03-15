@@ -307,9 +307,12 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
 {
     assert(!code.empty());
 
+    constexpr int32_t LOC_UNVISITED = -1;
+    constexpr int32_t LOC_IMMEDIATE = -2;
+
     // Stack height in the header is limited to uint16_t, but keeping larger size for ease of
     // calculation.
-    std::vector<int32_t> stack_heights = std::vector<int32_t>(code.size(), -1);
+    std::vector<int32_t> stack_heights = std::vector<int32_t>(code.size(), LOC_UNVISITED);
     stack_heights[0] = code_types[func_index].inputs;
 
     std::stack<size_t> worklist;
@@ -338,7 +341,7 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
         }
 
         auto stack_height = stack_heights[i];
-        assert(stack_height != -1);
+        assert(stack_height != LOC_UNVISITED);
 
         if (stack_height < stack_height_required)
             return {EOFValidationError::stack_underflow, -1};
@@ -360,7 +363,7 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
                 return {EOFValidationError::no_terminating_instruction, -1};
 
             const auto beg = stack_heights.begin() + static_cast<int32_t>(i) + 1;
-            std::fill_n(beg, count * 2 + 1, -2);
+            std::fill_n(beg, count * 2 + 1, LOC_IMMEDIATE);
 
             successors.push_back(next);
 
@@ -384,14 +387,14 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
         if (opcode != OP_RJUMPV)
         {
             const auto beg = stack_heights.begin() + static_cast<int32_t>(i) + 1;
-            std::fill_n(beg, instr::traits[opcode].immediate_size, -2);
+            std::fill_n(beg, instr::traits[opcode].immediate_size, LOC_IMMEDIATE);
         }
 
         stack_height += stack_height_change;
 
         for (const auto& s : successors)
         {
-            if (stack_heights[s] == -1)
+            if (stack_heights[s] == LOC_UNVISITED)
             {
                 stack_heights[s] = stack_height;
                 worklist.push(s);
@@ -406,7 +409,7 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
 
     const auto msh_it = std::max_element(stack_heights.begin(), stack_heights.end());
 
-    if (std::find(stack_heights.begin(), stack_heights.end(), -1) != stack_heights.end())
+    if (std::find(stack_heights.begin(), stack_heights.end(), LOC_UNVISITED) != stack_heights.end())
         return {EOFValidationError::unreachable_instructions, -1};
 
     return {EOFValidationError::success, *msh_it};
