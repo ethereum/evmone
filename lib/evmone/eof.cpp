@@ -247,7 +247,7 @@ bool validate_rjump_destinations(bytes_view code) noexcept
     for (size_t i = 0; i < code_size; ++i)
     {
         const auto op = code[i];
-        auto imm_size = instr::traits[op].immediate_size;
+        size_t imm_size = instr::traits[op].immediate_size;
 
         if (op == OP_RJUMP || op == OP_RJUMPI)
         {
