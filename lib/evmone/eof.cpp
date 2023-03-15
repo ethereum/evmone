@@ -307,7 +307,8 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
 {
     assert(!code.empty());
 
-    // Changing this type to smaller integer (uint16_t) have in mind that it can overflow.
+    // Stack height in the header is limited to uint16_t, but keeping larger size for ease of
+    // calculation.
     std::vector<int32_t> stack_heights = std::vector<int32_t>(code.size(), -1);
     std::stack<size_t> worklist;
 
@@ -347,6 +348,8 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
 
         successors.clear();
 
+        // Skip RJUMP because next may not be its successor. It's calculated below.
+        // Skip terminating opcodes because they do not have successors.
         // Skip RJUMPV because its immediate_size depends on the code. It's calculated below.
         if (opcode != OP_RJUMP && !instr::traits[opcode].is_terminating && opcode != OP_RJUMPV)
         {
