@@ -66,8 +66,6 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_v
     EOFSectionHeaders section_headers{};
     const auto container_end = container.end();
     auto it = container.begin() + std::size(MAGIC) + 1;  // MAGIC + VERSION
-    // TODO: Since all sections are mandatory and they have to be ordered (Types, Code+, Data)
-    // TODO: this fragment of code can be much simpler. Rewriting needed.
     uint8_t expected_section_id = TYPE_SECTION;
     while (it != container_end && state != State::terminated)
     {
