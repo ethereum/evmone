@@ -334,8 +334,7 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
         if (stack_height < stack_height_required)
             return {EOFValidationError::stack_underflow, -1};
 
-        // Target locations of control flow.
-        std::vector<size_t> successors;
+        stack_height += stack_height_change;
 
         // Determine size of immediate, including the special case of RJUMPV.
         const size_t imm_size = (opcode == OP_RJUMPV) ? (1 + /*count*/ size_t{code[i + 1]} * 2) :
@@ -344,6 +343,20 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
         // Mark immediate locations.
         std::fill_n(&stack_heights[i + 1], imm_size, LOC_IMMEDIATE);
 
+        // Validates the successor instruction and updates its stack height.
+        const auto validate_successor = [&stack_heights, &worklist](size_t successor_offset,
+                                            int32_t expected_stack_height) {
+            auto& successor_stack_height = stack_heights[successor_offset];
+            if (successor_stack_height == LOC_UNVISITED)
+            {
+                successor_stack_height = expected_stack_height;
+                worklist.push(successor_offset);
+                return true;
+            }
+            else
+                return successor_stack_height == expected_stack_height;
+        };
+
         const auto next = i + imm_size + 1;  // Offset of the next instruction (may be invalid).
 
         // Check validity of next instruction. We skip RJUMP and terminating instructions.
@@ -351,17 +364,17 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
         {
             if (next >= code.size())
                 return {EOFValidationError::no_terminating_instruction, -1};
-
-            successors.push_back(next);
+            if (!validate_successor(next, stack_height))
+                return {EOFValidationError::stack_height_mismatch, -1};
         }
 
-        // Collect non-fallthrough successors of relative jumps.
+        // Validate non-fallthrough successors of relative jumps.
         if (opcode == OP_RJUMP || opcode == OP_RJUMPI)
         {
-            // Insert jump target.
             const auto target_rel_offset = read_int16_be(&code[i + 1]);
             const auto target = static_cast<int32_t>(i) + target_rel_offset + 3;
-            successors.push_back(static_cast<size_t>(target));
+            if (!validate_successor(static_cast<size_t>(target), stack_height))
+                return {EOFValidationError::stack_height_mismatch, -1};
         }
         else if (opcode == OP_RJUMPV)
         {
@@ -372,21 +385,9 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
             {
                 const auto target_rel_offset = read_int16_be(&code[i + k * 2 + 2]);
                 const auto target = static_cast<int32_t>(next) + target_rel_offset;
-                successors.push_back(static_cast<size_t>(target));
+                if (!validate_successor(static_cast<size_t>(target), stack_height))
+                    return {EOFValidationError::stack_height_mismatch, -1};
             }
-        }
-
-        stack_height += stack_height_change;
-
-        for (const auto& s : successors)
-        {
-            if (stack_heights[s] == LOC_UNVISITED)
-            {
-                stack_heights[s] = stack_height;
-                worklist.push(s);
-            }
-            else if (stack_heights[s] != stack_height)
-                return {EOFValidationError::stack_height_mismatch, -1};
         }
 
         if (opcode == OP_RETF && stack_height != code_types[func_index].outputs)
