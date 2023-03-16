@@ -344,10 +344,11 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
         // Mark immediate locations.
         std::fill_n(&stack_heights[i + 1], imm_size, LOC_IMMEDIATE);
 
+        const auto next = i + imm_size + 1;  // Offset of the next instruction (may be invalid).
+
         // Check validity of next instruction. We skip RJUMP and terminating instructions.
         if (!instr::traits[opcode].is_terminating && opcode != OP_RJUMP)
         {
-            const auto next = i + imm_size + 1;
             if (next >= code.size())
                 return {EOFValidationError::no_terminating_instruction, -1};
 
@@ -359,20 +360,19 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
         {
             // Insert jump target.
             const auto target_rel_offset = read_int16_be(&code[i + 1]);
-            successors.push_back(
-                static_cast<size_t>(static_cast<int32_t>(i) + target_rel_offset + 3));
+            const auto target = static_cast<int32_t>(i) + target_rel_offset + 3;
+            successors.push_back(static_cast<size_t>(target));
         }
         else if (opcode == OP_RJUMPV)
         {
             const auto count = code[i + 1];
 
-            const auto pc_post_instruction = i + imm_size + 1;
             // Insert all jump targets.
             for (size_t k = 0; k < count; ++k)
             {
                 const auto target_rel_offset = read_int16_be(&code[i + k * 2 + 2]);
-                successors.push_back(static_cast<size_t>(
-                    static_cast<int32_t>(pc_post_instruction) + target_rel_offset));
+                const auto target = static_cast<int32_t>(next) + target_rel_offset;
+                successors.push_back(static_cast<size_t>(target));
             }
         }
 
