@@ -308,6 +308,7 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
 {
     assert(!code.empty());
 
+    // Special values used for detecting errors.
     constexpr int32_t LOC_UNVISITED = -1;
     constexpr int32_t LOC_IMMEDIATE = -2;
 
@@ -347,11 +348,12 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
         if (stack_height < stack_height_required)
             return {EOFValidationError::stack_underflow, -1};
 
+        // Target locations of control flow.
         std::vector<size_t> successors;
 
         // Determine size of immediate, including the special case of RJUMPV.
-        size_t imm_size = (opcode == OP_RJUMPV) ? (1 + /*count*/ size_t{code[i + 1]} * 2) :
-                                                  instr::traits[opcode].immediate_size;
+        const size_t imm_size = (opcode == OP_RJUMPV) ? (1 + /*count*/ size_t{code[i + 1]} * 2) :
+                                                        instr::traits[opcode].immediate_size;
 
         // Mark immediate locations.
         const auto beg = stack_heights.begin() + static_cast<int32_t>(i) + 1;
