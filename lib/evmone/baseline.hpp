@@ -29,7 +29,7 @@ public:
     uint8_t eof_version = 0;     ///< The EOF version, 0 means legacy code.
     /// Offset of each code section relative to the beginning of the first code
     /// section. We flatten the sections for cheap execution.
-    std::vector<uint16_t> code_offsets;
+    CodeOffsets code_offsets;
 
 private:
     /// Padded code for faster legacy code execution.
