@@ -492,9 +492,10 @@ EOF1Header read_valid_eof1_header(bytes_view container)
 
     for (auto type_offset = header_size;
          type_offset < header_size + section_headers[TYPE_SECTION][0]; type_offset += 4)
-
+    {
         header.types.emplace_back(container[type_offset], container[type_offset + 1],
             read_uint16_be(&container[type_offset + 2]));
+    }
 
     header.code_sizes = section_headers[CODE_SECTION];
     std::vector<uint16_t> code_offsets;
