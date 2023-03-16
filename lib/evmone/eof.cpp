@@ -96,6 +96,8 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_v
                 it += 2;
                 if (section_num == 0)
                     return EOFValidationError::zero_section_size;
+                if (section_num > CODE_SECTION_NUMBER_LIMIT)
+                    return EOFValidationError::too_many_code_sections;
                 expected_section_id = DATA_SECTION;
                 state = State::section_size;
                 break;
@@ -123,8 +125,6 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_v
                     if (section_size == 0)
                         return EOFValidationError::zero_section_size;
 
-                    if (section_headers[CODE_SECTION].size() == CODE_SECTION_NUMBER_LIMIT)
-                        return EOFValidationError::too_many_code_sections;
                     section_headers[section_id].emplace_back(section_size);
                 }
             }
