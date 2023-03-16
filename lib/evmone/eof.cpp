@@ -11,6 +11,7 @@
 #include <cassert>
 #include <limits>
 #include <numeric>
+#include <span>
 #include <stack>
 #include <variant>
 #include <vector>
@@ -168,7 +169,7 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_v
 }
 
 std::variant<std::vector<EOFCodeType>, EOFValidationError> validate_types(
-    bytes_view container, size_t header_size, std::vector<uint16_t> type_section_sizes) noexcept
+    bytes_view container, size_t header_size, std::span<const uint16_t> type_section_sizes) noexcept
 {
     assert(!container.empty());              // guaranteed by EOF headers validation
     assert(type_section_sizes.size() <= 1);  // guaranteed by EOF headers validation
