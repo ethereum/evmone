@@ -665,43 +665,43 @@ TEST(eof_valication, max_arguments_count)
 TEST(eof_valication, max_stack_heigh)
 {
     {
+        auto code = "EF0001 010008 02000200010BFE 030000 00 00000000 000003FF B1" +
+                    0x3FF * bytecode{1} + 0x3FF * OP_POP + OP_RETF;
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+    }
+
+    {
+        auto code = "EF0001 010008 0200020BFE0001 030000 00 000003FF 00000000" +
+                    0x3FF * bytecode{1} + 0x3FF * OP_POP + OP_RETF + OP_RETF;
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+    }
+
+    {
         auto code = "EF0001 010008 02000200010C01 030000 00 00000000 00000400 B1" +
                     0x400 * bytecode{1} + 0x400 * OP_POP + OP_RETF;
 
-        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::max_stack_height_above_limit);
     }
 
     {
         auto code = "EF0001 010008 0200020C010001 030000 00 00000400 00000000" +
                     0x400 * bytecode{1} + 0x400 * OP_POP + OP_RETF + OP_RETF;
 
-        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
-    }
-
-    {
-        auto code = "EF0001 010008 02000200010C04 030000 00 00000000 00000401 B1" +
-                    0x401 * bytecode{1} + 0x401 * OP_POP + OP_RETF;
-
         EXPECT_EQ(validate_eof(code), EOFValidationError::max_stack_height_above_limit);
     }
 
     {
-        auto code = "EF0001 010008 0200020C040001 030000 00 00000401 00000000" +
-                    0x401 * bytecode{1} + 0x401 * OP_POP + OP_RETF + OP_RETF;
-
-        EXPECT_EQ(validate_eof(code), EOFValidationError::max_stack_height_above_limit);
-    }
-
-    {
-        auto code = "EF0001 010008 02000200010C04 030000 00 00000000 00000400 B1" +
-                    0x401 * bytecode{1} + 0x401 * OP_POP + OP_RETF;
+        auto code = "EF0001 010008 02000200010C01 030000 00 00000000 000003FF B1" +
+                    0x400 * bytecode{1} + 0x400 * OP_POP + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::invalid_max_stack_height);
     }
 
     {
-        auto code = "EF0001 010008 0200020C040001 030000 00 00000400 00000000" +
-                    0x401 * bytecode{1} + 0x401 * OP_POP + OP_RETF + OP_RETF;
+        auto code = "EF0001 010008 0200020C010001 030000 00 000003FF 00000000" +
+                    0x400 * bytecode{1} + 0x400 * OP_POP + OP_RETF + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::invalid_max_stack_height);
     }

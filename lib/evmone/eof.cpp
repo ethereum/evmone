@@ -27,7 +27,7 @@ constexpr uint8_t CODE_SECTION = 0x02;
 constexpr uint8_t DATA_SECTION = 0x03;
 constexpr uint8_t MAX_SECTION = DATA_SECTION;
 constexpr auto CODE_SECTION_NUMBER_LIMIT = 1024;
-constexpr auto MAX_STACK_HEIGHT = 0x0400;
+constexpr auto MAX_STACK_HEIGHT = 0x03FF;
 constexpr auto OUTPUTS_INPUTS_NUMBER_LIMIT = 0x7F;
 
 using EOFSectionHeaders = std::array<std::vector<uint16_t>, MAX_SECTION + 1>;
