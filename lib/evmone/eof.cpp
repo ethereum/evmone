@@ -29,6 +29,7 @@ constexpr uint8_t MAX_SECTION = DATA_SECTION;
 constexpr auto CODE_SECTION_NUMBER_LIMIT = 1024;
 constexpr auto MAX_STACK_HEIGHT = 0x03FF;
 constexpr auto OUTPUTS_INPUTS_NUMBER_LIMIT = 0x7F;
+constexpr auto REL_OFFSET_SIZE = sizeof(int16_t);
 
 using EOFSectionHeaders = std::array<std::vector<uint16_t>, MAX_SECTION + 1>;
 
@@ -232,8 +233,6 @@ EOFValidationError validate_instructions(evmc_revision rev, bytes_view code) noe
 /// Requires that the input is validated against truncation.
 bool validate_rjump_destinations(bytes_view code) noexcept
 {
-    static constexpr auto REL_OFFSET_SIZE = sizeof(int16_t);
-
     // Collect relative jump destinations and immediate locations
     const auto code_size = code.size();
     // list of all possible absolute rjumps destinations positions
@@ -337,8 +336,9 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
         stack_height += stack_height_change;
 
         // Determine size of immediate, including the special case of RJUMPV.
-        const size_t imm_size = (opcode == OP_RJUMPV) ? (1 + /*count*/ size_t{code[i + 1]} * 2) :
-                                                        instr::traits[opcode].immediate_size;
+        const size_t imm_size = (opcode == OP_RJUMPV) ?
+                                    (1 + /*count*/ size_t{code[i + 1]} * REL_OFFSET_SIZE) :
+                                    instr::traits[opcode].immediate_size;
 
         // Mark immediate locations.
         std::fill_n(&stack_heights[i + 1], imm_size, LOC_IMMEDIATE);
@@ -383,7 +383,7 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
             // Insert all jump targets.
             for (size_t k = 0; k < count; ++k)
             {
-                const auto target_rel_offset = read_int16_be(&code[i + k * 2 + 2]);
+                const auto target_rel_offset = read_int16_be(&code[i + k * REL_OFFSET_SIZE + 2]);
                 const auto target = static_cast<int32_t>(next) + target_rel_offset;
                 if (!validate_successor(static_cast<size_t>(target), stack_height))
                     return {EOFValidationError::stack_height_mismatch, -1};
