@@ -302,6 +302,7 @@ bool validate_rjump_destinations(bytes_view code) noexcept
     return true;
 }
 
+/// Requires that the input is validated against truncation.
 std::pair<EOFValidationError, int32_t> validate_max_stack_height(
     bytes_view code, size_t func_index, const std::vector<EOFCodeType>& code_types)
 {
@@ -348,20 +349,27 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
 
         std::vector<size_t> successors;
 
-        size_t imm_size = instr::traits[opcode].immediate_size;
+        // Determine size of immediate, including the special case of RJUMPV.
+        size_t imm_size = (opcode == OP_RJUMPV) ? (1 + /*count*/ size_t{code[i + 1]} * 2) :
+                                                  instr::traits[opcode].immediate_size;
 
+        // Mark immediate locations.
+        const auto beg = stack_heights.begin() + static_cast<int32_t>(i) + 1;
+        std::fill_n(beg, imm_size, LOC_IMMEDIATE);
+
+        // Check validity of next instruction. We skip RJUMP and terminating instructions.
+        if (!instr::traits[opcode].is_terminating && opcode != OP_RJUMP)
+        {
+            const auto next = i + imm_size + 1;
+            if (next >= code.size())
+                return {EOFValidationError::no_terminating_instruction, -1};
+
+            successors.push_back(next);
+        }
+
+        // These cases check the conditional jump targets.
         if (opcode == OP_RJUMP || opcode == OP_RJUMPI)
         {
-            // Conditional jump has the fallthrough as successor too.
-            if (opcode == OP_RJUMPI)
-            {
-                const auto next = i + imm_size + 1;
-                if (next >= code.size())
-                    return {EOFValidationError::no_terminating_instruction, -1};
-
-                successors.push_back(next);
-            }
-
             // Insert jump target.
             const auto target_rel_offset = read_int16_be(&code[i + 1]);
             successors.push_back(
@@ -370,14 +378,6 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
         else if (opcode == OP_RJUMPV)
         {
             const auto count = code[i + 1];
-            imm_size = 1 + size_t{count} * 2;
-
-            const auto next = i + imm_size + 1;
-            if (next >= code.size())
-                return {EOFValidationError::no_terminating_instruction, -1};
-
-            // Insert fall through.
-            successors.push_back(next);
 
             // Insert all jump targets.
             for (uint16_t k = 0; k < count; ++k)
@@ -387,18 +387,6 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
                     static_cast<int32_t>(i) + 2 * count + target_rel_offset + 2));
             }
         }
-        else if (!instr::traits[opcode].is_terminating)
-        {
-            const auto next = i + imm_size + 1;
-            if (next >= code.size())
-                return {EOFValidationError::no_terminating_instruction, -1};
-
-            successors.push_back(next);
-        }
-
-        // Mark immediate locations.
-        const auto beg = stack_heights.begin() + static_cast<int32_t>(i) + 1;
-        std::fill_n(beg, imm_size, LOC_IMMEDIATE);
 
         stack_height += stack_height_change;
 
