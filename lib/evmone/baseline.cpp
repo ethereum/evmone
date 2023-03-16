@@ -79,7 +79,9 @@ CodeAnalysis analyze_eof1(bytes_view container)
     const auto executable_code =
         container.substr(code_sections_offset, code_sections_end - code_sections_offset);
 
-    // Offsets relative from the beginning of the first code section.
+    // Code section offsets relative to the beginning of the first code section.
+    // Execution starts at position 0 (first code section).
+    // The implementation of CALLF uses these offsets.
     CodeAnalysis::CodeOffsets relative_offsets;
     relative_offsets.reserve(header.code_offsets.size());
     for (const auto offset : header.code_offsets)
