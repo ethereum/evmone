@@ -295,12 +295,12 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
     assert(!code.empty());
 
     // Special values used for detecting errors.
-    constexpr int32_t LOC_UNVISITED = -1;
-    constexpr int32_t LOC_IMMEDIATE = -2;
+    static constexpr int32_t LOC_UNVISITED = -1;  // Unvisited byte.
+    static constexpr int32_t LOC_IMMEDIATE = -2;  // Immediate byte.
 
-    // Stack height in the header is limited to uint16_t, but keeping larger size for ease of
-    // calculation.
-    std::vector<int32_t> stack_heights = std::vector<int32_t>(code.size(), LOC_UNVISITED);
+    // Stack height in the header is limited to uint16_t,
+    // but keeping larger size for ease of calculation.
+    std::vector<int32_t> stack_heights(code.size(), LOC_UNVISITED);
     stack_heights[0] = code_types[func_index].inputs;
 
     std::stack<size_t> worklist;
@@ -342,8 +342,7 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
                                                         instr::traits[opcode].immediate_size;
 
         // Mark immediate locations.
-        const auto beg = stack_heights.begin() + static_cast<int32_t>(i) + 1;
-        std::fill_n(beg, imm_size, LOC_IMMEDIATE);
+        std::fill_n(&stack_heights[i + 1], imm_size, LOC_IMMEDIATE);
 
         // Check validity of next instruction. We skip RJUMP and terminating instructions.
         if (!instr::traits[opcode].is_terminating && opcode != OP_RJUMP)
@@ -355,20 +354,20 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
             successors.push_back(next);
         }
 
-        // These cases check the conditional jump targets.
+        // Collect non-fallthrough successors of relative jumps.
         if (opcode == OP_RJUMP || opcode == OP_RJUMPI)
         {
             // Insert jump target.
             const auto target_rel_offset = read_int16_be(&code[i + 1]);
             successors.push_back(
-                static_cast<size_t>(target_rel_offset + 3 + static_cast<int32_t>(i)));
+                static_cast<size_t>(static_cast<int32_t>(i) + target_rel_offset + 3));
         }
         else if (opcode == OP_RJUMPV)
         {
             const auto count = code[i + 1];
 
             // Insert all jump targets.
-            for (uint16_t k = 0; k < count; ++k)
+            for (size_t k = 0; k < count; ++k)
             {
                 const auto target_rel_offset = read_int16_be(&code[i + k * 2 + 2]);
                 successors.push_back(static_cast<size_t>(
@@ -393,12 +392,12 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
             return {EOFValidationError::non_empty_stack_on_terminating_instruction, -1};
     }
 
-    const auto msh_it = std::max_element(stack_heights.begin(), stack_heights.end());
+    const auto max_stack_height = *std::max_element(stack_heights.begin(), stack_heights.end());
 
     if (std::find(stack_heights.begin(), stack_heights.end(), LOC_UNVISITED) != stack_heights.end())
         return {EOFValidationError::unreachable_instructions, -1};
 
-    return {EOFValidationError::success, *msh_it};
+    return {EOFValidationError::success, max_stack_height};
 }
 
 std::variant<EOF1Header, EOFValidationError> validate_eof1(
