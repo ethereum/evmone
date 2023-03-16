@@ -288,7 +288,7 @@ bool validate_rjump_destinations(bytes_view code) noexcept
 }
 
 /// Requires that the input is validated against truncation.
-std::pair<EOFValidationError, int32_t> validate_max_stack_height(
+std::variant<EOFValidationError, int32_t> validate_max_stack_height(
     bytes_view code, size_t func_index, const std::vector<EOFCodeType>& code_types)
 {
     assert(!code.empty());
@@ -320,7 +320,7 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
             const auto fid = read_uint16_be(&code[i + 1]);
 
             if (fid >= code_types.size())
-                return {EOFValidationError::invalid_code_section_index, 0};
+                return EOFValidationError::invalid_code_section_index;
 
             stack_height_required = static_cast<int8_t>(code_types[fid].inputs);
             stack_height_change =
@@ -331,7 +331,7 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
         assert(stack_height != LOC_UNVISITED);
 
         if (stack_height < stack_height_required)
-            return {EOFValidationError::stack_underflow, -1};
+            return EOFValidationError::stack_underflow;
 
         stack_height += stack_height_change;
 
@@ -363,9 +363,9 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
         if (!instr::traits[opcode].is_terminating && opcode != OP_RJUMP)
         {
             if (next >= code.size())
-                return {EOFValidationError::no_terminating_instruction, -1};
+                return EOFValidationError::no_terminating_instruction;
             if (!validate_successor(next, stack_height))
-                return {EOFValidationError::stack_height_mismatch, -1};
+                return EOFValidationError::stack_height_mismatch;
         }
 
         // Validate non-fallthrough successors of relative jumps.
@@ -374,7 +374,7 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
             const auto target_rel_offset = read_int16_be(&code[i + 1]);
             const auto target = static_cast<int32_t>(i) + target_rel_offset + 3;
             if (!validate_successor(static_cast<size_t>(target), stack_height))
-                return {EOFValidationError::stack_height_mismatch, -1};
+                return EOFValidationError::stack_height_mismatch;
         }
         else if (opcode == OP_RJUMPV)
         {
@@ -386,20 +386,20 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
                 const auto target_rel_offset = read_int16_be(&code[i + k * REL_OFFSET_SIZE + 2]);
                 const auto target = static_cast<int32_t>(next) + target_rel_offset;
                 if (!validate_successor(static_cast<size_t>(target), stack_height))
-                    return {EOFValidationError::stack_height_mismatch, -1};
+                    return EOFValidationError::stack_height_mismatch;
             }
         }
 
         if (opcode == OP_RETF && stack_height != code_types[func_index].outputs)
-            return {EOFValidationError::non_empty_stack_on_terminating_instruction, -1};
+            return EOFValidationError::non_empty_stack_on_terminating_instruction;
     }
 
     const auto max_stack_height = *std::max_element(stack_heights.begin(), stack_heights.end());
 
     if (std::find(stack_heights.begin(), stack_heights.end(), LOC_UNVISITED) != stack_heights.end())
-        return {EOFValidationError::unreachable_instructions, -1};
+        return EOFValidationError::unreachable_instructions;
 
-    return {EOFValidationError::success, max_stack_height};
+    return max_stack_height;
 }
 
 std::variant<EOF1Header, EOFValidationError> validate_eof1(
@@ -442,11 +442,11 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(
         if (!validate_rjump_destinations(header.get_code(container, code_idx)))
             return EOFValidationError::invalid_rjump_destination;
 
-        auto msh_validation_result =
+        auto msh_or_error =
             validate_max_stack_height(header.get_code(container, code_idx), code_idx, header.types);
-        if (msh_validation_result.first != EOFValidationError::success)
-            return msh_validation_result.first;
-        if (msh_validation_result.second != header.types[code_idx].max_stack_height)
+        if (const auto* error = std::get_if<EOFValidationError>(&msh_or_error))
+            return *error;
+        if (std::get<int32_t>(msh_or_error) != header.types[code_idx].max_stack_height)
             return EOFValidationError::invalid_max_stack_height;
     }
 
