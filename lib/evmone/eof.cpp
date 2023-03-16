@@ -232,6 +232,8 @@ EOFValidationError validate_instructions(evmc_revision rev, bytes_view code) noe
 /// Requires that the input is validated against truncation.
 bool validate_rjump_destinations(bytes_view code) noexcept
 {
+    static constexpr auto REL_OFFSET_SIZE = sizeof(int16_t);
+
     // Collect relative jump destinations and immediate locations
     const auto code_size = code.size();
     // list of all possible absolute rjumps destinations positions
@@ -239,14 +241,16 @@ bool validate_rjump_destinations(bytes_view code) noexcept
     // bool map of immediate arguments positions in the code
     std::vector<bool> immediate_map(code_size);
 
-    const auto check_rjump_destination = [code_size](auto rel_offset_data_it,
-                                             size_t post_pos) -> std::optional<size_t> {
+    /// Validates relative jump destination. If valid pushes the destination to the rjumpdests.
+    const auto check_rjump_destination = [code_size, &rjumpdests](
+                                             auto rel_offset_data_it, size_t post_pos) -> bool {
         const auto rel_offset = read_int16_be(rel_offset_data_it);
         const auto jumpdest = static_cast<int32_t>(post_pos) + rel_offset;
         if (jumpdest < 0 || static_cast<size_t>(jumpdest) >= code_size)
-            return {};
-        else
-            return static_cast<size_t>(jumpdest);
+            return false;
+
+        rjumpdests.emplace_back(static_cast<size_t>(jumpdest));
+        return true;
     };
 
     for (size_t i = 0; i < code_size; ++i)
@@ -256,29 +260,18 @@ bool validate_rjump_destinations(bytes_view code) noexcept
 
         if (op == OP_RJUMP || op == OP_RJUMPI)
         {
-            if (auto jumpdest_opt = check_rjump_destination(&code[i + 1], i + 3); jumpdest_opt)
-                rjumpdests.push_back(jumpdest_opt.value());
-            else
+            if (!check_rjump_destination(&code[i + 1], i + REL_OFFSET_SIZE + 1))
                 return false;
         }
         else if (op == OP_RJUMPV)
         {
-            constexpr auto REL_OFFSET_SIZE = sizeof(int16_t);
-
             const auto count = code[i + 1];
-
             imm_size += size_t{1} /* count */ + count * REL_OFFSET_SIZE /* tbl */;
-
             const size_t post_pos = i + 1 + imm_size;
 
             for (size_t k = 0; k < count * REL_OFFSET_SIZE; k += REL_OFFSET_SIZE)
             {
-                auto jumpdest_opt =
-                    check_rjump_destination(&code[i + 1 + 1 + static_cast<uint16_t>(k)], post_pos);
-
-                if (jumpdest_opt)
-                    rjumpdests.push_back(jumpdest_opt.value());
-                else
+                if (!check_rjump_destination(&code[i + 1 + 1 + static_cast<uint16_t>(k)], post_pos))
                     return false;
             }
         }
