@@ -366,12 +366,13 @@ std::pair<EOFValidationError, int32_t> validate_max_stack_height(
         {
             const auto count = code[i + 1];
 
+            const auto pc_post_instruction = i + imm_size + 1;
             // Insert all jump targets.
             for (size_t k = 0; k < count; ++k)
             {
                 const auto target_rel_offset = read_int16_be(&code[i + k * 2 + 2]);
                 successors.push_back(static_cast<size_t>(
-                    static_cast<int32_t>(i) + 2 * count + target_rel_offset + 2));
+                    static_cast<int32_t>(pc_post_instruction) + target_rel_offset));
             }
         }
 
