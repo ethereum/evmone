@@ -89,7 +89,7 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_v
                 break;
             case CODE_SECTION:
             {
-                if (it >= container_end - 2)
+                if (it >= container_end - 1)
                     return EOFValidationError::incomplete_section_number;
                 section_num = read_uint16_be(it);
                 it += 2;
@@ -117,7 +117,7 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_v
                 assert(section_num > 0);  // Guaranteed by previous validation step.
                 for (size_t i = 0; i < section_num; ++i)
                 {
-                    if (it >= container_end - 2)
+                    if (it >= container_end - 1)
                         return EOFValidationError::incomplete_section_size;
                     const auto section_size = read_uint16_be(it);
                     it += 2;
@@ -129,7 +129,7 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_v
             }
             else  // TYPES_SECTION or DATA_SECTION
             {
-                if (it + 1 == container_end)
+                if (it >= container_end - 1)
                     return EOFValidationError::incomplete_section_size;
                 const auto section_size = read_uint16_be(it);
                 it += 2;

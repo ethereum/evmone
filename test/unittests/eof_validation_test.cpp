@@ -174,9 +174,17 @@ TEST(eof_validation, EOF1_unknown_section)
 
 TEST(eof_validation, EOF1_incomplete_section_size)
 {
+    // TODO: section_headers_not_terminated should rather be incomplete_section_size
+    //  in these examples.
+
+    EXPECT_EQ(validate_eof("EF0001 01"), EOFValidationError::section_headers_not_terminated);
     EXPECT_EQ(validate_eof("EF0001 0100"), EOFValidationError::incomplete_section_size);
     EXPECT_EQ(validate_eof("EF0001 010004 0200"), EOFValidationError::incomplete_section_number);
     EXPECT_EQ(validate_eof("EF0001 010004 02000100"), EOFValidationError::incomplete_section_size);
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001"),
+        EOFValidationError::section_headers_not_terminated);
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 03"),
+        EOFValidationError::section_headers_not_terminated);
     EXPECT_EQ(
         validate_eof("EF0001 010004 0200010001 0300"), EOFValidationError::incomplete_section_size);
 }
@@ -187,6 +195,9 @@ TEST(eof_validation, EOF1_header_not_terminated)
     EXPECT_EQ(validate_eof("EF0001 010004"), EOFValidationError::section_headers_not_terminated);
     EXPECT_EQ(validate_eof("EF0001 010004 FE"), EOFValidationError::code_section_missing);
     EXPECT_EQ(validate_eof("EF0001 010004 02"), EOFValidationError::incomplete_section_number);
+    EXPECT_EQ(validate_eof("EF0001 010004 0200"), EOFValidationError::incomplete_section_number);
+    EXPECT_EQ(
+        validate_eof("EF0001 010004 020001"), EOFValidationError::section_headers_not_terminated);
     EXPECT_EQ(validate_eof("EF0001 010004 0200010001 030001"),
         EOFValidationError::section_headers_not_terminated);
     EXPECT_EQ(validate_eof("EF0001 010004 0200010001 030001 FE AA"),
