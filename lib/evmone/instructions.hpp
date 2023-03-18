@@ -906,6 +906,11 @@ inline evmc_status_code dataload(StackTop stack, ExecutionState& state) noexcept
     return EVMC_SUCCESS;
 }
 
+inline void datasize(StackTop stack, ExecutionState& state) noexcept
+{
+    stack.push(state.data.size());
+}
+
 template <size_t NumTopics>
 inline evmc_status_code log(StackTop stack, ExecutionState& state) noexcept
 {
