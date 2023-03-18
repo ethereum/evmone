@@ -31,6 +31,8 @@ public:
     /// section. We flatten the sections for cheap execution.
     CodeOffsets code_offsets;
 
+    bytes_view data;  ///< Data section.
+
 private:
     /// Padded code for faster legacy code execution.
     /// If not nullptr the executable_code must point to it.
@@ -43,11 +45,13 @@ public:
         m_padded_code{std::move(padded_code)}
     {}
 
-    CodeAnalysis(bytes_view code, JumpdestMap map, uint8_t version, CodeOffsets offsets)
+    CodeAnalysis(bytes_view code, JumpdestMap map, uint8_t version, CodeOffsets offsets,
+        bytes_view data_section)
       : executable_code{code},
         jumpdest_map{std::move(map)},
         eof_version{version},
-        code_offsets{std::move(offsets)}
+        code_offsets{std::move(offsets)},
+        data{data_section}
     {}
 };
 static_assert(std::is_move_constructible_v<CodeAnalysis>);

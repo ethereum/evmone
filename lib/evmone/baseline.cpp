@@ -87,9 +87,11 @@ CodeAnalysis analyze_eof1(bytes_view container)
     for (const auto offset : header.code_offsets)
         relative_offsets.push_back(offset - code_sections_offset);
 
+    const auto data_section = container.substr(code_sections_end);
+
     // FIXME: Better way of getting EOF version.
     const auto eof_version = container[2];
-    return CodeAnalysis{executable_code, {}, eof_version, relative_offsets};
+    return CodeAnalysis{executable_code, {}, eof_version, relative_offsets, data_section};
 }
 }  // namespace
 
@@ -375,8 +377,8 @@ evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_co
 {
     auto vm = static_cast<VM*>(c_vm);
     const auto jumpdest_map = analyze(rev, {code, code_size});
-    auto state =
-        std::make_unique<ExecutionState>(*msg, rev, *host, ctx, bytes_view{code, code_size});
+    auto state = std::make_unique<ExecutionState>(
+        *msg, rev, *host, ctx, bytes_view{code, code_size}, jumpdest_map.data);
     return execute(*vm, *state, jumpdest_map);
 }
 }  // namespace evmone::baseline

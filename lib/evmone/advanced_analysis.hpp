@@ -90,9 +90,9 @@ struct AdvancedExecutionState : ExecutionState
     AdvancedExecutionState() noexcept : stack{stack_space.bottom()} {}
 
     AdvancedExecutionState(const evmc_message& message, evmc_revision revision,
-        const evmc_host_interface& host_interface, evmc_host_context* host_ctx,
-        bytes_view _code) noexcept
-      : ExecutionState{message, revision, host_interface, host_ctx, _code},
+        const evmc_host_interface& host_interface, evmc_host_context* host_ctx, bytes_view _code,
+        bytes_view _data) noexcept
+      : ExecutionState{message, revision, host_interface, host_ctx, _code, _data},
         stack{stack_space.bottom()}
     {}
 

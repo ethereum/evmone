@@ -163,6 +163,8 @@ enum Opcode : uint8_t
     OP_DUPN = 0xb5,
     OP_SWAPN = 0xb6,
 
+    OP_DATALOAD = 0xb7,
+
     OP_CREATE = 0xf0,
     OP_CALL = 0xf1,
     OP_CALLCODE = 0xf2,
