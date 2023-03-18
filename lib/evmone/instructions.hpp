@@ -906,6 +906,34 @@ inline evmc_status_code dataload(StackTop stack, ExecutionState& state) noexcept
     return EVMC_SUCCESS;
 }
 
+inline evmc_status_code datacopy(StackTop stack, ExecutionState& state) noexcept
+{
+    const auto& mem_index = stack.pop();
+    const auto& data_index = stack.pop();
+    const auto& size = stack.pop();
+
+    if (!check_memory(state, mem_index, size))
+        return EVMC_OUT_OF_GAS;
+
+    auto s = static_cast<size_t>(size);
+
+    if (state.data.size() < s || state.data.size() - s < data_index)
+        return EVMC_INVALID_MEMORY_ACCESS;  // TODO better error
+
+    const auto copy_cost = num_words(s) * 3;
+    if ((state.gas_left -= copy_cost) < 0)
+        return EVMC_OUT_OF_GAS;
+
+    if (s > 0)
+    {
+        const auto src = static_cast<size_t>(data_index);
+        const auto dst = static_cast<size_t>(mem_index);
+        std::memcpy(&state.memory[dst], &state.data[src], s);
+    }
+
+    return EVMC_SUCCESS;
+}
+
 inline void datasize(StackTop stack, ExecutionState& state) noexcept
 {
     stack.push(state.data.size());
