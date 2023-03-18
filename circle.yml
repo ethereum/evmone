@@ -5,30 +5,30 @@ orbs:
 executors:
   lint:
     docker:
-      - image: ethereum/cpp-build-env:18-lint
+      - image: ethereum/cpp-build-env:19-lint
     resource_class: small
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
   linux-gcc-latest:
     docker:
-      - image: ethereum/cpp-build-env:18-gcc-12
+      - image: ethereum/cpp-build-env:19-gcc-12
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 4
   linux-gcc-multilib:
     docker:
-      - image: ethereum/cpp-build-env:18-gcc-12-multilib
+      - image: ethereum/cpp-build-env:19-gcc-12-multilib
     resource_class: small
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
   blockchain-tests:
     docker:
-      - image: ethereum/cpp-build-env:18-gcc-12
+      - image: ethereum/cpp-build-env:19-gcc-12
     resource_class: xlarge
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 8
   linux-clang-xlarge:
     docker:
-      - image: ethereum/cpp-build-env:18-clang-14
+      - image: ethereum/cpp-build-env:19-clang-15
     resource_class: xlarge
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 8
@@ -40,7 +40,7 @@ executors:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
   linux-clang-latest:
     docker:
-      - image: ethereum/cpp-build-env:18-clang-14
+      - image: ethereum/cpp-build-env:19-clang-15
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 4
   linux-clang-min:
@@ -57,7 +57,7 @@ executors:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
   macos:
     macos:
-      xcode: 14.1.0
+      xcode: 14.2.0
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 4
   macos-xcode-min:
@@ -205,13 +205,13 @@ commands:
   test:
     description: "Test"
     steps:
-    - run:
-        name: "Test"
-        shell: bash
-        working_directory: ~/build
-        command: ctest -R ${TESTS_FILTER:-'.*'} --schedule-random --output-on-failure --parallel $CMAKE_BUILD_PARALLEL_LEVEL --output-junit ~/test_results/evmone.xml
-    - store_test_results:
-        path: ~/test_results
+      - run:
+          name: "Test"
+          shell: bash
+          working_directory: ~/build
+          command: ctest -R ${TESTS_FILTER:-'.*'} --schedule-random --output-on-failure --parallel $CMAKE_BUILD_PARALLEL_LEVEL --output-junit ~/test_results/evmone.xml
+      - store_test_results:
+          path: ~/test_results
 
   collect_coverage_gcc:
     description: "Collect coverage data (GCC)"
@@ -235,8 +235,8 @@ commands:
         type: string
     steps:
       - run:
-          name: "Upgrade codecov"
-          command: sudo pip3 install --upgrade --quiet --no-cache-dir codecov
+          name: "Install codecov"
+          command: pip3 install --break-system-packages --upgrade --user --quiet --no-cache-dir codecov
       - run:
           name: "Upload to Codecov"
           command: |
@@ -279,17 +279,17 @@ jobs:
   lint:
     executor: lint
     steps:
-    - checkout
-    - run:
-        name: "Check code format"
-        command: |
-          clang-format --version
-          find include lib test -name '*.hpp' -o -name '*.cpp' -o -name '*.h' -o -name '*.c' | xargs clang-format -i
-          git diff --color --exit-code
-    - run:
-        name: "Check spelling"
-        command: |
-          codespell --quiet-level=4 --skip=.git
+      - checkout
+      - run:
+          name: "Check code format"
+          command: |
+            clang-format --version
+            find include lib test -name '*.hpp' -o -name '*.cpp' -o -name '*.h' -o -name '*.c' | xargs clang-format -i
+            git diff --color --exit-code
+      - run:
+          name: "Check spelling"
+          command: |
+            codespell --quiet-level=4 --skip=.git
 
   release-linux:
     executor: linux-gcc-latest
@@ -426,7 +426,7 @@ jobs:
     steps:
       - build
       - download_execution_tests:
-          commit: e279c3d0a53e2f3055c7d7f72f993b62dde18e36
+          commit: v11.3
       - run:
           name: "State tests"
           working_directory: ~/build

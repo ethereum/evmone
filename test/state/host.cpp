@@ -184,8 +184,8 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
 
     // Clear the new account storage, but keep the access status (from tx access list).
     // This is only needed for tests and cannot happen in real networks.
-    for (auto& [_, v] : new_acc.storage)
-        [[unlikely]] v = StorageValue{.access_status = v.access_status};
+    for (auto& [_, v] : new_acc.storage) [[unlikely]]
+        v = StorageValue{.access_status = v.access_status};
 
     auto& sender_acc = m_state.get(msg.sender);  // TODO: Duplicated account lookup.
     const auto value = intx::be::load<intx::uint256>(msg.value);

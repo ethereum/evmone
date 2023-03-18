@@ -10,16 +10,16 @@ using namespace evmone;
 
 TEST(eof, code_begin)
 {
-    EOF1Header header1{1, 0};
+    const EOF1Header header1{1, 0};
     EXPECT_EQ(header1.code_begin(), 7);
 
-    EOF1Header header2{10, 0};
+    const EOF1Header header2{10, 0};
     EXPECT_EQ(header2.code_begin(), 7);
 
-    EOF1Header header3{1, 1};
+    const EOF1Header header3{1, 1};
     EXPECT_EQ(header3.code_begin(), 10);
 
-    EOF1Header header4{1, 10};
+    const EOF1Header header4{1, 10};
     EXPECT_EQ(header4.code_begin(), 10);
 }
 
