@@ -148,7 +148,14 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
     const auto current_difficulty_it = j.find("currentDifficulty");
     const auto parent_difficulty_it = j.find("parentDifficulty");
     if (prev_randao_it != j.end())
-        difficulty = from_json<evmc::bytes32>(*prev_randao_it);
+    {
+        // Special case to handle "0". Required by exec-spec-tests.
+        // TODO: Get rid of it.
+        if (prev_randao_it->is_string() && prev_randao_it->get<std::string>() == "0")
+            difficulty = 0x0000000000000000000000000000000000000000000000000000000000000000_bytes32;
+        else
+            difficulty = from_json<evmc::bytes32>(*prev_randao_it);
+    }
     else if (current_difficulty_it != j.end())
         difficulty = from_json<evmc::bytes32>(*current_difficulty_it);
     else if (parent_difficulty_it != j.end())
