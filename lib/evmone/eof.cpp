@@ -279,6 +279,18 @@ EOFValidationError validate_instructions(
                 return EOFValidationError::invalid_dataloadn_index;
             i += 2;
         }
+        else if (op == OP_CREATE3 || op == OP_RETURNCONTRACT)
+        {
+            if (i + 1 < code.size())
+            {
+                const auto container_idx = code[i + 1];
+                if (container_idx >= header.container_sizes.size())
+                    return EOFValidationError::invalid_container_section_index;
+                ++i;
+            }
+            else
+                return EOFValidationError::truncated_instruction;
+        }
         else
             i += instr::traits[op].immediate_size;
     }
@@ -723,6 +735,8 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "invalid_dataloadn_index";
     case EOFValidationError::too_many_container_sections:
         return "too_many_container_sections";
+    case EOFValidationError::invalid_container_section_index:
+        return "invalid_container_section_index";
     case EOFValidationError::impossible:
         return "impossible";
     }
