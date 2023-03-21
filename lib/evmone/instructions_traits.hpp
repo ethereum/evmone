@@ -166,6 +166,11 @@ constexpr inline GasCostTable gas_costs = []() noexcept {
     table[EVMC_CANCUN] = table[EVMC_SHANGHAI];
     table[EVMC_CANCUN][OP_DUPN] = 3;
     table[EVMC_CANCUN][OP_SWAPN] = 3;
+    table[EVMC_CANCUN][OP_RJUMP] = 2;
+    table[EVMC_CANCUN][OP_RJUMPI] = 4;
+    table[EVMC_CANCUN][OP_RJUMPV] = 4;
+    table[EVMC_CANCUN][OP_CALLF] = 5;
+    table[EVMC_CANCUN][OP_RETF] = 3;
 
     table[EVMC_PRAGUE] = table[EVMC_CANCUN];
 
@@ -288,6 +293,10 @@ constexpr inline std::array<Traits, 256> traits = []() noexcept {
     table[OP_MSIZE] = {"MSIZE", 0, false, 0, 1, EVMC_FRONTIER};
     table[OP_GAS] = {"GAS", 0, false, 0, 1, EVMC_FRONTIER};
     table[OP_JUMPDEST] = {"JUMPDEST", 0, false, 0, 0, EVMC_FRONTIER};
+    table[OP_RJUMP] = {"RJUMP", 2, false, 0, 0, EVMC_CANCUN};
+    table[OP_RJUMPI] = {"RJUMPI", 2, false, 1, -1, EVMC_CANCUN};
+    table[OP_RJUMPV] = {
+        "RJUMPV", 0 /* WARNING: immediate_size is dynamic */, false, 1, -1, EVMC_CANCUN};
 
     table[OP_PUSH0] = {"PUSH0", 0, false, 0, 1, EVMC_SHANGHAI};
 
@@ -374,6 +383,8 @@ constexpr inline std::array<Traits, 256> traits = []() noexcept {
     table[OP_DELEGATECALL] = {"DELEGATECALL", 0, false, 6, -5, EVMC_HOMESTEAD};
     table[OP_CREATE2] = {"CREATE2", 0, false, 4, -3, EVMC_CONSTANTINOPLE};
     table[OP_STATICCALL] = {"STATICCALL", 0, false, 6, -5, EVMC_BYZANTIUM};
+    table[OP_CALLF] = {"CALLF", 2, false, 0, 0, EVMC_CANCUN};
+    table[OP_RETF] = {"RETF", 0, true, 0, 0, EVMC_CANCUN};
     table[OP_REVERT] = {"REVERT", 0, true, 2, -2, EVMC_BYZANTIUM};
     table[OP_INVALID] = {"INVALID", 0, true, 0, 0, EVMC_FRONTIER};
     table[OP_SELFDESTRUCT] = {"SELFDESTRUCT", 0, true, 1, -1, EVMC_FRONTIER};

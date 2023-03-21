@@ -4,6 +4,7 @@
 #pragma once
 
 #include "baseline.hpp"
+#include "eof.hpp"
 #include "execution_state.hpp"
 #include "instructions_traits.hpp"
 #include "instructions_xmacro.hpp"
@@ -701,6 +702,40 @@ inline code_iterator jumpi(StackTop stack, ExecutionState& state, code_iterator 
     return cond ? jump_impl(state, dst) : pos + 1;
 }
 
+inline code_iterator rjump(StackTop /*stack*/, ExecutionState& /*state*/, code_iterator pc) noexcept
+{
+    // Reading next 2 bytes is guaranteed to be safe by deploy-time validation.
+    const auto offset = read_int16_be(&pc[1]);
+    return pc + 3 + offset;  // PC_post_rjump + offset
+}
+
+inline code_iterator rjumpi(StackTop stack, ExecutionState& state, code_iterator pc) noexcept
+{
+    const auto cond = stack.pop();
+    return cond ? rjump(stack, state, pc) : pc + 3;
+}
+
+inline code_iterator rjumpv(StackTop stack, ExecutionState& /*state*/, code_iterator pc) noexcept
+{
+    constexpr auto REL_OFFSET_SIZE = sizeof(int16_t);
+    const auto case_ = stack.pop();
+
+    const auto count = pc[1];
+    const auto pc_post = pc + 1 + 1 /* count */ + count * REL_OFFSET_SIZE /* tbl */;
+
+    if (case_ >= count)
+    {
+        return pc_post;
+    }
+    else
+    {
+        const auto rel_offset =
+            read_int16_be(&pc[2 + static_cast<uint16_t>(case_) * REL_OFFSET_SIZE]);
+
+        return pc_post + rel_offset;
+    }
+}
+
 inline code_iterator pc(StackTop stack, ExecutionState& state, code_iterator pos) noexcept
 {
     stack.push(static_cast<uint64_t>(pos - state.analysis.baseline->executable_code.data()));
@@ -897,6 +932,22 @@ template <Opcode Op>
 evmc_status_code create_impl(StackTop stack, ExecutionState& state) noexcept;
 inline constexpr auto create = create_impl<OP_CREATE>;
 inline constexpr auto create2 = create_impl<OP_CREATE2>;
+
+inline code_iterator callf(StackTop /*stack*/, ExecutionState& state, code_iterator pos) noexcept
+{
+    const auto index = read_uint16_be(&pos[1]);
+    state.call_stack.push_back(pos + 3);
+    const auto offset = state.analysis.baseline->code_offsets[index];
+    auto code = state.analysis.baseline->executable_code;
+    return code.data() + offset;
+}
+
+inline code_iterator retf(StackTop /*stack*/, ExecutionState& state, code_iterator /*pos*/) noexcept
+{
+    const auto p = state.call_stack.back();
+    state.call_stack.pop_back();
+    return p;
+}
 
 template <evmc_status_code StatusCode>
 inline StopToken return_impl(StackTop stack, ExecutionState& state) noexcept

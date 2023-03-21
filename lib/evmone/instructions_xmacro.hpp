@@ -129,9 +129,9 @@
     ON_OPCODE_IDENTIFIER(OP_MSIZE, msize)                   \
     ON_OPCODE_IDENTIFIER(OP_GAS, gas)                       \
     ON_OPCODE_IDENTIFIER(OP_JUMPDEST, jumpdest)             \
-    ON_OPCODE_UNDEFINED(0x5c)                               \
-    ON_OPCODE_UNDEFINED(0x5d)                               \
-    ON_OPCODE_UNDEFINED(0x5e)                               \
+    ON_OPCODE_IDENTIFIER(OP_RJUMP, rjump)                   \
+    ON_OPCODE_IDENTIFIER(OP_RJUMPI, rjumpi)                 \
+    ON_OPCODE_IDENTIFIER(OP_RJUMPV, rjumpv)                 \
     ON_OPCODE_IDENTIFIER(OP_PUSH0, push0)                   \
                                                             \
     ON_OPCODE_IDENTIFIER(OP_PUSH1, push<1>)                 \
@@ -219,8 +219,8 @@
     ON_OPCODE_UNDEFINED(0xae)                               \
     ON_OPCODE_UNDEFINED(0xaf)                               \
                                                             \
-    ON_OPCODE_UNDEFINED(0xb0)                               \
-    ON_OPCODE_UNDEFINED(0xb1)                               \
+    ON_OPCODE_IDENTIFIER(OP_CALLF, callf)                   \
+    ON_OPCODE_IDENTIFIER(OP_RETF, retf)                     \
     ON_OPCODE_UNDEFINED(0xb2)                               \
     ON_OPCODE_UNDEFINED(0xb3)                               \
     ON_OPCODE_UNDEFINED(0xb4)                               \

@@ -83,34 +83,36 @@ inline bytecode operator*(int n, Opcode op)
     return n * bytecode{op};
 }
 
-inline bytes big_endian(uint16_t value)
+template <typename T>
+inline typename std::enable_if_t<std::is_same_v<T, uint16_t> || std::is_same_v<T, int16_t>, bytes>
+big_endian(T value)
 {
     return {static_cast<uint8_t>(value >> 8), static_cast<uint8_t>(value)};
 }
 
-inline bytecode eof_header(uint8_t version, uint16_t code_size, uint16_t data_size)
+inline bytecode eof_header(
+    uint8_t version, uint16_t code_size, uint16_t max_stack_height, uint16_t data_size)
 {
     bytecode out{bytes{0xEF, 0x00, version}};
-
-    out += "01" + big_endian(code_size);
-
-    if (data_size != 0)
-        out += "02" + big_endian(data_size);
-
+    out += "01" + big_endian(uint16_t{4});  // type header
+    out += "02"_hex + big_endian(uint16_t{1}) + big_endian(code_size);
+    out += "03" + big_endian(data_size);
     out += "00";
+    out += "0000"_hex + big_endian(max_stack_height);  // type section
     return out;
 }
 
-inline bytecode eof1_header(uint16_t code_size, uint16_t data_size = 0)
+inline bytecode eof1_header(uint16_t code_size, uint16_t max_stack_height, uint16_t data_size = 0)
 {
-    return eof_header(1, code_size, data_size);
+    return eof_header(1, code_size, max_stack_height, data_size);
 }
 
-inline bytecode eof1_bytecode(bytecode code, bytecode data = {})
+inline bytecode eof1_bytecode(bytecode code, uint16_t max_stack_height = 0, bytecode data = {})
 {
     assert(code.size() <= std::numeric_limits<uint16_t>::max());
     assert(data.size() <= std::numeric_limits<uint16_t>::max());
-    return eof1_header(static_cast<uint16_t>(code.size()), static_cast<uint16_t>(data.size())) +
+    return eof1_header(static_cast<uint16_t>(code.size()), max_stack_height,
+               static_cast<uint16_t>(data.size())) +
            code + data;
 }
 
@@ -240,6 +242,24 @@ inline bytecode jump(bytecode target)
 inline bytecode jumpi(bytecode target, bytecode condition)
 {
     return condition + target + OP_JUMPI;
+}
+
+inline bytecode rjump(int16_t offset)
+{
+    return OP_RJUMP + big_endian(offset);
+}
+
+inline bytecode rjumpi(int16_t offset, bytecode condition)
+{
+    return condition + (OP_RJUMPI + big_endian(offset));
+}
+
+inline bytecode rjumpv(const std::initializer_list<int16_t> offsets, bytecode condition)
+{
+    bytecode ret = condition + OP_RJUMPV + static_cast<Opcode>(offsets.size());
+    for (const auto offset : offsets)
+        ret += bytecode{big_endian(offset)};
+    return ret;
 }
 
 inline bytecode ret(bytecode index, bytecode size)

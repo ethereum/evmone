@@ -82,6 +82,9 @@ enum Opcode : uint8_t
     OP_MSIZE = 0x59,
     OP_GAS = 0x5a,
     OP_JUMPDEST = 0x5b,
+    OP_RJUMP = 0x5c,
+    OP_RJUMPI = 0x5d,
+    OP_RJUMPV = 0x5e,
 
     OP_PUSH0 = 0x5f,
     OP_PUSH1 = 0x60,
@@ -153,6 +156,9 @@ enum Opcode : uint8_t
     OP_LOG2 = 0xa2,
     OP_LOG3 = 0xa3,
     OP_LOG4 = 0xa4,
+
+    OP_CALLF = 0xb0,
+    OP_RETF = 0xb1,
 
     OP_DUPN = 0xb5,
     OP_SWAPN = 0xb6,
