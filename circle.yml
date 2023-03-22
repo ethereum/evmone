@@ -150,7 +150,7 @@ commands:
           name: "Download execution tests: <<parameters.rev>> <<parameters.commit>>"
           working_directory: ~/tests
           command: |
-            git clone --no-checkout --depth=250 --single-branch https://github.com/ethereum/tests . --branch <<parameters.rev>>
+            git clone --no-checkout --depth=250 --single-branch https://github.com/ipsilon/tests . --branch <<parameters.rev>>
             <<#parameters.rev>>git checkout <<parameters.rev>><</parameters.rev>>
             <<#parameters.commit>>git checkout <<parameters.commit>><</parameters.commit>>
             git submodule update --init --recursive --depth=1 --progress
@@ -403,7 +403,7 @@ jobs:
       - build_silkworm:
           commit: 30ca8b324fcffb574c23c09fcba6386e57a7a5af
       - download_execution_tests:
-          rev: v11.3
+          rev: eof-tests
       - run:
           name: "Silkworm-driven blockchain tests (Advanced)"
           working_directory: ~/build
@@ -426,11 +426,11 @@ jobs:
     steps:
       - build
       - download_execution_tests:
-          commit: v11.3
+          rev: eof-tests
       - run:
           name: "State tests"
           working_directory: ~/build
-          command: EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json bin/evmone-statetest ~/tests/GeneralStateTests ~/tests/LegacyTests/Constantinople/GeneralStateTests
+          command: EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json bin/evmone-statetest ~/tests/GeneralStateTests ~/tests/LegacyTests/Constantinople/GeneralStateTests ~/tests/EIPTests/StateTests/stEOF ~/tests/EOFTests
       - collect_coverage_gcc
       - upload_coverage:
           flags: statetests
