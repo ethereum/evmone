@@ -103,11 +103,25 @@ int main(int argc, const char* argv[])
                     tx.chain_id = chain_id;
 
                     auto res = state::transition(state, block, tx, rev, vm);
+
+                    const auto computed_tx_hash = keccak256(rlp::encode(tx));
+
+                    if (j_txs[i].contains("hash"))
+                    {
+                        const auto loaded_tx_hash_opt =
+                            evmc::from_hex<bytes32>(j_txs[i]["hash"].get<std::string>());
+
+                        if (loaded_tx_hash_opt != computed_tx_hash)
+                            throw std::logic_error("transaction hash mismatched: computed " +
+                                                   hex0x(computed_tx_hash) + ", expected " +
+                                                   hex0x(loaded_tx_hash_opt.value()));
+                    }
+
                     if (holds_alternative<std::error_code>(res))
                     {
                         const auto ec = std::get<std::error_code>(res);
                         json::json j_rejected_tx;
-                        j_rejected_tx["hash"] = j_txs[i]["hash"];
+                        j_rejected_tx["hash"] = hex0x(computed_tx_hash);
                         j_rejected_tx["index"] = i;
                         j_rejected_tx["error"] = ec.message();
                         j_result["rejected"].push_back(j_rejected_tx);
@@ -120,7 +134,8 @@ int main(int argc, const char* argv[])
 
                         txs_logs.insert(txs_logs.end(), tx_logs.begin(), tx_logs.end());
                         auto& j_receipt = j_result["receipts"][j_result["receipts"].size()];
-                        j_receipt["transactionHash"] = j_txs[i]["hash"];
+
+                        j_receipt["transactionHash"] = hex0x(computed_tx_hash);
                         j_receipt["gasUsed"] = hex0x(static_cast<uint64_t>(receipt.gas_used));
                         j_receipt["cumulativeGasUsed"] = j_receipt["gasUsed"];
 
@@ -165,9 +180,10 @@ int main(int argc, const char* argv[])
 
         std::ofstream{output_dir / output_alloc_file} << std::setw(2) << j_alloc;
     }
-    catch (...)
+    catch (const std::exception& e)
     {
-        std::cerr << "Unhandled exception" << std::endl;
+        std::cerr << e.what() << std::endl;
+        return 1;
     }
 
     return 0;
