@@ -148,7 +148,7 @@ int main(int argc, const char* argv[])
         j_result["receiptsRoot"] = hex0x(state::mpt_hash(receipts));
         j_result["txRoot"] = hex0x(state::mpt_hash(transactions));
 
-        std::ofstream{output_dir / output_result_file} << j_result;
+        std::ofstream{output_dir / output_result_file} << std::setw(2) << j_result;
 
         // Print out current state to outAlloc file
         json::json j_alloc;
@@ -163,7 +163,7 @@ int main(int argc, const char* argv[])
             j_alloc[hex0x(addr)]["balance"] = hex0x(acc.balance);
         }
 
-        std::ofstream{output_dir / output_alloc_file} << j_alloc;
+        std::ofstream{output_dir / output_alloc_file} << std::setw(2) << j_alloc;
     }
     catch (...)
     {
