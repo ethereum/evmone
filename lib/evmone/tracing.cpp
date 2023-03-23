@@ -112,15 +112,15 @@ class InstructionTracer : public Tracer
 
         const auto opcode = ctx.code[pc];
         m_out << "{";
-        m_out << R"("pc":)" << pc;
-        m_out << R"(,"op":)" << int{opcode};
+        m_out << R"("pc":)" << std::dec << pc;
+        m_out << R"(,"op":)" << std::dec << int{opcode};
         m_out << R"(,"opName":")" << get_name(opcode) << '"';
-        m_out << R"(,"gas":)" << state.gas_left;
+        m_out << R"(,"gas":)" << std::hex << "0x" << state.gas_left;
         output_stack(stack_top, stack_height);
 
         // Full memory can be dumped as evmc::hex({state.memory.data(), state.memory.size()}),
         // but this should not be done by default. Adding --tracing=+memory option would be nice.
-        m_out << R"(,"memorySize":)" << state.memory.size();
+        m_out << R"(,"memorySize":)" << std::dec << state.memory.size();
 
         m_out << "}\n";
     }
@@ -135,8 +135,8 @@ class InstructionTracer : public Tracer
             m_out << "null";
         else
             m_out << '"' << result.status_code << '"';
-        m_out << R"(,"gas":)" << result.gas_left;
-        m_out << R"(,"gasUsed":)" << (ctx.start_gas - result.gas_left);
+        m_out << R"(,"gas":)" << std::hex << "0x" << result.gas_left;
+        m_out << R"(,"gasUsed":)" << std::hex << "0x" << (ctx.start_gas - result.gas_left);
         m_out << R"(,"output":")" << evmc::hex({result.output_data, result.output_size}) << '"';
         m_out << "}\n";
 

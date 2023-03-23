@@ -23,12 +23,12 @@ DUP1,4
     set_tests_properties(
         ${PREFIX}/trace PROPERTIES PASS_REGULAR_EXPRESSION
         "{\"depth\":0,\"rev\":\"Paris\",\"static\":false}
-{\"pc\":0,\"op\":96,\"opName\":\"PUSH1\",\"gas\":1000000,\"stack\":\\[\\],\"memorySize\":0}
-{\"pc\":2,\"op\":96,\"opName\":\"PUSH1\",\"gas\":999997,\"stack\":\\[\"0x0\"\\],\"memorySize\":0}
-{\"pc\":4,\"op\":128,\"opName\":\"DUP1\",\"gas\":999994,\"stack\":\\[\"0x0\",\"0x2\"\\],\"memorySize\":0}
-{\"pc\":5,\"op\":1,\"opName\":\"ADD\",\"gas\":999991,\"stack\":\\[\"0x0\",\"0x2\",\"0x2\"\\],\"memorySize\":0}
-{\"pc\":6,\"op\":3,\"opName\":\"SUB\",\"gas\":999988,\"stack\":\\[\"0x0\",\"0x4\"\\],\"memorySize\":0}
-{\"error\":null,\"gas\":999985,\"gasUsed\":15,\"output\":\"\"}
+{\"pc\":0,\"op\":96,\"opName\":\"PUSH1\",\"gas\":0xf4240,\"stack\":\\[\\],\"memorySize\":0}
+{\"pc\":2,\"op\":96,\"opName\":\"PUSH1\",\"gas\":0xf423d,\"stack\":\\[\"0x0\"\\],\"memorySize\":0}
+{\"pc\":4,\"op\":128,\"opName\":\"DUP1\",\"gas\":0xf423a,\"stack\":\\[\"0x0\",\"0x2\"\\],\"memorySize\":0}
+{\"pc\":5,\"op\":1,\"opName\":\"ADD\",\"gas\":0xf4237,\"stack\":\\[\"0x0\",\"0x2\",\"0x2\"\\],\"memorySize\":0}
+{\"pc\":6,\"op\":3,\"opName\":\"SUB\",\"gas\":0xf4234,\"stack\":\\[\"0x0\",\"0x4\"\\],\"memorySize\":0}
+{\"error\":null,\"gas\":0xf4231,\"gasUsed\":0xf,\"output\":\"\"}
 ")
 
 endif()
