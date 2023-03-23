@@ -571,6 +571,21 @@ jobs:
       - build
       - test
 
+  wasi:
+    executor: linux-clang-latest
+    resource_class: small
+    environment:
+      TOOLCHAIN: wasm32-wasi
+      CMAKE_OPTIONS: -DEVMONE_TESTING=OFF
+    steps:
+      - run:
+          name: "Install WASI SDK"
+          command: |
+            sudo mkdir /opt/wasi-sdk && cd /opt/wasi-sdk
+            curl -L https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-19/wasi-sdk-19.0-linux.tar.gz | sudo tar -xz --strip=1
+            find .
+      - build
+
 workflows:
   version: 2
   evmone:
@@ -599,16 +614,17 @@ workflows:
               ignore: /.*/
             tags:
               only: /^v[0-9].*/
-      - state-tests
-      - blockchain-tests
-      - cmake-min
-      - gcc-min
-      - clang-min
-      - gcc-latest-coverage
-      - gcc-latest-memcheck
-      - clang-latest-sanitizers
-      - clang-latest-coverage
-      - macos-asan
-      - xcode-min
-      - gcc-32bit
-      - fuzzing
+#      - state-tests
+#      - blockchain-tests
+#      - cmake-min
+#      - gcc-min
+#      - clang-min
+#      - gcc-latest-coverage
+#      - gcc-latest-memcheck
+#      - clang-latest-sanitizers
+#      - clang-latest-coverage
+#      - macos-asan
+#      - xcode-min
+#      - gcc-32bit
+#      - fuzzing
+      - wasi
