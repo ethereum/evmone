@@ -236,10 +236,11 @@ commands:
     steps:
       - run:
           name: "Install codecov"
-          command: pip3 install --break-system-packages --upgrade --user --quiet --no-cache-dir codecov
+          command: sudo pip3 install --break-system-packages --upgrade --quiet --no-cache-dir codecov
       - run:
           name: "Upload to Codecov"
           command: |
+            codecov --version
             # Convert to relative paths
             sed -i 's|$(pwd)/||' ~/build/coverage.lcov
             counter=1
