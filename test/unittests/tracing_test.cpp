@@ -168,10 +168,10 @@ TEST_F(tracing, trace)
     trace_stream << '\n';
     EXPECT_EQ(trace(add(2, 3)), R"(
 {"depth":0,"rev":"Berlin","static":false}
-{"pc":0,"op":96,"opName":"PUSH1","gas":1000000,"stack":[],"memorySize":0}
-{"pc":2,"op":96,"opName":"PUSH1","gas":999997,"stack":["0x3"],"memorySize":0}
-{"pc":4,"op":1,"opName":"ADD","gas":999994,"stack":["0x3","0x2"],"memorySize":0}
-{"error":null,"gas":999991,"gasUsed":9,"output":""}
+{"pc":0,"op":96,"opName":"PUSH1","gas":0xf4240,"stack":[],"memorySize":0}
+{"pc":2,"op":96,"opName":"PUSH1","gas":0xf423d,"stack":["0x3"],"memorySize":0}
+{"pc":4,"op":1,"opName":"ADD","gas":0xf423a,"stack":["0x3","0x2"],"memorySize":0}
+{"error":null,"gas":0xf4237,"gasUsed":0x9,"output":""}
 )");
 }
 
@@ -183,14 +183,14 @@ TEST_F(tracing, trace_stack)
     trace_stream << '\n';
     EXPECT_EQ(trace(code), R"(
 {"depth":0,"rev":"Berlin","static":false}
-{"pc":0,"op":96,"opName":"PUSH1","gas":1000000,"stack":[],"memorySize":0}
-{"pc":2,"op":96,"opName":"PUSH1","gas":999997,"stack":["0x1"],"memorySize":0}
-{"pc":4,"op":96,"opName":"PUSH1","gas":999994,"stack":["0x1","0x2"],"memorySize":0}
-{"pc":6,"op":96,"opName":"PUSH1","gas":999991,"stack":["0x1","0x2","0x3"],"memorySize":0}
-{"pc":8,"op":1,"opName":"ADD","gas":999988,"stack":["0x1","0x2","0x3","0x4"],"memorySize":0}
-{"pc":9,"op":1,"opName":"ADD","gas":999985,"stack":["0x1","0x2","0x7"],"memorySize":0}
-{"pc":10,"op":1,"opName":"ADD","gas":999982,"stack":["0x1","0x9"],"memorySize":0}
-{"error":null,"gas":999979,"gasUsed":21,"output":""}
+{"pc":0,"op":96,"opName":"PUSH1","gas":0xf4240,"stack":[],"memorySize":0}
+{"pc":2,"op":96,"opName":"PUSH1","gas":0xf423d,"stack":["0x1"],"memorySize":0}
+{"pc":4,"op":96,"opName":"PUSH1","gas":0xf423a,"stack":["0x1","0x2"],"memorySize":0}
+{"pc":6,"op":96,"opName":"PUSH1","gas":0xf4237,"stack":["0x1","0x2","0x3"],"memorySize":0}
+{"pc":8,"op":1,"opName":"ADD","gas":0xf4234,"stack":["0x1","0x2","0x3","0x4"],"memorySize":0}
+{"pc":9,"op":1,"opName":"ADD","gas":0xf4231,"stack":["0x1","0x2","0x7"],"memorySize":0}
+{"pc":10,"op":1,"opName":"ADD","gas":0xf422e,"stack":["0x1","0x9"],"memorySize":0}
+{"error":null,"gas":0xf422b,"gasUsed":0x15,"output":""}
 )");
 }
 
@@ -202,8 +202,8 @@ TEST_F(tracing, trace_error)
     trace_stream << '\n';
     EXPECT_EQ(trace(code), R"(
 {"depth":0,"rev":"Berlin","static":false}
-{"pc":0,"op":80,"opName":"POP","gas":1000000,"stack":[],"memorySize":0}
-{"error":"stack underflow","gas":0,"gasUsed":1000000,"output":""}
+{"pc":0,"op":80,"opName":"POP","gas":0xf4240,"stack":[],"memorySize":0}
+{"error":"stack underflow","gas":0x0,"gasUsed":0xf4240,"output":""}
 )");
 }
 
@@ -215,13 +215,13 @@ TEST_F(tracing, trace_output)
     trace_stream << '\n';
     EXPECT_EQ(trace(code), R"(
 {"depth":0,"rev":"Berlin","static":false}
-{"pc":0,"op":98,"opName":"PUSH3","gas":1000000,"stack":[],"memorySize":0}
-{"pc":4,"op":96,"opName":"PUSH1","gas":999997,"stack":["0xabcdef"],"memorySize":0}
-{"pc":6,"op":82,"opName":"MSTORE","gas":999994,"stack":["0xabcdef","0x0"],"memorySize":0}
-{"pc":7,"op":96,"opName":"PUSH1","gas":999988,"stack":[],"memorySize":32}
-{"pc":9,"op":96,"opName":"PUSH1","gas":999985,"stack":["0x20"],"memorySize":32}
-{"pc":11,"op":243,"opName":"RETURN","gas":999982,"stack":["0x20","0x0"],"memorySize":32}
-{"error":null,"gas":999982,"gasUsed":18,"output":"0000000000000000000000000000000000000000000000000000000000abcdef"}
+{"pc":0,"op":98,"opName":"PUSH3","gas":0xf4240,"stack":[],"memorySize":0}
+{"pc":4,"op":96,"opName":"PUSH1","gas":0xf423d,"stack":["0xabcdef"],"memorySize":0}
+{"pc":6,"op":82,"opName":"MSTORE","gas":0xf423a,"stack":["0xabcdef","0x0"],"memorySize":0}
+{"pc":7,"op":96,"opName":"PUSH1","gas":0xf4234,"stack":[],"memorySize":32}
+{"pc":9,"op":96,"opName":"PUSH1","gas":0xf4231,"stack":["0x20"],"memorySize":32}
+{"pc":11,"op":243,"opName":"RETURN","gas":0xf422e,"stack":["0x20","0x0"],"memorySize":32}
+{"error":null,"gas":0xf422e,"gasUsed":0x12,"output":"0000000000000000000000000000000000000000000000000000000000abcdef"}
 )");
 }
 
@@ -233,13 +233,13 @@ TEST_F(tracing, trace_revert)
     trace_stream << '\n';
     EXPECT_EQ(trace(code), R"(
 {"depth":0,"rev":"Berlin","static":false}
-{"pc":0,"op":98,"opName":"PUSH3","gas":1000000,"stack":[],"memorySize":0}
-{"pc":4,"op":96,"opName":"PUSH1","gas":999997,"stack":["0xe4404"],"memorySize":0}
-{"pc":6,"op":82,"opName":"MSTORE","gas":999994,"stack":["0xe4404","0x0"],"memorySize":0}
-{"pc":7,"op":96,"opName":"PUSH1","gas":999988,"stack":[],"memorySize":32}
-{"pc":9,"op":96,"opName":"PUSH1","gas":999985,"stack":["0x3"],"memorySize":32}
-{"pc":11,"op":253,"opName":"REVERT","gas":999982,"stack":["0x3","0x1d"],"memorySize":32}
-{"error":"revert","gas":999982,"gasUsed":18,"output":"0e4404"}
+{"pc":0,"op":98,"opName":"PUSH3","gas":0xf4240,"stack":[],"memorySize":0}
+{"pc":4,"op":96,"opName":"PUSH1","gas":0xf423d,"stack":["0xe4404"],"memorySize":0}
+{"pc":6,"op":82,"opName":"MSTORE","gas":0xf423a,"stack":["0xe4404","0x0"],"memorySize":0}
+{"pc":7,"op":96,"opName":"PUSH1","gas":0xf4234,"stack":[],"memorySize":32}
+{"pc":9,"op":96,"opName":"PUSH1","gas":0xf4231,"stack":["0x3"],"memorySize":32}
+{"pc":11,"op":253,"opName":"REVERT","gas":0xf422e,"stack":["0x3","0x1d"],"memorySize":32}
+{"error":"revert","gas":0xf422e,"gasUsed":0x12,"output":"0e4404"}
 )");
 }
 
@@ -250,7 +250,7 @@ TEST_F(tracing, trace_create)
     trace_stream << '\n';
     EXPECT_EQ(trace({}, 2), R"(
 {"depth":2,"rev":"Berlin","static":false}
-{"error":null,"gas":1000000,"gasUsed":0,"output":""}
+{"error":null,"gas":0xf4240,"gasUsed":0x0,"output":""}
 )");
 }
 
@@ -261,7 +261,7 @@ TEST_F(tracing, trace_static)
     trace_stream << '\n';
     EXPECT_EQ(trace({}, 2, EVMC_STATIC), R"(
 {"depth":2,"rev":"Berlin","static":true}
-{"error":null,"gas":1000000,"gasUsed":0,"output":""}
+{"error":null,"gas":0xf4240,"gasUsed":0x0,"output":""}
 )");
 }
 
@@ -273,9 +273,9 @@ TEST_F(tracing, trace_undefined_instruction)
     trace_stream << '\n';
     EXPECT_EQ(trace(code), R"(
 {"depth":0,"rev":"Berlin","static":false}
-{"pc":0,"op":91,"opName":"JUMPDEST","gas":1000000,"stack":[],"memorySize":0}
-{"pc":1,"op":239,"opName":"0xef","gas":999999,"stack":[],"memorySize":0}
-{"error":"undefined instruction","gas":0,"gasUsed":1000000,"output":""}
+{"pc":0,"op":91,"opName":"JUMPDEST","gas":0xf4240,"stack":[],"memorySize":0}
+{"pc":1,"op":239,"opName":"0xef","gas":0xf423f,"stack":[],"memorySize":0}
+{"error":"undefined instruction","gas":0x0,"gasUsed":0xf4240,"output":""}
 )");
 }
 
@@ -299,10 +299,10 @@ TEST_F(tracing, trace_eof)
     trace_stream << '\n';
     EXPECT_EQ(trace(eof1_bytecode(add(2, 3) + OP_STOP, 2), 0, 0, EVMC_CANCUN), R"(
 {"depth":0,"rev":"Cancun","static":false}
-{"pc":0,"op":96,"opName":"PUSH1","gas":1000000,"stack":[],"memorySize":0}
-{"pc":2,"op":96,"opName":"PUSH1","gas":999997,"stack":["0x3"],"memorySize":0}
-{"pc":4,"op":1,"opName":"ADD","gas":999994,"stack":["0x3","0x2"],"memorySize":0}
-{"pc":5,"op":0,"opName":"STOP","gas":999991,"stack":["0x5"],"memorySize":0}
-{"error":null,"gas":999991,"gasUsed":9,"output":""}
+{"pc":0,"op":96,"opName":"PUSH1","gas":0xf4240,"stack":[],"memorySize":0}
+{"pc":2,"op":96,"opName":"PUSH1","gas":0xf423d,"stack":["0x3"],"memorySize":0}
+{"pc":4,"op":1,"opName":"ADD","gas":0xf423a,"stack":["0x3","0x2"],"memorySize":0}
+{"pc":5,"op":0,"opName":"STOP","gas":0xf4237,"stack":["0x5"],"memorySize":0}
+{"error":null,"gas":0xf4237,"gasUsed":0x9,"output":""}
 )");
 }
