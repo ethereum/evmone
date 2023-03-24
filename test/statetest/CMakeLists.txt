@@ -18,6 +18,7 @@ target_sources(
 
 add_executable(evmone-statetest)
 target_link_libraries(evmone-statetest PRIVATE evmone::statetestutils evmone GTest::gtest)
+target_include_directories(evmone-statetest PRIVATE ${evmone_private_include_dir})
 target_sources(
     evmone-statetest PRIVATE
     statetest.cpp

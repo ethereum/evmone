@@ -7,6 +7,7 @@
 set(PREFIX ${PREFIX}/statetest)
 set(TESTS1 ${CMAKE_CURRENT_SOURCE_DIR}/tests1)
 set(TESTS2 ${CMAKE_CURRENT_SOURCE_DIR}/tests2)
+set(TESTS_EOF ${CMAKE_CURRENT_SOURCE_DIR}/eof)
 
 add_test(
     NAME ${PREFIX}/no_arguments
@@ -81,4 +82,13 @@ add_test(
 set_tests_properties(
     ${PREFIX}/trace PROPERTIES
     PASS_REGULAR_EXPRESSION [=[\{"pc":4,"op":1,"opName":"ADD","gas":0x5c872,"stack":\["0x1","0x1"\],"memorySize":0\}]=]
+)
+
+add_test(
+    NAME ${PREFIX}/invalid_eof_in_state
+    COMMAND evmone-statetest ${TESTS_EOF}/invalid_eof_in_state.json
+)
+set_tests_properties(
+    ${PREFIX}/invalid_eof_in_state PROPERTIES
+    PASS_REGULAR_EXPRESSION "EOF container at 0x0000000000000000000000000000000000bade0f is invalid"
 )
