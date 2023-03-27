@@ -69,6 +69,12 @@ template <typename T>
 T from_json(const json::json& j) = delete;
 
 template <>
+uint64_t from_json<uint64_t>(const json::json& j);
+
+template <>
+int64_t from_json<int64_t>(const json::json& j);
+
+template <>
 state::BlockInfo from_json<state::BlockInfo>(const json::json& j);
 
 template <>

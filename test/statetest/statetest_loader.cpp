@@ -20,16 +20,44 @@ uint8_t from_json<uint8_t>(const json::json& j)
     return static_cast<uint8_t>(ret);
 }
 
+template <typename T>
+static std::optional<T> integer_from_json(const json::json& j)
+{
+    if (j.is_number_integer())
+        return j.get<T>();
+
+    if (!j.is_string())
+        return {};
+
+    const auto s = j.get<std::string>();
+    size_t num_processed = 0;
+    T v = 0;
+    if constexpr (std::is_same_v<T, uint64_t>)
+        v = std::stoull(s, &num_processed, 0);
+    else
+        v = std::stoll(s, &num_processed, 0);
+
+    if (num_processed == 0 || num_processed != s.size())
+        return {};
+    return v;
+}
+
 template <>
 int64_t from_json<int64_t>(const json::json& j)
 {
-    return static_cast<int64_t>(std::stoll(j.get<std::string>(), nullptr, 16));
+    const auto v = integer_from_json<int64_t>(j);
+    if (!v.has_value())
+        throw std::invalid_argument("from_json<int64_t>: must be integer or string of integer");
+    return *v;
 }
 
 template <>
 uint64_t from_json<uint64_t>(const json::json& j)
 {
-    return static_cast<uint64_t>(std::stoull(j.get<std::string>(), nullptr, 16));
+    const auto v = integer_from_json<uint64_t>(j);
+    if (!v.has_value())
+        throw std::invalid_argument("from_json<uint64_t>: must be integer or string of integer");
+    return *v;
 }
 
 template <>
@@ -120,7 +148,14 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
     const auto current_difficulty_it = j.find("currentDifficulty");
     const auto parent_difficulty_it = j.find("parentDifficulty");
     if (prev_randao_it != j.end())
-        difficulty = from_json<evmc::bytes32>(*prev_randao_it);
+    {
+        // Special case to handle "0". Required by exec-spec-tests.
+        // TODO: Get rid of it.
+        if (prev_randao_it->is_string() && prev_randao_it->get<std::string>() == "0")
+            difficulty = 0x0000000000000000000000000000000000000000000000000000000000000000_bytes32;
+        else
+            difficulty = from_json<evmc::bytes32>(*prev_randao_it);
+    }
     else if (current_difficulty_it != j.end())
         difficulty = from_json<evmc::bytes32>(*current_difficulty_it);
     else if (parent_difficulty_it != j.end())

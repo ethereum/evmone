@@ -15,7 +15,7 @@ TEST(statetest_loader, tx_create_legacy)
 {
     constexpr std::string_view input = R"({
         "input": "b0b1",
-        "gas": "9091",
+        "gas": "0x9091",
         "value": "0xe0e1",
         "sender": "a0a1",
         "to": "",
@@ -46,7 +46,7 @@ TEST(statetest_loader, tx_eip1559)
 {
     constexpr std::string_view input = R"({
         "input": "b0b1",
-        "gas": "9091",
+        "gas": "0x9091",
         "value": "0xe0e1",
         "sender": "a0a1",
         "to": "c0c1",

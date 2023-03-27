@@ -36,6 +36,7 @@ target_sources(
     state_mpt_test.cpp
     state_new_account_address_test.cpp
     state_rlp_test.cpp
+    statetest_loader_block_info_test.cpp
     statetest_loader_test.cpp
     statetest_loader_tx_test.cpp
     statetest_logs_hash_test.cpp
