@@ -69,7 +69,7 @@ CodeAnalysis analyze_legacy(bytes_view code)
 
 CodeAnalysis analyze_eof1(bytes_view container)
 {
-    const auto header = read_valid_eof1_header(container);
+    auto header = read_valid_eof1_header(container);
 
     // Extract all code sections as single buffer reference.
     // TODO: It would be much easier if header had code_sections_offset and data_section_offset
@@ -79,17 +79,7 @@ CodeAnalysis analyze_eof1(bytes_view container)
     const auto executable_code =
         container.substr(code_sections_offset, code_sections_end - code_sections_offset);
 
-    // Code section offsets relative to the beginning of the first code section.
-    // Execution starts at position 0 (first code section).
-    // The implementation of CALLF uses these offsets.
-    CodeAnalysis::CodeOffsets relative_offsets;
-    relative_offsets.reserve(header.code_offsets.size());
-    for (const auto offset : header.code_offsets)
-        relative_offsets.push_back(offset - code_sections_offset);
-
-    // FIXME: Better way of getting EOF version.
-    const auto eof_version = container[2];
-    return CodeAnalysis{executable_code, {}, eof_version, relative_offsets};
+    return CodeAnalysis{executable_code, std::move(header)};
 }
 }  // namespace
 
@@ -338,7 +328,7 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
 
     const auto code = analysis.executable_code;
 
-    const auto& cost_table = get_baseline_cost_table(state.rev, analysis.eof_version);
+    const auto& cost_table = get_baseline_cost_table(state.rev, analysis.eof_header.version);
 
     auto* tracer = vm.get_tracer();
     if (INTX_UNLIKELY(tracer != nullptr))

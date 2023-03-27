@@ -937,7 +937,9 @@ inline code_iterator callf(StackTop /*stack*/, ExecutionState& state, code_itera
 {
     const auto index = read_uint16_be(&pos[1]);
     state.call_stack.push_back(pos + 3);
-    const auto offset = state.analysis.baseline->code_offsets[index];
+
+    const auto& header = state.analysis.baseline->eof_header;
+    const auto offset = header.code_offsets[index] - header.code_offsets[0];
     auto code = state.analysis.baseline->executable_code;
     return code.data() + offset;
 }
