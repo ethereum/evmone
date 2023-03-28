@@ -143,7 +143,7 @@ inline uint64_t calculate_current_base_fee_eip1559(
 template <>
 state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
 {
-    evmc::bytes32 difficulty;
+    evmc::bytes32 difficulty = 0x0000000000000000000000000000000000000000000000000000000000000000_bytes32;
     const auto prev_randao_it = j.find("currentRandom");
     const auto current_difficulty_it = j.find("currentDifficulty");
     const auto parent_difficulty_it = j.find("parentDifficulty");
@@ -157,7 +157,12 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
             difficulty = from_json<evmc::bytes32>(*prev_randao_it);
     }
     else if (current_difficulty_it != j.end())
-        difficulty = from_json<evmc::bytes32>(*current_difficulty_it);
+        // Special case to handle "0x0". Required by exec-spec-tests.
+        // TODO: Get rid of it.
+        if (current_difficulty_it->is_string() && current_difficulty_it->get<std::string>() == "0x0")
+            difficulty = 0x0000000000000000000000000000000000000000000000000000000000000000_bytes32;
+        else
+            difficulty = from_json<evmc::bytes32>(*current_difficulty_it);
     else if (parent_difficulty_it != j.end())
         difficulty = from_json<evmc::bytes32>(*parent_difficulty_it);
 
