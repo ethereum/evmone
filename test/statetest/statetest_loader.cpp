@@ -159,8 +159,8 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
     else if (current_difficulty_it != j.end())
         // Special case to handle "0x0". Required by exec-spec-tests.
         // TODO: Get rid of it.
-        if (current_difficulty_it->is_string()
-            && current_difficulty_it->get<std::string>() == "0x0")
+        if (current_difficulty_it->is_string() &&
+            current_difficulty_it->get<std::string>() == "0x0")
             difficulty = 0x0000000000000000000000000000000000000000000000000000000000000000_bytes32;
         else
             difficulty = from_json<evmc::bytes32>(*current_difficulty_it);
