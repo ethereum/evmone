@@ -223,12 +223,10 @@ template <Opcode Op>
 
 
 template <bool TracingEnabled>
-void dispatch(const CostTable& cost_table, ExecutionState& state, const uint8_t* code,
-    Tracer* tracer = nullptr) noexcept
+int64_t dispatch(const CostTable& cost_table, ExecutionState& state, int64_t gas,
+    const uint8_t* code, Tracer* tracer = nullptr) noexcept
 {
     const auto stack_bottom = state.stack_space.bottom();
-
-    auto gas = state.gas_left;
 
     // Code iterator and stack top pointer for interpreter loop.
     Position position{code, stack_bottom};
@@ -255,8 +253,7 @@ void dispatch(const CostTable& cost_table, ExecutionState& state, const uint8_t*
         if (const auto next = invoke<OPCODE>(cost_table, stack_bottom, position, gas, state); \
             next.code_it == nullptr)                                                          \
         {                                                                                     \
-            state.gas_left = gas;                                                             \
-            return;                                                                           \
+            return gas;                                                                       \
         }                                                                                     \
         else                                                                                  \
         {                                                                                     \
@@ -271,16 +268,15 @@ void dispatch(const CostTable& cost_table, ExecutionState& state, const uint8_t*
 
         default:
             state.status = EVMC_UNDEFINED_INSTRUCTION;
-            state.gas_left = gas;
-            return;
+            return gas;
         }
     }
     INTX_UNREACHABLE();
 }
 
 #if EVMONE_CGOTO_SUPPORTED
-void dispatch_cgoto(
-    const CostTable& cost_table, ExecutionState& state, const uint8_t* code) noexcept
+int64_t dispatch_cgoto(
+    const CostTable& cost_table, ExecutionState& state, int64_t gas, const uint8_t* code) noexcept
 {
 #pragma GCC diagnostic ignored "-Wpedantic"
 
@@ -300,8 +296,6 @@ void dispatch_cgoto(
     // Code iterator and stack top pointer for interpreter loop.
     Position position{code, stack_bottom};
 
-    auto gas = state.gas_left;
-
     goto* cgoto_table[*position.code_it];
 
 #define ON_OPCODE(OPCODE)                                                                 \
@@ -309,8 +303,7 @@ void dispatch_cgoto(
     if (const auto next = invoke<OPCODE>(cost_table, stack_bottom, position, gas, state); \
         next.code_it == nullptr)                                                          \
     {                                                                                     \
-        state.gas_left = gas;                                                             \
-        return;                                                                           \
+        return gas;                                                                       \
     }                                                                                     \
     else                                                                                  \
     {                                                                                     \
@@ -325,12 +318,13 @@ void dispatch_cgoto(
 
 TARGET_OP_UNDEFINED:
     state.status = EVMC_UNDEFINED_INSTRUCTION;
-    state.gas_left = gas;
+    return gas;
 }
 #endif
 }  // namespace
 
-evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& analysis) noexcept
+evmc_result execute(
+    const VM& vm, int64_t gas, ExecutionState& state, const CodeAnalysis& analysis) noexcept
 {
     state.analysis.baseline = &analysis;  // Assign code analysis for instruction implementations.
 
@@ -342,20 +336,19 @@ evmc_result execute(const VM& vm, ExecutionState& state, const CodeAnalysis& ana
     if (INTX_UNLIKELY(tracer != nullptr))
     {
         tracer->notify_execution_start(state.rev, *state.msg, analysis.executable_code);
-        dispatch<true>(cost_table, state, code.data(), tracer);
+        gas = dispatch<true>(cost_table, state, gas, code.data(), tracer);
     }
     else
     {
 #if EVMONE_CGOTO_SUPPORTED
         if (vm.cgoto)
-            dispatch_cgoto(cost_table, state, code.data());
+            gas = dispatch_cgoto(cost_table, state, gas, code.data());
         else
 #endif
-            dispatch<false>(cost_table, state, code.data());
+            gas = dispatch<false>(cost_table, state, gas, code.data());
     }
 
-    const auto gas_left =
-        (state.status == EVMC_SUCCESS || state.status == EVMC_REVERT) ? state.gas_left : 0;
+    const auto gas_left = (state.status == EVMC_SUCCESS || state.status == EVMC_REVERT) ? gas : 0;
     const auto gas_refund = (state.status == EVMC_SUCCESS) ? state.gas_refund : 0;
 
     assert(state.output_size != 0 || state.output_offset == 0);
@@ -375,6 +368,6 @@ evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_co
     const auto jumpdest_map = analyze(rev, {code, code_size});
     auto state =
         std::make_unique<ExecutionState>(*msg, rev, *host, ctx, bytes_view{code, code_size});
-    return execute(*vm, *state, jumpdest_map);
+    return execute(*vm, msg->gas, *state, jumpdest_map);
 }
 }  // namespace evmone::baseline

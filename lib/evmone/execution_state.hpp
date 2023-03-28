@@ -125,7 +125,6 @@ public:
 class ExecutionState
 {
 public:
-    int64_t gas_left = 0;
     int64_t gas_refund = 0;
     Memory memory;
     const evmc_message* msg = nullptr;
@@ -166,11 +165,7 @@ public:
     ExecutionState(const evmc_message& message, evmc_revision revision,
         const evmc_host_interface& host_interface, evmc_host_context* host_ctx,
         bytes_view _code) noexcept
-      : gas_left{message.gas},
-        msg{&message},
-        host{host_interface, host_ctx},
-        rev{revision},
-        original_code{_code}
+      : msg{&message}, host{host_interface, host_ctx}, rev{revision}, original_code{_code}
     {}
 
     /// Resets the contents of the ExecutionState so that it could be reused.
@@ -178,7 +173,6 @@ public:
         const evmc_host_interface& host_interface, evmc_host_context* host_ctx,
         bytes_view _code) noexcept
     {
-        gas_left = message.gas;
         gas_refund = 0;
         memory.clear();
         msg = &message;
