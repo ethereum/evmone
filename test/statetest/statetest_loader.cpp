@@ -143,7 +143,7 @@ inline uint64_t calculate_current_base_fee_eip1559(
 template <>
 state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
 {
-    evmc::bytes32 difficulty = 0x0000000000000000000000000000000000000000000000000000000000000000_bytes32;
+    evmc::bytes32 difficulty;
     const auto prev_randao_it = j.find("currentRandom");
     const auto current_difficulty_it = j.find("currentDifficulty");
     const auto parent_difficulty_it = j.find("parentDifficulty");
