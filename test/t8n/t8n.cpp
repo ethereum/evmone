@@ -27,6 +27,7 @@ int main(int argc, const char* argv[])
     fs::path output_dir;
     fs::path output_result_file;
     fs::path output_alloc_file;
+    fs::path output_body_file;
     std::optional<intx::uint256> block_reward;
     uint64_t chain_id = 0;
 
@@ -59,6 +60,8 @@ int main(int argc, const char* argv[])
                 block_reward = intx::from_string<intx::uint256>(argv[i]);
             else if (arg == "--state.chainid" && ++i < argc)
                 chain_id = intx::from_string<uint64_t>(argv[i]);
+            else if (arg == "--output.body" && ++i < argc)
+                output_body_file = argv[i];
         }
 
         state::BlockInfo block;
@@ -182,6 +185,9 @@ int main(int argc, const char* argv[])
         }
 
         std::ofstream{output_dir / output_alloc_file} << std::setw(2) << j_alloc;
+
+        if (!output_body_file.empty())
+            std::ofstream{output_dir / output_body_file} << hex0x(rlp::encode(transactions));
     }
     catch (const std::exception& e)
     {
