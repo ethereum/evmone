@@ -27,6 +27,7 @@ int main(int argc, const char* argv[])
     fs::path output_dir;
     fs::path output_result_file;
     fs::path output_alloc_file;
+    fs::path output_body_file;
     std::optional<intx::uint256> block_reward;
     uint64_t chain_id = 0;
 
@@ -59,6 +60,8 @@ int main(int argc, const char* argv[])
                 block_reward = intx::from_string<intx::uint256>(argv[i]);
             else if (arg == "--state.chainid" && ++i < argc)
                 chain_id = intx::from_string<uint64_t>(argv[i]);
+            else if (arg == "--output.body" && ++i < argc)
+                output_body_file = argv[i];
         }
 
         state::BlockInfo block;
@@ -80,6 +83,7 @@ int main(int argc, const char* argv[])
         j_result["currentDifficulty"] = "0x20000";
         j_result["currentBaseFee"] = hex0x(block.base_fee);
 
+        int64_t cumulative_gas_used = 0;
         std::vector<state::Transaction> transactions;
         std::vector<state::TransactionReceipt> receipts;
 
@@ -137,7 +141,8 @@ int main(int argc, const char* argv[])
 
                         j_receipt["transactionHash"] = hex0x(computed_tx_hash);
                         j_receipt["gasUsed"] = hex0x(static_cast<uint64_t>(receipt.gas_used));
-                        j_receipt["cumulativeGasUsed"] = j_receipt["gasUsed"];
+                        cumulative_gas_used += receipt.gas_used;
+                        j_receipt["cumulativeGasUsed"] = hex0x(cumulative_gas_used);
 
                         j_receipt["blockHash"] = hex0x(bytes32{});
                         j_receipt["contractAddress"] = hex0x(address{});
@@ -162,6 +167,7 @@ int main(int argc, const char* argv[])
         j_result["logsBloom"] = hex0x(compute_bloom_filter(receipts));
         j_result["receiptsRoot"] = hex0x(state::mpt_hash(receipts));
         j_result["txRoot"] = hex0x(state::mpt_hash(transactions));
+        j_result["gasUsed"] = hex0x(cumulative_gas_used);
 
         std::ofstream{output_dir / output_result_file} << std::setw(2) << j_result;
 
@@ -179,6 +185,9 @@ int main(int argc, const char* argv[])
         }
 
         std::ofstream{output_dir / output_alloc_file} << std::setw(2) << j_alloc;
+
+        if (!output_body_file.empty())
+            std::ofstream{output_dir / output_body_file} << hex0x(rlp::encode(transactions));
     }
     catch (const std::exception& e)
     {
