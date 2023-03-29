@@ -80,6 +80,7 @@ int main(int argc, const char* argv[])
         j_result["currentDifficulty"] = "0x20000";
         j_result["currentBaseFee"] = hex0x(block.base_fee);
 
+        int64_t cumulative_gas_used = 0;
         std::vector<state::Transaction> transactions;
         std::vector<state::TransactionReceipt> receipts;
 
@@ -137,7 +138,8 @@ int main(int argc, const char* argv[])
 
                         j_receipt["transactionHash"] = hex0x(computed_tx_hash);
                         j_receipt["gasUsed"] = hex0x(static_cast<uint64_t>(receipt.gas_used));
-                        j_receipt["cumulativeGasUsed"] = j_receipt["gasUsed"];
+                        cumulative_gas_used += receipt.gas_used;
+                        j_receipt["cumulativeGasUsed"] = hex0x(cumulative_gas_used);
 
                         j_receipt["blockHash"] = hex0x(bytes32{});
                         j_receipt["contractAddress"] = hex0x(address{});
@@ -162,6 +164,7 @@ int main(int argc, const char* argv[])
         j_result["logsBloom"] = hex0x(compute_bloom_filter(receipts));
         j_result["receiptsRoot"] = hex0x(state::mpt_hash(receipts));
         j_result["txRoot"] = hex0x(state::mpt_hash(transactions));
+        j_result["gasUsed"] = hex0x(cumulative_gas_used);
 
         std::ofstream{output_dir / output_result_file} << std::setw(2) << j_result;
 
