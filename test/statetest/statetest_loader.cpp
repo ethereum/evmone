@@ -75,7 +75,12 @@ address from_json<address>(const json::json& j)
 template <>
 hash256 from_json<hash256>(const json::json& j)
 {
-    return evmc::from_hex<hash256>(j.get<std::string>()).value();
+    // Special case to handle "0". Required by exec-spec-tests.
+    // TODO: Get rid of it.
+    if (j.is_string() && (j == "0" || j == "0x0"))
+        return 0x00_bytes32;
+    else
+        return evmc::from_hex<hash256>(j.get<std::string>()).value();
 }
 
 template <>
@@ -148,18 +153,11 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
     const auto current_difficulty_it = j.find("currentDifficulty");
     const auto parent_difficulty_it = j.find("parentDifficulty");
     if (prev_randao_it != j.end())
-    {
-        // Special case to handle "0". Required by exec-spec-tests.
-        // TODO: Get rid of it.
-        if (prev_randao_it->is_string() && prev_randao_it->get<std::string>() == "0")
-            difficulty = 0x0000000000000000000000000000000000000000000000000000000000000000_bytes32;
-        else
-            difficulty = from_json<evmc::bytes32>(*prev_randao_it);
-    }
+        difficulty = from_json<bytes32>(*prev_randao_it);
     else if (current_difficulty_it != j.end())
-        difficulty = from_json<evmc::bytes32>(*current_difficulty_it);
+        difficulty = from_json<bytes32>(*current_difficulty_it);
     else if (parent_difficulty_it != j.end())
-        difficulty = from_json<evmc::bytes32>(*parent_difficulty_it);
+        difficulty = from_json<bytes32>(*parent_difficulty_it);
 
     uint64_t base_fee = 0;
     if (j.contains("currentBaseFee"))
