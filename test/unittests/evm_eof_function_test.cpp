@@ -57,3 +57,70 @@ TEST_P(evm, eof_function_example2)
     EXPECT_GAS_USED(EVMC_SUCCESS, 44544);
     EXPECT_EQ(output, "0000000000000000000000000000000000000000000000000000000000000262"_hex);
 }
+
+TEST_P(evm, callf_stack_size_1024)
+{
+    // CALLF is not implemented in Advanced.
+    if (is_advanced())
+        return;
+
+    rev = EVMC_CANCUN;
+    const auto code = bytecode{"ef0001 010008 020002 0BFF 0004 030000 00 000003FF 00000001"_hex} +
+                      1023 * push(1) + OP_CALLF + bytecode{"0x0001"_hex} + 1021 * OP_POP +
+                      OP_RETURN + push(1) + OP_POP + OP_RETF;
+
+    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::success);
+    execute(bytecode{code});
+    EXPECT_STATUS(EVMC_SUCCESS);
+}
+
+TEST_P(evm, callf_stack_overflow)
+{
+    // CALLF is not implemented in Advanced.
+    if (is_advanced())
+        return;
+
+    rev = EVMC_CANCUN;
+    const auto code =
+        bytecode{"ef0001 010008 020002 0BFF 0007 030000 00 000003FF 00000002"_hex} +  // EOF header
+        1023 * push(1) + OP_CALLF + bytecode{"0x0001"_hex} + 1021 * OP_POP + OP_RETURN +
+        2 * push(1) + 2 * OP_POP + OP_RETF;
+
+    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::success);
+    execute(bytecode{code});
+    EXPECT_STATUS(EVMC_STACK_OVERFLOW);
+}
+
+TEST_P(evm, callf_call_stack_size_1024)
+{
+    // CALLF is not implemented in Advanced.
+    if (is_advanced())
+        return;
+
+    rev = EVMC_CANCUN;
+    const auto code = bytecode{"ef0001 010008 020002 0007 000e 030000 00 00000001 01000002"_hex} +
+                      push(1023) + OP_CALLF + bytecode{"0x0001"_hex} + OP_STOP + OP_DUP1 +
+                      OP_RJUMPI + bytecode{"0x0002"_hex} + OP_POP + OP_RETF + push(1) + OP_SWAP1 +
+                      OP_SUB + OP_CALLF + bytecode{"0x0001"_hex} + OP_RETF;
+
+    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::success);
+    execute(bytecode{code});
+    EXPECT_STATUS(EVMC_SUCCESS);
+}
+
+TEST_P(evm, callf_call_stack_size_1025)
+{
+    // CALLF is not implemented in Advanced.
+    if (is_advanced())
+        return;
+
+    rev = EVMC_CANCUN;
+    const auto code = bytecode{"ef0001 010008 020002 0007 000e 030000 00 00000001 01000002"_hex} +
+                      push(1024) + OP_CALLF + bytecode{"0x0001"_hex} + OP_STOP + OP_DUP1 +
+                      OP_RJUMPI + bytecode{"0x0002"_hex} + OP_POP + OP_RETF + push(1) + OP_SWAP1 +
+                      OP_SUB + OP_CALLF + bytecode{"0x0001"_hex} + OP_RETF;
+
+    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::success);
+    execute(bytecode{code});
+    EXPECT_STATUS(EVMC_STACK_OVERFLOW);
+}

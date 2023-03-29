@@ -28,6 +28,9 @@ struct EOFCodeType
 
 struct EOF1Header
 {
+    /// The EOF version, 0 means legacy code.
+    uint8_t version = 0;
+
     /// Size of every code section.
     std::vector<uint16_t> code_sizes;
 
