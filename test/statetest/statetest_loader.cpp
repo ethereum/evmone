@@ -237,8 +237,8 @@ static void from_json_tx_common(const json::json& j, state::Transaction& o)
 {
     o.sender = from_json<evmc::address>(j.at("sender"));
 
-    if (const auto& to = j.at("to"); !to.get<std::string>().empty())
-        o.to = from_json<evmc::address>(to);
+    if (const auto to_it = j.find("to"); to_it != j.end() && !to_it->get<std::string>().empty())
+        o.to = from_json<evmc::address>(*to_it);
 
     if (const auto gas_price_it = j.find("gasPrice"); gas_price_it != j.end())
     {
