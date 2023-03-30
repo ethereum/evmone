@@ -184,10 +184,14 @@ state::State from_json<state::State>(const json::json& j)
                 .balance = from_json<intx::uint256>(j_acc.at("balance")),
                 .code = from_json<bytes>(j_acc.at("code"))});
 
-        for (const auto& [j_key, j_value] : j_acc.at("storage").items())
+        if (const auto storage_it = j_acc.find("storage"); storage_it != j_acc.end())
         {
-            const auto value = from_json<bytes32>(j_value);
-            acc.storage.insert({from_json<bytes32>(j_key), {.current = value, .original = value}});
+            for (const auto& [j_key, j_value] : storage_it->items())
+            {
+                const auto value = from_json<bytes32>(j_value);
+                acc.storage.insert(
+                    {from_json<bytes32>(j_key), {.current = value, .original = value}});
+            }
         }
     }
     return o;
