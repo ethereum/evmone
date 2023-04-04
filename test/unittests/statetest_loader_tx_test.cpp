@@ -16,6 +16,7 @@ TEST(statetest_loader, tx_create_legacy)
     constexpr std::string_view input = R"({
         "input": "b0b1",
         "gas": "0x9091",
+        "chainId": "0x5",
         "value": "0xe0e1",
         "sender": "a0a1",
         "to": "",
@@ -30,6 +31,7 @@ TEST(statetest_loader, tx_create_legacy)
     EXPECT_EQ(tx.kind, state::Transaction::Kind::legacy);
     EXPECT_EQ(tx.data, (bytes{0xb0, 0xb1}));
     EXPECT_EQ(tx.gas_limit, 0x9091);
+    EXPECT_EQ(tx.chain_id, 5);
     EXPECT_EQ(tx.value, 0xe0e1);
     EXPECT_EQ(tx.sender, 0xa0a1_address);
     EXPECT_FALSE(tx.to.has_value());
@@ -63,6 +65,7 @@ TEST(statetest_loader, tx_eip1559)
     EXPECT_EQ(tx.kind, state::Transaction::Kind::eip1559);
     EXPECT_EQ(tx.data, (bytes{0xb0, 0xb1}));
     EXPECT_EQ(tx.gas_limit, 0x9091);
+    EXPECT_EQ(tx.chain_id, 0);
     EXPECT_EQ(tx.value, 0xe0e1);
     EXPECT_EQ(tx.sender, 0xa0a1_address);
     EXPECT_EQ(tx.to, 0xc0c1_address);

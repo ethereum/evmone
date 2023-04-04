@@ -265,6 +265,8 @@ state::Transaction from_json<state::Transaction>(const json::json& j)
 {
     state::Transaction o;
     from_json_tx_common(j, o);
+    if (const auto chain_id_it = j.find("chainId"); chain_id_it != j.end())
+        o.chain_id = from_json<uint8_t>(*chain_id_it);
     o.data = from_json<bytes>(j.at("input"));
     o.gas_limit = from_json<int64_t>(j.at("gas"));
     o.value = from_json<intx::uint256>(j.at("value"));
