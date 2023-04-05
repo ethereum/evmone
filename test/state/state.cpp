@@ -117,6 +117,22 @@ evmc_message build_message(const Transaction& tx, int64_t execution_gas_limit) n
 }
 }  // namespace
 
+void finalize(
+    State& state, evmc_revision rev, const address& coinbase, std::optional<uint64_t> block_reward)
+{
+    if (block_reward.has_value())
+        state.touch(coinbase).balance += *block_reward;
+
+    if (rev >= EVMC_SPURIOUS_DRAGON)
+    {
+        std::erase_if(
+            state.get_accounts(), [](const std::pair<const address, Account>& p) noexcept {
+                const auto& acc = p.second;
+                return acc.erasable && acc.is_empty();
+            });
+    }
+}
+
 std::variant<TransactionReceipt, std::error_code> transition(
     State& state, const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm)
 {
@@ -124,12 +140,7 @@ std::variant<TransactionReceipt, std::error_code> transition(
     const auto validation_result = validate_transaction(sender_acc, block, tx, rev);
 
     if (holds_alternative<std::error_code>(validation_result))
-    {
-        // Pre EIP-158 coinbase has to be touched also for invalid tx.
-        if (rev <= EVMC_TANGERINE_WHISTLE)
-            state.touch(block.coinbase);
         return get<std::error_code>(validation_result);
-    }
 
     const auto execution_gas_limit = get<int64_t>(validation_result);
 
@@ -176,11 +187,9 @@ std::variant<TransactionReceipt, std::error_code> transition(
     state.get(tx.sender).balance += tx_max_cost - gas_used * effective_gas_price;
     state.touch(block.coinbase).balance += gas_used * priority_gas_price;
 
-    // Apply destructs and clear erasable empty accounts.
-    std::erase_if(state.get_accounts(), [rev](const std::pair<const address, Account>& p) noexcept {
-        const auto& acc = p.second;
-        return acc.destructed || (rev >= EVMC_SPURIOUS_DRAGON && acc.erasable && acc.is_empty());
-    });
+    // Apply destructs.
+    std::erase_if(state.get_accounts(),
+        [](const std::pair<const address, Account>& p) noexcept { return p.second.destructed; });
 
     auto receipt = TransactionReceipt{tx.kind, result.status_code, gas_used, host.take_logs(), {}};
 
