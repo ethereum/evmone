@@ -3,18 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
+#include "../utils/stdx/utility.hpp"
 #include <evmc/evmc.hpp>
 #include <optional>
-#include <type_traits>
-
-namespace stdx
-{
-template <typename EnumT>
-inline constexpr auto to_underlying(EnumT e) noexcept
-{
-    return static_cast<std::underlying_type_t<EnumT>>(e);
-}
-}  // namespace stdx
 
 namespace evmone::state
 {

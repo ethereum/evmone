@@ -13,6 +13,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
     target_sources(
         testutils PRIVATE
         bytecode.hpp
+        stdx/utility.hpp
         utils.hpp
     )
 endif()
