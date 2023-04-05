@@ -5,7 +5,6 @@
 #include "../state/mpt_hash.hpp"
 #include "../state/rlp.hpp"
 #include "statetest.hpp"
-#include <evmone/eof.hpp>
 #include <gtest/gtest.h>
 
 namespace evmone::test
@@ -26,21 +25,7 @@ void run_state_test(const StateTransitionTest& test, evmc::VM& vm)
             const auto tx = test.multi_tx.get(expected.indexes);
             auto state = test.pre_state;
 
-            // Validate deployed EOF containers before running state test.
-            // Any invalid EOF in state make the test incorrect.
-            for (const auto& [addr, acc] : state.get_accounts())
-            {
-                if (is_eof_container(acc.code))
-                {
-                    if (const auto result = validate_eof(rev, acc.code);
-                        result != EOFValidationError::success)
-                    {
-                        throw std::invalid_argument(
-                            "EOF container at " + hex0x(addr) +
-                            " is invalid: " + std::string(get_error_message(result)));
-                    }
-                }
-            }
+            validate_deployed_code(state, rev);
 
             const auto res = state::transition(state, test.block, tx, rev, vm);
             if (holds_alternative<state::TransactionReceipt>(res))

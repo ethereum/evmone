@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "statetest.hpp"
+#include <evmone/eof.hpp>
 #include <nlohmann/json.hpp>
 
 namespace evmone::test
@@ -344,5 +345,30 @@ static void from_json(const json::json& j, StateTransitionTest& o)
 StateTransitionTest load_state_test(std::istream& input)
 {
     return json::json::parse(input).get<StateTransitionTest>();
+}
+
+void validate_deployed_code(const state::State& state, evmc_revision rev)
+{
+    for (const auto& [addr, acc] : state.get_accounts())
+    {
+        if (is_eof_container(acc.code))
+        {
+            if (rev >= EVMC_CANCUN)
+            {
+                if (const auto result = validate_eof(rev, acc.code);
+                    result != EOFValidationError::success)
+                {
+                    throw std::invalid_argument(
+                        "EOF container at " + hex0x(addr) +
+                        " is invalid: " + std::string(get_error_message(result)));
+                }
+            }
+            else
+            {
+                throw std::invalid_argument("code at " + hex0x(addr) + " starts with 0xEF00 in " +
+                                            evmc_revision_to_string(rev));
+            }
+        }
+    }
 }
 }  // namespace evmone::test
