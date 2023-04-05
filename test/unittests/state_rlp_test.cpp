@@ -377,3 +377,27 @@ TEST(state_rlp, tx_to_rlp_eip1559_invalid_v_value)
 
     EXPECT_THROW(rlp::encode(tx), std::invalid_argument);
 }
+
+TEST(state_rlp, tx_to_rlp_eip1559_with_non_empty_access_list)
+{
+    state::Transaction tx{};
+    tx.kind = evmone::state::Transaction::Kind::eip1559;
+    tx.data = "00"_hex;
+    tx.gas_limit = 0x3d0900;
+    tx.max_gas_price = 0x7d0;
+    tx.max_priority_gas_price = 0xa;
+    tx.sender = 0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b_address;
+    tx.to = 0xcccccccccccccccccccccccccccccccccccccccc_address;
+    tx.value = 0;
+    tx.access_list = {{0xcccccccccccccccccccccccccccccccccccccccc_address,
+        {0x0000000000000000000000000000000000000000000000000000000000000000_bytes32,
+            0x0000000000000000000000000000000000000000000000000000000000000001_bytes32}}};
+    tx.nonce = 1;
+    tx.r = 0xd671815898b8dd34321adbba4cb6a57baa7017323c26946f3719b00e70c755c2_u256;
+    tx.s = 0x3528b9efe3be57ea65a933d1e6bbf3b7d0c78830138883c1201e0c641fee6464_u256;
+    tx.v = 0;
+    tx.chain_id = 1;
+
+    EXPECT_EQ(keccak256(rlp::encode(tx)),
+        0xfb18421827800adcf465688e303cc9863045fdb96971473a114677916a3a08a4_bytes32);
+}
