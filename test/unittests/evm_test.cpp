@@ -53,7 +53,7 @@ TEST_P(evm, stack_underflow)
 
 TEST_P(evm, add)
 {
-    execute(25, bytecode{"6007600d0160005260206000f3"});
+    execute(25, add(7, 13) + ret_top());
     EXPECT_GAS_USED(EVMC_SUCCESS, 24);
     EXPECT_OUTPUT_INT(20);
 }

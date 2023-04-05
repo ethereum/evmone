@@ -30,10 +30,10 @@ evmc_status_code call_impl(StackTop stack, ExecutionState& state) noexcept
             return EVMC_OUT_OF_GAS;
     }
 
-    if (!check_memory(state, input_offset_u256, input_size_u256))
+    if (!check_memory(state.gas_left, state.memory, input_offset_u256, input_size_u256))
         return EVMC_OUT_OF_GAS;
 
-    if (!check_memory(state, output_offset_u256, output_size_u256))
+    if (!check_memory(state.gas_left, state.memory, output_offset_u256, output_size_u256))
         return EVMC_OUT_OF_GAS;
 
     const auto input_offset = static_cast<size_t>(input_offset_u256);
@@ -131,7 +131,7 @@ evmc_status_code create_impl(StackTop stack, ExecutionState& state) noexcept
     stack.push(0);  // Assume failure.
     state.return_data.clear();
 
-    if (!check_memory(state, init_code_offset_u256, init_code_size_u256))
+    if (!check_memory(state.gas_left, state.memory, init_code_offset_u256, init_code_size_u256))
         return EVMC_OUT_OF_GAS;
 
     const auto init_code_offset = static_cast<size_t>(init_code_offset_u256);
