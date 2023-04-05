@@ -31,3 +31,6 @@ inline hash256 keccak256(bytes_view data) noexcept
     return h;
 }
 }  // namespace evmone
+
+std::ostream& operator<<(std::ostream& out, const evmone::address& a);
+std::ostream& operator<<(std::ostream& out, const evmone::bytes32& b);
