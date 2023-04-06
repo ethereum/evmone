@@ -85,6 +85,10 @@ state::Transaction from_json<state::Transaction>(const json::json& j);
 
 StateTransitionTest load_state_test(std::istream& input);
 
+/// Validates deployed EOF containers before running state test.
+/// Throws exception on any invalid EOF in state.
+void validate_deployed_code(const state::State& state, evmc_revision rev);
+
 void run_state_test(const StateTransitionTest& test, evmc::VM& vm);
 
 /// Computes the hash of the RLP-encoded list of transaction logs.

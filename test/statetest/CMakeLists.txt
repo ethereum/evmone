@@ -9,6 +9,7 @@ add_library(evmone-statetestutils STATIC)
 add_library(evmone::statetestutils ALIAS evmone-statetestutils)
 target_compile_features(evmone-statetestutils PUBLIC cxx_std_20)
 target_link_libraries(evmone-statetestutils PRIVATE evmone::state nlohmann_json::nlohmann_json)
+target_include_directories(evmone-statetestutils PRIVATE ${evmone_private_include_dir})
 target_sources(
     evmone-statetestutils PRIVATE
     statetest.hpp
