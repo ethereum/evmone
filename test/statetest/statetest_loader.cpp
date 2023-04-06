@@ -2,6 +2,7 @@
 // Copyright 2022 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+#include "../utils/stdx/utility.hpp"
 #include "statetest.hpp"
 #include <evmone/eof.hpp>
 #include <nlohmann/json.hpp>
@@ -249,7 +250,7 @@ static void from_json_tx_common(const json::json& j, state::Transaction& o)
         if (j.contains("maxFeePerGas") || j.contains("maxPriorityFeePerGas"))
         {
             throw std::invalid_argument(
-                "Misformatted transaction -- contains both legacy and 1559 fees");
+                "invalid transaction: contains both legacy and EIP-1559 fees");
         }
     }
     else
@@ -272,7 +273,17 @@ state::Transaction from_json<state::Transaction>(const json::json& j)
     o.value = from_json<intx::uint256>(j.at("value"));
 
     if (const auto ac_it = j.find("accessList"); ac_it != j.end())
+    {
         o.access_list = from_json<state::AccessList>(*ac_it);
+        if (o.kind == state::Transaction::Kind::legacy)  // Upgrade tx type if tx has "accessList"
+            o.kind = state::Transaction::Kind::eip2930;
+    }
+
+    if (const auto type_it = j.find("type"); type_it != j.end())
+    {
+        if (stdx::to_underlying(o.kind) != from_json<uint8_t>(*type_it))
+            throw std::invalid_argument("wrong transaction type");
+    }
 
     o.nonce = from_json<uint64_t>(j.at("nonce"));
     o.r = from_json<intx::uint256>(j.at("r"));

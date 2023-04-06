@@ -2,12 +2,13 @@
 // Copyright 2023 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-#include <gtest/gtest.h>
+#include <gmock/gmock.h>
 #include <intx/intx.hpp>
 #include <test/statetest/statetest.hpp>
 
 using namespace evmone;
 using namespace intx;
+using namespace testing;
 
 // TODO: Add specific test of loading nonce, chainId, r, s, v
 
@@ -136,8 +137,117 @@ TEST(statetest_loader, tx_confusing)
         "v": "1"
     })";
 
-    EXPECT_THROW(
-        test::from_json<state::Transaction>(json::json::parse(input)), std::invalid_argument);
+    EXPECT_THAT([&] { test::from_json<state::Transaction>(json::json::parse(input)); },
+        ThrowsMessage<std::invalid_argument>(
+            "invalid transaction: contains both legacy and EIP-1559 fees"));
+}
+
+TEST(statetest_loader, tx_type_1)
+{
+    constexpr std::string_view input = R"({
+        "input": "",
+        "gas": "0",
+        "type": "1",
+        "value": "0",
+        "sender": "",
+        "to": "",
+        "gasPrice": "0",
+        "accessList": [
+            {"address": "ac01", "storageKeys": []},
+            {"address": "ac02", "storageKeys": ["fe", "00"]}
+        ],
+        "nonce": "0",
+        "r": "0x1111111111111111111111111111111111111111111111111111111111111111",
+        "s": "0x2222222222222222222222222222222222222222222222222222222222222222",
+        "v": "1"
+    })";
+
+    const auto tx = test::from_json<state::Transaction>(json::json::parse(input));
+    EXPECT_EQ(tx.kind, state::Transaction::Kind::eip2930);
+    EXPECT_TRUE(tx.data.empty());
+    EXPECT_EQ(tx.gas_limit, 0);
+    EXPECT_EQ(tx.value, 0);
+    EXPECT_EQ(tx.sender, 0x00_address);
+    EXPECT_FALSE(tx.to.has_value());
+    EXPECT_EQ(tx.max_gas_price, 0);
+    EXPECT_EQ(tx.max_priority_gas_price, 0);
+    ASSERT_EQ(tx.access_list.size(), 2);
+    EXPECT_EQ(tx.access_list[0].first, 0xac01_address);
+    EXPECT_EQ(tx.access_list[0].second.size(), 0);
+    EXPECT_EQ(tx.access_list[1].first, 0xac02_address);
+    EXPECT_EQ(tx.access_list[1].second, (std::vector{0xfe_bytes32, 0x00_bytes32}));
+    EXPECT_EQ(tx.nonce, 0);
+    EXPECT_EQ(tx.r, 0x1111111111111111111111111111111111111111111111111111111111111111_u256);
+    EXPECT_EQ(tx.s, 0x2222222222222222222222222222222222222222222222222222222222222222_u256);
+    EXPECT_EQ(tx.v, 1);
+}
+
+TEST(statetest_loader, invalid_tx_type)
+{
+    {
+        constexpr std::string_view input = R"({
+                "input": "",
+                "gas": "0",
+                "type": "2",
+                "value": "0",
+                "sender": "",
+                "to": "",
+                "gasPrice": "0",
+                "accessList": [
+                    {"address": "ac01", "storageKeys": []},
+                    {"address": "ac02", "storageKeys": ["fe", "00"]}
+                ],
+                "nonce": "0",
+                "r": "0x1111111111111111111111111111111111111111111111111111111111111111",
+                "s": "0x2222222222222222222222222222222222222222222222222222222222222222",
+                "v": "1"
+            })";
+
+        EXPECT_THAT([&] { test::from_json<state::Transaction>(json::json::parse(input)); },
+            ThrowsMessage<std::invalid_argument>("wrong transaction type"));
+    }
+    {
+        constexpr std::string_view input = R"({
+            "input": "",
+            "gas": "0",
+            "type": "1",
+            "value": "0",
+            "sender": "",
+            "to": "",
+            "gasPrice": "0",
+            "nonce": "0",
+            "r": "0x1111111111111111111111111111111111111111111111111111111111111111",
+            "s": "0x2222222222222222222222222222222222222222222222222222222222222222",
+            "v": "1"
+        })";
+
+        EXPECT_THAT([&] { test::from_json<state::Transaction>(json::json::parse(input)); },
+            ThrowsMessage<std::invalid_argument>("wrong transaction type"));
+    }
+
+    {
+        constexpr std::string_view input = R"({
+            "input": "",
+            "gas": "0",
+            "type": "1",
+            "value": "0",
+            "sender": "",
+            "to": "",
+            "maxFeePerGas": "0",
+            "maxPriorityFeePerGas": "0",
+            "accessList": [
+                {"address": "ac01", "storageKeys": []},
+                {"address": "ac02", "storageKeys": ["fe", "00"]}
+            ],
+            "nonce": "0",
+            "r": "0x1111111111111111111111111111111111111111111111111111111111111111",
+            "s": "0x2222222222222222222222222222222222222222222222222222222222222222",
+            "v": "1"
+        })";
+
+        EXPECT_THAT([&] { test::from_json<state::Transaction>(json::json::parse(input)); },
+            ThrowsMessage<std::invalid_argument>("wrong transaction type"));
+    }
 }
 
 namespace evmone::test
