@@ -41,7 +41,7 @@ class HistogramTracer : public Tracer
     }
 
     void on_instruction_start(uint32_t pc, const intx::uint256* /*stack_top*/, int /*stack_height*/,
-        const ExecutionState& /*state*/) noexcept override
+        int64_t /*gas*/, const ExecutionState& /*state*/) noexcept override
     {
         auto& ctx = m_contexts.top();
         ++ctx.counts[ctx.code[pc]];
@@ -106,7 +106,7 @@ class InstructionTracer : public Tracer
     }
 
     void on_instruction_start(uint32_t pc, const intx::uint256* stack_top, int stack_height,
-        const ExecutionState& state) noexcept override
+        int64_t gas, const ExecutionState& state) noexcept override
     {
         const auto& ctx = m_contexts.top();
 
@@ -115,7 +115,7 @@ class InstructionTracer : public Tracer
         m_out << R"("pc":)" << std::dec << pc;
         m_out << R"(,"op":)" << std::dec << int{opcode};
         m_out << R"(,"opName":")" << get_name(opcode) << '"';
-        m_out << R"(,"gas":)" << std::hex << "0x" << state.gas_left;
+        m_out << R"(,"gas":0x)" << std::hex << gas;
         output_stack(stack_top, stack_height);
 
         // Full memory can be dumped as evmc::hex({state.memory.data(), state.memory.size()}),

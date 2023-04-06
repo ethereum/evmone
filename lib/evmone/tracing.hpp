@@ -40,19 +40,19 @@ public:
     }
 
     void notify_instruction_start(  // NOLINT(misc-no-recursion)
-        uint32_t pc, intx::uint256* stack_top, int stack_height,
+        uint32_t pc, intx::uint256* stack_top, int stack_height, int64_t gas,
         const ExecutionState& state) noexcept
     {
-        on_instruction_start(pc, stack_top, stack_height, state);
+        on_instruction_start(pc, stack_top, stack_height, gas, state);
         if (m_next_tracer)
-            m_next_tracer->notify_instruction_start(pc, stack_top, stack_height, state);
+            m_next_tracer->notify_instruction_start(pc, stack_top, stack_height, gas, state);
     }
 
 private:
     virtual void on_execution_start(
         evmc_revision rev, const evmc_message& msg, bytes_view code) noexcept = 0;
     virtual void on_instruction_start(uint32_t pc, const intx::uint256* stack_top, int stack_height,
-        const ExecutionState& state) noexcept = 0;
+        int64_t gas, const ExecutionState& state) noexcept = 0;
     virtual void on_execution_end(const evmc_result& result) noexcept = 0;
 };
 
