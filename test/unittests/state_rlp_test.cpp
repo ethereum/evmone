@@ -2,7 +2,7 @@
 // Copyright 2022 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-#include <gtest/gtest.h>
+#include <gmock/gmock.h>
 #include <test/state/hash_utils.hpp>
 #include <test/state/rlp.hpp>
 #include <test/state/state.hpp>
@@ -12,6 +12,7 @@
 using namespace evmone;
 using namespace evmc::literals;
 using namespace intx;
+using namespace testing;
 
 static constexpr auto emptyBytesHash =
     0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470_bytes32;
@@ -375,5 +376,78 @@ TEST(state_rlp, tx_to_rlp_eip1559_invalid_v_value)
     tx.v = 2;
     tx.chain_id = 1;
 
-    EXPECT_THROW(rlp::encode(tx), std::invalid_argument);
+    EXPECT_THAT([tx]() { rlp::encode(tx); },
+        ThrowsMessage<std::invalid_argument>("`v` value for eip1559 transaction must be 0 or 1"));
+}
+
+TEST(state_rlp, tx_to_rlp_eip2930_invalid_v_value)
+{
+    state::Transaction tx{};
+    tx.kind = evmone::state::Transaction::Kind::eip2930;
+    tx.data = ""_hex;
+    tx.gas_limit = 1;
+    tx.max_gas_price = 1;
+    tx.max_priority_gas_price = 1;
+    tx.sender = 0x0000000000000000000000000000000000000000_address;
+    tx.to = 0x0000000000000000000000000000000000000000_address;
+    tx.value = 0;
+    tx.access_list = {};
+    tx.nonce = 47;
+    tx.r = 0x0000000000000000000000000000000000000000000000000000000000000000_u256;
+    tx.s = 0x0000000000000000000000000000000000000000000000000000000000000000_u256;
+    tx.v = 2;
+    tx.chain_id = 1;
+
+    EXPECT_THAT([tx]() { rlp::encode(tx); },
+        ThrowsMessage<std::invalid_argument>("`v` value for eip2930 transaction must be 0 or 1"));
+}
+
+TEST(state_rlp, tx_to_rlp_eip1559_with_non_empty_access_list)
+{
+    state::Transaction tx{};
+    tx.kind = evmone::state::Transaction::Kind::eip1559;
+    tx.data = "00"_hex;
+    tx.gas_limit = 0x3d0900;
+    tx.max_gas_price = 0x7d0;
+    tx.max_priority_gas_price = 0xa;
+    tx.sender = 0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b_address;
+    tx.to = 0xcccccccccccccccccccccccccccccccccccccccc_address;
+    tx.value = 0;
+    tx.access_list = {{0xcccccccccccccccccccccccccccccccccccccccc_address,
+        {0x0000000000000000000000000000000000000000000000000000000000000000_bytes32,
+            0x0000000000000000000000000000000000000000000000000000000000000001_bytes32}}};
+    tx.nonce = 1;
+    tx.r = 0xd671815898b8dd34321adbba4cb6a57baa7017323c26946f3719b00e70c755c2_u256;
+    tx.s = 0x3528b9efe3be57ea65a933d1e6bbf3b7d0c78830138883c1201e0c641fee6464_u256;
+    tx.v = 0;
+    tx.chain_id = 1;
+
+    EXPECT_EQ(keccak256(rlp::encode(tx)),
+        0xfb18421827800adcf465688e303cc9863045fdb96971473a114677916a3a08a4_bytes32);
+}
+
+TEST(state_rlp, tx_to_rlp_eip2930_with_non_empty_access_list)
+{
+    // https://etherscan.io/tx/0xf076e75aa935552e20e5d9fd4d1dda4ff33399ff3d6ac22843ae646f82c385d4
+
+    state::Transaction tx{};
+    tx.kind = evmone::state::Transaction::Kind::eip2930;
+    tx.data =
+        "0x095ea7b3000000000000000000000000f17d23136b4fead139f54fb766c8795faae09660ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"_hex;
+    tx.gas_limit = 51253;
+    tx.max_gas_price = 15650965396;
+    tx.max_priority_gas_price = 15650965396;
+    tx.sender = 0xcb0b99284784d9e400b1020b01fc40ff193d3540_address;
+    tx.to = 0x9232a548dd9e81bac65500b5e0d918f8ba93675c_address;
+    tx.value = 0;
+    tx.access_list = {{0x9232a548dd9e81bac65500b5e0d918f8ba93675c_address,
+        {0x8e947fe742892ee6fffe7cfc013acac35d33a3892c58597344bed88b21eb1d2f_bytes32}}};
+    tx.nonce = 62;
+    tx.r = 0x2cfaa5ffa42172bfa9f83207a257c53ba3a106844ee58e9131466f655ecc11e9_u256;
+    tx.s = 0x419366dadd905a16cd433f2953f9ed976560822bb2611ac192b939f7b9c2a98c_u256;
+    tx.v = 1;
+    tx.chain_id = 1;
+
+    EXPECT_EQ(keccak256(rlp::encode(tx)),
+        0xf076e75aa935552e20e5d9fd4d1dda4ff33399ff3d6ac22843ae646f82c385d4_bytes32);
 }

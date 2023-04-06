@@ -203,11 +203,22 @@ std::variant<TransactionReceipt, std::error_code> transition(
         return rlp::encode_tuple(tx.nonce, tx.max_gas_price, static_cast<uint64_t>(tx.gas_limit),
             tx.to.has_value() ? tx.to.value() : bytes_view(), tx.value, tx.data, tx.v, tx.r, tx.s);
     }
+    else if (tx.kind == Transaction::Kind::eip2930)
+    {
+        if (tx.v > 1)
+            throw std::invalid_argument("`v` value for eip2930 transaction must be 0 or 1");
+        // tx_type +
+        // rlp [nonce, gas_price, gas_limit, to, value, data, access_list, v, r, s];
+        return bytes{0x01} +  // Transaction type (eip2930 type == 1)
+               rlp::encode_tuple(tx.chain_id, tx.nonce, tx.max_gas_price,
+                   static_cast<uint64_t>(tx.gas_limit),
+                   tx.to.has_value() ? tx.to.value() : bytes_view(), tx.value, tx.data,
+                   tx.access_list, static_cast<bool>(tx.v), tx.r, tx.s);
+    }
     else
     {
         if (tx.v > 1)
             throw std::invalid_argument("`v` value for eip1559 transaction must be 0 or 1");
-        // TODO: Implement AccessList encoding
         // tx_type +
         // rlp [chain_id, nonce, max_priority_fee_per_gas, max_fee_per_gas, gas_limit, to, value,
         // data, access_list, sig_parity, r, s];
@@ -215,7 +226,7 @@ std::variant<TransactionReceipt, std::error_code> transition(
                rlp::encode_tuple(tx.chain_id, tx.nonce, tx.max_priority_gas_price, tx.max_gas_price,
                    static_cast<uint64_t>(tx.gas_limit),
                    tx.to.has_value() ? tx.to.value() : bytes_view(), tx.value, tx.data,
-                   std::vector<uint8_t>(), static_cast<bool>(tx.v), tx.r, tx.s);
+                   tx.access_list, static_cast<bool>(tx.v), tx.r, tx.s);
     }
 }
 

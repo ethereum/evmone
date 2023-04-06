@@ -80,10 +80,11 @@ using AccessList = std::vector<std::pair<address, std::vector<bytes32>>>;
 
 struct Transaction
 {
-    enum class Kind
+    enum class Kind : uint8_t
     {
-        legacy,
-        eip1559
+        legacy = 0,
+        eip2930 = 1,  ///< Transaction with access list https://eips.ethereum.org/EIPS/eip-2930
+        eip1559 = 2   ///< EIP1559 transaction https://eips.ethereum.org/EIPS/eip-1559
     };
 
     Kind kind = Kind::legacy;

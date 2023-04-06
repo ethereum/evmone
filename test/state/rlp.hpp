@@ -98,6 +98,13 @@ inline bytes encode_tuple(const Types&... elements)
     return internal::wrap_list((encode(elements) + ...));
 }
 
+/// Encodes a pair of values as RPL list.
+template <typename T1, typename T2>
+inline bytes encode(const std::pair<T1, T2>& p)
+{
+    return encode_tuple(p.first, p.second);
+}
+
 /// Encodes the container as RLP list.
 ///
 /// @tparam InputIterator  Type of the input iterator.
