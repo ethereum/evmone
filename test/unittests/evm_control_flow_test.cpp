@@ -78,7 +78,7 @@ TEST_P(evm, jump_to_block_beginning)
 
 TEST_P(evm, jumpi_stack)
 {
-    const auto code = push(0xde) + jumpi(6, OP_CALLDATASIZE) + OP_JUMPDEST + ret_top();
+    const auto code = push(0xde) + jumpi(6, calldatasize()) + OP_JUMPDEST + ret_top();
     execute(code);
     EXPECT_OUTPUT_INT(0xde);
     execute(code, "ee"_hex);
@@ -158,7 +158,7 @@ TEST_P(evm, pc_after_jump_1)
 
 TEST_P(evm, pc_after_jump_2)
 {
-    const auto code = OP_CALLDATASIZE + push(9) + OP_JUMPI + push(12) + OP_PC + OP_SWAP1 + OP_JUMP +
+    const auto code = calldatasize() + push(9) + OP_JUMPI + push(12) + OP_PC + OP_SWAP1 + OP_JUMP +
                       OP_JUMPDEST + OP_GAS + OP_PC + OP_JUMPDEST + ret_top();
 
     execute(code);

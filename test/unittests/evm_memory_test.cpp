@@ -100,11 +100,9 @@ TEST_P(evm, keccak256_memory_cost)
 
 TEST_P(evm, calldatacopy_memory_cost)
 {
-    auto code = push(1) + push(0) + push(0) + OP_CALLDATACOPY;
+    const auto code = calldatacopy(0, 0, 1);
     execute(18, code);
-    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    execute(17, code);
-    EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 18);
 }
 
 

@@ -585,8 +585,8 @@ TEST_P(evm, extcodecopy_fill_tail)
 
 TEST_P(evm, extcodecopy_buffer_overflow)
 {
-    const auto code = bytecode{} + OP_NUMBER + OP_TIMESTAMP + OP_CALLDATASIZE + OP_ADDRESS +
-                      OP_EXTCODECOPY + ret(OP_CALLDATASIZE, OP_NUMBER);
+    const auto code = bytecode{} + OP_NUMBER + OP_TIMESTAMP + calldatasize() + OP_ADDRESS +
+                      OP_EXTCODECOPY + ret(calldatasize(), OP_NUMBER);
 
     host.accounts[msg.recipient].code = code;
 
