@@ -236,19 +236,27 @@ commands:
     steps:
       - run:
           name: "Install codecov"
-          command: sudo pip3 install --break-system-packages --upgrade --quiet --no-cache-dir codecov
+          command: |
+            # TODO: This should go to cpp-build-env image
+            gpg --no-default-keyring --keyring trustedkeys.gpg --keyserver keyserver.ubuntu.com --recv-key ED779869
+            
+            export CODECOV_VERSION=v0.4.1
+            curl -Os https://uploader.codecov.io/$CODECOV_VERSION/linux/codecov
+            curl -Os https://uploader.codecov.io/$CODECOV_VERSION/linux/codecov.SHA256SUM
+            curl -Os https://uploader.codecov.io/$CODECOV_VERSION/linux/codecov.SHA256SUM.sig
+  
+            gpgv codecov.SHA256SUM.sig codecov.SHA256SUM
+            shasum -c codecov.SHA256SUM
+            
+            chmod +x codecov
+            sudo mv codecov /usr/local/bin
+
       - run:
           name: "Upload to Codecov"
           command: |
-            codecov --version
             # Convert to relative paths
             sed -i 's|$(pwd)/||' ~/build/coverage.lcov
-            counter=1
-            until codecov --flags <<parameters.flags>> --required --file ~/build/coverage.lcov -X gcov || [ $counter = 5 ]; do
-              counter=$((counter+1))
-              sleep 1
-              echo "Try #$counter..."
-            done
+            codecov --flags <<parameters.flags>> --required --file ~/build/coverage.lcov -X gcov
 
   package:
     description: "Make package"
