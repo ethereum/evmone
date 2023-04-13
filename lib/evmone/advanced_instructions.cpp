@@ -36,17 +36,30 @@ inline evmc_status_code impl(AdvancedExecutionState& state) noexcept
     return status;
 }
 
-template <Opcode Op, StopToken CoreFn() noexcept = core::impl<Op>>
-inline StopToken impl(AdvancedExecutionState& /*state*/) noexcept
+template <Opcode Op,
+    evmc_status_code CoreFn(StackTop, int64_t&, ExecutionState&) noexcept = core::impl<Op>>
+inline evmc_status_code impl(AdvancedExecutionState& state) noexcept
 {
-    return CoreFn();
+    const auto status = CoreFn(state.stack.top_item, state.gas_left, state);
+    state.stack.top_item += instr::traits[Op].stack_height_change;
+    return status;
 }
 
-template <Opcode Op, StopToken CoreFn(StackTop, ExecutionState&) noexcept = core::impl<Op>>
-inline StopToken impl(AdvancedExecutionState& state) noexcept
+template <Opcode Op, Result CoreFn(StackTop, int64_t, ExecutionState&) noexcept = core::impl<Op>>
+inline evmc_status_code impl(AdvancedExecutionState& state) noexcept
+{
+    const auto status = CoreFn(state.stack.top_item, state.gas_left, state);
+    state.gas_left = status.gas_left;
+    state.stack.top_item += instr::traits[Op].stack_height_change;
+    return status.status;
+}
+
+template <Opcode Op,
+    TermResult CoreFn(StackTop, int64_t, ExecutionState&) noexcept = core::impl<Op>>
+inline TermResult impl(AdvancedExecutionState& state) noexcept
 {
     // Stack height adjustment may be omitted.
-    return CoreFn(state.stack.top_item, state);
+    return CoreFn(state.stack.top_item, state.gas_left, state);
 }
 
 template <Opcode Op,
@@ -88,10 +101,12 @@ const Instruction* op(const Instruction* instr, AdvancedExecutionState& state) n
 }
 
 /// Wraps the generic instruction implementation to advanced instruction function signature.
-template <StopToken InstrFn(AdvancedExecutionState&) noexcept>
+template <TermResult InstrFn(AdvancedExecutionState&) noexcept>
 const Instruction* op(const Instruction* /*instr*/, AdvancedExecutionState& state) noexcept
 {
-    return state.exit(InstrFn(state).status);
+    const auto result = InstrFn(state);
+    state.gas_left = result.gas_left;
+    return state.exit(result.status);
 }
 
 const Instruction* op_sstore(const Instruction* instr, AdvancedExecutionState& state) noexcept

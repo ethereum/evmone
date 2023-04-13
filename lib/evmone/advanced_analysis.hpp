@@ -80,6 +80,7 @@ public:
 /// The execution state specialized for the Advanced interpreter.
 struct AdvancedExecutionState : ExecutionState
 {
+    int64_t gas_left = 0;
     Stack stack;
 
     /// The gas cost of the current block.
@@ -93,6 +94,7 @@ struct AdvancedExecutionState : ExecutionState
         const evmc_host_interface& host_interface, evmc_host_context* host_ctx,
         bytes_view _code) noexcept
       : ExecutionState{message, revision, host_interface, host_ctx, _code},
+        gas_left{message.gas},
         stack{stack_space.bottom()}
     {}
 
@@ -109,6 +111,7 @@ struct AdvancedExecutionState : ExecutionState
         bytes_view _code) noexcept
     {
         ExecutionState::reset(message, revision, host_interface, host_ctx, _code);
+        gas_left = message.gas;
         stack.reset(stack_space.bottom());
         analysis.advanced = nullptr;  // For consistency with previous behavior.
         current_block_cost = 0;

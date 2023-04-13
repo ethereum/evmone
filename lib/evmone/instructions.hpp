@@ -39,12 +39,17 @@ public:
     void push(const uint256& value) noexcept { *++m_top = value; }
 };
 
-/// A wrapper for evmc_status_code to indicate that an instruction
-/// unconditionally terminates execution.
-struct StopToken
+
+/// Instruction execution result.
+struct Result
 {
-    const evmc_status_code status;  ///< The status code execution terminates with.
+    evmc_status_code status;
+    int64_t gas_left;
 };
+
+/// Instruction result indicating that execution terminates unconditionally.
+struct TermResult : Result
+{};
 
 constexpr auto max_buffer_size = std::numeric_limits<uint32_t>::max();
 
@@ -132,9 +137,10 @@ inline constexpr auto pop = noop;
 inline constexpr auto jumpdest = noop;
 
 template <evmc_status_code Status>
-inline StopToken stop_impl() noexcept
+inline TermResult stop_impl(
+    StackTop /*stack*/, int64_t gas_left, ExecutionState& /*state*/) noexcept
 {
-    return {Status};
+    return {Status, gas_left};
 }
 inline constexpr auto stop = stop_impl<EVMC_SUCCESS>;
 inline constexpr auto invalid = stop_impl<EVMC_INVALID_INSTRUCTION>;
@@ -194,7 +200,7 @@ inline void mulmod(StackTop stack) noexcept
     m = m != 0 ? intx::mulmod(x, y, m) : 0;
 }
 
-inline evmc_status_code exp(StackTop stack, ExecutionState& state) noexcept
+inline Result exp(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     const auto& base = stack.pop();
     auto& exponent = stack.top();
@@ -203,11 +209,11 @@ inline evmc_status_code exp(StackTop stack, ExecutionState& state) noexcept
         static_cast<int>(intx::count_significant_bytes(exponent));
     const auto exponent_cost = state.rev >= EVMC_SPURIOUS_DRAGON ? 50 : 10;
     const auto additional_cost = exponent_significant_bytes * exponent_cost;
-    if ((state.gas_left -= additional_cost) < 0)
-        return EVMC_OUT_OF_GAS;
+    if ((gas_left -= additional_cost) < 0)
+        return {EVMC_OUT_OF_GAS, gas_left};
 
     exponent = intx::exp(base, exponent);
-    return EVMC_SUCCESS;
+    return {EVMC_SUCCESS, gas_left};
 }
 
 inline void signextend(StackTop stack) noexcept
@@ -334,24 +340,24 @@ inline void sar(StackTop stack) noexcept
     x = (x >> y) | (sign_mask << mask_shift);
 }
 
-inline evmc_status_code keccak256(StackTop stack, ExecutionState& state) noexcept
+inline Result keccak256(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     const auto& index = stack.pop();
     auto& size = stack.top();
 
-    if (!check_memory(state.gas_left, state.memory, index, size))
-        return EVMC_OUT_OF_GAS;
+    if (!check_memory(gas_left, state.memory, index, size))
+        return {EVMC_OUT_OF_GAS, gas_left};
 
     const auto i = static_cast<size_t>(index);
     const auto s = static_cast<size_t>(size);
     const auto w = num_words(s);
     const auto cost = w * 6;
-    if ((state.gas_left -= cost) < 0)
-        return EVMC_OUT_OF_GAS;
+    if ((gas_left -= cost) < 0)
+        return {EVMC_OUT_OF_GAS, gas_left};
 
     auto data = s != 0 ? &state.memory[i] : nullptr;
     size = intx::be::load<uint256>(ethash::keccak256(data, s));
-    return EVMC_SUCCESS;
+    return {EVMC_SUCCESS, gas_left};
 }
 
 
@@ -360,19 +366,19 @@ inline void address(StackTop stack, ExecutionState& state) noexcept
     stack.push(intx::be::load<uint256>(state.msg->recipient));
 }
 
-inline evmc_status_code balance(StackTop stack, ExecutionState& state) noexcept
+inline Result balance(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     auto& x = stack.top();
     const auto addr = intx::be::trunc<evmc::address>(x);
 
     if (state.rev >= EVMC_BERLIN && state.host.access_account(addr) == EVMC_ACCESS_COLD)
     {
-        if ((state.gas_left -= instr::additional_cold_account_access_cost) < 0)
-            return EVMC_OUT_OF_GAS;
+        if ((gas_left -= instr::additional_cold_account_access_cost) < 0)
+            return {EVMC_OUT_OF_GAS, gas_left};
     }
 
     x = intx::be::load<uint256>(state.host.get_balance(addr));
-    return EVMC_SUCCESS;
+    return {EVMC_SUCCESS, gas_left};
 }
 
 inline void origin(StackTop stack, ExecutionState& state) noexcept
@@ -414,14 +420,14 @@ inline void calldatasize(StackTop stack, ExecutionState& state) noexcept
     stack.push(state.msg->input_size);
 }
 
-inline evmc_status_code calldatacopy(StackTop stack, ExecutionState& state) noexcept
+inline Result calldatacopy(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     const auto& mem_index = stack.pop();
     const auto& input_index = stack.pop();
     const auto& size = stack.pop();
 
-    if (!check_memory(state.gas_left, state.memory, mem_index, size))
-        return EVMC_OUT_OF_GAS;
+    if (!check_memory(gas_left, state.memory, mem_index, size))
+        return {EVMC_OUT_OF_GAS, gas_left};
 
     auto dst = static_cast<size_t>(mem_index);
     auto src = state.msg->input_size < input_index ? state.msg->input_size :
@@ -430,8 +436,8 @@ inline evmc_status_code calldatacopy(StackTop stack, ExecutionState& state) noex
     auto copy_size = std::min(s, state.msg->input_size - src);
 
     const auto copy_cost = num_words(s) * 3;
-    if ((state.gas_left -= copy_cost) < 0)
-        return EVMC_OUT_OF_GAS;
+    if ((gas_left -= copy_cost) < 0)
+        return {EVMC_OUT_OF_GAS, gas_left};
 
     if (copy_size > 0)
         std::memcpy(&state.memory[dst], &state.msg->input_data[src], copy_size);
@@ -439,7 +445,7 @@ inline evmc_status_code calldatacopy(StackTop stack, ExecutionState& state) noex
     if (s - copy_size > 0)
         std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
 
-    return EVMC_SUCCESS;
+    return {EVMC_SUCCESS, gas_left};
 }
 
 inline void codesize(StackTop stack, ExecutionState& state) noexcept
@@ -447,7 +453,7 @@ inline void codesize(StackTop stack, ExecutionState& state) noexcept
     stack.push(state.original_code.size());
 }
 
-inline evmc_status_code codecopy(StackTop stack, ExecutionState& state) noexcept
+inline Result codecopy(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     // TODO: Similar to calldatacopy().
 
@@ -455,8 +461,8 @@ inline evmc_status_code codecopy(StackTop stack, ExecutionState& state) noexcept
     const auto& input_index = stack.pop();
     const auto& size = stack.pop();
 
-    if (!check_memory(state.gas_left, state.memory, mem_index, size))
-        return EVMC_OUT_OF_GAS;
+    if (!check_memory(gas_left, state.memory, mem_index, size))
+        return {EVMC_OUT_OF_GAS, gas_left};
 
     const auto code_size = state.original_code.size();
     const auto dst = static_cast<size_t>(mem_index);
@@ -465,8 +471,8 @@ inline evmc_status_code codecopy(StackTop stack, ExecutionState& state) noexcept
     const auto copy_size = std::min(s, code_size - src);
 
     const auto copy_cost = num_words(s) * 3;
-    if ((state.gas_left -= copy_cost) < 0)
-        return EVMC_OUT_OF_GAS;
+    if ((gas_left -= copy_cost) < 0)
+        return {EVMC_OUT_OF_GAS, gas_left};
 
     // TODO: Add unit tests for each combination of conditions.
     if (copy_size > 0)
@@ -475,7 +481,7 @@ inline evmc_status_code codecopy(StackTop stack, ExecutionState& state) noexcept
     if (s - copy_size > 0)
         std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
 
-    return EVMC_SUCCESS;
+    return {EVMC_SUCCESS, gas_left};
 }
 
 
@@ -489,40 +495,40 @@ inline void basefee(StackTop stack, ExecutionState& state) noexcept
     stack.push(intx::be::load<uint256>(state.get_tx_context().block_base_fee));
 }
 
-inline evmc_status_code extcodesize(StackTop stack, ExecutionState& state) noexcept
+inline Result extcodesize(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     auto& x = stack.top();
     const auto addr = intx::be::trunc<evmc::address>(x);
 
     if (state.rev >= EVMC_BERLIN && state.host.access_account(addr) == EVMC_ACCESS_COLD)
     {
-        if ((state.gas_left -= instr::additional_cold_account_access_cost) < 0)
-            return EVMC_OUT_OF_GAS;
+        if ((gas_left -= instr::additional_cold_account_access_cost) < 0)
+            return {EVMC_OUT_OF_GAS, gas_left};
     }
 
     x = state.host.get_code_size(addr);
-    return EVMC_SUCCESS;
+    return {EVMC_SUCCESS, gas_left};
 }
 
-inline evmc_status_code extcodecopy(StackTop stack, ExecutionState& state) noexcept
+inline Result extcodecopy(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     const auto addr = intx::be::trunc<evmc::address>(stack.pop());
     const auto& mem_index = stack.pop();
     const auto& input_index = stack.pop();
     const auto& size = stack.pop();
 
-    if (!check_memory(state.gas_left, state.memory, mem_index, size))
-        return EVMC_OUT_OF_GAS;
+    if (!check_memory(gas_left, state.memory, mem_index, size))
+        return {EVMC_OUT_OF_GAS, gas_left};
 
     const auto s = static_cast<size_t>(size);
     const auto copy_cost = num_words(s) * 3;
-    if ((state.gas_left -= copy_cost) < 0)
-        return EVMC_OUT_OF_GAS;
+    if ((gas_left -= copy_cost) < 0)
+        return {EVMC_OUT_OF_GAS, gas_left};
 
     if (state.rev >= EVMC_BERLIN && state.host.access_account(addr) == EVMC_ACCESS_COLD)
     {
-        if ((state.gas_left -= instr::additional_cold_account_access_cost) < 0)
-            return EVMC_OUT_OF_GAS;
+        if ((gas_left -= instr::additional_cold_account_access_cost) < 0)
+            return {EVMC_OUT_OF_GAS, gas_left};
     }
 
     if (s > 0)
@@ -535,7 +541,7 @@ inline evmc_status_code extcodecopy(StackTop stack, ExecutionState& state) noexc
             std::memset(&state.memory[dst + num_bytes_copied], 0, num_bytes_to_clear);
     }
 
-    return EVMC_SUCCESS;
+    return {EVMC_SUCCESS, gas_left};
 }
 
 inline void returndatasize(StackTop stack, ExecutionState& state) noexcept
@@ -543,48 +549,48 @@ inline void returndatasize(StackTop stack, ExecutionState& state) noexcept
     stack.push(state.return_data.size());
 }
 
-inline evmc_status_code returndatacopy(StackTop stack, ExecutionState& state) noexcept
+inline Result returndatacopy(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     const auto& mem_index = stack.pop();
     const auto& input_index = stack.pop();
     const auto& size = stack.pop();
 
-    if (!check_memory(state.gas_left, state.memory, mem_index, size))
-        return EVMC_OUT_OF_GAS;
+    if (!check_memory(gas_left, state.memory, mem_index, size))
+        return {EVMC_OUT_OF_GAS, gas_left};
 
     auto dst = static_cast<size_t>(mem_index);
     auto s = static_cast<size_t>(size);
 
     if (state.return_data.size() < input_index)
-        return EVMC_INVALID_MEMORY_ACCESS;
+        return {EVMC_INVALID_MEMORY_ACCESS, gas_left};
     auto src = static_cast<size_t>(input_index);
 
     if (src + s > state.return_data.size())
-        return EVMC_INVALID_MEMORY_ACCESS;
+        return {EVMC_INVALID_MEMORY_ACCESS, gas_left};
 
     const auto copy_cost = num_words(s) * 3;
-    if ((state.gas_left -= copy_cost) < 0)
-        return EVMC_OUT_OF_GAS;
+    if ((gas_left -= copy_cost) < 0)
+        return {EVMC_OUT_OF_GAS, gas_left};
 
     if (s > 0)
         std::memcpy(&state.memory[dst], &state.return_data[src], s);
 
-    return EVMC_SUCCESS;
+    return {EVMC_SUCCESS, gas_left};
 }
 
-inline evmc_status_code extcodehash(StackTop stack, ExecutionState& state) noexcept
+inline Result extcodehash(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     auto& x = stack.top();
     const auto addr = intx::be::trunc<evmc::address>(x);
 
     if (state.rev >= EVMC_BERLIN && state.host.access_account(addr) == EVMC_ACCESS_COLD)
     {
-        if ((state.gas_left -= instr::additional_cold_account_access_cost) < 0)
-            return EVMC_OUT_OF_GAS;
+        if ((gas_left -= instr::additional_cold_account_access_cost) < 0)
+            return {EVMC_OUT_OF_GAS, gas_left};
     }
 
     x = intx::be::load<uint256>(state.host.get_code_hash(addr));
-    return EVMC_SUCCESS;
+    return {EVMC_SUCCESS, gas_left};
 }
 
 
@@ -638,44 +644,44 @@ inline void selfbalance(StackTop stack, ExecutionState& state) noexcept
     stack.push(intx::be::load<uint256>(state.host.get_balance(state.msg->recipient)));
 }
 
-inline evmc_status_code mload(StackTop stack, ExecutionState& state) noexcept
+inline Result mload(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     auto& index = stack.top();
 
-    if (!check_memory(state.gas_left, state.memory, index, 32))
-        return EVMC_OUT_OF_GAS;
+    if (!check_memory(gas_left, state.memory, index, 32))
+        return {EVMC_OUT_OF_GAS, gas_left};
 
     index = intx::be::unsafe::load<uint256>(&state.memory[static_cast<size_t>(index)]);
-    return EVMC_SUCCESS;
+    return {EVMC_SUCCESS, gas_left};
 }
 
-inline evmc_status_code mstore(StackTop stack, ExecutionState& state) noexcept
+inline Result mstore(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     const auto& index = stack.pop();
     const auto& value = stack.pop();
 
-    if (!check_memory(state.gas_left, state.memory, index, 32))
-        return EVMC_OUT_OF_GAS;
+    if (!check_memory(gas_left, state.memory, index, 32))
+        return {EVMC_OUT_OF_GAS, gas_left};
 
     intx::be::unsafe::store(&state.memory[static_cast<size_t>(index)], value);
-    return EVMC_SUCCESS;
+    return {EVMC_SUCCESS, gas_left};
 }
 
-inline evmc_status_code mstore8(StackTop stack, ExecutionState& state) noexcept
+inline Result mstore8(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     const auto& index = stack.pop();
     const auto& value = stack.pop();
 
-    if (!check_memory(state.gas_left, state.memory, index, 1))
-        return EVMC_OUT_OF_GAS;
+    if (!check_memory(gas_left, state.memory, index, 1))
+        return {EVMC_OUT_OF_GAS, gas_left};
 
     state.memory[static_cast<size_t>(index)] = static_cast<uint8_t>(value);
-    return EVMC_SUCCESS;
+    return {EVMC_SUCCESS, gas_left};
 }
 
-evmc_status_code sload(StackTop stack, ExecutionState& state) noexcept;
+Result sload(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;
 
-evmc_status_code sstore(StackTop stack, ExecutionState& state) noexcept;
+Result sstore(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;
 
 /// Internal jump implementation for JUMP/JUMPI instructions.
 inline code_iterator jump_impl(ExecutionState& state, const uint256& dst) noexcept
@@ -749,9 +755,10 @@ inline void msize(StackTop stack, ExecutionState& state) noexcept
     stack.push(state.memory.size());
 }
 
-inline void gas(StackTop stack, ExecutionState& state) noexcept
+inline Result gas(StackTop stack, int64_t gas_left, ExecutionState& /*state*/) noexcept
 {
-    stack.push(state.gas_left);
+    stack.push(gas_left);
+    return {EVMC_SUCCESS, gas_left};
 }
 
 inline void push0(StackTop stack) noexcept
@@ -893,25 +900,25 @@ inline code_iterator swapn(StackTop stack, ExecutionState& state, code_iterator 
 }
 
 template <size_t NumTopics>
-inline evmc_status_code log(StackTop stack, ExecutionState& state) noexcept
+inline Result log(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     static_assert(NumTopics <= 4);
 
     if (state.in_static_mode())
-        return EVMC_STATIC_MODE_VIOLATION;
+        return {EVMC_STATIC_MODE_VIOLATION, 0};
 
     const auto& offset = stack.pop();
     const auto& size = stack.pop();
 
-    if (!check_memory(state.gas_left, state.memory, offset, size))
-        return EVMC_OUT_OF_GAS;
+    if (!check_memory(gas_left, state.memory, offset, size))
+        return {EVMC_OUT_OF_GAS, gas_left};
 
     const auto o = static_cast<size_t>(offset);
     const auto s = static_cast<size_t>(size);
 
     const auto cost = int64_t(s) * 8;
-    if ((state.gas_left -= cost) < 0)
-        return EVMC_OUT_OF_GAS;
+    if ((gas_left -= cost) < 0)
+        return {EVMC_OUT_OF_GAS, gas_left};
 
     std::array<evmc::bytes32, NumTopics> topics;  // NOLINT(cppcoreguidelines-pro-type-member-init)
     for (auto& topic : topics)
@@ -919,19 +926,19 @@ inline evmc_status_code log(StackTop stack, ExecutionState& state) noexcept
 
     const auto data = s != 0 ? &state.memory[o] : nullptr;
     state.host.emit_log(state.msg->recipient, data, s, topics.data(), NumTopics);
-    return EVMC_SUCCESS;
+    return {EVMC_SUCCESS, gas_left};
 }
 
 
 template <Opcode Op>
-evmc_status_code call_impl(StackTop stack, ExecutionState& state) noexcept;
+Result call_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;
 inline constexpr auto call = call_impl<OP_CALL>;
 inline constexpr auto callcode = call_impl<OP_CALLCODE>;
 inline constexpr auto delegatecall = call_impl<OP_DELEGATECALL>;
 inline constexpr auto staticcall = call_impl<OP_STATICCALL>;
 
 template <Opcode Op>
-evmc_status_code create_impl(StackTop stack, ExecutionState& state) noexcept;
+Result create_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;
 inline constexpr auto create = create_impl<OP_CREATE>;
 inline constexpr auto create2 = create_impl<OP_CREATE2>;
 
@@ -967,33 +974,33 @@ inline code_iterator retf(StackTop /*stack*/, ExecutionState& state, code_iterat
 }
 
 template <evmc_status_code StatusCode>
-inline StopToken return_impl(StackTop stack, ExecutionState& state) noexcept
+inline TermResult return_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     const auto& offset = stack[0];
     const auto& size = stack[1];
 
-    if (!check_memory(state.gas_left, state.memory, offset, size))
-        return {EVMC_OUT_OF_GAS};
+    if (!check_memory(gas_left, state.memory, offset, size))
+        return {EVMC_OUT_OF_GAS, gas_left};
 
     state.output_size = static_cast<size_t>(size);
     if (state.output_size != 0)
         state.output_offset = static_cast<size_t>(offset);
-    return {StatusCode};
+    return {StatusCode, gas_left};
 }
 inline constexpr auto return_ = return_impl<EVMC_SUCCESS>;
 inline constexpr auto revert = return_impl<EVMC_REVERT>;
 
-inline StopToken selfdestruct(StackTop stack, ExecutionState& state) noexcept
+inline TermResult selfdestruct(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     if (state.in_static_mode())
-        return {EVMC_STATIC_MODE_VIOLATION};
+        return {EVMC_STATIC_MODE_VIOLATION, gas_left};
 
     const auto beneficiary = intx::be::trunc<evmc::address>(stack[0]);
 
     if (state.rev >= EVMC_BERLIN && state.host.access_account(beneficiary) == EVMC_ACCESS_COLD)
     {
-        if ((state.gas_left -= instr::cold_account_access_cost) < 0)
-            return {EVMC_OUT_OF_GAS};
+        if ((gas_left -= instr::cold_account_access_cost) < 0)
+            return {EVMC_OUT_OF_GAS, gas_left};
     }
 
     if (state.rev >= EVMC_TANGERINE_WHISTLE)
@@ -1004,8 +1011,8 @@ inline StopToken selfdestruct(StackTop stack, ExecutionState& state) noexcept
             // sending value to a non-existing account.
             if (!state.host.account_exists(beneficiary))
             {
-                if ((state.gas_left -= 25000) < 0)
-                    return {EVMC_OUT_OF_GAS};
+                if ((gas_left -= 25000) < 0)
+                    return {EVMC_OUT_OF_GAS, gas_left};
             }
         }
     }
@@ -1015,7 +1022,7 @@ inline StopToken selfdestruct(StackTop stack, ExecutionState& state) noexcept
         if (state.rev < EVMC_LONDON)
             state.gas_refund += 24000;
     }
-    return {EVMC_SUCCESS};
+    return {EVMC_SUCCESS, gas_left};
 }
 
 
