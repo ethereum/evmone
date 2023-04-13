@@ -119,6 +119,12 @@ struct TransactionReceipt
     BloomFilter logs_bloom_filter;
 };
 
+/// Finalize state after applying a "block" of transactions.
+///
+/// Applies block reward to coinbase and deletes empty touched accounts (post Spurious Dragon).
+void finalize(
+    State& state, evmc_revision rev, const address& coinbase, std::optional<uint64_t> block_reward);
+
 [[nodiscard]] std::variant<TransactionReceipt, std::error_code> transition(
     State& state, const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm);
 
