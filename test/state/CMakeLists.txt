@@ -13,6 +13,7 @@ target_sources(
     bloom_filter.cpp
     errors.hpp
     hash_utils.hpp
+    hash_utils.cpp
     host.hpp
     host.cpp
     mpt.hpp

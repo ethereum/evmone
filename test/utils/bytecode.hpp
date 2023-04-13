@@ -297,6 +297,16 @@ inline bytecode calldataload(bytecode index)
     return index + OP_CALLDATALOAD;
 }
 
+inline bytecode calldatasize()
+{
+    return OP_CALLDATASIZE;
+}
+
+inline bytecode calldatacopy(bytecode src, bytecode dst, bytecode size)
+{
+    return std::move(size) + std::move(dst) + std::move(src) + OP_CALLDATACOPY;
+}
+
 inline bytecode sstore(bytecode index, bytecode value)
 {
     return value + index + OP_SSTORE;
