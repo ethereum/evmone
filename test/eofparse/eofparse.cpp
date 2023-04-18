@@ -3,9 +3,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <evmc/evmc.hpp>
+#include "../statetest/statetest.hpp"
+#include <evmone/evmone.h>
 #include <evmone/eof.hpp>
 #include <iostream>
 #include <string>
+
+using namespace evmone;
+using namespace evmone::test;
 
 namespace
 {
@@ -35,8 +40,23 @@ std::optional<evmc::bytes> from_hex_skip_nonalnum(InputIterator begin, InputIter
 
 }  // namespace
 
-int main()
+int main(int argc, char* argv[])
 {
+    evmc_revision rev = EVMC_CANCUN;
+    if (argc == 3)
+    {
+        if (std::string_view{argv[1]} != "--fork")
+        {
+            std::cerr << "Usage: " << argv[0] << " [--fork <forkname>] < EOF1" << "\n";
+            return 1;
+        }
+        rev = evmone::test::to_rev(argv[2]);
+    } else if (argc != 1)
+    {
+        std::cerr << "Usage: " << argv[0] << " [--fork <forkname>] < EOF1" << "\n";
+        return 1;
+    }
+
     try
     {
         for (std::string line; std::getline(std::cin, line);)
@@ -52,7 +72,7 @@ int main()
             }
 
             const auto& eof = *o;
-            const auto err = evmone::validate_eof(EVMC_CANCUN, eof);
+            const auto err = evmone::validate_eof(rev, eof);
             if (err != evmone::EOFValidationError::success)
             {
                 std::cout << "err: " << evmone::get_error_message(err) << "\n";
@@ -60,14 +80,7 @@ int main()
             }
 
             const auto header = evmone::read_valid_eof1_header(eof);
-            std::cout << "OK ";
-            for (size_t i = 0; i < header.code_sizes.size(); ++i)
-            {
-                if (i != 0)
-                    std::cout << ",";
-                std::cout << evmc::hex(header.get_code(eof, i));
-            }
-            std::cout << "\n";
+            std::cout << "ok.\n";
         }
         return 0;
     }

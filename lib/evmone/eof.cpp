@@ -521,6 +521,9 @@ uint8_t get_eof_version(bytes_view container) noexcept
 
 EOFValidationError validate_eof(evmc_revision rev, bytes_view container) noexcept
 {
+    if (rev < EVMC_CANCUN)
+        return EOFValidationError::invalid_code;
+
     if (!is_eof_container(container))
         return EOFValidationError::invalid_prefix;
 
@@ -545,6 +548,8 @@ std::string_view get_error_message(EOFValidationError err) noexcept
 {
     switch (err)
     {
+    case EOFValidationError::invalid_code:
+        return "invalid_code";
     case EOFValidationError::success:
         return "success";
     case EOFValidationError::starts_with_format:

@@ -58,6 +58,7 @@ struct EOF1Header
 
 enum class EOFValidationError
 {
+    invalid_code,
     success,
     starts_with_format,
     invalid_prefix,
