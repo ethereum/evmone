@@ -3,5 +3,5 @@
 # SPDX-License-Identifier: Apache-2.0
 
 add_executable(evmone-eofparse eofparse.cpp)
-target_link_libraries(evmone-eofparse PRIVATE evmone)
+target_link_libraries(evmone-eofparse PRIVATE evmone evmone::statetestutils)
 target_include_directories(evmone-eofparse PRIVATE ${evmone_private_include_dir})

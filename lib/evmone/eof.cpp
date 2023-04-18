@@ -619,6 +619,9 @@ uint8_t get_eof_version(bytes_view container) noexcept
 
 EOFValidationError validate_eof(evmc_revision rev, bytes_view container) noexcept
 {
+    if (rev < EVMC_PRAGUE)
+        return EOFValidationError::invalid_code;
+
     if (!is_eof_container(container))
         return EOFValidationError::invalid_prefix;
 
@@ -626,9 +629,6 @@ EOFValidationError validate_eof(evmc_revision rev, bytes_view container) noexcep
 
     if (version == 1)
     {
-        if (rev < EVMC_PRAGUE)
-            return EOFValidationError::eof_version_unknown;
-
         const auto header_or_error = validate_eof1(rev, container);
         if (const auto* error = std::get_if<EOFValidationError>(&header_or_error))
             return *error;
@@ -645,8 +645,8 @@ std::string_view get_error_message(EOFValidationError err) noexcept
     {
     case EOFValidationError::success:
         return "success";
-    case EOFValidationError::starts_with_format:
-        return "starts_with_format";
+    case EOFValidationError::invalid_code:
+        return "invalid_code";
     case EOFValidationError::invalid_prefix:
         return "invalid_prefix";
     case EOFValidationError::eof_version_mismatch:
