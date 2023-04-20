@@ -6,6 +6,7 @@
 #include "../state/rlp.hpp"
 #include "../statetest/statetest.hpp"
 #include <evmone/evmone.h>
+#include <evmone/version.h>
 #include <nlohmann/json.hpp>
 #include <filesystem>
 #include <fstream>
@@ -39,7 +40,7 @@ int main(int argc, const char* argv[])
 
             if (arg == "-v")
             {
-                std::cout << "evmone-t8n " PROJECT_VERSION "\n";
+                std::cout << "evmone-t8n " EVMONE_VERSION "\n";
                 return 0;
             }
             if (arg == "--state.fork" && ++i < argc)

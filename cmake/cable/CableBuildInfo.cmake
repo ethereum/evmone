@@ -9,6 +9,9 @@
 #
 # CHANGELOG
 #
+# 1.0.1 - 2023-04-19
+# - Fix -Wstrict-prototypes warning in buildinfo source files.
+#
 # 1.0.0 - 2022-02-12
 
 include_guard(GLOBAL)

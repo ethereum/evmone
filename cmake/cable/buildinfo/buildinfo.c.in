@@ -7,7 +7,7 @@
 
 #include "buildinfo.h"
 
-const struct buildinfo* @FUNCTION_NAME@()
+const struct buildinfo* @FUNCTION_NAME@(void)
 {
     static const struct buildinfo buildinfo = {
         .project_name = "@PROJECT_NAME@",

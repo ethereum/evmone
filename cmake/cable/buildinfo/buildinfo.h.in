@@ -26,7 +26,7 @@ struct buildinfo
     const char* build_type;
 };
 
-const struct buildinfo* @FUNCTION_NAME@();
+const struct buildinfo* @FUNCTION_NAME@(void);
 
 #ifdef __cplusplus
 }
