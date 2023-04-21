@@ -170,9 +170,21 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
             from_json<uint64_t>(j.at("parentGasLimit")),
             from_json<uint64_t>(j.at("parentBaseFee")));
     }
+
+    std::vector<state::Withdrawal> withdrawals;
+    if (const auto withdrawals_it = j.find("withdrawals"); withdrawals_it != j.end())
+    {
+        for (const auto& withdrawal : *withdrawals_it)
+        {
+            withdrawals.push_back({from_json<evmc::address>(withdrawal.at("address")),
+                from_json<uint64_t>(withdrawal.at("amount"))});
+        }
+    }
+
     return {from_json<int64_t>(j.at("currentNumber")), from_json<int64_t>(j.at("currentTimestamp")),
         from_json<int64_t>(j.at("currentGasLimit")),
-        from_json<evmc::address>(j.at("currentCoinbase")), difficulty, base_fee};
+        from_json<evmc::address>(j.at("currentCoinbase")), difficulty, base_fee,
+        std::move(withdrawals)};
 }
 
 template <>

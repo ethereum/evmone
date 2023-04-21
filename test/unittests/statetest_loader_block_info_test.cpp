@@ -170,3 +170,43 @@ TEST(statetest_loader, block_info_0_random)
     EXPECT_EQ(bi.timestamp, 0);
     EXPECT_EQ(bi.number, 0);
 }
+
+TEST(statetest_loader, block_info_withdrawals)
+{
+    constexpr std::string_view input = R"({
+            "currentCoinbase": "0x1111111111111111111111111111111111111111",
+            "currentDifficulty": "0x0",
+            "currentGasLimit": "0x0",
+            "currentNumber": "0",
+            "currentTimestamp": "0",
+            "currentBaseFee": "7",
+            "currentRandom": "0x00",
+            "withdrawals": [
+                {
+                    "index": "0x0",
+                    "validatorIndex": "0x0",
+                    "address": "0x0000000000000000000000000000000000000100",
+                    "amount": "0x800000000"
+                },
+                {
+                    "index": "0x1",
+                    "validatorIndex": "0x1",
+                    "address": "0x0000000000000000000000000000000000000200",
+                    "amount": "0xffffffffffffffff"
+                }
+            ]
+        })";
+
+    const auto bi = test::from_json<state::BlockInfo>(json::json::parse(input));
+    EXPECT_EQ(bi.coinbase, 0x1111111111111111111111111111111111111111_address);
+    EXPECT_EQ(bi.prev_randao, 0x00_bytes32);
+    EXPECT_EQ(bi.gas_limit, 0x0);
+    EXPECT_EQ(bi.base_fee, 7);
+    EXPECT_EQ(bi.timestamp, 0);
+    EXPECT_EQ(bi.number, 0);
+    EXPECT_EQ(bi.withdrawals.size(), 2);
+    EXPECT_EQ(bi.withdrawals[0].recipient, 0x0000000000000000000000000000000000000100_address);
+    EXPECT_EQ(bi.withdrawals[0].get_amount(), intx::uint256{0x800000000} * 1'000'000'000);
+    EXPECT_EQ(bi.withdrawals[1].recipient, 0x0000000000000000000000000000000000000200_address);
+    EXPECT_EQ(bi.withdrawals[1].get_amount(), intx::uint256{0xffffffffffffffff} * 1'000'000'000);
+}
