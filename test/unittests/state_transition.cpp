@@ -22,7 +22,7 @@ void state_transition::TearDown()
     ASSERT_TRUE(holds_alternative<TransactionReceipt>(res))
         << std::get<std::error_code>(res).message();
     const auto& receipt = std::get<TransactionReceipt>(res);
-    evmone::state::finalize(state, rev, block.coinbase, 0);
+    evmone::state::finalize(state, rev, block.coinbase, 0, block.withdrawals);
 
     EXPECT_EQ(receipt.status, expect.status);
     if (expect.gas_used.has_value())

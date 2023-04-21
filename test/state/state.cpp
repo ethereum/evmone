@@ -117,8 +117,8 @@ evmc_message build_message(const Transaction& tx, int64_t execution_gas_limit) n
 }
 }  // namespace
 
-void finalize(
-    State& state, evmc_revision rev, const address& coinbase, std::optional<uint64_t> block_reward)
+void finalize(State& state, evmc_revision rev, const address& coinbase,
+    std::optional<uint64_t> block_reward, std::span<Withdrawal> withdrawals)
 {
     if (block_reward.has_value())
         state.touch(coinbase).balance += *block_reward;
@@ -131,6 +131,9 @@ void finalize(
                 return acc.erasable && acc.is_empty();
             });
     }
+
+    for (const auto& withdrawal : withdrawals)
+        state.touch(withdrawal.recipient).balance += withdrawal.get_amount();
 }
 
 std::variant<TransactionReceipt, std::error_code> transition(

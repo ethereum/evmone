@@ -66,6 +66,18 @@ public:
     [[nodiscard]] const auto& get_accounts() const noexcept { return m_accounts; }
 };
 
+struct Withdrawal
+{
+    address recipient;
+    uint64_t amount_in_gwei = 0;  ///< The amount is denominated in gwei.
+
+    /// Returns withdrawal amount in wei.
+    [[nodiscard]] intx::uint256 get_amount() const noexcept
+    {
+        return intx::uint256{amount_in_gwei} * 1'000'000'000;
+    }
+};
+
 struct BlockInfo
 {
     int64_t number = 0;
@@ -74,6 +86,7 @@ struct BlockInfo
     address coinbase;
     bytes32 prev_randao;
     uint64_t base_fee = 0;
+    std::vector<Withdrawal> withdrawals;
 };
 
 using AccessList = std::vector<std::pair<address, std::vector<bytes32>>>;
@@ -121,9 +134,10 @@ struct TransactionReceipt
 
 /// Finalize state after applying a "block" of transactions.
 ///
-/// Applies block reward to coinbase and deletes empty touched accounts (post Spurious Dragon).
-void finalize(
-    State& state, evmc_revision rev, const address& coinbase, std::optional<uint64_t> block_reward);
+/// Applies block reward to coinbase, withdrawals (post Shanghai) and deletes empty touched accounts
+/// (post Spurious Dragon).
+void finalize(State& state, evmc_revision rev, const address& coinbase,
+    std::optional<uint64_t> block_reward, std::span<Withdrawal> withdrawals);
 
 [[nodiscard]] std::variant<TransactionReceipt, std::error_code> transition(
     State& state, const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm);
