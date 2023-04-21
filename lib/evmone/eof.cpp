@@ -531,9 +531,6 @@ EOFValidationError validate_eof(evmc_revision rev, bytes_view container) noexcep
 
     if (version == 1)
     {
-        if (rev < EVMC_CANCUN)
-            return EOFValidationError::eof_version_unknown;
-
         const auto header_or_error = validate_eof1(rev, container);
         if (const auto* error = std::get_if<EOFValidationError>(&header_or_error))
             return *error;
