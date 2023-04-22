@@ -11,7 +11,7 @@ hunter_cmake_args(
 
 hunter_config(
     intx
-    VERSION 0.9.1
-    URL https://github.com/chfast/intx/archive/v0.9.1.tar.gz
-    SHA1 d9907860327b52ca5cba4048d1a0e8274c883584
+    VERSION 0.10.0
+    URL https://github.com/chfast/intx/archive/v0.10.0.tar.gz
+    SHA1 3a6ebe0b1a36527b6ef291ee93a8e508371e5b77
 )
