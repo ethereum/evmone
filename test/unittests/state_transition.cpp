@@ -42,20 +42,21 @@ void state_transition::TearDown()
             ASSERT_NE(acc, nullptr) << "account " << addr << " should exist";
             if (expected_acc.nonce.has_value())
             {
-                EXPECT_EQ(acc->nonce, *expected_acc.nonce);
+                EXPECT_EQ(acc->nonce, *expected_acc.nonce) << "account " << addr;
             }
             if (expected_acc.balance.has_value())
             {
                 EXPECT_EQ(acc->balance, *expected_acc.balance)
-                    << to_string(acc->balance) << " vs " << to_string(*expected_acc.balance);
+                    << to_string(acc->balance) << " vs " << to_string(*expected_acc.balance)
+                    << " account " << addr;
             }
             if (expected_acc.code.has_value())
             {
-                EXPECT_EQ(acc->code, *expected_acc.code);
+                EXPECT_EQ(acc->code, *expected_acc.code) << "account " << addr;
             }
             for (const auto& [key, value] : expected_acc.storage)
             {
-                EXPECT_EQ(acc->storage[key].current, value);
+                EXPECT_EQ(acc->storage[key].current, value) << "account " << addr;
             }
             for (const auto& [key, value] : acc->storage)
             {
