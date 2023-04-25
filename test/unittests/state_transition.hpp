@@ -22,8 +22,8 @@ class state_transition : public testing::Test
 {
 protected:
     /// The default sender address of the test transaction.
-    /// Private key: 0xa45355879.
-    static constexpr auto Sender = 0xe100DeB58f38F7fd62d14E37e2Fe9ce019Aa001e_address;
+    /// Private key: 0x2b1263d2b.
+    static constexpr auto Sender = 0xe100713FC15400D1e94096a545879E7c6407001e_address;
 
     /// The default destination address of the test transaction.
     static constexpr auto To = 0xc0de_address;

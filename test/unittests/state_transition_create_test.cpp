@@ -26,7 +26,7 @@ TEST_F(state_transition, create2_factory)
 
 TEST_F(state_transition, create_tx)
 {
-    static constexpr auto create_address = 0x8ef300b6a6a0b41e4f5d717074d9fd5c605c7285_address;
+    static constexpr auto create_address = 0x3442a1dec1e72f337007125aa67221498cdd759d_address;
 
     tx.data = mstore8(0, push(0xFE)) + ret(0, 1);
 
