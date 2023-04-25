@@ -56,7 +56,7 @@ void state_transition::TearDown()
             }
             for (const auto& [key, value] : expected_acc.storage)
             {
-                EXPECT_EQ(acc->storage[key].current, value) << "account " << addr;
+                EXPECT_EQ(acc->storage[key].current, value) << "account " << addr << " key " << key;
             }
             for (const auto& [key, value] : acc->storage)
             {
