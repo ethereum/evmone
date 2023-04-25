@@ -17,11 +17,12 @@ TEST(eof, is_eof_container)
     EXPECT_FALSE(is_eof_container("EFFF"_hex));
     EXPECT_FALSE(is_eof_container("00"_hex));
     EXPECT_FALSE(is_eof_container("FE"_hex));
+    EXPECT_FALSE(is_eof_container("EF00"_hex));
+    EXPECT_FALSE(is_eof_container("EF00 01 010004 0200010001 00"_hex));
+    EXPECT_FALSE(is_eof_container("EF00 02 ABCFEF"_hex));
 
-    EXPECT_TRUE(is_eof_container("EF00"_hex));
     EXPECT_TRUE(is_eof_container("EF00 01 010004 0200010001 00 00000000 00"_hex));
     EXPECT_TRUE(is_eof_container("EF00 01 010004 0200010001 030004 00 00000000 00 AABBCCDD"_hex));
-    EXPECT_TRUE(is_eof_container("EF00 02 ABCFEF"_hex));
 }
 
 TEST(eof, read_valid_eof1_header)

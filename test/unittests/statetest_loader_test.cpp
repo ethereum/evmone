@@ -133,7 +133,7 @@ TEST(statetest_loader, validate_deployed_code_test)
         EXPECT_THAT([&] { validate_deployed_code(state, EVMC_CANCUN); },
             ThrowsMessage<std::invalid_argument>(
                 "EOF container at 0x000000000000000000000000000000000000add4 is invalid: "
-                "zero_section_size"));
+                "invalid format"));
     }
 
     {

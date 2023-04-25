@@ -376,9 +376,9 @@ void validate_deployed_code(const state::State& state, evmc_revision rev)
 {
     for (const auto& [addr, acc] : state.get_accounts())
     {
-        if (is_eof_container(acc.code))
+        if (rev >= EVMC_CANCUN)
         {
-            if (rev >= EVMC_CANCUN)
+            if (is_eof_container(acc.code))
             {
                 if (const auto result = validate_eof(rev, acc.code);
                     result != EOFValidationError::success)
@@ -390,9 +390,15 @@ void validate_deployed_code(const state::State& state, evmc_revision rev)
             }
             else
             {
-                throw std::invalid_argument("code at " + hex0x(addr) + " starts with 0xEF00 in " +
-                                            evmc_revision_to_string(rev));
+                    throw std::invalid_argument(
+                        "EOF container at " + hex0x(addr) +
+                        " is invalid: invalid format");
             }
+        }
+        else
+        {
+            throw std::invalid_argument("code at " + hex0x(addr) + " starts with 0xEF00 in " +
+                                        evmc_revision_to_string(rev));
         }
     }
 }
