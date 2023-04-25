@@ -271,7 +271,7 @@ int64_t dispatch(const CostTable& cost_table, ExecutionState& state, int64_t gas
             return gas;
         }
     }
-    INTX_UNREACHABLE();
+    intx::unreachable();
 }
 
 #if EVMONE_CGOTO_SUPPORTED

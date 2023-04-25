@@ -92,12 +92,10 @@ public:
     void grow(size_t new_size) noexcept
     {
         // Restriction for future changes. EVM always has memory size as multiple of 32 bytes.
-        assert(new_size % 32 == 0);
+        INTX_REQUIRE(new_size % 32 == 0);
 
         // Allow only growing memory. Include hint for optimizing compiler.
-        assert(new_size > m_size);
-        if (new_size <= m_size)
-            INTX_UNREACHABLE();  // TODO: NOLINT(misc-static-assert)
+        INTX_REQUIRE(new_size > m_size);
 
         if (new_size > m_capacity)
         {
