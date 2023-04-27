@@ -61,8 +61,6 @@ int main(int argc, char* argv[])
     // The default test filter. To enable all tests use `--gtest_filter=*`.
     testing::FLAGS_gtest_filter =
         "-"
-        // Unsupported or broken EIP implementations:
-        "EIPTests/stEOF/*.*:"  // EOF implementation is broken
         // Slow tests:
         "stCreateTest.CreateOOGafterMaxCodesize:"      // pass
         "stQuadraticComplexityTest.Call50000_sha256:"  // pass
