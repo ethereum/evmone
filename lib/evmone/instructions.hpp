@@ -811,7 +811,9 @@ inline code_iterator push(StackTop stack, ExecutionState& /*state*/, code_iterat
     constexpr auto num_full_words = Len / sizeof(uint64_t);
     constexpr auto num_partial_bytes = Len % sizeof(uint64_t);
     auto data = pos + 1;
-    uint256 r;
+
+    stack.push(0);
+    auto& r = stack.top();
 
     // Load top partial word.
     if constexpr (num_partial_bytes != 0)
@@ -827,7 +829,6 @@ inline code_iterator push(StackTop stack, ExecutionState& /*state*/, code_iterat
         data += sizeof(uint64_t);
     }
 
-    stack.push(r);
     return pos + (Len + 1);
 }
 
