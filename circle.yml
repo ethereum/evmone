@@ -414,7 +414,7 @@ jobs:
       - build_silkworm:
           commit: 30ca8b324fcffb574c23c09fcba6386e57a7a5af
       - download_execution_tests:
-          rev: v11.3
+          rev: v12.2
       - run:
           name: "Silkworm-driven blockchain tests (Advanced)"
           working_directory: ~/build
@@ -437,11 +437,13 @@ jobs:
     steps:
       - build
       - download_execution_tests:
-          commit: v11.3
+          rev: v12.2
       - run:
           name: "State tests"
           working_directory: ~/build
-          command: EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json bin/evmone-statetest ~/tests/GeneralStateTests ~/tests/LegacyTests/Constantinople/GeneralStateTests
+          command: |
+            export EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json 
+            bin/evmone-statetest ~/tests/GeneralStateTests ~/tests/EIPTests/StateTests/stEOF ~/tests/LegacyTests/Constantinople/GeneralStateTests
       - collect_coverage_gcc
       - upload_coverage:
           flags: statetests
