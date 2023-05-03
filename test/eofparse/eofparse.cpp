@@ -43,22 +43,23 @@ std::optional<evmc::bytes> from_hex_skip_nonalnum(InputIterator begin, InputIter
 int main(int argc, char* argv[])
 {
     evmc_revision rev = EVMC_CANCUN;
-    if (argc == 3)
+
+    try
     {
-        if (std::string_view{argv[1]} != "--fork")
+        if (argc == 3)
+        {
+            if (std::string_view{argv[1]} != "--fork")
+            {
+                std::cerr << "Usage: " << argv[0] << " [--fork <forkname>] < EOF1" << "\n";
+                return 1;
+            }
+            rev = evmone::test::to_rev(argv[2]);
+        } else if (argc != 1)
         {
             std::cerr << "Usage: " << argv[0] << " [--fork <forkname>] < EOF1" << "\n";
             return 1;
         }
-        rev = evmone::test::to_rev(argv[2]);
-    } else if (argc != 1)
-    {
-        std::cerr << "Usage: " << argv[0] << " [--fork <forkname>] < EOF1" << "\n";
-        return 1;
-    }
 
-    try
-    {
         for (std::string line; std::getline(std::cin, line);)
         {
             if (line.empty() || line.starts_with('#'))
