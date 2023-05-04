@@ -295,10 +295,10 @@
     ON_OPCODE_IDENTIFIER(OP_CREATE2, create2)               \
     ON_OPCODE_UNDEFINED(0xf6)                               \
     ON_OPCODE_IDENTIFIER(OP_RETURNDATALOAD, returndataload) \
-    ON_OPCODE_UNDEFINED(0xf8)                               \
-    ON_OPCODE_UNDEFINED(0xf9)                               \
+    ON_OPCODE_IDENTIFIER(OP_CALL2, call2)                   \
+    ON_OPCODE_IDENTIFIER(OP_DELEGATECALL2, delegatecall2)   \
     ON_OPCODE_IDENTIFIER(OP_STATICCALL, staticcall)         \
-    ON_OPCODE_UNDEFINED(0xfb)                               \
+    ON_OPCODE_IDENTIFIER(OP_STATICCALL2, staticcall2)       \
     ON_OPCODE_UNDEFINED(0xfc)                               \
     ON_OPCODE_IDENTIFIER(OP_REVERT, revert)                 \
     ON_OPCODE_IDENTIFIER(OP_INVALID, invalid)               \

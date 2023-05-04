@@ -133,6 +133,94 @@ template Result call_impl<OP_DELEGATECALL>(
 template Result call_impl<OP_CALLCODE>(
     StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;
 
+template <Opcode Op>
+Result newcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
+{
+    static_assert(Op == OP_CALL2 || Op == OP_DELEGATECALL2 || Op == OP_STATICCALL2);
+
+    const auto dst = intx::be::trunc<evmc::address>(stack.pop());
+    const auto input_offset_u256 = stack.pop();
+    const auto input_size_u256 = stack.pop();
+    const auto value = (Op == OP_STATICCALL || Op == OP_DELEGATECALL) ? 0 : stack.pop();
+    const auto has_value = value != 0;
+
+    stack.push(0);  // Assume failure.
+    state.return_data.clear();
+
+    if (state.host.access_account(dst) == EVMC_ACCESS_COLD)
+    {
+        if ((gas_left -= instr::additional_cold_account_access_cost) < 0)
+            return {EVMC_OUT_OF_GAS, gas_left};
+    }
+
+    if (!check_memory(gas_left, state.memory, input_offset_u256, input_size_u256))
+        return {EVMC_OUT_OF_GAS, gas_left};
+
+    const auto input_offset = static_cast<size_t>(input_offset_u256);
+    const auto input_size = static_cast<size_t>(input_size_u256);
+
+    auto msg = evmc_message{};
+    msg.kind = (Op == OP_DELEGATECALL2) ? EVMC_DELEGATECALL : EVMC_CALL;
+    msg.flags = (Op == OP_STATICCALL2) ? uint32_t{EVMC_STATIC} : state.msg->flags;
+    msg.depth = state.msg->depth + 1;
+    msg.recipient = (Op != OP_DELEGATECALL2) ? dst : state.msg->recipient;
+    msg.code_address = dst;
+    msg.sender = (Op == OP_DELEGATECALL2) ? state.msg->sender : state.msg->recipient;
+    msg.value =
+        (Op == OP_DELEGATECALL2) ? state.msg->value : intx::be::store<evmc::uint256be>(value);
+
+    if (input_size > 0)
+    {
+        // input_offset may be garbage if input_size == 0.
+        msg.input_data = &state.memory[input_offset];
+        msg.input_size = input_size;
+    }
+
+    auto cost = has_value ? 9000 : 0;
+
+    if constexpr (Op == OP_CALL2)
+    {
+        if (has_value && state.in_static_mode())
+            return {EVMC_STATIC_MODE_VIOLATION, gas_left};
+
+        if (has_value && !state.host.account_exists(dst))
+            cost += 25000;
+    }
+
+    if ((gas_left -= cost) < 0)
+        return {EVMC_OUT_OF_GAS, gas_left};
+
+    msg.gas = std::numeric_limits<int64_t>::max();
+    msg.gas = std::min(msg.gas, gas_left - gas_left / 64);
+
+    if (has_value)
+    {
+        msg.gas += 2300;  // Add stipend.
+        gas_left += 2300;
+    }
+
+    if (state.msg->depth >= 1024)
+        return {EVMC_SUCCESS, gas_left};  // "Light" failure.
+
+    if (has_value && intx::be::load<uint256>(state.host.get_balance(state.msg->recipient)) < value)
+        return {EVMC_SUCCESS, gas_left};  // "Light" failure.
+
+    const auto result = state.host.call(msg);
+    state.return_data.assign(result.output_data, result.output_size);
+    stack.top() = result.status_code == EVMC_SUCCESS;  // TODO: support revert here
+
+    const auto gas_used = msg.gas - result.gas_left;
+    gas_left -= gas_used;
+    state.gas_refund += result.gas_refund;
+    return {EVMC_SUCCESS, gas_left};
+}
+
+template Result newcall_impl<OP_CALL2>(
+    StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;
+template Result newcall_impl<OP_STATICCALL2>(
+    StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;
+template Result newcall_impl<OP_DELEGATECALL2>(
+    StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;
 
 template <Opcode Op>
 Result create_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept

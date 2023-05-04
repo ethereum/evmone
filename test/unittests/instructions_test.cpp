@@ -126,6 +126,9 @@ constexpr bool instruction_only_in_evmone(evmc_revision rev, Opcode op) noexcept
     case OP_RETURNDATALOAD:
     case OP_TLOAD:
     case OP_TSTORE:
+    case OP_CALL2:
+    case OP_DELEGATECALL2:
+    case OP_STATICCALL2:
         return true;
     default:
         return false;
