@@ -24,7 +24,7 @@ constexpr uint8_t MAGIC[] = {0xef, 0x00};
 constexpr uint8_t TERMINATOR = 0x00;
 constexpr uint8_t TYPE_SECTION = 0x01;
 constexpr uint8_t CODE_SECTION = 0x02;
-constexpr uint8_t DATA_SECTION = 0x03;
+constexpr uint8_t DATA_SECTION = 0x04;
 constexpr uint8_t MAX_SECTION = DATA_SECTION;
 constexpr auto CODE_SECTION_NUMBER_LIMIT = 1024;
 constexpr auto MAX_STACK_HEIGHT = 0x03FF;
@@ -565,6 +565,8 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "type_section_missing";
     case EOFValidationError::code_section_missing:
         return "code_section_missing";
+    case EOFValidationError::unknown_section_id:
+        return "unknown_section_id";
     case EOFValidationError::data_section_missing:
         return "data_section_missing";
     case EOFValidationError::zero_section_size:

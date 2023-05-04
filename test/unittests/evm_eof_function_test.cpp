@@ -15,7 +15,7 @@ TEST_P(evm, eof_function_example1)
 
     rev = EVMC_CANCUN;
     const auto code =
-        "EF00 01 010008 020002 000f 0002 030000 00"
+        "EF00 01 010008 020002 000f 0002 040000 00"
         "00000002 02010002"
         "6001 6008 b00001 " +
         ret_top() + "03b1";
@@ -35,7 +35,7 @@ TEST_P(evm, eof_function_example2)
 
     rev = EVMC_CANCUN;
     const auto code =
-        "ef0001 01000c 020003 003b 0017 001d 030000 00 00000004 01010003 01010004"
+        "ef0001 01000c 020003 003b 0017 001d 040000 00 00000004 01010003 01010004"
         "60043560003560e01c63c766526781145d001c63c6c2ea1781145d00065050600080fd50b00002600052602060"
         "00f350b0000160005260206000f3"
         "600181115d0004506001b160018103b0000181029050b1"
@@ -65,7 +65,7 @@ TEST_P(evm, callf_stack_size_1024)
         return;
 
     rev = EVMC_CANCUN;
-    const auto code = bytecode{"ef0001 010008 020002 0BFF 0004 030000 00 000003FF 00000001"_hex} +
+    const auto code = bytecode{"ef0001 010008 020002 0BFF 0004 040000 00 000003FF 00000001"_hex} +
                       1023 * push(1) + OP_CALLF + bytecode{"0x0001"_hex} + 1021 * OP_POP +
                       OP_RETURN + push(1) + OP_POP + OP_RETF;
 
@@ -82,7 +82,7 @@ TEST_P(evm, callf_stack_overflow)
 
     rev = EVMC_CANCUN;
     const auto code =
-        bytecode{"ef0001 010008 020002 0BFF 0007 030000 00 000003FF 00000002"_hex} +  // EOF header
+        bytecode{"ef0001 010008 020002 0BFF 0007 040000 00 000003FF 00000002"_hex} +  // EOF header
         1023 * push(1) + OP_CALLF + bytecode{"0x0001"_hex} + 1021 * OP_POP + OP_RETURN +
         2 * push(1) + 2 * OP_POP + OP_RETF;
 
@@ -98,7 +98,7 @@ TEST_P(evm, callf_call_stack_size_1024)
         return;
 
     rev = EVMC_CANCUN;
-    const auto code = bytecode{"ef0001 010008 020002 0007 000e 030000 00 00000001 01000002"_hex} +
+    const auto code = bytecode{"ef0001 010008 020002 0007 000e 040000 00 00000001 01000002"_hex} +
                       push(1023) + OP_CALLF + bytecode{"0x0001"_hex} + OP_STOP + OP_DUP1 +
                       OP_RJUMPI + bytecode{"0x0002"_hex} + OP_POP + OP_RETF + push(1) + OP_SWAP1 +
                       OP_SUB + OP_CALLF + bytecode{"0x0001"_hex} + OP_RETF;
@@ -115,7 +115,7 @@ TEST_P(evm, callf_call_stack_size_1025)
         return;
 
     rev = EVMC_CANCUN;
-    const auto code = bytecode{"ef0001 010008 020002 0007 000e 030000 00 00000001 01000002"_hex} +
+    const auto code = bytecode{"ef0001 010008 020002 0007 000e 040000 00 00000001 01000002"_hex} +
                       push(1024) + OP_CALLF + bytecode{"0x0001"_hex} + OP_STOP + OP_DUP1 +
                       OP_RJUMPI + bytecode{"0x0002"_hex} + OP_POP + OP_RETF + push(1) + OP_SWAP1 +
                       OP_SUB + OP_CALLF + bytecode{"0x0001"_hex} + OP_RETF;

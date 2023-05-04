@@ -96,7 +96,7 @@ inline bytecode eof_header(
     bytecode out{bytes{0xEF, 0x00, version}};
     out += "01" + big_endian(uint16_t{4});  // type header
     out += "02"_hex + big_endian(uint16_t{1}) + big_endian(code_size);
-    out += "03" + big_endian(data_size);
+    out += "04" + big_endian(data_size);
     out += "00";
     out += "0000"_hex + big_endian(max_stack_height);  // type section
     return out;
