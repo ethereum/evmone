@@ -69,7 +69,6 @@ enum class EOFValidationError
     header_terminator_missing,
     type_section_missing,
     code_section_missing,
-    unknown_section_id,
     data_section_missing,
     zero_section_size,
     section_headers_not_terminated,
