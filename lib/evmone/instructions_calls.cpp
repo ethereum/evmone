@@ -207,7 +207,18 @@ Result newcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
 
     const auto result = state.host.call(msg);
     state.return_data.assign(result.output_data, result.output_size);
-    stack.top() = result.status_code == EVMC_SUCCESS;  // TODO: support revert here
+    if (result.status_code == EVMC_SUCCESS)
+    {
+        stack.top() = 0;
+    }
+    else if (result.status_code == EVMC_REVERT)
+    {
+        stack.top() = 1;
+    }
+    else
+    {
+        stack.top() = 2;
+    }
 
     const auto gas_used = msg.gas - result.gas_left;
     gas_left -= gas_used;
