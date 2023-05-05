@@ -2,10 +2,10 @@
 // Copyright 2023 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-#include <evmc/evmc.hpp>
 #include "../statetest/statetest.hpp"
-#include <evmone/evmone.h>
+#include <evmc/evmc.hpp>
 #include <evmone/eof.hpp>
+#include <evmone/evmone.h>
 #include <iostream>
 #include <string>
 
@@ -50,13 +50,14 @@ int main(int argc, char* argv[])
         {
             if (std::string_view{argv[1]} != "--fork")
             {
-                std::cerr << "Usage: " << argv[0] << " [--fork <forkname>] < EOF1" << "\n";
+                std::cerr << "Usage: " << argv[0] << " [--fork <forkname>] < EOF1\n";
                 return 1;
             }
             rev = evmone::test::to_rev(argv[2]);
-        } else if (argc != 1)
+        }
+        else if (argc != 1)
         {
-            std::cerr << "Usage: " << argv[0] << " [--fork <forkname>] < EOF1" << "\n";
+            std::cerr << "Usage: " << argv[0] << " [--fork <forkname>] < EOF1\n";
             return 1;
         }
 
