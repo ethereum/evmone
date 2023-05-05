@@ -66,10 +66,10 @@ TEST(eof_validation, validate_EOF_version)
         EOFValidationError::eof_version_unknown);
 }
 
-TEST(eof_validation, valid_EOF1_code_pre_shanghai)
+TEST(eof_validation, valid_EOF1_code_pre_cancun)
 {
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 00 00000000 FE", EVMC_PARIS),
-        EOFValidationError::eof_version_unknown);
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 00 00000000 FE", EVMC_SHANGHAI),
+        EOFValidationError::invalid_code);
 }
 
 TEST(eof_validation, minimal_valid_EOF1_code)
