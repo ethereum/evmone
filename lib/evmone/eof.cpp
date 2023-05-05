@@ -28,6 +28,7 @@ constexpr uint8_t DATA_SECTION = 0x03;
 constexpr uint8_t MAX_SECTION = DATA_SECTION;
 constexpr auto CODE_SECTION_NUMBER_LIMIT = 1024;
 constexpr auto MAX_STACK_HEIGHT = 0x03FF;
+constexpr auto STACK_LIMIT = 0x400;
 constexpr auto OUTPUTS_INPUTS_NUMBER_LIMIT = 0x7F;
 constexpr auto REL_OFFSET_SIZE = sizeof(int16_t);
 
@@ -322,6 +323,9 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
             if (fid >= code_types.size())
                 return EOFValidationError::invalid_code_section_index;
 
+            if (stack_heights[i] + code_types[fid].max_stack_height > STACK_LIMIT)
+                return EOFValidationError::stack_overflow;
+
             stack_height_required = static_cast<int8_t>(code_types[fid].inputs);
             stack_height_change =
                 static_cast<int8_t>(code_types[fid].outputs - stack_height_required);
@@ -605,6 +609,8 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "unreachable_instructions";
     case EOFValidationError::stack_underflow:
         return "stack_underflow";
+    case EOFValidationError::stack_overflow:
+        return "stack_overflow";
     case EOFValidationError::invalid_code_section_index:
         return "invalid_code_section_index";
     case EOFValidationError::impossible:

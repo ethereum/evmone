@@ -86,7 +86,7 @@ TEST_P(evm, callf_stack_overflow)
         1023 * push(1) + OP_CALLF + bytecode{"0x0001"_hex} + 1021 * OP_POP + OP_RETURN +
         2 * push(1) + 2 * OP_POP + OP_RETF;
 
-    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::success);
+    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::stack_overflow);
     execute(bytecode{code});
     EXPECT_STATUS(EVMC_STACK_OVERFLOW);
 }

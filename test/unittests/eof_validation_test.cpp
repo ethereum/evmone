@@ -731,6 +731,14 @@ TEST(eof_validation, callf_invalid_code_section_index)
         EOFValidationError::invalid_code_section_index);
 }
 
+TEST(eof_validation, callf_stack_overflow)
+{
+    auto code = "EF0001 010008 020002 0404 0008 030000 00 000003ff 00000003 6001" +
+                1022 * bytecode{"80"} + OP_CALLF + "0001" + OP_STOP + "60018080505050" + OP_RETF;
+
+    EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+}
+
 TEST(eof_validation, incomplete_section_size)
 {
     EXPECT_EQ(
