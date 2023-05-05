@@ -192,12 +192,6 @@ Result newcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
 
     msg.gas = gas_left - gas_left / 64;
 
-    if (has_value)
-    {
-        msg.gas += 2300;  // Add stipend.
-        gas_left += 2300;
-    }
-
     if (state.msg->depth >= 1024)
         return {EVMC_SUCCESS, gas_left};  // "Light" failure.
 
