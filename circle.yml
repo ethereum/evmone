@@ -5,30 +5,30 @@ orbs:
 executors:
   lint:
     docker:
-      - image: ethereum/cpp-build-env:19-lint
+      - image: ethereum/cpp-build-env:20-lint
     resource_class: small
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
   linux-gcc-latest:
     docker:
-      - image: ethereum/cpp-build-env:19-gcc-12
+      - image: ethereum/cpp-build-env:20-gcc-13
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 4
   linux-gcc-multilib:
     docker:
-      - image: ethereum/cpp-build-env:19-gcc-12-multilib
+      - image: ethereum/cpp-build-env:20-gcc-13-multilib
     resource_class: small
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
   blockchain-tests:
     docker:
-      - image: ethereum/cpp-build-env:19-gcc-12
+      - image: ethereum/cpp-build-env:20-gcc-13
     resource_class: xlarge
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 8
   linux-clang-xlarge:
     docker:
-      - image: ethereum/cpp-build-env:19-clang-15
+      - image: ethereum/cpp-build-env:20-clang-16
     resource_class: xlarge
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 8
@@ -40,7 +40,7 @@ executors:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
   linux-clang-latest:
     docker:
-      - image: ethereum/cpp-build-env:19-clang-15
+      - image: ethereum/cpp-build-env:20-clang-16
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 4
   linux-clang-min:
@@ -109,10 +109,6 @@ commands:
             else
               echo 'export SILKWORM_BUILD=true' >> $BASH_ENV
             fi
-      - run:
-          name: "Install build dependencies"
-          command: |
-            sudo apt-get -q update && sudo apt-get -qy install --no-install-recommends binutils m4 texinfo
       - run:
           name: "Checkout Silkworm"
           working_directory: ~/silkworm/src
@@ -239,10 +235,7 @@ commands:
       - run:
           name: "Install codecov"
           command: |
-            # TODO: This should go to cpp-build-env image
-            gpg --no-default-keyring --keyring trustedkeys.gpg --keyserver keyserver.ubuntu.com --recv-key ED779869
-            
-            export CODECOV_VERSION=v0.4.1
+            export CODECOV_VERSION=v0.5.0
             curl -Os https://uploader.codecov.io/$CODECOV_VERSION/linux/codecov
             curl -Os https://uploader.codecov.io/$CODECOV_VERSION/linux/codecov.SHA256SUM
             curl -Os https://uploader.codecov.io/$CODECOV_VERSION/linux/codecov.SHA256SUM.sig
@@ -482,9 +475,6 @@ jobs:
       - build
       - test
       - run:
-          name: "Install valgrind"
-          command: sudo apt-get -q update && sudo apt-get -qy install --no-install-recommends valgrind
-      - run:
           name: "memcheck"
           working_directory: ~/build
           command: valgrind --vgdb=no --error-exitcode=99 bin/evmone-unittests
@@ -590,9 +580,6 @@ jobs:
       BUILD_TYPE: Release
       QEMU_CPU: core2duo  # The lowest 64-bit CPU I could find, but qemu64 should be good too.
     steps:
-      - run:
-          name: "Install qemu"
-          command: sudo apt update -y && sudo apt install -y qemu-user-static
       - build
       - run:
           name: "Check evmone.so"
