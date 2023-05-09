@@ -73,6 +73,35 @@ Point bn254_add(const Point& pt1, const Point& pt2) noexcept
     return {x3, y3};
 }
 
+Point bn254_mul(const Point& pt, const uint256& s) noexcept
+{
+    if (is_at_infinity(pt))
+        return pt;
+
+    if (s == 0)
+        return {0, 0};
+
+    Point r0 = {0, 0};
+    Point r1 = pt;
+
+    for (int16_t i = 255; i >= 0; --i)
+    {
+        const uint256 d = s & (uint256{1} << i);
+        if(d == 0)
+        {
+            r1 = bn254_add(r0, r1);
+            r0 = bn254_add(r0, r0);
+        }
+        else
+        {
+            r0 = bn254_add(r0, r1);
+            r1 = bn254_add(r1, r1);
+        }
+    }
+
+    return r0;
+}
+
 bool bn254_add_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept
 {
     uint8_t input_padded[128]{};
