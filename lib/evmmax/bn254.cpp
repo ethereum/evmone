@@ -77,7 +77,7 @@ Point bn254_add(const Point& pt1, const Point& pt2, bool convert_to_mont) noexce
     x3 = s.mul(x3, z3_inv);
     y3 = s.mul(y3, z3_inv);
 
-    if(convert_to_mont)
+    if (convert_to_mont)
     {
         x3 = s.from_mont(x3);
         y3 = s.from_mont(y3);
@@ -102,7 +102,7 @@ Point bn254_mul(const Point& pt, const uint256& s) noexcept
     for (int16_t i = 255; i >= 0; --i)
     {
         const uint256 d = s & (uint256{1} << i);
-        if(d == 0)
+        if (d == 0)
         {
             r1 = bn254_add(r0, r1, false);
             r0 = bn254_add(r0, r0, false);
