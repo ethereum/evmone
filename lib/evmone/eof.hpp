@@ -104,6 +104,9 @@ enum class EOFValidationError
 /// Returns the error message corresponding to an error code.
 [[nodiscard]] EVMC_EXPORT std::string_view get_error_message(EOFValidationError err) noexcept;
 
+/// Output operator for EOFValidationError.
+EVMC_EXPORT std::ostream& operator<<(std::ostream& os, EOFValidationError err) noexcept;
+
 /// Loads big endian int16_t from data. Unsafe.
 /// TODO: Move it to intx
 inline int16_t read_int16_be(auto it) noexcept

@@ -11,6 +11,7 @@
 #include <cassert>
 #include <limits>
 #include <numeric>
+#include <ostream>
 #include <span>
 #include <stack>
 #include <variant>
@@ -609,5 +610,11 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "impossible";
     }
     return "<unknown>";
+}
+
+std::ostream& operator<<(std::ostream& os, EOFValidationError err) noexcept
+{
+    os << get_error_message(err);
+    return os;
 }
 }  // namespace evmone
