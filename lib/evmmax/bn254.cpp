@@ -18,7 +18,7 @@ bool validate(const Point& pt) noexcept
     return y2 == x3_3;
 }
 
-Point bn254_add(const Point& pt1, const Point& pt2) noexcept
+Point bn254_add(const Point& pt1, const Point& pt2, bool convert_to_mont) noexcept
 {
     if (is_at_infinity(pt1))
         return pt2;
@@ -32,11 +32,20 @@ Point bn254_add(const Point& pt1, const Point& pt2) noexcept
 
     auto b3 = s.to_mont(9);
 
-    auto x1 = s.to_mont(pt1.x);
-    auto y1 = s.to_mont(pt1.y);
+    auto x1 = pt1.x;
+    auto y1 = pt1.y;
 
-    auto x2 = s.to_mont(pt2.x);
-    auto y2 = s.to_mont(pt2.y);
+    auto x2 = pt2.x;
+    auto y2 = pt2.y;
+
+    if (convert_to_mont)
+    {
+        x1 = s.to_mont(pt1.x);
+        y1 = s.to_mont(pt1.y);
+
+        x2 = s.to_mont(pt2.x);
+        y2 = s.to_mont(pt2.y);
+    }
 
     uint256 x3, y3, z3, t0, t1, t3, t4, t5;
 
@@ -67,8 +76,12 @@ Point bn254_add(const Point& pt1, const Point& pt2) noexcept
     auto z3_inv = inv(s, z3);
     x3 = s.mul(x3, z3_inv);
     y3 = s.mul(y3, z3_inv);
-    x3 = s.from_mont(x3);
-    y3 = s.from_mont(y3);
+
+    if(convert_to_mont)
+    {
+        x3 = s.from_mont(x3);
+        y3 = s.from_mont(y3);
+    }
 
     return {x3, y3};
 }
@@ -81,25 +94,27 @@ Point bn254_mul(const Point& pt, const uint256& s) noexcept
     if (s == 0)
         return {0, 0};
 
-    Point r0 = {0, 0};
-    Point r1 = pt;
+    const evmmax::ModArith sm{BN254Mod};
+
+    Point r0 = {sm.to_mont(0), sm.to_mont(0)};
+    Point r1 = {sm.to_mont(pt.x), sm.to_mont(pt.y)};
 
     for (int16_t i = 255; i >= 0; --i)
     {
         const uint256 d = s & (uint256{1} << i);
         if(d == 0)
         {
-            r1 = bn254_add(r0, r1);
-            r0 = bn254_add(r0, r0);
+            r1 = bn254_add(r0, r1, false);
+            r0 = bn254_add(r0, r0, false);
         }
         else
         {
-            r0 = bn254_add(r0, r1);
-            r1 = bn254_add(r1, r1);
+            r0 = bn254_add(r0, r1, false);
+            r1 = bn254_add(r1, r1, false);
         }
     }
 
-    return r0;
+    return {sm.from_mont(r0.x), sm.from_mont(r0.y)};
 }
 
 bool bn254_add_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept
@@ -118,6 +133,24 @@ bool bn254_add_precompile(const uint8_t* input, size_t input_size, uint8_t* outp
     const auto s = bn254_add(a, b);
     be::unsafe::store(output, s.x);
     be::unsafe::store(output + 32, s.y);
+    return true;
+}
+
+bool bn254_mul_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept
+{
+    uint8_t input_padded[128]{};
+    std::copy_n(input, std::min(input_size, sizeof(input_padded)), input_padded);
+
+    const Point a{
+        be::unsafe::load<uint256>(&input_padded[0]), be::unsafe::load<uint256>(&input_padded[32])};
+    const auto s = be::unsafe::load<uint256>(&input_padded[64]);
+
+    if (!validate(a))
+        return false;
+
+    const auto r = bn254_mul(a, s);
+    be::unsafe::store(output, r.x);
+    be::unsafe::store(output + 32, r.y);
     return true;
 }
 
