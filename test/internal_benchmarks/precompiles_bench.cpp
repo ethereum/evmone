@@ -27,5 +27,27 @@ void bn254_add(benchmark::State& state)
         benchmark::Counter(static_cast<double>(total_gas_used), benchmark::Counter::kIsRate);
 }
 
+template <decltype(evmmax::bn254::bn254_mul_precompile) Fn>
+void bn254_mul(benchmark::State& state)
+{
+    const auto input = evmc::from_hex(
+        "0f25929bcb43d5a57391564615c9e70a992b10eafa4db109709649cf48c50dd216da2f5cb6be7a0aa72c440c53"
+        "c9bbdfec6c36c7d515536431b3a865468acbba0000000000000000000000000000000000000000000000000000"
+        "000000000003")
+                       .value();
+    uint8_t output[64];
+
+    uint64_t total_gas_used = 0;
+    for (auto _ : state)
+    {
+        Fn(input.data(), input.size(), output);
+        total_gas_used += 6000;
+    }
+
+    state.counters["gas_rate"] =
+        benchmark::Counter(static_cast<double>(total_gas_used), benchmark::Counter::kIsRate);
+}
+
 // BENCHMARK_TEMPLATE(bn254_add, evmone::state::silkpre_ecadd_execute);
 BENCHMARK_TEMPLATE(bn254_add, evmmax::bn254::bn254_add_precompile);
+BENCHMARK_TEMPLATE(bn254_mul, evmmax::bn254::bn254_mul_precompile);
