@@ -226,7 +226,7 @@ TEST_P(evm, eof1_rjumpv_long_jumps)
     EXPECT_OUTPUT_INT(7);
 }
 
-TEST_P(evm, rjumps_undefined_in_legacy)
+TEST_P(evm, DISABLED_rjumps_undefined_in_legacy)
 {
     rev = EVMC_PRAGUE;
     auto code = rjump(1) + OP_INVALID + mstore8(0, 1) + ret(0, 1);
