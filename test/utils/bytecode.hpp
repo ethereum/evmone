@@ -234,6 +234,11 @@ inline bytecode mstore8(bytecode index, bytecode value)
     return value + index + OP_MSTORE8;
 }
 
+inline bytecode mcopy(bytecode dst, bytecode src, bytecode length)
+{
+    return length + src + dst + OP_MCOPY;
+}
+
 inline bytecode jump(bytecode target)
 {
     return target + OP_JUMP;

@@ -900,6 +900,29 @@ inline code_iterator swapn(StackTop stack, ExecutionState& state, code_iterator 
     return pos + 2;
 }
 
+inline Result mcopy(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
+{
+    const auto dst_u256 = stack.pop();
+    const auto src_u256 = stack.pop();
+    const auto size_u256 = stack.pop();
+
+    if (!check_memory(gas_left, state.memory, std::max(dst_u256, src_u256), size_u256))
+        return {EVMC_OUT_OF_GAS, gas_left};
+
+    const auto dst = static_cast<size_t>(dst_u256);
+    const auto src = static_cast<size_t>(src_u256);
+    const auto size = static_cast<size_t>(size_u256);
+
+    const auto copy_cost = num_words(size) * 3;
+    if ((gas_left -= copy_cost) < 0)
+        return {EVMC_OUT_OF_GAS, gas_left};
+
+    if (size > 0)
+        std::memmove(&state.memory[dst], &state.memory[src], size);
+
+    return {EVMC_SUCCESS, gas_left};
+}
+
 template <size_t NumTopics>
 inline Result log(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
