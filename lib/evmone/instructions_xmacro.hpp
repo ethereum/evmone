@@ -226,7 +226,7 @@
     ON_OPCODE_UNDEFINED(0xb4)                               \
     ON_OPCODE_IDENTIFIER(OP_DUPN, dupn)                     \
     ON_OPCODE_IDENTIFIER(OP_SWAPN, swapn)                   \
-    ON_OPCODE_UNDEFINED(0xb7)                               \
+    ON_OPCODE_IDENTIFIER(OP_MCOPY, mcopy)                   \
     ON_OPCODE_UNDEFINED(0xb8)                               \
     ON_OPCODE_UNDEFINED(0xb9)                               \
     ON_OPCODE_UNDEFINED(0xba)                               \

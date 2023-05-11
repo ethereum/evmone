@@ -110,6 +110,7 @@ constexpr bool instruction_only_in_evmone(evmc_revision rev, Opcode op) noexcept
     case OP_RETF:
     case OP_DUPN:
     case OP_SWAPN:
+    case OP_MCOPY:
         return true;
     default:
         return false;
