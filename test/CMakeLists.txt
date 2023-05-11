@@ -46,3 +46,6 @@ if(type STREQUAL SHARED_LIBRARY)
         add_test(NAME ${PROJECT_NAME}/evm-test COMMAND evm-test $<TARGET_FILE:evmone>)
     endif()
 endif()
+
+add_executable(fast_stack_check_poc fast_stack_check_poc.cpp)
+target_compile_features(fast_stack_check_poc PRIVATE cxx_std_20)
