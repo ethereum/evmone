@@ -63,6 +63,13 @@ inline constexpr int64_t num_words(uint64_t size_in_bytes) noexcept
     return static_cast<int64_t>((size_in_bytes + (word_size - 1)) / word_size);
 }
 
+/// Computes gas cost of copying the given amount of bytes to/from EVM memory.
+inline constexpr int64_t copy_cost(uint64_t size_in_bytes) noexcept
+{
+    constexpr auto WordCopyCost = 3;
+    return num_words(size_in_bytes) * WordCopyCost;
+}
+
 /// Grows EVM memory and checks its cost.
 ///
 /// This function should not be inlined because this may affect other inlining decisions:
@@ -435,8 +442,7 @@ inline Result calldatacopy(StackTop stack, int64_t gas_left, ExecutionState& sta
     auto s = static_cast<size_t>(size);
     auto copy_size = std::min(s, state.msg->input_size - src);
 
-    const auto copy_cost = num_words(s) * 3;
-    if ((gas_left -= copy_cost) < 0)
+    if (const auto cost = copy_cost(s); (gas_left -= cost) < 0)
         return {EVMC_OUT_OF_GAS, gas_left};
 
     if (copy_size > 0)
@@ -470,8 +476,7 @@ inline Result codecopy(StackTop stack, int64_t gas_left, ExecutionState& state) 
     const auto s = static_cast<size_t>(size);
     const auto copy_size = std::min(s, code_size - src);
 
-    const auto copy_cost = num_words(s) * 3;
-    if ((gas_left -= copy_cost) < 0)
+    if (const auto cost = copy_cost(s); (gas_left -= cost) < 0)
         return {EVMC_OUT_OF_GAS, gas_left};
 
     // TODO: Add unit tests for each combination of conditions.
@@ -521,8 +526,7 @@ inline Result extcodecopy(StackTop stack, int64_t gas_left, ExecutionState& stat
         return {EVMC_OUT_OF_GAS, gas_left};
 
     const auto s = static_cast<size_t>(size);
-    const auto copy_cost = num_words(s) * 3;
-    if ((gas_left -= copy_cost) < 0)
+    if (const auto cost = copy_cost(s); (gas_left -= cost) < 0)
         return {EVMC_OUT_OF_GAS, gas_left};
 
     if (state.rev >= EVMC_BERLIN && state.host.access_account(addr) == EVMC_ACCESS_COLD)
@@ -568,8 +572,7 @@ inline Result returndatacopy(StackTop stack, int64_t gas_left, ExecutionState& s
     if (src + s > state.return_data.size())
         return {EVMC_INVALID_MEMORY_ACCESS, gas_left};
 
-    const auto copy_cost = num_words(s) * 3;
-    if ((gas_left -= copy_cost) < 0)
+    if (const auto cost = copy_cost(s); (gas_left -= cost) < 0)
         return {EVMC_OUT_OF_GAS, gas_left};
 
     if (s > 0)
@@ -913,8 +916,7 @@ inline Result mcopy(StackTop stack, int64_t gas_left, ExecutionState& state) noe
     const auto src = static_cast<size_t>(src_u256);
     const auto size = static_cast<size_t>(size_u256);
 
-    const auto copy_cost = num_words(size) * 3;
-    if ((gas_left -= copy_cost) < 0)
+    if (const auto cost = copy_cost(size); (gas_left -= cost) < 0)
         return {EVMC_OUT_OF_GAS, gas_left};
 
     if (size > 0)
