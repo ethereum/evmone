@@ -18,7 +18,96 @@ bool validate(const Point& pt) noexcept
     return y2 == x3_3;
 }
 
-Point bn254_add(const Point& pt1, const Point& pt2, bool convert_to_mont) noexcept
+bool validate(const uint256& x, const uint256& y, const uint256& z, const uint256& a, const uint256& b)
+{
+    if (x == 0 && y == 0 && z == 0)
+        return true;
+
+    const evmmax::ModArith s{BN254Mod};
+
+    const auto xm = s.to_mont(x);
+    const auto ym = s.to_mont(y);
+    const auto zm = s.to_mont(z);
+    const auto am = s.to_mont(a);
+    const auto bm = s.to_mont(b);
+
+    const auto y2 = s.mul(ym, ym);
+    const auto x2 = s.mul(xm, xm);
+    const auto x3 = s.mul(x2, xm);
+
+    const auto z2 = s.mul(zm, zm);
+    const auto z3 = s.mul(z2, zm);
+
+    const auto ls = s.mul(y2, zm);
+    const auto ax = s.mul(am, xm);
+    const auto axz2 = s.mul(ax, z2);
+    const auto bz3 = s.mul(bm, z3);
+
+    const auto rs = s.add(x3, s.add(axz2, bz3));
+
+    return ls == rs;
+}
+
+std::tuple<uint256, uint256, uint256> mul_inv(const evmmax::ModArith<uint256>& s, const uint256& x, const uint256& y, const uint256& z)
+{
+    auto z_inv = inv(s, z);
+    return {s.mul(x, z_inv), s.mul(y, z_inv), s.mul(z, z_inv)};
+}
+
+std::tuple<uint256, uint256, uint256> point_addition(const evmmax::ModArith<uint256>& s,
+    const uint256& x1, const uint256& y1, const uint256& z1,
+    const uint256& x2, const uint256& y2, const uint256& z2,
+    const uint256& a, const uint256& b3) noexcept
+{
+    // https://eprint.iacr.org/2015/1060 algorithm 1.
+
+    uint256 x3, y3, z3, t0, t1, t2, t3, t4, t5;
+
+    t0 = s.mul(x1, x2); // 1
+    t1 = s.mul(y1, y2); // 2
+    t2 = s.mul(z1, z2); // 3
+    t3 = s.add(x1, y1); // 4
+    t4 = s.add(x2, y2); // 5
+    t3 = s.mul(t3, t4); // 6
+    t4 = s.add(t0, t1); // 7
+    t3 = s.sub(t3, t4); // 8
+    t4 = s.add(x1, z1); // 9
+    t5 = s.add(x2, z2); // 10
+    t4 = s.mul(t4, t5); // 11
+    t5 = s.add(t0, t2); // 12
+    t4 = s.sub(t4, t5); // 13
+    t5 = s.add(y1, z1); // 14
+    x3 = s.add(y2, z2); // 15
+    t5 = s.mul(t5, x3); // 16
+    x3 = s.add(t1, t2); // 17
+    t5 = s.sub(t5, x3); // 18
+    z3 = s.mul(a, t4);  // 19
+    x3 = s.mul(b3, t2); // 20
+    z3 = s.add(x3, z3); // 21
+    x3 = s.sub(t1, z3); // 22
+    z3 = s.add(t1, z3); // 23
+    y3 = s.mul(x3, z3); // 24
+    t1 = s.add(t0, t0); // 25
+    t1 = s.add(t1, t0); // 26
+    t2 = s.mul(a, t2);  // 27
+    t4 = s.mul(b3, t4); // 28
+    t1 = s.add(t1, t2); // 29
+    t2 = s.sub(t0, t2); // 30
+    t2 = s.mul(a, t2);  // 31
+    t4 = s.add(t4, t2); // 32
+    t0 = s.mul(t1, t4); // 33
+    y3 = s.add(y3, t0); // 34
+    t0 = s.mul(t5, t4); // 35
+    x3 = s.mul(t3, x3); // 36
+    x3 = s.sub(x3, t0); // 37
+    t0 = s.mul(t3, t1); // 38
+    z3 = s.mul(t5, z3); // 39
+    z3 = s.add(z3, t0); // 40
+
+    return {x3, y3, z3};
+}
+
+Point bn254_add(const Point& pt1, const Point& pt2) noexcept
 {
     if (is_at_infinity(pt1))
         return pt2;
@@ -30,91 +119,58 @@ Point bn254_add(const Point& pt1, const Point& pt2, bool convert_to_mont) noexce
     // https://eprint.iacr.org/2015/1060 algorithm 2.
     // Simplified with z3 == 1, a == 0, b3 == 9.
 
-    auto b3 = s.to_mont(9);
+    const auto x1 = s.to_mont(pt1.x);
+    const auto y1 = s.to_mont(pt1.y);
 
-    auto x1 = pt1.x;
-    auto y1 = pt1.y;
+    const auto x2 = s.to_mont(pt2.x);
+    const auto y2 = s.to_mont(pt2.y);
 
-    auto x2 = pt2.x;
-    auto y2 = pt2.y;
+    const auto b3 = s.to_mont(9);
+    auto [x3, y3, z3] = point_addition(s, x1, y1, s.to_mont(1), x2, y2, s.to_mont(1), 0, b3);
 
-    if (convert_to_mont)
-    {
-        x1 = s.to_mont(pt1.x);
-        y1 = s.to_mont(pt1.y);
+    std::tie(x3, y3, z3) = mul_inv(s, x3, y3, z3);
 
-        x2 = s.to_mont(pt2.x);
-        y2 = s.to_mont(pt2.y);
-    }
-
-    uint256 x3, y3, z3, t0, t1, t3, t4, t5;
-
-    t0 = s.mul(x1, x2);
-    t1 = s.mul(y1, y2);
-    t3 = s.add(x2, y2);
-    t4 = s.add(x1, y1);
-    t3 = s.mul(t3, t4);
-    t4 = s.add(t0, t1);
-    t3 = s.sub(t3, t4);
-    t4 = s.add(x2, x1);
-    t5 = s.add(y2, y1);
-    x3 = s.sub(t1, b3);
-    z3 = s.add(t1, b3);
-    y3 = s.mul(x3, z3);
-    t1 = s.add(t0, t0);
-    t1 = s.add(t1, t0);
-    t4 = s.mul(b3, t4);
-    t0 = s.mul(t1, t4);
-    y3 = s.add(y3, t0);
-    t0 = s.mul(t5, t4);
-    x3 = s.mul(t3, x3);
-    x3 = s.sub(x3, t0);
-    t0 = s.mul(t3, t1);
-    z3 = s.mul(t5, z3);
-    z3 = s.add(z3, t0);
-
-    auto z3_inv = inv(s, z3);
-    x3 = s.mul(x3, z3_inv);
-    y3 = s.mul(y3, z3_inv);
-
-    if (convert_to_mont)
-    {
-        x3 = s.from_mont(x3);
-        y3 = s.from_mont(y3);
-    }
-
-    return {x3, y3};
+    return {s.from_mont(x3), s.from_mont(y3)};
 }
 
-Point bn254_mul(const Point& pt, const uint256& s) noexcept
+Point bn254_mul(const Point& pt, const uint256& c) noexcept
 {
     if (is_at_infinity(pt))
         return pt;
 
-    if (s == 0)
+    if (c == 0)
         return {0, 0};
 
-    const evmmax::ModArith sm{BN254Mod};
+    const evmmax::ModArith s{BN254Mod};
 
-    Point r0 = {sm.to_mont(0), sm.to_mont(0)};
-    Point r1 = {sm.to_mont(pt.x), sm.to_mont(pt.y)};
+    uint256 x0 = 0;
+    uint256 y0 = s.to_mont(1);
+    uint256 z0 = 0;
+
+    uint256 x1 = s.to_mont(pt.x);
+    uint256 y1 = s.to_mont(pt.y);
+    uint256 z1 = s.to_mont(1);
+
+    auto b3 = s.to_mont(9);
 
     for (int16_t i = 255; i >= 0; --i)
     {
-        const uint256 d = s & (uint256{1} << i);
+        const uint256 d = c & (uint256{1} << i);
         if (d == 0)
         {
-            r1 = bn254_add(r0, r1, false);
-            r0 = bn254_add(r0, r0, false);
+            std::tie(x1, y1, z1) = point_addition(s, x0, y0, z0, x1, y1, z1, 0, b3);
+            std::tie(x0, y0, z0) = point_addition(s, x0, y0, z0, x0, y0, z0, 0, b3);
         }
         else
         {
-            r0 = bn254_add(r0, r1, false);
-            r1 = bn254_add(r1, r1, false);
+            std::tie(x0, y0, z0) = point_addition(s, x0, y0, z0, x1, y1, z1, 0, b3);
+            std::tie(x1, y1, z1) = point_addition(s, x1, y1, z1, x1, y1, z1, 0, b3);
         }
     }
 
-    return {sm.from_mont(r0.x), sm.from_mont(r0.y)};
+    std::tie(x0, y0, z0) = mul_inv(s, x0, y0, z0);
+
+    return {s.from_mont(x0), s.from_mont(y0)};
 }
 
 bool bn254_add_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept
@@ -508,4 +564,5 @@ uint256 inv(const evmmax::ModArith<uint256>& s, const uint256& x) noexcept
 
     return z;
 }
+
 }  // namespace evmmax::bn254
