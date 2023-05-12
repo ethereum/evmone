@@ -108,7 +108,7 @@ std::tuple<uint256, uint256, uint256> point_addition_a0(const evmmax::ModArith<u
     return {x3, y3, z3};
 }
 
-std::tuple<uint256, uint256, uint256> point_doubling(const evmmax::ModArith<uint256>& s,
+std::tuple<uint256, uint256, uint256> point_doubling_a0(const evmmax::ModArith<uint256>& s,
     const uint256& x, const uint256& y, const uint256& z, const uint256& b3) noexcept
 {
     // https://eprint.iacr.org/2015/1060 algorithm 3.
@@ -151,6 +151,40 @@ std::tuple<uint256, uint256, uint256> point_doubling(const evmmax::ModArith<uint
     return {x3, y3, z3};
 }
 
+std::tuple<uint256, uint256, uint256> point_addition_mixed_a0(const evmmax::ModArith<uint256>& s,
+    const uint256& x1, const uint256& y1,
+    const uint256& x2, const uint256& y2,
+    const uint256& b3) noexcept
+{
+    uint256 x3, y3, z3, t0, t1, t3, t4, t5;
+
+    t0 = s.mul(x1, x2);
+    t1 = s.mul(y1, y2);
+    t3 = s.add(x2, y2);
+    t4 = s.add(x1, y1);
+    t3 = s.mul(t3, t4);
+    t4 = s.add(t0, t1);
+    t3 = s.sub(t3, t4);
+    t4 = s.add(x2, x1);
+    t5 = s.add(y2, y1);
+    x3 = s.sub(t1, b3);
+    z3 = s.add(t1, b3);
+    y3 = s.mul(x3, z3);
+    t1 = s.add(t0, t0);
+    t1 = s.add(t1, t0);
+    t4 = s.mul(b3, t4);
+    t0 = s.mul(t1, t4);
+    y3 = s.add(y3, t0);
+    t0 = s.mul(t5, t4);
+    x3 = s.mul(t3, x3);
+    x3 = s.sub(x3, t0);
+    t0 = s.mul(t3, t1);
+    z3 = s.mul(t5, z3);
+    z3 = s.add(z3, t0);
+
+    return {x3, y3, z3};
+}
+
 Point bn254_add(const Point& pt1, const Point& pt2) noexcept
 {
     if (is_at_infinity(pt1))
@@ -170,7 +204,7 @@ Point bn254_add(const Point& pt1, const Point& pt2) noexcept
     const auto y2 = s.to_mont(pt2.y);
 
     const auto b3 = s.to_mont(9);
-    auto [x3, y3, z3] = point_addition_a0(s, x1, y1, s.to_mont(1), x2, y2, s.to_mont(1), b3);
+    auto [x3, y3, z3] = point_addition_mixed_a0(s, x1, y1, x2, y2, b3);
 
     std::tie(x3, y3, z3) = mul_inv(s, x3, y3, z3);
 
@@ -203,13 +237,13 @@ Point bn254_mul(const Point& pt, const uint256& c) noexcept
         if (d == 0)
         {
             std::tie(x1, y1, z1) = point_addition_a0(s, x0, y0, z0, x1, y1, z1, b3);
-            std::tie(x0, y0, z0) = point_doubling(s, x0, y0, z0, b3);
+            std::tie(x0, y0, z0) = point_doubling_a0(s, x0, y0, z0, b3);
             //std::tie(x0, y0, z0) = point_addition_a0(s, x0, y0, z0, x0, y0, z0, b3);
         }
         else
         {
             std::tie(x0, y0, z0) = point_addition_a0(s, x0, y0, z0, x1, y1, z1, b3);
-            std::tie(x1, y1, z1) = point_doubling(s, x1, y1, z1, b3);
+            std::tie(x1, y1, z1) = point_doubling_a0(s, x1, y1, z1, b3);
             //std::tie(x1, y1, z1) = point_addition_a0(s, x1, y1, z1, x1, y1, z1, b3);
         }
     }
