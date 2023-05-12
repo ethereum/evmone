@@ -57,7 +57,7 @@ std::tuple<uint256, uint256, uint256> mul_inv(const evmmax::ModArith<uint256>& s
 std::tuple<uint256, uint256, uint256> point_addition(const evmmax::ModArith<uint256>& s,
     const uint256& x1, const uint256& y1, const uint256& z1,
     const uint256& x2, const uint256& y2, const uint256& z2,
-    const uint256& a, const uint256& b3) noexcept
+    const uint256& , const uint256& b3) noexcept
 {
     // https://eprint.iacr.org/2015/1060 algorithm 1.
 
@@ -81,20 +81,20 @@ std::tuple<uint256, uint256, uint256> point_addition(const evmmax::ModArith<uint
     t5 = s.mul(t5, x3); // 16
     x3 = s.add(t1, t2); // 17
     t5 = s.sub(t5, x3); // 18
-    z3 = s.mul(a, t4);  // 19
+    z3 = 0;//s.mul(a, t4);  // 19
     x3 = s.mul(b3, t2); // 20
-    z3 = s.add(x3, z3); // 21
+    z3 = x3; //s.add(x3, z3); // 21
     x3 = s.sub(t1, z3); // 22
     z3 = s.add(t1, z3); // 23
     y3 = s.mul(x3, z3); // 24
     t1 = s.add(t0, t0); // 25
     t1 = s.add(t1, t0); // 26
-    t2 = s.mul(a, t2);  // 27
+    //t2 = 0; // s.mul(a, t2);  // 27
     t4 = s.mul(b3, t4); // 28
-    t1 = s.add(t1, t2); // 29
-    t2 = s.sub(t0, t2); // 30
-    t2 = s.mul(a, t2);  // 31
-    t4 = s.add(t4, t2); // 32
+    // t1 = s.add(t1, t2); // 29
+    //t2 = t0; //s.sub(t0, t2); // 30
+    //t2 = s.mul(a, t2);  // 31
+    //t4 = s.add(t4, t2); // 32
     t0 = s.mul(t1, t4); // 33
     y3 = s.add(y3, t0); // 34
     t0 = s.mul(t5, t4); // 35
