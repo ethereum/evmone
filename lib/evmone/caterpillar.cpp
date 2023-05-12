@@ -110,20 +110,20 @@ inline int64_t check_gas(int64_t gas_left, evmc_revision rev) noexcept
 }
 
 template <Opcode Op>
-evmc_status_code invoke(
+__regcall evmc_status_code invoke(
     const uint256* stack_bottom, uint256* stack_top, code_iterator code_it, int64_t gas, void*, ExecutionState& state) noexcept;
 
-evmc_status_code cat_undefined(const uint256*, uint256* /*stack_top*/, code_iterator /*code_it*/, int64_t /*gas*/,
+        __regcall evmc_status_code cat_undefined(const uint256*, uint256* /*stack_top*/, code_iterator /*code_it*/, int64_t /*gas*/,
     void*, ExecutionState& /*state*/) noexcept
 {
     return EVMC_UNDEFINED_INSTRUCTION;
 }
 
-using InstrFn = evmc_status_code (*)(
+using InstrFn = __regcall evmc_status_code (*)(
     const uint256* stack_bottom, uint256* stack_top, code_iterator code_it, int64_t gas, void*, ExecutionState& state) noexcept;
 
 #define ON_OPCODE(OPCODE)                                                                      \
-    extern "C" evmc_status_code evmone_##OPCODE(                                                                \
+    extern "C" __regcall evmc_status_code evmone_##OPCODE(                                                                \
         const uint256* stack_bottom, uint256* stack_top, code_iterator code_it, int64_t g, void* tbl, ExecutionState& state) noexcept \
     {                                                                                          \
         /*TODO: The [[musttail]] is needed although invoke<> is [[always_inline]]*/ \
