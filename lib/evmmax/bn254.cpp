@@ -81,7 +81,7 @@ std::tuple<uint256, uint256, uint256> point_addition(const evmmax::ModArith<uint
     t5 = s.mul(t5, x3); // 16
     x3 = s.add(t1, t2); // 17
     t5 = s.sub(t5, x3); // 18
-    z3 = 0;//s.mul(a, t4);  // 19
+    //z3 = 0;//s.mul(a, t4);  // 19
     x3 = s.mul(b3, t2); // 20
     z3 = x3; //s.add(x3, z3); // 21
     x3 = s.sub(t1, z3); // 22
