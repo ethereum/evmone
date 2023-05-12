@@ -54,12 +54,13 @@ std::tuple<uint256, uint256, uint256> mul_inv(const evmmax::ModArith<uint256>& s
     return {s.mul(x, z_inv), s.mul(y, z_inv), s.mul(z, z_inv)};
 }
 
-std::tuple<uint256, uint256, uint256> point_addition(const evmmax::ModArith<uint256>& s,
+std::tuple<uint256, uint256, uint256> point_addition_a0(const evmmax::ModArith<uint256>& s,
     const uint256& x1, const uint256& y1, const uint256& z1,
     const uint256& x2, const uint256& y2, const uint256& z2,
-    const uint256& , const uint256& b3) noexcept
+    const uint256& b3) noexcept
 {
     // https://eprint.iacr.org/2015/1060 algorithm 1.
+    // Simplified with a == 0
 
     uint256 x3, y3, z3, t0, t1, t2, t3, t4, t5;
 
@@ -83,9 +84,9 @@ std::tuple<uint256, uint256, uint256> point_addition(const evmmax::ModArith<uint
     t5 = s.sub(t5, x3); // 18
     //z3 = 0;//s.mul(a, t4);  // 19
     x3 = s.mul(b3, t2); // 20
-    z3 = x3; //s.add(x3, z3); // 21
-    x3 = s.sub(t1, z3); // 22
-    z3 = s.add(t1, z3); // 23
+    //z3 = x3; //s.add(x3, z3); // 21
+    z3 = s.add(t1, x3); // 23
+    x3 = s.sub(t1, x3); // 22
     y3 = s.mul(x3, z3); // 24
     t1 = s.add(t0, t0); // 25
     t1 = s.add(t1, t0); // 26
@@ -103,6 +104,49 @@ std::tuple<uint256, uint256, uint256> point_addition(const evmmax::ModArith<uint
     t0 = s.mul(t3, t1); // 38
     z3 = s.mul(t5, z3); // 39
     z3 = s.add(z3, t0); // 40
+
+    return {x3, y3, z3};
+}
+
+std::tuple<uint256, uint256, uint256> point_doubling(const evmmax::ModArith<uint256>& s,
+    const uint256& x, const uint256& y, const uint256& z, const uint256& b3) noexcept
+{
+    // https://eprint.iacr.org/2015/1060 algorithm 3.
+    // Simplified with a == 0
+
+    uint256 x3, y3, z3, t0, t1, t2, t3;
+
+    t0 = s.mul(x, x); // 1
+    t1 = s.mul(y, y); // 2
+    t2 = s.mul(z, z); // 3
+    t3 = s.mul(x, y); // 4
+    t3 = s.add(t3, t3); // 5
+    z3 = s.mul(x, z); // 6
+    z3 = s.add(z3, z3); // 7
+    x3 = s.mul(0, z3); // 8
+    y3 = s.mul(b3, t2); // 9
+    y3 = s.add(x3, y3); // 10
+    x3 = s.sub(t1, y3); // 11
+    y3 = s.add(t1, y3); // 12
+    y3 = s.mul(x3, y3); // 13
+    x3 = s.mul(t3, x3); // 14
+    z3 = s.mul(b3, z3); // 15
+    t2 = s.mul(0, t2); // 16
+    t3 = s.sub(t0, t2); // 17
+    t3 = s.mul(0, t3); // 18
+    t3 = s.add(t3, z3);  // 19
+    z3 = s.add(t0, t0); // 20
+    t0 = s.add(z3, t0); // 21
+    t0 = s.add(t0, t2); // 22
+    t0 = s.mul(t0, t3); // 23
+    y3 = s.add(y3, t0); // 24
+    t2 = s.mul(y, z); // 25
+    t2 = s.add(t2, t2); // 26
+    t0 = s.mul(t2, t3);  // 27
+    x3 = s.sub(x3, t0); // 28
+    z3 = s.mul(t2, t1); // 29
+    z3 = s.add(z3, z3); // 30
+    z3 = s.add(z3, z3); // 31
 
     return {x3, y3, z3};
 }
@@ -126,7 +170,7 @@ Point bn254_add(const Point& pt1, const Point& pt2) noexcept
     const auto y2 = s.to_mont(pt2.y);
 
     const auto b3 = s.to_mont(9);
-    auto [x3, y3, z3] = point_addition(s, x1, y1, s.to_mont(1), x2, y2, s.to_mont(1), 0, b3);
+    auto [x3, y3, z3] = point_addition_a0(s, x1, y1, s.to_mont(1), x2, y2, s.to_mont(1), b3);
 
     std::tie(x3, y3, z3) = mul_inv(s, x3, y3, z3);
 
@@ -158,13 +202,15 @@ Point bn254_mul(const Point& pt, const uint256& c) noexcept
         const uint256 d = c & (uint256{1} << i);
         if (d == 0)
         {
-            std::tie(x1, y1, z1) = point_addition(s, x0, y0, z0, x1, y1, z1, 0, b3);
-            std::tie(x0, y0, z0) = point_addition(s, x0, y0, z0, x0, y0, z0, 0, b3);
+            std::tie(x1, y1, z1) = point_addition_a0(s, x0, y0, z0, x1, y1, z1, b3);
+            std::tie(x0, y0, z0) = point_doubling(s, x0, y0, z0, b3);
+            //std::tie(x0, y0, z0) = point_addition_a0(s, x0, y0, z0, x0, y0, z0, b3);
         }
         else
         {
-            std::tie(x0, y0, z0) = point_addition(s, x0, y0, z0, x1, y1, z1, 0, b3);
-            std::tie(x1, y1, z1) = point_addition(s, x1, y1, z1, x1, y1, z1, 0, b3);
+            std::tie(x0, y0, z0) = point_addition_a0(s, x0, y0, z0, x1, y1, z1, b3);
+            std::tie(x1, y1, z1) = point_doubling(s, x1, y1, z1, b3);
+            //std::tie(x1, y1, z1) = point_addition_a0(s, x1, y1, z1, x1, y1, z1, b3);
         }
     }
 
