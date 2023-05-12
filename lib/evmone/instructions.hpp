@@ -937,6 +937,11 @@ inline Result dataload(StackTop stack, int64_t gas_left, ExecutionState& state) 
     return {EVMC_SUCCESS, gas_left};
 }
 
+inline void datasize(StackTop stack, ExecutionState& state) noexcept
+{
+    stack.push(state.data.size());
+}
+
 template <size_t NumTopics>
 inline Result log(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
