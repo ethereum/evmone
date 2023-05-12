@@ -65,7 +65,7 @@ ModArith<UintT>::ModArith(const UintT& modulus) : mod{modulus}, mod_inv{mul_inv6
 // }
 
 template <typename UintT>
-UintT ModArith<UintT>::mul(const UintT& a, const UintT& b) const noexcept
+UintT ModArith<UintT>::mul(const UintT& x, const UintT& y) const noexcept
 {
     // Coarsely Integrated Op erand Scanning (CIOS) Method
     // Based on 2.3.2 from
@@ -79,7 +79,7 @@ UintT ModArith<UintT>::mul(const UintT& a, const UintT& b) const noexcept
         uint64_t c = 0;
         for (size_t j = 0; j != S; ++j)
         {
-            std::tie(c, t[j]) = addmul(t[j], a[j], b[i], c);
+            std::tie(c, t[j]) = addmul(t[j], x[j], y[i], c);
         }
         auto tmp = addc(t[S], c);
         t[S] = tmp.value;

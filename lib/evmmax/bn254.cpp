@@ -18,92 +18,95 @@ bool validate(const Point& pt) noexcept
     return y2 == x3_3;
 }
 
-bool validate(const uint256& x, const uint256& y, const uint256& z, const uint256& a, const uint256& b)
+//bool validate(const uint256& x, const uint256& y, const uint256& z, const uint256& a, const uint256& b)
+//{
+//    if (x == 0 && y == 0 && z == 0)
+//        return true;
+//
+//    const evmmax::ModArith s{BN254Mod};
+//
+//    const auto xm = s.to_mont(x);
+//    const auto ym = s.to_mont(y);
+//    const auto zm = s.to_mont(z);
+//    const auto am = s.to_mont(a);
+//    const auto bm = s.to_mont(b);
+//
+//    const auto y2 = s.mul(ym, ym);
+//    const auto x2 = s.mul(xm, xm);
+//    const auto x3 = s.mul(x2, xm);
+//
+//    const auto z2 = s.mul(zm, zm);
+//    const auto z3 = s.mul(z2, zm);
+//
+//    const auto ls = s.mul(y2, zm);
+//    const auto ax = s.mul(am, xm);
+//    const auto axz2 = s.mul(ax, z2);
+//    const auto bz3 = s.mul(bm, z3);
+//
+//    const auto rs = s.add(x3, s.add(axz2, bz3));
+//
+//    return ls == rs;
+//}
+
+namespace
 {
-    if (x == 0 && y == 0 && z == 0)
-        return true;
 
-    const evmmax::ModArith s{BN254Mod};
-
-    const auto xm = s.to_mont(x);
-    const auto ym = s.to_mont(y);
-    const auto zm = s.to_mont(z);
-    const auto am = s.to_mont(a);
-    const auto bm = s.to_mont(b);
-
-    const auto y2 = s.mul(ym, ym);
-    const auto x2 = s.mul(xm, xm);
-    const auto x3 = s.mul(x2, xm);
-
-    const auto z2 = s.mul(zm, zm);
-    const auto z3 = s.mul(z2, zm);
-
-    const auto ls = s.mul(y2, zm);
-    const auto ax = s.mul(am, xm);
-    const auto axz2 = s.mul(ax, z2);
-    const auto bz3 = s.mul(bm, z3);
-
-    const auto rs = s.add(x3, s.add(axz2, bz3));
-
-    return ls == rs;
-}
-
-std::tuple<uint256, uint256, uint256> mul_inv(const evmmax::ModArith<uint256>& s, const uint256& x, const uint256& y, const uint256& z)
+std::tuple<uint256, uint256, uint256> mul_inv(
+    const evmmax::ModArith<uint256>& s, const uint256& x, const uint256& y, const uint256& z)
 {
     auto z_inv = inv(s, z);
     return {s.mul(x, z_inv), s.mul(y, z_inv), s.mul(z, z_inv)};
 }
 
 std::tuple<uint256, uint256, uint256> point_addition_a0(const evmmax::ModArith<uint256>& s,
-    const uint256& x1, const uint256& y1, const uint256& z1,
-    const uint256& x2, const uint256& y2, const uint256& z2,
-    const uint256& b3) noexcept
+    const uint256& x1, const uint256& y1, const uint256& z1, const uint256& x2, const uint256& y2,
+    const uint256& z2, const uint256& b3) noexcept
 {
     // https://eprint.iacr.org/2015/1060 algorithm 1.
     // Simplified with a == 0
 
     uint256 x3, y3, z3, t0, t1, t2, t3, t4, t5;
 
-    t0 = s.mul(x1, x2); // 1
-    t1 = s.mul(y1, y2); // 2
-    t2 = s.mul(z1, z2); // 3
-    t3 = s.add(x1, y1); // 4
-    t4 = s.add(x2, y2); // 5
-    t3 = s.mul(t3, t4); // 6
-    t4 = s.add(t0, t1); // 7
-    t3 = s.sub(t3, t4); // 8
-    t4 = s.add(x1, z1); // 9
-    t5 = s.add(x2, z2); // 10
-    t4 = s.mul(t4, t5); // 11
-    t5 = s.add(t0, t2); // 12
-    t4 = s.sub(t4, t5); // 13
-    t5 = s.add(y1, z1); // 14
-    x3 = s.add(y2, z2); // 15
-    t5 = s.mul(t5, x3); // 16
-    x3 = s.add(t1, t2); // 17
-    t5 = s.sub(t5, x3); // 18
-    //z3 = 0;//s.mul(a, t4);  // 19
-    x3 = s.mul(b3, t2); // 20
-    //z3 = x3; //s.add(x3, z3); // 21
-    z3 = s.add(t1, x3); // 23
-    x3 = s.sub(t1, x3); // 22
-    y3 = s.mul(x3, z3); // 24
-    t1 = s.add(t0, t0); // 25
-    t1 = s.add(t1, t0); // 26
-    //t2 = 0; // s.mul(a, t2);  // 27
-    t4 = s.mul(b3, t4); // 28
+    t0 = s.mul(x1, x2);  // 1
+    t1 = s.mul(y1, y2);  // 2
+    t2 = s.mul(z1, z2);  // 3
+    t3 = s.add(x1, y1);  // 4
+    t4 = s.add(x2, y2);  // 5
+    t3 = s.mul(t3, t4);  // 6
+    t4 = s.add(t0, t1);  // 7
+    t3 = s.sub(t3, t4);  // 8
+    t4 = s.add(x1, z1);  // 9
+    t5 = s.add(x2, z2);  // 10
+    t4 = s.mul(t4, t5);  // 11
+    t5 = s.add(t0, t2);  // 12
+    t4 = s.sub(t4, t5);  // 13
+    t5 = s.add(y1, z1);  // 14
+    x3 = s.add(y2, z2);  // 15
+    t5 = s.mul(t5, x3);  // 16
+    x3 = s.add(t1, t2);  // 17
+    t5 = s.sub(t5, x3);  // 18
+    // z3 = 0;//s.mul(a, t4);  // 19
+    x3 = s.mul(b3, t2);  // 20
+    // z3 = x3; //s.add(x3, z3); // 21
+    z3 = s.add(t1, x3);  // 23
+    x3 = s.sub(t1, x3);  // 22
+    y3 = s.mul(x3, z3);  // 24
+    t1 = s.add(t0, t0);  // 25
+    t1 = s.add(t1, t0);  // 26
+    // t2 = 0; // s.mul(a, t2);  // 27
+    t4 = s.mul(b3, t4);  // 28
     // t1 = s.add(t1, t2); // 29
-    //t2 = t0; //s.sub(t0, t2); // 30
-    //t2 = s.mul(a, t2);  // 31
-    //t4 = s.add(t4, t2); // 32
-    t0 = s.mul(t1, t4); // 33
-    y3 = s.add(y3, t0); // 34
-    t0 = s.mul(t5, t4); // 35
-    x3 = s.mul(t3, x3); // 36
-    x3 = s.sub(x3, t0); // 37
-    t0 = s.mul(t3, t1); // 38
-    z3 = s.mul(t5, z3); // 39
-    z3 = s.add(z3, t0); // 40
+    // t2 = t0; //s.sub(t0, t2); // 30
+    // t2 = s.mul(a, t2);  // 31
+    // t4 = s.add(t4, t2); // 32
+    t0 = s.mul(t1, t4);  // 33
+    y3 = s.add(y3, t0);  // 34
+    t0 = s.mul(t5, t4);  // 35
+    x3 = s.mul(t3, x3);  // 36
+    x3 = s.sub(x3, t0);  // 37
+    t0 = s.mul(t3, t1);  // 38
+    z3 = s.mul(t5, z3);  // 39
+    z3 = s.add(z3, t0);  // 40
 
     return {x3, y3, z3};
 }
@@ -116,44 +119,43 @@ std::tuple<uint256, uint256, uint256> point_doubling_a0(const evmmax::ModArith<u
 
     uint256 x3, y3, z3, t0, t1, t2, t3;
 
-    t0 = s.mul(x, x); // 1
-    t1 = s.mul(y, y); // 2
-    t2 = s.mul(z, z); // 3
-    t3 = s.mul(x, y); // 4
-    t3 = s.add(t3, t3); // 5
-    z3 = s.mul(x, z); // 6
-    z3 = s.add(z3, z3); // 7
-    //x3 = s.mul(0, z3); // 8
-    y3 = s.mul(b3, t2); // 9
-    //y3 = s.add(x3, y3); // 10
-    x3 = s.sub(t1, y3); // 11
-    y3 = s.add(t1, y3); // 12
-    y3 = s.mul(x3, y3); // 13
-    x3 = s.mul(t3, x3); // 14
-    z3 = s.mul(b3, z3); // 15
-    //t2 = s.mul(0, t2); // 16
-    //t3 = s.sub(t0, t2); // 17
-    //t3 = s.mul(0, t3); // 18
-    t3 = z3; //s.add(t3, z3);  // 19
-    z3 = s.add(t0, t0); // 20
-    t0 = s.add(z3, t0); // 21
-    //t0 = s.add(t0, t2); // 22
-    t0 = s.mul(t0, t3); // 23
-    y3 = s.add(y3, t0); // 24
-    t2 = s.mul(y, z); // 25
-    t2 = s.add(t2, t2); // 26
+    t0 = s.mul(x, x);    // 1
+    t1 = s.mul(y, y);    // 2
+    t2 = s.mul(z, z);    // 3
+    t3 = s.mul(x, y);    // 4
+    t3 = s.add(t3, t3);  // 5
+    z3 = s.mul(x, z);    // 6
+    z3 = s.add(z3, z3);  // 7
+    // x3 = s.mul(0, z3); // 8
+    y3 = s.mul(b3, t2);  // 9
+    // y3 = s.add(x3, y3); // 10
+    x3 = s.sub(t1, y3);  // 11
+    y3 = s.add(t1, y3);  // 12
+    y3 = s.mul(x3, y3);  // 13
+    x3 = s.mul(t3, x3);  // 14
+    z3 = s.mul(b3, z3);  // 15
+    // t2 = s.mul(0, t2); // 16
+    // t3 = s.sub(t0, t2); // 17
+    // t3 = s.mul(0, t3); // 18
+    t3 = z3;             // s.add(t3, z3);  // 19
+    z3 = s.add(t0, t0);  // 20
+    t0 = s.add(z3, t0);  // 21
+    // t0 = s.add(t0, t2); // 22
+    t0 = s.mul(t0, t3);  // 23
+    y3 = s.add(y3, t0);  // 24
+    t2 = s.mul(y, z);    // 25
+    t2 = s.add(t2, t2);  // 26
     t0 = s.mul(t2, t3);  // 27
-    x3 = s.sub(x3, t0); // 28
-    z3 = s.mul(t2, t1); // 29
-    z3 = s.add(z3, z3); // 30
-    z3 = s.add(z3, z3); // 31
+    x3 = s.sub(x3, t0);  // 28
+    z3 = s.mul(t2, t1);  // 29
+    z3 = s.add(z3, z3);  // 30
+    z3 = s.add(z3, z3);  // 31
 
     return {x3, y3, z3};
 }
 
 std::tuple<uint256, uint256, uint256> point_addition_mixed_a0(const evmmax::ModArith<uint256>& s,
-    const uint256& x1, const uint256& y1,
-    const uint256& x2, const uint256& y2,
+    const uint256& x1, const uint256& y1, const uint256& x2, const uint256& y2,
     const uint256& b3) noexcept
 {
     uint256 x3, y3, z3, t0, t1, t3, t4, t5;
@@ -184,6 +186,7 @@ std::tuple<uint256, uint256, uint256> point_addition_mixed_a0(const evmmax::ModA
 
     return {x3, y3, z3};
 }
+} // namespace
 
 Point bn254_add(const Point& pt1, const Point& pt2) noexcept
 {
