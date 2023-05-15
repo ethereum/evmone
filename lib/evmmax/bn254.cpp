@@ -52,11 +52,11 @@ bool validate(const Point& pt) noexcept
 namespace
 {
 
-std::tuple<uint256, uint256, uint256> mul_inv(
+std::tuple<uint256, uint256> mul_inv(
     const evmmax::ModArith<uint256>& s, const uint256& x, const uint256& y, const uint256& z)
 {
     auto z_inv = inv(s, z);
-    return {s.mul(x, z_inv), s.mul(y, z_inv), s.mul(z, z_inv)};
+    return {s.mul(x, z_inv), s.mul(y, z_inv)};
 }
 
 std::tuple<uint256, uint256, uint256> point_addition_a0(const evmmax::ModArith<uint256>& s,
@@ -160,7 +160,7 @@ std::tuple<uint256, uint256, uint256> point_addition_mixed_a0(const evmmax::ModA
     const uint256& b3) noexcept
 {
     // https://eprint.iacr.org/2015/1060 algorithm 2.
-    // Simplified with z1 == 1, a == 0, b3 == 9
+    // Simplified with z1 == 1, a == 0
 
     uint256 x3, y3, z3, t0, t1, t3, t4, t5;
 
@@ -201,19 +201,17 @@ Point bn254_add(const Point& pt1, const Point& pt2) noexcept
 
     const evmmax::ModArith s{BN254Mod};
 
-    // https://eprint.iacr.org/2015/1060 algorithm 2.
-    // Simplified with z3 == 1, a == 0, b3 == 9.
-
     const auto x1 = s.to_mont(pt1.x);
     const auto y1 = s.to_mont(pt1.y);
 
     const auto x2 = s.to_mont(pt2.x);
     const auto y2 = s.to_mont(pt2.y);
 
+    // b3 == 9 for y^2 == x^3 + 9
     const auto b3 = s.to_mont(9);
     auto [x3, y3, z3] = point_addition_mixed_a0(s, x1, y1, x2, y2, b3);
 
-    std::tie(x3, y3, z3) = mul_inv(s, x3, y3, z3);
+    std::tie(x3, y3) = mul_inv(s, x3, y3, z3);
 
     return {s.from_mont(x3), s.from_mont(y3)};
 }
@@ -228,13 +226,15 @@ Point bn254_mul(const Point& pt, const uint256& c) noexcept
 
     const evmmax::ModArith s{BN254Mod};
 
+    auto _1_mont = s.to_mont(1);
+
     uint256 x0 = 0;
-    uint256 y0 = s.to_mont(1);
+    uint256 y0 = _1_mont;
     uint256 z0 = 0;
 
     uint256 x1 = s.to_mont(pt.x);
     uint256 y1 = s.to_mont(pt.y);
-    uint256 z1 = s.to_mont(1);
+    uint256 z1 = _1_mont;
 
     auto b3 = s.to_mont(9);
 
@@ -255,7 +255,7 @@ Point bn254_mul(const Point& pt, const uint256& c) noexcept
         }
     }
 
-    std::tie(x0, y0, z0) = mul_inv(s, x0, y0, z0);
+    std::tie(x0, y0) = mul_inv(s, x0, y0, z0);
 
     return {s.from_mont(x0), s.from_mont(y0)};
 }
