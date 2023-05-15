@@ -18,35 +18,36 @@ bool validate(const Point& pt) noexcept
     return y2 == x3_3;
 }
 
-//bool validate(const uint256& x, const uint256& y, const uint256& z, const uint256& a, const uint256& b)
+// bool validate(const uint256& x, const uint256& y, const uint256& z, const uint256& a, const
+// uint256& b)
 //{
-//    if (x == 0 && y == 0 && z == 0)
-//        return true;
+//     if (x == 0 && y == 0 && z == 0)
+//         return true;
 //
-//    const evmmax::ModArith s{BN254Mod};
+//     const evmmax::ModArith s{BN254Mod};
 //
-//    const auto xm = s.to_mont(x);
-//    const auto ym = s.to_mont(y);
-//    const auto zm = s.to_mont(z);
-//    const auto am = s.to_mont(a);
-//    const auto bm = s.to_mont(b);
+//     const auto xm = s.to_mont(x);
+//     const auto ym = s.to_mont(y);
+//     const auto zm = s.to_mont(z);
+//     const auto am = s.to_mont(a);
+//     const auto bm = s.to_mont(b);
 //
-//    const auto y2 = s.mul(ym, ym);
-//    const auto x2 = s.mul(xm, xm);
-//    const auto x3 = s.mul(x2, xm);
+//     const auto y2 = s.mul(ym, ym);
+//     const auto x2 = s.mul(xm, xm);
+//     const auto x3 = s.mul(x2, xm);
 //
-//    const auto z2 = s.mul(zm, zm);
-//    const auto z3 = s.mul(z2, zm);
+//     const auto z2 = s.mul(zm, zm);
+//     const auto z3 = s.mul(z2, zm);
 //
-//    const auto ls = s.mul(y2, zm);
-//    const auto ax = s.mul(am, xm);
-//    const auto axz2 = s.mul(ax, z2);
-//    const auto bz3 = s.mul(bm, z3);
+//     const auto ls = s.mul(y2, zm);
+//     const auto ax = s.mul(am, xm);
+//     const auto axz2 = s.mul(ax, z2);
+//     const auto bz3 = s.mul(bm, z3);
 //
-//    const auto rs = s.add(x3, s.add(axz2, bz3));
+//     const auto rs = s.add(x3, s.add(axz2, bz3));
 //
-//    return ls == rs;
-//}
+//     return ls == rs;
+// }
 
 namespace
 {
@@ -189,7 +190,7 @@ std::tuple<uint256, uint256, uint256> point_addition_mixed_a0(const evmmax::ModA
 
     return {x3, y3, z3};
 }
-} // namespace
+}  // namespace
 
 Point bn254_add(const Point& pt1, const Point& pt2) noexcept
 {
@@ -244,13 +245,13 @@ Point bn254_mul(const Point& pt, const uint256& c) noexcept
         {
             std::tie(x1, y1, z1) = point_addition_a0(s, x0, y0, z0, x1, y1, z1, b3);
             std::tie(x0, y0, z0) = point_doubling_a0(s, x0, y0, z0, b3);
-            //std::tie(x0, y0, z0) = point_addition_a0(s, x0, y0, z0, x0, y0, z0, b3);
+            // std::tie(x0, y0, z0) = point_addition_a0(s, x0, y0, z0, x0, y0, z0, b3);
         }
         else
         {
             std::tie(x0, y0, z0) = point_addition_a0(s, x0, y0, z0, x1, y1, z1, b3);
             std::tie(x1, y1, z1) = point_doubling_a0(s, x1, y1, z1, b3);
-            //std::tie(x1, y1, z1) = point_addition_a0(s, x1, y1, z1, x1, y1, z1, b3);
+            // std::tie(x1, y1, z1) = point_addition_a0(s, x1, y1, z1, x1, y1, z1, b3);
         }
     }
 
