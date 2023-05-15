@@ -64,10 +64,16 @@ bool silkpre_ecadd_execute(const uint8_t* input, size_t input_size, uint8_t* out
     return true;
 }
 
-ExecutionResult silkpre_ecmul_execute(
-    const uint8_t* input, size_t input_size, uint8_t* output_buf, size_t max_output_size) noexcept
+bool silkpre_ecmul_execute(
+    const uint8_t* input, size_t input_size, uint8_t* output_buf) noexcept
 {
-    return execute(input, input_size, output_buf, max_output_size, PrecompileId::ecmul);
+    const auto [output, output_size] = silkpre_bn_mul_run(input, input_size);
+    if (output == nullptr)
+        return false;
+    assert(output_size <= max_output_size);
+    std::memcpy(output_buf, output, output_size);
+    std::free(output);
+    return true;
 }
 
 

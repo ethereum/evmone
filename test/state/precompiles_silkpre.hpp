@@ -21,8 +21,8 @@ ExecutionResult silkpre_expmod_execute(
 
 bool silkpre_ecadd_execute(const uint8_t* input, size_t input_size, uint8_t* output_buf) noexcept;
 
-ExecutionResult silkpre_ecmul_execute(
-    const uint8_t* input, size_t input_size, uint8_t* output_buf, size_t max_output_size) noexcept;
+bool silkpre_ecmul_execute(
+    const uint8_t* input, size_t input_size, uint8_t* output_buf) noexcept;
 
 ExecutionResult silkpre_ecpairing_execute(
     const uint8_t* input, size_t input_size, uint8_t* output_buf, size_t max_output_size) noexcept;
