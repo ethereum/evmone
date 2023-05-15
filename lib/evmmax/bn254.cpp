@@ -158,6 +158,9 @@ std::tuple<uint256, uint256, uint256> point_addition_mixed_a0(const evmmax::ModA
     const uint256& x1, const uint256& y1, const uint256& x2, const uint256& y2,
     const uint256& b3) noexcept
 {
+    // https://eprint.iacr.org/2015/1060 algorithm 2.
+    // Simplified with z1 == 1, a == 0, b3 == 9
+
     uint256 x3, y3, z3, t0, t1, t3, t4, t5;
 
     t0 = s.mul(x1, x2);
