@@ -52,17 +52,27 @@ bool validate(const Point& pt) noexcept
 namespace
 {
 
-std::tuple<uint256, uint256> mul_inv(
+std::tuple<uint256, uint256> from_proj(
     const evmmax::ModArith<uint256>& s, const uint256& x, const uint256& y, const uint256& z)
 {
     auto z_inv = inv(s, z);
     return {s.mul(x, z_inv), s.mul(y, z_inv)};
 }
 
+bool is_at_infinity(const uint256& x, const uint256& y, const uint256& z) noexcept
+{
+    return x == 0 && y == 0 && z == 0;
+}
+
 std::tuple<uint256, uint256, uint256> point_addition_a0(const evmmax::ModArith<uint256>& s,
     const uint256& x1, const uint256& y1, const uint256& z1, const uint256& x2, const uint256& y2,
     const uint256& z2, const uint256& b3) noexcept
 {
+    if (is_at_infinity(x1, y1, z1))
+        return {0, 0, 0};
+    if (is_at_infinity(x2, y2, z2))
+        return {0, 0, 0};
+
     // https://eprint.iacr.org/2015/1060 algorithm 1.
     // Simplified with a == 0
 
@@ -115,6 +125,9 @@ std::tuple<uint256, uint256, uint256> point_addition_a0(const evmmax::ModArith<u
 std::tuple<uint256, uint256, uint256> point_doubling_a0(const evmmax::ModArith<uint256>& s,
     const uint256& x, const uint256& y, const uint256& z, const uint256& b3) noexcept
 {
+    if (is_at_infinity(x, y, z))
+        return {0, 0, 0};
+
     // https://eprint.iacr.org/2015/1060 algorithm 3.
     // Simplified with a == 0
 
@@ -211,7 +224,7 @@ Point bn254_add(const Point& pt1, const Point& pt2) noexcept
     const auto b3 = s.to_mont(9);
     auto [x3, y3, z3] = point_addition_mixed_a0(s, x1, y1, x2, y2, b3);
 
-    std::tie(x3, y3) = mul_inv(s, x3, y3, z3);
+    std::tie(x3, y3) = from_proj(s, x3, y3, z3);
 
     return {s.from_mont(x3), s.from_mont(y3)};
 }
@@ -238,24 +251,30 @@ Point bn254_mul(const Point& pt, const uint256& c) noexcept
 
     auto b3 = s.to_mont(9);
 
-    for (int16_t i = 255; i >= 0; --i)
+    auto first_significant_met = false;
+
+    for (int i = 255; i >= 0; --i)
     {
         const uint256 d = c & (uint256{1} << i);
         if (d == 0)
         {
-            std::tie(x1, y1, z1) = point_addition_a0(s, x0, y0, z0, x1, y1, z1, b3);
-            std::tie(x0, y0, z0) = point_doubling_a0(s, x0, y0, z0, b3);
-            // std::tie(x0, y0, z0) = point_addition_a0(s, x0, y0, z0, x0, y0, z0, b3);
+            if(first_significant_met)
+            {
+                std::tie(x1, y1, z1) = point_addition_a0(s, x0, y0, z0, x1, y1, z1, b3);
+                std::tie(x0, y0, z0) = point_doubling_a0(s, x0, y0, z0, b3);
+                // std::tie(x0, y0, z0) = point_addition_a0(s, x0, y0, z0, x0, y0, z0, b3);
+            }
         }
         else
         {
             std::tie(x0, y0, z0) = point_addition_a0(s, x0, y0, z0, x1, y1, z1, b3);
             std::tie(x1, y1, z1) = point_doubling_a0(s, x1, y1, z1, b3);
+            first_significant_met = true;
             // std::tie(x1, y1, z1) = point_addition_a0(s, x1, y1, z1, x1, y1, z1, b3);
         }
     }
 
-    std::tie(x0, y0) = mul_inv(s, x0, y0, z0);
+    std::tie(x0, y0) = from_proj(s, x0, y0, z0);
 
     return {s.from_mont(x0), s.from_mont(y0)};
 }
