@@ -47,6 +47,15 @@ struct EOF1Header
         assert(code_idx < code_offsets.size());
         return container.substr(code_offsets[code_idx], code_sizes[code_idx]);
     }
+
+    /// A helper to extract reference to the data section.
+    [[nodiscard]] bytes_view get_data(bytes_view container) const noexcept
+    {
+        if (data_size == 0)
+            return {};
+
+        return container.substr(code_offsets.back() + code_sizes.back(), data_size);
+    }
 };
 
 /// Checks if code starts with EOF FORMAT + MAGIC, doesn't validate the format.

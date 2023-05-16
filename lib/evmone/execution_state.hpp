@@ -135,6 +135,9 @@ public:
     /// For EOF-formatted code this is a reference to entire container.
     bytes_view original_code;
 
+    /// Reference to the EOF data section. May be empty.
+    bytes_view data;
+
     evmc_status_code status = EVMC_SUCCESS;
     size_t output_offset = 0;
     size_t output_size = 0;
@@ -161,15 +164,19 @@ public:
     ExecutionState() noexcept = default;
 
     ExecutionState(const evmc_message& message, evmc_revision revision,
-        const evmc_host_interface& host_interface, evmc_host_context* host_ctx,
-        bytes_view _code) noexcept
-      : msg{&message}, host{host_interface, host_ctx}, rev{revision}, original_code{_code}
+        const evmc_host_interface& host_interface, evmc_host_context* host_ctx, bytes_view _code,
+        bytes_view _data) noexcept
+      : msg{&message},
+        host{host_interface, host_ctx},
+        rev{revision},
+        original_code{_code},
+        data{_data}
     {}
 
     /// Resets the contents of the ExecutionState so that it could be reused.
     void reset(const evmc_message& message, evmc_revision revision,
-        const evmc_host_interface& host_interface, evmc_host_context* host_ctx,
-        bytes_view _code) noexcept
+        const evmc_host_interface& host_interface, evmc_host_context* host_ctx, bytes_view _code,
+        bytes_view _data) noexcept
     {
         gas_refund = 0;
         memory.clear();
@@ -178,6 +185,7 @@ public:
         rev = revision;
         return_data.clear();
         original_code = _code;
+        data = _data;
         status = EVMC_SUCCESS;
         output_offset = 0;
         output_size = 0;

@@ -925,6 +925,18 @@ inline Result mcopy(StackTop stack, int64_t gas_left, ExecutionState& state) noe
     return {EVMC_SUCCESS, gas_left};
 }
 
+inline Result dataload(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
+{
+    auto& index = stack.top();
+
+    if (state.data.size() < 32 || (state.data.size() - 32) < index)
+        return {EVMC_INVALID_MEMORY_ACCESS, gas_left};  // TODO: Introduce EVMC_INVALID_DATA_ACCESS
+
+    const auto begin = static_cast<size_t>(index);
+    index = intx::be::unsafe::load<uint256>(&state.data[begin]);
+    return {EVMC_SUCCESS, gas_left};
+}
+
 template <size_t NumTopics>
 inline Result log(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {

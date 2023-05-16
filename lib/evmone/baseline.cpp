@@ -365,9 +365,10 @@ evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_co
     evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
 {
     auto vm = static_cast<VM*>(c_vm);
-    const auto jumpdest_map = analyze(rev, {code, code_size});
-    auto state =
-        std::make_unique<ExecutionState>(*msg, rev, *host, ctx, bytes_view{code, code_size});
-    return execute(*vm, msg->gas, *state, jumpdest_map);
+    const bytes_view container{code, code_size};
+    const auto code_analysis = analyze(rev, container);
+    const auto data = code_analysis.eof_header.get_data(container);
+    auto state = std::make_unique<ExecutionState>(*msg, rev, *host, ctx, container, data);
+    return execute(*vm, msg->gas, *state, code_analysis);
 }
 }  // namespace evmone::baseline
