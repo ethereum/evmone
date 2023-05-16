@@ -652,72 +652,64 @@ TEST_P(evm, create_oog_after)
 
 TEST_P(evm, returndatasize_before_call)
 {
-    execute(bytecode{"3d60005360016000f3"});
-    EXPECT_EQ(gas_used, 17);
-    ASSERT_EQ(result.output_size, 1);
-    EXPECT_EQ(result.output_data[0], 0);
+    execute(returndatasize() + ret_top());
+    EXPECT_GAS_USED(EVMC_SUCCESS, 17);
+    EXPECT_OUTPUT_INT(0);
 }
 
 TEST_P(evm, returndatasize)
 {
-    uint8_t call_output[13];
+    const uint8_t call_output[13]{};
+    host.call_result.output_data = std::data(call_output);
+
+    const auto code = delegatecall(0) + returndatasize() + ret_top();
+
+    host.call_result.status_code = EVMC_SUCCESS;
     host.call_result.output_size = std::size(call_output);
-    host.call_result.output_data = std::begin(call_output);
-
-    const auto code =
-        push(0) + 5 * OP_DUP1 + OP_DELEGATECALL + mstore8(0, OP_RETURNDATASIZE) + ret(0, 1);
     execute(code);
-    EXPECT_EQ(gas_used, 735);
-    ASSERT_EQ(result.output_size, 1);
-    EXPECT_EQ(result.output_data[0], std::size(call_output));
+    EXPECT_GAS_USED(EVMC_SUCCESS, 735);
+    EXPECT_OUTPUT_INT(std::size(call_output));
 
-    host.call_result.output_size = 1;
     host.call_result.status_code = EVMC_FAILURE;
+    host.call_result.output_size = 1;
     execute(code);
-    EXPECT_EQ(gas_used, 735);
-    ASSERT_EQ(result.output_size, 1);
-    EXPECT_EQ(result.output_data[0], 1);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 735);
+    EXPECT_OUTPUT_INT(1);
 
-    host.call_result.output_size = 0;
     host.call_result.status_code = EVMC_INTERNAL_ERROR;
+    host.call_result.output_size = 0;
     execute(code);
-    EXPECT_EQ(gas_used, 735);
-    ASSERT_EQ(result.output_size, 1);
-    EXPECT_EQ(result.output_data[0], 0);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 735);
+    EXPECT_OUTPUT_INT(0);
 }
 
 TEST_P(evm, returndatacopy)
 {
-    uint8_t call_output[32] = {1, 2, 3, 4, 5, 6, 7};
-    host.call_result.output_size = std::size(call_output);
-    host.call_result.output_data = std::begin(call_output);
+    const auto call_output =
+        0x497f3c9f61479c1cfa53f0373d39d2bf4e5f73f71411da62f1d6b85c03a60735_bytes32;
+    host.call_result.output_data = std::data(call_output.bytes);
+    host.call_result.output_size = std::size(call_output.bytes);
 
-    const bytecode code = "600080808060aa60fff4506020600060003e60206000f3";
+    const auto code = delegatecall(0) + returndatacopy(0, 0, 32) + ret(0, 32);
     execute(code);
-    EXPECT_EQ(gas_used, 999);
-    ASSERT_EQ(result.output_size, 32);
-    EXPECT_EQ(result.output_data[0], 1);
-    EXPECT_EQ(result.output_data[1], 2);
-    EXPECT_EQ(result.output_data[2], 3);
-    EXPECT_EQ(result.output_data[6], 7);
-    EXPECT_EQ(result.output_data[7], 0);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 742);
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size), call_output);
 }
 
 TEST_P(evm, returndatacopy_empty)
 {
-    const bytecode code = "600080808060aa60fff4600080803e60016000f3";
-    execute(code);
-    EXPECT_EQ(gas_used, 994);
-    ASSERT_EQ(result.output_size, 1);
-    EXPECT_EQ(result.output_data[0], 0);
+    execute(delegatecall(0) + returndatacopy(0, 0, 0) + ret(0, 32));
+    EXPECT_GAS_USED(EVMC_SUCCESS, 739);
+    EXPECT_OUTPUT_INT(0);
 }
 
 TEST_P(evm, returndatacopy_cost)
 {
-    auto call_output = uint8_t{};
-    host.call_result.output_data = &call_output;
-    host.call_result.output_size = sizeof(call_output);
-    auto code = "60008080808080fa6001600060003e";
+    const uint8_t call_output[1]{};
+    host.call_result.output_data = std::data(call_output);
+    host.call_result.output_size = std::size(call_output);
+
+    const auto code = staticcall(0) + returndatacopy(0, 0, 1);
     execute(736, code);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     execute(735, code);
@@ -726,17 +718,27 @@ TEST_P(evm, returndatacopy_cost)
 
 TEST_P(evm, returndatacopy_outofrange)
 {
-    auto call_output = uint8_t{};
-    host.call_result.output_data = &call_output;
-    host.call_result.output_size = sizeof(call_output);
-    execute(735, "60008080808080fa6002600060003e");
+    const uint8_t call_output[2]{};
+    host.call_result.output_data = std::data(call_output);
+    host.call_result.output_size = std::size(call_output);
+
+    execute(735, staticcall(0) + returndatacopy(0, 0, 3));
     EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
 
-    execute(735, "60008080808080fa6001600160003e");
+    execute(735, staticcall(0) + returndatacopy(0, 1, 2));
     EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
 
-    execute(735, "60008080808080fa6000600260003e");
+    execute(735, staticcall(0) + returndatacopy(0, 2, 1));
     EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
+
+    execute(735, staticcall(0) + returndatacopy(0, 3, 0));
+    EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
+
+    execute(735, staticcall(0) + returndatacopy(0, 1, 0));
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+
+    execute(735, staticcall(0) + returndatacopy(0, 2, 0));
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
 }
 
 TEST_P(evm, call_gas_refund_propagation)

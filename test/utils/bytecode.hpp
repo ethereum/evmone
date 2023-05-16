@@ -307,9 +307,19 @@ inline bytecode calldatasize()
     return OP_CALLDATASIZE;
 }
 
-inline bytecode calldatacopy(bytecode src, bytecode dst, bytecode size)
+inline bytecode calldatacopy(bytecode dst, bytecode src, bytecode size)
 {
-    return std::move(size) + std::move(dst) + std::move(src) + OP_CALLDATACOPY;
+    return std::move(size) + std::move(src) + std::move(dst) + OP_CALLDATACOPY;
+}
+
+inline bytecode returndatasize()
+{
+    return OP_RETURNDATASIZE;
+}
+
+inline bytecode returndatacopy(bytecode dst, bytecode src, bytecode size)
+{
+    return std::move(size) + std::move(src) + std::move(dst) + OP_RETURNDATACOPY;
 }
 
 inline bytecode sstore(bytecode index, bytecode value)
