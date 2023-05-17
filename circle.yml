@@ -137,21 +137,35 @@ commands:
 
   download_execution_tests:
     parameters:
+      repo:
+        type: string
+        default: "ethereum/tests"
       rev:
         type: string
         default: develop
       commit:
         type: string
         default: ""
+      legacy:
+        description: "Download also legacy tests"
+        type: boolean
+        default: true
     steps:
       - run:
           name: "Download execution tests: <<parameters.rev>> <<parameters.commit>>"
           working_directory: ~/tests
           command: |
-            git clone --no-checkout --depth=250 --single-branch https://github.com/ethereum/tests . --branch <<parameters.rev>>
+            find . -delete
+            git clone --no-checkout --depth=100 --single-branch https://github.com/<<parameters.repo>> . --branch <<parameters.rev>>
             <<#parameters.rev>>git checkout <<parameters.rev>><</parameters.rev>>
             <<#parameters.commit>>git checkout <<parameters.commit>><</parameters.commit>>
-            git submodule update --init --recursive --depth=1 --progress
+      - when:
+          condition: <<parameters.legacy>>
+          steps:
+            - run:
+                name: "Download legacy execution tests (git submodule)"
+                working_directory: ~/tests
+                command: git submodule update --init --recursive --depth=1 --progress
 
   build:
     description: "Build"
@@ -436,7 +450,16 @@ jobs:
           working_directory: ~/build
           command: |
             export EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json 
-            bin/evmone-statetest ~/tests/GeneralStateTests ~/tests/EIPTests/StateTests/stEOF ~/tests/LegacyTests/Constantinople/GeneralStateTests
+            bin/evmone-statetest ~/tests/GeneralStateTests ~/tests/LegacyTests/Constantinople/GeneralStateTests
+      - download_execution_tests:
+          repo: ipsilon/tests
+          rev: eof
+          legacy: false
+      - run:
+          name: "State tests (EOF)"
+          working_directory: ~/build
+          command: |
+            bin/evmone-statetest ~/tests/EIPTests/StateTests/stEOF
       - collect_coverage_gcc
       - upload_coverage:
           flags: statetests
