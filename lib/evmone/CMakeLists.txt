@@ -49,6 +49,7 @@ if(CABLE_COMPILER_GNULIKE)
         evmone PRIVATE
         -fno-exceptions
         $<$<CXX_COMPILER_ID:GNU>:-Wstack-usage=2600>
+        -fcf-protection=none
     )
     if(NOT SANITIZE MATCHES undefined)
         # RTTI can be disabled except for UBSan which checks vptr integrity.
