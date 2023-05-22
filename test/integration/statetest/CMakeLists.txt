@@ -79,9 +79,23 @@ add_test(
     NAME ${PREFIX}/trace
     COMMAND evmone-statetest ${TESTS1}/SuiteA/test1.json --trace
 )
+set(EXPECTED_TRACE [[
+{"pc":0,"op":96,"gas":"0x5c878","gasCost":"0x3","memSize":0,"stack":[],"depth":1,"refund":0,"opName":"PUSH1"}
+{"pc":2,"op":96,"gas":"0x5c875","gasCost":"0x3","memSize":0,"stack":["0x1"],"depth":1,"refund":0,"opName":"PUSH1"}
+{"pc":4,"op":1,"gas":"0x5c872","gasCost":"0x3","memSize":0,"stack":["0x1","0x1"],"depth":1,"refund":0,"opName":"ADD"}
+{"pc":5,"op":96,"gas":"0x5c86f","gasCost":"0x3","memSize":0,"stack":["0x2"],"depth":1,"refund":0,"opName":"PUSH1"}
+{"pc":7,"op":85,"gas":"0x5c86c","gasCost":"0x0","memSize":0,"stack":["0x2","0x0"],"depth":1,"refund":0,"opName":"SSTORE"}
+{"pc":8,"op":0,"gas":"0x57218","gasCost":"0x0","memSize":0,"stack":[],"depth":1,"refund":0,"opName":"STOP"}
+{"pass":true,"gasUsed":"0xa868","stateRoot":"0xe8010ce590f401c9d61fef8ab05bea9bcec24281b795e5868809bc4e515aa530"}
+]])
+# Escape regex special characters.
+string(REPLACE "{" "\\{" EXPECTED_TRACE ${EXPECTED_TRACE})
+string(REPLACE "}" "\\}" EXPECTED_TRACE ${EXPECTED_TRACE})
+string(REPLACE "[" "\\[" EXPECTED_TRACE ${EXPECTED_TRACE})
+string(REPLACE "]" "\\]" EXPECTED_TRACE ${EXPECTED_TRACE})
 set_tests_properties(
     ${PREFIX}/trace PROPERTIES
-    PASS_REGULAR_EXPRESSION [=[\{"pc":4,"op":1,"gas":"0x5c872","gasCost":"0x3","memSize":0,"stack":\["0x1","0x1"\],"depth":1,"refund":0,"opName":"ADD"\}]=]
+    PASS_REGULAR_EXPRESSION ${EXPECTED_TRACE}
 )
 
 add_test(
