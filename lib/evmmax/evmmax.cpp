@@ -8,6 +8,10 @@ using namespace intx;
 
 extern "C" void mulx_mont_sparse_256(uint64_t* r_ptr, const uint64_t* a_ptr, const uint64_t* b_org,
     const uint64_t* n_ptr, uint64_t n0) noexcept;
+extern "C" void mulMont_CIOS_sparebit_asm_adx__limbs95asm95mul95mont95x565495adx95bmi50_424(
+    uint64_t* r_ptr, const uint64_t* a_ptr, const uint64_t* b_org, const uint64_t* n_ptr,
+    uint64_t n0) noexcept;
+
 
 namespace evmmax
 {
@@ -128,7 +132,8 @@ UintT ModArith<UintT>::mul(const UintT& x, const UintT& y) const noexcept
     if constexpr (std::is_same_v<UintT, uint256>)
     {
         uint64_t r[4];
-        mulx_mont_sparse_256(r, &x[0], &y[0], &mod[0], mod_inv);
+        mulMont_CIOS_sparebit_asm_adx__limbs95asm95mul95mont95x565495adx95bmi50_424(
+            r, &x[0], &y[0], &mod[0], mod_inv);
         return {r[0], r[1], r[2], r[3]};
     }
 
