@@ -6,6 +6,9 @@
 
 using namespace intx;
 
+extern "C" void mulx_mont_sparse_256(uint64_t* r_ptr, const uint64_t* a_ptr, const uint64_t* b_org,
+    const uint64_t* n_ptr, uint64_t n0) noexcept;
+
 namespace evmmax
 {
 namespace
@@ -65,9 +68,71 @@ ModArith<UintT>::ModArith(const UintT& modulus) : mod{modulus}, mod_inv{mul_inv6
 //     return state;
 // }
 
+inline void _mulx(uint64_t rdx, uint64_t x, uint64_t& l, uint64_t& h)
+{
+    const auto r = umul(x, rdx);
+    h = r[1];
+    l = r[0];
+}
+
+inline void _add(bool& c, uint64_t x, uint64_t& y)
+{
+    const auto r = addc(x, y);
+    y = r.value;
+    c = r.carry;
+}
+
+inline void _adc(bool& c, uint64_t x, uint64_t& y)
+{
+    const auto r = addc(x, y, c);
+    y = r.value;
+    c = r.carry;
+}
+inline void _mov(uint64_t x, uint64_t& y)
+{
+    y = x;
+}
+
+
+// static void mulx_mont_sparse_256(uint64_t* r_ptr, const uint64_t* a_ptr, const uint64_t* b_org,
+//     const uint64_t* n_ptr, uint64_t n0)
+//{
+//     bool c = false;
+//     bool o = false;
+//     uint64_t acc[6];
+//     uint64_t lo, hi;
+//     uint64_t rax, rdx;
+//
+//     auto b_ptr = b_org;
+//     rdx = b_org[0];
+//     acc[4] = a_ptr[0];
+//     acc[5] = a_ptr[1];
+//     lo = a_ptr[2];
+//     hi = a_ptr[3];
+//
+//     _mulx(rdx, acc[4], rax, acc[1]);
+//
+//     _mulx(rdx, acc[5], acc[5], acc[2]);
+//     _mulx(rdx, lo, lo, acc[3]);
+//     _add(c, acc[5], acc[1]);
+//     _mulx(rdx, hi, hi, acc[4]);
+//     _mov(b_ptr[1], rdx);
+//     _adc(c, lo, acc[2]);
+//     _adc(c, hi, acc[3]);
+//     _adc(c, 0, acc[4]);
+// }
+
 template <typename UintT>
 UintT ModArith<UintT>::mul(const UintT& x, const UintT& y) const noexcept
 {
+    if constexpr (std::is_same_v<UintT, uint256>)
+    {
+        uint64_t r[4];
+        mulx_mont_sparse_256(r, &x[0], &y[0], &mod[0], mod_inv);
+        return {r[0], r[1], r[2], r[3]};
+    }
+
+
     // Coarsely Integrated Op erand Scanning (CIOS) Method
     // Based on 2.3.2 from
     // https://www.microsoft.com/en-us/research/wp-content/uploads/1998/06/97Acar.pdf
@@ -119,7 +184,7 @@ UintT ModArith<UintT>::from_mont(const UintT& x) const noexcept
 template <typename UintT>
 UintT ModArith<UintT>::add(const UintT& x, const UintT& y) const noexcept
 {
-    const auto s = x + y; // Never overflows if prime < max 255bit int.
+    const auto s = x + y;  // Never overflows if prime < max 255bit int.
     const auto d = subc(s, mod);
     return d.carry ? s : d.value;
 }
