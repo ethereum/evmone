@@ -320,8 +320,8 @@ TEST(eof_validation, EOF1_undefined_opcodes)
         // PUSH*, DUPN, SWAPN, RJUMP*, CALLF require immediate argument to be valid,
         // checked in a separate test.
         if ((opcode >= OP_PUSH1 && opcode <= OP_PUSH32) || opcode == OP_DUPN ||
-            opcode == OP_SWAPN || opcode == OP_RJUMP || opcode == OP_RJUMPI ||
-            opcode == OP_RJUMPV || opcode == OP_CALLF)
+            opcode == OP_SWAPN || opcode == OP_RJUMP || opcode == OP_RJUMPI || opcode == OP_CALLF ||
+            opcode == OP_RJUMPV || opcode == OP_DATALOADN)
             continue;
         // These opcodes are deprecated since Cancun.
         // gas_cost table current implementation does not allow to undef instructions.

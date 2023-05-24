@@ -173,6 +173,7 @@ constexpr inline GasCostTable gas_costs = []() noexcept {
     table[EVMC_CANCUN][OP_CALLF] = 5;
     table[EVMC_CANCUN][OP_RETF] = 3;
     table[EVMC_CANCUN][OP_DATALOAD] = 3;
+    table[EVMC_CANCUN][OP_DATALOADN] = 2;
     table[EVMC_CANCUN][OP_DATASIZE] = 2;
     table[EVMC_CANCUN][OP_DATACOPY] = 3;
 
@@ -381,6 +382,7 @@ constexpr inline std::array<Traits, 256> traits = []() noexcept {
     table[OP_SWAPN] = {"SWAPN", 1, false, 0, 0, EVMC_CANCUN};
     table[OP_MCOPY] = {"MCOPY", 0, false, 3, -3, EVMC_CANCUN};
     table[OP_DATALOAD] = {"DATALOAD", 0, false, 1, 0, EVMC_CANCUN};
+    table[OP_DATALOADN] = {"DATALOADN", 2, false, 0, 1, EVMC_CANCUN};
     table[OP_DATASIZE] = {"DATASIZE", 0, false, 0, 1, EVMC_CANCUN};
     table[OP_DATACOPY] = {"DATACOPY", 0, false, 3, -3, EVMC_CANCUN};
 

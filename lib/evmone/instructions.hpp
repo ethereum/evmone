@@ -942,6 +942,14 @@ inline void datasize(StackTop stack, ExecutionState& state) noexcept
     stack.push(state.data.size());
 }
 
+inline code_iterator dataloadn(StackTop stack, ExecutionState& state, code_iterator pos) noexcept
+{
+    const auto index = read_uint16_be(&pos[1]);
+
+    stack.push(intx::be::unsafe::load<uint256>(&state.data[index]));
+    return pos + 3;
+}
+
 inline Result datacopy(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     const auto& mem_index = stack.pop();

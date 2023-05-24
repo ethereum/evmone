@@ -165,6 +165,7 @@ enum Opcode : uint8_t
     OP_MCOPY = 0xb7,
 
     OP_DATALOAD = 0xb8,
+    OP_DATALOADN = 0xb9,
     OP_DATASIZE = 0xba,
     OP_DATACOPY = 0xbb,
 
