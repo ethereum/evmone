@@ -454,6 +454,7 @@ jobs:
       - download_execution_tests:
           repo: ipsilon/tests
           rev: eof
+          commit: b25623d4d7df10e38498cace7adc7eb413c4b20d
           legacy: false
       - run:
           name: "State tests (EOF)"
