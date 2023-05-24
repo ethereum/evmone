@@ -942,6 +942,33 @@ inline void datasize(StackTop stack, ExecutionState& state) noexcept
     stack.push(state.data.size());
 }
 
+inline Result datacopy(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
+{
+    const auto& mem_index = stack.pop();
+    const auto& data_index = stack.pop();
+    const auto& size = stack.pop();
+
+    if (!check_memory(gas_left, state.memory, mem_index, size))
+        return {EVMC_OUT_OF_GAS, gas_left};
+
+    const auto s = static_cast<size_t>(size);
+
+    if (state.data.size() < s || state.data.size() - s < data_index)
+        return {EVMC_INVALID_MEMORY_ACCESS, gas_left};  // TODO: Introduce EVMC_INVALID_DATA_ACCESS
+
+    if (const auto cost = copy_cost(s); (gas_left -= cost) < 0)
+        return {EVMC_OUT_OF_GAS, gas_left};
+
+    if (s > 0)
+    {
+        const auto src = static_cast<size_t>(data_index);
+        const auto dst = static_cast<size_t>(mem_index);
+        std::memcpy(&state.memory[dst], &state.data[src], s);
+    }
+
+    return {EVMC_SUCCESS, gas_left};
+}
+
 template <size_t NumTopics>
 inline Result log(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
