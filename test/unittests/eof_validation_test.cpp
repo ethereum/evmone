@@ -1247,3 +1247,47 @@ TEST(eof_validation, too_many_code_sections)
         "00000000000000000000000000000000000000000000000000000000000000000000";
     EXPECT_EQ(validate_eof(code), EOFValidationError::too_many_code_sections);
 }
+
+TEST(eof_validation, dataloadn)
+{
+    // DATALOADN{0}
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 030020 00 00000001 b900005000"
+                           "0000000000000000111111111111111122222222222222223333333333333333"),
+        EOFValidationError::success);
+
+    // DATALOADN{1}
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 030021 00 00000001 b900015000"
+                           "000000000000000011111111111111112222222222222222333333333333333344"),
+        EOFValidationError::success);
+
+    // DATALOADN{32}
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 030040 00 00000001 b900205000"
+                           "0000000000000000111111111111111122222222222222223333333333333333"
+                           "0000000000000000111111111111111122222222222222223333333333333333"),
+        EOFValidationError::success);
+
+    // DATALOADN{0} - no data section
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 030000 00 00000001 b900005000"),
+        EOFValidationError::invalid_dataloadn_index);
+
+    // DATALOADN{1} - out of data section bounds
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 030001 00 00000001 b900015000"
+                           "00"),
+        EOFValidationError::invalid_dataloadn_index);
+
+    // DATALOADN{32} - out of data section bounds
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 030020 00 00000001 b900205000"
+                           "0000000000000000111111111111111122222222222222223333333333333333"),
+        EOFValidationError::invalid_dataloadn_index);
+
+    // DATALOADN{uint16_max} - out of data section bounds
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 030020 00 00000001 b9ffff5000"
+                           "0000000000000000111111111111111122222222222222223333333333333333"),
+        EOFValidationError::invalid_dataloadn_index);
+
+    // DATALOADN{32} - truncated word
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 03003F 00 00000001 b900205000"
+                           "0000000000000000111111111111111122222222222222223333333333333333"
+                           "00000000000000001111111111111111222222222222222233333333333333"),
+        EOFValidationError::invalid_dataloadn_index);
+}
