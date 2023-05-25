@@ -514,6 +514,17 @@ TEST(eof_validation, EOF1_rjump_invalid_destination)
     // To PUSH immediate (offset = -4)
     EXPECT_EQ(validate_eof("EF0001 010004 0200010006 040000 00 00800000 6000E0FFFC00"),
         EOFValidationError::invalid_rjump_destination);
+
+    // To CREATE3 immediate
+    const auto embedded = eof_bytecode(bytecode{OP_INVALID});
+    auto cont =
+        eof_bytecode(rjump(9) + 0 + 0xff + 0 + 0 + OP_CREATE3 + Opcode{0} + OP_POP + OP_STOP, 4)
+            .container(embedded);
+    EXPECT_EQ(validate_eof(cont, EVMC_PRAGUE), EOFValidationError::invalid_rjump_destination);
+
+    // To RETURNCONTRACT immediate
+    cont = eof_bytecode(rjump(5) + 0 + 0 + OP_RETURNCONTRACT + Opcode{0}, 2).container(embedded);
+    EXPECT_EQ(validate_eof(cont, EVMC_PRAGUE), EOFValidationError::invalid_rjump_destination);
 }
 
 TEST(eof_validation, EOF1_rjumpi_invalid_destination)
@@ -541,6 +552,18 @@ TEST(eof_validation, EOF1_rjumpi_invalid_destination)
     // To PUSH immediate (offset = -4)
     EXPECT_EQ(validate_eof("EF0001 010004 0200010006 040000 00 00800000 6000E1FFFC00"),
         EOFValidationError::invalid_rjump_destination);
+
+    // To CREATE3 immediate
+    const auto embedded = eof_bytecode(bytecode{OP_INVALID});
+    auto cont =
+        eof_bytecode(rjumpi(9, 0) + 0 + 0xff + 0 + 0 + OP_CREATE3 + Opcode{0} + OP_POP + OP_STOP, 4)
+            .container(embedded);
+    EXPECT_EQ(validate_eof(cont, EVMC_PRAGUE), EOFValidationError::invalid_rjump_destination);
+
+    // To RETURNCONTRACT immediate
+    cont =
+        eof_bytecode(rjumpi(5, 0) + 0 + 0 + OP_RETURNCONTRACT + Opcode{0}, 2).container(embedded);
+    EXPECT_EQ(validate_eof(cont, EVMC_PRAGUE), EOFValidationError::invalid_rjump_destination);
 }
 
 TEST(eof_validation, EOF1_rjumpv_invalid_destination)
@@ -590,6 +613,18 @@ TEST(eof_validation, EOF1_rjumpv_invalid_destination)
     EXPECT_EQ(
         validate_eof("EF0001 010004 020001000F 040000 00 00800000 6002E2020000000300066001006002"),
         EOFValidationError::invalid_rjump_destination);
+
+    // To CREATE3 immediate
+    const auto embedded = eof_bytecode(bytecode{OP_INVALID});
+    auto cont = eof_bytecode(
+        rjumpv({9}, 0) + 0 + 0xff + 0 + 0 + OP_CREATE3 + Opcode{0} + OP_POP + OP_STOP, 4)
+                    .container(embedded);
+    EXPECT_EQ(validate_eof(cont, EVMC_PRAGUE), EOFValidationError::invalid_rjump_destination);
+
+    // To RETURNCONTRACT immediate
+    cont =
+        eof_bytecode(rjumpv({5}, 0) + 0 + 0 + OP_RETURNCONTRACT + Opcode{0}, 2).container(embedded);
+    EXPECT_EQ(validate_eof(cont, EVMC_PRAGUE), EOFValidationError::invalid_rjump_destination);
 }
 
 TEST(eof_validation, EOF1_section_order)
@@ -1253,4 +1288,89 @@ TEST(eof_validation, EOF1_embedded_container_invalid)
     EXPECT_EQ(validate_eof("EF0001 010004 0200010006" + containers_header +
                            "040000 00 00800001 60005D000000" + containers_body),
         EOFValidationError::too_many_container_sections);
+}
+
+TEST(eof_validation, EOF1_create3_valid)
+{
+    // initcontainer_index = 0
+    const auto embedded = eof_bytecode(bytecode{OP_INVALID});
+    auto cont = eof_bytecode(
+        create3().container(0).input(0, OP_CALLDATASIZE).salt(0xff) + OP_POP + OP_STOP, 4)
+                    .container(embedded);
+    EXPECT_EQ(validate_eof(cont, EVMC_PRAGUE), EOFValidationError::success);
+
+    // initcontainer_index = 1
+    cont = eof_bytecode(
+        create3().container(1).input(0, OP_CALLDATASIZE).salt(0xff) + OP_POP + OP_STOP, 4)
+               .container(embedded)
+               .container(embedded);
+    EXPECT_EQ(validate_eof(cont, EVMC_PRAGUE), EOFValidationError::success);
+
+    // initcontainer_index = 255
+    cont = eof_bytecode(
+        create3().container(255).input(0, OP_CALLDATASIZE).salt(0xff) + OP_POP + OP_STOP, 4);
+    for (auto i = 0; i < 256; ++i)
+        cont.container(embedded);
+    EXPECT_EQ(validate_eof(cont, EVMC_PRAGUE), EOFValidationError::success);
+}
+
+TEST(eof_validation, EOF1_create3_invalid)
+{
+    // truncated immediate
+    const auto embedded = eof_bytecode(bytecode{OP_INVALID});
+    auto cont = eof_bytecode(bytecode(0) + 0xff + 0 + 0 + OP_CREATE3, 4).container(embedded);
+    EXPECT_EQ(validate_eof(cont, EVMC_PRAGUE), EOFValidationError::truncated_instruction);
+
+    // last instruction
+    cont = eof_bytecode(bytecode(0) + 0xff + 0 + 0 + OP_CREATE3 + Opcode{0}, 4).container(embedded);
+    EXPECT_EQ(validate_eof(cont, EVMC_PRAGUE), EOFValidationError::no_terminating_instruction);
+
+    // referring to non-existent container section
+    cont = eof_bytecode(bytecode(0) + 0xff + 0 + 0 + OP_CREATE3 + Opcode{1} + OP_POP + OP_STOP, 4)
+               .container(embedded);
+    EXPECT_EQ(validate_eof(cont, EVMC_PRAGUE), EOFValidationError::invalid_container_section_index);
+    cont =
+        eof_bytecode(bytecode(0) + 0xff + 0 + 0 + OP_CREATE3 + Opcode{0xff} + OP_POP + OP_STOP, 4)
+            .container(embedded);
+    EXPECT_EQ(validate_eof(cont, EVMC_PRAGUE), EOFValidationError::invalid_container_section_index);
+}
+
+TEST(eof_validation, EOF1_returncontract_valid)
+{
+    // initcontainer_index = 0
+    const auto embedded = eof_bytecode(bytecode{OP_INVALID});
+    auto cont =
+        eof_bytecode(bytecode(0) + 0 + OP_RETURNCONTRACT + Opcode{0}, 2).container(embedded);
+    EXPECT_EQ(validate_eof(cont, EVMC_PRAGUE), EOFValidationError::success);
+
+    // initcontainer_index = 1
+    cont = eof_bytecode(bytecode(0) + 0 + OP_RETURNCONTRACT + Opcode{1}, 2)
+               .container(embedded)
+               .container(embedded);
+    EXPECT_EQ(validate_eof(cont, EVMC_PRAGUE), EOFValidationError::success);
+
+    // initcontainer_index = 255
+    cont = eof_bytecode(bytecode(0) + 0 + OP_RETURNCONTRACT + Opcode{255}, 2);
+    for (auto i = 0; i < 256; ++i)
+        cont.container(embedded);
+    EXPECT_EQ(validate_eof(cont, EVMC_PRAGUE), EOFValidationError::success);
+}
+
+TEST(eof_validation, EOF1_returncontract_invalid)
+{
+    // truncated immediate
+    const auto embedded = eof_bytecode(bytecode{OP_INVALID});
+    auto cont = eof_bytecode(bytecode(0) + 0 + OP_RETURNCONTRACT, 4).container(embedded);
+    EXPECT_EQ(validate_eof(cont, EVMC_PRAGUE), EOFValidationError::truncated_instruction);
+
+    // referring to non-existent container section
+    cont = eof_bytecode(bytecode(0) + 0 + OP_RETURNCONTRACT + Opcode{1}, 4).container(embedded);
+    EXPECT_EQ(validate_eof(cont, EVMC_PRAGUE), EOFValidationError::invalid_container_section_index);
+    cont = eof_bytecode(bytecode(0) + 0 + OP_RETURNCONTRACT + Opcode{0xff}, 4).container(embedded);
+    EXPECT_EQ(validate_eof(cont, EVMC_PRAGUE), EOFValidationError::invalid_container_section_index);
+
+    // Unreachable code after RETURNCONTRACT
+    cont = eof_bytecode(bytecode(0) + 0 + OP_RETURNCONTRACT + Opcode{0} + OP_STOP, 2)
+               .container(embedded);
+    EXPECT_EQ(validate_eof(cont, EVMC_PRAGUE), EOFValidationError::unreachable_instructions);
 }
