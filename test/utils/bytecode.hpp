@@ -9,7 +9,9 @@
 #include <test/utils/utils.hpp>
 #include <algorithm>
 #include <ostream>
+#include <span>
 #include <stdexcept>
+#include <vector>
 
 struct bytecode;
 
@@ -91,25 +93,30 @@ big_endian(T value)
 }
 
 inline bytecode eof_header(uint8_t version, uint16_t code_size, uint16_t max_stack_height,
-    uint16_t data_size, uint16_t embedded_container_size)
+    uint16_t data_size, std::span<const uint16_t> embedded_container_sizes)
 {
+    assert(embedded_container_sizes.size() <= std::numeric_limits<uint16_t>::max());
+
     bytecode out{bytes{0xEF, 0x00, version}};
     out += "01" + big_endian(uint16_t{4});  // type header
-    out += "02"_hex + big_endian(uint16_t{1}) + big_endian(code_size);
+    out += "020001" + big_endian(code_size);
 
-    if (embedded_container_size != 0)
-        out += "030001"_hex + big_endian(embedded_container_size);
+    if (!embedded_container_sizes.empty())
+        out += "03" + big_endian(static_cast<uint16_t>(embedded_container_sizes.size()));
+    for (const auto container_size : embedded_container_sizes)
+        out += big_endian(container_size);
+
     out += "04" + big_endian(data_size);
 
     out += "00";
-    out += "0000"_hex + big_endian(max_stack_height);  // type section
+    out += "0000" + big_endian(max_stack_height);  // type section
     return out;
 }
 
-inline bytecode eof1_header(uint16_t code_size, uint16_t max_stack_height, uint16_t data_size = 0,
-    uint16_t embedded_container_size = 0)
+inline bytecode eof1_header(uint16_t code_size, uint16_t max_stack_height, uint16_t data_size,
+    std::span<const uint16_t> embedded_container_sizes)
 {
-    return eof_header(1, code_size, max_stack_height, data_size, embedded_container_size);
+    return eof_header(1, code_size, max_stack_height, data_size, embedded_container_sizes);
 }
 
 inline bytecode eof1_bytecode(bytecode code, uint16_t max_stack_height = 0, bytecode data = {},
@@ -117,11 +124,40 @@ inline bytecode eof1_bytecode(bytecode code, uint16_t max_stack_height = 0, byte
 {
     assert(code.size() <= std::numeric_limits<uint16_t>::max());
     assert(data.size() <= std::numeric_limits<uint16_t>::max());
+    assert(embedded_container.size() <= std::numeric_limits<uint16_t>::max());
 
-    return eof1_header(static_cast<uint16_t>(code.size()), max_stack_height,
-               static_cast<uint16_t>(data.size()),
-               static_cast<uint16_t>(embedded_container.size())) +
-           code + embedded_container + data;
+    const auto code_size = static_cast<uint16_t>(code.size());
+    const auto data_size = static_cast<uint16_t>(data.size());
+
+    if (!embedded_container.empty())
+    {
+        const auto embedded_container_size = static_cast<uint16_t>(embedded_container.size());
+        return eof1_header(code_size, max_stack_height, data_size, {&embedded_container_size, 1}) +
+               code + embedded_container + data;
+    }
+    else
+        return eof1_header(code_size, max_stack_height, data_size, {}) + code + data;
+}
+
+inline bytecode eof1_bytecode(bytecode code, uint16_t max_stack_height, bytecode data,
+    std::span<const bytecode> embedded_containers)
+{
+    assert(code.size() <= std::numeric_limits<uint16_t>::max());
+    assert(data.size() <= std::numeric_limits<uint16_t>::max());
+
+    std::vector<uint16_t> embedded_container_sizes;
+    std::transform(embedded_containers.begin(), embedded_containers.end(),
+        std::back_inserter(embedded_container_sizes),
+        [](const auto& container) { return static_cast<uint16_t>(container.size()); });
+
+    bytecode container = eof1_header(static_cast<uint16_t>(code.size()), max_stack_height,
+                             static_cast<uint16_t>(data.size()), embedded_container_sizes) +
+                         code;
+    for (const auto& embedded_container : embedded_containers)
+        container += embedded_container;
+    container += data;
+
+    return container;
 }
 
 inline bytecode push(bytes_view data)
