@@ -198,8 +198,10 @@ std::variant<std::vector<EOFCodeType>, EOFValidationError> validate_types(
     return types;
 }
 
-EOFValidationError validate_instructions(evmc_revision rev, bytes_view code) noexcept
+EOFValidationError validate_instructions(
+    evmc_revision rev, const EOF1Header& header, size_t code_idx, bytes_view container) noexcept
 {
+    const bytes_view code{header.get_code(container, code_idx)};
     assert(!code.empty());  // guaranteed by EOF headers validation
 
     const auto& cost_table = baseline::get_baseline_cost_table(rev, 1);
@@ -219,6 +221,13 @@ EOFValidationError validate_instructions(evmc_revision rev, bytes_view code) noe
             if (count < 1)
                 return EOFValidationError::invalid_rjumpv_count;
             i += static_cast<size_t>(1 /* count */ + count * 2 /* tbl */);
+        }
+        else if (op == OP_DATALOADN)
+        {
+            const auto index = read_uint16_be(&code[i + 1]);
+            if (header.data_size < 32 || index > header.data_size - 32)
+                return EOFValidationError::invalid_dataloadn_index;
+            i += 2;
         }
         else
             i += instr::traits[op].immediate_size;
@@ -435,7 +444,7 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(
 
     for (size_t code_idx = 0; code_idx < header.code_sizes.size(); ++code_idx)
     {
-        const auto error_instr = validate_instructions(rev, header.get_code(container, code_idx));
+        const auto error_instr = validate_instructions(rev, header, code_idx, container);
         if (error_instr != EOFValidationError::success)
             return error_instr;
 
@@ -606,6 +615,8 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "stack_underflow";
     case EOFValidationError::invalid_code_section_index:
         return "invalid_code_section_index";
+    case EOFValidationError::invalid_dataloadn_index:
+        return "invalid_dataloadn_index";
     case EOFValidationError::impossible:
         return "impossible";
     }

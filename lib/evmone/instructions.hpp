@@ -925,6 +925,58 @@ inline Result mcopy(StackTop stack, int64_t gas_left, ExecutionState& state) noe
     return {EVMC_SUCCESS, gas_left};
 }
 
+inline Result dataload(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
+{
+    auto& index = stack.top();
+
+    if (state.data.size() < 32 || (state.data.size() - 32) < index)
+        return {EVMC_INVALID_MEMORY_ACCESS, gas_left};  // TODO: Introduce EVMC_INVALID_DATA_ACCESS
+
+    const auto begin = static_cast<size_t>(index);
+    index = intx::be::unsafe::load<uint256>(&state.data[begin]);
+    return {EVMC_SUCCESS, gas_left};
+}
+
+inline void datasize(StackTop stack, ExecutionState& state) noexcept
+{
+    stack.push(state.data.size());
+}
+
+inline code_iterator dataloadn(StackTop stack, ExecutionState& state, code_iterator pos) noexcept
+{
+    const auto index = read_uint16_be(&pos[1]);
+
+    stack.push(intx::be::unsafe::load<uint256>(&state.data[index]));
+    return pos + 3;
+}
+
+inline Result datacopy(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
+{
+    const auto& mem_index = stack.pop();
+    const auto& data_index = stack.pop();
+    const auto& size = stack.pop();
+
+    if (!check_memory(gas_left, state.memory, mem_index, size))
+        return {EVMC_OUT_OF_GAS, gas_left};
+
+    const auto s = static_cast<size_t>(size);
+
+    if (state.data.size() < s || state.data.size() - s < data_index)
+        return {EVMC_INVALID_MEMORY_ACCESS, gas_left};  // TODO: Introduce EVMC_INVALID_DATA_ACCESS
+
+    if (const auto cost = copy_cost(s); (gas_left -= cost) < 0)
+        return {EVMC_OUT_OF_GAS, gas_left};
+
+    if (s > 0)
+    {
+        const auto src = static_cast<size_t>(data_index);
+        const auto dst = static_cast<size_t>(mem_index);
+        std::memcpy(&state.memory[dst], &state.data[src], s);
+    }
+
+    return {EVMC_SUCCESS, gas_left};
+}
+
 template <size_t NumTopics>
 inline Result log(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {

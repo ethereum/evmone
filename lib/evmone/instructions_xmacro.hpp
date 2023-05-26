@@ -227,10 +227,10 @@
     ON_OPCODE_IDENTIFIER(OP_DUPN, dupn)                     \
     ON_OPCODE_IDENTIFIER(OP_SWAPN, swapn)                   \
     ON_OPCODE_IDENTIFIER(OP_MCOPY, mcopy)                   \
-    ON_OPCODE_UNDEFINED(0xb8)                               \
-    ON_OPCODE_UNDEFINED(0xb9)                               \
-    ON_OPCODE_UNDEFINED(0xba)                               \
-    ON_OPCODE_UNDEFINED(0xbb)                               \
+    ON_OPCODE_IDENTIFIER(OP_DATALOAD, dataload)             \
+    ON_OPCODE_IDENTIFIER(OP_DATALOADN, dataloadn)           \
+    ON_OPCODE_IDENTIFIER(OP_DATASIZE, datasize)             \
+    ON_OPCODE_IDENTIFIER(OP_DATACOPY, datacopy)             \
     ON_OPCODE_UNDEFINED(0xbc)                               \
     ON_OPCODE_UNDEFINED(0xbd)                               \
     ON_OPCODE_UNDEFINED(0xbe)                               \
