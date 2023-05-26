@@ -905,9 +905,9 @@ inline code_iterator swapn(StackTop stack, ExecutionState& state, code_iterator 
 
 inline Result mcopy(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
-    const auto dst_u256 = stack.pop();
-    const auto src_u256 = stack.pop();
-    const auto size_u256 = stack.pop();
+    const auto& dst_u256 = stack.pop();
+    const auto& src_u256 = stack.pop();
+    const auto& size_u256 = stack.pop();
 
     if (!check_memory(gas_left, state.memory, std::max(dst_u256, src_u256), size_u256))
         return {EVMC_OUT_OF_GAS, gas_left};
