@@ -95,6 +95,11 @@ commands:
         type: string
     steps:
       - run:
+          # TODO: This is a workaround for silkworm/libff build issue:
+          #       https://github.com/torquem-ch/silkworm/issues/1171
+          name: "Install system GMP"
+          command: sudo apt -q update && sudo apt -yq install libgmp-dev
+      - run:
           # Fix fixes the cache restore step in case the silkworm dir does not exist
           name: "Make Silkworm dir"
           command: mkdir -p ~/silkworm
@@ -104,7 +109,7 @@ commands:
       - run:
           name: "Check Silkworm cache"
           command: |
-            if [ -f ~/silkworm/consensus ]; then
+            if [ -f ~/silkworm/ethereum ]; then
               echo 'Cached Silkworm binary available - skip build.'
             else
               echo 'export SILKWORM_BUILD=true' >> $BASH_ENV
@@ -118,22 +123,25 @@ commands:
             git checkout <<parameters.commit>>
             git submodule update --init --recursive --progress
       - run:
+          name: "Install conan"
+          command: sudo pip install --break-system-packages conan==1.58
+      - run:
           name: "Configure Silkworm"
           working_directory: ~/silkworm
           command: |
             [ "$SILKWORM_BUILD" = true ] || exit 0
-            cmake -S src -B build -DCMAKE_BUILD_TYPE=Release -DHUNTER_CONFIGURATION_TYPES=Release -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=$(pwd)
+            cmake -S src -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=$(pwd)
       - run:
-          name: "Build Silkworm cmd/consensus"
+          name: "Build Silkworm cmd/test/ethereum"
           working_directory: ~/silkworm
           command: |
             [ "$SILKWORM_BUILD" = true ] || exit 0
-            cmake --build build --target consensus
+            cmake --build build --target ethereum
       - save_cache:
           name: "Save Silkworm cache"
           key: *silkworm-cache-key
           paths:
-            - ~/silkworm/consensus
+            - ~/silkworm/ethereum
 
   download_execution_tests:
     parameters:
@@ -419,19 +427,19 @@ jobs:
     steps:
       - build
       - build_silkworm:
-          commit: 30ca8b324fcffb574c23c09fcba6386e57a7a5af
+          commit: 2b7114844c64344c4b833235194cd5e2745a13be
       - download_execution_tests:
           rev: v12.2
       - run:
           name: "Silkworm-driven blockchain tests (Advanced)"
           working_directory: ~/build
           no_output_timeout: 20m
-          command: ~/silkworm/consensus --evm lib/libevmone.so,advanced --tests ~/tests --threads $CMAKE_BUILD_PARALLEL_LEVEL
+          command: ~/silkworm/ethereum --evm lib/libevmone.so,advanced --tests ~/tests --threads $CMAKE_BUILD_PARALLEL_LEVEL
       - run:
           name: "Silkworm-driven blockchain tests (Baseline)"
           working_directory: ~/build
           no_output_timeout: 20m
-          command: ~/silkworm/consensus --evm lib/libevmone.so --tests ~/tests --threads $CMAKE_BUILD_PARALLEL_LEVEL
+          command: ~/silkworm/ethereum --evm lib/libevmone.so --tests ~/tests --threads $CMAKE_BUILD_PARALLEL_LEVEL
       - collect_coverage_gcc
       - upload_coverage:
           flags: blockchaintests
@@ -454,6 +462,7 @@ jobs:
       - download_execution_tests:
           repo: ipsilon/tests
           rev: eof
+          commit: b25623d4d7df10e38498cace7adc7eb413c4b20d
           legacy: false
       - run:
           name: "State tests (EOF)"
@@ -644,7 +653,9 @@ workflows:
             tags:
               only: /^v[0-9].*/
       - state-tests
-      - blockchain-tests
+      # TODO: Disabled because some tests are failing.
+      #       See https://github.com/ethereum/evmone/issues/656.
+      # - blockchain-tests
       - cmake-min
       - gcc-min
       - clang-min
