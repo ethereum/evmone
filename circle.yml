@@ -95,12 +95,7 @@ commands:
         type: string
     steps:
       - run:
-          # TODO: This is a workaround for silkworm/libff build issue:
-          #       https://github.com/torquem-ch/silkworm/issues/1171
-          name: "Install system GMP"
-          command: sudo apt -q update && sudo apt -yq install libgmp-dev
-      - run:
-          # Fix fixes the cache restore step in case the silkworm dir does not exist
+          # Fixes the cache restore step in case the silkworm dir does not exist
           name: "Make Silkworm dir"
           command: mkdir -p ~/silkworm
       - restore_cache:
@@ -427,7 +422,7 @@ jobs:
     steps:
       - build
       - build_silkworm:
-          commit: 2b7114844c64344c4b833235194cd5e2745a13be
+          commit: 3cc504f91460667e9417bb825d0f652dbcc8efc1
       - download_execution_tests:
           rev: v12.2
       - run:
@@ -653,9 +648,7 @@ workflows:
             tags:
               only: /^v[0-9].*/
       - state-tests
-      # TODO: Disabled because some tests are failing.
-      #       See https://github.com/ethereum/evmone/issues/656.
-      # - blockchain-tests
+      - blockchain-tests
       - cmake-min
       - gcc-min
       - clang-min
