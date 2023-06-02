@@ -432,7 +432,7 @@ TEST_P(evm, blockhash)
     host.block_hash.bytes[13] = 0x13;
 
     host.tx_context.block_number = 0;
-    const auto code = push(0) + OP_BLOCKHASH + ret_top();
+    const auto code = blockhash(0) + ret_top();
     execute(code);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(gas_used, 38);
