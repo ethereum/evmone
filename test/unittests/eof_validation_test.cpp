@@ -725,6 +725,15 @@ TEST(eof_valication, max_stack_heigh)
     }
 }
 
+TEST(eof_validation, EOF1_callf_truncated)
+{
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 030000 00 00000000 B0"),
+        EOFValidationError::truncated_instruction);
+
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010002 030000 00 00000000 B000"),
+        EOFValidationError::truncated_instruction);
+}
+
 TEST(eof_validation, callf_invalid_code_section_index)
 {
     EXPECT_EQ(validate_eof("EF0001 010004 0200010004 030000 00 00000000 b0000100"),
