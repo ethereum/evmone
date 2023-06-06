@@ -214,11 +214,9 @@ EOFValidationError validate_instructions(
 
         if (i + instr::traits[op].immediate_size >= code.size())
             return EOFValidationError::truncated_instruction;
+
         if (op == OP_RJUMPV)
         {
-            if (i + 1 >= code.size())
-                return EOFValidationError::truncated_instruction;
-
             const auto count = code[i + 1];
             if (count < 1)
                 return EOFValidationError::invalid_rjumpv_count;
@@ -276,7 +274,7 @@ bool validate_rjump_destinations(bytes_view code) noexcept
         else if (op == OP_RJUMPV)
         {
             const auto count = code[i + 1];
-            imm_size += size_t{1} /* count */ + count * REL_OFFSET_SIZE /* tbl */;
+            imm_size += count * REL_OFFSET_SIZE /* tbl */;
             const size_t post_pos = i + 1 + imm_size;
 
             for (size_t k = 0; k < count * REL_OFFSET_SIZE; k += REL_OFFSET_SIZE)

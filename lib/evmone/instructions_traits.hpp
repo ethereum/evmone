@@ -301,7 +301,7 @@ constexpr inline std::array<Traits, 256> traits = []() noexcept {
     table[OP_RJUMP] = {"RJUMP", 2, false, 0, 0, EVMC_CANCUN};
     table[OP_RJUMPI] = {"RJUMPI", 2, false, 1, -1, EVMC_CANCUN};
     table[OP_RJUMPV] = {
-        "RJUMPV", 0 /* WARNING: immediate_size is dynamic */, false, 1, -1, EVMC_CANCUN};
+        "RJUMPV", 1 /* 1 byte static immediate + dynamic immediate */, false, 1, -1, EVMC_CANCUN};
 
     table[OP_PUSH0] = {"PUSH0", 0, false, 0, 1, EVMC_SHANGHAI};
 
