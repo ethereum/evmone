@@ -212,6 +212,8 @@ EOFValidationError validate_instructions(
         if (cost_table[op] == instr::undefined)
             return EOFValidationError::undefined_instruction;
 
+        if (i + instr::traits[op].immediate_size >= code.size())
+            return EOFValidationError::truncated_instruction;
         if (op == OP_RJUMPV)
         {
             if (i + 1 >= code.size())
@@ -221,6 +223,8 @@ EOFValidationError validate_instructions(
             if (count < 1)
                 return EOFValidationError::invalid_rjumpv_count;
             i += static_cast<size_t>(1 /* count */ + count * 2 /* tbl */);
+            if (i >= code.size())
+                return EOFValidationError::truncated_instruction;
         }
         else if (op == OP_DATALOADN)
         {
@@ -231,9 +235,6 @@ EOFValidationError validate_instructions(
         }
         else
             i += instr::traits[op].immediate_size;
-
-        if (i >= code.size())
-            return EOFValidationError::truncated_instruction;
     }
 
     return EOFValidationError::success;
