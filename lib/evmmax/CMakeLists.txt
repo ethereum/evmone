@@ -17,4 +17,6 @@ target_sources(
         mulMont256_spare_bits_asm_adx.S
     bn254.hpp
     bn254.cpp
+    secp256k1.hpp
+    secp256k1.cpp
 )
