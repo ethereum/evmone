@@ -29,4 +29,6 @@ inline bool is_at_infinity(const Point& pt) noexcept
     return pt.x == 0 && pt.y == 0;
 }
 
+uint256 inv(const ModArith<uint256>& s, const uint256& x) noexcept;
+
 }  // namespace evmmax::secp256k1
