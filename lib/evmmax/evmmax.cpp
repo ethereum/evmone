@@ -43,7 +43,6 @@ inline constexpr std::pair<uint64_t, uint64_t> addmul(
 template <typename UintT>
 ModArith<UintT>::ModArith(const UintT& modulus) : mod{modulus}, mod_inv{mul_inv64(-modulus[0])}
 {
-    assert(modulus < 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF_u256);
     static constexpr auto r2 = intx::uint<UintT::num_bits * 2 + 64>{1} << UintT::num_bits * 2;
     r_squared = intx::udivrem(r2, modulus).rem;
 }
@@ -189,9 +188,9 @@ UintT ModArith<UintT>::from_mont(const UintT& x) const noexcept
 template <typename UintT>
 UintT ModArith<UintT>::add(const UintT& x, const UintT& y) const noexcept
 {
-    const auto s = x + y;  // Never overflows if prime < max 255bit int.
-    const auto d = subc(s, mod);
-    return d.carry ? s : d.value;
+    const auto s = addc(x, y);  // FIXME: can overflow only if prime is max size (e.g. 255 bits).
+    const auto d = subc(s.value, mod);
+    return (!s.carry && d.carry) ? s.value : d.value;
 }
 
 template <typename UintT>
