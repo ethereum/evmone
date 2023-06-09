@@ -220,7 +220,7 @@ Point bn254_add(const Point& pt1, const Point& pt2) noexcept
     const auto x2 = s.to_mont(pt2.x);
     const auto y2 = s.to_mont(pt2.y);
 
-    // b3 == 9 for y^2 == x^3 + 9
+    // b3 == 9 for y^2 == x^3 + 3
     const auto b3 = s.to_mont(9);
     auto [x3, y3, z3] = point_addition_mixed_a0(s, x1, y1, x2, y2, b3);
 
