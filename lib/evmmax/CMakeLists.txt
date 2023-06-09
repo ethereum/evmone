@@ -13,8 +13,8 @@ target_sources(
     evmmax PRIVATE
     evmmax.hpp
     evmmax.cpp
-        mulx_mont_256-x86_64.s
-        mulMont256_spare_bits_asm_adx.S
+#        mulx_mont_256-x86_64.s
+#        mulMont256_spare_bits_asm_adx.S
     bn254.hpp
     bn254.cpp
     secp256k1.hpp

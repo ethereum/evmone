@@ -128,13 +128,13 @@ inline void _mov(uint64_t x, uint64_t& y)
 template <typename UintT>
 UintT ModArith<UintT>::mul(const UintT& x, const UintT& y) const noexcept
 {
-    if constexpr (std::is_same_v<UintT, uint256>)
-    {
-        uint64_t r[4];
-        mulMont_CIOS_sparebit_asm_adx__limbs95asm95mul95mont95x565495adx95bmi50_424(
-            r, &x[0], &y[0], &mod[0], mod_inv);
-        return {r[0], r[1], r[2], r[3]};
-    }
+    // if constexpr (std::is_same_v<UintT, uint256>)
+    // {
+    //     uint64_t r[4];
+    //     mulMont_CIOS_sparebit_asm_adx__limbs95asm95mul95mont95x565495adx95bmi50_424(
+    //         r, &x[0], &y[0], &mod[0], mod_inv);
+    //     return {r[0], r[1], r[2], r[3]};
+    // }
 
 
     // Coarsely Integrated Op erand Scanning (CIOS) Method
