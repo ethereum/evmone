@@ -4,6 +4,7 @@
 #pragma once
 
 #include "evmmax.hpp"
+#include <optional>
 
 using namespace intx;
 
@@ -31,4 +32,5 @@ inline bool is_at_infinity(const Point& pt) noexcept
 
 uint256 inv(const ModArith<uint256>& s, const uint256& x) noexcept;
 
+std::optional<uint256> sqrt(const ModArith<uint256>& s, const uint256& x) noexcept;
 }  // namespace evmmax::secp256k1
