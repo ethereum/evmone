@@ -149,4 +149,76 @@ uint256 inv(const ModArith<uint256>& s, const uint256& x) noexcept
 
     return z;
 }
+
+std::optional<uint256> sqrt(const ModArith<uint256>& s, const uint256& x) noexcept
+{
+    const auto x2 = s.mul(x, x);
+    const auto x3 = s.mul(x2, x);
+
+    auto x6 = x3;
+    for (auto i = 0; i < 3; ++i)
+        x6 = s.mul(x6, x6);
+    x6 = s.mul(x6, x3);
+
+    auto x9 = x6;
+    for (auto i = 0; i < 3; ++i)
+        x9 = s.mul(x9, x9);
+    x9 = s.mul(x9, x3);
+
+    auto x11 = x9;
+    for (auto i = 0; i < 2; ++i)
+        x11 = s.mul(x11, x11);
+    x11 = s.mul(x11, x2);
+
+    auto x22 = x11;
+    for (auto i = 0; i < 11; ++i)
+        x22 = s.mul(x22, x22);
+    x22 = s.mul(x22, x11);
+
+    auto x44 = x22;
+    for (auto i = 0; i < 22; ++i)
+        x44 = s.mul(x44, x44);
+    x44 = s.mul(x44, x22);
+
+    auto x88 = x44;
+    for (auto i = 0; i < 44; ++i)
+        x88 = s.mul(x88, x88);
+    x88 = s.mul(x88, x44);
+
+    auto x176 = x88;
+    for (auto i = 0; i < 88; ++i)
+        x176 = s.mul(x176, x176);
+    x176 = s.mul(x176, x88);
+
+    auto x220 = x176;
+    for (auto i = 0; i < 44; ++i)
+        x220 = s.mul(x220, x220);
+    x220 = s.mul(x220, x44);
+
+    auto x223 = x220;
+    for (auto i = 0; i < 3; ++i)
+        x223 = s.mul(x223, x223);
+    x223 = s.mul(x223, x3);
+
+    auto t1 = x223;
+    for (auto i = 0; i < 23; ++i)
+        t1 = s.mul(t1, t1);
+    t1 = s.mul(t1, x22);
+    for (auto i = 0; i < 6; ++i)
+        t1 = s.mul(t1, t1);
+    t1 = s.mul(t1, x2);
+    t1 = s.mul(t1, t1);
+    t1 = s.mul(t1, t1);
+
+    auto ret = t1;
+
+    auto ret2 = s.mul(ret, ret);
+
+    //    if (ret2 != x)
+    //        ret = s.sub(s.to_mont(0), ret);
+    //
+    //    ret2 = s.mul(ret, ret);
+
+    return (ret2 == x ? std::make_optional(ret) : std::nullopt);
+}
 }  // namespace evmmax::secp256k1
