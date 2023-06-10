@@ -11,6 +11,8 @@ using namespace intx;
 
 inline constexpr auto Secp256K1Mod =
     0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f_u256;
+inline constexpr auto Secp256K1N =
+    0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141_u256;
 
 namespace evmmax::secp256k1
 {

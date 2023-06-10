@@ -294,7 +294,8 @@ std::optional<Point> ecdsa_recover(const ModArith<uint256>& m, const ethash::has
     // https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Public_key_recovery
 
     // 1. Validate r and s are within [1, n-1].
-    // TODO
+    if (r == 0 || r >= Secp256K1N || s == 0 || s >= Secp256K1N)
+        return std::nullopt;
 
     // 2. Calculate y coordinate of R from r and v.
     (void)v;
