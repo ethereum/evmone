@@ -2,6 +2,7 @@
 // Copyright 2023 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 #include "secp256k1.hpp"
+#include <ethash/keccak.hpp>
 
 namespace evmmax::secp256k1
 {
@@ -24,6 +25,20 @@ std::optional<uint256> calculate_y(
     // Negate if different parity requested
     const auto candidate_parity = (m.from_mont(*y) & 1) != 0;
     return (candidate_parity == y_parity) ? *y : m.sub(0, *y);
+}
+
+evmc::address to_address(const Point& pt) noexcept
+{
+    // This performs Ethereum's address hashing on an uncompressed pubkey.
+    uint8_t serialized[64];
+    intx::be::unsafe::store(serialized, pt.x);
+    intx::be::unsafe::store(serialized + 32, pt.y);
+
+    const auto hashed = ethash::keccak256(serialized, sizeof(serialized));
+    evmc::address ret{};
+    std::memcpy(ret.bytes, hashed.bytes + 12, 20);
+
+    return ret;
 }
 
 uint256 field_inv(const ModArith<uint256>& m, const uint256& x) noexcept

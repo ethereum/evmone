@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 using namespace evmmax::secp256k1;
+using namespace evmc::literals;
 
 TEST(secp256k1, field_inv)
 {
@@ -140,4 +141,12 @@ TEST(secp256k1, calculate_y_invalid)
         const auto y_odd = calculate_y(m, x, true);
         ASSERT_FALSE(y_odd.has_value());
     }
+}
+
+TEST(secp256k1, point_to_address)
+{
+    // Check if converting the point at infinity gives the known address.
+    // https://www.google.com/search?q=0x3f17f1962B36e491b30A40b2405849e597Ba5FB5
+    // https://etherscan.io/address/0x3f17f1962b36e491b30a40b2405849e597ba5fb5
+    EXPECT_EQ(to_address(Point{}), 0x3f17f1962B36e491b30A40b2405849e597Ba5FB5_address);
 }

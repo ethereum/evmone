@@ -4,6 +4,7 @@
 #pragma once
 
 #include "ecc.hpp"
+#include <evmc/evmc.hpp>
 #include <optional>
 
 namespace evmmax::secp256k1
@@ -17,6 +18,9 @@ inline constexpr auto FieldPrime =
 /// The secp256k1 curve group order (N).
 inline constexpr auto Order =
     0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141_u256;
+
+using Point = ecc::Point<uint256>;
+
 
 /// Modular inversion for secp256k1 prime field.
 ///
@@ -41,5 +45,8 @@ uint256 scalar_inv(const ModArith<uint256>& m, const uint256& x) noexcept;
 /// Calculate y coordinate of a point having x coordinate and y parity.
 std::optional<uint256> calculate_y(
     const ModArith<uint256>& m, const uint256& x, bool y_parity) noexcept;
+
+/// Convert the secp256k1 point (uncompressed public key) to Ethereum address.
+evmc::address to_address(const Point& pt) noexcept;
 
 }  // namespace evmmax::secp256k1
