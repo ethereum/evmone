@@ -439,16 +439,13 @@ std::optional<Point> ecdsa_recover(const ModArith<uint256>& m, const ethash::has
 
     // 6. Calculate public key point Q.
     // TODO:
-    const Point Q;
-    (void)u1;
-    (void)u2;
     const Point R{r, *y};
-    (void)R;
-    // Point G
-    // ProjPoint T1 = point_mul(G, u1);
-    // ProjPoint T2 = point_mul(R, u2);
-    // ProjPoint Qj = point_add(T1, T2);
+    Point G = {};
+    Point T1 = secp256k1_mul(G, u1);
+    Point T2 = secp256k1_mul(R, u2);
+    //Point Qj = secp256k1_add(T1, T2);
     // Point Q = to_affine(Qj);
+    const Point Q = secp256k1_add(T1, T2);
     // TODO: What if Q is infinity?
 
     return std::make_optional(Q);
