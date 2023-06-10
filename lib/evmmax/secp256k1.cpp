@@ -287,8 +287,8 @@ std::optional<uint256> sqrt(const ModArith<uint256>& s, const uint256& x) noexce
     return (z2 == x ? std::make_optional(z) : std::nullopt);
 }
 
-Point ecdsa_recover(const ModArith<uint256>& m, const ethash::hash256& e, const uint256& r,
-    const uint256& s, bool v) noexcept
+std::optional<Point> ecdsa_recover(const ModArith<uint256>& m, const ethash::hash256& e,
+    const uint256& r, const uint256& s, bool v) noexcept
 {
     // Follows
     // https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Public_key_recovery
@@ -325,7 +325,7 @@ Point ecdsa_recover(const ModArith<uint256>& m, const ethash::hash256& e, const 
     // Point Q = to_affine(Qj);
     // TODO: What if Q is infinity?
 
-    return Q;
+    return std::make_optional(Q);
 }
 
 std::optional<uint256> sec256k1_calculate_y(
