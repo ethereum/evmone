@@ -236,7 +236,7 @@ TEST(evmmax, ecrecovery)
         bool v_bool = v == 28_u256 ? true : false;
 
         const auto result = ecrecover(hash, r, s, v_bool);
-        if (result.has_value())
-            EXPECT_EQ(result, e);
+        ASSERT_TRUE(result.has_value());
+        EXPECT_EQ(result, e);
     }
 }
