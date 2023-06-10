@@ -14,7 +14,7 @@ std::tuple<uint256, uint256, uint256> point_doubling_a0(const evmmax::ModArith<u
 std::tuple<uint256, uint256, uint256> point_addition_mixed_a0(const evmmax::ModArith<uint256>& s,
     const uint256& x1, const uint256& y1, const uint256& x2, const uint256& y2,
     const uint256& b3) noexcept;
-}
+}  // namespace evmmax::bn254
 
 namespace evmmax::secp256k1
 {
@@ -176,7 +176,7 @@ std::tuple<uint256, uint256> from_proj(
     return {s.mul(x, z_inv), s.mul(y, z_inv)};
 }
 
-} // namespace
+}  // namespace
 
 Point secp256k1_add(const Point& pt1, const Point& pt2) noexcept
 {
@@ -233,7 +233,7 @@ Point secp256k1_mul(const Point& pt, const uint256& c) noexcept
         const uint256 d = c & (uint256{1} << i);
         if (d == 0)
         {
-            if(first_significant_met)
+            if (first_significant_met)
             {
                 std::tie(x1, y1, z1) = point_addition_a0(s, x0, y0, z0, x1, y1, z1, b3);
                 std::tie(x0, y0, z0) = point_doubling_a0(s, x0, y0, z0, b3);
@@ -443,8 +443,8 @@ std::optional<Point> ecdsa_recover(const ModArith<uint256>& m, const ethash::has
     Point G = {};
     Point T1 = secp256k1_mul(G, u1);
     Point T2 = secp256k1_mul(R, u2);
-    //Point Qj = secp256k1_add(T1, T2);
-    // Point Q = to_affine(Qj);
+    // Point Qj = secp256k1_add(T1, T2);
+    //  Point Q = to_affine(Qj);
     const Point Q = secp256k1_add(T1, T2);
     // TODO: What if Q is infinity?
 
