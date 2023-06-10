@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 using namespace evmmax::secp256k1;
+using namespace evmc::literals;
 
 TEST(evmmax, secp256k1_inv_1)
 {
@@ -202,6 +203,38 @@ TEST(evmmax, secp256k1_pt_mul)
         EXPECT_EQ(r, e);
     }
 }
+
+
+struct TestCaseECR
+{
+    evmc::bytes32 hash;
+    uint256 r;
+    uint256 s;
+    bool parity;
+    Point pubkey;
+};
+
+static const TestCaseECR test_cases_ecr[] = {
+    {0x18c547e4f7b0f325ad1e56f57e26c745b09a3e503d86e00e5255ff7f715d3d1c_bytes32,
+        0x7af9e73057870458f03c143483bc5fcb6f39d01c9b26d28ed9f3fe23714f6628_u256,
+        0x3134a4ba8fafe11b351a720538398a5635e235c0b3258dce19942000731079ec_u256, false,
+        {0x43ec87f8ee6f58605d947dac51b5e4cfe26705f509e5dad058212aadda180835_u256,
+            0x90ebad786ce091f5af1719bf30ee236a4e6ce8a7ab6c36a16c93c6177aa109df_u256}},
+};
+
+TEST(evmmax, ecr)
+{
+    for (const auto& t : test_cases_ecr)
+    {
+        const auto h = std::bit_cast<ethash::hash256>(t.hash);
+        const auto result = secp256k1_ecdsa_recover(h, t.r, t.s, t.parity);
+        ASSERT_TRUE(result.has_value());
+        EXPECT_EQ(result->x, t.pubkey.x);
+        EXPECT_EQ(result->y, t.pubkey.y);
+        // EXPECT_EQ(*result, t.pubkey);
+    }
+}
+
 
 struct TestCaseECRecovery
 {
