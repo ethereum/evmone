@@ -286,4 +286,45 @@ std::optional<uint256> sqrt(const ModArith<uint256>& s, const uint256& x) noexce
 
     return (z2 == x ? std::make_optional(z) : std::nullopt);
 }
+
+Point ecdsa_recover(const ModArith<uint256>& m, const ethash::hash256& e, const uint256& r,
+    const uint256& s, bool v) noexcept
+{
+    // Follows
+    // https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Public_key_recovery
+
+    // 1. Validate r and s are within [1, n-1].
+    // TODO
+
+    // 2. Calculate y coordinate of R from r and v.
+    (void)v;
+
+    // 3. Hash of the message is already calculated in e.
+
+    // 4. Convert hash e to z field element.
+    // TODO: Properly convert hash to z.
+    // TODO: Convert z to montgomery form.
+    const auto z = intx::be::load<uint256>(e.bytes);
+
+    // 5. Calculate u1 and u2.
+    // TODO: Convert r, s to montgomery form.
+    const auto r_inv = inv(m, r);
+    const auto z_neg = m.sub(0, z);
+    const auto u1 = m.mul(z_neg, r_inv);
+    const auto u2 = m.mul(s, r_inv);
+
+    // 6. Calculate public key point Q.
+    // TODO:
+    const Point Q;
+    (void)u1;
+    (void)u2;
+    // Point G
+    // ProjPoint T1 = point_mul(G, u1);
+    // ProjPoint T2 = point_mul(R, u2);
+    // ProjPoint Qj = point_add(T1, T2);
+    // Point Q = to_affine(Qj);
+    // TODO: What if Q is infinity?
+
+    return Q;
+}
 }  // namespace evmmax::secp256k1

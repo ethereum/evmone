@@ -4,6 +4,7 @@
 #pragma once
 
 #include "evmmax.hpp"
+#include <ethash/keccak.hpp>
 #include <optional>
 
 using namespace intx;
@@ -33,4 +34,6 @@ inline bool is_at_infinity(const Point& pt) noexcept
 uint256 inv(const ModArith<uint256>& s, const uint256& x) noexcept;
 
 std::optional<uint256> sqrt(const ModArith<uint256>& s, const uint256& x) noexcept;
+
+Point ecdsa_recover(const ethash::hash256& e, const uint256& r, const uint256& s, bool v) noexcept;
 }  // namespace evmmax::secp256k1
