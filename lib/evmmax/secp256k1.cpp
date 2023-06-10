@@ -153,7 +153,7 @@ uint256 inv(const ModArith<uint256>& s, const uint256& x) noexcept
 }
 
 // Computes z = 1/x (mod p) and returns it.
-uint256 scalar_inv(const ModArith<uint256>& s, const uint256& x) noexcept
+static uint256 scalar_inv(const ModArith<uint256>& s, const uint256& x) noexcept
 {
     uint256 z;
     // Inversion computation is derived from the addition chain:
