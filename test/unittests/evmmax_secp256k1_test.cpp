@@ -220,15 +220,13 @@ TEST(evmmax, ecrecovery)
         const auto s{be::unsafe::load<uint256>(&t.input[64])};
         const auto v{be::unsafe::load<uint256>(&t.input[96])};
 
-        const auto e{be::unsafe::load<uint256>(&t.expected_output[0])};
+        evmc::address e;
+        memcpy(&e.bytes[0], &t.expected_output[12], 20);
 
         bool v_bool = v == 28_u256 ? true : false;
 
-        auto result = ecrecover(hash, r, s, v_bool);
-
-        (void)result;
-        (void)e;
-        // TODO: Convert to public key
-        //EXPECT_EQ(result, e);
+        const auto result = ecrecover(hash, r, s, v_bool);
+        if (result.has_value())
+            EXPECT_EQ(result, e);
     }
 }
