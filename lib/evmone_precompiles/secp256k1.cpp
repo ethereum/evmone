@@ -5,6 +5,27 @@
 
 namespace evmmax::secp256k1
 {
+namespace
+{
+const ModArith<uint256> Fp{FieldPrime};
+const auto B = Fp.to_mont(7);
+}  // namespace
+
+// FIXME: Change to "uncompress_point".
+std::optional<uint256> calculate_y(
+    const ModArith<uint256>& m, const uint256& x, bool y_parity) noexcept
+{
+    // Calculate sqrt(x^3 + 7)
+    const auto x3 = m.mul(m.mul(x, x), x);
+    const auto y = field_sqrt(m, m.add(x3, B));
+    if (!y.has_value())
+        return std::nullopt;
+
+    // Negate if different parity requested
+    const auto candidate_parity = (m.from_mont(*y) & 1) != 0;
+    return (candidate_parity == y_parity) ? *y : m.sub(0, *y);
+}
+
 uint256 field_inv(const ModArith<uint256>& m, const uint256& x) noexcept
 {
     // Computes modular exponentiation

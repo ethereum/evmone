@@ -38,4 +38,8 @@ std::optional<uint256> field_sqrt(const ModArith<uint256>& m, const uint256& x) 
 /// where N is ::Order.
 uint256 scalar_inv(const ModArith<uint256>& m, const uint256& x) noexcept;
 
+/// Calculate y coordinate of a point having x coordinate and y parity.
+std::optional<uint256> calculate_y(
+    const ModArith<uint256>& m, const uint256& x, bool y_parity) noexcept;
+
 }  // namespace evmmax::secp256k1
