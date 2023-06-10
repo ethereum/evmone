@@ -1,20 +1,5 @@
 #include "secp256k1.hpp"
-
-namespace evmmax::bn254
-{
-bool is_at_infinity(const uint256& x, const uint256& y, const uint256& z) noexcept;
-
-std::tuple<uint256, uint256, uint256> point_addition_a0(const evmmax::ModArith<uint256>& s,
-    const uint256& x1, const uint256& y1, const uint256& z1, const uint256& x2, const uint256& y2,
-    const uint256& z2, const uint256& b3) noexcept;
-
-std::tuple<uint256, uint256, uint256> point_doubling_a0(const evmmax::ModArith<uint256>& s,
-    const uint256& x, const uint256& y, const uint256& z, const uint256& b3) noexcept;
-
-std::tuple<uint256, uint256, uint256> point_addition_mixed_a0(const evmmax::ModArith<uint256>& s,
-    const uint256& x1, const uint256& y1, const uint256& x2, const uint256& y2,
-    const uint256& b3) noexcept;
-}  // namespace evmmax::bn254
+#include "bn254.hpp"
 
 namespace evmmax::secp256k1
 {
@@ -252,22 +237,6 @@ Point secp256k1_mul(const Point& pt, const uint256& c) noexcept
     std::tie(x0, y0) = from_proj(s, x0, y0, z0);
 
     return {s.from_mont(x0), s.from_mont(y0)};
-}
-
-bool validate(const Point& pt) noexcept
-{
-    if (is_at_infinity(pt))
-        return true;
-
-    const evmmax::ModArith s{Secp256K1Mod};
-    const auto xm = s.to_mont(pt.x);
-    const auto ym = s.to_mont(pt.y);
-    const auto y2 = s.mul(ym, ym);
-    const auto x2 = s.mul(xm, xm);
-    const auto x3 = s.mul(x2, xm);
-    const auto _3 = s.to_mont(3);
-    const auto x3_3 = s.add(x3, _3);
-    return y2 == x3_3;
 }
 
 
