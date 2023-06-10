@@ -482,7 +482,7 @@ evmc::address secp256k1_point_to_address(const Point& pt) noexcept
 
     const auto hashed = ethash::keccak256(serialized, sizeof(serialized));
     evmc::address ret{};
-    std::memcpy(ret.bytes, hashed.bytes, 20);
+    std::memcpy(ret.bytes, hashed.bytes + 12, 20);
 
     return ret;
 }
