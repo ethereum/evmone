@@ -408,9 +408,11 @@ std::optional<uint256> sqrt(const ModArith<uint256>& s, const uint256& x) noexce
     return (z2 == x ? std::make_optional(z) : std::nullopt);
 }
 
-std::optional<Point> ecdsa_recover(const ModArith<uint256>& m, const ethash::hash256& e,
-    const uint256& r, const uint256& s, bool v) noexcept
+std::optional<Point> secp256k1_ecdsa_recover(
+    const ethash::hash256& e, const uint256& r, const uint256& s, bool v) noexcept
 {
+    const ModArith<uint256> m{Secp256K1Mod};
+
     // Follows
     // https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Public_key_recovery
 
@@ -465,5 +467,22 @@ std::optional<uint256> sec256k1_calculate_y(
     // Negate if different oddity requested
     const auto y_is_odd = s.from_mont(*y) & 1;
     return (is_odd == y_is_odd ? *y : s.sub(0, *y));
+}
+
+evmc::address secp256k1_point_to_address(const Point& /*pt*/) noexcept
+{
+    // TODO: implement
+    return evmc::address{};
+}
+
+std::optional<evmc::address> ecrecover(
+    const ethash::hash256& e, const uint256& r, const uint256& s, bool v) noexcept
+{
+    const auto point = secp256k1_ecdsa_recover(e, r, s, v);
+    if (!point.has_value())
+        return std::nullopt;
+    // TODO: Verify validity (infinity)
+
+    return std::make_optional(secp256k1_point_to_address(*point));
 }
 }  // namespace evmmax::secp256k1

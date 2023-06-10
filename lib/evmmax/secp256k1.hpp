@@ -5,6 +5,7 @@
 
 #include "evmmax.hpp"
 #include <ethash/keccak.hpp>
+#include <evmc/evmc.hpp>
 #include <optional>
 
 using namespace intx;
@@ -40,9 +41,15 @@ std::optional<uint256> sqrt(const ModArith<uint256>& s, const uint256& x) noexce
 std::optional<uint256> sec256k1_calculate_y(
     const ModArith<uint256>& s, const uint256& x, bool is_odd) noexcept;
 
-std::optional<Point> ecdsa_recover(
+std::optional<Point> secp256k1_ecdsa_recover(
     const ethash::hash256& e, const uint256& r, const uint256& s, bool v) noexcept;
 
 Point secp256k1_add(const Point& pt1, const Point& pt2) noexcept;
 Point secp256k1_mul(const Point& pt, const uint256& c) noexcept;
+
+evmc::address secp256k1_point_to_address(const Point& pt) noexcept;
+
+std::optional<evmc::address> ecrecover(
+    const ethash::hash256& e, const uint256& r, const uint256& s, bool v) noexcept;
+
 }  // namespace evmmax::secp256k1
