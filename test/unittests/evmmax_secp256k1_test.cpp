@@ -100,3 +100,62 @@ TEST(evmmax, secp256k1_calculate_y_invalid)
         ASSERT_FALSE(y_odd.has_value());
     }
 }
+
+TEST(evmmax, secp256k1_pt_add)
+{
+    const evmmax::ModArith s{Secp256K1Mod};
+
+    const Point p1{0x18f4057699e2d9679421de8f4e11d7df9fa4b9e7cb841ea48aed75f1567b9731_u256,
+        0x6db5b7ecd8e226c06f538d15173267bf1e78acc02bb856e83b3d6daec6a68144_u256};
+    const Point p2{0xf929e07c83d65da3569113ae03998d13359ba982216285a686f4d66e721a0beb_u256,
+        0xb6d73966107b10526e2e140c17f343ee0a373351f2b1408923151b027f55b82_u256};
+    const Point p3{0xf929e07c83d65da3569113ae03998d13359ba982216285a686f4d66e721a0beb_u256,
+        0xf4928c699ef84efad91d1ebf3e80cbc11f5c8ccae0d4ebf76dceae4ed80aa0ad_u256};
+    const Point p4{
+        0x1_u256, 0xbde70df51939b94c9c24979fa7dd04ebd9b3572da7802290438af2a681895441_u256};
+
+    {
+        const Point e = {0x40468d7704db3d11961ab9c222e35919d7e5d1baef59e0f46255d66bec3bd1d3_u256,
+            0x6fff88d9f575236b6cc5c74e7d074832a460c2792fba888aea7b9986429dd7f7_u256};
+        EXPECT_EQ(secp256k1_add(p1, p2), e);
+    }
+    {
+        const Point e = {0xd8e7b42b8c82e185bf0669ce0754697a6eb46c156497d5d1971bd6a23f38ed9e_u256,
+            0x628c3107fc73c92e7b8c534e239257fb2de95bd6b965dc1021f636da086a7e99_u256};
+        EXPECT_EQ(secp256k1_add(p1, p1), e);
+    }
+    {
+        const Point e = {0xdf592d726f42759020da10d3106db3880e514c783d6970d2a9085fb16879b37f_u256,
+            0x10aa0ef9fe224e3797792b4b286b9f63542d4c11fe26d449a845b9db0f5993f9_u256};
+        EXPECT_EQ(secp256k1_add(p1, p3), e);
+    }
+    {
+        const Point e = {0x12a5fd099bcd30e7290e58d63f8d5008287239500e6d0108020040497c5cb9c9_u256,
+            0x7f6bd83b5ac46e3b59e24af3bc9bfbb213ed13e21d754e4950ae635961742574_u256};
+        EXPECT_EQ(secp256k1_add(p1, p4), e);
+    }
+}
+
+TEST(evmmax, secp256k1_pt_mul)
+{
+    const evmmax::ModArith s{Secp256K1Mod};
+
+    const Point p1{0x18f4057699e2d9679421de8f4e11d7df9fa4b9e7cb841ea48aed75f1567b9731_u256,
+        0x6db5b7ecd8e226c06f538d15173267bf1e78acc02bb856e83b3d6daec6a68144_u256};
+
+    {
+        const auto d{100000000000000000000_u256};
+        const Point e{0x4c34e6dc48badd579d1ce4702fd490fb98fa0e666417bfc2d4ff8e957d99c565_u256,
+            0xb53da5be179d80c7f07226ba79b6bce643d89496b37d6bc2d111b009e37cc28b_u256};
+        auto r = secp256k1_mul(p1, d);
+        EXPECT_EQ(r, e);
+    }
+
+    {
+        const auto d{100000000000000000000000000000000_u256};
+        const Point e{0xf86902594c8a4e4fc5f6dfb27886784271302c6bab3dc4350a0fe7c5b056af66_u256,
+            0xb5748aa8f9122bfdcbf5846f6f8ec76f41626642a3f2ea0f483c92bf915847ad_u256};
+        auto r = secp256k1_mul(p1, d);
+        EXPECT_EQ(r, e);
+    }
+}

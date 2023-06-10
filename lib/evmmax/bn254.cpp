@@ -59,6 +59,8 @@ std::tuple<uint256, uint256> from_proj(
     return {s.mul(x, z_inv), s.mul(y, z_inv)};
 }
 
+} // namespace
+
 bool is_at_infinity(const uint256& x, const uint256& y, const uint256& z) noexcept
 {
     return x == 0 && y == 0 && z == 0;
@@ -203,7 +205,6 @@ std::tuple<uint256, uint256, uint256> point_addition_mixed_a0(const evmmax::ModA
 
     return {x3, y3, z3};
 }
-}  // namespace
 
 Point bn254_add(const Point& pt1, const Point& pt2) noexcept
 {

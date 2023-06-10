@@ -1,5 +1,21 @@
 #include "secp256k1.hpp"
 
+namespace evmmax::bn254
+{
+bool is_at_infinity(const uint256& x, const uint256& y, const uint256& z) noexcept;
+
+std::tuple<uint256, uint256, uint256> point_addition_a0(const evmmax::ModArith<uint256>& s,
+    const uint256& x1, const uint256& y1, const uint256& z1, const uint256& x2, const uint256& y2,
+    const uint256& z2, const uint256& b3) noexcept;
+
+std::tuple<uint256, uint256, uint256> point_doubling_a0(const evmmax::ModArith<uint256>& s,
+    const uint256& x, const uint256& y, const uint256& z, const uint256& b3) noexcept;
+
+std::tuple<uint256, uint256, uint256> point_addition_mixed_a0(const evmmax::ModArith<uint256>& s,
+    const uint256& x1, const uint256& y1, const uint256& x2, const uint256& y2,
+    const uint256& b3) noexcept;
+}
+
 namespace evmmax::secp256k1
 {
 // Computes z = 1/x (mod p) and returns it.
@@ -149,6 +165,111 @@ uint256 inv(const ModArith<uint256>& s, const uint256& x) noexcept
 
     return z;
 }
+
+namespace
+{
+
+std::tuple<uint256, uint256> from_proj(
+    const evmmax::ModArith<uint256>& s, const uint256& x, const uint256& y, const uint256& z)
+{
+    auto z_inv = inv(s, z);
+    return {s.mul(x, z_inv), s.mul(y, z_inv)};
+}
+
+} // namespace
+
+Point secp256k1_add(const Point& pt1, const Point& pt2) noexcept
+{
+    using namespace evmmax::bn254;
+    if (is_at_infinity(pt1))
+        return pt2;
+    if (is_at_infinity(pt2))
+        return pt1;
+
+    const evmmax::ModArith s{Secp256K1Mod};
+
+    const auto x1 = s.to_mont(pt1.x);
+    const auto y1 = s.to_mont(pt1.y);
+
+    const auto x2 = s.to_mont(pt2.x);
+    const auto y2 = s.to_mont(pt2.y);
+
+    // b3 == 21 for y^2 == x^3 + 7
+    const auto b3 = s.to_mont(21);
+    auto [x3, y3, z3] = point_addition_mixed_a0(s, x1, y1, x2, y2, b3);
+
+    std::tie(x3, y3) = from_proj(s, x3, y3, z3);
+
+    return {s.from_mont(x3), s.from_mont(y3)};
+}
+
+Point secp256k1_mul(const Point& pt, const uint256& c) noexcept
+{
+    using namespace evmmax::bn254;
+    if (is_at_infinity(pt))
+        return pt;
+
+    if (c == 0)
+        return {0, 0};
+
+    const evmmax::ModArith s{Secp256K1Mod};
+
+    auto _1_mont = s.to_mont(1);
+
+    uint256 x0 = 0;
+    uint256 y0 = _1_mont;
+    uint256 z0 = 0;
+
+    uint256 x1 = s.to_mont(pt.x);
+    uint256 y1 = s.to_mont(pt.y);
+    uint256 z1 = _1_mont;
+
+    auto b3 = s.to_mont(21);
+
+    auto first_significant_met = false;
+
+    for (int i = 255; i >= 0; --i)
+    {
+        const uint256 d = c & (uint256{1} << i);
+        if (d == 0)
+        {
+            if(first_significant_met)
+            {
+                std::tie(x1, y1, z1) = point_addition_a0(s, x0, y0, z0, x1, y1, z1, b3);
+                std::tie(x0, y0, z0) = point_doubling_a0(s, x0, y0, z0, b3);
+                // std::tie(x0, y0, z0) = point_addition_a0(s, x0, y0, z0, x0, y0, z0, b3);
+            }
+        }
+        else
+        {
+            std::tie(x0, y0, z0) = point_addition_a0(s, x0, y0, z0, x1, y1, z1, b3);
+            std::tie(x1, y1, z1) = point_doubling_a0(s, x1, y1, z1, b3);
+            first_significant_met = true;
+            // std::tie(x1, y1, z1) = point_addition_a0(s, x1, y1, z1, x1, y1, z1, b3);
+        }
+    }
+
+    std::tie(x0, y0) = from_proj(s, x0, y0, z0);
+
+    return {s.from_mont(x0), s.from_mont(y0)};
+}
+
+bool validate(const Point& pt) noexcept
+{
+    if (is_at_infinity(pt))
+        return true;
+
+    const evmmax::ModArith s{Secp256K1Mod};
+    const auto xm = s.to_mont(pt.x);
+    const auto ym = s.to_mont(pt.y);
+    const auto y2 = s.mul(ym, ym);
+    const auto x2 = s.mul(xm, xm);
+    const auto x3 = s.mul(x2, xm);
+    const auto _3 = s.to_mont(3);
+    const auto x3_3 = s.add(x3, _3);
+    return y2 == x3_3;
+}
+
 
 std::optional<uint256> sqrt(const ModArith<uint256>& s, const uint256& x) noexcept
 {

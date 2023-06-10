@@ -9,7 +9,7 @@
 
 using namespace intx;
 
-inline constexpr auto Secp256K1Mod =
+    inline constexpr auto Secp256K1Mod =
     0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f_u256;
 inline constexpr auto Secp256K1N =
     0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141_u256;
@@ -42,4 +42,7 @@ std::optional<uint256> sec256k1_calculate_y(
 
 std::optional<Point> ecdsa_recover(
     const ethash::hash256& e, const uint256& r, const uint256& s, bool v) noexcept;
+
+Point secp256k1_add(const Point& pt1, const Point& pt2) noexcept;
+Point secp256k1_mul(const Point& pt, const uint256& c) noexcept;
 }  // namespace evmmax::secp256k1
