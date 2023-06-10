@@ -421,7 +421,8 @@ std::optional<Point> secp256k1_ecdsa_recover(
         return std::nullopt;
 
     // 2. Calculate y coordinate of R from r and v.
-    const auto y = sec256k1_calculate_y(m, r, v);
+    const auto r_mont = m.to_mont(r);
+    const auto y = sec256k1_calculate_y(m, r_mont, v);
     if (!y.has_value())
         return std::nullopt;
 
@@ -436,7 +437,6 @@ std::optional<Point> secp256k1_ecdsa_recover(
         z -= Secp256K1Mod;
 
     // 5. Calculate u1 and u2.
-    const auto r_mont = m.to_mont(r);
     const auto r_inv = inv(m, r_mont);
 
     const auto z_mont = m.to_mont(z);
