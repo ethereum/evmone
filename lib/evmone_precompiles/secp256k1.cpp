@@ -10,6 +10,10 @@ namespace
 {
 const ModArith<uint256> Fp{FieldPrime};
 const auto B = Fp.to_mont(7);
+const auto B3 = Fp.to_mont(7 * 3);
+
+constexpr Point G{0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798_u256,
+    0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8_u256};
 }  // namespace
 
 // FIXME: Change to "uncompress_point".
@@ -27,6 +31,33 @@ std::optional<uint256> calculate_y(
     return (candidate_parity == y_parity) ? *y : m.sub(0, *y);
 }
 
+Point add(const Point& p, const Point& q) noexcept
+{
+    if (p.is_inf())
+        return q;
+    if (q.is_inf())
+        return p;
+
+    const auto pp = ecc::to_proj(Fp, p);
+    const auto pq = ecc::to_proj(Fp, q);
+
+    // b3 == 21 for y^2 == x^3 + 7
+    const auto r = ecc::add(Fp, pp, pq, B3);
+    return ecc::to_affine(Fp, field_inv, r);
+}
+
+Point mul(const Point& p, const uint256& c) noexcept
+{
+    if (p.is_inf())
+        return p;
+
+    if (c == 0)
+        return {0, 0};
+
+    const auto r = ecc::mul(Fp, ecc::to_proj(Fp, p), c, B3);
+    return ecc::to_affine(Fp, field_inv, r);
+}
+
 evmc::address to_address(const Point& pt) noexcept
 {
     // This performs Ethereum's address hashing on an uncompressed pubkey.
@@ -39,6 +70,74 @@ evmc::address to_address(const Point& pt) noexcept
     std::memcpy(ret.bytes, hashed.bytes + 12, 20);
 
     return ret;
+}
+
+std::optional<Point> secp256k1_ecdsa_recover(
+    const ethash::hash256& e, const uint256& r, const uint256& s, bool v) noexcept
+{
+    // Follows
+    // https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Public_key_recovery
+
+    // 1. Validate r and s are within [1, n-1].
+    if (r == 0 || r >= Order || s == 0 || s >= Order)
+        return std::nullopt;
+
+    // 3. Hash of the message is already calculated in e.
+    // 4. Convert hash e to z field element by doing z = e % n.
+    //    https://www.rfc-editor.org/rfc/rfc6979#section-2.3.2
+    //    We can do this by n - e because n > 2^255.
+    static_assert(Order > 1_u256 << 255);
+    auto z = intx::be::load<uint256>(e.bytes);
+    if (z >= Order)
+        z -= Order;
+
+
+    const ModArith<uint256> n{Order};
+
+    // 5. Calculate u1 and u2.
+    const auto r_n = n.to_mont(r);
+    const auto r_inv = scalar_inv(n, r_n);
+
+    const auto z_mont = n.to_mont(z);
+    const auto z_neg = n.sub(0, z_mont);
+    const auto u1_mont = n.mul(z_neg, r_inv);
+    const auto u1 = n.from_mont(u1_mont);
+
+    const auto s_mont = n.to_mont(s);
+    const auto u2_mont = n.mul(s_mont, r_inv);
+    const auto u2 = n.from_mont(u2_mont);
+
+    // 2. Calculate y coordinate of R from r and v.
+    const auto r_mont = Fp.to_mont(r);
+    const auto y_mont = calculate_y(Fp, r_mont, v);
+    if (!y_mont.has_value())
+        return std::nullopt;
+    const auto y = Fp.from_mont(*y_mont);
+
+    // 6. Calculate public key point Q.
+    const auto R = ecc::to_proj(Fp, {r, y});
+    const auto pG = ecc::to_proj(Fp, G);
+    const auto T1 = ecc::mul(Fp, pG, u1, B3);
+    const auto T2 = ecc::mul(Fp, R, u2, B3);
+    const auto pQ = ecc::add(Fp, T1, T2, B3);
+
+    const auto Q = ecc::to_affine(Fp, field_inv, pQ);
+
+    // Any other validity check needed?
+    if (Q.is_inf())
+        return std::nullopt;
+
+    return Q;
+}
+
+std::optional<evmc::address> ecrecover(
+    const ethash::hash256& e, const uint256& r, const uint256& s, bool v) noexcept
+{
+    const auto point = secp256k1_ecdsa_recover(e, r, s, v);
+    if (!point.has_value())
+        return std::nullopt;
+
+    return to_address(*point);
 }
 
 uint256 field_inv(const ModArith<uint256>& m, const uint256& x) noexcept

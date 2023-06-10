@@ -4,6 +4,7 @@
 #pragma once
 
 #include "ecc.hpp"
+#include <ethash/hash_types.hpp>
 #include <evmc/evmc.hpp>
 #include <optional>
 
@@ -46,7 +47,23 @@ uint256 scalar_inv(const ModArith<uint256>& m, const uint256& x) noexcept;
 std::optional<uint256> calculate_y(
     const ModArith<uint256>& m, const uint256& x, bool y_parity) noexcept;
 
+/// Addition in secp256k1.
+///
+/// Computes P ⊕ Q for two points in affine coordinates on the secp256k1 curve,
+Point add(const Point& p, const Point& q) noexcept;
+
+/// Scalar multiplication in secp256k1.
+///
+/// Computes [c]P for a point in affine coordinate on the secp256k1 curve,
+Point mul(const Point& p, const uint256& c) noexcept;
+
 /// Convert the secp256k1 point (uncompressed public key) to Ethereum address.
 evmc::address to_address(const Point& pt) noexcept;
+
+std::optional<Point> secp256k1_ecdsa_recover(
+    const ethash::hash256& e, const uint256& r, const uint256& s, bool v) noexcept;
+
+std::optional<evmc::address> ecrecover(
+    const ethash::hash256& e, const uint256& r, const uint256& s, bool v) noexcept;
 
 }  // namespace evmmax::secp256k1
