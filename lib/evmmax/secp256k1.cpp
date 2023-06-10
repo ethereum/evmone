@@ -1,6 +1,5 @@
 #include "secp256k1.hpp"
 #include "bn254.hpp"
-#include <iostream>
 
 namespace evmmax::secp256k1
 {
@@ -723,16 +722,12 @@ std::optional<Point> secp256k1_ecdsa_recover(
     if (r == 0 || r >= Secp256K1N || s == 0 || s >= Secp256K1N)
         return std::nullopt;
 
-    std::cerr << "hash: " << hex(std::bit_cast<evmc::bytes32>(e)) << "\n   r: " << hex(r)
-              << "\n   s: " << hex(s) << std::endl;
-
     // 2. Calculate y coordinate of R from r and v.
     const auto r_mont = m.to_mont(r);
     const auto y_mont = sec256k1_calculate_y(m, r_mont, v);
     if (!y_mont.has_value())
         return std::nullopt;
     const auto y = m.from_mont(*y_mont);
-    std::cerr << " R.y: " << hex(y) << std::endl;
 
     // 3. Hash of the message is already calculated in e.
 
@@ -743,24 +738,19 @@ std::optional<Point> secp256k1_ecdsa_recover(
     auto z = intx::be::load<uint256>(e.bytes);
     if (z >= Secp256K1Mod)
         z -= Secp256K1Mod;
-    std::cerr << "   z: " << hex(z) << std::endl;
 
     // 5. Calculate u1 and u2.
     const auto r_n = n.to_mont(r);
     const auto r_inv = scalar_inv(n, r_n);
 
-    std::cerr << "rinv: " << hex(n.from_mont(r_inv)) << std::endl;
-
     const auto z_mont = n.to_mont(z);
     const auto z_neg = n.sub(0, z_mont);
     const auto u1_mont = n.mul(z_neg, r_inv);
     const auto u1 = n.from_mont(u1_mont);
-    std::cerr << "  u1: " << hex(u1) << std::endl;
 
     const auto s_mont = n.to_mont(s);
     const auto u2_mont = n.mul(s_mont, r_inv);
     const auto u2 = n.from_mont(u2_mont);
-    std::cerr << "  u2: " << hex(u2) << std::endl;
 
     // 6. Calculate public key point Q.
     const Point R{r, y};
@@ -768,14 +758,8 @@ std::optional<Point> secp256k1_ecdsa_recover(
         0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798_u256,
         0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8_u256};
     const Point T1 = secp256k1_mul(G, u1);
-    std::cerr << "u1Gx: " << hex(T1.x) << std::endl;
-    std::cerr << "u1Gy: " << hex(T1.y) << std::endl;
     const Point T2 = secp256k1_mul(R, u2);
-    std::cerr << "u2Rx: " << hex(T2.x) << std::endl;
-    std::cerr << "u2Ry: " << hex(T2.y) << std::endl;
     const Point Q = secp256k1_add(T1, T2);
-    std::cerr << " Q.x: " << hex(Q.x) << std::endl;
-    std::cerr << " Q.y: " << hex(Q.y) << std::endl;
 
     // Any other validity check needed?
     if (is_at_infinity(Q))
