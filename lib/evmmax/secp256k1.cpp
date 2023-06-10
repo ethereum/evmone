@@ -298,7 +298,9 @@ std::optional<Point> ecdsa_recover(const ModArith<uint256>& m, const ethash::has
         return std::nullopt;
 
     // 2. Calculate y coordinate of R from r and v.
-    (void)v;
+    const auto y = sec256k1_calculate_y(m, r, v);
+    if (!y.has_value())
+        return std::nullopt;
 
     // 3. Hash of the message is already calculated in e.
 
@@ -319,6 +321,8 @@ std::optional<Point> ecdsa_recover(const ModArith<uint256>& m, const ethash::has
     const Point Q;
     (void)u1;
     (void)u2;
+    const Point R{r, *y};
+    (void)R;
     // Point G
     // ProjPoint T1 = point_mul(G, u1);
     // ProjPoint T2 = point_mul(R, u2);
