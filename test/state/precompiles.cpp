@@ -5,6 +5,7 @@
 #include "precompiles.hpp"
 #include "precompiles_cache.hpp"
 #include <evmmax/bn254.hpp>
+#include <evmmax/secp256k1.hpp>
 #include <intx/intx.hpp>
 #include <bit>
 #include <cassert>
@@ -143,6 +144,37 @@ PrecompileAnalysis expmod_analyze(bytes_view input, evmc_revision rev) noexcept
         static_cast<size_t>(mod_len)};
 }
 
+ExecutionResult ecrecover_execute(const uint8_t* input, size_t input_size, uint8_t* output,
+    [[maybe_unused]] size_t output_size) noexcept
+{
+    assert(output_size == 32);
+
+    uint8_t input_buffer[128]{};
+    if (input_size != 0)
+        std::memcpy(input_buffer, input, std::min(input_size, std::size(input_buffer)));
+
+    ethash::hash256 h{};
+    std::memcpy(h.bytes, input_buffer, sizeof(h));
+
+    const auto v = intx::be::unsafe::load<uint256>(input_buffer + 32);
+    if (v != 27 && v != 28)
+        return {EVMC_SUCCESS, 0};
+    const bool parity = v == 28;
+
+    const auto r = intx::be::unsafe::load<uint256>(input_buffer + 64);
+    const auto s = intx::be::unsafe::load<uint256>(input_buffer + 96);
+
+    const auto res = evmmax::secp256k1::ecrecover(h, r, s, parity);
+    if (res)
+    {
+        std::memset(output, 0, 12);
+        std::memcpy(output + 12, res->bytes, 20);
+        return {EVMC_SUCCESS, output_size};
+    }
+    else
+        return {EVMC_SUCCESS, 0};
+}
+
 ExecutionResult identity_execute(const uint8_t* input, size_t input_size, uint8_t* output,
     [[maybe_unused]] size_t output_size) noexcept
 {
@@ -178,7 +210,7 @@ ExecutionResult dummy_execute(const uint8_t*, size_t, uint8_t*, size_t) noexcept
 inline constexpr auto traits = []() noexcept {
     std::array<PrecompileTraits, NumPrecompiles> tbl{{
         {},  // undefined for 0
-        {ecrecover_analyze, dummy_execute<PrecompileId::ecrecover>},
+        {ecrecover_analyze, ecrecover_execute},
         {sha256_analyze, dummy_execute<PrecompileId::sha256>},
         {ripemd160_analyze, dummy_execute<PrecompileId::ripemd160>},
         {identity_analyze, identity_execute},
