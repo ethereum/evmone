@@ -63,3 +63,21 @@ TEST(secp256k1, field_sqrt_invalid)
         EXPECT_FALSE(field_sqrt(m, m.to_mont(t)).has_value());
     }
 }
+
+TEST(secp256k1, scalar_inv)
+{
+    const evmmax::ModArith n{Order};
+
+    for (const auto& t : {
+             1_u256,
+             0x6e140df17432311190232a91a38daed3ee9ed7f038645dd0278da7ca6e497de_u256,
+             Order - 1,
+         })
+    {
+        ASSERT_LT(t, Order);
+        const auto a = n.to_mont(t);
+        const auto a_inv = scalar_inv(n, a);
+        const auto p = n.mul(a, a_inv);
+        EXPECT_EQ(n.from_mont(p), 1) << hex(t);
+    }
+}
