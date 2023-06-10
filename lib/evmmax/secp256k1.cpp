@@ -427,9 +427,13 @@ std::optional<Point> secp256k1_ecdsa_recover(
 
     // 3. Hash of the message is already calculated in e.
 
-    // 4. Convert hash e to z field element.
-    // TODO: Properly convert hash to z.
-    const auto z = intx::be::load<uint256>(e.bytes);
+    // 4. Convert hash e to z field element by doing z = e % n.
+    //    https://www.rfc-editor.org/rfc/rfc6979#section-2.3.2
+    //    We can do this by n - e because n > 2^255.
+    static_assert(Secp256K1Mod > 1_u256 << 255);
+    auto z = intx::be::load<uint256>(e.bytes);
+    if (z >= Secp256K1Mod)
+        z -= Secp256K1Mod;
 
     // 5. Calculate u1 and u2.
     const auto r_mont = m.to_mont(r);

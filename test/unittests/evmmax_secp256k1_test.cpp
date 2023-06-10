@@ -134,6 +134,16 @@ TEST(evmmax, secp256k1_calculate_u2)
     EXPECT_EQ(u2, expected);
 }
 
+TEST(evmmax, secp256k1_hash_to_number)
+{
+    const auto max_h = ~uint256{};
+    const auto hm = max_h % Secp256K1Mod;
+
+    // Optimized mod.
+    const auto hm2 = max_h - Secp256K1Mod;
+    EXPECT_EQ(hm2, hm);
+}
+
 TEST(evmmax, secp256k1_pt_add)
 {
     const evmmax::ModArith s{Secp256K1Mod};
