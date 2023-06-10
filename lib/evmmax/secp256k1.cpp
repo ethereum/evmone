@@ -474,10 +474,18 @@ std::optional<uint256> sec256k1_calculate_y(
     return (is_odd == y_is_odd ? *y : s.sub(0, *y));
 }
 
-evmc::address secp256k1_point_to_address(const Point& /*pt*/) noexcept
+evmc::address secp256k1_point_to_address(const Point& pt) noexcept
 {
-    // TODO: implement
-    return evmc::address{};
+    // This performs Ethereum's address hashing on an uncompressed pubkey.
+    uint8_t serialized[64];
+    intx::be::unsafe::store(serialized, pt.x);
+    intx::be::unsafe::store(serialized + 32, pt.y);
+
+    const auto hashed = ethash::keccak256(serialized, sizeof(serialized));
+    evmc::address ret{};
+    std::memcpy(ret.bytes, hashed.bytes, 20);
+
+    return ret;
 }
 
 std::optional<evmc::address> ecrecover(
