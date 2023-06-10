@@ -712,9 +712,6 @@ std::optional<uint256> sqrt(const ModArith<uint256>& s, const uint256& x) noexce
 std::optional<Point> secp256k1_ecdsa_recover(
     const ethash::hash256& e, const uint256& r, const uint256& s, bool v) noexcept
 {
-    const ModArith<uint256> m{Secp256K1Mod};
-    const ModArith<uint256> n{Secp256K1N};
-
     // Follows
     // https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Public_key_recovery
 
@@ -722,15 +719,7 @@ std::optional<Point> secp256k1_ecdsa_recover(
     if (r == 0 || r >= Secp256K1N || s == 0 || s >= Secp256K1N)
         return std::nullopt;
 
-    // 2. Calculate y coordinate of R from r and v.
-    const auto r_mont = m.to_mont(r);
-    const auto y_mont = sec256k1_calculate_y(m, r_mont, v);
-    if (!y_mont.has_value())
-        return std::nullopt;
-    const auto y = m.from_mont(*y_mont);
-
     // 3. Hash of the message is already calculated in e.
-
     // 4. Convert hash e to z field element by doing z = e % n.
     //    https://www.rfc-editor.org/rfc/rfc6979#section-2.3.2
     //    We can do this by n - e because n > 2^255.
@@ -738,6 +727,9 @@ std::optional<Point> secp256k1_ecdsa_recover(
     auto z = intx::be::load<uint256>(e.bytes);
     if (z >= Secp256K1N)
         z -= Secp256K1N;
+
+
+    const ModArith<uint256> n{Secp256K1N};
 
     // 5. Calculate u1 and u2.
     const auto r_n = n.to_mont(r);
@@ -751,6 +743,16 @@ std::optional<Point> secp256k1_ecdsa_recover(
     const auto s_mont = n.to_mont(s);
     const auto u2_mont = n.mul(s_mont, r_inv);
     const auto u2 = n.from_mont(u2_mont);
+
+
+    const ModArith<uint256> m{Secp256K1Mod};
+
+    // 2. Calculate y coordinate of R from r and v.
+    const auto r_mont = m.to_mont(r);
+    const auto y_mont = sec256k1_calculate_y(m, r_mont, v);
+    if (!y_mont.has_value())
+        return std::nullopt;
+    const auto y = m.from_mont(*y_mont);
 
     // 6. Calculate public key point Q.
     const Point R{r, y};
