@@ -452,7 +452,10 @@ std::optional<Point> secp256k1_ecdsa_recover(
     const Point T1 = secp256k1_mul(G, u1);
     const Point T2 = secp256k1_mul(R, u2);
     const Point Q = secp256k1_add(T1, T2);
-    // TODO: What if Q is infinity?
+
+    // Any other validity check needed?
+    if (is_at_infinity(Q))
+        return std::nullopt;
 
     return std::make_optional(Q);
 }
@@ -493,7 +496,6 @@ std::optional<evmc::address> ecrecover(
     const auto point = secp256k1_ecdsa_recover(e, r, s, v);
     if (!point.has_value())
         return std::nullopt;
-    // TODO: Verify validity (infinity)
 
     return std::make_optional(secp256k1_point_to_address(*point));
 }
