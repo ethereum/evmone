@@ -429,15 +429,20 @@ std::optional<Point> secp256k1_ecdsa_recover(
 
     // 4. Convert hash e to z field element.
     // TODO: Properly convert hash to z.
-    // TODO: Convert z to montgomery form.
     const auto z = intx::be::load<uint256>(e.bytes);
 
     // 5. Calculate u1 and u2.
-    // TODO: Convert r, s to montgomery form.
-    const auto r_inv = inv(m, r);
-    const auto z_neg = m.sub(0, z);
-    const auto u1 = m.mul(z_neg, r_inv);
-    const auto u2 = m.mul(s, r_inv);
+    const auto r_mont = m.to_mont(r);
+    const auto r_inv = inv(m, r_mont);
+
+    const auto z_mont = m.to_mont(z);
+    const auto z_neg = m.sub(0, z_mont);
+    const auto u1_mont = m.mul(z_neg, r_inv);
+    const auto u1 = m.from_mont(u1_mont);
+
+    const auto s_mont = m.to_mont(s);
+    const auto u2_mont = m.mul(s_mont, r_inv);
+    const auto u2 = m.from_mont(u2_mont);
 
     // 6. Calculate public key point Q.
     // TODO:
