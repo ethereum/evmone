@@ -391,8 +391,8 @@ std::optional<Point> secp256k1_ecdsa_recover(
 
     // 2. Calculate y coordinate of R from r and v.
     const auto r_mont = m.to_mont(r);
-    const auto y = sec256k1_calculate_y(m, r_mont, v);
-    if (!y.has_value())
+    const auto y_mont = sec256k1_calculate_y(m, r_mont, v);
+    if (!y_mont.has_value())
         return std::nullopt;
 
     // 3. Hash of the message is already calculated in e.
@@ -418,7 +418,8 @@ std::optional<Point> secp256k1_ecdsa_recover(
     const auto u2 = m.from_mont(u2_mont);
 
     // 6. Calculate public key point Q.
-    const Point R{r, *y};
+    const auto y = m.from_mont(*y_mont);
+    const Point R{r, y};
     static constexpr Point G{
         0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798_u256,
         0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8_u256};
