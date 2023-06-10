@@ -207,36 +207,33 @@ struct TestCaseECRecovery
 {
     bytes input;
     bytes expected_output;
-
-    TestCaseECRecovery(bytes i, bytes o) : input{std::move(i)}, expected_output{std::move(o)}
-    {
-        input.resize(96);
-        expected_output.resize(64);
-    }
 };
 
-static const TestCaseECRecovery test_cases [] =
-    {
-        {"18c547e4f7b0f325ad1e56f57e26c745b09a3e503d86e00e5255ff7f715d3d1c000000000000000000000000000000000000000000000000000000000000001c73b1693892219d736caba55bdb67216e485557ea6b6af75f37096c9aa6a5a75feeb940b1d03b21e36b0e47e79769f095fe2ab855bd91e3a38756b7d75a9c4549"_hex, "000000000000000000000000a94f5374fce5edbc8e2a8697c15331677e6ebf0b"_hex}
-};
+static const TestCaseECRecovery test_cases[] = {
+    {"18c547e4f7b0f325ad1e56f57e26c745b09a3e503d86e00e5255ff7f715d3d1c000000000000000000000000000000000000000000000000000000000000001c73b1693892219d736caba55bdb67216e485557ea6b6af75f37096c9aa6a5a75feeb940b1d03b21e36b0e47e79769f095fe2ab855bd91e3a38756b7d75a9c4549"_hex,
+        "000000000000000000000000a94f5374fce5edbc8e2a8697c15331677e6ebf0b"_hex}};
 
 TEST(evmmax, ecrecovery)
 {
     for (const auto& t : test_cases)
     {
+        ASSERT_EQ(t.input.size(), 128);
+        ASSERT_EQ(t.expected_output.size(), 32);
+
         ethash::hash256 hash;
-        memcpy(&hash, &t.input[0], 32);
-        const auto r{be::unsafe::load<uint256>(&t.input[32])};
-        const auto s{be::unsafe::load<uint256>(&t.input[64])};
-        const auto v{be::unsafe::load<uint256>(&t.input[96])};
+        std::memcpy(hash.bytes, &t.input[0], 32);
+        const auto v{be::unsafe::load<uint256>(&t.input[32])};
+        ASSERT_TRUE(v == 27 || v == 28);
+        const auto r{be::unsafe::load<uint256>(&t.input[64])};
+        const auto s{be::unsafe::load<uint256>(&t.input[96])};
 
         evmc::address e;
         memcpy(&e.bytes[0], &t.expected_output[12], 20);
 
-        bool v_bool = v == 28_u256 ? true : false;
+        const bool parity = v == 28;
 
-        const auto result = ecrecover(hash, r, s, v_bool);
+        const auto result = ecrecover(hash, r, s, parity);
         ASSERT_TRUE(result.has_value());
-        EXPECT_EQ(result, e);
+        EXPECT_EQ(*result, e);
     }
 }
