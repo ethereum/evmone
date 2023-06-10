@@ -48,3 +48,55 @@ TEST(evmmax, secp256k1_sqrt)
         EXPECT_TRUE(a2_sqrt == a || a2_sqrt == s.sub(0, a)) << to_string(t);
     }
 }
+
+TEST(evmmax, secp256k1_calculate_y)
+{
+    const evmmax::ModArith s{Secp256K1Mod};
+
+    struct TestCase
+    {
+        uint256 x;
+        uint256 y_even;
+        uint256 y_odd;
+    };
+
+    const TestCase test_cases[] = {
+        {1_u256, 0x4218f20ae6c646b363db68605822fb14264ca8d2587fdd6fbc750d587e76a7ee_u256,
+            0xbde70df51939b94c9c24979fa7dd04ebd9b3572da7802290438af2a681895441_u256},
+        {0xb697546bfbc062d06df1d25a26e4fadfe2f2a48109c349bf65d2b01182f3aa60_u256,
+            0xd02714d31d0c08c38037400d232886863b473a37adba9823ea44ae50028a5bea_u256,
+            0x2fd8eb2ce2f3f73c7fc8bff2dcd77979c4b8c5c8524567dc15bb51aefd75a045_u256},
+        {0x18f4057699e2d9679421de8f4e11d7df9fa4b9e7cb841ea48aed75f1567b9731_u256,
+            0x6db5b7ecd8e226c06f538d15173267bf1e78acc02bb856e83b3d6daec6a68144_u256,
+            0x924a4813271dd93f90ac72eae8cd9840e187533fd447a917c4c2925039597aeb_u256}};
+
+    for (const auto& t : test_cases)
+    {
+        const auto x = s.to_mont(t.x);
+
+        const auto y_even = sec256k1_calculate_y(s, x, false);
+        ASSERT_TRUE(y_even.has_value());
+        EXPECT_EQ(s.from_mont(*y_even), t.y_even);
+
+        const auto y_odd = sec256k1_calculate_y(s, x, true);
+        ASSERT_TRUE(y_odd.has_value());
+        EXPECT_EQ(s.from_mont(*y_odd), t.y_odd);
+    }
+}
+
+TEST(evmmax, secp256k1_calculate_y_invalid)
+{
+    const evmmax::ModArith s{Secp256K1Mod};
+
+    for (const auto& t :
+        {0x207ea538f1835f6de40c793fc23d22b14da5a80015a0fecddf56f146b21d7949_u256, Secp256K1Mod - 1})
+    {
+        const auto x = s.to_mont(t);
+
+        const auto y_even = sec256k1_calculate_y(s, x, false);
+        ASSERT_FALSE(y_even.has_value());
+
+        const auto y_odd = sec256k1_calculate_y(s, x, true);
+        ASSERT_FALSE(y_odd.has_value());
+    }
+}

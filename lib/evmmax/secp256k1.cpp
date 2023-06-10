@@ -327,4 +327,20 @@ Point ecdsa_recover(const ModArith<uint256>& m, const ethash::hash256& e, const 
 
     return Q;
 }
+
+std::optional<uint256> sec256k1_calculate_y(
+    const ModArith<uint256>& s, const uint256& x, bool is_odd) noexcept
+{
+    static const auto Sec256k1_b = s.to_mont(7);
+
+    // Calculate sqrt(x^3 + 7)
+    const auto x3 = s.mul(s.mul(x, x), x);
+    const auto y = sqrt(s, s.add(x3, Sec256k1_b));
+    if (!y.has_value())
+        return std::nullopt;
+
+    // Negate if different oddity requested
+    const auto y_is_odd = s.from_mont(*y) & 1;
+    return (is_odd == y_is_odd ? *y : s.sub(0, *y));
+}
 }  // namespace evmmax::secp256k1

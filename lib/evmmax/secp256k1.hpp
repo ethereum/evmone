@@ -35,5 +35,8 @@ uint256 inv(const ModArith<uint256>& s, const uint256& x) noexcept;
 
 std::optional<uint256> sqrt(const ModArith<uint256>& s, const uint256& x) noexcept;
 
+std::optional<uint256> sec256k1_calculate_y(
+    const ModArith<uint256>& s, const uint256& x, bool is_odd) noexcept;
+
 Point ecdsa_recover(const ethash::hash256& e, const uint256& r, const uint256& s, bool v) noexcept;
 }  // namespace evmmax::secp256k1
