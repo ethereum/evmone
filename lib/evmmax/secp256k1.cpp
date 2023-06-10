@@ -445,13 +445,12 @@ std::optional<Point> secp256k1_ecdsa_recover(
     const auto u2 = m.from_mont(u2_mont);
 
     // 6. Calculate public key point Q.
-    // TODO:
     const Point R{r, *y};
-    Point G = {};
-    Point T1 = secp256k1_mul(G, u1);
-    Point T2 = secp256k1_mul(R, u2);
-    // Point Qj = secp256k1_add(T1, T2);
-    //  Point Q = to_affine(Qj);
+    static constexpr Point G{
+        0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798_u256,
+        0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8_u256};
+    const Point T1 = secp256k1_mul(G, u1);
+    const Point T2 = secp256k1_mul(R, u2);
     const Point Q = secp256k1_add(T1, T2);
     // TODO: What if Q is infinity?
 
