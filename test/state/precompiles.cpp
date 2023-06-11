@@ -194,6 +194,17 @@ ExecutionResult bn254_add_execute(const uint8_t* input, size_t input_size, uint8
         return {EVMC_PRECOMPILE_FAILURE, 0};
 }
 
+ExecutionResult bn254_mul_execute(const uint8_t* input, size_t input_size, uint8_t* output,
+    [[maybe_unused]] size_t output_size) noexcept
+{
+    assert(output_size == 64);
+    const auto res = evmmax::bn254::bn254_mul_precompile(input, input_size, output);
+    if (res)
+        return {EVMC_SUCCESS, output_size};
+    else
+        return {EVMC_PRECOMPILE_FAILURE, 0};
+}
+
 struct PrecompileTraits
 {
     decltype(identity_analyze)* analyze = nullptr;
@@ -216,7 +227,7 @@ inline constexpr auto traits = []() noexcept {
         {identity_analyze, identity_execute},
         {expmod_analyze, dummy_execute<PrecompileId::expmod>},
         {ecadd_analyze, bn254_add_execute},
-        {ecmul_analyze, dummy_execute<PrecompileId::ecmul>},
+        {ecmul_analyze, bn254_mul_execute},
         {ecpairing_analyze, dummy_execute<PrecompileId::ecpairing>},
         {blake2bf_analyze, dummy_execute<PrecompileId::blake2bf>},
     }};
@@ -224,7 +235,6 @@ inline constexpr auto traits = []() noexcept {
     tbl[static_cast<size_t>(PrecompileId::sha256)].execute = silkpre_sha256_execute;
     tbl[static_cast<size_t>(PrecompileId::ripemd160)].execute = silkpre_ripemd160_execute;
     tbl[static_cast<size_t>(PrecompileId::expmod)].execute = silkpre_expmod_execute;
-    tbl[static_cast<size_t>(PrecompileId::ecmul)].execute = silkpre_ecmul_execute;
     tbl[static_cast<size_t>(PrecompileId::ecpairing)].execute = silkpre_ecpairing_execute;
     tbl[static_cast<size_t>(PrecompileId::blake2bf)].execute = silkpre_blake2bf_execute;
 #endif
