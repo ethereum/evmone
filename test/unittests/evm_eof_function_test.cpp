@@ -14,13 +14,11 @@ TEST_P(evm, eof_function_example1)
         return;
 
     rev = EVMC_CANCUN;
-    const auto code =
-        "EF00 01 010008 020002 000f 0002 030000 00"
-        "00000002 02010002"
-        "6001 6008 b00001 " +
-        ret_top() + "03b1";
+    const auto code = "EF00 01 010008 020002 000f 0002 030000 00 00000002 02010002" +
+                      /* func0: */ push(1) + push(8) + OP_CALLF + "0001" + ret_top() +
+                      /* func1: */ OP_SUB + OP_RETF;
 
-    ASSERT_EQ((int)evmone::validate_eof(rev, code), (int)evmone::EOFValidationError{});
+    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::success);
 
     execute(code);
     EXPECT_GAS_USED(EVMC_SUCCESS, 32);
@@ -36,12 +34,12 @@ TEST_P(evm, eof_function_example2)
     rev = EVMC_CANCUN;
     const auto code =
         "ef0001 01000c 020003 003b 0017 001d 030000 00 00000004 01010003 01010004"
-        "60043560003560e01c63c766526781145d001c63c6c2ea1781145d00065050600080fd50b00002600052602060"
-        "00f350b0000160005260206000f3"
-        "600181115d0004506001b160018103b0000181029050b1"
-        "600281115d0004506001b160028103b0000260018203b00002019050b1"_hex;
+        "60043560003560e01c63c76652678114e1001c63c6c2ea178114e100065050600080fd50e30002600052602060"
+        "00f350e3000160005260206000f3"
+        "60018111e10004506001e460018103e3000181029050e4"
+        "60028111e10004506001e460028103e3000260018203e30002019050e4"_hex;
 
-    ASSERT_EQ((int)evmone::validate_eof(rev, code), (int)evmone::EOFValidationError{});
+    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::success);
 
     // Call fac(5)
     const auto calldata_fac =

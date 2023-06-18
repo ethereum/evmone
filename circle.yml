@@ -455,9 +455,8 @@ jobs:
             export EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json 
             bin/evmone-statetest ~/tests/GeneralStateTests ~/tests/LegacyTests/Constantinople/GeneralStateTests
       - download_execution_tests:
-          repo: ethereum/tests
-          rev: develop
-          commit: 0ec53d024c2b1f5175e70aba8f750cd4d37d9999
+          repo: ipsilon/tests
+          rev: eof-opcodes-20230619
           legacy: false
       - run:
           name: "State tests (EOF)"

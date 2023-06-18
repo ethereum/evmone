@@ -394,89 +394,89 @@ TEST(eof_validation, EOF1_truncated_push)
 TEST(eof_validation, EOF1_valid_rjump)
 {
     // offset = 0
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 030000 00 00000000 5C000000"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 030000 00 00000000 E0000000"),
         EOFValidationError::success);
 
     // offset = 3
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010009 030000 00 00000001 5C00036001005CFFFA"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010009 030000 00 00000001 E00003600100E0FFFA"),
         EOFValidationError::success);
 
     // offset = -4
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 030000 00 00000000 5B5CFFFC"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 030000 00 00000000 5BE0FFFC"),
         EOFValidationError::success);
 }
 
 TEST(eof_validation, EOF1_valid_rjumpi)
 {
     // offset = 0
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 030000 00 00000001 60005D000000"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 030000 00 00000001 6000E1000000"),
         EOFValidationError::success);
 
     // offset = 3
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010009 030000 00 00000001 60005D00035B5B5B00"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010009 030000 00 00000001 6000E100035B5B5B00"),
         EOFValidationError::success);
 
     // offset = -5
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 030000 00 00000001 60005DFFFB00"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 030000 00 00000001 6000E1FFFB00"),
         EOFValidationError::success);
 }
 
 TEST(eof_validation, EOF1_valid_rjumpv)
 {
     // table = [0] case = 0
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010009 030000 00 00000001 60005E010000600100"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010009 030000 00 00000001 6000E2010000600100"),
         EOFValidationError::success);
 
     // table = [0,3] case = 0
     EXPECT_EQ(
-        validate_eof("EF0001 010004 020001000E 030000 00 00000001 60005E0200000003600100600200"),
+        validate_eof("EF0001 010004 020001000E 030000 00 00000001 6000E20200000003600100600200"),
         EOFValidationError::success);
 
     // table = [0,3] case = 2
     EXPECT_EQ(
-        validate_eof("EF0001 010004 020001000E 030000 00 00000001 60025E0200000003600100600200"),
+        validate_eof("EF0001 010004 020001000E 030000 00 00000001 6002E20200000003600100600200"),
         EOFValidationError::success);
 
     // table = [0,3,-10] case = 2
     EXPECT_EQ(validate_eof(
-                  "EF0001 010004 0200010010 030000 00 00000001 60025E0300000003FFF6600100600200"),
+                  "EF0001 010004 0200010010 030000 00 00000001 6002E20300000003FFF6600100600200"),
         EOFValidationError::success);
 }
 
 TEST(eof_validation, EOF1_rjump_truncated)
 {
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 030000 00 00000000 5C"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 030000 00 00000000 E0"),
         EOFValidationError::truncated_instruction);
 
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010002 030000 00 00000000 5C00"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010002 030000 00 00000000 E000"),
         EOFValidationError::truncated_instruction);
 }
 
 TEST(eof_validation, EOF1_rjumpi_truncated)
 {
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010003 030000 00 00000000 60005D"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010003 030000 00 00000000 6000E1"),
         EOFValidationError::truncated_instruction);
 
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 030000 00 00000000 60005D00"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 030000 00 00000000 6000E100"),
         EOFValidationError::truncated_instruction);
 }
 
 TEST(eof_validation, EOF1_rjumpv_truncated)
 {
     // table = [0] case = 0
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 030000 00 00000000 60005E0100"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 030000 00 00000000 6000E20100"),
         EOFValidationError::truncated_instruction);
 
     // table = [0,3] case = 0
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010007 030000 00 00000000 60005E02000000"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010007 030000 00 00000000 6000E202000000"),
         EOFValidationError::truncated_instruction);
 
     // table = [0,3] case = 2
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 030000 00 00000000 60025E020000"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 030000 00 00000000 6002E2020000"),
         EOFValidationError::truncated_instruction);
 
     // table = [0,3,-10] case = 2
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010009 030000 00 00000000 60025E0300000003FF"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010009 030000 00 00000000 6002E20300000003FF"),
         EOFValidationError::truncated_instruction);
 }
 
@@ -490,130 +490,130 @@ TEST(eof_validation, EOF1_rjumpv_0_count)
 TEST(eof_validation, EOF1_rjump_invalid_destination)
 {
     // Into header (offset = -5)
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 030000 00 00000000 5CFFFB00"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 030000 00 00000000 E0FFFB00"),
         EOFValidationError::invalid_rjump_destination);
 
     // To before code begin (offset = -13)
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 030000 00 00000000 5CFFF300"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 030000 00 00000000 E0FFF300"),
         EOFValidationError::invalid_rjump_destination);
 
     // To after code end (offset = 2)
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 030000 00 00000000 5C000200"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 030000 00 00000000 E0000200"),
         EOFValidationError::invalid_rjump_destination);
 
     // To code end (offset = 1)
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 030000 00 00000000 5C000100"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 030000 00 00000000 E0000100"),
         EOFValidationError::invalid_rjump_destination);
 
     // To the same RJUMP immediate (offset = -1)
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 030000 00 00000000 5CFFFF00"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 030000 00 00000000 E0FFFF00"),
         EOFValidationError::invalid_rjump_destination);
 
     // To PUSH immediate (offset = -4)
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 030000 00 00000000 60005CFFFC00"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 030000 00 00000000 6000E0FFFC00"),
         EOFValidationError::invalid_rjump_destination);
 }
 
 TEST(eof_validation, EOF1_rjumpi_invalid_destination)
 {
     // Into header (offset = -7)
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 030000 00 00000000 60005DFFF900"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 030000 00 00000000 6000E1FFF900"),
         EOFValidationError::invalid_rjump_destination);
 
     // To before code begin (offset = -15)
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 030000 00 00000000 60005DFFF100"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 030000 00 00000000 6000E1FFF100"),
         EOFValidationError::invalid_rjump_destination);
 
     // To after code end (offset = 2)
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 030000 00 00000000 60005D000200"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 030000 00 00000000 6000E1000200"),
         EOFValidationError::invalid_rjump_destination);
 
     // To code end (offset = 1)
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 030000 00 00000000 60005D000100"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 030000 00 00000000 6000E1000100"),
         EOFValidationError::invalid_rjump_destination);
 
     // To the same RJUMPI immediate (offset = -1)
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 030000 00 00000000 60005DFFFF00"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 030000 00 00000000 6000E1FFFF00"),
         EOFValidationError::invalid_rjump_destination);
 
     // To PUSH immediate (offset = -4)
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 030000 00 00000000 60005DFFFC00"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 030000 00 00000000 6000E1FFFC00"),
         EOFValidationError::invalid_rjump_destination);
 }
 
 TEST(eof_validation, EOF1_rjumpv_invalid_destination)
 {
     // table = [-23] case = 0
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010008 030000 00 00000000 60005E01FFE96001"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010008 030000 00 00000000 6000E201FFE96001"),
         EOFValidationError::invalid_rjump_destination);
 
     // table = [-8] case = 0
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010008 030000 00 00000000 60005E01FFF86001"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010008 030000 00 00000000 6000E201FFF86001"),
         EOFValidationError::invalid_rjump_destination);
 
     // table = [-1] case = 0
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010008 030000 00 00000000 60005E01FFFF6001"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010008 030000 00 00000000 6000E201FFFF6001"),
         EOFValidationError::invalid_rjump_destination);
 
     // table = [2] case = 0
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010008 030000 00 00000000 60005E0100026001"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010008 030000 00 00000000 6000E20100026001"),
         EOFValidationError::invalid_rjump_destination);
 
     // table = [3] case = 0
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010008 030000 00 00000000 60005E0100036001"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010008 030000 00 00000000 6000E20100036001"),
         EOFValidationError::invalid_rjump_destination);
 
 
     // table = [0,3,-27] case = 2
     EXPECT_EQ(
-        validate_eof("EF0001 010004 020001000F 030000 00 00000000 60025E0300000003FFE56001006002"),
+        validate_eof("EF0001 010004 020001000F 030000 00 00000000 6002E20300000003FFE56001006002"),
         EOFValidationError::invalid_rjump_destination);
 
     // table = [0,3,-12] case = 2
     EXPECT_EQ(
-        validate_eof("EF0001 010004 020001000F 030000 00 00000000 60025E0300000003FFF46001006002"),
+        validate_eof("EF0001 010004 020001000F 030000 00 00000000 6002E20300000003FFF46001006002"),
         EOFValidationError::invalid_rjump_destination);
 
     // table = [0,3,-1] case = 2
     EXPECT_EQ(
-        validate_eof("EF0001 010004 020001000F 030000 00 00000000 60025E0300000003FFFF6001006002"),
+        validate_eof("EF0001 010004 020001000F 030000 00 00000000 6002E20300000003FFFF6001006002"),
         EOFValidationError::invalid_rjump_destination);
 
     // table = [0,3,5] case = 2
     EXPECT_EQ(
-        validate_eof("EF0001 010004 020001000F 030000 00 00000000 60025E030000000300056001006002"),
+        validate_eof("EF0001 010004 020001000F 030000 00 00000000 6002E2030000000300056001006002"),
         EOFValidationError::invalid_rjump_destination);
 
     // table = [0,3,6] case = 2
     EXPECT_EQ(
-        validate_eof("EF0001 010004 020001000F 030000 00 00000000 60025E030000000300066001006002"),
+        validate_eof("EF0001 010004 020001000F 030000 00 00000000 6002E2030000000300066001006002"),
         EOFValidationError::invalid_rjump_destination);
 }
 
 TEST(eof_validation, EOF1_section_order)
 {
     // 01 02 03
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 030002 00 00000001 60005D000000 AABB"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 030002 00 00000001 6000E0000000 AABB"),
         EOFValidationError::success);
 
     // 01 03 02
-    EXPECT_EQ(validate_eof("EF0001 010004 030002 0200010006 00 00000000 AABB 60005D000000"),
+    EXPECT_EQ(validate_eof("EF0001 010004 030002 0200010006 00 00000000 AABB 6000E0000000"),
         EOFValidationError::code_section_missing);
 
     // 02 01 03
-    EXPECT_EQ(validate_eof("EF0001 0200010006 010004 030002 00 60005D000000 00000000 AABB"),
+    EXPECT_EQ(validate_eof("EF0001 0200010006 010004 030002 00 6000E0000000 00000000 AABB"),
         EOFValidationError::type_section_missing);
 
     // 02 03 01
-    EXPECT_EQ(validate_eof("EF0001 0200010006 030002 010004 00 60005D000000 AABB 00000000"),
+    EXPECT_EQ(validate_eof("EF0001 0200010006 030002 010004 00 6000E0000000 AABB 00000000"),
         EOFValidationError::type_section_missing);
 
     // 03 01 02
-    EXPECT_EQ(validate_eof("EF0001 030002 010004 0200010006 00 AABB 00000000 60005D000000"),
+    EXPECT_EQ(validate_eof("EF0001 030002 010004 0200010006 00 AABB 00000000 6000E0000000"),
         EOFValidationError::type_section_missing);
 
     // 03 02 01
-    EXPECT_EQ(validate_eof("EF0001 030002 0200010006 010004 00 AABB 60005D000000 00000000"),
+    EXPECT_EQ(validate_eof("EF0001 030002 0200010006 010004 00 AABB 6000E0000000 00000000"),
         EOFValidationError::type_section_missing);
 }
 
@@ -625,47 +625,47 @@ TEST(eof_validation, deprecated_instructions)
     }
 }
 
-TEST(eof_valication, max_arguments_count)
+TEST(eof_validation, max_arguments_count)
 {
-    EXPECT_EQ(validate_eof("EF0001 010008 02000200010001 030000 00 00000000 7F7F007F B1 B1"),
+    EXPECT_EQ(validate_eof("EF0001 010008 02000200010001 030000 00 00000000 7F7F007F E4 E4"),
         EOFValidationError::success);
 
-    EXPECT_EQ(validate_eof("EF0001 010008 02000200010001 030000 00 00000000 80800080 B1 B1"),
+    EXPECT_EQ(validate_eof("EF0001 010008 02000200010001 030000 00 00000000 80800080 E4 E4"),
         EOFValidationError::inputs_outputs_num_above_limit);
 
     {
-        auto code = "EF0001 010008 020002000100FF 030000 00 00000000 007F007F B1" +
+        auto code = bytecode{"EF0001 010008 020002000100FF 030000 00 00000000 007F007F"} + OP_RETF +
                     127 * bytecode{1} + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::success);
     }
 
     {
-        auto code = "EF0001 010008 02000200010101 030000 00 00000000 00800080 B1" +
+        auto code = bytecode{"EF0001 010008 02000200010101 030000 00 00000000 00800080"} + OP_RETF +
                     128 * bytecode{1} + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::inputs_outputs_num_above_limit);
     }
 
     {
-        auto code =
-            "EF0001 010008 02000200010080 030000 00 00000000 7F00007F B1" + 127 * OP_POP + OP_RETF;
+        auto code = bytecode{"EF0001 010008 02000200010080 030000 00 00000000 7F00007F"} + OP_RETF +
+                    127 * OP_POP + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::success);
     }
 
     {
-        auto code =
-            "EF0001 010008 02000200010081 030000 00 00000000 80000080 B1" + 128 * OP_POP + OP_RETF;
+        auto code = bytecode{"EF0001 010008 02000200010081 030000 00 00000000 80000080"} + OP_RETF +
+                    128 * OP_POP + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::inputs_outputs_num_above_limit);
     }
 }
 
-TEST(eof_valication, max_stack_heigh)
+TEST(eof_validation, max_stack_heigh)
 {
     {
-        auto code = "EF0001 010008 02000200010BFE 030000 00 00000000 000003FF B1" +
+        auto code = bytecode{"EF0001 010008 02000200010BFE 030000 00 00000000 000003FF"} + OP_RETF +
                     0x3FF * bytecode{1} + 0x3FF * OP_POP + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::success);
@@ -679,7 +679,7 @@ TEST(eof_valication, max_stack_heigh)
     }
 
     {
-        auto code = "EF0001 010008 02000200010C01 030000 00 00000000 00000400 B1" +
+        auto code = bytecode{"EF0001 010008 02000200010C01 030000 00 00000000 00000400"} + OP_RETF +
                     0x400 * bytecode{1} + 0x400 * OP_POP + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::max_stack_height_above_limit);
@@ -693,7 +693,7 @@ TEST(eof_valication, max_stack_heigh)
     }
 
     {
-        auto code = "EF0001 010008 02000200010C01 030000 00 00000000 000003FF B1" +
+        auto code = bytecode{"EF0001 010008 02000200010C01 030000 00 00000000 000003FF"} + OP_RETF +
                     0x400 * bytecode{1} + 0x400 * OP_POP + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::invalid_max_stack_height);
@@ -727,16 +727,16 @@ TEST(eof_valication, max_stack_heigh)
 
 TEST(eof_validation, EOF1_callf_truncated)
 {
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 030000 00 00000000 B0"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 030000 00 00000000 E3"),
         EOFValidationError::truncated_instruction);
 
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010002 030000 00 00000000 B000"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010002 030000 00 00000000 E300"),
         EOFValidationError::truncated_instruction);
 }
 
 TEST(eof_validation, callf_invalid_code_section_index)
 {
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 030000 00 00000000 b0000100"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 030000 00 00000000 E3000100"),
         EOFValidationError::invalid_code_section_index);
 }
 
@@ -1259,52 +1259,52 @@ TEST(eof_validation, too_many_code_sections)
 
 TEST(eof_validation, EOF1_dataloadn_truncated)
 {
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 030000 00 00000000 B9"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 030000 00 00000000 E9"),
         EOFValidationError::truncated_instruction);
 
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010002 030000 00 00000000 B900"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010002 030000 00 00000000 E900"),
         EOFValidationError::truncated_instruction);
 }
 
 TEST(eof_validation, dataloadn)
 {
     // DATALOADN{0}
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 030020 00 00000001 b900005000"
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 030020 00 00000001 E900005000"
                            "0000000000000000111111111111111122222222222222223333333333333333"),
         EOFValidationError::success);
 
     // DATALOADN{1}
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 030021 00 00000001 b900015000"
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 030021 00 00000001 E900015000"
                            "000000000000000011111111111111112222222222222222333333333333333344"),
         EOFValidationError::success);
 
     // DATALOADN{32}
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 030040 00 00000001 b900205000"
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 030040 00 00000001 E900205000"
                            "0000000000000000111111111111111122222222222222223333333333333333"
                            "0000000000000000111111111111111122222222222222223333333333333333"),
         EOFValidationError::success);
 
     // DATALOADN{0} - no data section
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 030000 00 00000001 b900005000"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 030000 00 00000001 E900005000"),
         EOFValidationError::invalid_dataloadn_index);
 
     // DATALOADN{1} - out of data section bounds
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 030001 00 00000001 b900015000"
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 030001 00 00000001 E900015000"
                            "00"),
         EOFValidationError::invalid_dataloadn_index);
 
     // DATALOADN{32} - out of data section bounds
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 030020 00 00000001 b900205000"
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 030020 00 00000001 E900205000"
                            "0000000000000000111111111111111122222222222222223333333333333333"),
         EOFValidationError::invalid_dataloadn_index);
 
     // DATALOADN{uint16_max} - out of data section bounds
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 030020 00 00000001 b9ffff5000"
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 030020 00 00000001 E9ffff5000"
                            "0000000000000000111111111111111122222222222222223333333333333333"),
         EOFValidationError::invalid_dataloadn_index);
 
     // DATALOADN{32} - truncated word
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 03003F 00 00000001 b900205000"
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 03003F 00 00000001 E900205000"
                            "0000000000000000111111111111111122222222222222223333333333333333"
                            "00000000000000001111111111111111222222222222222233333333333333"),
         EOFValidationError::invalid_dataloadn_index);
