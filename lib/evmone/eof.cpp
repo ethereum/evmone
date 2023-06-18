@@ -224,6 +224,13 @@ EOFValidationError validate_instructions(
             if (i >= code.size())
                 return EOFValidationError::truncated_instruction;
         }
+        else if (op == OP_CALLF)
+        {
+            const auto fid = read_uint16_be(&code[i + 1]);
+            if (fid >= header.types.size())
+                return EOFValidationError::invalid_code_section_index;
+            i += 2;
+        }
         else if (op == OP_DATALOADN)
         {
             const auto index = read_uint16_be(&code[i + 1]);
@@ -327,9 +334,6 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
         if (opcode == OP_CALLF)
         {
             const auto fid = read_uint16_be(&code[i + 1]);
-
-            if (fid >= code_types.size())
-                return EOFValidationError::invalid_code_section_index;
 
             stack_height_required = static_cast<int8_t>(code_types[fid].inputs);
             stack_height_change =
