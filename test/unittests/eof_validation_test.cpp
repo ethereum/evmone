@@ -1248,6 +1248,15 @@ TEST(eof_validation, too_many_code_sections)
     EXPECT_EQ(validate_eof(code), EOFValidationError::too_many_code_sections);
 }
 
+TEST(eof_validation, EOF1_dataloadn_truncated)
+{
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 030000 00 00000000 B9"),
+        EOFValidationError::truncated_instruction);
+
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010002 030000 00 00000000 B900"),
+        EOFValidationError::truncated_instruction);
+}
+
 TEST(eof_validation, dataloadn)
 {
     // DATALOADN{0}

@@ -58,6 +58,8 @@ constexpr void validate_traits_of() noexcept
         static_assert(tr.immediate_size == Op - OP_PUSH1 + 1);
     else if constexpr (Op == OP_RJUMP || Op == OP_RJUMPI || Op == OP_CALLF)
         static_assert(tr.immediate_size == 2);
+    else if constexpr (Op == OP_RJUMPV)
+        static_assert(tr.immediate_size == 1);
     else if constexpr (Op == OP_DUPN || Op == OP_SWAPN)
         static_assert(tr.immediate_size == 1);
     else if constexpr (Op == OP_DATALOADN)
