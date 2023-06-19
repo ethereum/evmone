@@ -2,6 +2,7 @@
 // Copyright 2019 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+#include "eof.hpp"
 #include "instructions.hpp"
 
 namespace evmone::instr::core
@@ -94,6 +95,21 @@ Result call_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noexce
 
     if (has_value && intx::be::load<uint256>(state.host.get_balance(state.msg->recipient)) < value)
         return {EVMC_SUCCESS, gas_left};  // "Light" failure.
+
+    if constexpr (Op == OP_DELEGATECALL)
+    {
+        if (state.rev >= EVMC_CANCUN && is_eof_container(state.original_code))
+        {
+            // The code targeted by DELEGATECALL must also be an EOF.
+            // This restriction has been added to EIP-3540 in
+            // https://github.com/ethereum/EIPs/pull/7131
+            uint8_t target_code_prefix[2];
+            const auto s = state.host.copy_code(
+                msg.code_address, 0, target_code_prefix, std::size(target_code_prefix));
+            if (!is_eof_container({target_code_prefix, s}))
+                return {EVMC_SUCCESS, gas_left};
+        }
+    }
 
     const auto result = state.host.call(msg);
     state.return_data.assign(result.output_data, result.output_size);
