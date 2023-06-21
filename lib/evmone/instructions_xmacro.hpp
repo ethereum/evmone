@@ -129,9 +129,9 @@
     ON_OPCODE_IDENTIFIER(OP_MSIZE, msize)                   \
     ON_OPCODE_IDENTIFIER(OP_GAS, gas)                       \
     ON_OPCODE_IDENTIFIER(OP_JUMPDEST, jumpdest)             \
-    ON_OPCODE_IDENTIFIER(OP_RJUMP, rjump)                   \
-    ON_OPCODE_IDENTIFIER(OP_RJUMPI, rjumpi)                 \
-    ON_OPCODE_IDENTIFIER(OP_RJUMPV, rjumpv)                 \
+    ON_OPCODE_UNDEFINED(0x5c)                               \
+    ON_OPCODE_UNDEFINED(0x5d)                               \
+    ON_OPCODE_IDENTIFIER(OP_MCOPY, mcopy)                   \
     ON_OPCODE_IDENTIFIER(OP_PUSH0, push0)                   \
                                                             \
     ON_OPCODE_IDENTIFIER(OP_PUSH1, push<1>)                 \
@@ -219,18 +219,18 @@
     ON_OPCODE_UNDEFINED(0xae)                               \
     ON_OPCODE_UNDEFINED(0xaf)                               \
                                                             \
-    ON_OPCODE_IDENTIFIER(OP_CALLF, callf)                   \
-    ON_OPCODE_IDENTIFIER(OP_RETF, retf)                     \
+    ON_OPCODE_UNDEFINED(0xb0)                               \
+    ON_OPCODE_UNDEFINED(0xb1)                               \
     ON_OPCODE_UNDEFINED(0xb2)                               \
     ON_OPCODE_UNDEFINED(0xb3)                               \
     ON_OPCODE_UNDEFINED(0xb4)                               \
-    ON_OPCODE_IDENTIFIER(OP_DUPN, dupn)                     \
-    ON_OPCODE_IDENTIFIER(OP_SWAPN, swapn)                   \
-    ON_OPCODE_IDENTIFIER(OP_MCOPY, mcopy)                   \
-    ON_OPCODE_IDENTIFIER(OP_DATALOAD, dataload)             \
-    ON_OPCODE_IDENTIFIER(OP_DATALOADN, dataloadn)           \
-    ON_OPCODE_IDENTIFIER(OP_DATASIZE, datasize)             \
-    ON_OPCODE_IDENTIFIER(OP_DATACOPY, datacopy)             \
+    ON_OPCODE_UNDEFINED(0xb5)                               \
+    ON_OPCODE_UNDEFINED(0xb6)                               \
+    ON_OPCODE_UNDEFINED(0xb7)                               \
+    ON_OPCODE_UNDEFINED(0xb8)                               \
+    ON_OPCODE_UNDEFINED(0xb9)                               \
+    ON_OPCODE_UNDEFINED(0xba)                               \
+    ON_OPCODE_UNDEFINED(0xbb)                               \
     ON_OPCODE_UNDEFINED(0xbc)                               \
     ON_OPCODE_UNDEFINED(0xbd)                               \
     ON_OPCODE_UNDEFINED(0xbe)                               \
@@ -270,18 +270,18 @@
     ON_OPCODE_UNDEFINED(0xde)                               \
     ON_OPCODE_UNDEFINED(0xdf)                               \
                                                             \
-    ON_OPCODE_UNDEFINED(0xe0)                               \
-    ON_OPCODE_UNDEFINED(0xe1)                               \
-    ON_OPCODE_UNDEFINED(0xe2)                               \
-    ON_OPCODE_UNDEFINED(0xe3)                               \
-    ON_OPCODE_UNDEFINED(0xe4)                               \
+    ON_OPCODE_IDENTIFIER(OP_RJUMP, rjump)                   \
+    ON_OPCODE_IDENTIFIER(OP_RJUMPI, rjumpi)                 \
+    ON_OPCODE_IDENTIFIER(OP_RJUMPV, rjumpv)                 \
+    ON_OPCODE_IDENTIFIER(OP_CALLF, callf)                   \
+    ON_OPCODE_IDENTIFIER(OP_RETF, retf)                     \
     ON_OPCODE_UNDEFINED(0xe5)                               \
-    ON_OPCODE_UNDEFINED(0xe6)                               \
-    ON_OPCODE_UNDEFINED(0xe7)                               \
-    ON_OPCODE_UNDEFINED(0xe8)                               \
-    ON_OPCODE_UNDEFINED(0xe9)                               \
-    ON_OPCODE_UNDEFINED(0xea)                               \
-    ON_OPCODE_UNDEFINED(0xeb)                               \
+    ON_OPCODE_IDENTIFIER(OP_DUPN, dupn)                     \
+    ON_OPCODE_IDENTIFIER(OP_SWAPN, swapn)                   \
+    ON_OPCODE_IDENTIFIER(OP_DATALOAD, dataload)             \
+    ON_OPCODE_IDENTIFIER(OP_DATALOADN, dataloadn)           \
+    ON_OPCODE_IDENTIFIER(OP_DATASIZE, datasize)             \
+    ON_OPCODE_IDENTIFIER(OP_DATACOPY, datacopy)             \
     ON_OPCODE_UNDEFINED(0xec)                               \
     ON_OPCODE_UNDEFINED(0xed)                               \
     ON_OPCODE_UNDEFINED(0xee)                               \
