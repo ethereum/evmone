@@ -82,7 +82,8 @@ enum Opcode : uint8_t
     OP_MSIZE = 0x59,
     OP_GAS = 0x5a,
     OP_JUMPDEST = 0x5b,
-
+    OP_TLOAD = 0x5c,
+    OP_TSTORE = 0x5d,
     OP_MCOPY = 0x5e,
     OP_PUSH0 = 0x5f,
     OP_PUSH1 = 0x60,

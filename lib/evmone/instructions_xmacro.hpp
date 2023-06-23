@@ -129,8 +129,8 @@
     ON_OPCODE_IDENTIFIER(OP_MSIZE, msize)                   \
     ON_OPCODE_IDENTIFIER(OP_GAS, gas)                       \
     ON_OPCODE_IDENTIFIER(OP_JUMPDEST, jumpdest)             \
-    ON_OPCODE_UNDEFINED(0x5c)                               \
-    ON_OPCODE_UNDEFINED(0x5d)                               \
+    ON_OPCODE_IDENTIFIER(OP_TLOAD, tload)                   \
+    ON_OPCODE_IDENTIFIER(OP_TSTORE, tstore)                 \
     ON_OPCODE_IDENTIFIER(OP_MCOPY, mcopy)                   \
     ON_OPCODE_IDENTIFIER(OP_PUSH0, push0)                   \
                                                             \

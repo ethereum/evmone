@@ -164,6 +164,8 @@ constexpr inline GasCostTable gas_costs = []() noexcept {
     table[EVMC_SHANGHAI][OP_PUSH0] = 2;
 
     table[EVMC_CANCUN] = table[EVMC_SHANGHAI];
+    table[EVMC_CANCUN][OP_TLOAD] = warm_storage_read_cost;
+    table[EVMC_CANCUN][OP_TSTORE] = warm_storage_read_cost;
     table[EVMC_CANCUN][OP_MCOPY] = 3;
 
     table[EVMC_PRAGUE] = table[EVMC_CANCUN];
@@ -303,6 +305,8 @@ constexpr inline std::array<Traits, 256> traits = []() noexcept {
     table[OP_RJUMPV] = {
         "RJUMPV", 1 /* 1 byte static immediate + dynamic immediate */, false, 1, -1, EVMC_PRAGUE};
 
+    table[OP_TLOAD] = {"TLOAD", 0, false, 1, 0, EVMC_CANCUN};
+    table[OP_TSTORE] = {"TSTORE", 0, false, 2, -2, EVMC_CANCUN};
     table[OP_PUSH0] = {"PUSH0", 0, false, 0, 1, EVMC_SHANGHAI};
 
     table[OP_PUSH1] = {"PUSH1", 1, false, 0, 1, EVMC_FRONTIER};
