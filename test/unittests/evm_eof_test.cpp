@@ -385,3 +385,23 @@ TEST_P(evm, eof_create3)
     ASSERT_EQ(result.output_size, deployed_container.size());
     EXPECT_EQ(output, deployed_container);
 }
+
+TEST_P(evm, create3_undefined_in_legacy)
+{
+    rev = EVMC_CANCUN;
+    const auto code = calldatacopy(0, 0, OP_CALLDATASIZE) +
+                      create3().input(0, OP_CALLDATASIZE).salt(0xff) + ret_top();
+
+    execute(code);
+    EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
+}
+
+TEST_P(evm, returncontract_undefined_in_legacy)
+{
+    rev = EVMC_CANCUN;
+    const auto code =
+        calldatacopy(0, 0, OP_CALLDATASIZE) + OP_CALLDATASIZE + 0 + OP_RETURNCONTRACT + Opcode{0};
+
+    execute(code);
+    EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
+}
