@@ -56,6 +56,12 @@ private:
     evmc_storage_status set_storage(
         const address& addr, const bytes32& key, const bytes32& value) noexcept override;
 
+    [[nodiscard]] evmc::bytes32 get_transient_storage(
+        const address& addr, const bytes32& key) const noexcept override;
+
+    void set_transient_storage(
+        const address& addr, const bytes32& key, const bytes32& value) noexcept override;
+
     [[nodiscard]] uint256be get_balance(const address& addr) const noexcept override;
 
     [[nodiscard]] size_t get_code_size(const address& addr) const noexcept override;
