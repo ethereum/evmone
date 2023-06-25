@@ -104,7 +104,7 @@ struct Transaction
 
         /// The typed transaction with optional account/storage access list.
         /// Introduced by EIP-2930 https://eips.ethereum.org/EIPS/eip-2930.
-        eip2930 = 1,
+        access_list = 1,
 
         /// The typed transaction with priority gas price.
         /// Introduced by EIP-1559 https://eips.ethereum.org/EIPS/eip-1559.

@@ -163,7 +163,7 @@ TEST(statetest_loader, tx_type_1)
     })";
 
     const auto tx = test::from_json<state::Transaction>(json::json::parse(input));
-    EXPECT_EQ(tx.type, state::Transaction::Type::eip2930);
+    EXPECT_EQ(tx.type, state::Transaction::Type::access_list);
     EXPECT_TRUE(tx.data.empty());
     EXPECT_EQ(tx.gas_limit, 0);
     EXPECT_EQ(tx.value, 0);

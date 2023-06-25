@@ -383,7 +383,7 @@ TEST(state_rlp, tx_to_rlp_eip1559_invalid_v_value)
 TEST(state_rlp, tx_to_rlp_eip2930_invalid_v_value)
 {
     state::Transaction tx{};
-    tx.type = evmone::state::Transaction::Type::eip2930;
+    tx.type = evmone::state::Transaction::Type::access_list;
     tx.data = ""_hex;
     tx.gas_limit = 1;
     tx.max_gas_price = 1;
@@ -431,7 +431,7 @@ TEST(state_rlp, tx_to_rlp_eip2930_with_non_empty_access_list)
     // https://etherscan.io/tx/0xf076e75aa935552e20e5d9fd4d1dda4ff33399ff3d6ac22843ae646f82c385d4
 
     state::Transaction tx{};
-    tx.type = evmone::state::Transaction::Type::eip2930;
+    tx.type = evmone::state::Transaction::Type::access_list;
     tx.data =
         "0x095ea7b3000000000000000000000000f17d23136b4fead139f54fb766c8795faae09660ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"_hex;
     tx.gas_limit = 51253;

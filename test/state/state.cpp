@@ -67,7 +67,7 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
             return make_error_code(TIP_GT_FEE_CAP);  // Priority gas price is too high.
         [[fallthrough]];
 
-    case Transaction::Type::eip2930:
+    case Transaction::Type::access_list:
         if (rev < EVMC_BERLIN)
             return make_error_code(TX_TYPE_NOT_SUPPORTED);
         [[fallthrough]];
@@ -226,7 +226,7 @@ std::variant<TransactionReceipt, std::error_code> transition(
         return rlp::encode_tuple(tx.nonce, tx.max_gas_price, static_cast<uint64_t>(tx.gas_limit),
             tx.to.has_value() ? tx.to.value() : bytes_view(), tx.value, tx.data, tx.v, tx.r, tx.s);
     }
-    else if (tx.type == Transaction::Type::eip2930)
+    else if (tx.type == Transaction::Type::access_list)
     {
         if (tx.v > 1)
             throw std::invalid_argument("`v` value for eip2930 transaction must be 0 or 1");
