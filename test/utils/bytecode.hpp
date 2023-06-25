@@ -214,6 +214,11 @@ inline bytecode byte(bytecode a, bytecode n)
     return a + n + OP_BYTE;
 }
 
+inline bytecode mload(bytecode index)
+{
+    return index + OP_MLOAD;
+}
+
 inline bytecode mstore(bytecode index)
 {
     return index + OP_MSTORE;
@@ -331,6 +336,16 @@ inline bytecode sstore(bytecode index, bytecode value)
 inline bytecode sload(bytecode index)
 {
     return index + OP_SLOAD;
+}
+
+inline bytecode tstore(bytecode index, bytecode value)
+{
+    return value + index + OP_TSTORE;
+}
+
+inline bytecode tload(bytecode index)
+{
+    return index + OP_TLOAD;
 }
 
 template <Opcode kind>
