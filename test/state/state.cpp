@@ -61,7 +61,7 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
     if (rev < EVMC_LONDON && tx.kind == Transaction::Kind::eip1559)
         return make_error_code(TX_TYPE_NOT_SUPPORTED);
 
-    if (rev < EVMC_BERLIN && !tx.access_list.empty())
+    if (rev < EVMC_BERLIN && tx.kind == Transaction::Kind::eip2930)
         return make_error_code(TX_TYPE_NOT_SUPPORTED);
 
     if (tx.max_priority_gas_price > tx.max_gas_price)

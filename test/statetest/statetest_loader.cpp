@@ -287,7 +287,7 @@ state::Transaction from_json<state::Transaction>(const json::json& j)
     if (const auto ac_it = j.find("accessList"); ac_it != j.end())
     {
         o.access_list = from_json<state::AccessList>(*ac_it);
-        if (o.kind == state::Transaction::Kind::legacy)  // Upgrade tx type if tx has "accessList"
+        if (o.kind == state::Transaction::Kind::legacy)  // Upgrade tx type if tx has access list
             o.kind = state::Transaction::Kind::eip2930;
     }
 
@@ -312,10 +312,12 @@ static void from_json(const json::json& j, TestMultiTransaction& o)
     for (const auto& j_data : j.at("data"))
         o.inputs.emplace_back(from_json<bytes>(j_data));
 
-    if (j.contains("accessLists"))
+    if (const auto ac_it = j.find("accessLists"); ac_it != j.end())
     {
-        for (const auto& j_access_list : j["accessLists"])
+        for (const auto& j_access_list : *ac_it)
             o.access_lists.emplace_back(from_json<state::AccessList>(j_access_list));
+        if (o.kind == state::Transaction::Kind::legacy)  // Upgrade tx type if tx has access lists
+            o.kind = state::Transaction::Kind::eip2930;
     }
 
     for (const auto& j_gas_limit : j.at("gasLimit"))
