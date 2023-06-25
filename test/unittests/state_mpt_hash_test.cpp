@@ -70,7 +70,7 @@ TEST(state_mpt_hash, one_transactions)
 
     Transaction tx{};
 
-    tx.kind = Transaction::Kind::eip1559;
+    tx.type = Transaction::Type::eip1559;
     tx.data =
         "04a7e62e00000000000000000000000000000000000000000000000000000000000000c0000000000000000000"
         "000000000000000000000000000000000000000000024000000000000000000000000000000000000000000000"
@@ -186,7 +186,7 @@ TEST(state_mpt_hash, legacy_and_eip1559_receipt_three_logs_no_logs)
     //}
 
     TransactionReceipt receipt0{};
-    receipt0.kind = evmone::state::Transaction::Kind::legacy;
+    receipt0.type = evmone::state::Transaction::Type::legacy;
     receipt0.status = EVMC_SUCCESS;
     receipt0.gas_used = 0x24522;
 
@@ -236,7 +236,7 @@ TEST(state_mpt_hash, legacy_and_eip1559_receipt_three_logs_no_logs)
     //}
 
     TransactionReceipt receipt1{};
-    receipt1.kind = evmone::state::Transaction::Kind::eip1559;
+    receipt1.type = evmone::state::Transaction::Type::eip1559;
     receipt1.status = EVMC_SUCCESS;
     receipt1.gas_used = 0x2cd9b;
     receipt1.logs_bloom_filter = compute_bloom_filter(receipt1.logs);

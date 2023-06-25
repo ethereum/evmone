@@ -204,7 +204,7 @@ TEST(state_rlp, tx_to_rlp_legacy)
     // https://eips.ethereum.org/EIPS/eip-155
 
     state::Transaction tx{};
-    tx.kind = evmone::state::Transaction::Kind::legacy;
+    tx.type = evmone::state::Transaction::Type::legacy;
     tx.data = ""_b;
     tx.gas_limit = 21000;
     tx.max_gas_price = 20000000000;
@@ -239,7 +239,7 @@ TEST(state_rlp, tx_to_rlp_legacy_with_data)
     // https://etherscan.io/tx/0x033e9f8db737193d4666911a164e218d58d80edc64f4ed393d0c48c1ce2673e7
 
     state::Transaction tx{};
-    tx.kind = evmone::state::Transaction::Kind::legacy;
+    tx.type = evmone::state::Transaction::Type::legacy;
     tx.data = "0xa0712d680000000000000000000000000000000000000000000000000000000000000003"_hex;
     tx.gas_limit = 421566;
     tx.max_gas_price = 14829580649;
@@ -278,7 +278,7 @@ TEST(state_rlp, tx_to_rlp_eip1559)
 
     state::Transaction tx{};
 
-    tx.kind = evmone::state::Transaction::Kind::eip1559;
+    tx.type = evmone::state::Transaction::Type::eip1559;
     tx.data = ""_b;
     tx.gas_limit = 30000;
     tx.max_gas_price = 14237787676;
@@ -320,7 +320,7 @@ TEST(state_rlp, tx_to_rlp_eip1559_with_data)
     // https://etherscan.io/tx/0xf9400dd4722908fa7b8d514429aebfd4cd04aaa9faaf044554d2f550422baef9
 
     state::Transaction tx{};
-    tx.kind = evmone::state::Transaction::Kind::eip1559;
+    tx.type = evmone::state::Transaction::Type::eip1559;
     tx.data =
         "095ea7b3"
         "0000000000000000000000001111111254eeb25477b68fb85ed929f73a960582"
@@ -361,7 +361,7 @@ TEST(state_rlp, tx_to_rlp_eip1559_with_data)
 TEST(state_rlp, tx_to_rlp_eip1559_invalid_v_value)
 {
     state::Transaction tx{};
-    tx.kind = evmone::state::Transaction::Kind::eip1559;
+    tx.type = evmone::state::Transaction::Type::eip1559;
     tx.data = ""_hex;
     tx.gas_limit = 1;
     tx.max_gas_price = 1;
@@ -383,7 +383,7 @@ TEST(state_rlp, tx_to_rlp_eip1559_invalid_v_value)
 TEST(state_rlp, tx_to_rlp_eip2930_invalid_v_value)
 {
     state::Transaction tx{};
-    tx.kind = evmone::state::Transaction::Kind::eip2930;
+    tx.type = evmone::state::Transaction::Type::eip2930;
     tx.data = ""_hex;
     tx.gas_limit = 1;
     tx.max_gas_price = 1;
@@ -405,7 +405,7 @@ TEST(state_rlp, tx_to_rlp_eip2930_invalid_v_value)
 TEST(state_rlp, tx_to_rlp_eip1559_with_non_empty_access_list)
 {
     state::Transaction tx{};
-    tx.kind = evmone::state::Transaction::Kind::eip1559;
+    tx.type = evmone::state::Transaction::Type::eip1559;
     tx.data = "00"_hex;
     tx.gas_limit = 0x3d0900;
     tx.max_gas_price = 0x7d0;
@@ -431,7 +431,7 @@ TEST(state_rlp, tx_to_rlp_eip2930_with_non_empty_access_list)
     // https://etherscan.io/tx/0xf076e75aa935552e20e5d9fd4d1dda4ff33399ff3d6ac22843ae646f82c385d4
 
     state::Transaction tx{};
-    tx.kind = evmone::state::Transaction::Kind::eip2930;
+    tx.type = evmone::state::Transaction::Type::eip2930;
     tx.data =
         "0x095ea7b3000000000000000000000000f17d23136b4fead139f54fb766c8795faae09660ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"_hex;
     tx.gas_limit = 51253;

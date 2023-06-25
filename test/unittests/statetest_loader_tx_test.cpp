@@ -29,7 +29,7 @@ TEST(statetest_loader, tx_create_legacy)
     })";
 
     const auto tx = test::from_json<state::Transaction>(json::json::parse(input));
-    EXPECT_EQ(tx.kind, state::Transaction::Kind::legacy);
+    EXPECT_EQ(tx.type, state::Transaction::Type::legacy);
     EXPECT_EQ(tx.data, (bytes{0xb0, 0xb1}));
     EXPECT_EQ(tx.gas_limit, 0x9091);
     EXPECT_EQ(tx.chain_id, 5);
@@ -63,7 +63,7 @@ TEST(statetest_loader, tx_eip1559)
     })";
 
     const auto tx = test::from_json<state::Transaction>(json::json::parse(input));
-    EXPECT_EQ(tx.kind, state::Transaction::Kind::eip1559);
+    EXPECT_EQ(tx.type, state::Transaction::Type::eip1559);
     EXPECT_EQ(tx.data, (bytes{0xb0, 0xb1}));
     EXPECT_EQ(tx.gas_limit, 0x9091);
     EXPECT_EQ(tx.chain_id, 0);
@@ -100,7 +100,7 @@ TEST(statetest_loader, tx_access_list)
     })";
 
     const auto tx = test::from_json<state::Transaction>(json::json::parse(input));
-    EXPECT_EQ(tx.kind, state::Transaction::Kind::eip1559);
+    EXPECT_EQ(tx.type, state::Transaction::Type::eip1559);
     EXPECT_TRUE(tx.data.empty());
     EXPECT_EQ(tx.gas_limit, 0);
     EXPECT_EQ(tx.value, 0);
@@ -163,7 +163,7 @@ TEST(statetest_loader, tx_type_1)
     })";
 
     const auto tx = test::from_json<state::Transaction>(json::json::parse(input));
-    EXPECT_EQ(tx.kind, state::Transaction::Kind::eip2930);
+    EXPECT_EQ(tx.type, state::Transaction::Type::eip2930);
     EXPECT_TRUE(tx.data.empty());
     EXPECT_EQ(tx.gas_limit, 0);
     EXPECT_EQ(tx.value, 0);

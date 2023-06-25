@@ -102,7 +102,7 @@ TEST(statetest_loader, load_minimal_test)
     EXPECT_EQ(st.block.coinbase, address{});
     EXPECT_EQ(st.block.prev_randao, bytes32{});
     EXPECT_EQ(st.block.base_fee, 0);
-    EXPECT_EQ(st.multi_tx.kind, test::TestMultiTransaction::Kind::legacy);
+    EXPECT_EQ(st.multi_tx.type, test::TestMultiTransaction::Type::legacy);
     EXPECT_EQ(st.multi_tx.data, bytes{});
     EXPECT_EQ(st.multi_tx.gas_limit, 0);
     EXPECT_EQ(st.multi_tx.max_gas_price, 0);

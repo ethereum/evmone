@@ -256,7 +256,7 @@ static void from_json_tx_common(const json::json& j, state::Transaction& o)
 
     if (const auto gas_price_it = j.find("gasPrice"); gas_price_it != j.end())
     {
-        o.kind = state::Transaction::Kind::legacy;
+        o.type = state::Transaction::Type::legacy;
         o.max_gas_price = from_json<intx::uint256>(*gas_price_it);
         o.max_priority_gas_price = o.max_gas_price;
         if (j.contains("maxFeePerGas") || j.contains("maxPriorityFeePerGas"))
@@ -267,7 +267,7 @@ static void from_json_tx_common(const json::json& j, state::Transaction& o)
     }
     else
     {
-        o.kind = state::Transaction::Kind::eip1559;
+        o.type = state::Transaction::Type::eip1559;
         o.max_gas_price = from_json<intx::uint256>(j.at("maxFeePerGas"));
         o.max_priority_gas_price = from_json<intx::uint256>(j.at("maxPriorityFeePerGas"));
     }
@@ -287,13 +287,13 @@ state::Transaction from_json<state::Transaction>(const json::json& j)
     if (const auto ac_it = j.find("accessList"); ac_it != j.end())
     {
         o.access_list = from_json<state::AccessList>(*ac_it);
-        if (o.kind == state::Transaction::Kind::legacy)  // Upgrade tx type if tx has access list
-            o.kind = state::Transaction::Kind::eip2930;
+        if (o.type == state::Transaction::Type::legacy)  // Upgrade tx type if tx has access list
+            o.type = state::Transaction::Type::eip2930;
     }
 
     if (const auto type_it = j.find("type"); type_it != j.end())
     {
-        if (stdx::to_underlying(o.kind) != from_json<uint8_t>(*type_it))
+        if (stdx::to_underlying(o.type) != from_json<uint8_t>(*type_it))
             throw std::invalid_argument("wrong transaction type");
     }
 
@@ -316,8 +316,8 @@ static void from_json(const json::json& j, TestMultiTransaction& o)
     {
         for (const auto& j_access_list : *ac_it)
             o.access_lists.emplace_back(from_json<state::AccessList>(j_access_list));
-        if (o.kind == state::Transaction::Kind::legacy)  // Upgrade tx type if tx has access lists
-            o.kind = state::Transaction::Kind::eip2930;
+        if (o.type == state::Transaction::Type::legacy)  // Upgrade tx type if tx has access lists
+            o.type = state::Transaction::Type::eip2930;
     }
 
     for (const auto& j_gas_limit : j.at("gasLimit"))
