@@ -500,6 +500,16 @@ inline void basefee(StackTop stack, ExecutionState& state) noexcept
     stack.push(intx::be::load<uint256>(state.get_tx_context().block_base_fee));
 }
 
+inline void blobhash(StackTop stack, ExecutionState& state) noexcept
+{
+    auto& index = stack.top();
+    const auto& tx = state.get_tx_context();
+
+    index = (index < tx.blob_hashes_count) ?
+                intx::be::load<uint256>(tx.blob_hashes[static_cast<size_t>(index)]) :
+                0;
+}
+
 inline Result extcodesize(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     auto& x = stack.top();

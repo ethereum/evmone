@@ -109,7 +109,7 @@
     ON_OPCODE_IDENTIFIER(OP_CHAINID, chainid)               \
     ON_OPCODE_IDENTIFIER(OP_SELFBALANCE, selfbalance)       \
     ON_OPCODE_IDENTIFIER(OP_BASEFEE, basefee)               \
-    ON_OPCODE_UNDEFINED(0x49)                               \
+    ON_OPCODE_IDENTIFIER(OP_BLOBHASH, blobhash)             \
     ON_OPCODE_UNDEFINED(0x4a)                               \
     ON_OPCODE_UNDEFINED(0x4b)                               \
     ON_OPCODE_UNDEFINED(0x4c)                               \

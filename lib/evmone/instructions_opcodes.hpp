@@ -69,6 +69,7 @@ enum Opcode : uint8_t
     OP_CHAINID = 0x46,
     OP_SELFBALANCE = 0x47,
     OP_BASEFEE = 0x48,
+    OP_BLOBHASH = 0x49,
 
     OP_POP = 0x50,
     OP_MLOAD = 0x51,
