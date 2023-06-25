@@ -95,9 +95,16 @@ struct Transaction
 {
     enum class Kind : uint8_t
     {
+        /// The legacy RLP-encoded transaction without leading "type" byte.
         legacy = 0,
-        eip2930 = 1,  ///< Transaction with access list https://eips.ethereum.org/EIPS/eip-2930
-        eip1559 = 2   ///< EIP1559 transaction https://eips.ethereum.org/EIPS/eip-1559
+
+        /// The typed transaction with optional account/storage access list.
+        /// Introduced by EIP-2930 https://eips.ethereum.org/EIPS/eip-2930.
+        eip2930 = 1,
+
+        /// The typed transaction with priority gas price.
+        /// Introduced by EIP-1559 https://eips.ethereum.org/EIPS/eip-1559.
+        eip1559 = 2,
     };
 
     Kind kind = Kind::legacy;
