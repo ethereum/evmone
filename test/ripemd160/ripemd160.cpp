@@ -1,12 +1,34 @@
 #include "ripemd160.hpp"
 
-#define ROL(x, n) (((x) << (n)) | ((x) >> (32 - (n))))
+inline uint32_t rol(uint32_t x, uint32_t n)
+{
+    return (x << n) | (x >> (32 - n));
+}
 
-#define F(x, y, z) (x ^ y ^ z)
-#define G(x, y, z) (z ^ (x & (y ^ z)))
-#define H(x, y, z) (z ^ (x | ~y))
-#define I(x, y, z) (y ^ (z & (x ^ y)))
-#define J(x, y, z) (x ^ (y | ~z))
+inline uint32_t F(uint32_t x, uint32_t y, uint32_t z)
+{
+    return (x ^ y ^ z);
+}
+
+inline uint32_t G(uint32_t x, uint32_t y, uint32_t z)
+{
+    return (z ^ (x & (y ^ z)));
+}
+
+inline uint32_t H(uint32_t x, uint32_t y, uint32_t z)
+{
+    return (z ^ (x | ~y));
+}
+
+inline uint32_t I(uint32_t x, uint32_t y, uint32_t z)
+{
+    return (y ^ (z & (x ^ y)));
+}
+
+inline uint32_t J(uint32_t x, uint32_t y, uint32_t z)
+{
+    return (x ^ (y | ~z));
+}
 
 #define k0 0
 #define k1 0x5a827999UL
@@ -21,8 +43,8 @@
 
 #define Subround(f, a, b, c, d, e, x, s, k) \
     a += f(b, c, d) + x + k;                \
-    a = ROL((uint32_t)a, s) + e;            \
-    c = ROL((uint32_t)c, 10)
+    a = rol(a, s) + e;                      \
+    c = rol(c, 10)
 
 static inline void rmd160_compress(uint32_t* digest, const uint32_t* X)
 {
