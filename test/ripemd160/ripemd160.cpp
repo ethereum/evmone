@@ -30,21 +30,26 @@ inline uint32_t J(uint32_t x, uint32_t y, uint32_t z)
     return (x ^ (y | ~z));
 }
 
-#define k0 0
-#define k1 0x5a827999UL
-#define k2 0x6ed9eba1UL
-#define k3 0x8f1bbcdcUL
-#define k4 0xa953fd4eUL
-#define k5 0x50a28be6UL
-#define k6 0x5c4dd124UL
-#define k7 0x6d703ef3UL
-#define k8 0x7a6d76e9UL
-#define k9 0
+constexpr uint32_t k[] = {
+    0,
+    0x5a827999,
+    0x6ed9eba1,
+    0x8f1bbcdc,
+    0xa953fd4e,
+    0x50a28be6,
+    0x5c4dd124,
+    0x6d703ef3,
+    0x7a6d76e9,
+    0,
+};
 
-#define Subround(f, a, b, c, d, e, x, s, k) \
-    a += f(b, c, d) + x + k;                \
-    a = rol(a, s) + e;                      \
-    c = rol(c, 10)
+template <decltype(F) Fn, uint32_t S, uint32_t K>
+inline void subround(uint32_t& a, uint32_t b, uint32_t& c, uint32_t d, uint32_t e, uint32_t x)
+{
+    a += Fn(b, c, d) + x + K;
+    a = rol(a, S) + e;
+    c = rol(c, 10);
+}
 
 static inline void rmd160_compress(uint32_t* digest, const uint32_t* X)
 {
@@ -55,175 +60,175 @@ static inline void rmd160_compress(uint32_t* digest, const uint32_t* X)
     d1 = d2 = digest[3];
     e1 = e2 = digest[4];
 
-    Subround(F, a1, b1, c1, d1, e1, X[0], 11, k0);
-    Subround(F, e1, a1, b1, c1, d1, X[1], 14, k0);
-    Subround(F, d1, e1, a1, b1, c1, X[2], 15, k0);
-    Subround(F, c1, d1, e1, a1, b1, X[3], 12, k0);
-    Subround(F, b1, c1, d1, e1, a1, X[4], 5, k0);
-    Subround(F, a1, b1, c1, d1, e1, X[5], 8, k0);
-    Subround(F, e1, a1, b1, c1, d1, X[6], 7, k0);
-    Subround(F, d1, e1, a1, b1, c1, X[7], 9, k0);
-    Subround(F, c1, d1, e1, a1, b1, X[8], 11, k0);
-    Subround(F, b1, c1, d1, e1, a1, X[9], 13, k0);
-    Subround(F, a1, b1, c1, d1, e1, X[10], 14, k0);
-    Subround(F, e1, a1, b1, c1, d1, X[11], 15, k0);
-    Subround(F, d1, e1, a1, b1, c1, X[12], 6, k0);
-    Subround(F, c1, d1, e1, a1, b1, X[13], 7, k0);
-    Subround(F, b1, c1, d1, e1, a1, X[14], 9, k0);
-    Subround(F, a1, b1, c1, d1, e1, X[15], 8, k0);
+    subround<F, 11, k[0]>(a1, b1, c1, d1, e1, X[0]);
+    subround<F, 14, k[0]>(e1, a1, b1, c1, d1, X[1]);
+    subround<F, 15, k[0]>(d1, e1, a1, b1, c1, X[2]);
+    subround<F, 12, k[0]>(c1, d1, e1, a1, b1, X[3]);
+    subround<F, 5, k[0]>(b1, c1, d1, e1, a1, X[4]);
+    subround<F, 8, k[0]>(a1, b1, c1, d1, e1, X[5]);
+    subround<F, 7, k[0]>(e1, a1, b1, c1, d1, X[6]);
+    subround<F, 9, k[0]>(d1, e1, a1, b1, c1, X[7]);
+    subround<F, 11, k[0]>(c1, d1, e1, a1, b1, X[8]);
+    subround<F, 13, k[0]>(b1, c1, d1, e1, a1, X[9]);
+    subround<F, 14, k[0]>(a1, b1, c1, d1, e1, X[10]);
+    subround<F, 15, k[0]>(e1, a1, b1, c1, d1, X[11]);
+    subround<F, 6, k[0]>(d1, e1, a1, b1, c1, X[12]);
+    subround<F, 7, k[0]>(c1, d1, e1, a1, b1, X[13]);
+    subround<F, 9, k[0]>(b1, c1, d1, e1, a1, X[14]);
+    subround<F, 8, k[0]>(a1, b1, c1, d1, e1, X[15]);
 
-    Subround(G, e1, a1, b1, c1, d1, X[7], 7, k1);
-    Subround(G, d1, e1, a1, b1, c1, X[4], 6, k1);
-    Subround(G, c1, d1, e1, a1, b1, X[13], 8, k1);
-    Subround(G, b1, c1, d1, e1, a1, X[1], 13, k1);
-    Subround(G, a1, b1, c1, d1, e1, X[10], 11, k1);
-    Subround(G, e1, a1, b1, c1, d1, X[6], 9, k1);
-    Subround(G, d1, e1, a1, b1, c1, X[15], 7, k1);
-    Subround(G, c1, d1, e1, a1, b1, X[3], 15, k1);
-    Subround(G, b1, c1, d1, e1, a1, X[12], 7, k1);
-    Subround(G, a1, b1, c1, d1, e1, X[0], 12, k1);
-    Subround(G, e1, a1, b1, c1, d1, X[9], 15, k1);
-    Subround(G, d1, e1, a1, b1, c1, X[5], 9, k1);
-    Subround(G, c1, d1, e1, a1, b1, X[2], 11, k1);
-    Subround(G, b1, c1, d1, e1, a1, X[14], 7, k1);
-    Subround(G, a1, b1, c1, d1, e1, X[11], 13, k1);
-    Subround(G, e1, a1, b1, c1, d1, X[8], 12, k1);
+    subround<G, 7, k[1]>(e1, a1, b1, c1, d1, X[7]);
+    subround<G, 6, k[1]>(d1, e1, a1, b1, c1, X[4]);
+    subround<G, 8, k[1]>(c1, d1, e1, a1, b1, X[13]);
+    subround<G, 13, k[1]>(b1, c1, d1, e1, a1, X[1]);
+    subround<G, 11, k[1]>(a1, b1, c1, d1, e1, X[10]);
+    subround<G, 9, k[1]>(e1, a1, b1, c1, d1, X[6]);
+    subround<G, 7, k[1]>(d1, e1, a1, b1, c1, X[15]);
+    subround<G, 15, k[1]>(c1, d1, e1, a1, b1, X[3]);
+    subround<G, 7, k[1]>(b1, c1, d1, e1, a1, X[12]);
+    subround<G, 12, k[1]>(a1, b1, c1, d1, e1, X[0]);
+    subround<G, 15, k[1]>(e1, a1, b1, c1, d1, X[9]);
+    subround<G, 9, k[1]>(d1, e1, a1, b1, c1, X[5]);
+    subround<G, 11, k[1]>(c1, d1, e1, a1, b1, X[2]);
+    subround<G, 7, k[1]>(b1, c1, d1, e1, a1, X[14]);
+    subround<G, 13, k[1]>(a1, b1, c1, d1, e1, X[11]);
+    subround<G, 12, k[1]>(e1, a1, b1, c1, d1, X[8]);
 
-    Subround(H, d1, e1, a1, b1, c1, X[3], 11, k2);
-    Subround(H, c1, d1, e1, a1, b1, X[10], 13, k2);
-    Subround(H, b1, c1, d1, e1, a1, X[14], 6, k2);
-    Subround(H, a1, b1, c1, d1, e1, X[4], 7, k2);
-    Subround(H, e1, a1, b1, c1, d1, X[9], 14, k2);
-    Subround(H, d1, e1, a1, b1, c1, X[15], 9, k2);
-    Subround(H, c1, d1, e1, a1, b1, X[8], 13, k2);
-    Subround(H, b1, c1, d1, e1, a1, X[1], 15, k2);
-    Subround(H, a1, b1, c1, d1, e1, X[2], 14, k2);
-    Subround(H, e1, a1, b1, c1, d1, X[7], 8, k2);
-    Subround(H, d1, e1, a1, b1, c1, X[0], 13, k2);
-    Subround(H, c1, d1, e1, a1, b1, X[6], 6, k2);
-    Subround(H, b1, c1, d1, e1, a1, X[13], 5, k2);
-    Subround(H, a1, b1, c1, d1, e1, X[11], 12, k2);
-    Subround(H, e1, a1, b1, c1, d1, X[5], 7, k2);
-    Subround(H, d1, e1, a1, b1, c1, X[12], 5, k2);
+    subround<H, 11, k[2]>(d1, e1, a1, b1, c1, X[3]);
+    subround<H, 13, k[2]>(c1, d1, e1, a1, b1, X[10]);
+    subround<H, 6, k[2]>(b1, c1, d1, e1, a1, X[14]);
+    subround<H, 7, k[2]>(a1, b1, c1, d1, e1, X[4]);
+    subround<H, 14, k[2]>(e1, a1, b1, c1, d1, X[9]);
+    subround<H, 9, k[2]>(d1, e1, a1, b1, c1, X[15]);
+    subround<H, 13, k[2]>(c1, d1, e1, a1, b1, X[8]);
+    subround<H, 15, k[2]>(b1, c1, d1, e1, a1, X[1]);
+    subround<H, 14, k[2]>(a1, b1, c1, d1, e1, X[2]);
+    subround<H, 8, k[2]>(e1, a1, b1, c1, d1, X[7]);
+    subround<H, 13, k[2]>(d1, e1, a1, b1, c1, X[0]);
+    subround<H, 6, k[2]>(c1, d1, e1, a1, b1, X[6]);
+    subround<H, 5, k[2]>(b1, c1, d1, e1, a1, X[13]);
+    subround<H, 12, k[2]>(a1, b1, c1, d1, e1, X[11]);
+    subround<H, 7, k[2]>(e1, a1, b1, c1, d1, X[5]);
+    subround<H, 5, k[2]>(d1, e1, a1, b1, c1, X[12]);
 
-    Subround(I, c1, d1, e1, a1, b1, X[1], 11, k3);
-    Subround(I, b1, c1, d1, e1, a1, X[9], 12, k3);
-    Subround(I, a1, b1, c1, d1, e1, X[11], 14, k3);
-    Subround(I, e1, a1, b1, c1, d1, X[10], 15, k3);
-    Subround(I, d1, e1, a1, b1, c1, X[0], 14, k3);
-    Subround(I, c1, d1, e1, a1, b1, X[8], 15, k3);
-    Subround(I, b1, c1, d1, e1, a1, X[12], 9, k3);
-    Subround(I, a1, b1, c1, d1, e1, X[4], 8, k3);
-    Subround(I, e1, a1, b1, c1, d1, X[13], 9, k3);
-    Subround(I, d1, e1, a1, b1, c1, X[3], 14, k3);
-    Subround(I, c1, d1, e1, a1, b1, X[7], 5, k3);
-    Subround(I, b1, c1, d1, e1, a1, X[15], 6, k3);
-    Subround(I, a1, b1, c1, d1, e1, X[14], 8, k3);
-    Subround(I, e1, a1, b1, c1, d1, X[5], 6, k3);
-    Subround(I, d1, e1, a1, b1, c1, X[6], 5, k3);
-    Subround(I, c1, d1, e1, a1, b1, X[2], 12, k3);
+    subround<I, 11, k[3]>(c1, d1, e1, a1, b1, X[1]);
+    subround<I, 12, k[3]>(b1, c1, d1, e1, a1, X[9]);
+    subround<I, 14, k[3]>(a1, b1, c1, d1, e1, X[11]);
+    subround<I, 15, k[3]>(e1, a1, b1, c1, d1, X[10]);
+    subround<I, 14, k[3]>(d1, e1, a1, b1, c1, X[0]);
+    subround<I, 15, k[3]>(c1, d1, e1, a1, b1, X[8]);
+    subround<I, 9, k[3]>(b1, c1, d1, e1, a1, X[12]);
+    subround<I, 8, k[3]>(a1, b1, c1, d1, e1, X[4]);
+    subround<I, 9, k[3]>(e1, a1, b1, c1, d1, X[13]);
+    subround<I, 14, k[3]>(d1, e1, a1, b1, c1, X[3]);
+    subround<I, 5, k[3]>(c1, d1, e1, a1, b1, X[7]);
+    subround<I, 6, k[3]>(b1, c1, d1, e1, a1, X[15]);
+    subround<I, 8, k[3]>(a1, b1, c1, d1, e1, X[14]);
+    subround<I, 6, k[3]>(e1, a1, b1, c1, d1, X[5]);
+    subround<I, 5, k[3]>(d1, e1, a1, b1, c1, X[6]);
+    subround<I, 12, k[3]>(c1, d1, e1, a1, b1, X[2]);
 
-    Subround(J, b1, c1, d1, e1, a1, X[4], 9, k4);
-    Subround(J, a1, b1, c1, d1, e1, X[0], 15, k4);
-    Subround(J, e1, a1, b1, c1, d1, X[5], 5, k4);
-    Subround(J, d1, e1, a1, b1, c1, X[9], 11, k4);
-    Subround(J, c1, d1, e1, a1, b1, X[7], 6, k4);
-    Subround(J, b1, c1, d1, e1, a1, X[12], 8, k4);
-    Subround(J, a1, b1, c1, d1, e1, X[2], 13, k4);
-    Subround(J, e1, a1, b1, c1, d1, X[10], 12, k4);
-    Subround(J, d1, e1, a1, b1, c1, X[14], 5, k4);
-    Subround(J, c1, d1, e1, a1, b1, X[1], 12, k4);
-    Subround(J, b1, c1, d1, e1, a1, X[3], 13, k4);
-    Subround(J, a1, b1, c1, d1, e1, X[8], 14, k4);
-    Subround(J, e1, a1, b1, c1, d1, X[11], 11, k4);
-    Subround(J, d1, e1, a1, b1, c1, X[6], 8, k4);
-    Subround(J, c1, d1, e1, a1, b1, X[15], 5, k4);
-    Subround(J, b1, c1, d1, e1, a1, X[13], 6, k4);
+    subround<J, 9, k[4]>(b1, c1, d1, e1, a1, X[4]);
+    subround<J, 15, k[4]>(a1, b1, c1, d1, e1, X[0]);
+    subround<J, 5, k[4]>(e1, a1, b1, c1, d1, X[5]);
+    subround<J, 11, k[4]>(d1, e1, a1, b1, c1, X[9]);
+    subround<J, 6, k[4]>(c1, d1, e1, a1, b1, X[7]);
+    subround<J, 8, k[4]>(b1, c1, d1, e1, a1, X[12]);
+    subround<J, 13, k[4]>(a1, b1, c1, d1, e1, X[2]);
+    subround<J, 12, k[4]>(e1, a1, b1, c1, d1, X[10]);
+    subround<J, 5, k[4]>(d1, e1, a1, b1, c1, X[14]);
+    subround<J, 12, k[4]>(c1, d1, e1, a1, b1, X[1]);
+    subround<J, 13, k[4]>(b1, c1, d1, e1, a1, X[3]);
+    subround<J, 14, k[4]>(a1, b1, c1, d1, e1, X[8]);
+    subround<J, 11, k[4]>(e1, a1, b1, c1, d1, X[11]);
+    subround<J, 8, k[4]>(d1, e1, a1, b1, c1, X[6]);
+    subround<J, 5, k[4]>(c1, d1, e1, a1, b1, X[15]);
+    subround<J, 6, k[4]>(b1, c1, d1, e1, a1, X[13]);
 
-    Subround(J, a2, b2, c2, d2, e2, X[5], 8, k5);
-    Subround(J, e2, a2, b2, c2, d2, X[14], 9, k5);
-    Subround(J, d2, e2, a2, b2, c2, X[7], 9, k5);
-    Subround(J, c2, d2, e2, a2, b2, X[0], 11, k5);
-    Subround(J, b2, c2, d2, e2, a2, X[9], 13, k5);
-    Subround(J, a2, b2, c2, d2, e2, X[2], 15, k5);
-    Subround(J, e2, a2, b2, c2, d2, X[11], 15, k5);
-    Subround(J, d2, e2, a2, b2, c2, X[4], 5, k5);
-    Subround(J, c2, d2, e2, a2, b2, X[13], 7, k5);
-    Subround(J, b2, c2, d2, e2, a2, X[6], 7, k5);
-    Subround(J, a2, b2, c2, d2, e2, X[15], 8, k5);
-    Subround(J, e2, a2, b2, c2, d2, X[8], 11, k5);
-    Subround(J, d2, e2, a2, b2, c2, X[1], 14, k5);
-    Subround(J, c2, d2, e2, a2, b2, X[10], 14, k5);
-    Subround(J, b2, c2, d2, e2, a2, X[3], 12, k5);
-    Subround(J, a2, b2, c2, d2, e2, X[12], 6, k5);
+    subround<J, 8, k[5]>(a2, b2, c2, d2, e2, X[5]);
+    subround<J, 9, k[5]>(e2, a2, b2, c2, d2, X[14]);
+    subround<J, 9, k[5]>(d2, e2, a2, b2, c2, X[7]);
+    subround<J, 11, k[5]>(c2, d2, e2, a2, b2, X[0]);
+    subround<J, 13, k[5]>(b2, c2, d2, e2, a2, X[9]);
+    subround<J, 15, k[5]>(a2, b2, c2, d2, e2, X[2]);
+    subround<J, 15, k[5]>(e2, a2, b2, c2, d2, X[11]);
+    subround<J, 5, k[5]>(d2, e2, a2, b2, c2, X[4]);
+    subround<J, 7, k[5]>(c2, d2, e2, a2, b2, X[13]);
+    subround<J, 7, k[5]>(b2, c2, d2, e2, a2, X[6]);
+    subround<J, 8, k[5]>(a2, b2, c2, d2, e2, X[15]);
+    subround<J, 11, k[5]>(e2, a2, b2, c2, d2, X[8]);
+    subround<J, 14, k[5]>(d2, e2, a2, b2, c2, X[1]);
+    subround<J, 14, k[5]>(c2, d2, e2, a2, b2, X[10]);
+    subround<J, 12, k[5]>(b2, c2, d2, e2, a2, X[3]);
+    subround<J, 6, k[5]>(a2, b2, c2, d2, e2, X[12]);
 
-    Subround(I, e2, a2, b2, c2, d2, X[6], 9, k6);
-    Subround(I, d2, e2, a2, b2, c2, X[11], 13, k6);
-    Subround(I, c2, d2, e2, a2, b2, X[3], 15, k6);
-    Subround(I, b2, c2, d2, e2, a2, X[7], 7, k6);
-    Subround(I, a2, b2, c2, d2, e2, X[0], 12, k6);
-    Subround(I, e2, a2, b2, c2, d2, X[13], 8, k6);
-    Subround(I, d2, e2, a2, b2, c2, X[5], 9, k6);
-    Subround(I, c2, d2, e2, a2, b2, X[10], 11, k6);
-    Subround(I, b2, c2, d2, e2, a2, X[14], 7, k6);
-    Subround(I, a2, b2, c2, d2, e2, X[15], 7, k6);
-    Subround(I, e2, a2, b2, c2, d2, X[8], 12, k6);
-    Subround(I, d2, e2, a2, b2, c2, X[12], 7, k6);
-    Subround(I, c2, d2, e2, a2, b2, X[4], 6, k6);
-    Subround(I, b2, c2, d2, e2, a2, X[9], 15, k6);
-    Subround(I, a2, b2, c2, d2, e2, X[1], 13, k6);
-    Subround(I, e2, a2, b2, c2, d2, X[2], 11, k6);
+    subround<I, 9, k[6]>(e2, a2, b2, c2, d2, X[6]);
+    subround<I, 13, k[6]>(d2, e2, a2, b2, c2, X[11]);
+    subround<I, 15, k[6]>(c2, d2, e2, a2, b2, X[3]);
+    subround<I, 7, k[6]>(b2, c2, d2, e2, a2, X[7]);
+    subround<I, 12, k[6]>(a2, b2, c2, d2, e2, X[0]);
+    subround<I, 8, k[6]>(e2, a2, b2, c2, d2, X[13]);
+    subround<I, 9, k[6]>(d2, e2, a2, b2, c2, X[5]);
+    subround<I, 11, k[6]>(c2, d2, e2, a2, b2, X[10]);
+    subround<I, 7, k[6]>(b2, c2, d2, e2, a2, X[14]);
+    subround<I, 7, k[6]>(a2, b2, c2, d2, e2, X[15]);
+    subround<I, 12, k[6]>(e2, a2, b2, c2, d2, X[8]);
+    subround<I, 7, k[6]>(d2, e2, a2, b2, c2, X[12]);
+    subround<I, 6, k[6]>(c2, d2, e2, a2, b2, X[4]);
+    subround<I, 15, k[6]>(b2, c2, d2, e2, a2, X[9]);
+    subround<I, 13, k[6]>(a2, b2, c2, d2, e2, X[1]);
+    subround<I, 11, k[6]>(e2, a2, b2, c2, d2, X[2]);
 
-    Subround(H, d2, e2, a2, b2, c2, X[15], 9, k7);
-    Subround(H, c2, d2, e2, a2, b2, X[5], 7, k7);
-    Subround(H, b2, c2, d2, e2, a2, X[1], 15, k7);
-    Subround(H, a2, b2, c2, d2, e2, X[3], 11, k7);
-    Subround(H, e2, a2, b2, c2, d2, X[7], 8, k7);
-    Subround(H, d2, e2, a2, b2, c2, X[14], 6, k7);
-    Subround(H, c2, d2, e2, a2, b2, X[6], 6, k7);
-    Subround(H, b2, c2, d2, e2, a2, X[9], 14, k7);
-    Subround(H, a2, b2, c2, d2, e2, X[11], 12, k7);
-    Subround(H, e2, a2, b2, c2, d2, X[8], 13, k7);
-    Subround(H, d2, e2, a2, b2, c2, X[12], 5, k7);
-    Subround(H, c2, d2, e2, a2, b2, X[2], 14, k7);
-    Subround(H, b2, c2, d2, e2, a2, X[10], 13, k7);
-    Subround(H, a2, b2, c2, d2, e2, X[0], 13, k7);
-    Subround(H, e2, a2, b2, c2, d2, X[4], 7, k7);
-    Subround(H, d2, e2, a2, b2, c2, X[13], 5, k7);
+    subround<H, 9, k[7]>(d2, e2, a2, b2, c2, X[15]);
+    subround<H, 7, k[7]>(c2, d2, e2, a2, b2, X[5]);
+    subround<H, 15, k[7]>(b2, c2, d2, e2, a2, X[1]);
+    subround<H, 11, k[7]>(a2, b2, c2, d2, e2, X[3]);
+    subround<H, 8, k[7]>(e2, a2, b2, c2, d2, X[7]);
+    subround<H, 6, k[7]>(d2, e2, a2, b2, c2, X[14]);
+    subround<H, 6, k[7]>(c2, d2, e2, a2, b2, X[6]);
+    subround<H, 14, k[7]>(b2, c2, d2, e2, a2, X[9]);
+    subround<H, 12, k[7]>(a2, b2, c2, d2, e2, X[11]);
+    subround<H, 13, k[7]>(e2, a2, b2, c2, d2, X[8]);
+    subround<H, 5, k[7]>(d2, e2, a2, b2, c2, X[12]);
+    subround<H, 14, k[7]>(c2, d2, e2, a2, b2, X[2]);
+    subround<H, 13, k[7]>(b2, c2, d2, e2, a2, X[10]);
+    subround<H, 13, k[7]>(a2, b2, c2, d2, e2, X[0]);
+    subround<H, 7, k[7]>(e2, a2, b2, c2, d2, X[4]);
+    subround<H, 5, k[7]>(d2, e2, a2, b2, c2, X[13]);
 
-    Subround(G, c2, d2, e2, a2, b2, X[8], 15, k8);
-    Subround(G, b2, c2, d2, e2, a2, X[6], 5, k8);
-    Subround(G, a2, b2, c2, d2, e2, X[4], 8, k8);
-    Subround(G, e2, a2, b2, c2, d2, X[1], 11, k8);
-    Subround(G, d2, e2, a2, b2, c2, X[3], 14, k8);
-    Subround(G, c2, d2, e2, a2, b2, X[11], 14, k8);
-    Subround(G, b2, c2, d2, e2, a2, X[15], 6, k8);
-    Subround(G, a2, b2, c2, d2, e2, X[0], 14, k8);
-    Subround(G, e2, a2, b2, c2, d2, X[5], 6, k8);
-    Subround(G, d2, e2, a2, b2, c2, X[12], 9, k8);
-    Subround(G, c2, d2, e2, a2, b2, X[2], 12, k8);
-    Subround(G, b2, c2, d2, e2, a2, X[13], 9, k8);
-    Subround(G, a2, b2, c2, d2, e2, X[9], 12, k8);
-    Subround(G, e2, a2, b2, c2, d2, X[7], 5, k8);
-    Subround(G, d2, e2, a2, b2, c2, X[10], 15, k8);
-    Subround(G, c2, d2, e2, a2, b2, X[14], 8, k8);
+    subround<G, 15, k[8]>(c2, d2, e2, a2, b2, X[8]);
+    subround<G, 5, k[8]>(b2, c2, d2, e2, a2, X[6]);
+    subround<G, 8, k[8]>(a2, b2, c2, d2, e2, X[4]);
+    subround<G, 11, k[8]>(e2, a2, b2, c2, d2, X[1]);
+    subround<G, 14, k[8]>(d2, e2, a2, b2, c2, X[3]);
+    subround<G, 14, k[8]>(c2, d2, e2, a2, b2, X[11]);
+    subround<G, 6, k[8]>(b2, c2, d2, e2, a2, X[15]);
+    subround<G, 14, k[8]>(a2, b2, c2, d2, e2, X[0]);
+    subround<G, 6, k[8]>(e2, a2, b2, c2, d2, X[5]);
+    subround<G, 9, k[8]>(d2, e2, a2, b2, c2, X[12]);
+    subround<G, 12, k[8]>(c2, d2, e2, a2, b2, X[2]);
+    subround<G, 9, k[8]>(b2, c2, d2, e2, a2, X[13]);
+    subround<G, 12, k[8]>(a2, b2, c2, d2, e2, X[9]);
+    subround<G, 5, k[8]>(e2, a2, b2, c2, d2, X[7]);
+    subround<G, 15, k[8]>(d2, e2, a2, b2, c2, X[10]);
+    subround<G, 8, k[8]>(c2, d2, e2, a2, b2, X[14]);
 
-    Subround(F, b2, c2, d2, e2, a2, X[12], 8, k9);
-    Subround(F, a2, b2, c2, d2, e2, X[15], 5, k9);
-    Subround(F, e2, a2, b2, c2, d2, X[10], 12, k9);
-    Subround(F, d2, e2, a2, b2, c2, X[4], 9, k9);
-    Subround(F, c2, d2, e2, a2, b2, X[1], 12, k9);
-    Subround(F, b2, c2, d2, e2, a2, X[5], 5, k9);
-    Subround(F, a2, b2, c2, d2, e2, X[8], 14, k9);
-    Subround(F, e2, a2, b2, c2, d2, X[7], 6, k9);
-    Subround(F, d2, e2, a2, b2, c2, X[6], 8, k9);
-    Subround(F, c2, d2, e2, a2, b2, X[2], 13, k9);
-    Subround(F, b2, c2, d2, e2, a2, X[13], 6, k9);
-    Subround(F, a2, b2, c2, d2, e2, X[14], 5, k9);
-    Subround(F, e2, a2, b2, c2, d2, X[0], 15, k9);
-    Subround(F, d2, e2, a2, b2, c2, X[3], 13, k9);
-    Subround(F, c2, d2, e2, a2, b2, X[9], 11, k9);
-    Subround(F, b2, c2, d2, e2, a2, X[11], 11, k9);
+    subround<F, 8, k[9]>(b2, c2, d2, e2, a2, X[12]);
+    subround<F, 5, k[9]>(a2, b2, c2, d2, e2, X[15]);
+    subround<F, 12, k[9]>(e2, a2, b2, c2, d2, X[10]);
+    subround<F, 9, k[9]>(d2, e2, a2, b2, c2, X[4]);
+    subround<F, 12, k[9]>(c2, d2, e2, a2, b2, X[1]);
+    subround<F, 5, k[9]>(b2, c2, d2, e2, a2, X[5]);
+    subround<F, 14, k[9]>(a2, b2, c2, d2, e2, X[8]);
+    subround<F, 6, k[9]>(e2, a2, b2, c2, d2, X[7]);
+    subround<F, 8, k[9]>(d2, e2, a2, b2, c2, X[6]);
+    subround<F, 13, k[9]>(c2, d2, e2, a2, b2, X[2]);
+    subround<F, 6, k[9]>(b2, c2, d2, e2, a2, X[13]);
+    subround<F, 5, k[9]>(a2, b2, c2, d2, e2, X[14]);
+    subround<F, 15, k[9]>(e2, a2, b2, c2, d2, X[0]);
+    subround<F, 13, k[9]>(d2, e2, a2, b2, c2, X[3]);
+    subround<F, 11, k[9]>(c2, d2, e2, a2, b2, X[9]);
+    subround<F, 11, k[9]>(b2, c2, d2, e2, a2, X[11]);
 
     c1 = digest[1] + c1 + d2;
     digest[1] = digest[2] + d1 + e2;
