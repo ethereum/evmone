@@ -51,7 +51,7 @@ inline void subround(uint32_t& a, uint32_t b, uint32_t& c, uint32_t d, uint32_t 
     c = rol(c, 10);
 }
 
-static inline void rmd160_compress(uint32_t* digest, const uint32_t* X)
+void rmd160_compress(uint32_t* digest, const uint32_t* X) noexcept
 {
     uint32_t a1, b1, c1, d1, e1, a2, b2, c2, d2, e2;
     a1 = a2 = digest[0];
@@ -315,6 +315,6 @@ void ripemd160(uint8_t out[20], const uint8_t* ptr, size_t len)
         out[i] = static_cast<uint8_t>(buf[i >> 2]);
         out[i + 1] = static_cast<uint8_t>(buf[i >> 2] >> 8);
         out[i + 2] = static_cast<uint8_t>(buf[i >> 2] >> 16);
-        out[i + 3] = buf[i >> 2] >> 24;
+        out[i + 3] = static_cast<uint8_t>(buf[i >> 2] >> 24);
     }
 }
