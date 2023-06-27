@@ -48,15 +48,24 @@ constexpr size_t N = 5;
 template <decltype(F) Fn, size_t O, uint32_t S, uint32_t K>
 inline void subround(uint32_t* z, uint32_t x)
 {
-    auto& a = z[(0 + N - O) % N];
-    const auto b = z[(1 + N - O) % N];
-    auto& c = z[(2 + N - O) % N];
-    const auto d = z[(3 + N - O) % N];
-    const auto e = z[(4 + N - O) % N];
+    static constexpr auto ia = (0 + N - O) % N;
+    static constexpr auto ib = (1 + N - O) % N;
+    static constexpr auto ic = (2 + N - O) % N;
+    static constexpr auto id = (3 + N - O) % N;
+    static constexpr auto ie = (4 + N - O) % N;
+
+    auto a = z[ia];
+    auto b = z[ib];
+    auto c = z[ic];
+    auto d = z[id];
+    auto e = z[ie];
 
     a += Fn(b, c, d) + x + K;
     a = rol(a, S) + e;
     c = rol(c, 10);
+
+    z[ia] = a;
+    z[ic] = c;
 }
 
 void rmd160_compress(uint32_t* digest, const uint32_t* X) noexcept
