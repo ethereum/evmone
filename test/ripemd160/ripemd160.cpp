@@ -113,16 +113,19 @@ inline void subround(uint32_t* z1, uint32_t* z2, uint32_t x1, uint32_t x2)
     z2[ic] = c2;
 }
 
-template <std::size_t... I>
-void round_impl(
-    uint32_t* z1, uint32_t* z2, const uint32_t* X, std::integer_sequence<std::size_t, I...>)
+template <size_t Rn, decltype(F) Fn1, decltype(F) Fn2, std::size_t... I>
+[[gnu::always_inline]] inline void round_impl(uint32_t* z1, uint32_t* z2, const uint32_t* X,
+    std::integer_sequence<std::size_t, I...>) noexcept
 {
-    (subround<F, J, I % N, s[I], s[I + 80], k[0], k[5]>(z1, z2, X[r[I]], X[r[I + 80]]), ...);
+    (subround<Fn1, Fn2, (I + Rn) % N, s[Rn * 16 + I], s[Rn * 16 + I + 80], k[Rn], k[Rn + 5]>(
+         z1, z2, X[r[Rn * 16 + I]], X[r[Rn * 16 + I + 80]]),
+        ...);
 }
 
-void round(uint32_t* z1, uint32_t* z2, const uint32_t* X)
+template <size_t Rn, decltype(F) Fn1, decltype(F) Fn2>
+[[gnu::always_inline]] inline void round(uint32_t* z1, uint32_t* z2, const uint32_t* X) noexcept
 {
-    round_impl(z1, z2, X, std::make_index_sequence<16>{});
+    round_impl<Rn, Fn1, Fn2>(z1, z2, X, std::make_index_sequence<16>{});
 }
 
 void rmd160_compress(uint32_t* digest, const uint32_t* X) noexcept
@@ -136,76 +139,11 @@ void rmd160_compress(uint32_t* digest, const uint32_t* X) noexcept
     z1[3] = z2[3] = digest[3];
     z1[4] = z2[4] = digest[4];
 
-    round(z1, z2, X);
-
-    subround<G, I, 1, 7, 9, k[1], k[6]>(z1, z2, X[7], X[6]);
-    subround<G, I, 2, 6, 13, k[1], k[6]>(z1, z2, X[4], X[11]);
-    subround<G, I, 3, 8, 15, k[1], k[6]>(z1, z2, X[13], X[3]);
-    subround<G, I, 4, 13, 7, k[1], k[6]>(z1, z2, X[1], X[7]);
-    subround<G, I, 0, 11, 12, k[1], k[6]>(z1, z2, X[10], X[0]);
-    subround<G, I, 1, 9, 8, k[1], k[6]>(z1, z2, X[6], X[13]);
-    subround<G, I, 2, 7, 9, k[1], k[6]>(z1, z2, X[15], X[5]);
-    subround<G, I, 3, 15, 11, k[1], k[6]>(z1, z2, X[3], X[10]);
-    subround<G, I, 4, 7, 7, k[1], k[6]>(z1, z2, X[12], X[14]);
-    subround<G, I, 0, 12, 7, k[1], k[6]>(z1, z2, X[0], X[15]);
-    subround<G, I, 1, 15, 12, k[1], k[6]>(z1, z2, X[9], X[8]);
-    subround<G, I, 2, 9, 7, k[1], k[6]>(z1, z2, X[5], X[12]);
-    subround<G, I, 3, 11, 6, k[1], k[6]>(z1, z2, X[2], X[4]);
-    subround<G, I, 4, 7, 15, k[1], k[6]>(z1, z2, X[14], X[9]);
-    subround<G, I, 0, 13, 13, k[1], k[6]>(z1, z2, X[11], X[1]);
-    subround<G, I, 1, 12, 11, k[1], k[6]>(z1, z2, X[8], X[2]);
-
-    subround<H, H, 2, 11, 9, k[2], k[7]>(z1, z2, X[3], X[15]);
-    subround<H, H, 3, 13, 7, k[2], k[7]>(z1, z2, X[10], X[5]);
-    subround<H, H, 4, 6, 15, k[2], k[7]>(z1, z2, X[14], X[1]);
-    subround<H, H, 0, 7, 11, k[2], k[7]>(z1, z2, X[4], X[3]);
-    subround<H, H, 1, 14, 8, k[2], k[7]>(z1, z2, X[9], X[7]);
-    subround<H, H, 2, 9, 6, k[2], k[7]>(z1, z2, X[15], X[14]);
-    subround<H, H, 3, 13, 6, k[2], k[7]>(z1, z2, X[8], X[6]);
-    subround<H, H, 4, 15, 14, k[2], k[7]>(z1, z2, X[1], X[9]);
-    subround<H, H, 0, 14, 12, k[2], k[7]>(z1, z2, X[2], X[11]);
-    subround<H, H, 1, 8, 13, k[2], k[7]>(z1, z2, X[7], X[8]);
-    subround<H, H, 2, 13, 5, k[2], k[7]>(z1, z2, X[0], X[12]);
-    subround<H, H, 3, 6, 14, k[2], k[7]>(z1, z2, X[6], X[2]);
-    subround<H, H, 4, 5, 13, k[2], k[7]>(z1, z2, X[13], X[10]);
-    subround<H, H, 0, 12, 13, k[2], k[7]>(z1, z2, X[11], X[0]);
-    subround<H, H, 1, 7, 7, k[2], k[7]>(z1, z2, X[5], X[4]);
-    subround<H, H, 2, 5, 5, k[2], k[7]>(z1, z2, X[12], X[13]);
-
-    subround<I, G, 3, 11, 15, k[3], k[8]>(z1, z2, X[1], X[8]);
-    subround<I, G, 4, 12, 5, k[3], k[8]>(z1, z2, X[9], X[6]);
-    subround<I, G, 0, 14, 8, k[3], k[8]>(z1, z2, X[11], X[4]);
-    subround<I, G, 1, 15, 11, k[3], k[8]>(z1, z2, X[10], X[1]);
-    subround<I, G, 2, 14, 14, k[3], k[8]>(z1, z2, X[0], X[3]);
-    subround<I, G, 3, 15, 14, k[3], k[8]>(z1, z2, X[8], X[11]);
-    subround<I, G, 4, 9, 6, k[3], k[8]>(z1, z2, X[12], X[15]);
-    subround<I, G, 0, 8, 14, k[3], k[8]>(z1, z2, X[4], X[0]);
-    subround<I, G, 1, 9, 6, k[3], k[8]>(z1, z2, X[13], X[5]);
-    subround<I, G, 2, 14, 9, k[3], k[8]>(z1, z2, X[3], X[12]);
-    subround<I, G, 3, 5, 12, k[3], k[8]>(z1, z2, X[7], X[2]);
-    subround<I, G, 4, 6, 9, k[3], k[8]>(z1, z2, X[15], X[13]);
-    subround<I, G, 0, 8, 12, k[3], k[8]>(z1, z2, X[14], X[9]);
-    subround<I, G, 1, 6, 5, k[3], k[8]>(z1, z2, X[5], X[7]);
-    subround<I, G, 2, 5, 15, k[3], k[8]>(z1, z2, X[6], X[10]);
-    subround<I, G, 3, 12, 8, k[3], k[8]>(z1, z2, X[2], X[14]);
-
-    subround<J, F, 4, 9, 8, k[4], k[9]>(z1, z2, X[4], X[12]);
-    subround<J, F, 0, 15, 5, k[4], k[9]>(z1, z2, X[0], X[15]);
-    subround<J, F, 1, 5, 12, k[4], k[9]>(z1, z2, X[5], X[10]);
-    subround<J, F, 2, 11, 9, k[4], k[9]>(z1, z2, X[9], X[4]);
-    subround<J, F, 3, 6, 12, k[4], k[9]>(z1, z2, X[7], X[1]);
-    subround<J, F, 4, 8, 5, k[4], k[9]>(z1, z2, X[12], X[5]);
-    subround<J, F, 0, 13, 14, k[4], k[9]>(z1, z2, X[2], X[8]);
-    subround<J, F, 1, 12, 6, k[4], k[9]>(z1, z2, X[10], X[7]);
-    subround<J, F, 2, 5, 8, k[4], k[9]>(z1, z2, X[14], X[6]);
-    subround<J, F, 3, 12, 13, k[4], k[9]>(z1, z2, X[1], X[2]);
-    subround<J, F, 4, 13, 6, k[4], k[9]>(z1, z2, X[3], X[13]);
-    subround<J, F, 0, 14, 5, k[4], k[9]>(z1, z2, X[8], X[14]);
-    subround<J, F, 1, 11, 15, k[4], k[9]>(z1, z2, X[11], X[0]);
-    subround<J, F, 2, 8, 13, k[4], k[9]>(z1, z2, X[6], X[3]);
-    subround<J, F, 3, 5, 11, k[4], k[9]>(z1, z2, X[15], X[9]);
-    subround<J, F, 4, 6, 11, k[4], k[9]>(z1, z2, X[13], X[11]);
-
+    round<0, F, J>(z1, z2, X);
+    round<1, G, I>(z1, z2, X);
+    round<2, H, H>(z1, z2, X);
+    round<3, I, G>(z1, z2, X);
+    round<4, J, F>(z1, z2, X);
 
     auto t = digest[1] + z1[2] + z2[3];
     digest[1] = digest[2] + z1[3] + z2[4];
