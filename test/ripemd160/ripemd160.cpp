@@ -1,4 +1,7 @@
 #include "ripemd160.hpp"
+#include <cstddef>
+#include <cstdint>
+#include <utility>
 
 inline uint32_t rol(uint32_t x, uint32_t n)
 {
@@ -43,7 +46,35 @@ constexpr uint32_t k[] = {
     0,
 };
 
-constexpr size_t N = 5;
+static constexpr size_t N = 5;
+
+/// Selection of message word.
+static constexpr size_t r[] = {
+    /*r ( 0..15) = */ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,  //
+    /*r (16..31) = */ 7, 4, 13, 1, 10, 6, 15, 3, 12, 0, 9, 5, 2, 14, 11, 8,  //
+    /*r (32..47) = */ 3, 10, 14, 4, 9, 15, 8, 1, 2, 7, 0, 6, 13, 11, 5, 12,  //
+    /*r (48..63) = */ 1, 9, 11, 10, 0, 8, 12, 4, 13, 3, 7, 15, 14, 5, 6, 2,  //
+    /*r (64..79) = */ 4, 0, 5, 9, 7, 12, 2, 10, 14, 1, 3, 8, 11, 6, 15, 13,  //
+    /*r′( 0..15) = */ 5, 14, 7, 0, 9, 2, 11, 4, 13, 6, 15, 8, 1, 10, 3, 12,  //
+    /*r′(16..31) = */ 6, 11, 3, 7, 0, 13, 5, 10, 14, 15, 8, 12, 4, 9, 1, 2,  //
+    /*r′(32..47) = */ 15, 5, 1, 3, 7, 14, 6, 9, 11, 8, 12, 2, 10, 0, 4, 13,  //
+    /*r′(48..63) = */ 8, 6, 4, 1, 3, 11, 15, 0, 5, 12, 2, 13, 9, 7, 10, 14,  //
+    /*r′(64..79) = */ 12, 15, 10, 4, 1, 5, 8, 7, 6, 2, 13, 14, 0, 3, 9, 11,  //
+};
+
+/// Amount for rotate left.
+static constexpr uint32_t s[] = {
+    /* s ( 0..15) = */ 11, 14, 15, 12, 5, 8, 7, 9, 11, 13, 14, 15, 6, 7, 9, 8,  //
+    /* s (16..31) = */ 7, 6, 8, 13, 11, 9, 7, 15, 7, 12, 15, 9, 11, 7, 13, 12,  //
+    /* s (32..47) = */ 11, 13, 6, 7, 14, 9, 13, 15, 14, 8, 13, 6, 5, 12, 7, 5,  //
+    /* s (48..63) = */ 11, 12, 14, 15, 14, 15, 9, 8, 9, 14, 5, 6, 8, 6, 5, 12,  //
+    /* s (64..79) = */ 9, 15, 5, 11, 6, 8, 13, 12, 5, 12, 13, 14, 11, 8, 5, 6,  //
+    /* s′( 0..15) = */ 8, 9, 9, 11, 13, 15, 15, 5, 7, 7, 8, 11, 14, 14, 12, 6,  //
+    /* s′(16..31) = */ 9, 13, 15, 7, 12, 8, 9, 11, 7, 7, 12, 7, 6, 15, 13, 11,  //
+    /* s′(32..47) = */ 9, 7, 15, 11, 8, 6, 6, 14, 12, 13, 5, 14, 13, 13, 7, 5,  //
+    /* s′(48..63) = */ 15, 5, 8, 11, 14, 14, 6, 14, 6, 9, 12, 9, 12, 5, 15, 8,  //
+    /* s′(64..79) = */ 8, 5, 12, 9, 12, 5, 14, 6, 8, 13, 6, 5, 15, 13, 11, 11,  //
+};
 
 template <decltype(F) Fn1, decltype(F) Fn2, size_t O, uint32_t S1, uint32_t S2, uint32_t K1,
     uint32_t K2>
@@ -82,6 +113,18 @@ inline void subround(uint32_t* z1, uint32_t* z2, uint32_t x1, uint32_t x2)
     z2[ic] = c2;
 }
 
+template <std::size_t... I>
+void round_impl(
+    uint32_t* z1, uint32_t* z2, const uint32_t* X, std::integer_sequence<std::size_t, I...>)
+{
+    (subround<F, J, I % N, s[I], s[I + 80], k[0], k[5]>(z1, z2, X[r[I]], X[r[I + 80]]), ...);
+}
+
+void round(uint32_t* z1, uint32_t* z2, const uint32_t* X)
+{
+    round_impl(z1, z2, X, std::make_index_sequence<16>{});
+}
+
 void rmd160_compress(uint32_t* digest, const uint32_t* X) noexcept
 {
     uint32_t z1[N];
@@ -93,22 +136,7 @@ void rmd160_compress(uint32_t* digest, const uint32_t* X) noexcept
     z1[3] = z2[3] = digest[3];
     z1[4] = z2[4] = digest[4];
 
-    subround<F, J, 0, 11, 8, k[0], k[5]>(z1, z2, X[0], X[5]);
-    subround<F, J, 1, 14, 9, k[0], k[5]>(z1, z2, X[1], X[14]);
-    subround<F, J, 2, 15, 9, k[0], k[5]>(z1, z2, X[2], X[7]);
-    subround<F, J, 3, 12, 11, k[0], k[5]>(z1, z2, X[3], X[0]);
-    subround<F, J, 4, 5, 13, k[0], k[5]>(z1, z2, X[4], X[9]);
-    subround<F, J, 0, 8, 15, k[0], k[5]>(z1, z2, X[5], X[2]);
-    subround<F, J, 1, 7, 15, k[0], k[5]>(z1, z2, X[6], X[11]);
-    subround<F, J, 2, 9, 5, k[0], k[5]>(z1, z2, X[7], X[4]);
-    subround<F, J, 3, 11, 7, k[0], k[5]>(z1, z2, X[8], X[13]);
-    subround<F, J, 4, 13, 7, k[0], k[5]>(z1, z2, X[9], X[6]);
-    subround<F, J, 0, 14, 8, k[0], k[5]>(z1, z2, X[10], X[15]);
-    subround<F, J, 1, 15, 11, k[0], k[5]>(z1, z2, X[11], X[8]);
-    subround<F, J, 2, 6, 14, k[0], k[5]>(z1, z2, X[12], X[1]);
-    subround<F, J, 3, 7, 14, k[0], k[5]>(z1, z2, X[13], X[10]);
-    subround<F, J, 4, 9, 12, k[0], k[5]>(z1, z2, X[14], X[3]);
-    subround<F, J, 0, 8, 6, k[0], k[5]>(z1, z2, X[15], X[12]);
+    round(z1, z2, X);
 
     subround<G, I, 1, 7, 9, k[1], k[6]>(z1, z2, X[7], X[6]);
     subround<G, I, 2, 6, 13, k[1], k[6]>(z1, z2, X[4], X[11]);
