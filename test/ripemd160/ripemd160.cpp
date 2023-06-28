@@ -84,50 +84,50 @@ static constexpr uint32_t s[] = {
     /* s′(64..79) = */ 8, 5, 12, 9, 12, 5, 14, 6, 8, 13, 6, 5, 15, 13, 11, 11,  //
 };
 
-template <size_t Rn, size_t O, uint32_t S1, uint32_t S2, uint32_t K1, uint32_t K2>
+template <size_t Rn, uint32_t S1, uint32_t S2, uint32_t K1, uint32_t K2>
 inline void subround(uint32_t* z1, uint32_t* z2, uint32_t x1, uint32_t x2)
 {
     static constexpr auto Fn1 = F<Rn>;
     static constexpr auto Fn2 = F<N - 1 - Rn>;
 
-    static constexpr auto ia = (0 + N - O) % N;
-    static constexpr auto ib = (1 + N - O) % N;
-    static constexpr auto ic = (2 + N - O) % N;
-    static constexpr auto id = (3 + N - O) % N;
-    static constexpr auto ie = (4 + N - O) % N;
-
-    auto a1 = z1[ia];
-    auto b1 = z1[ib];
-    auto c1 = z1[ic];
-    auto d1 = z1[id];
-    auto e1 = z1[ie];
+    auto a1 = z1[0];
+    auto b1 = z1[1];
+    auto c1 = z1[2];
+    auto d1 = z1[3];
+    auto e1 = z1[4];
 
     a1 += Fn1(b1, c1, d1) + x1 + K1;
     a1 = rol(a1, S1) + e1;
     c1 = rol(c1, 10);
 
-    z1[ia] = a1;
-    z1[ic] = c1;
+    z1[0] = e1;
+    z1[1] = a1;
+    z1[2] = b1;
+    z1[3] = c1;
+    z1[4] = d1;
 
-    auto a2 = z2[ia];
-    auto b2 = z2[ib];
-    auto c2 = z2[ic];
-    auto d2 = z2[id];
-    auto e2 = z2[ie];
+    auto a2 = z2[0];
+    auto b2 = z2[1];
+    auto c2 = z2[2];
+    auto d2 = z2[3];
+    auto e2 = z2[4];
 
     a2 += Fn2(b2, c2, d2) + x2 + K2;
     a2 = rol(a2, S2) + e2;
     c2 = rol(c2, 10);
 
-    z2[ia] = a2;
-    z2[ic] = c2;
+    z2[0] = e2;
+    z2[1] = a2;
+    z2[2] = b2;
+    z2[3] = c2;
+    z2[4] = d2;
 }
 
 template <size_t Rn, std::size_t... I>
 [[gnu::always_inline]] inline void round_impl(uint32_t* z1, uint32_t* z2, const uint32_t* X,
     std::integer_sequence<std::size_t, I...>) noexcept
 {
-    (subround<Rn, (I + Rn) % N, s[Rn * 16 + I], s[Rn * 16 + I + 80], k[Rn], k[Rn + 5]>(
+    (subround<Rn, s[Rn * 16 + I], s[Rn * 16 + I + 80], k[Rn], k[Rn + 5]>(
          z1, z2, X[r[Rn * 16 + I]], X[r[Rn * 16 + I + 80]]),
         ...);
 }
