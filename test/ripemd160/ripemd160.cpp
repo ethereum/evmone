@@ -8,38 +8,16 @@ inline uint32_t rol(uint32_t x, uint32_t n)
     return (x << n) | (x >> (32 - n));
 }
 
-template <size_t R>
-uint32_t F(uint32_t x, uint32_t y, uint32_t z) noexcept = delete;
+using FT = uint32_t (*)(uint32_t, uint32_t, uint32_t) noexcept;
 
-template <>
-inline uint32_t F<0>(uint32_t x, uint32_t y, uint32_t z) noexcept
-{
-    return (x ^ y ^ z);
-}
+static constexpr FT ft[] = {
+    [](uint32_t x, uint32_t y, uint32_t z) noexcept { return x ^ y ^ z; },
+    [](uint32_t x, uint32_t y, uint32_t z) noexcept { return z ^ (x & (y ^ z)); },
+    [](uint32_t x, uint32_t y, uint32_t z) noexcept { return z ^ (x | ~y); },
+    [](uint32_t x, uint32_t y, uint32_t z) noexcept { return y ^ (z & (x ^ y)); },
+    [](uint32_t x, uint32_t y, uint32_t z) noexcept { return x ^ (y | ~z); },
+};
 
-template <>
-inline uint32_t F<1>(uint32_t x, uint32_t y, uint32_t z) noexcept
-{
-    return (z ^ (x & (y ^ z)));
-}
-
-template <>
-inline uint32_t F<2>(uint32_t x, uint32_t y, uint32_t z) noexcept
-{
-    return (z ^ (x | ~y));
-}
-
-template <>
-inline uint32_t F<3>(uint32_t x, uint32_t y, uint32_t z) noexcept
-{
-    return (y ^ (z & (x ^ y)));
-}
-
-template <>
-inline uint32_t F<4>(uint32_t x, uint32_t y, uint32_t z) noexcept
-{
-    return (x ^ (y | ~z));
-}
 
 constexpr uint32_t k[] = {
     0,
@@ -87,8 +65,8 @@ static constexpr uint32_t s[] = {
 template <size_t Rn, uint32_t S1, uint32_t S2, uint32_t K1, uint32_t K2>
 inline void subround(uint32_t* z1, uint32_t* z2, uint32_t x1, uint32_t x2)
 {
-    static constexpr auto Fn1 = F<Rn>;
-    static constexpr auto Fn2 = F<N - 1 - Rn>;
+    static constexpr auto Fn1 = ft[Rn];
+    static constexpr auto Fn2 = ft[N - 1 - Rn];
 
     auto a1 = z1[0];
     auto b1 = z1[1];
