@@ -96,14 +96,10 @@ inline void subround(uint32_t* z1, uint32_t* z2, uint32_t x1, uint32_t x2)
     auto d1 = z1[3];
     auto e1 = z1[4];
 
-    a1 += Fn1(b1, c1, d1) + x1 + K1;
-    a1 = rol(a1, S1) + e1;
-    c1 = rol(c1, 10);
-
     z1[0] = e1;
-    z1[1] = a1;
+    z1[1] = rol(a1 + Fn1(b1, c1, d1) + x1 + K1, S1) + e1;
     z1[2] = b1;
-    z1[3] = c1;
+    z1[3] = rol(c1, 10);
     z1[4] = d1;
 
     auto a2 = z2[0];
@@ -112,14 +108,10 @@ inline void subround(uint32_t* z1, uint32_t* z2, uint32_t x1, uint32_t x2)
     auto d2 = z2[3];
     auto e2 = z2[4];
 
-    a2 += Fn2(b2, c2, d2) + x2 + K2;
-    a2 = rol(a2, S2) + e2;
-    c2 = rol(c2, 10);
-
     z2[0] = e2;
-    z2[1] = a2;
+    z2[1] = rol(a2 + Fn2(b2, c2, d2) + x2 + K2, S2) + e2;
     z2[2] = b2;
-    z2[3] = c2;
+    z2[3] = rol(c2, 10);
     z2[4] = d2;
 }
 
