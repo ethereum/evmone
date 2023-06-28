@@ -57,9 +57,10 @@ static constexpr uint32_t s[] = {
     /* s′(64..79) = */ 8, 5, 12, 9, 12, 5, 14, 6, 8, 13, 6, 5, 15, 13, 11, 11,  //
 };
 
-template <size_t Rn, uint32_t S1, uint32_t S2>
+template <size_t J, uint32_t S1, uint32_t S2>
 inline void subround(uint32_t* z1, uint32_t* z2, uint32_t x1, uint32_t x2)
 {
+    static constexpr auto Rn = J / 16;
     static constexpr auto K1 = k[Rn];
     static constexpr auto K2 = k[Rn + N];
 
@@ -91,19 +92,16 @@ inline void subround(uint32_t* z1, uint32_t* z2, uint32_t x1, uint32_t x2)
     z2[4] = d2;
 }
 
-template <size_t Rn, std::size_t... I>
+template <std::size_t... I>
 [[gnu::always_inline]] inline void round_impl(uint32_t* z1, uint32_t* z2, const uint32_t* X,
     std::integer_sequence<std::size_t, I...>) noexcept
 {
-    (subround<Rn, s[Rn * 16 + I], s[Rn * 16 + I + 80]>(
-         z1, z2, X[r[Rn * 16 + I]], X[r[Rn * 16 + I + 80]]),
-        ...);
+    (subround<I, s[I], s[I + 80]>(z1, z2, X[r[I]], X[r[I + 80]]), ...);
 }
 
-template <size_t Rn>
 [[gnu::always_inline]] inline void round(uint32_t* z1, uint32_t* z2, const uint32_t* X) noexcept
 {
-    round_impl<Rn>(z1, z2, X, std::make_index_sequence<16>{});
+    round_impl(z1, z2, X, std::make_index_sequence<80>{});
 }
 
 void rmd160_compress(uint32_t* digest, const uint32_t* X) noexcept
@@ -117,11 +115,7 @@ void rmd160_compress(uint32_t* digest, const uint32_t* X) noexcept
     z1[3] = z2[3] = digest[3];
     z1[4] = z2[4] = digest[4];
 
-    round<0>(z1, z2, X);
-    round<1>(z1, z2, X);
-    round<2>(z1, z2, X);
-    round<3>(z1, z2, X);
-    round<4>(z1, z2, X);
+    round(z1, z2, X);
 
     auto t = digest[1] + z1[2] + z2[3];
     digest[1] = digest[2] + z1[3] + z2[4];
