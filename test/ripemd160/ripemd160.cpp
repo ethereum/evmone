@@ -8,27 +8,35 @@ inline uint32_t rol(uint32_t x, uint32_t n)
     return (x << n) | (x >> (32 - n));
 }
 
-inline uint32_t F(uint32_t x, uint32_t y, uint32_t z)
+template <size_t R>
+uint32_t F(uint32_t x, uint32_t y, uint32_t z) noexcept = delete;
+
+template <>
+inline uint32_t F<0>(uint32_t x, uint32_t y, uint32_t z) noexcept
 {
     return (x ^ y ^ z);
 }
 
-inline uint32_t G(uint32_t x, uint32_t y, uint32_t z)
+template <>
+inline uint32_t F<1>(uint32_t x, uint32_t y, uint32_t z) noexcept
 {
     return (z ^ (x & (y ^ z)));
 }
 
-inline uint32_t H(uint32_t x, uint32_t y, uint32_t z)
+template <>
+inline uint32_t F<2>(uint32_t x, uint32_t y, uint32_t z) noexcept
 {
     return (z ^ (x | ~y));
 }
 
-inline uint32_t I(uint32_t x, uint32_t y, uint32_t z)
+template <>
+inline uint32_t F<3>(uint32_t x, uint32_t y, uint32_t z) noexcept
 {
     return (y ^ (z & (x ^ y)));
 }
 
-inline uint32_t J(uint32_t x, uint32_t y, uint32_t z)
+template <>
+inline uint32_t F<4>(uint32_t x, uint32_t y, uint32_t z) noexcept
 {
     return (x ^ (y | ~z));
 }
@@ -76,10 +84,12 @@ static constexpr uint32_t s[] = {
     /* s′(64..79) = */ 8, 5, 12, 9, 12, 5, 14, 6, 8, 13, 6, 5, 15, 13, 11, 11,  //
 };
 
-template <decltype(F) Fn1, decltype(F) Fn2, size_t O, uint32_t S1, uint32_t S2, uint32_t K1,
-    uint32_t K2>
+template <size_t Rn, size_t O, uint32_t S1, uint32_t S2, uint32_t K1, uint32_t K2>
 inline void subround(uint32_t* z1, uint32_t* z2, uint32_t x1, uint32_t x2)
 {
+    static constexpr auto Fn1 = F<Rn>;
+    static constexpr auto Fn2 = F<N - 1 - Rn>;
+
     static constexpr auto ia = (0 + N - O) % N;
     static constexpr auto ib = (1 + N - O) % N;
     static constexpr auto ic = (2 + N - O) % N;
@@ -113,19 +123,19 @@ inline void subround(uint32_t* z1, uint32_t* z2, uint32_t x1, uint32_t x2)
     z2[ic] = c2;
 }
 
-template <size_t Rn, decltype(F) Fn1, decltype(F) Fn2, std::size_t... I>
+template <size_t Rn, std::size_t... I>
 [[gnu::always_inline]] inline void round_impl(uint32_t* z1, uint32_t* z2, const uint32_t* X,
     std::integer_sequence<std::size_t, I...>) noexcept
 {
-    (subround<Fn1, Fn2, (I + Rn) % N, s[Rn * 16 + I], s[Rn * 16 + I + 80], k[Rn], k[Rn + 5]>(
+    (subround<Rn, (I + Rn) % N, s[Rn * 16 + I], s[Rn * 16 + I + 80], k[Rn], k[Rn + 5]>(
          z1, z2, X[r[Rn * 16 + I]], X[r[Rn * 16 + I + 80]]),
         ...);
 }
 
-template <size_t Rn, decltype(F) Fn1, decltype(F) Fn2>
+template <size_t Rn>
 [[gnu::always_inline]] inline void round(uint32_t* z1, uint32_t* z2, const uint32_t* X) noexcept
 {
-    round_impl<Rn, Fn1, Fn2>(z1, z2, X, std::make_index_sequence<16>{});
+    round_impl<Rn>(z1, z2, X, std::make_index_sequence<16>{});
 }
 
 void rmd160_compress(uint32_t* digest, const uint32_t* X) noexcept
@@ -139,11 +149,11 @@ void rmd160_compress(uint32_t* digest, const uint32_t* X) noexcept
     z1[3] = z2[3] = digest[3];
     z1[4] = z2[4] = digest[4];
 
-    round<0, F, J>(z1, z2, X);
-    round<1, G, I>(z1, z2, X);
-    round<2, H, H>(z1, z2, X);
-    round<3, I, G>(z1, z2, X);
-    round<4, J, F>(z1, z2, X);
+    round<0>(z1, z2, X);
+    round<1>(z1, z2, X);
+    round<2>(z1, z2, X);
+    round<3>(z1, z2, X);
+    round<4>(z1, z2, X);
 
     auto t = digest[1] + z1[2] + z2[3];
     digest[1] = digest[2] + z1[3] + z2[4];
