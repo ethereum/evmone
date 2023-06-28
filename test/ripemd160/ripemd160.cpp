@@ -57,15 +57,19 @@ static constexpr uint32_t s[] = {
     /* s′(64..79) = */ 8, 5, 12, 9, 12, 5, 14, 6, 8, 13, 6, 5, 15, 13, 11, 11,  //
 };
 
-template <size_t J, uint32_t S1, uint32_t S2>
-inline void subround(uint32_t* z1, uint32_t* z2, uint32_t x1, uint32_t x2)
+template <size_t J>
+inline void subround(uint32_t* z1, uint32_t* z2, const uint32_t* x)
 {
     static constexpr auto Rn = J / 16;
     static constexpr auto K1 = k[Rn];
     static constexpr auto K2 = k[Rn + N];
-
+    static constexpr auto S1 = s[J];
+    static constexpr auto S2 = s[J + 80];
     static constexpr auto Fn1 = ft[Rn];
     static constexpr auto Fn2 = ft[N - 1 - Rn];
+
+    const auto x1 = x[r[J]];
+    const auto x2 = x[r[J + 80]];
 
     auto a1 = z1[0];
     auto b1 = z1[1];
@@ -96,7 +100,7 @@ template <std::size_t... I>
 [[gnu::always_inline]] inline void round_impl(uint32_t* z1, uint32_t* z2, const uint32_t* X,
     std::integer_sequence<std::size_t, I...>) noexcept
 {
-    (subround<I, s[I], s[I + 80]>(z1, z2, X[r[I]], X[r[I + 80]]), ...);
+    (subround<I>(z1, z2, X), ...);
 }
 
 [[gnu::always_inline]] inline void round(uint32_t* z1, uint32_t* z2, const uint32_t* X) noexcept
