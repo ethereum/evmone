@@ -8,6 +8,7 @@ target_link_libraries(ripemd160-test PRIVATE intx::intx evmc::evmc_cpp GTest::gt
 target_sources(ripemd160-test PRIVATE ripemd160.cpp ripemd160.hpp ripemd160_test.cpp)
 
 add_executable(ripemd160-bench)
+target_compile_features(ripemd160-bench PRIVATE cxx_std_20)
 target_link_libraries(ripemd160-bench PRIVATE benchmark::benchmark)
 target_sources(ripemd160-bench PRIVATE ripemd160.cpp ripemd160.hpp ripemd160_bench.cpp)
 # BMI2 makes it slower
