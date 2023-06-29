@@ -67,7 +67,7 @@ static constexpr uint32_t s[] = {
 };
 
 template <size_t J>
-inline void subround(uint32_t* z1, uint32_t* z2, const uint32_t* x)
+inline void step(uint32_t* z1, uint32_t* z2, const uint32_t* x)
 {
     static constexpr auto Rn = J / 16;
     static constexpr auto K1 = k[Rn];
@@ -105,16 +105,14 @@ inline void subround(uint32_t* z1, uint32_t* z2, const uint32_t* x)
     z2[4] = d2;
 }
 
+
+// This could be a lambda, but [[always_inline]] does not work.
+// TODO: Try arguments instead of capture.
 template <std::size_t... I>
-[[gnu::always_inline]] inline void round_impl(uint32_t* z1, uint32_t* z2, const uint32_t* X,
+[[gnu::always_inline]] inline void steps(uint32_t* z1, uint32_t* z2, const uint32_t* X,
     std::integer_sequence<std::size_t, I...>) noexcept
 {
-    (subround<I>(z1, z2, X), ...);
-}
-
-[[gnu::always_inline]] inline void round(uint32_t* z1, uint32_t* z2, const uint32_t* X) noexcept
-{
-    round_impl(z1, z2, X, std::make_index_sequence<80>{});
+    (step<I>(z1, z2, X), ...);
 }
 
 void rmd160_compress(uint32_t* digest, const uint32_t* X) noexcept
@@ -128,7 +126,7 @@ void rmd160_compress(uint32_t* digest, const uint32_t* X) noexcept
     z1[3] = z2[3] = digest[3];
     z1[4] = z2[4] = digest[4];
 
-    round(z1, z2, X);
+    steps(z1, z2, X, std::make_index_sequence<80>{});
 
     auto t = digest[1] + z1[2] + z2[3];
     digest[1] = digest[2] + z1[3] + z2[4];
