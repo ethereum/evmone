@@ -7,10 +7,19 @@
 using FT = uint32_t (*)(uint32_t, uint32_t, uint32_t) noexcept;
 
 static constexpr FT ft[] = {
+    // f₁(x, y, z) = x ⊕ y ⊕ z
     [](uint32_t x, uint32_t y, uint32_t z) noexcept { return x ^ y ^ z; },
-    [](uint32_t x, uint32_t y, uint32_t z) noexcept { return z ^ (x & (y ^ z)); },
-    [](uint32_t x, uint32_t y, uint32_t z) noexcept { return z ^ (x | ~y); },
-    [](uint32_t x, uint32_t y, uint32_t z) noexcept { return y ^ (z & (x ^ y)); },
+
+    // f₂(x, y, z) = (x ∧ y) ∨ (¬x ∧ z) ⇔ ((y ⊕ z) ∧ x) ⊕ z
+    [](uint32_t x, uint32_t y, uint32_t z) noexcept { return ((y ^ z) & x) ^ z; },
+
+    // f₃(x, y, z) = (x ∨ ¬y) ⊕ z
+    [](uint32_t x, uint32_t y, uint32_t z) noexcept { return (x | ~y) ^ z; },
+
+    // f₄(x, y, z) = (x ∧ z) ∨ (y ∧ ¬z) ⇔ ((x ⊕ y) ∧ z) ⊕ y
+    [](uint32_t x, uint32_t y, uint32_t z) noexcept { return ((x ^ y) & z) ^ y; },
+
+    // f₅(x, y, z) = x ⊕ (y ∨ ¬z)
     [](uint32_t x, uint32_t y, uint32_t z) noexcept { return x ^ (y | ~z); },
 };
 
