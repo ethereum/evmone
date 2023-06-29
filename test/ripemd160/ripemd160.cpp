@@ -4,9 +4,9 @@
 #include <cstdint>
 #include <utility>
 
-using FT = uint32_t (*)(uint32_t, uint32_t, uint32_t) noexcept;
+using BinaryFunction = uint32_t (*)(uint32_t, uint32_t, uint32_t) noexcept;
 
-static constexpr FT ft[] = {
+static constexpr BinaryFunction binary_functions[] = {
     // f₁(x, y, z) = x ⊕ y ⊕ z
     [](uint32_t x, uint32_t y, uint32_t z) noexcept { return x ^ y ^ z; },
 
@@ -24,12 +24,11 @@ static constexpr FT ft[] = {
 };
 
 static constexpr size_t L = 2;
-
 static constexpr size_t M = 5;
 static constexpr size_t N = 80;
 
-
-static constexpr uint32_t k[L][M] = {
+/// Added constants.
+static constexpr uint32_t constants[L][M] = {
     {
         0,
         0x5a827999,
@@ -48,7 +47,7 @@ static constexpr uint32_t k[L][M] = {
 
 
 /// Selection of message word.
-static constexpr size_t r[L][N] = {
+static constexpr size_t word_index[L][N] = {
     {
         /*r ( 0..15) = */ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,  //
         /*r (16..31) = */ 7, 4, 13, 1, 10, 6, 15, 3, 12, 0, 9, 5, 2, 14, 11, 8,  //
@@ -66,7 +65,7 @@ static constexpr size_t r[L][N] = {
 };
 
 /// Amount for rotate left.
-static constexpr int s[L][N] = {
+static constexpr int rotate_amount[L][N] = {
     {
         /* s ( 0..15) = */ 11, 14, 15, 12, 5, 8, 7, 9, 11, 13, 14, 15, 6, 7, 9, 8,
         /* s (16..31) = */ 7, 6, 8, 13, 11, 9, 7, 15, 7, 12, 15, 9, 11, 7, 13, 12,
@@ -80,20 +79,21 @@ static constexpr int s[L][N] = {
         /* s′(32..47) = */ 9, 7, 15, 11, 8, 6, 6, 14, 12, 13, 5, 14, 13, 13, 7, 5,
         /* s′(48..63) = */ 15, 5, 8, 11, 14, 14, 6, 14, 6, 9, 12, 9, 12, 5, 15, 8,
         /* s′(64..79) = */ 8, 5, 12, 9, 12, 5, 14, 6, 8, 13, 6, 5, 15, 13, 11, 11,  //
-    }};
+    },
+};
 
 template <size_t J>
 inline void step(uint32_t z[2][M], const uint32_t* x)
 {
     static constexpr auto I = J / 16;
-    static constexpr FT ff[]{ft[I], ft[M - 1 - I]};
+    static constexpr BinaryFunction fs[]{binary_functions[I], binary_functions[M - 1 - I]};
 
     for (size_t i = 0; i < L; ++i)
     {
-        const auto f = ff[i];
-        const auto w = x[r[i][J]];
-        const auto K = k[i][I];
-        const auto S = s[i][J];
+        const auto f = fs[i];
+        const auto w = x[word_index[i][J]];
+        const auto k = constants[i][I];
+        const auto s = rotate_amount[i][J];
 
         const auto a = z[i][0];
         const auto b = z[i][1];
@@ -102,7 +102,7 @@ inline void step(uint32_t z[2][M], const uint32_t* x)
         const auto e = z[i][4];
 
         z[i][0] = e;
-        z[i][1] = std::rotl(a + f(b, c, d) + w + K, S) + e;
+        z[i][1] = std::rotl(a + f(b, c, d) + w + k, s) + e;
         z[i][2] = b;
         z[i][3] = std::rotl(c, 10);
         z[i][4] = d;
