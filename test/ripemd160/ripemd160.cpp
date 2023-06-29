@@ -81,29 +81,26 @@ inline void step(uint32_t z[2][M], const uint32_t* x)
     const auto x1 = x[r[J]];
     const auto x2 = x[r[J + N]];
 
-    auto a1 = z[0][0];
-    auto b1 = z[0][1];
-    auto c1 = z[0][2];
-    auto d1 = z[0][3];
-    auto e1 = z[0][4];
+    const uint32_t xx[]{x1, x2};
 
-    z[0][0] = e1;
-    z[0][1] = std::rotl(a1 + Fn1(b1, c1, d1) + x1 + K1, S1) + e1;
-    z[0][2] = b1;
-    z[0][3] = std::rotl(c1, 10);
-    z[0][4] = d1;
+    static constexpr FT ff[]{Fn1, Fn2};
+    static constexpr uint32_t KK[]{K1, K2};
+    static constexpr int SS[]{S1, S2};
 
-    auto a2 = z[1][0];
-    auto b2 = z[1][1];
-    auto c2 = z[1][2];
-    auto d2 = z[1][3];
-    auto e2 = z[1][4];
+    for (int i = 0; i < 2; ++i)
+    {
+        const auto a = z[i][0];
+        const auto b = z[i][1];
+        const auto c = z[i][2];
+        const auto d = z[i][3];
+        const auto e = z[i][4];
 
-    z[1][0] = e2;
-    z[1][1] = std::rotl(a2 + Fn2(b2, c2, d2) + x2 + K2, S2) + e2;
-    z[1][2] = b2;
-    z[1][3] = std::rotl(c2, 10);
-    z[1][4] = d2;
+        z[i][0] = e;
+        z[i][1] = std::rotl(a + ff[i](b, c, d) + xx[i] + KK[i], SS[i]) + e;
+        z[i][2] = b;
+        z[i][3] = std::rotl(c, 10);
+        z[i][4] = d;
+    }
 }
 
 
