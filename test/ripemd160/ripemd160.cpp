@@ -23,21 +23,29 @@ static constexpr FT ft[] = {
     [](uint32_t x, uint32_t y, uint32_t z) noexcept { return x ^ (y | ~z); },
 };
 
-constexpr uint32_t k[] = {
-    0,
-    0x5a827999,
-    0x6ed9eba1,
-    0x8f1bbcdc,
-    0xa953fd4e,
-    0x50a28be6,
-    0x5c4dd124,
-    0x6d703ef3,
-    0x7a6d76e9,
-    0,
-};
+static constexpr size_t L = 2;
 
 static constexpr size_t M = 5;
 static constexpr size_t N = 80;
+
+
+static constexpr uint32_t k[L][M] = {
+    {
+        0,
+        0x5a827999,
+        0x6ed9eba1,
+        0x8f1bbcdc,
+        0xa953fd4e,
+    },
+    {
+        0x50a28be6,
+        0x5c4dd124,
+        0x6d703ef3,
+        0x7a6d76e9,
+        0,
+    },
+};
+
 
 /// Selection of message word.
 static constexpr size_t r[] = {
@@ -71,8 +79,6 @@ template <size_t J>
 inline void step(uint32_t z[2][M], const uint32_t* x)
 {
     static constexpr auto Rn = J / 16;
-    static constexpr auto K1 = k[Rn];
-    static constexpr auto K2 = k[Rn + M];
     static constexpr auto S1 = s[J];
     static constexpr auto S2 = s[J + N];
     static constexpr auto Fn1 = ft[Rn];
@@ -84,7 +90,6 @@ inline void step(uint32_t z[2][M], const uint32_t* x)
     const uint32_t xx[]{x1, x2};
 
     static constexpr FT ff[]{Fn1, Fn2};
-    static constexpr uint32_t KK[]{K1, K2};
     static constexpr int SS[]{S1, S2};
 
     for (int i = 0; i < 2; ++i)
@@ -96,7 +101,7 @@ inline void step(uint32_t z[2][M], const uint32_t* x)
         const auto e = z[i][4];
 
         z[i][0] = e;
-        z[i][1] = std::rotl(a + ff[i](b, c, d) + xx[i] + KK[i], SS[i]) + e;
+        z[i][1] = std::rotl(a + ff[i](b, c, d) + xx[i] + k[i][Rn], SS[i]) + e;
         z[i][2] = b;
         z[i][3] = std::rotl(c, 10);
         z[i][4] = d;
