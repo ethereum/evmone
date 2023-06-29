@@ -68,7 +68,7 @@ static constexpr uint32_t s[] = {
 };
 
 template <size_t J>
-inline void step(uint32_t* z1, uint32_t* z2, const uint32_t* x)
+inline void step(uint32_t z[2][M], const uint32_t* x)
 {
     static constexpr auto Rn = J / 16;
     static constexpr auto K1 = k[Rn];
@@ -81,59 +81,52 @@ inline void step(uint32_t* z1, uint32_t* z2, const uint32_t* x)
     const auto x1 = x[r[J]];
     const auto x2 = x[r[J + N]];
 
-    auto a1 = z1[0];
-    auto b1 = z1[1];
-    auto c1 = z1[2];
-    auto d1 = z1[3];
-    auto e1 = z1[4];
+    auto a1 = z[0][0];
+    auto b1 = z[0][1];
+    auto c1 = z[0][2];
+    auto d1 = z[0][3];
+    auto e1 = z[0][4];
 
-    z1[0] = e1;
-    z1[1] = std::rotl(a1 + Fn1(b1, c1, d1) + x1 + K1, S1) + e1;
-    z1[2] = b1;
-    z1[3] = std::rotl(c1, 10);
-    z1[4] = d1;
+    z[0][0] = e1;
+    z[0][1] = std::rotl(a1 + Fn1(b1, c1, d1) + x1 + K1, S1) + e1;
+    z[0][2] = b1;
+    z[0][3] = std::rotl(c1, 10);
+    z[0][4] = d1;
 
-    auto a2 = z2[0];
-    auto b2 = z2[1];
-    auto c2 = z2[2];
-    auto d2 = z2[3];
-    auto e2 = z2[4];
+    auto a2 = z[1][0];
+    auto b2 = z[1][1];
+    auto c2 = z[1][2];
+    auto d2 = z[1][3];
+    auto e2 = z[1][4];
 
-    z2[0] = e2;
-    z2[1] = std::rotl(a2 + Fn2(b2, c2, d2) + x2 + K2, S2) + e2;
-    z2[2] = b2;
-    z2[3] = std::rotl(c2, 10);
-    z2[4] = d2;
+    z[1][0] = e2;
+    z[1][1] = std::rotl(a2 + Fn2(b2, c2, d2) + x2 + K2, S2) + e2;
+    z[1][2] = b2;
+    z[1][3] = std::rotl(c2, 10);
+    z[1][4] = d2;
 }
 
 
 // This could be a lambda, but [[always_inline]] does not work.
 // TODO: Try arguments instead of capture.
 template <std::size_t... I>
-[[gnu::always_inline]] inline void steps(uint32_t* z1, uint32_t* z2, const uint32_t* X,
-    std::integer_sequence<std::size_t, I...>) noexcept
+[[gnu::always_inline]] inline void steps(
+    uint32_t z[2][M], const uint32_t* X, std::integer_sequence<std::size_t, I...>) noexcept
 {
-    (step<I>(z1, z2, X), ...);
+    (step<I>(z, X), ...);
 }
 
 void rmd160_compress(uint32_t* h, const uint32_t* X) noexcept
 {
-    uint32_t z1[M];
-    uint32_t z2[M];
+    uint32_t z[2][M] = {{h[0], h[1], h[2], h[3], h[4]}, {h[0], h[1], h[2], h[3], h[4]}};
 
-    z1[0] = z2[0] = h[0];
-    z1[1] = z2[1] = h[1];
-    z1[2] = z2[2] = h[2];
-    z1[3] = z2[3] = h[3];
-    z1[4] = z2[4] = h[4];
+    steps(z, X, std::make_index_sequence<N>{});
 
-    steps(z1, z2, X, std::make_index_sequence<N>{});
-
-    auto t = h[1] + z1[2] + z2[3];
-    h[1] = h[2] + z1[3] + z2[4];
-    h[2] = h[3] + z1[4] + z2[0];
-    h[3] = h[4] + z1[0] + z2[1];
-    h[4] = h[0] + z1[1] + z2[2];
+    auto t = h[1] + z[0][2] + z[1][3];
+    h[1] = h[2] + z[0][3] + z[1][4];
+    h[2] = h[3] + z[0][4] + z[1][0];
+    h[3] = h[4] + z[0][0] + z[1][1];
+    h[4] = h[0] + z[0][1] + z[1][2];
     h[0] = t;
 }
 
