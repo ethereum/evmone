@@ -36,7 +36,8 @@ constexpr uint32_t k[] = {
     0,
 };
 
-static constexpr size_t N = 5;
+static constexpr size_t M = 5;
+static constexpr size_t N = 80;
 
 /// Selection of message word.
 static constexpr size_t r[] = {
@@ -71,14 +72,14 @@ inline void step(uint32_t* z1, uint32_t* z2, const uint32_t* x)
 {
     static constexpr auto Rn = J / 16;
     static constexpr auto K1 = k[Rn];
-    static constexpr auto K2 = k[Rn + N];
+    static constexpr auto K2 = k[Rn + M];
     static constexpr auto S1 = s[J];
-    static constexpr auto S2 = s[J + 80];
+    static constexpr auto S2 = s[J + N];
     static constexpr auto Fn1 = ft[Rn];
-    static constexpr auto Fn2 = ft[N - 1 - Rn];
+    static constexpr auto Fn2 = ft[M - 1 - Rn];
 
     const auto x1 = x[r[J]];
-    const auto x2 = x[r[J + 80]];
+    const auto x2 = x[r[J + N]];
 
     auto a1 = z1[0];
     auto b1 = z1[1];
@@ -115,25 +116,25 @@ template <std::size_t... I>
     (step<I>(z1, z2, X), ...);
 }
 
-void rmd160_compress(uint32_t* digest, const uint32_t* X) noexcept
+void rmd160_compress(uint32_t* h, const uint32_t* X) noexcept
 {
-    uint32_t z1[N];
-    uint32_t z2[N];
+    uint32_t z1[M];
+    uint32_t z2[M];
 
-    z1[0] = z2[0] = digest[0];
-    z1[1] = z2[1] = digest[1];
-    z1[2] = z2[2] = digest[2];
-    z1[3] = z2[3] = digest[3];
-    z1[4] = z2[4] = digest[4];
+    z1[0] = z2[0] = h[0];
+    z1[1] = z2[1] = h[1];
+    z1[2] = z2[2] = h[2];
+    z1[3] = z2[3] = h[3];
+    z1[4] = z2[4] = h[4];
 
-    steps(z1, z2, X, std::make_index_sequence<80>{});
+    steps(z1, z2, X, std::make_index_sequence<N>{});
 
-    auto t = digest[1] + z1[2] + z2[3];
-    digest[1] = digest[2] + z1[3] + z2[4];
-    digest[2] = digest[3] + z1[4] + z2[0];
-    digest[3] = digest[4] + z1[0] + z2[1];
-    digest[4] = digest[0] + z1[1] + z2[2];
-    digest[0] = t;
+    auto t = h[1] + z1[2] + z2[3];
+    h[1] = h[2] + z1[3] + z2[4];
+    h[2] = h[3] + z1[4] + z2[0];
+    h[3] = h[4] + z1[0] + z2[1];
+    h[4] = h[0] + z1[1] + z2[2];
+    h[0] = t;
 }
 
 /*
