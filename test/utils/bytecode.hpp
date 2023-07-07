@@ -98,7 +98,7 @@ inline bytecode eof_header(
     out += "02"_hex + big_endian(uint16_t{1}) + big_endian(code_size);
     out += "04" + big_endian(data_size);
     out += "00";
-    out += "0000"_hex + big_endian(max_stack_height);  // type section
+    out += "0080"_hex + big_endian(max_stack_height);  // type section
     return out;
 }
 
