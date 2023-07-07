@@ -120,8 +120,12 @@ evmc_message build_message(const Transaction& tx, int64_t execution_gas_limit) n
 void finalize(State& state, evmc_revision rev, const address& coinbase,
     std::optional<uint64_t> block_reward, std::span<Withdrawal> withdrawals)
 {
+    // TODO: The block reward can be represented as a withdrawal.
     if (block_reward.has_value())
         state.touch(coinbase).balance += *block_reward;
+
+    for (const auto& withdrawal : withdrawals)
+        state.touch(withdrawal.recipient).balance += withdrawal.get_amount();
 
     if (rev >= EVMC_SPURIOUS_DRAGON)
     {
@@ -131,9 +135,6 @@ void finalize(State& state, evmc_revision rev, const address& coinbase,
                 return acc.erasable && acc.is_empty();
             });
     }
-
-    for (const auto& withdrawal : withdrawals)
-        state.touch(withdrawal.recipient).balance += withdrawal.get_amount();
 }
 
 std::variant<TransactionReceipt, std::error_code> transition(
