@@ -98,7 +98,7 @@ Result call_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noexce
 
     if constexpr (Op == OP_DELEGATECALL)
     {
-        if (state.rev >= EVMC_CANCUN && is_eof_container(state.original_code))
+        if (state.rev >= EVMC_PRAGUE && is_eof_container(state.original_code))
         {
             // The code targeted by DELEGATECALL must also be an EOF.
             // This restriction has been added to EIP-3540 in

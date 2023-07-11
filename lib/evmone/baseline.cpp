@@ -85,7 +85,7 @@ CodeAnalysis analyze_eof1(bytes_view container)
 
 CodeAnalysis analyze(evmc_revision rev, bytes_view code)
 {
-    if (rev < EVMC_CANCUN || !is_eof_container(code))
+    if (rev < EVMC_PRAGUE || !is_eof_container(code))
         return analyze_legacy(code);
     return analyze_eof1(code);
 }

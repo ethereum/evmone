@@ -10,7 +10,7 @@ using namespace evmc::literals;
 
 TEST_P(evm, eof1_delegatecall_eof1)
 {
-    rev = EVMC_CANCUN;
+    rev = EVMC_PRAGUE;
     constexpr auto callee = 0xca11ee_address;
     host.accounts[callee].code = eof1_bytecode(OP_STOP);
     bytes call_output{0x01, 0x02, 0x03};
@@ -30,7 +30,7 @@ TEST_P(evm, eof1_delegatecall_eof1)
 
 TEST_P(evm, eof1_delegatecall_legacy)
 {
-    rev = EVMC_CANCUN;
+    rev = EVMC_PRAGUE;
     constexpr auto callee = 0xca11ee_address;
     host.access_account(callee);
 

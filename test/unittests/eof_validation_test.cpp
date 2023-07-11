@@ -14,7 +14,7 @@ namespace
 {
 // Can be called as validate_eof(string_view hex, rev) or validate_eof(bytes_view cont, rev).
 inline EOFValidationError validate_eof(
-    const bytecode& container, evmc_revision rev = EVMC_CANCUN) noexcept
+    const bytecode& container, evmc_revision rev = EVMC_PRAGUE) noexcept
 {
     return evmone::validate_eof(rev, container);
 }
@@ -222,7 +222,7 @@ TEST(eof_validation, EOF1_code_section_offset)
 {
     const auto eof =
         "EF0001 010008 02000200030001 040004 00 00000001 00000000 6001fe fe 0000 0000"_hex;
-    ASSERT_EQ(validate_eof(EVMC_CANCUN, eof), EOFValidationError::success);
+    ASSERT_EQ(validate_eof(EVMC_PRAGUE, eof), EOFValidationError::success);
 
     const auto header = read_valid_eof1_header(eof);
     ASSERT_EQ(header.code_sizes.size(), 2);
@@ -313,7 +313,7 @@ TEST(eof_validation, EOF1_too_many_code_sections)
 
 TEST(eof_validation, EOF1_undefined_opcodes)
 {
-    const auto& gas_table = evmone::instr::gas_costs[EVMC_CANCUN];
+    const auto& gas_table = evmone::instr::gas_costs[EVMC_PRAGUE];
 
     for (uint16_t opcode = 0; opcode <= 0xff; ++opcode)
     {
@@ -323,7 +323,7 @@ TEST(eof_validation, EOF1_undefined_opcodes)
             opcode == OP_SWAPN || opcode == OP_RJUMP || opcode == OP_RJUMPI || opcode == OP_CALLF ||
             opcode == OP_RJUMPV || opcode == OP_DATALOADN)
             continue;
-        // These opcodes are deprecated since Cancun.
+        // These opcodes are deprecated since Prague.
         // gas_cost table current implementation does not allow to undef instructions.
         if (opcode == OP_JUMP || opcode == OP_JUMPI || opcode == OP_PC || opcode == OP_CALLCODE ||
             opcode == OP_SELFDESTRUCT)

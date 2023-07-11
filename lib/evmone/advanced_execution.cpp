@@ -33,7 +33,7 @@ evmc_result execute(evmc_vm* /*unused*/, const evmc_host_interface* host, evmc_h
     const bytes_view container = {code, code_size};
     if (is_eof_container(container))
     {
-        if (rev >= EVMC_CANCUN)
+        if (rev >= EVMC_PRAGUE)
         {
             const auto eof1_header = read_valid_eof1_header(container);
             analysis = analyze(rev, eof1_header.get_code(container, 0));

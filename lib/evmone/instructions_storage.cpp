@@ -39,6 +39,7 @@ constexpr auto storage_cost_spec = []() noexcept {
     tbl[EVMC_PARIS] = tbl[EVMC_LONDON];
     tbl[EVMC_SHANGHAI] = tbl[EVMC_LONDON];
     tbl[EVMC_CANCUN] = tbl[EVMC_LONDON];
+    tbl[EVMC_PRAGUE] = tbl[EVMC_LONDON];
     return tbl;
 }();
 

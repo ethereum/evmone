@@ -16,7 +16,7 @@ TEST_P(evm, dupn)
     if (evm::is_advanced())
         return;
 
-    rev = EVMC_CANCUN;
+    rev = EVMC_PRAGUE;
 
     auto pushes = bytecode{};
     for (uint64_t i = 1; i <= 20; ++i)
@@ -44,7 +44,7 @@ TEST_P(evm, swapn)
     if (evm::is_advanced())
         return;
 
-    rev = EVMC_CANCUN;
+    rev = EVMC_PRAGUE;
 
     auto pushes = bytecode{};
     for (uint64_t i = 1; i <= 20; ++i)
@@ -84,7 +84,7 @@ TEST_P(evm, dupn_full_stack)
     if (evm::is_advanced())
         return;
 
-    rev = EVMC_CANCUN;
+    rev = EVMC_PRAGUE;
     auto full_stack_code = bytecode{};
     for (uint64_t i = 1023; i >= 1; --i)
         full_stack_code += push(i);
@@ -111,7 +111,7 @@ TEST_P(evm, swapn_full_stack)
     if (evm::is_advanced())
         return;
 
-    rev = EVMC_CANCUN;
+    rev = EVMC_PRAGUE;
     auto full_stack_code = bytecode{};
     for (uint64_t i = 1024; i >= 1; --i)
         full_stack_code += push(i);
@@ -139,7 +139,7 @@ TEST_P(evm, dupn_dup_consistency)
     if (evm::is_advanced())
         return;
 
-    rev = EVMC_CANCUN;
+    rev = EVMC_PRAGUE;
     auto pushes = bytecode{};
     for (uint64_t i = 32; i >= 1; --i)
         pushes += push(i);
@@ -167,7 +167,7 @@ TEST_P(evm, swapn_swap_consistency)
     if (evm::is_advanced())
         return;
 
-    rev = EVMC_CANCUN;
+    rev = EVMC_PRAGUE;
     auto pushes = bytecode{};
     for (uint64_t i = 32; i >= 1; --i)
         pushes += push(i);

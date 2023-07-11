@@ -61,7 +61,7 @@ TEST(eof, read_valid_eof1_header)
     for (const auto& test_case : test_cases)
     {
         const auto code = from_spaced_hex(test_case.code).value();
-        EXPECT_EQ(validate_eof(EVMC_CANCUN, code), EOFValidationError::success) << test_case.code;
+        EXPECT_EQ(validate_eof(EVMC_PRAGUE, code), EOFValidationError::success) << test_case.code;
 
         const auto header = read_valid_eof1_header(code);
         EXPECT_EQ(header.code_sizes, test_case.code_sizes) << test_case.code;
