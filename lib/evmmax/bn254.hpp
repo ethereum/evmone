@@ -64,18 +64,22 @@ struct BN245FieldModulus
 struct ModCoeffs2
 {
     static constexpr uint8_t DEGREE = 2;
+    // Polynomial modulus FQ2 (x^2 + 1). Coefficients in Montgomery form.
     static constexpr const uint256 MODULUS_COEFFS[DEGREE] = {
         /* 1 in mont */0xe0a77c19a07df2f666ea36f7879462c0a78eb28f5c70b3dd35d438dc58f0d9d_u256, 0};
+    // Implied + [1 in mont form]
 };
 
 struct ModCoeffs12
 {
     static constexpr uint8_t DEGREE = 12;
+    // Polynomial modulus FQ2 (x^12 -18x^6 + 82). Coefficients in Montgomery form.
     static constexpr uint256 MODULUS_COEFFS[DEGREE] = {
         /* 82 in mont */ 0x26574fb11b10196f403a164ef43989b2be1ac00e5788671d4cf30d5bd4979ae9_u256, 0,
         0, 0, 0, 0,
         /* (-18 == mod - 18) in mont */
         0x259d6b14729c0fa51e1a247090812318d087f6872aabf4f68c3488912edefaa0_u256, 0, 0, 0, 0, 0};
+    // Implied + [1 in mont form]
 };
 
 template <typename FieldElemT>
@@ -122,15 +126,22 @@ Point bn254_mul(const Point& pt, const uint256& c) noexcept;
 bool bn254_add_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept;
 bool bn254_mul_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept;
 
+// Extension field FQ2 (x^2 + 1) element
 using FE2 = struct PolyExtFieldElem<uint256, ModCoeffs2, BN245FieldModulus>;
+// Extension field FQ12 (x^12 -18x^6 + 82) element
 using FE12 = struct PolyExtFieldElem<uint256, ModCoeffs12, BN245FieldModulus>;
+// Point of dwo dim space (FQ2xFQ2)
 using FE2Point = struct PointExt<FE2>;
+// Point of dwo dim space (FQ12xFQ12)
 using FE12Point = struct PointExt<FE12>;
 
 bool is_on_curve_b2(const FE2Point& p);
 bool is_on_curve_b12(const FE12Point& p);
 
+// "Twists" a point in E(FQ2) into a point in E(FQ12)
 FE12Point twist(const FE2Point& pt);
+
+// Casts point from FQ to FQ12
 FE12Point cast_to_fe12(const Point& pt);
 
 // Create a function representing the line between P1 and P2, and evaluate it at T
@@ -155,6 +166,7 @@ PointExt<FieldElemT> point_add(const PointExt<FieldElemT>& p1, const PointExt<Fi
 template <typename FieldElemT>
 PointExt<FieldElemT> point_multiply(const PointExt<FieldElemT>& pt, const uint256& n);
 
+// Computes paring of bn254 curve points.
 FE12 pairing(const FE2Point& Q, const Point& P);
 
 }  // namespace evmmax::bn254
