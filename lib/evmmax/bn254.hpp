@@ -110,8 +110,6 @@ struct Point
 template <typename FieldElemT>
 struct PointExt
 {
-    typedef FieldElemT FEType;
-
     FieldElemT x;
     FieldElemT y;
 
