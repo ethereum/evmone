@@ -28,7 +28,7 @@ std::tuple<uint256, uint256, uint256> point_addition_mixed_a0(const evmmax::ModA
 
 inline uint256 expmod(const evmmax::ModArith<uint256>& s, uint256 base, uint256 exponent) noexcept
 {
-    auto result = s.to_mont(1);
+    auto result = s.one_mont();
 
     while (exponent != 0)
     {
@@ -50,6 +50,8 @@ struct Point
         // TODO(intx): C++20 operator<=> = default does not work for uint256.
         return a.x == b.x && a.y == b.y;
     }
+
+
 };
 
 struct BN245FieldModulus
@@ -62,14 +64,18 @@ struct BN245FieldModulus
 struct ModCoeffs2
 {
     static constexpr uint8_t DEGREE = 2;
-    static constexpr const uint256 MODULUS_COEFFS[DEGREE] = {1, 0};
+    static constexpr const uint256 MODULUS_COEFFS[DEGREE] = {
+        /* 1 in mont */0xe0a77c19a07df2f666ea36f7879462c0a78eb28f5c70b3dd35d438dc58f0d9d_u256, 0};
 };
 
 struct ModCoeffs12
 {
     static constexpr uint8_t DEGREE = 12;
     static constexpr uint256 MODULUS_COEFFS[DEGREE] = {
-        82, 0, 0, 0, 0, 0, BN254Mod - 18, 0, 0, 0, 0, 0};
+        /* 82 in mont */ 0x26574fb11b10196f403a164ef43989b2be1ac00e5788671d4cf30d5bd4979ae9_u256, 0,
+        0, 0, 0, 0,
+        /* (-18 == mod - 18) in mont */
+        0x259d6b14729c0fa51e1a247090812318d087f6872aabf4f68c3488912edefaa0_u256, 0, 0, 0, 0, 0};
 };
 
 template <typename FieldElemT>
@@ -95,6 +101,11 @@ struct PointExt
     friend std::ostream& operator<<(std::ostream& os, const PointExt& p)
     {
         return os << std::string("[") << p.x << ", " << p.y << std::string("]");
+    }
+
+    PointExt to_mont() const
+    {
+        return {x.to_mont(), y.to_mont()};
     }
 };
 

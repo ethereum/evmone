@@ -57,7 +57,7 @@ struct PolyExtFieldElem
         PolyExtFieldElem result;
 
         for (size_t i = 0; i < degree; ++i)
-            result.coeffs[i] = arith.mul_non_mont(x.coeffs[i], c);
+            result.coeffs[i] = arith.mul(x.coeffs[i], c);
 
         return result;
     }
@@ -71,7 +71,7 @@ struct PolyExtFieldElem
         for (size_t i = 0; i < degree; ++i)
         {
             for (size_t j = 0; j < degree; ++j)
-                b[i + j] = arith.add(b[i + j], arith.mul_non_mont(x.coeffs[i], y.coeffs[j]));
+                b[i + j] = arith.add(b[i + j], arith.mul(x.coeffs[i], y.coeffs[j]));
         }
 
         // Reduce by irreducible polynomial (extending polynomial)
@@ -82,7 +82,7 @@ struct PolyExtFieldElem
             b.pop_back();
             for (size_t i = 0; i < degree; ++i)
                 b[i + exp] =
-                    arith.sub(b[i + exp], arith.mul_non_mont(top, ModCoeffsT::MODULUS_COEFFS[i]));
+                    arith.sub(b[i + exp], arith.mul(top, ModCoeffsT::MODULUS_COEFFS[i]));
         }
 
         return PolyExtFieldElem(std::move(b));
@@ -133,7 +133,7 @@ struct PolyExtFieldElem
     static inline constexpr PolyExtFieldElem inv(const PolyExtFieldElem& x)
     {
         std::vector<UintT> lm(degree + 1);
-        lm[0] = 1;
+        lm[0] = arith.one_mont();
         std::vector<UintT> hm(degree + 1);
 
         std::vector<UintT> low = x.coeffs;
@@ -141,7 +141,7 @@ struct PolyExtFieldElem
 
         std::vector<UintT> high(degree);
         std::copy(ModCoeffsT::MODULUS_COEFFS, ModCoeffsT::MODULUS_COEFFS + degree, high.begin());
-        high.push_back(1);
+        high.push_back(arith.one_mont());
 
         while (deg(low) > 0)
         {
@@ -156,8 +156,8 @@ struct PolyExtFieldElem
             {
                 for (size_t j = 0; j < degree + 1 - i; ++j)
                 {
-                    nm[i + j] = arith.sub(nm[i + j], arith.mul_non_mont(lm[i], r[j]));
-                    _new[i + j] = arith.sub(_new[i + j], arith.mul_non_mont(low[i], r[j]));
+                    nm[i + j] = arith.sub(nm[i + j], arith.mul(lm[i], r[j]));
+                    _new[i + j] = arith.sub(_new[i + j], arith.mul(low[i], r[j]));
                 }
             }
 
@@ -180,6 +180,13 @@ struct PolyExtFieldElem
     {
         std::vector<UintT> _one(degree);
         _one[0] = 1;
+        return PolyExtFieldElem<UintT, ModCoeffsT, FiledModulusT>(std::move(_one));
+    }
+
+    static inline constexpr PolyExtFieldElem one_mont()
+    {
+        std::vector<UintT> _one(degree);
+        _one[0] = arith.one_mont();
         return PolyExtFieldElem<UintT, ModCoeffsT, FiledModulusT>(std::move(_one));
     }
 
@@ -236,6 +243,26 @@ struct PolyExtFieldElem
 
         os << "]"sv;
         return os;
+    }
+
+    PolyExtFieldElem to_mont() const
+    {
+        PolyExtFieldElem result;
+
+        for (size_t i = 0; i < degree; ++i)
+            result.coeffs[i] = arith.to_mont(this->coeffs[i]);
+
+        return result;
+    }
+
+    PolyExtFieldElem from_mont() const
+    {
+        PolyExtFieldElem result;
+
+        for (size_t i = 0; i < degree; ++i)
+            result.coeffs[i] = arith.from_mont(this->coeffs[i]);
+
+        return result;
     }
 };
 

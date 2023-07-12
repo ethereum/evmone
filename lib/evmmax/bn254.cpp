@@ -282,7 +282,7 @@ Point bn254_mul(const Point& pt, const uint256& c) noexcept
 
 bool is_on_curve_b2(const FE2Point& p)
 {
-    static const auto B2 = bn254::FE2::div(bn254::FE2({3, 0}), bn254::FE2({9, 1}));
+    static const auto B2 = bn254::FE2::div(bn254::FE2({3, 0}).to_mont(), bn254::FE2({9, 1}).to_mont());
     return FE2::eq(FE2::sub(FE2::pow(p.y, 2), FE2::pow(p.x, 3)), B2);
 }
 
@@ -294,7 +294,7 @@ bool is_on_curve_b12(const FE12Point& p)
 
 FE12Point twist(const FE2Point& pt)
 {
-    static const auto omega = FE12({0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
+    static const auto omega = FE12({0, bn254::FE2::arith.one_mont(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
     if (FE2Point::is_at_infinity(pt))
         return FE12Point::infinity();
 
@@ -302,10 +302,12 @@ FE12Point twist(const FE2Point& pt)
     auto _y = pt.y;
     // Field isomorphism from Z[p] / x**2 to Z[p] / x**2 - 18*x + 82
     std::vector<uint256> xcoeffs(2);
-    xcoeffs[0] = FE2::arith.sub(_x.coeffs[0], FE2::arith.mul_non_mont(_x.coeffs[1], 9));
+    xcoeffs[0] = FE2::arith.sub(_x.coeffs[0], FE2::arith.mul(_x.coeffs[1],
+                                                  bn254::FE2::arith.to_mont(9)));
     xcoeffs[1] = _x.coeffs[1];
     std::vector<uint256> ycoeffs(2);
-    ycoeffs[0] = FE2::arith.sub(_y.coeffs[0], FE2::arith.mul_non_mont(_y.coeffs[1], 9));
+    ycoeffs[0] = FE2::arith.sub(_y.coeffs[0], FE2::arith.mul(_y.coeffs[1],
+                                                  bn254::FE2::arith.to_mont(9)));
     ycoeffs[1] = _y.coeffs[1];
     // Isomorphism into subfield of Z[p] / w**12 - 18 * w**6 + 82, where w**6 = x
     auto nx = FE12({xcoeffs[0], 0, 0, 0, 0, 0, xcoeffs[1], 0, 0, 0, 0, 0});
@@ -336,7 +338,8 @@ FieldElemT line_func(
     else if (FieldElemT::eq(p1.y, p2.y))
     {
         auto m =
-            FieldElemT::div(FieldElemT::mul(FieldElemT::pow(p1.x, 2), 3), FieldElemT::mul(p1.y, 2));
+            FieldElemT::div(FieldElemT::mul(FieldElemT::pow(p1.x, 2), FieldElemT::arith.to_mont(3)),
+                FieldElemT::mul(p1.y, FieldElemT::arith.to_mont(2)));
         return FieldElemT::sub(
             FieldElemT::mul(FieldElemT::sub(t.x, p1.x), m), FieldElemT::sub(t.y, p1.y));
     }
@@ -349,8 +352,8 @@ template <typename FieldElemT>
 PointExt<FieldElemT> point_double(const PointExt<FieldElemT>& p)
 {
     using ET = FieldElemT;
-    auto lambda = ET::div(ET::mul(ET::pow(p.x, 2), 3), ET::mul(p.y, 2));
-    auto new_x = ET::sub(ET::pow(lambda, 2), ET::mul(p.x, 2));
+    auto lambda = ET::div(ET::mul(ET::pow(p.x, 2), FieldElemT::arith.to_mont(3)), ET::mul(p.y, FieldElemT::arith.to_mont(2)));
+    auto new_x = ET::sub(ET::pow(lambda, 2), ET::mul(p.x, FieldElemT::arith.to_mont(2)));
     auto new_y = ET::sub(ET::add(ET::mul(ET::neg(lambda), new_x), ET::mul(lambda, p.x)), p.y);
 
     return {new_x, new_y};
@@ -444,12 +447,16 @@ FE12 miller_loop(const FE12Point& Q, const FE12Point& P)
 }
 }  // namespace
 
-FE12 pairing(const FE2Point& Q, const Point& P)
+FE12 pairing(const FE2Point& q, const Point& p)
 {
-    assert(is_on_curve_b2(Q));
-    assert(validate(P));
+    assert(is_on_curve_b2(q.to_mont()));
+    assert(validate(p));
 
-    return miller_loop(twist(Q), cast_to_fe12(P));
+    Point p_mont = {FE2::arith.to_mont(p.x), FE2::arith.to_mont(p.y)};
+
+    auto res = miller_loop(twist(q.to_mont()), cast_to_fe12(p_mont));
+
+    return res.from_mont();
 }
 
 bool bn254_add_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept
