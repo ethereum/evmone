@@ -61,8 +61,7 @@ struct PolyExtFieldElem
         return result;
     }
 
-    static inline PolyExtFieldElem mul(
-        const PolyExtFieldElem& x, const PolyExtFieldElem& y)
+    static inline PolyExtFieldElem mul(const PolyExtFieldElem& x, const PolyExtFieldElem& y)
     {
         std::vector<uint256> b(2 * degree - 1);
 
@@ -188,10 +187,7 @@ struct PolyExtFieldElem
         return PolyExtFieldElem(std::move(_one));
     }
 
-    static inline constexpr PolyExtFieldElem zero()
-    {
-        return PolyExtFieldElem();
-    }
+    static inline constexpr PolyExtFieldElem zero() { return PolyExtFieldElem(); }
 
     template <typename PowUintT>
     static inline constexpr PolyExtFieldElem pow(const PolyExtFieldElem& x, const PowUintT& y)
