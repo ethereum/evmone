@@ -45,8 +45,8 @@ struct ModCoeffs12
 class BN254ModArith : public ModArith<uint256>
 {
 public:
-    constexpr explicit BN254ModArith(): ModArith<uint256>(BN245FieldModulus::MODULUS,
-            BN245FieldModulus::R_SQUARED)
+    constexpr explicit BN254ModArith()
+      : ModArith<uint256>(BN245FieldModulus::MODULUS, BN245FieldModulus::R_SQUARED)
     {}
 
     uint256 inv(const uint256& x) const noexcept;
