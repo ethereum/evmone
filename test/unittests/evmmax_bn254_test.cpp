@@ -167,7 +167,7 @@ TEST(evmmax, inv_1)
 
     const auto a =
         s.to_mont(0x6e140df17432311190232a91a38daed3ee9ed7f038645dd0278da7ca6e497de_u256);
-    const auto a_inv = inv(s, a);
+    const auto a_inv = s.inv(a);
     const auto p = s.mul(a, a_inv);
     EXPECT_EQ(s.from_mont(p), 1);
 }

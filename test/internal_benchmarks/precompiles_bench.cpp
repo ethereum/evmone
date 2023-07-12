@@ -33,8 +33,7 @@ void bn254_mul(benchmark::State& state)
     const auto input = evmc::from_hex(
         "025a6f4181d2b4ea8b724290ffb40156eb0adb514c688556eb79cdea0752c2bb2eff3f31dea215f1eb86023a13"
         "3a996eb6300b44da664d64251d05381bb8a02e183227397098d014dc2822db40c0ac2ecbc0b548b438e5469e10"
-        "460b6c3e7ea3"
-        )
+        "460b6c3e7ea3")
                            .value();
     uint8_t output[64];
 
@@ -49,7 +48,7 @@ void bn254_mul(benchmark::State& state)
         benchmark::Counter(static_cast<double>(total_gas_used), benchmark::Counter::kIsRate);
 }
 
-//BENCHMARK_TEMPLATE(bn254_add, evmone::state::silkpre_ecadd_execute);
+// BENCHMARK_TEMPLATE(bn254_add, evmone::state::silkpre_ecadd_execute);
 BENCHMARK_TEMPLATE(bn254_add, evmmax::bn254::bn254_add_precompile);
-//BENCHMARK_TEMPLATE(bn254_mul, evmone::state::silkpre_ecmul_execute);
+// BENCHMARK_TEMPLATE(bn254_mul, evmone::state::silkpre_ecmul_execute);
 BENCHMARK_TEMPLATE(bn254_mul, evmmax::bn254::bn254_mul_precompile);

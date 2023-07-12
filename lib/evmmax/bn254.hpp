@@ -4,6 +4,7 @@
 #pragma once
 
 #include "evmmax.hpp"
+#include "poly_extension_field.hpp"
 
 using namespace intx;
 
@@ -39,8 +40,6 @@ inline uint256 expmod(const evmmax::ModArith<uint256>& s, uint256 base, uint256 
     return result;
 }
 
-uint256 inv(const evmmax::ModArith<uint256>& s, const uint256& x) noexcept;
-
 struct Point
 {
     uint256 x;
@@ -50,6 +49,52 @@ struct Point
     {
         // TODO(intx): C++20 operator<=> = default does not work for uint256.
         return a.x == b.x && a.y == b.y;
+    }
+};
+
+struct BN245FieldModulus
+{
+    static constexpr auto MODULUS = BN254Mod;
+    static constexpr auto R_SQUARED =
+        0x6d89f71cab8351f47ab1eff0a417ff6b5e71911d44501fbf32cfc5b538afa89_u256;
+};
+
+struct ModCoeffs2
+{
+    static constexpr uint8_t DEGREE = 2;
+    static constexpr const uint256 MODULUS_COEFFS[DEGREE] = {1, 0};
+};
+
+struct ModCoeffs12
+{
+    static constexpr uint8_t DEGREE = 12;
+    static constexpr uint256 MODULUS_COEFFS[DEGREE] = {
+        82, 0, 0, 0, 0, 0, BN254Mod - 18, 0, 0, 0, 0, 0};
+};
+
+template <typename FieldElemT>
+struct PointExt
+{
+    typedef FieldElemT FEType;
+
+    FieldElemT x;
+    FieldElemT y;
+
+    static inline constexpr bool eq(const PointExt& a, const PointExt& b)
+    {
+        return FieldElemT::eq(a.x, b.x) && FieldElemT::eq(a.y, b.y);
+    }
+
+    static inline constexpr bool is_at_infinity(const PointExt& a)
+    {
+        return FieldElemT::eq(a.x, FieldElemT::zero()) && FieldElemT::eq(a.y, FieldElemT::zero());
+    }
+
+    static inline constexpr PointExt infinity() { return {FieldElemT::zero(), FieldElemT::zero()}; }
+
+    friend std::ostream& operator<<(std::ostream& os, const PointExt& p)
+    {
+        return os << std::string("[") << p.x << ", " << p.y << std::string("]");
     }
 };
 
@@ -65,4 +110,40 @@ Point bn254_mul(const Point& pt, const uint256& c) noexcept;
 
 bool bn254_add_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept;
 bool bn254_mul_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept;
+
+using FE2 = struct PolyExtFieldElem<uint256, ModCoeffs2, BN245FieldModulus>;
+using FE12 = struct PolyExtFieldElem<uint256, ModCoeffs12, BN245FieldModulus>;
+using FE2Point = struct PointExt<FE2>;
+using FE12Point = struct PointExt<FE12>;
+
+bool is_on_curve_b2(const FE2Point& p);
+bool is_on_curve_b12(const FE12Point& p);
+
+FE12Point twist(const FE2Point& pt);
+FE12Point cast_to_fe12(const Point& pt);
+
+// Create a function representing the line between P1 and P2, and evaluate it at T
+template <typename FieldElemT>
+FieldElemT line_func(
+    const PointExt<FieldElemT>& P, const PointExt<FieldElemT>& Q, const PointExt<FieldElemT>& T);
+
+// Create a function representing the line between P1 and P2, and evaluate it at T
+template <typename FieldElemT>
+FieldElemT line_func(
+    const PointExt<FieldElemT>& P, const PointExt<FieldElemT>& Q, const PointExt<FieldElemT>& T);
+
+// Elliptic curve point doubling over extension field
+template <typename FieldElemT>
+PointExt<FieldElemT> point_double(const PointExt<FieldElemT>& p);
+
+// Elliptic curve point addition over extension field
+template <typename FieldElemT>
+PointExt<FieldElemT> point_add(const PointExt<FieldElemT>& p1, const PointExt<FieldElemT>& p2);
+
+// Elliptic curve point multiplication over extension field
+template <typename FieldElemT>
+PointExt<FieldElemT> point_multiply(const PointExt<FieldElemT>& pt, const uint256& n);
+
+FE12 pairing(const FE2Point& Q, const Point& P);
+
 }  // namespace evmmax::bn254
