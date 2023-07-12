@@ -81,8 +81,7 @@ struct PolyExtFieldElem
             auto exp = b.size() - degree - 1;
             b.pop_back();
             for (size_t i = 0; i < degree; ++i)
-                b[i + exp] =
-                    arith.sub(b[i + exp], arith.mul(top, ModCoeffsT::MODULUS_COEFFS[i]));
+                b[i + exp] = arith.sub(b[i + exp], arith.mul(top, ModCoeffsT::MODULUS_COEFFS[i]));
         }
 
         return PolyExtFieldElem(std::move(b));

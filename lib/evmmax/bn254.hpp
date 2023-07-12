@@ -50,8 +50,6 @@ struct Point
         // TODO(intx): C++20 operator<=> = default does not work for uint256.
         return a.x == b.x && a.y == b.y;
     }
-
-
 };
 
 struct BN245FieldModulus
@@ -66,7 +64,7 @@ struct ModCoeffs2
     static constexpr uint8_t DEGREE = 2;
     // Polynomial modulus FQ2 (x^2 + 1). Coefficients in Montgomery form.
     static constexpr const uint256 MODULUS_COEFFS[DEGREE] = {
-        /* 1 in mont */0xe0a77c19a07df2f666ea36f7879462c0a78eb28f5c70b3dd35d438dc58f0d9d_u256, 0};
+        /* 1 in mont */ 0xe0a77c19a07df2f666ea36f7879462c0a78eb28f5c70b3dd35d438dc58f0d9d_u256, 0};
     // Implied + [1 in mont form]
 };
 
@@ -107,10 +105,7 @@ struct PointExt
         return os << std::string("[") << p.x << ", " << p.y << std::string("]");
     }
 
-    PointExt to_mont() const
-    {
-        return {x.to_mont(), y.to_mont()};
-    }
+    PointExt to_mont() const { return {x.to_mont(), y.to_mont()}; }
 };
 
 inline bool is_at_infinity(const Point& pt) noexcept

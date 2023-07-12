@@ -282,7 +282,8 @@ Point bn254_mul(const Point& pt, const uint256& c) noexcept
 
 bool is_on_curve_b2(const FE2Point& p)
 {
-    static const auto B2 = bn254::FE2::div(bn254::FE2({3, 0}).to_mont(), bn254::FE2({9, 1}).to_mont());
+    static const auto B2 =
+        bn254::FE2::div(bn254::FE2({3, 0}).to_mont(), bn254::FE2({9, 1}).to_mont());
     return FE2::eq(FE2::sub(FE2::pow(p.y, 2), FE2::pow(p.x, 3)), B2);
 }
 
@@ -302,12 +303,12 @@ FE12Point twist(const FE2Point& pt)
     auto _y = pt.y;
     // Field isomorphism from Z[p] / x**2 to Z[p] / x**2 - 18*x + 82
     std::vector<uint256> xcoeffs(2);
-    xcoeffs[0] = FE2::arith.sub(_x.coeffs[0], FE2::arith.mul(_x.coeffs[1],
-                                                  bn254::FE2::arith.template in_mont<9>()));
+    xcoeffs[0] = FE2::arith.sub(
+        _x.coeffs[0], FE2::arith.mul(_x.coeffs[1], bn254::FE2::arith.template in_mont<9>()));
     xcoeffs[1] = _x.coeffs[1];
     std::vector<uint256> ycoeffs(2);
-    ycoeffs[0] = FE2::arith.sub(_y.coeffs[0], FE2::arith.mul(_y.coeffs[1],
-                                                  bn254::FE2::arith.template in_mont<9>()));
+    ycoeffs[0] = FE2::arith.sub(
+        _y.coeffs[0], FE2::arith.mul(_y.coeffs[1], bn254::FE2::arith.template in_mont<9>()));
     ycoeffs[1] = _y.coeffs[1];
     // Isomorphism into subfield of Z[p] / w**12 - 18 * w**6 + 82, where w**6 = x
     auto nx = FE12({xcoeffs[0], 0, 0, 0, 0, 0, xcoeffs[1], 0, 0, 0, 0, 0});
@@ -337,10 +338,9 @@ FieldElemT line_func(
     }
     else if (FieldElemT::eq(p1.y, p2.y))
     {
-        auto m =
-            FieldElemT::div(FieldElemT::mul(FieldElemT::pow(p1.x, 2),
-                                FieldElemT::arith.template in_mont<3>()),
-                FieldElemT::mul(p1.y, FieldElemT::arith.template in_mont<2>()));
+        auto m = FieldElemT::div(
+            FieldElemT::mul(FieldElemT::pow(p1.x, 2), FieldElemT::arith.template in_mont<3>()),
+            FieldElemT::mul(p1.y, FieldElemT::arith.template in_mont<2>()));
         return FieldElemT::sub(
             FieldElemT::mul(FieldElemT::sub(t.x, p1.x), m), FieldElemT::sub(t.y, p1.y));
     }
