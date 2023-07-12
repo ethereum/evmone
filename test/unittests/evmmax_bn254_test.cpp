@@ -163,7 +163,7 @@ TEST(evmmax, expmod_1)
 
 TEST(evmmax, inv_1)
 {
-    const evmmax::ModArith s{BN254Mod};
+    const evmmax::bn254::BN254ModArith s;
 
     const auto a =
         s.to_mont(0x6e140df17432311190232a91a38daed3ee9ed7f038645dd0278da7ca6e497de_u256);

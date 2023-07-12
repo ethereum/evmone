@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
-#include "evmmax.hpp"
 #include "intx/intx.hpp"
 #include "span"
 #include "vector"
@@ -15,17 +14,17 @@ using namespace intx;
 using namespace std::literals;
 
 
-template <typename UintT, typename ModCoeffsT, typename FiledModulusT>
+template <typename ArithT, typename ModCoeffsT>
 struct PolyExtFieldElem
 {
     static constexpr auto degree = ModCoeffsT::DEGREE;
-    static constexpr auto arith = ModArith<UintT>(FiledModulusT::MODULUS, FiledModulusT::R_SQUARED);
+    static constexpr ArithT arith;
 
-    std::vector<UintT> coeffs;
+    std::vector<uint256> coeffs;
 
     explicit PolyExtFieldElem() { coeffs.resize(degree); }
 
-    explicit PolyExtFieldElem(std::vector<UintT>&& _coeffs) : coeffs(_coeffs)
+    explicit PolyExtFieldElem(std::vector<uint256>&& _coeffs) : coeffs(_coeffs)
     {
         assert(coeffs.size() == degree);
     }
@@ -52,7 +51,7 @@ struct PolyExtFieldElem
         return result;
     }
 
-    static inline constexpr PolyExtFieldElem mul(const PolyExtFieldElem& x, const UintT& c)
+    static inline constexpr PolyExtFieldElem mul(const PolyExtFieldElem& x, const uint256& c)
     {
         PolyExtFieldElem result;
 
@@ -65,7 +64,7 @@ struct PolyExtFieldElem
     static inline constexpr PolyExtFieldElem mul(
         const PolyExtFieldElem& x, const PolyExtFieldElem& y)
     {
-        std::vector<UintT> b(2 * degree - 1);
+        std::vector<uint256> b(2 * degree - 1);
 
         // Multiply
         for (size_t i = 0; i < degree; ++i)
@@ -87,7 +86,7 @@ struct PolyExtFieldElem
         return PolyExtFieldElem(std::move(b));
     }
 
-    static inline constexpr PolyExtFieldElem div(const PolyExtFieldElem& x, UintT c)
+    static inline constexpr PolyExtFieldElem div(const PolyExtFieldElem& x, uint256 c)
     {
         PolyExtFieldElem result;
 
@@ -97,7 +96,7 @@ struct PolyExtFieldElem
         return result;
     }
 
-    static inline constexpr size_t deg(const std::vector<UintT>& v)
+    static inline constexpr size_t deg(const std::vector<uint256>& v)
     {
         size_t d = v.size() - 1;
 
@@ -107,13 +106,13 @@ struct PolyExtFieldElem
         return d;
     }
 
-    static inline constexpr std::vector<UintT> poly_rounded_div(
-        const std::vector<UintT>& a, const std::vector<UintT>& b)
+    static inline constexpr std::vector<uint256> poly_rounded_div(
+        const std::vector<uint256>& a, const std::vector<uint256>& b)
     {
         auto dega = deg(a);
         auto degb = deg(b);
         auto temp = a;
-        auto o = std::vector<UintT>(a.size());
+        auto o = std::vector<uint256>(a.size());
         if (dega >= degb)
         {
             for (size_t i = dega - degb + 1; i > 0; --i)
@@ -125,20 +124,20 @@ struct PolyExtFieldElem
             }
         }
 
-        return std::vector<UintT>(
-            o.begin(), o.begin() + (typename std::vector<UintT>::difference_type)deg(o) + 1);
+        return std::vector<uint256>(
+            o.begin(), o.begin() + (typename std::vector<uint256>::difference_type)deg(o) + 1);
     }
 
     static inline constexpr PolyExtFieldElem inv(const PolyExtFieldElem& x)
     {
-        std::vector<UintT> lm(degree + 1);
+        std::vector<uint256> lm(degree + 1);
         lm[0] = arith.one_mont();
-        std::vector<UintT> hm(degree + 1);
+        std::vector<uint256> hm(degree + 1);
 
-        std::vector<UintT> low = x.coeffs;
+        std::vector<uint256> low = x.coeffs;
         low.push_back(0);
 
-        std::vector<UintT> high(degree);
+        std::vector<uint256> high(degree);
         std::copy(ModCoeffsT::MODULUS_COEFFS, ModCoeffsT::MODULUS_COEFFS + degree, high.begin());
         high.push_back(arith.one_mont());
 
@@ -166,7 +165,7 @@ struct PolyExtFieldElem
             lm = nm;
         }
 
-        return div(PolyExtFieldElem(std::vector<UintT>(lm.begin(), lm.begin() + degree)), low[0]);
+        return div(PolyExtFieldElem(std::vector<uint256>(lm.begin(), lm.begin() + degree)), low[0]);
     }
 
     static inline constexpr PolyExtFieldElem div(
@@ -177,22 +176,22 @@ struct PolyExtFieldElem
 
     static inline constexpr PolyExtFieldElem one()
     {
-        std::vector<UintT> _one(degree);
+        std::vector<uint256> _one(degree);
         _one[0] = 1;
-        return PolyExtFieldElem<UintT, ModCoeffsT, FiledModulusT>(std::move(_one));
+        return PolyExtFieldElem(std::move(_one));
     }
 
     static inline constexpr PolyExtFieldElem one_mont()
     {
-        std::vector<UintT> _one(degree);
+        std::vector<uint256> _one(degree);
         _one[0] = arith.one_mont();
-        return PolyExtFieldElem<UintT, ModCoeffsT, FiledModulusT>(std::move(_one));
+        return PolyExtFieldElem(std::move(_one));
     }
 
     static inline constexpr PolyExtFieldElem zero()
     {
-        std::vector<UintT> _one(degree);
-        return PolyExtFieldElem<UintT, ModCoeffsT, FiledModulusT>(std::move(_one));
+        std::vector<uint256> _one(degree);
+        return PolyExtFieldElem(std::move(_one));
     }
 
     template <typename PowUintT>

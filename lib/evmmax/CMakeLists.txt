@@ -14,7 +14,6 @@ target_sources(
     bn254.hpp
     bn254.cpp
     poly_extension_field.hpp
-    poly_extension_field.cpp
     secp256k1.hpp
     secp256k1.cpp
 )

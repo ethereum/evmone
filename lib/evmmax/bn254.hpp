@@ -13,6 +13,61 @@ inline constexpr auto BN254Mod =
 
 namespace evmmax::bn254
 {
+
+struct BN245FieldModulus
+{
+    static constexpr auto MODULUS = BN254Mod;
+    static constexpr auto R_SQUARED =
+        0x6d89f71cab8351f47ab1eff0a417ff6b5e71911d44501fbf32cfc5b538afa89_u256;
+};
+
+struct ModCoeffs2
+{
+    static constexpr uint8_t DEGREE = 2;
+    // Polynomial modulus FQ2 (x^2 + 1). Coefficients in Montgomery form.
+    static constexpr const uint256 MODULUS_COEFFS[DEGREE] = {
+        /* 1 in mont */ 0xe0a77c19a07df2f666ea36f7879462c0a78eb28f5c70b3dd35d438dc58f0d9d_u256, 0};
+    // Implied + [1 in mont form]
+};
+
+struct ModCoeffs12
+{
+    static constexpr uint8_t DEGREE = 12;
+    // Polynomial modulus FQ2 (x^12 -18x^6 + 82). Coefficients in Montgomery form.
+    static constexpr uint256 MODULUS_COEFFS[DEGREE] = {
+        /* 82 in mont */ 0x26574fb11b10196f403a164ef43989b2be1ac00e5788671d4cf30d5bd4979ae9_u256, 0,
+        0, 0, 0, 0,
+        /* (-18 == mod - 18) in mont */
+        0x259d6b14729c0fa51e1a247090812318d087f6872aabf4f68c3488912edefaa0_u256, 0, 0, 0, 0, 0};
+    // Implied + [1 in mont form]
+};
+
+class BN254ModArith : public ModArith<uint256>
+{
+public:
+    constexpr explicit BN254ModArith(): ModArith<uint256>(BN245FieldModulus::MODULUS,
+            BN245FieldModulus::R_SQUARED)
+    {}
+
+    uint256 inv(const uint256& x) const noexcept;
+
+    uint256 div(const uint256& x, const uint256& y) const noexcept;
+
+    uint256 pow(const uint256& x, const uint256& y) const noexcept;
+
+    uint256 neg(const uint256& x) const noexcept;
+
+    // Calculates Montgomery form for integer literal. Used for optimization only.
+    template <size_t N>
+    uint in_mont() const noexcept
+    {
+        static const auto n_value = to_mont(N);
+        return n_value;
+    }
+
+    uint one_mont() const noexcept { return in_mont<1>(); }
+};
+
 bool is_at_infinity(const uint256& x, const uint256& y, const uint256& z) noexcept;
 
 std::tuple<uint256, uint256, uint256> point_addition_a0(const evmmax::ModArith<uint256>& s,
@@ -50,34 +105,6 @@ struct Point
         // TODO(intx): C++20 operator<=> = default does not work for uint256.
         return a.x == b.x && a.y == b.y;
     }
-};
-
-struct BN245FieldModulus
-{
-    static constexpr auto MODULUS = BN254Mod;
-    static constexpr auto R_SQUARED =
-        0x6d89f71cab8351f47ab1eff0a417ff6b5e71911d44501fbf32cfc5b538afa89_u256;
-};
-
-struct ModCoeffs2
-{
-    static constexpr uint8_t DEGREE = 2;
-    // Polynomial modulus FQ2 (x^2 + 1). Coefficients in Montgomery form.
-    static constexpr const uint256 MODULUS_COEFFS[DEGREE] = {
-        /* 1 in mont */ 0xe0a77c19a07df2f666ea36f7879462c0a78eb28f5c70b3dd35d438dc58f0d9d_u256, 0};
-    // Implied + [1 in mont form]
-};
-
-struct ModCoeffs12
-{
-    static constexpr uint8_t DEGREE = 12;
-    // Polynomial modulus FQ2 (x^12 -18x^6 + 82). Coefficients in Montgomery form.
-    static constexpr uint256 MODULUS_COEFFS[DEGREE] = {
-        /* 82 in mont */ 0x26574fb11b10196f403a164ef43989b2be1ac00e5788671d4cf30d5bd4979ae9_u256, 0,
-        0, 0, 0, 0,
-        /* (-18 == mod - 18) in mont */
-        0x259d6b14729c0fa51e1a247090812318d087f6872aabf4f68c3488912edefaa0_u256, 0, 0, 0, 0, 0};
-    // Implied + [1 in mont form]
 };
 
 template <typename FieldElemT>
@@ -122,9 +149,9 @@ bool bn254_add_precompile(const uint8_t* input, size_t input_size, uint8_t* outp
 bool bn254_mul_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept;
 
 // Extension field FQ2 (x^2 + 1) element
-using FE2 = struct PolyExtFieldElem<uint256, ModCoeffs2, BN245FieldModulus>;
+using FE2 = struct PolyExtFieldElem<BN254ModArith, ModCoeffs2>;
 // Extension field FQ12 (x^12 -18x^6 + 82) element
-using FE12 = struct PolyExtFieldElem<uint256, ModCoeffs12, BN245FieldModulus>;
+using FE12 = struct PolyExtFieldElem<BN254ModArith, ModCoeffs12>;
 // Point of dwo dim space (FQ2xFQ2)
 using FE2Point = struct PointExt<FE2>;
 // Point of dwo dim space (FQ12xFQ12)
