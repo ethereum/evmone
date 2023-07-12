@@ -303,11 +303,11 @@ FE12Point twist(const FE2Point& pt)
     // Field isomorphism from Z[p] / x**2 to Z[p] / x**2 - 18*x + 82
     std::vector<uint256> xcoeffs(2);
     xcoeffs[0] = FE2::arith.sub(_x.coeffs[0], FE2::arith.mul(_x.coeffs[1],
-                                                  bn254::FE2::arith.to_mont(9)));
+                                                  bn254::FE2::arith.template in_mont<9>()));
     xcoeffs[1] = _x.coeffs[1];
     std::vector<uint256> ycoeffs(2);
     ycoeffs[0] = FE2::arith.sub(_y.coeffs[0], FE2::arith.mul(_y.coeffs[1],
-                                                  bn254::FE2::arith.to_mont(9)));
+                                                  bn254::FE2::arith.template in_mont<9>()));
     ycoeffs[1] = _y.coeffs[1];
     // Isomorphism into subfield of Z[p] / w**12 - 18 * w**6 + 82, where w**6 = x
     auto nx = FE12({xcoeffs[0], 0, 0, 0, 0, 0, xcoeffs[1], 0, 0, 0, 0, 0});
@@ -338,8 +338,9 @@ FieldElemT line_func(
     else if (FieldElemT::eq(p1.y, p2.y))
     {
         auto m =
-            FieldElemT::div(FieldElemT::mul(FieldElemT::pow(p1.x, 2), FieldElemT::arith.to_mont(3)),
-                FieldElemT::mul(p1.y, FieldElemT::arith.to_mont(2)));
+            FieldElemT::div(FieldElemT::mul(FieldElemT::pow(p1.x, 2),
+                                FieldElemT::arith.template in_mont<3>()),
+                FieldElemT::mul(p1.y, FieldElemT::arith.template in_mont<2>()));
         return FieldElemT::sub(
             FieldElemT::mul(FieldElemT::sub(t.x, p1.x), m), FieldElemT::sub(t.y, p1.y));
     }
@@ -352,8 +353,9 @@ template <typename FieldElemT>
 PointExt<FieldElemT> point_double(const PointExt<FieldElemT>& p)
 {
     using ET = FieldElemT;
-    auto lambda = ET::div(ET::mul(ET::pow(p.x, 2), FieldElemT::arith.to_mont(3)), ET::mul(p.y, FieldElemT::arith.to_mont(2)));
-    auto new_x = ET::sub(ET::pow(lambda, 2), ET::mul(p.x, FieldElemT::arith.to_mont(2)));
+    auto lambda = ET::div(ET::mul(ET::pow(p.x, 2), FieldElemT::arith.template in_mont<3>()),
+        ET::mul(p.y, FieldElemT::arith.template in_mont<2>()));
+    auto new_x = ET::sub(ET::pow(lambda, 2), ET::mul(p.x, FieldElemT::arith.template in_mont<2>()));
     auto new_y = ET::sub(ET::add(ET::mul(ET::neg(lambda), new_x), ET::mul(lambda, p.x)), p.y);
 
     return {new_x, new_y};

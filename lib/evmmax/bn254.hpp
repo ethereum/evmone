@@ -28,7 +28,7 @@ std::tuple<uint256, uint256, uint256> point_addition_mixed_a0(const evmmax::ModA
 
 inline uint256 expmod(const evmmax::ModArith<uint256>& s, uint256 base, uint256 exponent) noexcept
 {
-    auto result = s.one_mont();
+    auto result = s.to_mont(1);
 
     while (exponent != 0)
     {
