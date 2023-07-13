@@ -105,7 +105,7 @@ struct PolyExtFieldElem
         return d;
     }
 
-    static inline constexpr std::vector<uint256> poly_rounded_div(
+    static inline std::vector<uint256> poly_rounded_div(
         const std::vector<uint256>& a, const std::vector<uint256>& b)
     {
         auto dega = deg(a);
