@@ -53,24 +53,34 @@ int64_t compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& tx) noex
 }
 
 /// Validates transaction and computes its execution gas limit (the amount of gas provided to EVM).
-/// @return  Non-negative execution gas limit for valid transaction
-///          or negative value for invalid transaction.
+/// @return  Execution gas limit or transaction validation error.
 std::variant<int64_t, std::error_code> validate_transaction(const Account& sender_acc,
     const BlockInfo& block, const Transaction& tx, evmc_revision rev) noexcept
 {
-    if (rev < EVMC_LONDON && tx.kind == Transaction::Kind::eip1559)
-        return make_error_code(TX_TYPE_NOT_SUPPORTED);
+    switch (tx.type)
+    {
+    case Transaction::Type::eip1559:
+        if (rev < EVMC_LONDON)
+            return make_error_code(TX_TYPE_NOT_SUPPORTED);
 
-    if (rev < EVMC_BERLIN && !tx.access_list.empty())
-        return make_error_code(TX_TYPE_NOT_SUPPORTED);
+        if (tx.max_priority_gas_price > tx.max_gas_price)
+            return make_error_code(TIP_GT_FEE_CAP);  // Priority gas price is too high.
+        [[fallthrough]];
 
-    if (tx.max_priority_gas_price > tx.max_gas_price)
-        return make_error_code(TIP_GT_FEE_CAP);  // Priority gas price is too high.
+    case Transaction::Type::access_list:
+        if (rev < EVMC_BERLIN)
+            return make_error_code(TX_TYPE_NOT_SUPPORTED);
+        [[fallthrough]];
+
+    case Transaction::Type::legacy:;
+    }
+
+    assert(tx.max_priority_gas_price <= tx.max_gas_price);
 
     if (tx.gas_limit > block.gas_limit)
         return make_error_code(GAS_LIMIT_REACHED);
 
-    if (rev >= EVMC_LONDON && tx.max_gas_price < block.base_fee)
+    if (tx.max_gas_price < block.base_fee)
         return make_error_code(FEE_CAP_LESS_THEN_BLOCKS);
 
     if (!sender_acc.code.empty())
@@ -91,11 +101,11 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
         sender_acc.balance < tx_cost_limit_512)
         return make_error_code(INSUFFICIENT_FUNDS);
 
-    const auto intrinsic_cost = compute_tx_intrinsic_cost(rev, tx);
-    if (intrinsic_cost > tx.gas_limit)
+    const auto execution_gas_limit = tx.gas_limit - compute_tx_intrinsic_cost(rev, tx);
+    if (execution_gas_limit < 0)
         return make_error_code(INTRINSIC_GAS_TOO_LOW);
 
-    return tx.gas_limit - intrinsic_cost;
+    return execution_gas_limit;
 }
 
 evmc_message build_message(const Transaction& tx, int64_t execution_gas_limit) noexcept
@@ -195,7 +205,7 @@ std::variant<TransactionReceipt, std::error_code> transition(
     std::erase_if(state.get_accounts(),
         [](const std::pair<const address, Account>& p) noexcept { return p.second.destructed; });
 
-    auto receipt = TransactionReceipt{tx.kind, result.status_code, gas_used, host.take_logs(), {}};
+    auto receipt = TransactionReceipt{tx.type, result.status_code, gas_used, host.take_logs(), {}};
 
     // Cannot put it into constructor call because logs are std::moved from host instance.
     receipt.logs_bloom_filter = compute_bloom_filter(receipt.logs);
@@ -210,13 +220,13 @@ std::variant<TransactionReceipt, std::error_code> transition(
 
 [[nodiscard]] bytes rlp_encode(const Transaction& tx)
 {
-    if (tx.kind == Transaction::Kind::legacy)
+    if (tx.type == Transaction::Type::legacy)
     {
         // rlp [nonce, gas_price, gas_limit, to, value, data, v, r, s];
         return rlp::encode_tuple(tx.nonce, tx.max_gas_price, static_cast<uint64_t>(tx.gas_limit),
             tx.to.has_value() ? tx.to.value() : bytes_view(), tx.value, tx.data, tx.v, tx.r, tx.s);
     }
-    else if (tx.kind == Transaction::Kind::eip2930)
+    else if (tx.type == Transaction::Type::access_list)
     {
         if (tx.v > 1)
             throw std::invalid_argument("`v` value for eip2930 transaction must be 0 or 1");
@@ -245,7 +255,7 @@ std::variant<TransactionReceipt, std::error_code> transition(
 
 [[nodiscard]] bytes rlp_encode(const TransactionReceipt& receipt)
 {
-    const auto prefix = receipt.kind == Transaction::Kind::eip1559 ? bytes{0x02} : bytes{};
+    const auto prefix = receipt.type == Transaction::Type::eip1559 ? bytes{0x02} : bytes{};
     return prefix + rlp::encode_tuple(receipt.status == EVMC_SUCCESS,
                         static_cast<uint64_t>(receipt.gas_used),
                         bytes_view(receipt.logs_bloom_filter), receipt.logs);

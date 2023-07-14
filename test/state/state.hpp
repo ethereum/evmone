@@ -93,14 +93,25 @@ using AccessList = std::vector<std::pair<address, std::vector<bytes32>>>;
 
 struct Transaction
 {
-    enum class Kind : uint8_t
+    /// The type of the transaction.
+    ///
+    /// The format is defined by EIP-2718: Typed Transaction Envelope.
+    /// https://eips.ethereum.org/EIPS/eip-2718.
+    enum class Type : uint8_t
     {
+        /// The legacy RLP-encoded transaction without leading "type" byte.
         legacy = 0,
-        eip2930 = 1,  ///< Transaction with access list https://eips.ethereum.org/EIPS/eip-2930
-        eip1559 = 2   ///< EIP1559 transaction https://eips.ethereum.org/EIPS/eip-1559
+
+        /// The typed transaction with optional account/storage access list.
+        /// Introduced by EIP-2930 https://eips.ethereum.org/EIPS/eip-2930.
+        access_list = 1,
+
+        /// The typed transaction with priority gas price.
+        /// Introduced by EIP-1559 https://eips.ethereum.org/EIPS/eip-1559.
+        eip1559 = 2,
     };
 
-    Kind kind = Kind::legacy;
+    Type type = Type::legacy;
     bytes data;
     int64_t gas_limit;
     intx::uint256 max_gas_price;
@@ -125,7 +136,7 @@ struct Log
 
 struct TransactionReceipt
 {
-    Transaction::Kind kind = Transaction::Kind::legacy;
+    Transaction::Type type = Transaction::Type::legacy;
     evmc_status_code status = EVMC_INTERNAL_ERROR;
     int64_t gas_used = 0;
     std::vector<Log> logs;
