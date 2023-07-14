@@ -145,6 +145,7 @@ Point bn254_mul(const Point& pt, const uint256& c) noexcept;
 
 bool bn254_add_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept;
 bool bn254_mul_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept;
+bool bn254_ecpairing_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept;
 
 // Extension field FQ2 (x^2 + 1) element
 using FE2 = struct PolyExtFieldElem<BN254ModArith, ModCoeffs2>;
@@ -186,7 +187,13 @@ PointExt<FieldElemT> point_add(const PointExt<FieldElemT>& p1, const PointExt<Fi
 template <typename FieldElemT>
 PointExt<FieldElemT> point_multiply(const PointExt<FieldElemT>& pt, const uint256& n);
 
+// Miller loop for pairing bn254 curve points.
+FE12 miller_loop(const FE12Point& Q, const FE12Point& P, bool run_final_exp);
+
 // Computes paring of bn254 curve points.
 FE12 pairing(const FE2Point& Q, const Point& P);
+
+// Computes final exponentiation of bn254 pairing result.
+FE12 final_exponentiation(const FE12& a);
 
 }  // namespace evmmax::bn254

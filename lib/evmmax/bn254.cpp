@@ -403,24 +403,10 @@ template PointExt<FE12> point_add(const PointExt<FE12>&, const PointExt<FE12>&);
 template PointExt<FE2> point_multiply(const PointExt<FE2>&, const uint256&);
 template PointExt<FE12> point_multiply(const PointExt<FE12>&, const uint256&);
 
-namespace
-{
-FE12 miller_loop(const FE12Point& Q, const FE12Point& P)
+FE12 miller_loop(const FE12Point& Q, const FE12Point& P, bool run_final_exp)
 {
     static constexpr auto ate_loop_count = 29793968203157093288_u256;
     static constexpr auto log_ate_loop_count = 63;
-    static const intx::uint<2816> final_exp_pow =  // ((field_modulus ** 12 - 1) // curve_order
-        intx::from_string<intx::uint<2816>>(
-            "55248423361322409631261712678317314709738210376295765418888273431419691083990754121397"
-            "45027615406298170096085486546803436277011538294467478109073732568415510062016396777261"
-            "39946029199968412598804882391702273019083653272047566316584365559776493027495458238373"
-            "90287593765994350487322055416155052592630230333174746351564471187665317712957830319109"
-            "59009091916248178265666882418044080818927857259679317140977167095260922612780719525601"
-            "71111444072049229123565057483750161460024353346284167282452756217662335528813519139808"
-            "29117053907212538123081572907154486160275093696482931360813732542638373512217522954115"
-            "53763464360939302874020895174269731789175697133847480818272554725769374714961957527271"
-            "88261435633271238710131736096299798168852925540549342330775279877006784354801422249722"
-            "573783561685179618816480037695005515426162362431072245638324744480");
     if (FE12Point::is_at_infinity(Q) || FE12Point::is_at_infinity(P))
         return FE12::one();
 
@@ -445,9 +431,11 @@ FE12 miller_loop(const FE12Point& Q, const FE12Point& P)
     R = point_add(R, Q1);
     f = FE12::mul(f, line_func(R, nQ2, P));
     // R = add(R, nQ2) This line is in many specifications but it technically does nothing
-    return FE12::pow(f, final_exp_pow);
+    if (run_final_exp)
+        return final_exponentiation(f);
+    else
+        return f;
 }
-}  // namespace
 
 FE12 pairing(const FE2Point& q, const Point& p)
 {
@@ -456,9 +444,27 @@ FE12 pairing(const FE2Point& q, const Point& p)
 
     Point p_mont = {FE2::arith.to_mont(p.x), FE2::arith.to_mont(p.y)};
 
-    auto res = miller_loop(twist(q.to_mont()), cast_to_fe12(p_mont));
+    auto res = miller_loop(twist(q.to_mont()), cast_to_fe12(p_mont), true);
 
     return res.from_mont();
+}
+
+FE12 final_exponentiation(const FE12& a)
+{
+    static const intx::uint<2816> final_exp_pow =  // ((field_modulus ** 12 - 1) // curve_order
+        intx::from_string<intx::uint<2816>>(
+            "55248423361322409631261712678317314709738210376295765418888273431419691083990754121397"
+            "45027615406298170096085486546803436277011538294467478109073732568415510062016396777261"
+            "39946029199968412598804882391702273019083653272047566316584365559776493027495458238373"
+            "90287593765994350487322055416155052592630230333174746351564471187665317712957830319109"
+            "59009091916248178265666882418044080818927857259679317140977167095260922612780719525601"
+            "71111444072049229123565057483750161460024353346284167282452756217662335528813519139808"
+            "29117053907212538123081572907154486160275093696482931360813732542638373512217522954115"
+            "53763464360939302874020895174269731789175697133847480818272554725769374714961957527271"
+            "88261435633271238710131736096299798168852925540549342330775279877006784354801422249722"
+            "573783561685179618816480037695005515426162362431072245638324744480");
+
+    return FE12::pow(a, final_exp_pow);
 }
 
 bool bn254_add_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept
@@ -495,6 +501,46 @@ bool bn254_mul_precompile(const uint8_t* input, size_t input_size, uint8_t* outp
     const auto r = bn254_mul(a, s);
     be::unsafe::store(output, r.x);
     be::unsafe::store(output + 32, r.y);
+    return true;
+}
+
+bool bn254_ecpairing_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept
+{
+    static const size_t input_stride = 192;
+    if (input_size % input_stride != 0)
+        return false;
+
+    auto k = input_size / input_stride;
+    FE12 accumulator = FE12::one_mont();
+
+    for (size_t i = 0; i < k; ++i)
+    {
+        Point p{be::unsafe::load<uint256>(input), be::unsafe::load<uint256>(&input[32])};
+        bn254::FE2Point q{
+            bn254::FE2(
+                {be::unsafe::load<uint256>(&input[64]), be::unsafe::load<uint256>(&input[96])}),
+            bn254::FE2(
+                {be::unsafe::load<uint256>(&input[128]), be::unsafe::load<uint256>(&input[160])})};
+
+
+        if (!validate(p))
+            return false;
+        if (!is_on_curve_b2(q))
+            return false;
+
+        Point p_mont = {FE2::arith.to_mont(p.x), FE2::arith.to_mont(p.y)};
+
+        accumulator = FE12::mul(accumulator,
+            miller_loop(twist(q.to_mont()), cast_to_fe12(p_mont), false));
+    }
+
+    accumulator = final_exponentiation(accumulator);
+    
+    if (FE12::eq(accumulator, FE12::one_mont()))
+        be::unsafe::store(output, uint256{1});
+    else
+        be::unsafe::store(output, uint256{});
+
     return true;
 }
 
