@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
-#include "evmmax.hpp"
+#include <evmmax/evmmax.hpp>
 #include <ethash/keccak.hpp>
 #include <evmc/evmc.hpp>
 #include <optional>

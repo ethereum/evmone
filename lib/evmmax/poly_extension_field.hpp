@@ -18,7 +18,7 @@ template <typename ArithT, typename ModCoeffsT>
 struct PolyExtFieldElem
 {
     static constexpr auto degree = ModCoeffsT::DEGREE;
-    static constexpr auto arith = ArithT();
+    static inline auto arith = ArithT();
 
     std::vector<uint256> coeffs;
 
@@ -223,20 +223,20 @@ struct PolyExtFieldElem
         return true;
     }
 
-    friend std::ostream& operator<<(std::ostream& os, const PolyExtFieldElem& x)
-    {
-        os << "["sv;
-
-        if (!x.coeffs.empty())
-        {
-            for (size_t i = 0; i < x.coeffs.size() - 1; ++i)
-                os << "0x"sv << hex(x.coeffs[i]) << ", ";
-            os << "0x"sv << hex(x.coeffs.back());
-        }
-
-        os << "]"sv;
-        return os;
-    }
+//    friend std::ostream& operator<<(std::ostream& os, const PolyExtFieldElem& x)
+//    {
+//        os << "["sv;
+//
+//        if (!x.coeffs.empty())
+//        {
+//            for (size_t i = 0; i < x.coeffs.size() - 1; ++i)
+//                os << "0x"sv << hex(x.coeffs[i]) << ", ";
+//            os << "0x"sv << hex(x.coeffs.back());
+//        }
+//
+//        os << "]"sv;
+//        return os;
+//    }
 
     PolyExtFieldElem to_mont() const
     {

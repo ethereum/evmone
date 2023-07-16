@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
-#include "evmmax.hpp"
+#include <evmmax/evmmax.hpp>
 #include "poly_extension_field.hpp"
 
 using namespace intx;
@@ -45,8 +45,8 @@ struct ModCoeffs12
 class BN254ModArith : public ModArith<uint256>
 {
 public:
-    constexpr explicit BN254ModArith()
-      : ModArith<uint256>(BN245FieldModulus::MODULUS, BN245FieldModulus::R_SQUARED)
+    explicit BN254ModArith()
+      : ModArith<uint256>(BN245FieldModulus::MODULUS)
     {}
 
     uint256 inv(const uint256& x) const noexcept;
@@ -59,13 +59,13 @@ public:
 
     // Calculates Montgomery form for integer literal. Used for optimization only.
     template <size_t N>
-    uint in_mont() const noexcept
+    uint256 in_mont() const noexcept
     {
         static const auto n_value = to_mont(N);
         return n_value;
     }
 
-    uint one_mont() const noexcept { return in_mont<1>(); }
+    uint256 one_mont() const noexcept { return in_mont<1>(); }
 };
 
 bool is_at_infinity(const uint256& x, const uint256& y, const uint256& z) noexcept;
