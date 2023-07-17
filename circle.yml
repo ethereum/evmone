@@ -58,9 +58,15 @@ executors:
   macos:
     resource_class: macos.x86.medium.gen2
     macos:
-      xcode: 14.3.0
+      xcode: 14.3.1
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 4
+  macos-m1:
+    resource_class: macos.m1.large.gen1
+    macos:
+      xcode: 14.3.1
+    environment:
+      CMAKE_BUILD_PARALLEL_LEVEL: 8
   macos-xcode-min:
     resource_class: macos.x86.medium.gen2
     macos:
@@ -395,6 +401,18 @@ jobs:
       - test
       - package
 
+  release-macos-m1:
+    executor: macos-m1
+    environment:
+      BUILD_TYPE: Release
+    steps:
+      - run:
+          name: "Install System Dependencies"
+          command: HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake
+      - build
+      - test
+      - package
+
   deploy:
     docker:
       - image: circleci/golang
@@ -571,10 +589,10 @@ jobs:
             - ~/corpus
 
   macos-asan:
-    executor: macos
+    executor: macos-m1
     environment:
       BUILD_TYPE: RelWithDebInfo
-      CMAKE_OPTIONS: -DSANITIZE=address
+      CMAKE_OPTIONS: -DSANITIZE=address,undefined
       TESTS_FILTER: unittests
     steps:
       - run:
@@ -636,6 +654,7 @@ workflows:
           filters:
             tags:
               only: /.*/
+      - release-macos-m1
       - deploy:
           requires:
             - release-linux
