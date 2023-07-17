@@ -408,10 +408,10 @@ FE12 miller_loop(const FE12Point& Q, const FE12Point& P, bool run_final_exp)
     static constexpr auto ate_loop_count = 29793968203157093288_u256;
     static constexpr auto log_ate_loop_count = 63;
     if (FE12Point::is_at_infinity(Q) || FE12Point::is_at_infinity(P))
-        return FE12::one();
+        return FE12::one_mont();
 
     auto R = Q;
-    auto f = FE12::one();
+    auto f = FE12::one_mont();
     for (auto i = log_ate_loop_count; i >= 0; --i)
     {
         f = FE12::mul(FE12::mul(f, f), line_func(R, R, P));
@@ -515,27 +515,29 @@ bool bn254_ecpairing_precompile(const uint8_t* input, size_t input_size, uint8_t
 
     for (size_t i = 0; i < k; ++i)
     {
-        Point p{be::unsafe::load<uint256>(input), be::unsafe::load<uint256>(&input[32])};
-        bn254::FE2Point q{
-            bn254::FE2(
-                {be::unsafe::load<uint256>(&input[64]), be::unsafe::load<uint256>(&input[96])}),
-            bn254::FE2(
-                {be::unsafe::load<uint256>(&input[128]), be::unsafe::load<uint256>(&input[160])})};
+        Point p{be::unsafe::load<uint256>(&input[input_stride * i]),
+            be::unsafe::load<uint256>(&input[32 + input_stride * i])};
+        bn254::FE2Point q{bn254::FE2({be::unsafe::load<uint256>(&input[96 + input_stride * i]),
+                              be::unsafe::load<uint256>(&input[64 + input_stride * i])}),
+            bn254::FE2({be::unsafe::load<uint256>(&input[160 + input_stride * i]),
+                be::unsafe::load<uint256>(&input[128 + input_stride * i])})};
 
 
         if (!validate(p))
             return false;
-        if (!is_on_curve_b2(q))
+
+        auto q_mont = q.to_mont();
+        if (!is_on_curve_b2(q_mont))
             return false;
 
         Point p_mont = {FE2::arith.to_mont(p.x), FE2::arith.to_mont(p.y)};
 
-        accumulator = FE12::mul(accumulator,
-            miller_loop(twist(q.to_mont()), cast_to_fe12(p_mont), false));
+        auto r = miller_loop(twist(q_mont), cast_to_fe12(p_mont), false);
+        accumulator = FE12::mul(accumulator, r);
     }
 
     accumulator = final_exponentiation(accumulator);
-    
+
     if (FE12::eq(accumulator, FE12::one_mont()))
         be::unsafe::store(output, uint256{1});
     else
