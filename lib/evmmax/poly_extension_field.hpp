@@ -18,7 +18,7 @@ template <typename ArithT, typename ModCoeffsT>
 struct PolyExtFieldElem
 {
     static constexpr auto degree = ModCoeffsT::DEGREE;
-    static inline auto arith = ArithT();
+    static inline const auto arith = ArithT();
 
     std::vector<uint256> coeffs;
 

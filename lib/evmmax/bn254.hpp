@@ -14,13 +14,6 @@ inline constexpr auto BN254Mod =
 namespace evmmax::bn254
 {
 
-struct BN245FieldModulus
-{
-    static constexpr auto MODULUS = BN254Mod;
-    static constexpr auto R_SQUARED =
-        0x6d89f71cab8351f47ab1eff0a417ff6b5e71911d44501fbf32cfc5b538afa89_u256;
-};
-
 struct ModCoeffs2
 {
     static constexpr uint8_t DEGREE = 2;
@@ -46,7 +39,7 @@ class BN254ModArith : public ModArith<uint256>
 {
 public:
     explicit BN254ModArith()
-      : ModArith<uint256>(BN245FieldModulus::MODULUS)
+      : ModArith<uint256>(BN254Mod)
     {}
 
     uint256 inv(const uint256& x) const noexcept;
