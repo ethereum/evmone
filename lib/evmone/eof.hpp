@@ -100,6 +100,8 @@ enum class EOFValidationError
     invalid_code_section_index,
     invalid_dataloadn_index,
     jumpf_destination_incompatible_outputs,
+    invalid_non_returning_flag,
+    callf_to_non_returning_function,
 
     impossible,
 };
