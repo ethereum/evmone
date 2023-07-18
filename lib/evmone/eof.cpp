@@ -33,6 +33,7 @@ constexpr auto MAX_STACK_HEIGHT = 0x03FF;
 constexpr auto OUTPUTS_INPUTS_NUMBER_LIMIT = 0x7F;
 constexpr auto REL_OFFSET_SIZE = sizeof(int16_t);
 constexpr auto STACK_SIZE_LIMIT = 1024;
+constexpr uint8_t NON_RETURNING_FUNCITON = 0x80;
 
 using EOFSectionHeaders = std::array<std::vector<uint16_t>, MAX_SECTION + 1>;
 
@@ -195,13 +196,14 @@ std::variant<std::vector<EOFCodeType>, EOFValidationError> validate_types(
             container[offset], container[offset + 1], read_uint16_be(&container[offset + 2]));
     }
 
-    // check 1st section is (0, 0)
-    if (types[0].inputs != 0 || types[0].outputs != 0)
+    // check 1st section is (0, 0x80)
+    if (types[0].inputs != 0 || types[0].outputs != NON_RETURNING_FUNCITON)
         return EOFValidationError::invalid_first_section_type;
 
     for (const auto& t : types)
     {
-        if (t.outputs > OUTPUTS_INPUTS_NUMBER_LIMIT || t.inputs > OUTPUTS_INPUTS_NUMBER_LIMIT)
+        if ((t.outputs > OUTPUTS_INPUTS_NUMBER_LIMIT && t.outputs != NON_RETURNING_FUNCITON) ||
+            t.inputs > OUTPUTS_INPUTS_NUMBER_LIMIT)
             return EOFValidationError::inputs_outputs_num_above_limit;
 
         if (t.max_stack_height > MAX_STACK_HEIGHT)
@@ -219,6 +221,8 @@ EOFValidationError validate_instructions(
 
     const auto& cost_table = baseline::get_baseline_cost_table(rev, 1);
 
+    bool is_returning = false;
+
     for (size_t i = 0; i < code.size(); ++i)
     {
         const auto op = code[i];
@@ -235,11 +239,28 @@ EOFValidationError validate_instructions(
             if (i >= code.size())
                 return EOFValidationError::truncated_instruction;
         }
-        else if (op == OP_CALLF || op == OP_JUMPF)
+        else if (op == OP_CALLF)
         {
             const auto fid = read_uint16_be(&code[i + 1]);
             if (fid >= header.types.size())
                 return EOFValidationError::invalid_code_section_index;
+            if (header.types[fid].outputs == NON_RETURNING_FUNCITON)
+                return EOFValidationError::callf_to_non_returning_function;
+            i += 2;
+        }
+        else if (op == OP_RETF)
+        {
+            is_returning = true;
+            static_assert(instr::traits[OP_RETF].immediate_size == 0);
+        }
+        else if (op == OP_JUMPF)
+        {
+            const auto fid = read_uint16_be(&code[i + 1]);
+            if (fid >= header.types.size())
+                return EOFValidationError::invalid_code_section_index;
+            // JUMPF into returning function means current function is returning.
+            if (header.types[fid].outputs != NON_RETURNING_FUNCITON)
+                is_returning = true;
             i += 2;
         }
         else if (op == OP_DATALOADN)
@@ -252,6 +273,10 @@ EOFValidationError validate_instructions(
         else
             i += instr::traits[op].immediate_size;
     }
+
+    const auto declared_returning = (header.types[code_idx].outputs != NON_RETURNING_FUNCITON);
+    if (is_returning != declared_returning)
+        return EOFValidationError::invalid_non_returning_flag;
 
     return EOFValidationError::success;
 }
@@ -355,6 +380,8 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
                 STACK_SIZE_LIMIT)
                 return EOFValidationError::stack_overflow;
 
+            // Instruction validation ensures target function is returning
+            assert(code_types[fid].outputs != NON_RETURNING_FUNCITON);
             stack_height_change =
                 static_cast<int8_t>(code_types[fid].outputs - stack_height_required);
         }
@@ -362,17 +389,25 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
         {
             const auto fid = read_uint16_be(&code[i + 1]);
 
-            if (code_types[func_index].outputs < code_types[fid].outputs)
-                return EOFValidationError::jumpf_destination_incompatible_outputs;
-
             if (stack_height + code_types[fid].max_stack_height - code_types[fid].inputs >
                 STACK_SIZE_LIMIT)
                 return EOFValidationError::stack_overflow;
 
-            stack_height_required = static_cast<int8_t>(
-                code_types[func_index].outputs + code_types[fid].inputs - code_types[fid].outputs);
-            if (stack_heights[i] > stack_height_required)
-                return EOFValidationError::non_empty_stack_on_terminating_instruction;
+            if (code_types[fid].outputs == NON_RETURNING_FUNCITON)
+            {
+                stack_height_required = static_cast<int8_t>(code_types[fid].inputs);
+            }
+            else
+            {
+                if (code_types[func_index].outputs < code_types[fid].outputs)
+                    return EOFValidationError::jumpf_destination_incompatible_outputs;
+
+                stack_height_required =
+                    static_cast<int8_t>(code_types[func_index].outputs + code_types[fid].inputs -
+                                        code_types[fid].outputs);
+                if (stack_heights[i] > stack_height_required)
+                    return EOFValidationError::non_empty_stack_on_terminating_instruction;
+            }
         }
 
         if (stack_height < stack_height_required)
@@ -654,6 +689,10 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "invalid_dataloadn_index";
     case EOFValidationError::jumpf_destination_incompatible_outputs:
         return "jumpf_destination_incompatible_outputs";
+    case EOFValidationError::invalid_non_returning_flag:
+        return "invalid_non_returning_flag";
+    case EOFValidationError::callf_to_non_returning_function:
+        return "callf_to_non_returning_function";
     case EOFValidationError::impossible:
         return "impossible";
     }
