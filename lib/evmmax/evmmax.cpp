@@ -57,6 +57,11 @@ UintT ModArith<UintT>::mul(const UintT& x, const UintT& y) const noexcept
     // High-Speed Algorithms & Architectures For Number-Theoretic Cryptosystems
     // https://www.microsoft.com/en-us/research/wp-content/uploads/1998/06/97Acar.pdf
 
+    // Most of multiplication for ecparing are trivial.
+    // Because of that this optimisation is very important.
+    if (x == 0 || y == 0)
+        return 0;
+
     static constexpr auto S = UintT::num_words;
 
     intx::uint<UintT::num_bits + 64> t;
