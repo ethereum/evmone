@@ -475,26 +475,42 @@ template PointExt<FE12> point_multiply(const PointExt<FE12>&, const uint256&);
 
 FE12 miller_loop(const FE12Point& Q, const FE12Point& P, bool run_final_exp)
 {
-    static constexpr auto ate_loop_count = 29793968203157093288_u256;
-    static constexpr auto log_ate_loop_count = 63;
+    static const int8_t pseudo_binary_encoding[] =
+        {
+            0, 0, 0, 1, 0, 1, 0, -1, 0, 0, 1, -1, 0, 0, 1, 0, 0, 1, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0,
+            0, 0, 1, 1, 1, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 1, 0, 0, -1, 0, 0, 0, 1,
+            1, 0, -1, 0, 0, 1, 0, 1,
+            1
+        };
+
+    //static constexpr auto ate_loop_count = 29793968203157093288_u256;
+    //static constexpr auto log_ate_loop_count = 63;
     if (FE12Point::is_at_infinity(Q) || FE12Point::is_at_infinity(P))
         return FE12::one_mont();
 
     auto R = Q;
     auto f_num = FE12::one_mont();
     auto f_den = FE12::one_mont();
-    for (auto i = log_ate_loop_count; i >= 0; --i)
+    for (int i = sizeof(pseudo_binary_encoding) - 2; i >= 0; --i)
     {
         auto [_n, _d] = line_func(R, R, P);
         f_num = f_num * f_num * _n;
         f_den = f_den * f_den * _d;
         R = point_double(R);
-        if ((ate_loop_count & (uint256(1) << i)) != 0)
+        if (pseudo_binary_encoding[i] == 1)
         {
             std::tie(_n, _d) = line_func(R, Q, P);
             f_num = f_num * _n;
             f_den = f_den * _d;
             R = point_add(R, Q);
+        }
+        else if (pseudo_binary_encoding[i] == -1)
+        {
+            const FE12Point nQ = {Q.x, -Q.y, Q.z};
+            std::tie(_n, _d) = line_func(R, nQ, P);
+            f_num = f_num * _n;
+            f_den = f_den * _d;
+            R = point_add(R, nQ);
         }
     }
 
