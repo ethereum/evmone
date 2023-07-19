@@ -105,25 +105,31 @@ struct PointExt
 {
     FieldElemT x;
     FieldElemT y;
+    FieldElemT z;
 
     static inline constexpr bool eq(const PointExt& a, const PointExt& b)
     {
-        return FieldElemT::eq(a.x, b.x) && FieldElemT::eq(a.y, b.y);
+        return FieldElemT::eq(a.x, b.x) && FieldElemT::eq(a.y, b.y) && FieldElemT::eq(a.z, b.z);
     }
 
     static inline constexpr bool is_at_infinity(const PointExt& a)
     {
-        return FieldElemT::eq(a.x, FieldElemT::zero()) && FieldElemT::eq(a.y, FieldElemT::zero());
+        return FieldElemT::eq(a.x, FieldElemT::zero()) && FieldElemT::eq(a.y, FieldElemT::zero()) &&
+               FieldElemT::eq(a.z, FieldElemT::zero());
     }
 
-    static inline constexpr PointExt infinity() { return {FieldElemT::zero(), FieldElemT::zero()}; }
+    static inline constexpr PointExt infinity()
+    {
+        return {FieldElemT::zero(), FieldElemT::zero(), FieldElemT::zero()};
+    }
 
     friend std::ostream& operator<<(std::ostream& os, const PointExt& p)
     {
-        return os << std::string("[") << p.x << ", " << p.y << std::string("]");
+        return os << std::string("[") << p.x << ", " << p.y << ", "<< p.z  << std::string("]");
     }
 
-    PointExt to_mont() const { return {x.to_mont(), y.to_mont()}; }
+    PointExt to_mont() const { return {x.to_mont(), y.to_mont(), z.to_mont()}; }
+    PointExt from_mont() const { return {x.from_mont(), y.from_mont(), z.from_mont()}; }
 };
 
 inline bool is_at_infinity(const Point& pt) noexcept
@@ -160,12 +166,7 @@ FE12Point cast_to_fe12(const Point& pt);
 
 // Create a function representing the line between P1 and P2, and evaluate it at T
 template <typename FieldElemT>
-FieldElemT line_func(
-    const PointExt<FieldElemT>& P, const PointExt<FieldElemT>& Q, const PointExt<FieldElemT>& T);
-
-// Create a function representing the line between P1 and P2, and evaluate it at T
-template <typename FieldElemT>
-FieldElemT line_func(
+std::pair<FieldElemT, FieldElemT> line_func(
     const PointExt<FieldElemT>& P, const PointExt<FieldElemT>& Q, const PointExt<FieldElemT>& T);
 
 // Elliptic curve point doubling over extension field
