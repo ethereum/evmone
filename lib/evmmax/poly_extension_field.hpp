@@ -192,14 +192,18 @@ struct PolyExtFieldElem
     template <typename PowUintT>
     static inline constexpr PolyExtFieldElem pow(const PolyExtFieldElem& x, const PowUintT& y)
     {
-        if (y == 0)
-            return one();
-        else if (y == 1)
-            return x;
-        else if (y % 2 == 0)
-            return pow(mul(x, x), y / 2);
-        else
-            return mul(pow(mul(x, x), y / 2), x);
+        auto o = one_mont();
+        auto t = x;
+        auto p = y;
+        while (p > 0)
+        {
+            if (p & 1)
+                o = o * t;
+            p >>= 1;
+            t = t * t;
+        }
+
+        return o;
     }
 
     static inline constexpr PolyExtFieldElem neg(const PolyExtFieldElem& x)
