@@ -77,8 +77,8 @@ struct PolyExtFieldElem
             auto top = b.back();
             auto exp = b.size() - degree - 1;
             b.pop_back();
-            for (size_t i = 0; i < degree; ++i)
-                b[i + exp] = arith.sub(b[i + exp], arith.mul(top, ModCoeffsT::MODULUS_COEFFS[i]));
+            for (const auto& mc: ModCoeffsT::MODULUS_COEFFS)
+                b[mc.first + exp] = arith.sub(b[mc.first + exp], arith.mul(top, mc.second));
         }
 
         return PolyExtFieldElem(std::move(b));
@@ -136,7 +136,8 @@ struct PolyExtFieldElem
         low.push_back(0);
 
         std::vector<uint256> high(degree);
-        std::copy(ModCoeffsT::MODULUS_COEFFS, ModCoeffsT::MODULUS_COEFFS + degree, high.begin());
+        for (const auto& mc: ModCoeffsT::MODULUS_COEFFS)
+            high[mc.first] = mc.second;
         high.push_back(arith.one_mont());
 
         while (deg(low) > 0)

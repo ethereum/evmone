@@ -18,8 +18,8 @@ struct ModCoeffs2
 {
     static constexpr uint8_t DEGREE = 2;
     // Polynomial modulus FQ2 (x^2 + 1). Coefficients in Montgomery form.
-    static constexpr const uint256 MODULUS_COEFFS[DEGREE] = {
-        /* 1 in mont */ 0xe0a77c19a07df2f666ea36f7879462c0a78eb28f5c70b3dd35d438dc58f0d9d_u256, 0};
+    static constexpr const std::pair<uint8_t, uint256> MODULUS_COEFFS[1] = {
+        /* 1 in mont */ {0, 0xe0a77c19a07df2f666ea36f7879462c0a78eb28f5c70b3dd35d438dc58f0d9d_u256}};
     // Implied + [1 in mont form]
 };
 
@@ -27,11 +27,10 @@ struct ModCoeffs12
 {
     static constexpr uint8_t DEGREE = 12;
     // Polynomial modulus FQ2 (x^12 -18x^6 + 82). Coefficients in Montgomery form.
-    static constexpr uint256 MODULUS_COEFFS[DEGREE] = {
-        /* 82 in mont */ 0x26574fb11b10196f403a164ef43989b2be1ac00e5788671d4cf30d5bd4979ae9_u256, 0,
-        0, 0, 0, 0,
+    static constexpr std::pair<uint8_t, uint256> MODULUS_COEFFS[2] = {
+        /* 82 in mont */ {0, 0x26574fb11b10196f403a164ef43989b2be1ac00e5788671d4cf30d5bd4979ae9_u256},
         /* (-18 == mod - 18) in mont */
-        0x259d6b14729c0fa51e1a247090812318d087f6872aabf4f68c3488912edefaa0_u256, 0, 0, 0, 0, 0};
+        {6, 0x259d6b14729c0fa51e1a247090812318d087f6872aabf4f68c3488912edefaa0_u256}};
     // Implied + [1 in mont form]
 };
 
