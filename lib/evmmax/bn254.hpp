@@ -6,7 +6,7 @@
 #include <evmmax/evmmax.hpp>
 #include "poly_extension_field.hpp"
 
-using namespace intx;
+using intx::operator""_u256;
 
 inline constexpr auto BN254Mod =
     0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47_u256;

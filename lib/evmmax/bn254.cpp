@@ -469,6 +469,7 @@ FE12 final_exponentiation(const FE12& a)
 
 bool bn254_add_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept
 {
+    using namespace intx;
     uint8_t input_padded[128]{};
     std::copy_n(input, std::min(input_size, sizeof(input_padded)), input_padded);
 
@@ -488,6 +489,7 @@ bool bn254_add_precompile(const uint8_t* input, size_t input_size, uint8_t* outp
 
 bool bn254_mul_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept
 {
+    using namespace intx;
     uint8_t input_padded[128]{};
     std::copy_n(input, std::min(input_size, sizeof(input_padded)), input_padded);
 
@@ -506,6 +508,7 @@ bool bn254_mul_precompile(const uint8_t* input, size_t input_size, uint8_t* outp
 
 bool bn254_ecpairing_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept
 {
+    using namespace intx;
     static const size_t input_stride = 192;
     if (input_size % input_stride != 0)
         return false;

@@ -10,7 +10,6 @@
 namespace evmmax
 {
 using uint256 = intx::uint256;
-using namespace intx;
 using namespace std::literals;
 
 
@@ -256,6 +255,56 @@ struct PolyExtFieldElem
             result.coeffs[i] = arith.from_mont(this->coeffs[i]);
 
         return result;
+    }
+
+    friend PolyExtFieldElem operator*(const PolyExtFieldElem& a, const PolyExtFieldElem& b)
+    {
+        return mul(a, b);
+    }
+
+    friend PolyExtFieldElem operator*(const PolyExtFieldElem& a, const uint256& c)
+    {
+        return mul(a, c);
+    }
+
+    friend PolyExtFieldElem operator*(const uint256& c, const PolyExtFieldElem& a)
+    {
+        return mul(a, c);
+    }
+
+    friend PolyExtFieldElem operator-(const PolyExtFieldElem& a, const PolyExtFieldElem& b)
+    {
+        return sub(a, b);
+    }
+
+    friend PolyExtFieldElem operator+(const PolyExtFieldElem& a, const PolyExtFieldElem& b)
+    {
+        return add(a, b);
+    }
+
+    friend PolyExtFieldElem operator^(const PolyExtFieldElem& a, const size_t& b)
+    {
+        return pow(a, b);
+    }
+
+    friend PolyExtFieldElem operator^(const PolyExtFieldElem& a, const uint256& b)
+    {
+        return pow(a, b);
+    }
+
+    friend PolyExtFieldElem operator-(const PolyExtFieldElem& a)
+    {
+        return neg(a);
+    }
+
+    friend bool operator==(const PolyExtFieldElem& a, const PolyExtFieldElem& b)
+    {
+        return eq(a, b);
+    }
+
+    friend bool operator!=(const PolyExtFieldElem& a, const PolyExtFieldElem& b)
+    {
+        return !eq(a, b);
     }
 };
 
