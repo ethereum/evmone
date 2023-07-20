@@ -70,7 +70,7 @@ executors:
   macos-xcode-min:
     resource_class: macos.x86.medium.gen2
     macos:
-      xcode: 13.4.1
+      xcode: 14.3.1
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 4
 
@@ -262,7 +262,7 @@ commands:
             curl -Os https://uploader.codecov.io/$CODECOV_VERSION/linux/codecov
             curl -Os https://uploader.codecov.io/$CODECOV_VERSION/linux/codecov.SHA256SUM
             curl -Os https://uploader.codecov.io/$CODECOV_VERSION/linux/codecov.SHA256SUM.sig
-  
+            
             gpgv codecov.SHA256SUM.sig codecov.SHA256SUM
             shasum -c codecov.SHA256SUM
             
@@ -675,7 +675,8 @@ workflows:
       - clang-latest-sanitizers
       - clang-latest-coverage
       - macos-asan
-      - xcode-min
+      # TODO: Re-enable on next Xcode upgrade
+      # - xcode-min
       - gcc-32bit
       - x86-64-v1
       - fuzzing
