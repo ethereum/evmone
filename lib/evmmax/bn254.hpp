@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
-#include <evmmax/evmmax.hpp>
 #include "poly_extension_field.hpp"
+#include <evmmax/evmmax.hpp>
 
 using intx::operator""_u256;
 
@@ -19,7 +19,8 @@ struct ModCoeffs2
     static constexpr uint8_t DEGREE = 2;
     // Polynomial modulus FQ2 (x^2 + 1). Coefficients in Montgomery form.
     static constexpr const std::pair<uint8_t, uint256> MODULUS_COEFFS[1] = {
-        /* 1 in mont */ {0, 0xe0a77c19a07df2f666ea36f7879462c0a78eb28f5c70b3dd35d438dc58f0d9d_u256}};
+        /* 1 in mont */ {
+            0, 0xe0a77c19a07df2f666ea36f7879462c0a78eb28f5c70b3dd35d438dc58f0d9d_u256}};
     // Implied + [1 in mont form]
 };
 
@@ -28,7 +29,8 @@ struct ModCoeffs12
     static constexpr uint8_t DEGREE = 12;
     // Polynomial modulus FQ2 (x^12 -18x^6 + 82). Coefficients in Montgomery form.
     static constexpr std::pair<uint8_t, uint256> MODULUS_COEFFS[2] = {
-        /* 82 in mont */ {0, 0x26574fb11b10196f403a164ef43989b2be1ac00e5788671d4cf30d5bd4979ae9_u256},
+        /* 82 in mont */ {
+            0, 0x26574fb11b10196f403a164ef43989b2be1ac00e5788671d4cf30d5bd4979ae9_u256},
         /* (-18 == mod - 18) in mont */
         {6, 0x259d6b14729c0fa51e1a247090812318d087f6872aabf4f68c3488912edefaa0_u256}};
     // Implied + [1 in mont form]
@@ -37,9 +39,7 @@ struct ModCoeffs12
 class BN254ModArith : public ModArith<uint256>
 {
 public:
-    explicit BN254ModArith()
-      : ModArith<uint256>(BN254Mod)
-    {}
+    explicit BN254ModArith() : ModArith<uint256>(BN254Mod) {}
 
     uint256 inv(const uint256& x) const noexcept;
 
@@ -124,7 +124,7 @@ struct PointExt
 
     friend std::ostream& operator<<(std::ostream& os, const PointExt& p)
     {
-        return os << std::string("[") << p.x << ", " << p.y << ", "<< p.z  << std::string("]");
+        return os << std::string("[") << p.x << ", " << p.y << ", " << p.z << std::string("]");
     }
 
     PointExt to_mont() const { return {x.to_mont(), y.to_mont(), z.to_mont()}; }

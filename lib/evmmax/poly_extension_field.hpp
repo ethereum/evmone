@@ -77,7 +77,7 @@ struct PolyExtFieldElem
             auto top = b.back();
             auto exp = b.size() - degree - 1;
             b.pop_back();
-            for (const auto& mc: ModCoeffsT::MODULUS_COEFFS)
+            for (const auto& mc : ModCoeffsT::MODULUS_COEFFS)
                 b[mc.first + exp] = arith.sub(b[mc.first + exp], arith.mul(top, mc.second));
         }
 
@@ -136,7 +136,7 @@ struct PolyExtFieldElem
         low.push_back(0);
 
         std::vector<uint256> high(degree);
-        for (const auto& mc: ModCoeffsT::MODULUS_COEFFS)
+        for (const auto& mc : ModCoeffsT::MODULUS_COEFFS)
             high[mc.first] = mc.second;
         high.push_back(arith.one_mont());
 
@@ -207,7 +207,8 @@ struct PolyExtFieldElem
     }
 
     template <>
-    static inline constexpr PolyExtFieldElem pow<intx::uint<2816>>(const PolyExtFieldElem& x, const intx::uint<2816>& y)
+    static inline constexpr PolyExtFieldElem pow<intx::uint<2816>>(
+        const PolyExtFieldElem& x, const intx::uint<2816>& y)
     {
         auto o = one_mont();
         auto t = x;
@@ -257,20 +258,20 @@ struct PolyExtFieldElem
         return true;
     }
 
-//    friend std::ostream& operator<<(std::ostream& os, const PolyExtFieldElem& x)
-//    {
-//        os << "["sv;
-//
-//        if (!x.coeffs.empty())
-//        {
-//            for (size_t i = 0; i < x.coeffs.size() - 1; ++i)
-//                os << "0x"sv << hex(x.coeffs[i]) << ", ";
-//            os << "0x"sv << hex(x.coeffs.back());
-//        }
-//
-//        os << "]"sv;
-//        return os;
-//    }
+    //    friend std::ostream& operator<<(std::ostream& os, const PolyExtFieldElem& x)
+    //    {
+    //        os << "["sv;
+    //
+    //        if (!x.coeffs.empty())
+    //        {
+    //            for (size_t i = 0; i < x.coeffs.size() - 1; ++i)
+    //                os << "0x"sv << hex(x.coeffs[i]) << ", ";
+    //            os << "0x"sv << hex(x.coeffs.back());
+    //        }
+    //
+    //        os << "]"sv;
+    //        return os;
+    //    }
 
     PolyExtFieldElem to_mont() const
     {
@@ -327,10 +328,7 @@ struct PolyExtFieldElem
         return pow(a, b);
     }
 
-    friend PolyExtFieldElem operator-(const PolyExtFieldElem& a)
-    {
-        return neg(a);
-    }
+    friend PolyExtFieldElem operator-(const PolyExtFieldElem& a) { return neg(a); }
 
     friend bool operator==(const PolyExtFieldElem& a, const PolyExtFieldElem& b)
     {

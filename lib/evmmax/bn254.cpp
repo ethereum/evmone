@@ -283,26 +283,22 @@ Point bn254_mul(const Point& pt, const uint256& c) noexcept
 bool is_on_curve_b(const uint256& x, const uint256& y, const uint256& z)
 {
     static const auto B = bn254::FE2::arith.in_mont<3>();
-    return
-        bn254::FE2::arith.sub(
-            bn254::FE2::arith.mul(bn254::FE2::arith.pow(y, 2), z),
-            bn254::FE2::arith.pow(x, 3)
-            )
-        ==
-        bn254::FE2::arith.mul(B, bn254::FE2::arith.pow(z, 3));
+    return bn254::FE2::arith.sub(bn254::FE2::arith.mul(bn254::FE2::arith.pow(y, 2), z),
+               bn254::FE2::arith.pow(x, 3)) ==
+           bn254::FE2::arith.mul(B, bn254::FE2::arith.pow(z, 3));
 }
 
 bool is_on_curve_b2(const FE2Point& p)
 {
     static const auto B2 =
         bn254::FE2::div(bn254::FE2({3, 0}).to_mont(), bn254::FE2({9, 1}).to_mont());
-    return (p.y^2) * p.z - (p.x^3) == B2 * (p.z^3);
+    return (p.y ^ 2) * p.z - (p.x ^ 3) == B2 * (p.z ^ 3);
 }
 
 bool is_on_curve_b12(const FE12Point& p)
 {
     static const auto B12 = bn254::FE12({3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
-    return (p.y^2) * p.z - (p.x^3) == B12.to_mont() * (p.z^3);
+    return (p.y ^ 2) * p.z - (p.x ^ 3) == B12.to_mont() * (p.z ^ 3);
 }
 
 FE12Point twist(const FE2Point& pt)
@@ -331,18 +327,14 @@ FE12Point twist(const FE2Point& pt)
     auto nx = FE12({xcoeffs[0], 0, 0, 0, 0, 0, xcoeffs[1], 0, 0, 0, 0, 0});
     auto ny = FE12({ycoeffs[0], 0, 0, 0, 0, 0, ycoeffs[1], 0, 0, 0, 0, 0});
     auto nz = FE12({zcoeffs[0], 0, 0, 0, 0, 0, zcoeffs[1], 0, 0, 0, 0, 0});
-    // Multipy x coord by w**2 and y coord by w**3
-    return {nx * (omega^2), ny * (omega^3), nz};
+    // Multiply x coord by w**2 and y coord by w**3
+    return {nx * (omega ^ 2), ny * (omega ^ 3), nz};
 }
 
 FE12Point cast_to_fe12(const Point& pt)
 {
-    return
-        {
-            FE12({pt.x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
-            FE12({pt.y, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
-            FE12({1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-        };
+    return {FE12({pt.x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
+        FE12({pt.y, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}), FE12({1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})};
 }
 
 template <typename FieldElemT>
@@ -357,11 +349,8 @@ std::pair<FieldElemT, FieldElemT> line_func(
 
     if (m_denominator != FieldElemT::zero())
     {
-        return
-            {
-                m_numerator * (t.x * p1.z - p1.x * t.z) - m_denominator * (t.y * p1.z - p1.y * t.z),
-                m_denominator * t.z * p1.z
-            };
+        return {m_numerator * (t.x * p1.z - p1.x * t.z) - m_denominator * (t.y * p1.z - p1.y * t.z),
+            m_denominator * t.z * p1.z};
     }
     else if (m_numerator == FieldElemT::zero())
     {
@@ -369,20 +358,13 @@ std::pair<FieldElemT, FieldElemT> line_func(
         static const auto _2_mont = FieldElemT::arith.template in_mont<2>();
 
         m_numerator = (p1.x * p1.x) * _3_mont;
-        m_denominator = _2_mont * p1.y  * p1.z;
+        m_denominator = _2_mont * p1.y * p1.z;
 
-        return
-            {
-                m_numerator * (t.x * p1.z - p1.x * t.z) - m_denominator * (t.y * p1.z - p1.y * t.z),
-                m_denominator * t.z * p1.z
-            };
+        return {m_numerator * (t.x * p1.z - p1.x * t.z) - m_denominator * (t.y * p1.z - p1.y * t.z),
+            m_denominator * t.z * p1.z};
     }
     else
-        return
-            {
-                t.x * p1.z - p1.x * t.z,
-                p1.z * t.z
-            };
+        return {t.x * p1.z - p1.x * t.z, p1.z * t.z};
 }
 
 // Elliptic curve doubling over extension field
@@ -426,10 +408,10 @@ PointExt<FieldElemT> point_add(const PointExt<FieldElemT>& p1, const PointExt<Fi
     auto Y2 = p2.y;
     auto Z2 = p2.z;
 
-    auto U1 = Y2*Z1;
-    auto U2 = Y1*Z2;
-    auto V1 = X2*Z1;
-    auto V2 = X1*Z2;
+    auto U1 = Y2 * Z1;
+    auto U2 = Y1 * Z2;
+    auto V1 = X2 * Z1;
+    auto V2 = X1 * Z2;
     if (V1 == V2 && U1 == U2)
         return point_double(p1);
     else if (V1 == V2)
@@ -464,8 +446,10 @@ PointExt<FieldElemT> point_multiply(const PointExt<FieldElemT>& pt, const uint25
         return point_add(point_multiply(point_double(pt), n / 2), pt);
 }
 
-template std::pair<FE2, FE2> line_func<FE2>(const PointExt<FE2>&, const PointExt<FE2>&, const PointExt<FE2>&);
-template std::pair<FE12, FE12> line_func<FE12>(const PointExt<FE12>&, const PointExt<FE12>&, const PointExt<FE12>&);
+template std::pair<FE2, FE2> line_func<FE2>(
+    const PointExt<FE2>&, const PointExt<FE2>&, const PointExt<FE2>&);
+template std::pair<FE12, FE12> line_func<FE12>(
+    const PointExt<FE12>&, const PointExt<FE12>&, const PointExt<FE12>&);
 template PointExt<FE2> point_double(const PointExt<FE2>&);
 template PointExt<FE12> point_double(const PointExt<FE12>&);
 template PointExt<FE2> point_add(const PointExt<FE2>&, const PointExt<FE2>&);
@@ -475,16 +459,12 @@ template PointExt<FE12> point_multiply(const PointExt<FE12>&, const uint256&);
 
 FE12 miller_loop(const FE12Point& Q, const FE12Point& P, bool run_final_exp)
 {
-    static const int8_t pseudo_binary_encoding[] =
-        {
-            0, 0, 0, 1, 0, 1, 0, -1, 0, 0, 1, -1, 0, 0, 1, 0, 0, 1, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0,
-            0, 0, 1, 1, 1, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 1, 0, 0, -1, 0, 0, 0, 1,
-            1, 0, -1, 0, 0, 1, 0, 1,
-            1
-        };
+    static const int8_t pseudo_binary_encoding[] = {0, 0, 0, 1, 0, 1, 0, -1, 0, 0, 1, -1, 0, 0, 1,
+        0, 0, 1, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 0, 0, 1, 1, 1, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0,
+        -1, 0, 0, 1, 1, 0, 0, -1, 0, 0, 0, 1, 1, 0, -1, 0, 0, 1, 0, 1, 1};
 
-    //static constexpr auto ate_loop_count = 29793968203157093288_u256;
-    //static constexpr auto log_ate_loop_count = 63;
+    // static constexpr auto ate_loop_count = 29793968203157093288_u256;
+    // static constexpr auto log_ate_loop_count = 63;
     if (FE12Point::is_at_infinity(Q) || FE12Point::is_at_infinity(P))
         return FE12::one_mont();
 
@@ -514,9 +494,9 @@ FE12 miller_loop(const FE12Point& Q, const FE12Point& P, bool run_final_exp)
         }
     }
 
-    FE12Point Q1 = {Q.x^BN254Mod, Q.y^BN254Mod, Q.z^BN254Mod};
+    FE12Point Q1 = {Q.x ^ BN254Mod, Q.y ^ BN254Mod, Q.z ^ BN254Mod};
     // assert(is_on_curve_b12(Q1));
-    FE12Point nQ2 = {Q1.x^BN254Mod, -(Q1.y^BN254Mod), Q1.z^BN254Mod};
+    FE12Point nQ2 = {Q1.x ^ BN254Mod, -(Q1.y ^ BN254Mod), Q1.z ^ BN254Mod};
     // assert(is_on_curve_b12(nQ1));
     auto [_n1, _d1] = line_func(R, Q1, P);
     R = point_add(R, Q1);
@@ -615,9 +595,11 @@ bool bn254_ecpairing_precompile(const uint8_t* input, size_t input_size, uint8_t
         bn254::FE2Point q{bn254::FE2({be::unsafe::load<uint256>(&input[96 + input_stride * i]),
                               be::unsafe::load<uint256>(&input[64 + input_stride * i])}),
             bn254::FE2({be::unsafe::load<uint256>(&input[160 + input_stride * i]),
-                be::unsafe::load<uint256>(&input[128 + input_stride * i])}), bn254::FE2::one()};
+                be::unsafe::load<uint256>(&input[128 + input_stride * i])}),
+            bn254::FE2::one()};
 
-        if (!is_on_curve_b(FE2::arith.to_mont(p.x), FE2::arith.to_mont(p.y), FE2::arith.in_mont<1>()))
+        if (!is_on_curve_b(
+                FE2::arith.to_mont(p.x), FE2::arith.to_mont(p.y), FE2::arith.in_mont<1>()))
             return false;
 
         auto p_12 = cast_to_fe12(p);
@@ -628,7 +610,7 @@ bool bn254_ecpairing_precompile(const uint8_t* input, size_t input_size, uint8_t
 
         auto tq_mont = twist(q_mont);
         if (!is_on_curve_b12(tq_mont))
-            return false; // Twisting implementation error.
+            return false;  // Twisting implementation error.
 
         auto r = miller_loop(tq_mont, p_12.to_mont(), false);
         accumulator = FE12::mul(accumulator, r);
