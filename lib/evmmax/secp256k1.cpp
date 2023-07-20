@@ -709,6 +709,12 @@ std::optional<uint256> sqrt(const ModArith<uint256>& s, const uint256& x) noexce
     return (z2 == x ? std::make_optional(z) : std::nullopt);
 }
 
+namespace
+{
+constexpr Point G{0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798_u256,
+    0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8_u256};
+}  // namespace
+
 std::optional<Point> secp256k1_ecdsa_recover(
     const ethash::hash256& e, const uint256& r, const uint256& s, bool v) noexcept
 {
@@ -756,9 +762,6 @@ std::optional<Point> secp256k1_ecdsa_recover(
 
     // 6. Calculate public key point Q.
     const Point R{r, y};
-    static constexpr Point G{
-        0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798_u256,
-        0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8_u256};
     const Point T1 = secp256k1_mul(G, u1);
     const Point T2 = secp256k1_mul(R, u2);
     const Point Q = secp256k1_add(T1, T2);

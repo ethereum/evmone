@@ -78,7 +78,15 @@ std::tuple<uint256, uint256, uint256> point_addition_a0(const evmmax::ModArith<u
     // https://eprint.iacr.org/2015/1060 algorithm 1.
     // Simplified with a == 0
 
-    uint256 x3, y3, z3, t0, t1, t2, t3, t4, t5;
+    uint256 x3;
+    uint256 y3;
+    uint256 z3;
+    uint256 t0;
+    uint256 t1;
+    uint256 t2;
+    uint256 t3;
+    uint256 t4;
+    uint256 t5;
 
     t0 = s.mul(x1, x2);  // 1
     t1 = s.mul(y1, y2);  // 2
@@ -133,7 +141,13 @@ std::tuple<uint256, uint256, uint256> point_doubling_a0(const evmmax::ModArith<u
     // https://eprint.iacr.org/2015/1060 algorithm 3.
     // Simplified with a == 0
 
-    uint256 x3, y3, z3, t0, t1, t2, t3;
+    uint256 x3;
+    uint256 y3;
+    uint256 z3;
+    uint256 t0;
+    uint256 t1;
+    uint256 t2;
+    uint256 t3;
 
     t0 = s.mul(x, x);    // 1
     t1 = s.mul(y, y);    // 2
@@ -177,7 +191,14 @@ std::tuple<uint256, uint256, uint256> point_addition_mixed_a0(const evmmax::ModA
     // https://eprint.iacr.org/2015/1060 algorithm 2.
     // Simplified with z1 == 1, a == 0
 
-    uint256 x3, y3, z3, t0, t1, t3, t4, t5;
+    uint256 x3;
+    uint256 y3;
+    uint256 z3;
+    uint256 t0;
+    uint256 t1;
+    uint256 t3;
+    uint256 t4;
+    uint256 t5;
 
     t0 = s.mul(x1, x2);
     t1 = s.mul(y1, y2);
@@ -280,7 +301,7 @@ Point bn254_mul(const Point& pt, const uint256& c) noexcept
     return {s.from_mont(x0), s.from_mont(y0)};
 }
 
-bool is_on_curve_b(const uint256& x, const uint256& y, const uint256& z)
+bool is_on_curve_b(const uint256& x, const uint256& y, const uint256& z) noexcept
 {
     static const auto B = bn254::FE2::arith.in_mont<3>();
     return bn254::FE2::arith.sub(bn254::FE2::arith.mul(bn254::FE2::arith.pow(y, 2), z),
@@ -288,20 +309,20 @@ bool is_on_curve_b(const uint256& x, const uint256& y, const uint256& z)
            bn254::FE2::arith.mul(B, bn254::FE2::arith.pow(z, 3));
 }
 
-bool is_on_curve_b2(const FE2Point& p)
+bool is_on_curve_b2(const FE2Point& p) noexcept
 {
     static const auto B2 =
         bn254::FE2::div(bn254::FE2({3, 0}).to_mont(), bn254::FE2({9, 1}).to_mont());
     return (p.y ^ 2) * p.z - (p.x ^ 3) == B2 * (p.z ^ 3);
 }
 
-bool is_on_curve_b12(const FE12Point& p)
+bool is_on_curve_b12(const FE12Point& p) noexcept
 {
     static const auto B12 = bn254::FE12({3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
     return (p.y ^ 2) * p.z - (p.x ^ 3) == B12.to_mont() * (p.z ^ 3);
 }
 
-FE12Point twist(const FE2Point& pt)
+FE12Point twist(const FE2Point& pt) noexcept
 {
     static const auto omega = FE12({0, bn254::FE2::arith.one_mont(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
     if (FE2Point::is_at_infinity(pt))
@@ -331,15 +352,15 @@ FE12Point twist(const FE2Point& pt)
     return {nx * (omega ^ 2), ny * (omega ^ 3), nz};
 }
 
-FE12Point cast_to_fe12(const Point& pt)
+FE12Point cast_to_fe12(const Point& pt) noexcept
 {
     return {FE12({pt.x, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
         FE12({pt.y, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}), FE12({1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})};
 }
 
 template <typename FieldElemT>
-std::pair<FieldElemT, FieldElemT> line_func(
-    const PointExt<FieldElemT>& p1, const PointExt<FieldElemT>& p2, const PointExt<FieldElemT>& t)
+std::pair<FieldElemT, FieldElemT> line_func(const PointExt<FieldElemT>& p1,
+    const PointExt<FieldElemT>& p2, const PointExt<FieldElemT>& t) noexcept
 {
     assert(!PointExt<FieldElemT>::is_at_infinity(p1));
     assert(!PointExt<FieldElemT>::is_at_infinity(p2));
@@ -369,7 +390,7 @@ std::pair<FieldElemT, FieldElemT> line_func(
 
 // Elliptic curve doubling over extension field
 template <typename FieldElemT>
-PointExt<FieldElemT> point_double(const PointExt<FieldElemT>& p)
+PointExt<FieldElemT> point_double(const PointExt<FieldElemT>& p) noexcept
 {
     // https://en.wikibooks.org/wiki/Cryptography/Prime_Curve/Standard_Projective_Coordinates
 
@@ -393,7 +414,8 @@ PointExt<FieldElemT> point_double(const PointExt<FieldElemT>& p)
 
 // Elliptic curve doubling over extension field
 template <typename FieldElemT>
-PointExt<FieldElemT> point_add(const PointExt<FieldElemT>& p1, const PointExt<FieldElemT>& p2)
+PointExt<FieldElemT> point_add(
+    const PointExt<FieldElemT>& p1, const PointExt<FieldElemT>& p2) noexcept
 {
     // https://en.wikibooks.org/wiki/Cryptography/Prime_Curve/Standard_Projective_Coordinates
     using ET = FieldElemT;
@@ -434,7 +456,8 @@ PointExt<FieldElemT> point_add(const PointExt<FieldElemT>& p1, const PointExt<Fi
 }
 
 template <typename FieldElemT>
-PointExt<FieldElemT> point_multiply(const PointExt<FieldElemT>& pt, const uint256& n)
+PointExt<FieldElemT> point_multiply(  // NOLINT(misc-no-recursion)
+    const PointExt<FieldElemT>& pt, const uint256& n) noexcept
 {
     if (n == 0)
         return {FieldElemT(), FieldElemT(), FieldElemT()};
@@ -457,7 +480,7 @@ template PointExt<FE12> point_add(const PointExt<FE12>&, const PointExt<FE12>&);
 template PointExt<FE2> point_multiply(const PointExt<FE2>&, const uint256&);
 template PointExt<FE12> point_multiply(const PointExt<FE12>&, const uint256&);
 
-FE12 miller_loop(const FE12Point& Q, const FE12Point& P, bool run_final_exp)
+FE12 miller_loop(const FE12Point& Q, const FE12Point& P, bool run_final_exp) noexcept
 {
     static const int8_t pseudo_binary_encoding[] = {0, 0, 0, 1, 0, 1, 0, -1, 0, 0, 1, -1, 0, 0, 1,
         0, 0, 1, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 0, 0, 1, 1, 1, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0,
@@ -494,9 +517,9 @@ FE12 miller_loop(const FE12Point& Q, const FE12Point& P, bool run_final_exp)
         }
     }
 
-    FE12Point Q1 = {Q.x ^ BN254Mod, Q.y ^ BN254Mod, Q.z ^ BN254Mod};
+    const FE12Point Q1 = {Q.x ^ BN254Mod, Q.y ^ BN254Mod, Q.z ^ BN254Mod};
     // assert(is_on_curve_b12(Q1));
-    FE12Point nQ2 = {Q1.x ^ BN254Mod, -(Q1.y ^ BN254Mod), Q1.z ^ BN254Mod};
+    const FE12Point nQ2 = {Q1.x ^ BN254Mod, -(Q1.y ^ BN254Mod), Q1.z ^ BN254Mod};
     // assert(is_on_curve_b12(nQ1));
     auto [_n1, _d1] = line_func(R, Q1, P);
     R = point_add(R, Q1);
@@ -509,7 +532,7 @@ FE12 miller_loop(const FE12Point& Q, const FE12Point& P, bool run_final_exp)
         return f;
 }
 
-FE12 pairing(const FE2Point& q, const Point& p)
+FE12 pairing(const FE2Point& q, const Point& p) noexcept
 {
     assert(is_on_curve_b2(q.to_mont()));
     assert(is_on_curve_b(p.x, p.y, 1));
@@ -521,21 +544,24 @@ FE12 pairing(const FE2Point& q, const Point& p)
     return res.from_mont();
 }
 
-FE12 final_exponentiation(const FE12& a)
+namespace
 {
-    static const intx::uint<2816> final_exp_pow =  // ((field_modulus ** 12 - 1) // curve_order
-        intx::from_string<intx::uint<2816>>(
-            "55248423361322409631261712678317314709738210376295765418888273431419691083990754121397"
-            "45027615406298170096085486546803436277011538294467478109073732568415510062016396777261"
-            "39946029199968412598804882391702273019083653272047566316584365559776493027495458238373"
-            "90287593765994350487322055416155052592630230333174746351564471187665317712957830319109"
-            "59009091916248178265666882418044080818927857259679317140977167095260922612780719525601"
-            "71111444072049229123565057483750161460024353346284167282452756217662335528813519139808"
-            "29117053907212538123081572907154486160275093696482931360813732542638373512217522954115"
-            "53763464360939302874020895174269731789175697133847480818272554725769374714961957527271"
-            "88261435633271238710131736096299798168852925540549342330775279877006784354801422249722"
-            "573783561685179618816480037695005515426162362431072245638324744480");
+const auto final_exp_pow =  // ((field_modulus ** 12 - 1) // curve_order
+    intx::from_string<intx::uint<2816>>(
+        "55248423361322409631261712678317314709738210376295765418888273431419691083990754121397"
+        "45027615406298170096085486546803436277011538294467478109073732568415510062016396777261"
+        "39946029199968412598804882391702273019083653272047566316584365559776493027495458238373"
+        "90287593765994350487322055416155052592630230333174746351564471187665317712957830319109"
+        "59009091916248178265666882418044080818927857259679317140977167095260922612780719525601"
+        "71111444072049229123565057483750161460024353346284167282452756217662335528813519139808"
+        "29117053907212538123081572907154486160275093696482931360813732542638373512217522954115"
+        "53763464360939302874020895174269731789175697133847480818272554725769374714961957527271"
+        "88261435633271238710131736096299798168852925540549342330775279877006784354801422249722"
+        "573783561685179618816480037695005515426162362431072245638324744480");
+}  // namespace
 
+FE12 final_exponentiation(const FE12& a) noexcept
+{
     return FE12::pow(a, final_exp_pow);
 }
 
@@ -578,7 +604,8 @@ bool bn254_mul_precompile(const uint8_t* input, size_t input_size, uint8_t* outp
     return true;
 }
 
-bool bn254_ecpairing_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept
+bool bn254_ecpairing_precompile(  // NOLINT(bugprone-exception-escape)
+    const uint8_t* input, size_t input_size, uint8_t* output) noexcept
 {
     using namespace intx;
     static const size_t input_stride = 192;
@@ -590,10 +617,11 @@ bool bn254_ecpairing_precompile(const uint8_t* input, size_t input_size, uint8_t
 
     for (size_t i = 0; i < k; ++i)
     {
-        Point p{be::unsafe::load<uint256>(&input[input_stride * i]),
+        const Point p{be::unsafe::load<uint256>(&input[input_stride * i]),
             be::unsafe::load<uint256>(&input[32 + input_stride * i])};
-        bn254::FE2Point q{bn254::FE2({be::unsafe::load<uint256>(&input[96 + input_stride * i]),
-                              be::unsafe::load<uint256>(&input[64 + input_stride * i])}),
+        const bn254::FE2Point q{
+            bn254::FE2({be::unsafe::load<uint256>(&input[96 + input_stride * i]),
+                be::unsafe::load<uint256>(&input[64 + input_stride * i])}),
             bn254::FE2({be::unsafe::load<uint256>(&input[160 + input_stride * i]),
                 be::unsafe::load<uint256>(&input[128 + input_stride * i])}),
             bn254::FE2::one()};
@@ -602,17 +630,17 @@ bool bn254_ecpairing_precompile(const uint8_t* input, size_t input_size, uint8_t
                 FE2::arith.to_mont(p.x), FE2::arith.to_mont(p.y), FE2::arith.in_mont<1>()))
             return false;
 
-        auto p_12 = cast_to_fe12(p);
+        const auto p_12 = cast_to_fe12(p);
 
-        auto q_mont = q.to_mont();
+        const auto q_mont = q.to_mont();
         if (!is_on_curve_b2(q_mont))
             return false;
 
-        auto tq_mont = twist(q_mont);
+        const auto tq_mont = twist(q_mont);
         if (!is_on_curve_b12(tq_mont))
             return false;  // Twisting implementation error.
 
-        auto r = miller_loop(tq_mont, p_12.to_mont(), false);
+        const auto r = miller_loop(tq_mont, p_12.to_mont(), false);
         accumulator = FE12::mul(accumulator, r);
     }
 
@@ -986,7 +1014,8 @@ uint256 BN254ModArith::inv(const uint256& x) const noexcept
     return z;
 }
 
-uint256 BN254ModArith::pow(const uint256& x, const uint256& y) const noexcept
+uint256 BN254ModArith::pow(  // NOLINT(misc-no-recursion)
+    const uint256& x, const uint256& y) const noexcept
 {
     if (y == 0)
         return 1;

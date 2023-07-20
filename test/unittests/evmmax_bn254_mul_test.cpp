@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 using namespace evmmax::bn254;
+using namespace intx;
 
 struct TestCaseMul
 {
@@ -214,8 +215,8 @@ TEST(evmmax, bn254_mul_validate_inputs)
         ASSERT_EQ(t.expected_output.size(), 64);
 
         const Point a{
-            be::unsafe::load<uint256>(&t.input[0]), be::unsafe::load<uint256>(&t.input[32])};
-        const Point e{be::unsafe::load<uint256>(&t.expected_output[0]),
+            be::unsafe::load<uint256>(t.input.data()), be::unsafe::load<uint256>(&t.input[32])};
+        const Point e{be::unsafe::load<uint256>(t.expected_output.data()),
             be::unsafe::load<uint256>(&t.expected_output[32])};
 
         EXPECT_TRUE(validate(a));
@@ -230,9 +231,9 @@ TEST(evmmax, bn254_pt_mul)
     for (const auto& t : test_cases)
     {
         const Point p{
-            be::unsafe::load<uint256>(&t.input[0]), be::unsafe::load<uint256>(&t.input[32])};
+            be::unsafe::load<uint256>(t.input.data()), be::unsafe::load<uint256>(&t.input[32])};
         const auto d{be::unsafe::load<uint256>(&t.input[64])};
-        const Point e{be::unsafe::load<uint256>(&t.expected_output[0]),
+        const Point e{be::unsafe::load<uint256>(t.expected_output.data()),
             be::unsafe::load<uint256>(&t.expected_output[32])};
 
         auto r = bn254_mul(p, d);

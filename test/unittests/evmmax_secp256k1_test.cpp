@@ -220,7 +220,7 @@ struct TestCaseECR
     evmc::bytes32 hash;
     uint256 r;
     uint256 s;
-    bool parity;
+    bool parity = false;
     Point pubkey;
 };
 
@@ -267,7 +267,7 @@ TEST(evmmax, ecrecovery)
         ASSERT_EQ(t.expected_output.size(), 32);
 
         ethash::hash256 hash;
-        std::memcpy(hash.bytes, &t.input[0], 32);
+        std::memcpy(hash.bytes, t.input.data(), 32);
         const auto v{be::unsafe::load<uint256>(&t.input[32])};
         ASSERT_TRUE(v == 27 || v == 28);
         const auto r{be::unsafe::load<uint256>(&t.input[64])};

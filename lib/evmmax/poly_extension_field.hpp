@@ -21,15 +21,18 @@ struct PolyExtFieldElem
 
     std::vector<uint256> coeffs;
 
-    explicit PolyExtFieldElem() { coeffs.resize(degree); }
+    explicit PolyExtFieldElem() noexcept { coeffs.resize(degree); }
 
-    explicit PolyExtFieldElem(std::vector<uint256>&& _coeffs) : coeffs(_coeffs)
+    explicit PolyExtFieldElem(std::vector<uint256>&& _coeffs) noexcept : coeffs(_coeffs)
     {
         assert(coeffs.size() == degree);
     }
 
+    ~PolyExtFieldElem() noexcept = default;
+    PolyExtFieldElem(const PolyExtFieldElem&) noexcept = default;
+
     static inline constexpr PolyExtFieldElem add(
-        const PolyExtFieldElem& x, const PolyExtFieldElem& y)
+        const PolyExtFieldElem& x, const PolyExtFieldElem& y) noexcept
     {
         PolyExtFieldElem result;
 
@@ -40,7 +43,7 @@ struct PolyExtFieldElem
     }
 
     static inline constexpr PolyExtFieldElem sub(
-        const PolyExtFieldElem& x, const PolyExtFieldElem& y)
+        const PolyExtFieldElem& x, const PolyExtFieldElem& y) noexcept
     {
         PolyExtFieldElem result;
 
@@ -50,7 +53,8 @@ struct PolyExtFieldElem
         return result;
     }
 
-    static inline constexpr PolyExtFieldElem mul(const PolyExtFieldElem& x, const uint256& c)
+    static inline constexpr PolyExtFieldElem mul(
+        const PolyExtFieldElem& x, const uint256& c) noexcept
     {
         PolyExtFieldElem result;
 
@@ -60,7 +64,8 @@ struct PolyExtFieldElem
         return result;
     }
 
-    static inline PolyExtFieldElem mul(const PolyExtFieldElem& x, const PolyExtFieldElem& y)
+    static inline PolyExtFieldElem mul(
+        const PolyExtFieldElem& x, const PolyExtFieldElem& y) noexcept
     {
         std::vector<uint256> b(2 * degree - 1);
 
@@ -84,7 +89,7 @@ struct PolyExtFieldElem
         return PolyExtFieldElem(std::move(b));
     }
 
-    static inline constexpr PolyExtFieldElem div(const PolyExtFieldElem& x, uint256 c)
+    static inline constexpr PolyExtFieldElem div(const PolyExtFieldElem& x, uint256 c) noexcept
     {
         PolyExtFieldElem result;
 
@@ -94,7 +99,7 @@ struct PolyExtFieldElem
         return result;
     }
 
-    static inline constexpr size_t deg(const std::vector<uint256>& v)
+    static inline constexpr size_t deg(const std::vector<uint256>& v) noexcept
     {
         size_t d = v.size() - 1;
 
@@ -105,7 +110,7 @@ struct PolyExtFieldElem
     }
 
     static inline std::vector<uint256> poly_rounded_div(
-        const std::vector<uint256>& a, const std::vector<uint256>& b)
+        const std::vector<uint256>& a, const std::vector<uint256>& b) noexcept
     {
         auto dega = deg(a);
         auto degb = deg(b);
@@ -126,7 +131,7 @@ struct PolyExtFieldElem
             o.begin(), o.begin() + (typename std::vector<uint256>::difference_type)deg(o) + 1);
     }
 
-    static inline PolyExtFieldElem inv(const PolyExtFieldElem& x)
+    static inline PolyExtFieldElem inv(const PolyExtFieldElem& x) noexcept
     {
         std::vector<uint256> lm(degree + 1);
         lm[0] = arith.one_mont();
@@ -168,29 +173,30 @@ struct PolyExtFieldElem
     }
 
     static inline constexpr PolyExtFieldElem div(
-        const PolyExtFieldElem& x, const PolyExtFieldElem& y)
+        const PolyExtFieldElem& x, const PolyExtFieldElem& y) noexcept
     {
         return mul(x, inv(y));
     }
 
-    static inline PolyExtFieldElem one()
+    static inline PolyExtFieldElem one() noexcept
     {
         std::vector<uint256> _one(degree);
         _one[0] = 1;
         return PolyExtFieldElem(std::move(_one));
     }
 
-    static inline PolyExtFieldElem one_mont()
+    static inline PolyExtFieldElem one_mont() noexcept
     {
         std::vector<uint256> _one(degree);
         _one[0] = arith.one_mont();
         return PolyExtFieldElem(std::move(_one));
     }
 
-    static inline constexpr PolyExtFieldElem zero() { return PolyExtFieldElem(); }
+    static inline constexpr PolyExtFieldElem zero() noexcept { return PolyExtFieldElem(); }
 
     template <typename PowUintT>
-    static inline constexpr PolyExtFieldElem pow(const PolyExtFieldElem& x, const PowUintT& y)
+    static inline constexpr PolyExtFieldElem pow(
+        const PolyExtFieldElem& x, const PowUintT& y) noexcept
     {
         auto o = one_mont();
         auto t = x;
@@ -206,9 +212,8 @@ struct PolyExtFieldElem
         return o;
     }
 
-    template <>
-    static inline constexpr PolyExtFieldElem pow<intx::uint<2816>>(
-        const PolyExtFieldElem& x, const intx::uint<2816>& y)
+    static inline constexpr PolyExtFieldElem pow(
+        const PolyExtFieldElem& x, const intx::uint<2816>& y) noexcept
     {
         auto o = one_mont();
         auto t = x;
@@ -237,7 +242,7 @@ struct PolyExtFieldElem
         return o;
     }
 
-    static inline constexpr PolyExtFieldElem neg(const PolyExtFieldElem& x)
+    static inline constexpr PolyExtFieldElem neg(const PolyExtFieldElem& x) noexcept
     {
         PolyExtFieldElem result;
 
@@ -247,7 +252,7 @@ struct PolyExtFieldElem
         return result;
     }
 
-    static inline constexpr bool eq(const PolyExtFieldElem& x, const PolyExtFieldElem& y)
+    static inline constexpr bool eq(const PolyExtFieldElem& x, const PolyExtFieldElem& y) noexcept
     {
         for (size_t i = 0; i < degree; ++i)
         {
@@ -273,7 +278,7 @@ struct PolyExtFieldElem
     //        return os;
     //    }
 
-    PolyExtFieldElem to_mont() const
+    PolyExtFieldElem to_mont() const noexcept
     {
         PolyExtFieldElem result;
 
@@ -283,7 +288,7 @@ struct PolyExtFieldElem
         return result;
     }
 
-    PolyExtFieldElem from_mont() const
+    PolyExtFieldElem from_mont() const noexcept
     {
         PolyExtFieldElem result;
 
@@ -293,49 +298,49 @@ struct PolyExtFieldElem
         return result;
     }
 
-    friend PolyExtFieldElem operator*(const PolyExtFieldElem& a, const PolyExtFieldElem& b)
+    friend PolyExtFieldElem operator*(const PolyExtFieldElem& a, const PolyExtFieldElem& b) noexcept
     {
         return mul(a, b);
     }
 
-    friend PolyExtFieldElem operator*(const PolyExtFieldElem& a, const uint256& c)
+    friend PolyExtFieldElem operator*(const PolyExtFieldElem& a, const uint256& c) noexcept
     {
         return mul(a, c);
     }
 
-    friend PolyExtFieldElem operator*(const uint256& c, const PolyExtFieldElem& a)
+    friend PolyExtFieldElem operator*(const uint256& c, const PolyExtFieldElem& a) noexcept
     {
         return mul(a, c);
     }
 
-    friend PolyExtFieldElem operator-(const PolyExtFieldElem& a, const PolyExtFieldElem& b)
+    friend PolyExtFieldElem operator-(const PolyExtFieldElem& a, const PolyExtFieldElem& b) noexcept
     {
         return sub(a, b);
     }
 
-    friend PolyExtFieldElem operator+(const PolyExtFieldElem& a, const PolyExtFieldElem& b)
+    friend PolyExtFieldElem operator+(const PolyExtFieldElem& a, const PolyExtFieldElem& b) noexcept
     {
         return add(a, b);
     }
 
-    friend PolyExtFieldElem operator^(const PolyExtFieldElem& a, const size_t& b)
+    friend PolyExtFieldElem operator^(const PolyExtFieldElem& a, const size_t& b) noexcept
     {
         return pow(a, b);
     }
 
-    friend PolyExtFieldElem operator^(const PolyExtFieldElem& a, const uint256& b)
+    friend PolyExtFieldElem operator^(const PolyExtFieldElem& a, const uint256& b) noexcept
     {
         return pow(a, b);
     }
 
-    friend PolyExtFieldElem operator-(const PolyExtFieldElem& a) { return neg(a); }
+    friend PolyExtFieldElem operator-(const PolyExtFieldElem& a) noexcept { return neg(a); }
 
-    friend bool operator==(const PolyExtFieldElem& a, const PolyExtFieldElem& b)
+    friend bool operator==(const PolyExtFieldElem& a, const PolyExtFieldElem& b) noexcept
     {
         return eq(a, b);
     }
 
-    friend bool operator!=(const PolyExtFieldElem& a, const PolyExtFieldElem& b)
+    friend bool operator!=(const PolyExtFieldElem& a, const PolyExtFieldElem& b) noexcept
     {
         return !eq(a, b);
     }

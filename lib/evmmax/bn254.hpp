@@ -106,29 +106,29 @@ struct PointExt
     FieldElemT y;
     FieldElemT z;
 
-    static inline constexpr bool eq(const PointExt& a, const PointExt& b)
+    static inline constexpr bool eq(const PointExt& a, const PointExt& b) noexcept
     {
         return FieldElemT::eq(a.x, b.x) && FieldElemT::eq(a.y, b.y) && FieldElemT::eq(a.z, b.z);
     }
 
-    static inline constexpr bool is_at_infinity(const PointExt& a)
+    static inline constexpr bool is_at_infinity(const PointExt& a) noexcept
     {
         return FieldElemT::eq(a.x, FieldElemT::zero()) && FieldElemT::eq(a.y, FieldElemT::zero()) &&
                FieldElemT::eq(a.z, FieldElemT::zero());
     }
 
-    static inline constexpr PointExt infinity()
+    static inline constexpr PointExt infinity() noexcept
     {
         return {FieldElemT::zero(), FieldElemT::zero(), FieldElemT::zero()};
     }
 
-    friend std::ostream& operator<<(std::ostream& os, const PointExt& p)
+    friend std::ostream& operator<<(std::ostream& os, const PointExt& p) noexcept
     {
         return os << std::string("[") << p.x << ", " << p.y << ", " << p.z << std::string("]");
     }
 
-    PointExt to_mont() const { return {x.to_mont(), y.to_mont(), z.to_mont()}; }
-    PointExt from_mont() const { return {x.from_mont(), y.from_mont(), z.from_mont()}; }
+    PointExt to_mont() const noexcept { return {x.to_mont(), y.to_mont(), z.to_mont()}; }
+    PointExt from_mont() const noexcept { return {x.from_mont(), y.from_mont(), z.from_mont()}; }
 };
 
 inline bool is_at_infinity(const Point& pt) noexcept
@@ -146,47 +146,49 @@ bool bn254_mul_precompile(const uint8_t* input, size_t input_size, uint8_t* outp
 bool bn254_ecpairing_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept;
 
 // Extension field FQ2 (x^2 + 1) element
-using FE2 = struct PolyExtFieldElem<BN254ModArith, ModCoeffs2>;
+using FE2 = PolyExtFieldElem<BN254ModArith, ModCoeffs2>;
 // Extension field FQ12 (x^12 -18x^6 + 82) element
-using FE12 = struct PolyExtFieldElem<BN254ModArith, ModCoeffs12>;
+using FE12 = PolyExtFieldElem<BN254ModArith, ModCoeffs12>;
 // Point of dwo dim space (FQ2xFQ2)
-using FE2Point = struct PointExt<FE2>;
+using FE2Point = PointExt<FE2>;
 // Point of dwo dim space (FQ12xFQ12)
-using FE12Point = struct PointExt<FE12>;
+using FE12Point = PointExt<FE12>;
 
-bool is_on_curve_b2(const FE2Point& p);
-bool is_on_curve_b12(const FE12Point& p);
+bool is_on_curve_b(const uint256& x, const uint256& y, const uint256& z) noexcept;
+bool is_on_curve_b2(const FE2Point& p) noexcept;
+bool is_on_curve_b12(const FE12Point& p) noexcept;
 
 // "Twists" a point in E(FQ2) into a point in E(FQ12)
-FE12Point twist(const FE2Point& pt);
+FE12Point twist(const FE2Point& pt) noexcept;
 
 // Casts point from FQ to FQ12
-FE12Point cast_to_fe12(const Point& pt);
+FE12Point cast_to_fe12(const Point& pt) noexcept;
 
 // Create a function representing the line between P1 and P2, and evaluate it at T
 template <typename FieldElemT>
-std::pair<FieldElemT, FieldElemT> line_func(
-    const PointExt<FieldElemT>& P, const PointExt<FieldElemT>& Q, const PointExt<FieldElemT>& T);
+std::pair<FieldElemT, FieldElemT> line_func(const PointExt<FieldElemT>& p1,
+    const PointExt<FieldElemT>& p2, const PointExt<FieldElemT>& t) noexcept;
 
 // Elliptic curve point doubling over extension field
 template <typename FieldElemT>
-PointExt<FieldElemT> point_double(const PointExt<FieldElemT>& p);
+PointExt<FieldElemT> point_double(const PointExt<FieldElemT>& p) noexcept;
 
 // Elliptic curve point addition over extension field
 template <typename FieldElemT>
-PointExt<FieldElemT> point_add(const PointExt<FieldElemT>& p1, const PointExt<FieldElemT>& p2);
+PointExt<FieldElemT> point_add(
+    const PointExt<FieldElemT>& p1, const PointExt<FieldElemT>& p2) noexcept;
 
 // Elliptic curve point multiplication over extension field
 template <typename FieldElemT>
-PointExt<FieldElemT> point_multiply(const PointExt<FieldElemT>& pt, const uint256& n);
+PointExt<FieldElemT> point_multiply(const PointExt<FieldElemT>& pt, const uint256& n) noexcept;
 
 // Miller loop for pairing bn254 curve points.
-FE12 miller_loop(const FE12Point& Q, const FE12Point& P, bool run_final_exp);
+FE12 miller_loop(const FE12Point& Q, const FE12Point& P, bool run_final_exp) noexcept;
 
 // Computes paring of bn254 curve points.
-FE12 pairing(const FE2Point& Q, const Point& P);
+FE12 pairing(const FE2Point& Q, const Point& P) noexcept;
 
 // Computes final exponentiation of bn254 pairing result.
-FE12 final_exponentiation(const FE12& a);
+FE12 final_exponentiation(const FE12& a) noexcept;
 
 }  // namespace evmmax::bn254
