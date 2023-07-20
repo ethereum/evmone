@@ -206,6 +206,36 @@ struct PolyExtFieldElem
         return o;
     }
 
+    template <>
+    static inline constexpr PolyExtFieldElem pow<intx::uint<2816>>(const PolyExtFieldElem& x, const intx::uint<2816>& y)
+    {
+        auto o = one_mont();
+        auto t = x;
+
+        for (size_t i = 0; i < y.num_words - 1; ++i)
+        {
+            auto p = y[i];
+            for (uint8_t _ = 0; _ < y.word_num_bits; ++_)
+            {
+                if (p & 1)
+                    o = o * t;
+                p >>= 1;
+                t = t * t;
+            }
+        }
+
+        auto p = y[y.num_words - 1];
+        while (p > 0)
+        {
+            if (p & 1)
+                o = o * t;
+            p >>= 1;
+            t = t * t;
+        }
+
+        return o;
+    }
+
     static inline constexpr PolyExtFieldElem neg(const PolyExtFieldElem& x)
     {
         PolyExtFieldElem result;
