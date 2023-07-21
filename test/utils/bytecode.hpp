@@ -353,6 +353,11 @@ inline bytecode blockhash(bytecode number)
     return number + OP_BLOCKHASH;
 }
 
+inline bytecode blobhash(bytecode index)
+{
+    return index + OP_BLOBHASH;
+}
+
 template <Opcode kind>
 struct call_instruction
 {
