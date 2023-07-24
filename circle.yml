@@ -485,6 +485,27 @@ jobs:
       - upload_coverage:
           flags: statetests
 
+  precompiles-silkpre:
+    executor: blockchain-tests
+    environment:
+      BUILD_TYPE: Coverage
+      CMAKE_OPTIONS: -DCMAKE_CXX_FLAGS=-Og -DEVMONE_PRECOMPILES_SILKPRE=1
+    steps:
+      - run:
+          name: "Install GMP"
+          command: sudo apt-get -q update && sudo apt-get -qy install libgmp-dev
+      - build
+      - download_execution_tests:
+          rev: v12.2
+      - run:
+          name: "State tests"
+          working_directory: ~/build
+          command: |
+            bin/evmone-statetest ~/tests/GeneralStateTests ~/tests/LegacyTests/Constantinople/GeneralStateTests
+      - collect_coverage_gcc
+      - upload_coverage:
+          flags: statetests-silkpre
+
   gcc-min:
     executor: linux-gcc-min
     steps:
@@ -666,6 +687,7 @@ workflows:
             tags:
               only: /^v[0-9].*/
       - state-tests
+      - precompiles-silkpre
       - blockchain-tests
       - cmake-min
       - gcc-min
