@@ -155,6 +155,16 @@ int main(int argc, const char* argv[])
                         transactions.emplace_back(std::move(tx));
                         receipts.emplace_back(std::move(receipt));
                     }
+
+                    for (auto& acc : state.get_accounts())
+                    {
+                        acc.second.access_status = EVMC_ACCESS_COLD;
+                        for (auto& [_, val] : acc.second.storage)
+                        {
+                            val.access_status = EVMC_ACCESS_COLD;
+                            val.original = val.current;
+                        }
+                    }
                 }
             }
 
