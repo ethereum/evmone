@@ -139,6 +139,7 @@ struct TransactionReceipt
     Transaction::Type type = Transaction::Type::legacy;
     evmc_status_code status = EVMC_INTERNAL_ERROR;
     int64_t gas_used = 0;
+    int64_t cumulative_gas_used = 0;
     std::vector<Log> logs;
     BloomFilter logs_bloom_filter;
 };
