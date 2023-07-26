@@ -142,6 +142,7 @@ struct TransactionReceipt
     int64_t cumulative_gas_used = 0;
     std::vector<Log> logs;
     BloomFilter logs_bloom_filter;
+    std::optional<bytes32> post_state;
 };
 
 /// Finalize state after applying a "block" of transactions.
