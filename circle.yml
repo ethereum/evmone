@@ -474,7 +474,7 @@ jobs:
             bin/evmone-statetest ~/tests/GeneralStateTests ~/tests/LegacyTests/Constantinople/GeneralStateTests
       - download_execution_tests:
           repo: ipsilon/tests
-          rev: eof-opcodes-20230619
+          rev: runtime-stackoverflow-fix
           legacy: false
       - run:
           name: "State tests (EOF)"
