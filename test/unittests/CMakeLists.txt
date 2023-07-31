@@ -29,6 +29,7 @@ target_sources(
     evm_storage_test.cpp
     evm_other_test.cpp
     evm_benchmark_test.cpp
+    evmmax_test.cpp
     evmone_test.cpp
     execution_state_test.cpp
     instructions_test.cpp
@@ -48,7 +49,7 @@ target_sources(
     statetest_logs_hash_test.cpp
     tracing_test.cpp
 )
-target_link_libraries(evmone-unittests PRIVATE evmone evmone::state evmone::statetestutils testutils evmc::instructions GTest::gtest GTest::gtest_main)
+target_link_libraries(evmone-unittests PRIVATE evmone evmone::evmmax evmone::state evmone::statetestutils testutils evmc::instructions GTest::gtest GTest::gtest_main)
 target_include_directories(evmone-unittests PRIVATE ${evmone_private_include_dir})
 
 gtest_discover_tests(evmone-unittests TEST_PREFIX ${PROJECT_NAME}/unittests/)
