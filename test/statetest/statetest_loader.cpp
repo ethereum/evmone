@@ -210,10 +210,19 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
         }
     }
 
+    std::unordered_map<int64_t, hash256> block_hashes;
+
+    if (const auto block_hashes_it = j.find("blockHashes"); block_hashes_it != j.end())
+    {
+        for (const auto& [j_num, j_hash] : block_hashes_it->items())
+            block_hashes[from_json<int64_t>(j_num)] = from_json<hash256>(j_hash);
+    }
+
     return {from_json<int64_t>(j.at("currentNumber")), from_json<int64_t>(j.at("currentTimestamp")),
         parent_timestamp, from_json<int64_t>(j.at("currentGasLimit")),
         from_json<evmc::address>(j.at("currentCoinbase")), current_difficulty, parent_difficulty,
-        parent_uncle_hash, prev_randao, base_fee, std::move(withdrawals), std::move(ommers)};
+        parent_uncle_hash, prev_randao, base_fee, std::move(withdrawals), std::move(ommers),
+        std::move(block_hashes)};
 }
 
 template <>

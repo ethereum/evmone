@@ -100,6 +100,7 @@ struct BlockInfo
     uint64_t base_fee = 0;
     std::vector<Withdrawal> withdrawals;
     std::vector<Ommer> ommers;
+    std::unordered_map<int64_t, hash256> block_hashes;
 };
 
 using AccessList = std::vector<std::pair<address, std::vector<bytes32>>>;
