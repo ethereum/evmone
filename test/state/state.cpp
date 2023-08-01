@@ -81,7 +81,7 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
     if (tx.gas_limit > block.gas_limit)
         return make_error_code(GAS_LIMIT_REACHED);
 
-    if (tx.max_gas_price < block.base_fee)
+    if (rev >= EVMC_LONDON && tx.max_gas_price < block.base_fee)
         return make_error_code(FEE_CAP_LESS_THEN_BLOCKS);
 
     if (!sender_acc.code.empty())

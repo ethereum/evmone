@@ -203,6 +203,24 @@ int main(int argc, const char* argv[])
                         continue;
                     }
 
+                    auto sender_acc_ptr = state.find(tx.sender);
+                    if (sender_acc_ptr == nullptr)
+                    {
+                        // It's possible to send tx from non-existent account before London fork.
+                        // TODO: This should be handled in `validate_transaction` but it requires bigger change.
+                        if (rev < EVMC_LONDON && tx.max_gas_price == 0)
+                            state.touch(tx.sender);
+                        else
+                        {
+                            json::json j_rejected_tx;
+                            j_rejected_tx["hash"] = hex0x(computed_tx_hash);
+                            j_rejected_tx["index"] = i;
+                            j_rejected_tx["error"] =
+                                make_error_code(state::ErrorCode::INSUFFICIENT_FUNDS).message();
+                            j_result["rejected"].push_back(j_rejected_tx);
+                            continue;
+                        }
+                    }
                     auto res = state::transition(state, block, tx, rev, vm);
 
                     if (j_txs[i].contains("hash"))
