@@ -145,9 +145,13 @@ int main(int argc, const char* argv[])
             j_result["currentDifficulty"] = hex0x(block.current_difficulty);
         else
         {
-            const auto current_difficulty =
-                calc_difficulty(block.parent_difficulty, block.parent_uncle_hash,
-                    block.parent_timestamp, block.timestamp, block.number, rev);
+            if (rev >= EVMC_SHANGHAI)
+                j_result["currentDifficulty"] = nullptr;
+            else
+            {
+                const auto current_difficulty =
+                    calc_difficulty(block.parent_difficulty, block.parent_uncle_hash,
+                        block.parent_timestamp, block.timestamp, block.number, rev);
 
                 j_result["currentDifficulty"] = hex0x(current_difficulty);
                 block.current_difficulty = current_difficulty;
