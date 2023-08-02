@@ -207,7 +207,8 @@ int main(int argc, const char* argv[])
                     if (sender_acc_ptr == nullptr)
                     {
                         // It's possible to send tx from non-existent account before London fork.
-                        // TODO: This should be handled in `validate_transaction` but it requires bigger change.
+                        // TODO: This should be handled in `validate_transaction` but it requires
+                        // bigger change.
                         if (rev < EVMC_LONDON && tx.max_gas_price == 0)
                             state.touch(tx.sender);
                         else
@@ -221,6 +222,29 @@ int main(int argc, const char* argv[])
                             continue;
                         }
                     }
+
+                    if (state.get(tx.sender).nonce < tx.nonce)
+                    {
+                        json::json j_rejected_tx;
+                        j_rejected_tx["hash"] = hex0x(computed_tx_hash);
+                        j_rejected_tx["index"] = i;
+                        // TODO: Add error code to state::ErrorCode
+                        j_rejected_tx["error"] = "nonce too high";
+                        j_result["rejected"].push_back(j_rejected_tx);
+                        continue;
+                    }
+
+                    if (state.get(tx.sender).nonce > tx.nonce)
+                    {
+                        json::json j_rejected_tx;
+                        j_rejected_tx["hash"] = hex0x(computed_tx_hash);
+                        j_rejected_tx["index"] = i;
+                        // TODO: Add error code to state::ErrorCode
+                        j_rejected_tx["error"] = "nonce too low";
+                        j_result["rejected"].push_back(j_rejected_tx);
+                        continue;
+                    }
+
                     auto res = state::transition(state, block, tx, rev, vm);
 
                     if (j_txs[i].contains("hash"))
