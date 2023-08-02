@@ -129,11 +129,26 @@ evmc_message build_message(const Transaction& tx, int64_t execution_gas_limit) n
 }  // namespace
 
 void finalize(State& state, evmc_revision rev, const address& coinbase,
-    std::optional<uint64_t> block_reward, std::span<Withdrawal> withdrawals)
+    std::optional<uint64_t> block_reward, std::span<Withdrawal> withdrawals,
+    std::span<Ommer> ommers)
 {
     // TODO: The block reward can be represented as a withdrawal.
     if (block_reward.has_value())
+    {
         state.touch(coinbase).balance += *block_reward;
+        if (!ommers.empty())
+        {
+            state.touch(coinbase).balance += *block_reward * ommers.size() / 32;
+
+            for (const auto& ommer : ommers)
+            {
+                uint256 block_reward_256 = *block_reward;
+                block_reward_256 = block_reward_256 * (8 - ommer.delta) / 8;
+                assert(block_reward_256 <= std::numeric_limits<uint64_t>::max());
+                state.touch(ommer.beneficiary).balance += block_reward_256[0];
+            }
+        }
+    }
 
     for (const auto& withdrawal : withdrawals)
         state.touch(withdrawal.recipient).balance += withdrawal.get_amount();

@@ -200,10 +200,20 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
     if (parent_timestamp_it != j.end())
         parent_timestamp = from_json<int64_t>(*parent_timestamp_it);
 
+    std::vector<state::Ommer> ommers;
+    if (const auto ommers_it = j.find("ommers"); ommers_it != j.end())
+    {
+        for (const auto& ommer : *ommers_it)
+        {
+            ommers.push_back(
+                {from_json<evmc::address>(ommer.at("address")), ommer.at("delta").get<uint8_t>()});
+        }
+    }
+
     return {from_json<int64_t>(j.at("currentNumber")), from_json<int64_t>(j.at("currentTimestamp")),
         parent_timestamp, from_json<int64_t>(j.at("currentGasLimit")),
         from_json<evmc::address>(j.at("currentCoinbase")), current_difficulty, parent_difficulty,
-        parent_uncle_hash, prev_randao, base_fee, std::move(withdrawals)};
+        parent_uncle_hash, prev_randao, base_fee, std::move(withdrawals), std::move(ommers)};
 }
 
 template <>
