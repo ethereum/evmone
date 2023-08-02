@@ -474,7 +474,7 @@ jobs:
             bin/evmone-statetest ~/tests/GeneralStateTests ~/tests/LegacyTests/Constantinople/GeneralStateTests
       - download_execution_tests:
           repo: ipsilon/tests
-          rev: eof-prague-20230803
+          rev: eof-rjumpv-20230803
           legacy: false
       - run:
           name: "State tests (EOF)"
