@@ -82,8 +82,12 @@ struct BlockInfo
 {
     int64_t number = 0;
     int64_t timestamp = 0;
+    int64_t parent_timestamp = 0;
     int64_t gas_limit = 0;
     address coinbase;
+    int64_t current_difficulty = 0;
+    int64_t parent_difficulty = 0;
+    hash256 parent_uncle_hash;
     bytes32 prev_randao;
     uint64_t base_fee = 0;
     std::vector<Withdrawal> withdrawals;

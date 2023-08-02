@@ -20,6 +20,64 @@ using namespace evmone;
 using namespace evmone::test;
 using namespace std::literals;
 
+namespace
+{
+using namespace intx;
+
+int64_t get_bomb_delay(evmc_revision rev)
+{
+    switch (rev)
+    {
+    case EVMC_BYZANTIUM:
+        return 3000000;
+    case EVMC_CONSTANTINOPLE:
+    case EVMC_PETERSBURG:
+    case EVMC_ISTANBUL:
+        return 5000000;
+    case EVMC_BERLIN:
+        return 9000000;
+    case EVMC_LONDON:
+        return 9700000;
+    default:
+        throw std::runtime_error("get_bomb_delay: Wrong rev");
+    }
+}
+
+int64_t calc_difficulty(const int64_t& parent_difficulty, const hash256& parent_uncle_hash,
+    const int64_t& parent_timestamp, const int64_t& current_timestamp, const int64_t& block_num,
+    evmc_revision rev)
+{
+    if (rev >= EVMC_PARIS)
+        return 0;
+
+    // TODO: Implement for older revisions
+    if (rev < EVMC_BYZANTIUM)
+        return 0x020000;
+
+    static constexpr auto min_difficulty = int64_t{1} << 17;
+
+    const auto kappa = get_bomb_delay(rev);
+
+    const auto H_i_prime = kappa >= block_num ? 0 : block_num - kappa;
+
+    const auto p = (H_i_prime / 100000) - 2;
+    assert(p < 63);
+
+    const auto epsilon = p < 0 ? 0 : int64_t{1} << p;
+
+    static const hash256 empty_uncle_hash =
+        0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347_bytes32;
+
+    const auto y = parent_uncle_hash != empty_uncle_hash ? 2 : 1;
+
+    const auto sigma_2 = std::max(y - (current_timestamp - parent_timestamp) / 9, int64_t{-99});
+
+    const int64_t x = parent_difficulty / 2048;
+
+    return std::max(min_difficulty, (int64_t)parent_difficulty + x * sigma_2 + epsilon);
+}
+}  // namespace
+
 int main(int argc, const char* argv[])
 {
     evmc_revision rev = {};
@@ -81,8 +139,31 @@ int main(int argc, const char* argv[])
         }
 
         json::json j_result;
-        // FIXME: Calculate difficulty properly
-        j_result["currentDifficulty"] = "0x20000";
+
+        // Difficulty was received from upstream. No need to calc
+        if (block.current_difficulty != 0)
+            j_result["currentDifficulty"] = hex0x(block.current_difficulty);
+        else
+        {
+            const auto current_difficulty =
+                calc_difficulty(block.parent_difficulty, block.parent_uncle_hash,
+                    block.parent_timestamp, block.timestamp, block.number, rev);
+
+                j_result["currentDifficulty"] = hex0x(current_difficulty);
+                block.current_difficulty = current_difficulty;
+
+                // Override prev_randao with difficulty (swap bytes to BE) pre Merge
+                if (rev < EVMC_PARIS)
+                {
+                    std::memset(block.prev_randao.bytes, 0, 32);
+                    const auto s = sizeof(current_difficulty);
+                    const auto diff_ptr = reinterpret_cast<const uint8_t*>(&current_difficulty);
+                    for (size_t i = 0; i < s; ++i)
+                        block.prev_randao.bytes[24 + i] = diff_ptr[s - 1 - i];
+                }
+            }
+        };
+
         j_result["currentBaseFee"] = hex0x(block.base_fee);
 
         int64_t cumulative_gas_used = 0;
