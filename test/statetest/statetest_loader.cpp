@@ -242,7 +242,7 @@ evmc_revision to_rev(std::string_view s)
         return EVMC_ISTANBUL;
     if (s == "Berlin")
         return EVMC_BERLIN;
-    if (s == "London")
+    if (s == "London" || s == "ArrowGlacier")
         return EVMC_LONDON;
     if (s == "Merge")
         return EVMC_PARIS;
