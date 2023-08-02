@@ -76,6 +76,8 @@ struct Ommer
 
 struct Withdrawal
 {
+    uint64_t index = 0;
+    uint64_t validator_index = 0;
     address recipient;
     uint64_t amount_in_gwei = 0;  ///< The amount is denominated in gwei.
 
@@ -178,5 +180,8 @@ void finalize(State& state, evmc_revision rev, const address& coinbase,
 
 /// Defines how to RLP-encode a Log.
 [[nodiscard]] bytes rlp_encode(const Log& log);
+
+/// Defines how to RLP-encode a Withdrawal.
+[[nodiscard]] bytes rlp_encode(const Withdrawal& withdrawal);
 
 }  // namespace evmone::state

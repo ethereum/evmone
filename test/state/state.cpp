@@ -291,4 +291,10 @@ std::variant<TransactionReceipt, std::error_code> transition(
     }
 }
 
+[[nodiscard]] bytes rlp_encode(const Withdrawal& withdrawal)
+{
+    return rlp::encode_tuple(withdrawal.index, withdrawal.validator_index, withdrawal.recipient,
+        withdrawal.amount_in_gwei);
+}
+
 }  // namespace evmone::state

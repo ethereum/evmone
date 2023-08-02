@@ -53,4 +53,13 @@ hash256 mpt_hash(std::span<const TransactionReceipt> receipts)
     return trie.hash();
 }
 
+hash256 mpt_hash(std::span<const Withdrawal> withdrawals)
+{
+    MPT trie;
+    for (size_t i = 0; i < withdrawals.size(); ++i)
+        trie.insert(rlp::encode(i), rlp::encode(withdrawals[i]));
+
+    return trie.hash();
+}
+
 }  // namespace evmone::state
