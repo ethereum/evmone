@@ -13,8 +13,8 @@ TEST_P(evm, eof_function_example1)
     if (is_advanced())
         return;
 
-    rev = EVMC_CANCUN;
-    const auto code = "EF00 01 010008 020002 000f 0002 030000 00 00000002 02010002" +
+    rev = EVMC_PRAGUE;
+    const auto code = "EF00 01 010008 020002 000f 0002 040000 00 00000002 02010002" +
                       /* func0: */ push(1) + push(8) + OP_CALLF + "0001" + ret_top() +
                       /* func1: */ OP_SUB + OP_RETF;
 
@@ -31,9 +31,9 @@ TEST_P(evm, eof_function_example2)
     if (is_advanced())
         return;
 
-    rev = EVMC_CANCUN;
+    rev = EVMC_PRAGUE;
     const auto code =
-        "ef0001 01000c 020003 003b 0017 001d 030000 00 00000004 01010003 01010004"
+        "ef0001 01000c 020003 003b 0017 001d 040000 00 00000004 01010003 01010004"
         "60043560003560e01c63c76652678114e1001c63c6c2ea178114e100065050600080fd50e30002600052602060"
         "00f350e3000160005260206000f3"
         "60018111e10004506001e460018103e3000181029050e4"
@@ -62,8 +62,8 @@ TEST_P(evm, callf_stack_size_1024)
     if (is_advanced())
         return;
 
-    rev = EVMC_CANCUN;
-    const auto code = bytecode{"ef0001 010008 020002 0BFF 0004 030000 00 000003FF 00000001"_hex} +
+    rev = EVMC_PRAGUE;
+    const auto code = bytecode{"ef0001 010008 020002 0BFF 0004 040000 00 000003FF 00000001"_hex} +
                       1023 * push(1) + OP_CALLF + bytecode{"0x0001"_hex} + 1021 * OP_POP +
                       OP_RETURN + push(1) + OP_POP + OP_RETF;
 
@@ -78,8 +78,8 @@ TEST_P(evm, callf_with_inputs_stack_size_1024)
     if (is_advanced())
         return;
 
-    rev = EVMC_CANCUN;
-    const auto code = bytecode{"ef0001 010008 020002 0BFF 0004 030000 00 000003FF 03030004"_hex} +
+    rev = EVMC_PRAGUE;
+    const auto code = bytecode{"ef0001 010008 020002 0BFF 0004 040000 00 000003FF 03030004"_hex} +
                       1023 * push(1) + OP_CALLF + bytecode{"0x0001"_hex} + 1021 * OP_POP +
                       OP_RETURN + push(1) + OP_POP + OP_RETF;
 
@@ -94,9 +94,9 @@ TEST_P(evm, callf_stack_overflow)
     if (is_advanced())
         return;
 
-    rev = EVMC_CANCUN;
+    rev = EVMC_PRAGUE;
     const auto code =
-        bytecode{"ef0001 010008 020002 0BFF 0007 030000 00 000003FF 00000002"_hex} +  // EOF header
+        bytecode{"ef0001 010008 020002 0BFF 0007 040000 00 000003FF 00000002"_hex} +  // EOF header
         1023 * push(1) + OP_CALLF + bytecode{"0x0001"_hex} + 1021 * OP_POP + OP_RETURN +
         2 * push(1) + 2 * OP_POP + OP_RETF;
 
@@ -111,9 +111,9 @@ TEST_P(evm, callf_with_inputs_stack_overflow)
     if (is_advanced())
         return;
 
-    rev = EVMC_CANCUN;
+    rev = EVMC_PRAGUE;
     const auto code =
-        bytecode{"ef0001 01000c 020003 0BFF 0007 0004 030000 00 000003FF 03030004 03030004"_hex} +
+        bytecode{"ef0001 01000c 020003 0BFF 0007 0004 040000 00 000003FF 03030004 03030004"_hex} +
         1023 * push(1) + OP_CALLF + bytecode{"0x0001"_hex} + 1021 * OP_POP + OP_RETURN + push(1) +
         OP_CALLF + bytecode{"0x0002"_hex} + OP_POP + OP_RETF + push(1) + OP_POP + OP_RETF;
 
@@ -128,8 +128,8 @@ TEST_P(evm, callf_call_stack_size_1024)
     if (is_advanced())
         return;
 
-    rev = EVMC_CANCUN;
-    const auto code = bytecode{"ef0001 010008 020002 0007 000e 030000 00 00000001 01000002"_hex} +
+    rev = EVMC_PRAGUE;
+    const auto code = bytecode{"ef0001 010008 020002 0007 000e 040000 00 00000001 01000002"_hex} +
                       push(1023) + OP_CALLF + bytecode{"0x0001"_hex} + OP_STOP + OP_DUP1 +
                       OP_RJUMPI + bytecode{"0x0002"_hex} + OP_POP + OP_RETF + push(1) + OP_SWAP1 +
                       OP_SUB + OP_CALLF + bytecode{"0x0001"_hex} + OP_RETF;
@@ -145,8 +145,8 @@ TEST_P(evm, callf_call_stack_size_1025)
     if (is_advanced())
         return;
 
-    rev = EVMC_CANCUN;
-    const auto code = bytecode{"ef0001 010008 020002 0007 000e 030000 00 00000001 01000002"_hex} +
+    rev = EVMC_PRAGUE;
+    const auto code = bytecode{"ef0001 010008 020002 0007 000e 040000 00 00000001 01000002"_hex} +
                       push(1024) + OP_CALLF + bytecode{"0x0001"_hex} + OP_STOP + OP_DUP1 +
                       OP_RJUMPI + bytecode{"0x0002"_hex} + OP_POP + OP_RETF + push(1) + OP_SWAP1 +
                       OP_SUB + OP_CALLF + bytecode{"0x0001"_hex} + OP_RETF;

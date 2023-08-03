@@ -6,6 +6,7 @@
 #include "baseline_instruction_table.hpp"
 #include "instructions_traits.hpp"
 
+#include <intx/intx.hpp>
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -25,7 +26,7 @@ constexpr uint8_t MAGIC[] = {0xef, 0x00};
 constexpr uint8_t TERMINATOR = 0x00;
 constexpr uint8_t TYPE_SECTION = 0x01;
 constexpr uint8_t CODE_SECTION = 0x02;
-constexpr uint8_t DATA_SECTION = 0x03;
+constexpr uint8_t DATA_SECTION = 0x04;
 constexpr uint8_t MAX_SECTION = DATA_SECTION;
 constexpr auto CODE_SECTION_NUMBER_LIMIT = 1024;
 constexpr auto MAX_STACK_HEIGHT = 0x03FF;
@@ -49,8 +50,19 @@ size_t eof_header_size(const EOFSectionHeaders& headers) noexcept
 
 EOFValidationError get_section_missing_error(uint8_t section_id) noexcept
 {
-    return static_cast<EOFValidationError>(
-        static_cast<uint8_t>(EOFValidationError::header_terminator_missing) + section_id);
+    switch (section_id)
+    {
+    case TERMINATOR:
+        return EOFValidationError::header_terminator_missing;
+    case TYPE_SECTION:
+        return EOFValidationError::type_section_missing;
+    case CODE_SECTION:
+        return EOFValidationError::code_section_missing;
+    case DATA_SECTION:
+        return EOFValidationError::data_section_missing;
+    default:
+        intx::unreachable();
+    }
 }
 
 std::variant<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_view container)
@@ -541,7 +553,7 @@ EOFValidationError validate_eof(evmc_revision rev, bytes_view container) noexcep
 
     if (version == 1)
     {
-        if (rev < EVMC_CANCUN)
+        if (rev < EVMC_PRAGUE)
             return EOFValidationError::eof_version_unknown;
 
         const auto header_or_error = validate_eof1(rev, container);

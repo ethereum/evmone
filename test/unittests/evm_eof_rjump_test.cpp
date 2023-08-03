@@ -14,7 +14,7 @@ TEST_P(evm, eof1_rjump)
     if (is_advanced())
         return;
 
-    rev = EVMC_CANCUN;
+    rev = EVMC_PRAGUE;
     auto code = eof1_bytecode(rjumpi(3, 0) + rjump(1) + OP_INVALID + mstore8(0, 1) + ret(0, 1), 2);
 
     execute(code);
@@ -37,7 +37,7 @@ TEST_P(evm, eof1_rjump_backward)
     if (is_advanced())
         return;
 
-    rev = EVMC_CANCUN;
+    rev = EVMC_PRAGUE;
     auto code = eof1_bytecode(rjump(10) + mstore8(0, 1) + ret(0, 1) + rjump(-13), 2);
 
     execute(code);
@@ -59,7 +59,7 @@ TEST_P(evm, eof1_rjump_0_offset)
     if (is_advanced())
         return;
 
-    rev = EVMC_CANCUN;
+    rev = EVMC_PRAGUE;
     auto code = eof1_bytecode(rjump(0) + mstore8(0, 1) + ret(0, 1), 2);
 
     execute(code);
@@ -74,7 +74,7 @@ TEST_P(evm, eof1_rjumpi)
     if (is_advanced())
         return;
 
-    rev = EVMC_CANCUN;
+    rev = EVMC_PRAGUE;
     auto code = eof1_bytecode(
         rjumpi(10, calldataload(0)) + mstore8(0, 2) + ret(0, 1) + mstore8(0, 1) + ret(0, 1), 2);
 
@@ -97,7 +97,7 @@ TEST_P(evm, eof1_rjumpi_backwards)
     if (is_advanced())
         return;
 
-    rev = EVMC_CANCUN;
+    rev = EVMC_PRAGUE;
     auto code = eof1_bytecode(rjump(10) + mstore8(0, 1) + ret(0, 1) + rjumpi(-16, calldataload(0)) +
                                   mstore8(0, 2) + ret(0, 1),
         2);
@@ -121,7 +121,7 @@ TEST_P(evm, eof1_rjumpi_0_offset)
     if (is_advanced())
         return;
 
-    rev = EVMC_CANCUN;
+    rev = EVMC_PRAGUE;
     auto code = eof1_bytecode(rjumpi(0, calldataload(0)) + mstore8(0, 1) + ret(0, 1), 2);
 
     // RJUMPI condition is true
@@ -143,7 +143,7 @@ TEST_P(evm, eof1_rjumpv_single_offset)
     if (is_advanced())
         return;
 
-    rev = EVMC_CANCUN;
+    rev = EVMC_PRAGUE;
     auto code = eof1_bytecode(rjumpv({3}, 0) + OP_JUMPDEST + OP_JUMPDEST + OP_STOP + 20 + 40 + 0 +
                                   OP_CODECOPY + ret(0, 20),
         3, "ef000101000402000100010300000000000000fe");
@@ -161,7 +161,7 @@ TEST_P(evm, eof1_rjumpv_multiple_offsets)
     if (is_advanced())
         return;
 
-    rev = EVMC_CANCUN;
+    rev = EVMC_PRAGUE;
     auto code = eof1_bytecode(rjump(12) + 10 + 68 + 0 + OP_CODECOPY + ret(0, 10) +
                                   rjumpv({12, -22, 0}, 1) + 10 + 78 + 0 + OP_CODECOPY + ret(0, 10) +
                                   20 + 68 + 0 + OP_CODECOPY + ret(0, 20),
@@ -200,7 +200,7 @@ TEST_P(evm, eof1_rjumpv_long_jumps)
     if (is_advanced())
         return;
 
-    rev = EVMC_CANCUN;
+    rev = EVMC_PRAGUE;
     auto code =
         rjump(0x7fff - 3 - 5) + (0x7fff - 3 - 2 - 8 - 5) * bytecode{OP_JUMPDEST} + 7 + ret_top();
 
@@ -223,7 +223,7 @@ TEST_P(evm, eof1_rjumpv_long_jumps)
 
 TEST_P(evm, rjumps_undefined_in_legacy)
 {
-    rev = EVMC_CANCUN;
+    rev = EVMC_PRAGUE;
     auto code = rjump(1) + OP_INVALID + mstore8(0, 1) + ret(0, 1);
 
     execute(code);

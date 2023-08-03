@@ -13,7 +13,7 @@ TEST_F(state_transition, eof_invalid_initcode)
     // TODO: Correction of this address is not verified.
     static constexpr auto create_address = 0x864bbda5c698ac34b47a9ea3bd4228802cc5ce3b_address;
 
-    rev = EVMC_CANCUN;
+    rev = EVMC_PRAGUE;
     tx.to = To;
     pre.insert(*tx.to,
         {

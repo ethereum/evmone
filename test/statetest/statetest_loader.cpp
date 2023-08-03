@@ -380,7 +380,7 @@ void validate_deployed_code(const state::State& state, evmc_revision rev)
     {
         if (is_eof_container(acc.code))
         {
-            if (rev >= EVMC_CANCUN)
+            if (rev >= EVMC_PRAGUE)
             {
                 if (const auto result = validate_eof(rev, acc.code);
                     result != EOFValidationError::success)

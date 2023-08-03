@@ -42,18 +42,18 @@ TEST(eof, read_valid_eof1_header)
         section_size_1_256 += "0001";
 
     const TestCase test_cases[] = {
-        {"EF00 01 010004 0200010001 030000 00 00000000 00", 4, 0, {1}},
-        {"EF00 01 010004 0200010006 030000 00 00000002 600160005500", 4, 0, {6}},
-        {"EF00 01 010004 0200010001 030001 00 00000000 00 AA", 4, 1, {1}},
-        {"EF00 01 010004 0200010006 030004 00 00000002 600160005500 AABBCCDD", 4, 4, {6}},
-        {"EF00 01 01000C 020003000100020003 030000 00 000000000000000000000000 00 5B00 5B5B00", 12,
+        {"EF00 01 010004 0200010001 040000 00 00000000 00", 4, 0, {1}},
+        {"EF00 01 010004 0200010006 040000 00 00000002 600160005500", 4, 0, {6}},
+        {"EF00 01 010004 0200010001 040001 00 00000000 00 AA", 4, 1, {1}},
+        {"EF00 01 010004 0200010006 040004 00 00000002 600160005500 AABBCCDD", 4, 4, {6}},
+        {"EF00 01 01000C 020003000100020003 040000 00 000000000000000000000000 00 5B00 5B5B00", 12,
             0, {1, 2, 3}},
-        {"EF00 01 01000C 020003000100020003 030004 00 000000000000000000000000 00 5B00 5B5B00 "
+        {"EF00 01 01000C 020003000100020003 040004 00 000000000000000000000000 00 5B00 5B5B00 "
          "FFFFFFFF",
             12, 4, {1, 2, 3}},
-        {"EF00 01 010004 0200010100 031000 00 00000000" + nops_255 + "00" + std::string(8192, 'F'),
+        {"EF00 01 010004 0200010100 041000 00 00000000" + nops_255 + "00" + std::string(8192, 'F'),
             4, 4096, {256}},
-        {"EF00 01 010400 020100" + section_size_1_256 + " 031000 00 " +
+        {"EF00 01 010400 020100" + section_size_1_256 + " 041000 00 " +
                 std::string(4 * 256 * 2, '0') + std::string(512, '0') + std::string(8192, 'F'),
             4 * 256, 4096, std::vector<uint16_t>(256, 1)},
     };
@@ -61,7 +61,7 @@ TEST(eof, read_valid_eof1_header)
     for (const auto& test_case : test_cases)
     {
         const auto code = from_spaced_hex(test_case.code).value();
-        EXPECT_EQ(validate_eof(EVMC_CANCUN, code), EOFValidationError::success) << test_case.code;
+        EXPECT_EQ(validate_eof(EVMC_PRAGUE, code), EOFValidationError::success) << test_case.code;
 
         const auto header = read_valid_eof1_header(code);
         EXPECT_EQ(header.code_sizes, test_case.code_sizes) << test_case.code;
