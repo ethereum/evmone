@@ -731,10 +731,10 @@ inline code_iterator rjumpv(StackTop stack, ExecutionState& /*state*/, code_iter
     constexpr auto REL_OFFSET_SIZE = sizeof(int16_t);
     const auto case_ = stack.pop();
 
-    const auto count = pc[1];
-    const auto pc_post = pc + 1 + 1 /* count */ + count * REL_OFFSET_SIZE /* tbl */;
+    const auto max_index = pc[1];
+    const auto pc_post = pc + 1 + 1 /* max_index */ + (max_index + 1) * REL_OFFSET_SIZE /* tbl */;
 
-    if (case_ >= count)
+    if (case_ > max_index)
     {
         return pc_post;
     }
