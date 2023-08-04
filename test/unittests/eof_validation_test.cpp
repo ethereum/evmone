@@ -977,3 +977,130 @@ TEST(eof_validation, callf_into_nonreturning)
                            "E3000100 00"),
         EOFValidationError::callf_to_non_returning_function);
 }
+
+TEST(eof_validation, jumpf_equal_outputs)
+{
+    const auto code =
+        bytecode{"ef0001 01000c 020003 0004 0003 0004 040000 00 00800003 00030000 00030003"_hex} +
+        OP_CALLF + "0001" + OP_STOP + OP_JUMPF + "0002" + 3 * OP_PUSH0 + OP_RETF;
+
+    EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+}
+
+TEST(eof_validation, jumpf_compatible_outputs)
+{
+    const auto code =
+        bytecode{"ef0001 01000c 020003 0004 0005 0004 040000 00 00800005 00050002 00030003"_hex} +
+        OP_CALLF + "0001" + OP_STOP + 2 * OP_PUSH0 + OP_JUMPF + "0002" + 3 * OP_PUSH0 + OP_RETF;
+
+    EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+}
+
+TEST(eof_validation, jumpf_incompatible_outputs)
+{
+    const auto code =
+        bytecode{"ef0001 01000c 020003 0004 0005 0004 040000 00 00800003 00030002 00050003"_hex} +
+        OP_CALLF + "0001" + OP_STOP + OP_JUMPF + "0002" + 5 * OP_PUSH0 + OP_RETF;
+
+    EXPECT_EQ(validate_eof(code), EOFValidationError::jumpf_destination_incompatible_outputs);
+}
+
+TEST(eof_validation, jumpf_into_nonreturning_stack_validation)
+{
+    // Exactly required inputs on stack at JUMPF
+    EXPECT_EQ(
+        validate_eof("EF0001 010008 02000200060001 040000 00 0080000303800003 5F5F5FE50001 00"),
+        EOFValidationError::success);
+
+    // Extra items on stack at JUMPF
+    EXPECT_EQ(
+        validate_eof("EF0001 010008 02000200070001 040000 00 0080000403800003 5F5F5F5FE50001 00"),
+        EOFValidationError::success);
+
+    // Not enough inputs on stack at JUMPF
+    EXPECT_EQ(validate_eof("EF0001 010008 02000200050001 040000 00 0080000203800003 5F5FE50001 00"),
+        EOFValidationError::stack_underflow);
+}
+
+TEST(eof_validation, jumpf_into_returning_stack_validation)
+{
+    // JUMPF into a function with the same number of outputs as current one
+
+    // Exactly required inputs on stack at JUMPF
+    EXPECT_EQ(validate_eof("EF0001 01000C 020003000100060002 040000 00 008000000002000303020003 00 "
+                           "5F5F5FE50002 50e4"),
+        EOFValidationError::success);
+
+    // Extra items on stack at JUMPF
+    EXPECT_EQ(validate_eof("EF0001 01000C 020003000100070002 040000 00 008000000002000403020003 00 "
+                           "5F5F5F5FE50002 50e4"),
+        EOFValidationError::non_empty_stack_on_terminating_instruction);
+
+    // Not enough inputs on stack at JUMPF
+    EXPECT_EQ(validate_eof("EF0001 01000C 020003000100050002 040000 00 008000000002000203020003 00 "
+                           "5F5FE50002 50e4"),
+        EOFValidationError::stack_underflow);
+
+    // JUMPF into a function with fewer outputs than current one
+    // (0, 2) --JUMPF--> (3, 1): 3 inputs + 1 output = 4 items required
+
+    // Exactly required inputs on stack at JUMPF
+    EXPECT_EQ(validate_eof("EF0001 01000C 020003000100070003 040000 00 008000000002000403010003 00 "
+                           "5F5F5F5FE50002 5050e4"),
+        EOFValidationError::success);
+
+    // Extra items on stack at JUMPF
+    EXPECT_EQ(validate_eof("EF0001 01000C 020003000100080003 040000 00 008000000002000503010003 00 "
+                           "5F5F5F5F5FE50002 5050e4"),
+        EOFValidationError::non_empty_stack_on_terminating_instruction);
+
+    // Not enough inputs on stack at JUMPF
+    EXPECT_EQ(validate_eof("EF0001 01000C 020003000100060003 040000 00 008000000002000303010003 00 "
+                           "5F5F5FE50002 5050e4"),
+        EOFValidationError::stack_underflow);
+}
+
+TEST(eof_validation, jumpf_stack_overflow)
+{
+    {
+        const auto code = eof1_bytecode(512 * push(1) + OP_JUMPF + bytecode{"0x0000"_hex}, 512);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+    }
+
+    {
+        const auto code = eof1_bytecode(513 * push(1) + OP_JUMPF + bytecode{"0x0000"_hex}, 513);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+
+    {
+        const auto code = eof1_bytecode(1023 * push(1) + OP_JUMPF + bytecode{"0x0000"_hex}, 1023);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+}
+
+TEST(eof_validation, jumpf_with_inputs_stack_overflow)
+{
+    {
+        const auto code =
+            bytecode{"ef0001 010008 020002 0402 0002 040000 00 008003FF 02800003"_hex} +
+            1023 * OP_PUSH0 + OP_JUMPF + bytecode{"0x0001"_hex} + OP_PUSH0 + OP_STOP;
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+    }
+
+    {
+        const auto code =
+            bytecode{"ef0001 010008 020002 0402 0003 040000 00 008003FF 02800004"_hex} +
+            1023 * OP_PUSH0 + OP_JUMPF + bytecode{"0x0001"_hex} + OP_PUSH0 + OP_PUSH0 + OP_STOP;
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+
+    {
+        const auto code =
+            bytecode{"ef0001 010008 020002 0403 0002 040000 00 008003FF 02800003"_hex} +
+            1024 * OP_PUSH0 + OP_JUMPF + bytecode{"0x0001"_hex} + OP_PUSH0 + OP_STOP;
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+}
