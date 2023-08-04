@@ -235,7 +235,7 @@ EOFValidationError validate_instructions(
             if (i >= code.size())
                 return EOFValidationError::truncated_instruction;
         }
-        else if (op == OP_CALLF)
+        else if (op == OP_CALLF || op == OP_JUMPF)
         {
             const auto fid = read_uint16_be(&code[i + 1]);
             if (fid >= header.types.size())
@@ -357,6 +357,22 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
 
             stack_height_change =
                 static_cast<int8_t>(code_types[fid].outputs - stack_height_required);
+        }
+        else if (opcode == OP_JUMPF)
+        {
+            const auto fid = read_uint16_be(&code[i + 1]);
+
+            if (code_types[func_index].outputs < code_types[fid].outputs)
+                return EOFValidationError::jumpf_destination_incompatible_outputs;
+
+            if (stack_height + code_types[fid].max_stack_height - code_types[fid].inputs >
+                STACK_SIZE_LIMIT)
+                return EOFValidationError::stack_overflow;
+
+            stack_height_required = static_cast<int8_t>(
+                code_types[func_index].outputs + code_types[fid].inputs - code_types[fid].outputs);
+            if (stack_heights[i] > stack_height_required)
+                return EOFValidationError::non_empty_stack_on_terminating_instruction;
         }
 
         if (stack_height < stack_height_required)
@@ -636,6 +652,8 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "invalid_code_section_index";
     case EOFValidationError::invalid_dataloadn_index:
         return "invalid_dataloadn_index";
+    case EOFValidationError::jumpf_destination_incompatible_outputs:
+        return "jumpf_destination_incompatible_outputs";
     case EOFValidationError::impossible:
         return "impossible";
     }
