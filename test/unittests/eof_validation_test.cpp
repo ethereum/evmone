@@ -876,3 +876,58 @@ TEST(eof_validation, non_returning_status)
         validate_eof("EF0001 010008 02000200010007 040000 00 0080000001800001 00 E10001E4E50000"),
         EOFValidationError::invalid_non_returning_flag);
 }
+
+TEST(eof_validation, jumpf_into_nonreturning_stack_validation)
+{
+    // Exactly required inputs on stack at JUMPF
+    EXPECT_EQ(
+        validate_eof("EF0001 010008 02000200060001 040000 00 0080000303800003 5F5F5FE50001 00"),
+        EOFValidationError::success);
+
+    // Extra items on stack at JUMPF
+    EXPECT_EQ(
+        validate_eof("EF0001 010008 02000200070001 040000 00 0080000403800003 5F5F5F5FE50001 00"),
+        EOFValidationError::success);
+
+    // Not enough inputs on stack at JUMPF
+    EXPECT_EQ(validate_eof("EF0001 010008 02000200050001 040000 00 0080000203800003 5F5FE50001 00"),
+        EOFValidationError::stack_underflow);
+}
+
+TEST(eof_validation, jumpf_into_returning_stack_validation)
+{
+    // JUMPF into a function with the same number of outputs as current one
+
+    // Exactly required inputs on stack at JUMPF
+    EXPECT_EQ(validate_eof("EF0001 01000C 020003000100060002 040000 00 008000000002000303020003 00 "
+                           "5F5F5FE50002 50e4"),
+        EOFValidationError::success);
+
+    // Extra items on stack at JUMPF
+    EXPECT_EQ(validate_eof("EF0001 01000C 020003000100070002 040000 00 008000000002000403020003 00 "
+                           "5F5F5F5FE50002 50e4"),
+        EOFValidationError::non_empty_stack_on_terminating_instruction);
+
+    // Not enough inputs on stack at JUMPF
+    EXPECT_EQ(validate_eof("EF0001 01000C 020003000100050002 040000 00 008000000002000203020003 00 "
+                           "5F5FE50002 50e4"),
+        EOFValidationError::stack_underflow);
+
+    // JUMPF into a function with fewer outputs than current one
+    // (0, 2) --JUMPF--> (3, 1): 3 inputs + 1 output = 4 items required
+
+    // Exactly required inputs on stack at JUMPF
+    EXPECT_EQ(validate_eof("EF0001 01000C 020003000100070003 040000 00 008000000002000403010003 00 "
+                           "5F5F5F5FE50002 5050e4"),
+        EOFValidationError::success);
+
+    // Extra items on stack at JUMPF
+    EXPECT_EQ(validate_eof("EF0001 01000C 020003000100080003 040000 00 008000000002000503010003 00 "
+                           "5F5F5F5F5FE50002 5050e4"),
+        EOFValidationError::non_empty_stack_on_terminating_instruction);
+
+    // Not enough inputs on stack at JUMPF
+    EXPECT_EQ(validate_eof("EF0001 01000C 020003000100060003 040000 00 008000000002000303010003 00 "
+                           "5F5F5FE50002 5050e4"),
+        EOFValidationError::stack_underflow);
+}
