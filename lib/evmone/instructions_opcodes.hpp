@@ -160,6 +160,7 @@ enum Opcode : uint8_t
     OP_RJUMPV = 0xe2,
     OP_CALLF = 0xe3,
     OP_RETF = 0xe4,
+    OP_JUMPF = 0xe5,
 
     OP_DUPN = 0xe6,
     OP_SWAPN = 0xe7,

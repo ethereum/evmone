@@ -275,7 +275,7 @@
     ON_OPCODE_IDENTIFIER(OP_RJUMPV, rjumpv)                 \
     ON_OPCODE_IDENTIFIER(OP_CALLF, callf)                   \
     ON_OPCODE_IDENTIFIER(OP_RETF, retf)                     \
-    ON_OPCODE_UNDEFINED(0xe5)                               \
+    ON_OPCODE_IDENTIFIER(OP_JUMPF, jumpf)                   \
     ON_OPCODE_IDENTIFIER(OP_DUPN, dupn)                     \
     ON_OPCODE_IDENTIFIER(OP_SWAPN, swapn)                   \
     ON_OPCODE_IDENTIFIER(OP_DATALOAD, dataload)             \

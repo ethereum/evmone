@@ -96,8 +96,10 @@ enum class EOFValidationError
     inputs_outputs_num_above_limit,
     unreachable_instructions,
     stack_underflow,
+    stack_overflow,
     invalid_code_section_index,
     invalid_dataloadn_index,
+    jumpf_destination_incompatible_outputs,
 
     impossible,
 };

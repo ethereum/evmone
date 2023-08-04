@@ -32,6 +32,7 @@ constexpr auto CODE_SECTION_NUMBER_LIMIT = 1024;
 constexpr auto MAX_STACK_HEIGHT = 0x03FF;
 constexpr auto OUTPUTS_INPUTS_NUMBER_LIMIT = 0x7F;
 constexpr auto REL_OFFSET_SIZE = sizeof(int16_t);
+constexpr auto STACK_SIZE_LIMIT = 1024;
 
 using EOFSectionHeaders = std::array<std::vector<uint16_t>, MAX_SECTION + 1>;
 
@@ -234,7 +235,7 @@ EOFValidationError validate_instructions(
             if (i >= code.size())
                 return EOFValidationError::truncated_instruction;
         }
-        else if (op == OP_CALLF)
+        else if (op == OP_CALLF || op == OP_JUMPF)
         {
             const auto fid = read_uint16_be(&code[i + 1]);
             if (fid >= header.types.size())
@@ -341,6 +342,9 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
         auto stack_height_required = instr::traits[opcode].stack_height_required;
         auto stack_height_change = instr::traits[opcode].stack_height_change;
 
+        auto stack_height = stack_heights[i];
+        assert(stack_height != LOC_UNVISITED);
+
         if (opcode == OP_CALLF)
         {
             const auto fid = read_uint16_be(&code[i + 1]);
@@ -349,9 +353,22 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
             stack_height_change =
                 static_cast<int8_t>(code_types[fid].outputs - stack_height_required);
         }
+        else if (opcode == OP_JUMPF)
+        {
+            const auto fid = read_uint16_be(&code[i + 1]);
 
-        auto stack_height = stack_heights[i];
-        assert(stack_height != LOC_UNVISITED);
+            if (code_types[func_index].outputs < code_types[fid].outputs)
+                return EOFValidationError::jumpf_destination_incompatible_outputs;
+
+            if (stack_height + code_types[fid].max_stack_height - code_types[fid].inputs >
+                STACK_SIZE_LIMIT)
+                return EOFValidationError::stack_overflow;
+
+            stack_height_required = static_cast<int8_t>(
+                code_types[func_index].outputs + code_types[fid].inputs - code_types[fid].outputs);
+            if (stack_heights[i] > stack_height_required)
+                return EOFValidationError::non_empty_stack_on_terminating_instruction;
+        }
 
         if (stack_height < stack_height_required)
             return EOFValidationError::stack_underflow;
@@ -624,10 +641,14 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "unreachable_instructions";
     case EOFValidationError::stack_underflow:
         return "stack_underflow";
+    case EOFValidationError::stack_overflow:
+        return "stack_overflow";
     case EOFValidationError::invalid_code_section_index:
         return "invalid_code_section_index";
     case EOFValidationError::invalid_dataloadn_index:
         return "invalid_dataloadn_index";
+    case EOFValidationError::jumpf_destination_incompatible_outputs:
+        return "jumpf_destination_incompatible_outputs";
     case EOFValidationError::impossible:
         return "impossible";
     }
