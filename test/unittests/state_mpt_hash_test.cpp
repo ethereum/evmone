@@ -291,3 +291,105 @@ TEST(state_mpt_hash, withdrawals)
     EXPECT_EQ(mpt_hash(withdrawals),
         0x38cd9ae992a22b94a1582e7d0691dbef56a90cdb36bf7b11d98373f80b102c8f_bytes32);
 }
+
+TEST(state_mpt_hash, withdrawals_bc_case)
+{
+    // Input taken from
+    // https://github.com/ethereum/tests/blob/develop/BlockchainTests/InvalidBlocks/bc4895-withdrawals/warmup.json
+    constexpr std::string_view input =
+        R"([
+{
+    "index" : "0x0",
+    "validatorIndex" : "0x0",
+    "amount" : "0x186a0",
+    "address" : "0xc000000000000000000000000000000000000001"
+},
+{
+    "index" : "0x1",
+    "validatorIndex" : "0x0",
+    "amount" : "0x186a0",
+    "address" : "0xc000000000000000000000000000000000000002"
+},
+{
+    "index" : "0x2",
+    "validatorIndex" : "0x0",
+    "amount" : "0x186a0",
+    "address" : "0xc000000000000000000000000000000000000003"
+},
+{
+    "index" : "0x3",
+    "validatorIndex" : "0x0",
+    "amount" : "0x186a0",
+    "address" : "0xc000000000000000000000000000000000000004"
+},
+{
+    "index" : "0x4",
+    "validatorIndex" : "0x0",
+    "amount" : "0x186a0",
+    "address" : "0xc000000000000000000000000000000000000005"
+},
+{
+    "index" : "0x5",
+    "validatorIndex" : "0x0",
+    "amount" : "0x186a0",
+    "address" : "0xc000000000000000000000000000000000000006"
+},
+{
+    "index" : "0x6",
+    "validatorIndex" : "0x0",
+    "amount" : "0x186a0",
+    "address" : "0xc000000000000000000000000000000000000007"
+},
+{
+    "index" : "0x7",
+    "validatorIndex" : "0x0",
+    "amount" : "0x186a0",
+    "address" : "0xc000000000000000000000000000000000000008"
+},
+{
+    "index" : "0x8",
+    "validatorIndex" : "0x0",
+    "amount" : "0x186a0",
+    "address" : "0xc000000000000000000000000000000000000009"
+},
+{
+    "index" : "0x9",
+    "validatorIndex" : "0x0",
+    "amount" : "0x186a0",
+    "address" : "0xc000000000000000000000000000000000000010"
+}
+])";
+    const auto j = json::json::parse(input);
+
+    std::vector<state::Withdrawal> withdrawals;
+    for (const auto& withdrawal : j)
+        withdrawals.push_back(test::from_json<state::Withdrawal>(withdrawal));
+
+    EXPECT_EQ(mpt_hash(withdrawals),
+        0xaa45c53e9f7d6a8362f80876029915da00b1441ef39eb9bbb74f98465ff433ad_bytes32);
+}
+
+TEST(state_mpt_hash, hashing_test)
+{
+    MPT trie;
+
+    trie.insert("80"_hex, "db808094c000000000000000000000000000000000000001830186a0"_hex);
+    EXPECT_EQ(
+        trie.hash(), 0x4ae14e53d6bf2a9c73891aef9d2e6373ff06d400b6e7727b17a5eceb5e8dec9d_bytes32);
+
+    trie.insert("01"_hex, "db018094c000000000000000000000000000000000000002830186a0"_hex);
+    EXPECT_EQ(
+        trie.hash(), 0xc5128234c0282b256e2aa91ddc783ddb2c21556766f2e11e64159561b59f8ac7_bytes32);
+
+    trie.insert("0x02"_hex, "0xdb028094c000000000000000000000000000000000000003830186a0"_hex);
+    trie.insert("0x03"_hex, "0xdb038094c000000000000000000000000000000000000004830186a0"_hex);
+    trie.insert("0x04"_hex, "0xdb048094c000000000000000000000000000000000000005830186a0"_hex);
+    trie.insert("0x05"_hex, "0xdb058094c000000000000000000000000000000000000006830186a0"_hex);
+    trie.insert("0x06"_hex, "0xdb068094c000000000000000000000000000000000000007830186a0"_hex);
+    trie.insert("0x07"_hex, "0xdb078094c000000000000000000000000000000000000008830186a0"_hex);
+    trie.insert("0x08"_hex, "0xdb088094c000000000000000000000000000000000000009830186a0"_hex);
+    trie.insert("0x09"_hex, "0xdb098094c000000000000000000000000000000000000010830186a0"_hex);
+
+    EXPECT_EQ(
+        trie.hash(), 0xaa45c53e9f7d6a8362f80876029915da00b1441ef39eb9bbb74f98465ff433ad_bytes32);
+}
