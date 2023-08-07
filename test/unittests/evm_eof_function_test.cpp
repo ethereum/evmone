@@ -214,3 +214,67 @@ TEST_P(evm, jumpf_to_function_with_fewer_outputs)
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_OUTPUT_INT(3);
 }
+
+TEST_P(evm, jumpf_stack_size_1024)
+{
+    // JUMPF is not implemented in Advanced.
+    if (is_advanced())
+        return;
+
+    rev = EVMC_PRAGUE;
+    const auto code = bytecode{"ef0001 010008 020002 0402 0002 040000 00 008003FF 00800001"_hex} +
+                      1023 * OP_PUSH0 + OP_JUMPF + bytecode{"0x0001"_hex} + OP_PUSH0 + OP_STOP;
+
+    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::success);
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+}
+
+TEST_P(evm, jumpf_with_inputs_stack_size_1024)
+{
+    // JUMPF is not implemented in Advanced.
+    if (is_advanced())
+        return;
+
+    rev = EVMC_PRAGUE;
+    const auto code = bytecode{"ef0001 010008 020002 0402 0002 040000 00 008003FF 03800004"_hex} +
+                      1023 * OP_PUSH0 + OP_JUMPF + bytecode{"0x0001"_hex} + OP_PUSH0 + OP_STOP;
+
+    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::success);
+    execute(code);
+    EXPECT_STATUS(EVMC_SUCCESS);
+}
+
+TEST_P(evm, jumpf_stack_overflow)
+{
+    // JUMPF is not implemented in Advanced.
+    if (is_advanced())
+        return;
+
+    rev = EVMC_PRAGUE;
+    const auto code =
+        bytecode{"ef0001 01000c 020003 0402 0004 0002 040000 00 008003FF 00800001 00800001"_hex} +
+        1023 * OP_PUSH0 + OP_JUMPF + bytecode{"0x0001"_hex} + OP_PUSH0 + OP_JUMPF +
+        bytecode{"0x0002"_hex} + OP_PUSH0 + OP_STOP;
+
+    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::success);
+    execute(code);
+    EXPECT_STATUS(EVMC_STACK_OVERFLOW);
+}
+
+TEST_P(evm, jumpf_with_inputs_stack_overflow)
+{
+    // JUMPF is not implemented in Advanced.
+    if (is_advanced())
+        return;
+
+    rev = EVMC_PRAGUE;
+    const auto code =
+        bytecode{"ef0001 01000c 020003 0402 0004 0002 040000 00 008003FF 03800004 03800004"_hex} +
+        1023 * OP_PUSH0 + OP_JUMPF + bytecode{"0x0001"_hex} + OP_PUSH0 + OP_JUMPF +
+        bytecode{"0x0002"_hex} + OP_PUSH0 + OP_STOP;
+
+    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::success);
+    execute(code);
+    EXPECT_STATUS(EVMC_STACK_OVERFLOW);
+}
