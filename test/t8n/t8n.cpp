@@ -110,6 +110,7 @@ int main(int argc, const char* argv[])
                     tx.chain_id = chain_id;
 
                     const auto computed_tx_hash = keccak256(rlp::encode(tx));
+                    const auto computed_tx_hash_str = hex0x(computed_tx_hash);
 
                     auto res = state::transition(state, block, tx, rev, vm, block_gas_left);
 
@@ -120,7 +121,7 @@ int main(int argc, const char* argv[])
 
                         if (loaded_tx_hash_opt != computed_tx_hash)
                             throw std::logic_error("transaction hash mismatched: computed " +
-                                                   hex0x(computed_tx_hash) + ", expected " +
+                                                   computed_tx_hash_str + ", expected " +
                                                    hex0x(loaded_tx_hash_opt.value()));
                     }
 
@@ -128,7 +129,7 @@ int main(int argc, const char* argv[])
                     {
                         const auto ec = std::get<std::error_code>(res);
                         json::json j_rejected_tx;
-                        j_rejected_tx["hash"] = hex0x(computed_tx_hash);
+                        j_rejected_tx["hash"] = computed_tx_hash_str;
                         j_rejected_tx["index"] = i;
                         j_rejected_tx["error"] = ec.message();
                         j_result["rejected"].push_back(j_rejected_tx);
@@ -142,7 +143,7 @@ int main(int argc, const char* argv[])
                         txs_logs.insert(txs_logs.end(), tx_logs.begin(), tx_logs.end());
                         auto& j_receipt = j_result["receipts"][j_result["receipts"].size()];
 
-                        j_receipt["transactionHash"] = hex0x(computed_tx_hash);
+                        j_receipt["transactionHash"] = computed_tx_hash_str;
                         j_receipt["gasUsed"] = hex0x(static_cast<uint64_t>(receipt.gas_used));
                         cumulative_gas_used += receipt.gas_used;
                         receipt.cumulative_gas_used = cumulative_gas_used;
