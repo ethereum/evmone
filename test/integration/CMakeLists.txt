@@ -22,13 +22,11 @@ DUP1,4
     add_test(NAME ${PREFIX}/trace COMMAND $<TARGET_FILE:evmc::tool> --vm $<TARGET_FILE:evmone>,trace run 60006002800103)
     set_tests_properties(
         ${PREFIX}/trace PROPERTIES PASS_REGULAR_EXPRESSION
-        "{\"depth\":0,\"rev\":\"Shanghai\",\"static\":false}
-{\"pc\":0,\"op\":96,\"opName\":\"PUSH1\",\"gas\":0xf4240,\"stack\":\\[\\],\"memorySize\":0}
-{\"pc\":2,\"op\":96,\"opName\":\"PUSH1\",\"gas\":0xf423d,\"stack\":\\[\"0x0\"\\],\"memorySize\":0}
-{\"pc\":4,\"op\":128,\"opName\":\"DUP1\",\"gas\":0xf423a,\"stack\":\\[\"0x0\",\"0x2\"\\],\"memorySize\":0}
-{\"pc\":5,\"op\":1,\"opName\":\"ADD\",\"gas\":0xf4237,\"stack\":\\[\"0x0\",\"0x2\",\"0x2\"\\],\"memorySize\":0}
-{\"pc\":6,\"op\":3,\"opName\":\"SUB\",\"gas\":0xf4234,\"stack\":\\[\"0x0\",\"0x4\"\\],\"memorySize\":0}
-{\"error\":null,\"gas\":0xf4231,\"gasUsed\":0xf,\"output\":\"\"}
+        "\"pc\":0,\"op\":96,\"gas\":\"0xf4240\",\"gasCost\":\"0x3\",\"memSize\":0,\"stack\":\\[\\],\"depth\":1,\"refund\":0,\"opName\":\"PUSH1\"}
+{\"pc\":2,\"op\":96,\"gas\":\"0xf423d\",\"gasCost\":\"0x3\",\"memSize\":0,\"stack\":\\[\"0x0\"\\],\"depth\":1,\"refund\":0,\"opName\":\"PUSH1\"}
+{\"pc\":4,\"op\":128,\"gas\":\"0xf423a\",\"gasCost\":\"0x3\",\"memSize\":0,\"stack\":\\[\"0x0\",\"0x2\"\\],\"depth\":1,\"refund\":0,\"opName\":\"DUP1\"}
+{\"pc\":5,\"op\":1,\"gas\":\"0xf4237\",\"gasCost\":\"0x3\",\"memSize\":0,\"stack\":\\[\"0x0\",\"0x2\",\"0x2\"\\],\"depth\":1,\"refund\":0,\"opName\":\"ADD\"}
+{\"pc\":6,\"op\":3,\"gas\":\"0xf4234\",\"gasCost\":\"0x3\",\"memSize\":0,\"stack\":\\[\"0x0\",\"0x4\"\\],\"depth\":1,\"refund\":0,\"opName\":\"SUB\"}
 ")
 
 endif()
