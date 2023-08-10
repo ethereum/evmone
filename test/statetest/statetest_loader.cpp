@@ -181,10 +181,20 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
         }
     }
 
+    std::vector<state::Ommer> ommers;
+    if (const auto ommers_it = j.find("ommers"); ommers_it != j.end())
+    {
+        for (const auto& ommer : *ommers_it)
+        {
+            ommers.push_back(
+                {from_json<evmc::address>(ommer.at("address")), ommer.at("delta").get<uint8_t>()});
+        }
+    }
+
     return {from_json<int64_t>(j.at("currentNumber")), from_json<int64_t>(j.at("currentTimestamp")),
         from_json<int64_t>(j.at("currentGasLimit")),
         from_json<evmc::address>(j.at("currentCoinbase")), difficulty, base_fee,
-        std::move(withdrawals)};
+        std::move(withdrawals), std::move(ommers)};
 }
 
 template <>
