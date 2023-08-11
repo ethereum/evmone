@@ -186,7 +186,7 @@ PointExt<FieldElemT> point_multiply(const PointExt<FieldElemT>& pt, const uint25
 FE12 miller_loop(const FE12Point& Q, const FE12Point& P, bool run_final_exp) noexcept;
 
 // Computes paring of bn254 curve points.
-FE12 pairing(const FE2Point& Q, const Point& P) noexcept;
+FE12 bn254_pairing(const FE2Point& Q, const Point& P) noexcept;
 
 // Computes final exponentiation of bn254 pairing result.
 FE12 final_exponentiation(const FE12& a) noexcept;

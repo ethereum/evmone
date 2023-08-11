@@ -532,7 +532,7 @@ FE12 miller_loop(const FE12Point& Q, const FE12Point& P, bool run_final_exp) noe
         return f;
 }
 
-FE12 pairing(const FE2Point& q, const Point& p) noexcept
+FE12 bn254_pairing(const FE2Point& q, const Point& p) noexcept
 {
     assert(is_on_curve_b2(q.to_mont()));
     assert(is_on_curve_b(p.x, p.y, 1));
