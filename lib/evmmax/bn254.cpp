@@ -4,7 +4,7 @@ namespace evmmax::bn254
 {
 bool validate(const Point& pt) noexcept
 {
-    if (is_at_infinity(pt))
+    if (pt.is_inf())
         return true;
 
     const evmmax::ModArith s{BN254Mod};
@@ -229,9 +229,9 @@ std::tuple<uint256, uint256, uint256> point_addition_mixed_a0(const evmmax::ModA
 
 Point bn254_add(const Point& pt1, const Point& pt2) noexcept
 {
-    if (is_at_infinity(pt1))
+    if (pt1.is_inf())
         return pt2;
-    if (is_at_infinity(pt2))
+    if (pt2.is_inf())
         return pt1;
 
     const evmmax::ModArith s{BN254Mod};
@@ -253,7 +253,7 @@ Point bn254_add(const Point& pt1, const Point& pt2) noexcept
 
 Point bn254_mul(const Point& pt, const uint256& c) noexcept
 {
-    if (is_at_infinity(pt))
+    if (pt.is_inf())
         return pt;
 
     if (c == 0)

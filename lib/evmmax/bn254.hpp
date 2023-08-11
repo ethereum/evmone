@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
+#include "ecc.hpp"
 #include "poly_extension_field.hpp"
 #include <evmmax/evmmax.hpp>
 
@@ -13,6 +14,7 @@ inline constexpr auto BN254Mod =
 
 namespace evmmax::bn254
 {
+using Point = ecc::Point<uint256>;
 
 struct ModCoeffs2
 {
@@ -87,18 +89,6 @@ inline uint256 expmod(const evmmax::ModArith<uint256>& s, uint256 base, uint256 
     return result;
 }
 
-struct Point
-{
-    uint256 x;
-    uint256 y;
-
-    friend bool operator==(const Point& a, const Point& b) noexcept
-    {
-        // TODO(intx): C++20 operator<=> = default does not work for uint256.
-        return a.x == b.x && a.y == b.y;
-    }
-};
-
 template <typename FieldElemT>
 struct PointExt
 {
@@ -130,11 +120,6 @@ struct PointExt
     PointExt to_mont() const noexcept { return {x.to_mont(), y.to_mont(), z.to_mont()}; }
     PointExt from_mont() const noexcept { return {x.from_mont(), y.from_mont(), z.from_mont()}; }
 };
-
-inline bool is_at_infinity(const Point& pt) noexcept
-{
-    return pt.x == 0 && pt.y == 0;
-}
 
 bool validate(const Point& pt) noexcept;
 

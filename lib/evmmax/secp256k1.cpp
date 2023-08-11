@@ -498,9 +498,9 @@ std::tuple<uint256, uint256> from_proj(
 Point secp256k1_add(const Point& pt1, const Point& pt2) noexcept
 {
     using namespace evmmax::bn254;
-    if (is_at_infinity(pt1))
+    if (pt1.is_inf())
         return pt2;
-    if (is_at_infinity(pt2))
+    if (pt2.is_inf())
         return pt1;
 
     const evmmax::ModArith s{Secp256K1Mod};
@@ -523,7 +523,7 @@ Point secp256k1_add(const Point& pt1, const Point& pt2) noexcept
 Point secp256k1_mul(const Point& pt, const uint256& c) noexcept
 {
     using namespace evmmax::bn254;
-    if (is_at_infinity(pt))
+    if (pt.is_inf())
         return pt;
 
     if (c == 0)
@@ -767,7 +767,7 @@ std::optional<Point> secp256k1_ecdsa_recover(
     const Point Q = secp256k1_add(T1, T2);
 
     // Any other validity check needed?
-    if (is_at_infinity(Q))
+    if (Q.is_inf())
         return std::nullopt;
 
     return std::make_optional(Q);

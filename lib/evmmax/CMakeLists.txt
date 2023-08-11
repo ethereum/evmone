@@ -10,6 +10,7 @@ target_link_libraries(evmmax PRIVATE intx::intx evmc::evmc_cpp)
 target_sources(
     evmmax PRIVATE
     ${PROJECT_SOURCE_DIR}/include/evmmax/evmmax.hpp
+    ecc.hpp
     evmmax.cpp
     bn254.hpp
     bn254.cpp
