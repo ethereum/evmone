@@ -5,6 +5,7 @@
 #include "evm_fixture.hpp"
 #include "evmone/eof.hpp"
 
+using namespace evmc::literals;
 using evmone::test::evm;
 
 TEST_P(evm, eof1_execution)
@@ -340,4 +341,47 @@ TEST_P(evm, datacopy_memory_cost)
 
     execute(17, code);
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+}
+
+TEST_P(evm, eof_create3)
+{
+    if (is_advanced())
+        return;
+
+    rev = EVMC_PRAGUE;
+    const auto deploy_data = "abcdef"_hex;
+    const auto deploy_container = eof1_bytecode(bytecode(OP_INVALID), 0, deploy_data);
+
+    const auto init_code =
+        calldatacopy(0, 0, OP_CALLDATASIZE) + OP_CALLDATASIZE + 0 + OP_RETURNCONTRACT + Opcode{0};
+    const auto init_container = eof1_bytecode(init_code, 3, {}, deploy_container);
+
+    const auto create_code = calldatacopy(0, 0, OP_CALLDATASIZE) +
+                             create3().input(0, OP_CALLDATASIZE).salt(0xff) + ret_top();
+    const auto container = eof1_bytecode(create_code, 4, {}, init_container);
+
+    // test executing create code mocking CREATE3 call
+    host.call_result.output_data = deploy_container.data();
+    host.call_result.output_size = deploy_container.size();
+    host.call_result.create_address = 0xcc010203040506070809010203040506070809ce_address;
+
+    const auto aux_data = "aabbccddeeff"_hex;
+    execute(container, aux_data);
+    EXPECT_STATUS(EVMC_SUCCESS);
+
+    ASSERT_EQ(host.recorded_calls.size(), 1);
+    const auto& call_msg = host.recorded_calls.back();
+
+    EXPECT_EQ(call_msg.input_size, aux_data.size());
+
+    ASSERT_EQ(result.output_size, 32);
+    EXPECT_EQ(output, "000000000000000000000000cc010203040506070809010203040506070809ce"_hex);
+
+    // test executing initcontainer
+    msg.kind = EVMC_CREATE3;
+    execute(init_container, aux_data);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    const auto deployed_container = eof1_bytecode(bytecode(OP_INVALID), 0, deploy_data + aux_data);
+    ASSERT_EQ(result.output_size, deployed_container.size());
+    EXPECT_EQ(output, deployed_container);
 }
