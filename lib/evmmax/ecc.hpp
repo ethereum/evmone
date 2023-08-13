@@ -45,6 +45,6 @@ inline Point<IntT> to_affine(
     const ModArith<IntT>& s, InvFn<IntT> inv, const ProjPoint<IntT>& p) noexcept
 {
     const auto z_inv = inv(s, p.z);
-    return {s.mul(p.x, z_inv), s.mul(p.y, z_inv)};
+    return {s.from_mont(s.mul(p.x, z_inv)), s.from_mont(s.mul(p.y, z_inv))};
 }
 }  // namespace evmmax::ecc

@@ -505,8 +505,7 @@ Point secp256k1_add(const Point& pt1, const Point& pt2) noexcept
     const auto b3 = s.to_mont(21);
     const auto [x3, y3, z3] = point_addition_mixed_a0(s, x1, y1, x2, y2, b3);
 
-    const auto r = ecc::to_affine(s, field_inv, {x3, y3, z3});
-    return {s.from_mont(r.x), s.from_mont(r.y)};
+    return ecc::to_affine(s, field_inv, {x3, y3, z3});
 }
 
 Point secp256k1_mul(const Point& pt, const uint256& c) noexcept
@@ -548,8 +547,7 @@ Point secp256k1_mul(const Point& pt, const uint256& c) noexcept
         }
     }
 
-    const auto r = ecc::to_affine(s, field_inv, p);
-    return {s.from_mont(r.x), s.from_mont(r.y)};
+    return ecc::to_affine(s, field_inv, p);
 }
 
 
