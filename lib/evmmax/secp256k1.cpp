@@ -514,10 +514,8 @@ Point secp256k1_mul(const Point& pt, const uint256& c) noexcept
 
     const evmmax::ModArith s{Secp256K1Mod};
 
-    auto _1_mont = s.to_mont(1);
-
-    ProjPoint p{0, _1_mont, 0};  // FIXME: Why z==0?
-    ProjPoint q{s.to_mont(pt.x), s.to_mont(pt.y), _1_mont};
+    ProjPoint p{0, s.to_mont(1), 0};  // FIXME: Why z==0?
+    auto q = ecc::to_proj(s, pt);
 
     const auto b3 = s.to_mont(21);
 
