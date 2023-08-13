@@ -22,4 +22,15 @@ struct Point
     /// Checks if the point represents the special "infinity" value.
     [[nodiscard]] constexpr bool is_inf() const noexcept { return *this == Point{}; }
 };
+
+template <typename IntT>
+struct ProjPoint
+{
+    IntT x = {};
+    IntT y = {};
+    IntT z = {};  // FIXME: 1?
+
+    /// Checks if the point represents the special "infinity" value.
+    [[nodiscard]] constexpr bool is_inf() const noexcept { return x == 0 && y == 0; }
+};
 }  // namespace evmmax::ecc

@@ -61,22 +61,23 @@ std::tuple<uint256, uint256> from_proj(const uint256& x, const uint256& y, const
 
 }  // namespace
 
-bool is_at_infinity(const uint256& x, const uint256& y, const uint256& z) noexcept
+ProjPoint point_addition_a0(const evmmax::ModArith<uint256>& s, const ProjPoint& p,
+    const ProjPoint& q, const uint256& b3) noexcept
 {
-    return x == 0 && y == 0 && z == 0;
-}
-
-std::tuple<uint256, uint256, uint256> point_addition_a0(const evmmax::ModArith<uint256>& s,
-    const uint256& x1, const uint256& y1, const uint256& z1, const uint256& x2, const uint256& y2,
-    const uint256& z2, const uint256& b3) noexcept
-{
-    if (is_at_infinity(x1, y1, z1))
-        return {0, 0, 0};
-    if (is_at_infinity(x2, y2, z2))
-        return {0, 0, 0};
+    if (p.is_inf())
+        return p;
+    if (q.is_inf())
+        return q;
 
     // https://eprint.iacr.org/2015/1060 algorithm 1.
     // Simplified with a == 0
+
+    auto& x1 = p.x;
+    auto& y1 = p.y;
+    auto& z1 = p.z;
+    auto& x2 = q.x;
+    auto& y2 = q.y;
+    auto& z2 = q.z;
 
     uint256 x3;
     uint256 y3;
@@ -132,14 +133,18 @@ std::tuple<uint256, uint256, uint256> point_addition_a0(const evmmax::ModArith<u
     return {x3, y3, z3};
 }
 
-std::tuple<uint256, uint256, uint256> point_doubling_a0(const evmmax::ModArith<uint256>& s,
-    const uint256& x, const uint256& y, const uint256& z, const uint256& b3) noexcept
+ProjPoint point_doubling_a0(
+    const evmmax::ModArith<uint256>& s, const ProjPoint& p, const uint256& b3) noexcept
 {
-    if (is_at_infinity(x, y, z))
-        return {0, 0, 0};
+    if (p.is_inf())
+        return p;
 
     // https://eprint.iacr.org/2015/1060 algorithm 3.
     // Simplified with a == 0
+
+    auto& x = p.x;
+    auto& y = p.y;
+    auto& z = p.z;
 
     uint256 x3;
     uint256 y3;
@@ -263,15 +268,10 @@ Point bn254_mul(const Point& pt, const uint256& c) noexcept
 
     auto _1_mont = s.to_mont(1);
 
-    uint256 x0 = 0;
-    uint256 y0 = _1_mont;
-    uint256 z0 = 0;
+    ProjPoint p{0, _1_mont, 0};
+    ProjPoint q{s.to_mont(pt.x), s.to_mont(pt.y), _1_mont};
 
-    uint256 x1 = s.to_mont(pt.x);
-    uint256 y1 = s.to_mont(pt.y);
-    uint256 z1 = _1_mont;
-
-    auto b3 = s.to_mont(9);
+    const auto b3 = s.to_mont(9);
 
     auto first_significant_met = false;
 
@@ -282,23 +282,22 @@ Point bn254_mul(const Point& pt, const uint256& c) noexcept
         {
             if (first_significant_met)
             {
-                std::tie(x1, y1, z1) = point_addition_a0(s, x0, y0, z0, x1, y1, z1, b3);
-                std::tie(x0, y0, z0) = point_doubling_a0(s, x0, y0, z0, b3);
-                // std::tie(x0, y0, z0) = point_addition_a0(s, x0, y0, z0, x0, y0, z0, b3);
+                q = point_addition_a0(s, p, q, b3);
+                p = point_doubling_a0(s, p, b3);
             }
         }
         else
         {
-            std::tie(x0, y0, z0) = point_addition_a0(s, x0, y0, z0, x1, y1, z1, b3);
-            std::tie(x1, y1, z1) = point_doubling_a0(s, x1, y1, z1, b3);
+            p = point_addition_a0(s, p, q, b3);
+            q = point_doubling_a0(s, q, b3);
             first_significant_met = true;
-            // std::tie(x1, y1, z1) = point_addition_a0(s, x1, y1, z1, x1, y1, z1, b3);
         }
     }
 
-    std::tie(x0, y0) = from_proj(x0, y0, z0);
+    Point r;
+    std::tie(r.x, r.y) = from_proj(p.x, p.y, p.z);
 
-    return {s.from_mont(x0), s.from_mont(y0)};
+    return {s.from_mont(r.x), s.from_mont(r.y)};
 }
 
 bool is_on_curve_b(const uint256& x, const uint256& y, const uint256& z) noexcept

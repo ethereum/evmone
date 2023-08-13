@@ -15,6 +15,7 @@ inline constexpr auto BN254Mod =
 namespace evmmax::bn254
 {
 using Point = ecc::Point<uint256>;
+using ProjPoint = ecc::ProjPoint<uint256>;
 
 struct ModCoeffs2
 {
@@ -64,12 +65,11 @@ public:
 
 bool is_at_infinity(const uint256& x, const uint256& y, const uint256& z) noexcept;
 
-std::tuple<uint256, uint256, uint256> point_addition_a0(const evmmax::ModArith<uint256>& s,
-    const uint256& x1, const uint256& y1, const uint256& z1, const uint256& x2, const uint256& y2,
-    const uint256& z2, const uint256& b3) noexcept;
+ProjPoint point_addition_a0(const evmmax::ModArith<uint256>& s, const ProjPoint& p,
+    const ProjPoint& q, const uint256& b3) noexcept;
 
-std::tuple<uint256, uint256, uint256> point_doubling_a0(const evmmax::ModArith<uint256>& s,
-    const uint256& x, const uint256& y, const uint256& z, const uint256& b3) noexcept;
+ProjPoint point_doubling_a0(
+    const evmmax::ModArith<uint256>& s, const ProjPoint& p, const uint256& b3) noexcept;
 
 std::tuple<uint256, uint256, uint256> point_addition_mixed_a0(const evmmax::ModArith<uint256>& s,
     const uint256& x1, const uint256& y1, const uint256& x2, const uint256& y2,

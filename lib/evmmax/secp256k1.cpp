@@ -533,15 +533,10 @@ Point secp256k1_mul(const Point& pt, const uint256& c) noexcept
 
     auto _1_mont = s.to_mont(1);
 
-    uint256 x0 = 0;
-    uint256 y0 = _1_mont;
-    uint256 z0 = 0;
+    ProjPoint p{0, _1_mont, 0};  // FIXME: Why z==0?
+    ProjPoint q{s.to_mont(pt.x), s.to_mont(pt.y), _1_mont};
 
-    uint256 x1 = s.to_mont(pt.x);
-    uint256 y1 = s.to_mont(pt.y);
-    uint256 z1 = _1_mont;
-
-    auto b3 = s.to_mont(21);
+    const auto b3 = s.to_mont(21);
 
     auto first_significant_met = false;
 
@@ -552,23 +547,22 @@ Point secp256k1_mul(const Point& pt, const uint256& c) noexcept
         {
             if (first_significant_met)
             {
-                std::tie(x1, y1, z1) = point_addition_a0(s, x0, y0, z0, x1, y1, z1, b3);
-                std::tie(x0, y0, z0) = point_doubling_a0(s, x0, y0, z0, b3);
-                // std::tie(x0, y0, z0) = point_addition_a0(s, x0, y0, z0, x0, y0, z0, b3);
+                q = point_addition_a0(s, p, q, b3);
+                p = point_doubling_a0(s, p, b3);
             }
         }
         else
         {
-            std::tie(x0, y0, z0) = point_addition_a0(s, x0, y0, z0, x1, y1, z1, b3);
-            std::tie(x1, y1, z1) = point_doubling_a0(s, x1, y1, z1, b3);
+            p = point_addition_a0(s, p, q, b3);
+            q = point_doubling_a0(s, q, b3);
             first_significant_met = true;
-            // std::tie(x1, y1, z1) = point_addition_a0(s, x1, y1, z1, x1, y1, z1, b3);
         }
     }
 
-    std::tie(x0, y0) = from_proj(s, x0, y0, z0);
+    Point r;
+    std::tie(r.x, r.y) = from_proj(s, p.x, p.y, p.z);
 
-    return {s.from_mont(x0), s.from_mont(y0)};
+    return {s.from_mont(r.x), s.from_mont(r.y)};
 }
 
 
