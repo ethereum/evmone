@@ -63,11 +63,6 @@ public:
     uint256 one_mont() const noexcept { return in_mont<1>(); }
 };
 
-bool is_at_infinity(const uint256& x, const uint256& y, const uint256& z) noexcept;
-
-ProjPoint point_addition_a0(const evmmax::ModArith<uint256>& s, const ProjPoint& p,
-    const ProjPoint& q, const uint256& b3) noexcept;
-
 ProjPoint point_doubling_a0(
     const evmmax::ModArith<uint256>& s, const ProjPoint& p, const uint256& b3) noexcept;
 

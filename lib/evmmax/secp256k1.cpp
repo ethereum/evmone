@@ -499,7 +499,7 @@ Point secp256k1_add(const Point& p, const Point& q) noexcept
 
     // b3 == 21 for y^2 == x^3 + 7
     const auto b3 = s.to_mont(21);
-    const auto r = bn254::point_addition_a0(s, pp, pq, b3);
+    const auto r = ecc::add(s, pp, pq, b3);
     return ecc::to_affine(s, field_inv, r);
 }
 
@@ -530,13 +530,13 @@ Point secp256k1_mul(const Point& pt, const uint256& c) noexcept
         {
             if (first_significant_met)
             {
-                q = point_addition_a0(s, p, q, b3);
+                q = ecc::add(s, p, q, b3);
                 p = point_doubling_a0(s, p, b3);
             }
         }
         else
         {
-            p = point_addition_a0(s, p, q, b3);
+            p = ecc::add(s, p, q, b3);
             q = point_doubling_a0(s, q, b3);
             first_significant_met = true;
         }
