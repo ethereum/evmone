@@ -707,16 +707,18 @@ std::optional<Point> secp256k1_ecdsa_recover(
     const auto y = m.from_mont(*y_mont);
 
     // 6. Calculate public key point Q.
-    const Point R{r, y};
-    const Point T1 = secp256k1_mul(G, u1);
-    const Point T2 = secp256k1_mul(R, u2);
-    const Point Q = secp256k1_add(T1, T2);
+    const auto b3 = m.to_mont(21);
+    const auto R = ecc::to_proj(m, {r,y });
+    const auto pG = ecc::to_proj(m, G);
+    const auto T1 = ecc::mul(m, pG, u1, b3);
+    const auto T2 = ecc::mul(m, R, u2, b3);
+    const auto Q = ecc::add(m, T1, T2, b3);
 
     // Any other validity check needed?
     if (Q.is_inf())
         return std::nullopt;
 
-    return std::make_optional(Q);
+    return ecc::to_affine(m, field_inv, Q);
 }
 
 std::optional<uint256> sec256k1_calculate_y(
