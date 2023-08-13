@@ -18,7 +18,7 @@ TEST(evmmax, secp256k1_inv_1)
             Secp256K1Mod - 1})
     {
         const auto a = s.to_mont(t);
-        const auto a_inv = inv(s, a);
+        const auto a_inv = field_inv(s, a);
         const auto p = s.mul(a, a_inv);
         EXPECT_EQ(s.from_mont(p), 1);
     }
@@ -112,7 +112,7 @@ TEST(evmmax, secp256k1_calculate_u1)
     const evmmax::ModArith m{Secp256K1Mod};
     const auto z_mont = m.to_mont(z);
     const auto r_mont = m.to_mont(r);
-    const auto r_inv = inv(m, r_mont);
+    const auto r_inv = field_inv(m, r_mont);
     const auto z_neg = m.sub(0, z_mont);
     const auto u1_mont = m.mul(z_neg, r_inv);
     const auto u1 = m.from_mont(u1_mont);
@@ -129,7 +129,7 @@ TEST(evmmax, secp256k1_calculate_u2)
     const evmmax::ModArith m{Secp256K1Mod};
     const auto s_mont = m.to_mont(s);
     const auto r_mont = m.to_mont(r);
-    const auto r_inv = inv(m, r_mont);
+    const auto r_inv = field_inv(m, r_mont);
     const auto u2_mont = m.mul(s_mont, r_inv);
     const auto u2 = m.from_mont(u2_mont);
     EXPECT_EQ(u2, expected);

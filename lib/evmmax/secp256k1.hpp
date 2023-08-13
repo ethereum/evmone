@@ -20,7 +20,7 @@ namespace evmmax::secp256k1
 {
 using Point = ecc::Point<uint256>;
 
-uint256 inv(const ModArith<uint256>& s, const uint256& x) noexcept;
+uint256 field_inv(const ModArith<uint256>& s, const uint256& x) noexcept;
 
 std::optional<uint256> sqrt(const ModArith<uint256>& s, const uint256& x) noexcept;
 

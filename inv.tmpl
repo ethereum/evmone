@@ -18,6 +18,7 @@ uint256 inv(const ModArith<uint256>& s, const uint256& x) noexcept {
     uint256 {{ . }};
     {{- end -}}
 
+
     {{ range $i := .Program.Instructions }}
     // {{ printf "Step %d: %s = x^%#x" $i.Output.Index $i.Output (index $.Chain $i.Output.Index) }}
     {{- with add $i.Op }}

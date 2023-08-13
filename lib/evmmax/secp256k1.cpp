@@ -4,7 +4,7 @@
 namespace evmmax::secp256k1
 {
 // Computes z = 1/x (mod p) and returns it.
-uint256 inv(const ModArith<uint256>& s, const uint256& x) noexcept
+uint256 field_inv(const ModArith<uint256>& s, const uint256& x) noexcept
 {
     uint256 z;
     // Inversion computation is derived from the addition chain:
@@ -489,7 +489,7 @@ namespace
 std::tuple<uint256, uint256> from_proj(
     const evmmax::ModArith<uint256>& s, const uint256& x, const uint256& y, const uint256& z)
 {
-    auto z_inv = inv(s, z);
+    auto z_inv = field_inv(s, z);
     return {s.mul(x, z_inv), s.mul(y, z_inv)};
 }
 
