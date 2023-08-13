@@ -39,6 +39,14 @@ struct ProjPoint
 template <typename IntT>
 using InvFn = IntT (*)(const ModArith<IntT>&, const IntT& x) noexcept;
 
+/// Converts an affine point to a projected point with coordinates in Montgomery form.
+template <typename IntT>
+inline ProjPoint<IntT> to_proj(const ModArith<IntT>& s, const Point<IntT>& p) noexcept
+{
+    // FIXME: Add to_mont(1) to ModArith?
+    return {s.to_mont(p.x), s.to_mont(p.y), s.to_mont(1)};
+}
+
 /// Converts a projected point to an affine point.
 template <typename IntT>
 inline Point<IntT> to_affine(

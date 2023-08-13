@@ -30,7 +30,7 @@ std::optional<uint256> sec256k1_calculate_y(
 std::optional<Point> secp256k1_ecdsa_recover(
     const ethash::hash256& e, const uint256& r, const uint256& s, bool v) noexcept;
 
-Point secp256k1_add(const Point& pt1, const Point& pt2) noexcept;
+Point secp256k1_add(const Point& p, const Point& q) noexcept;
 Point secp256k1_mul(const Point& pt, const uint256& c) noexcept;
 
 evmc::address secp256k1_point_to_address(const Point& pt) noexcept;

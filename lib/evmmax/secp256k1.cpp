@@ -485,26 +485,21 @@ static uint256 scalar_inv(const ModArith<uint256>& s, const uint256& x) noexcept
     return z;
 }
 
-Point secp256k1_add(const Point& pt1, const Point& pt2) noexcept
+Point secp256k1_add(const Point& p, const Point& q) noexcept
 {
-    using namespace evmmax::bn254;
-    if (pt1.is_inf())
-        return pt2;
-    if (pt2.is_inf())
-        return pt1;
+    if (p.is_inf())
+        return q;
+    if (q.is_inf())
+        return p;
 
     const evmmax::ModArith s{Secp256K1Mod};
 
-    const auto x1 = s.to_mont(pt1.x);
-    const auto y1 = s.to_mont(pt1.y);
-
-    const auto x2 = s.to_mont(pt2.x);
-    const auto y2 = s.to_mont(pt2.y);
+    const auto pp = ecc::to_proj(s, p);
+    const auto pq = ecc::to_proj(s, q);
 
     // b3 == 21 for y^2 == x^3 + 7
     const auto b3 = s.to_mont(21);
-    const auto _1 = s.to_mont(1);
-    const auto r = point_addition_a0(s, {x1, y1, _1}, {x2, y2, _1}, b3);
+    const auto r = bn254::point_addition_a0(s, pp, pq, b3);
     return ecc::to_affine(s, field_inv, r);
 }
 
