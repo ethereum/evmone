@@ -132,4 +132,63 @@ ProjPoint<IntT> add(const evmmax::ModArith<IntT>& s, const ProjPoint<IntT>& p,
 }
 
 
+template <typename IntT, int A = 0>
+ProjPoint<IntT> dbl(
+    const evmmax::ModArith<IntT>& s, const ProjPoint<IntT>& p, const IntT& b3) noexcept
+{
+    static_assert(A == 0, "point doubling procedure is simplified for a = 0");
+    if (p.is_inf())
+        return p;
+
+    // https://eprint.iacr.org/2015/1060 algorithm 3.
+    // Simplified with a == 0
+
+    auto& x = p.x;
+    auto& y = p.y;
+    auto& z = p.z;
+
+    IntT x3;
+    IntT y3;
+    IntT z3;
+    IntT t0;
+    IntT t1;
+    IntT t2;
+    IntT t3;
+
+    t0 = s.mul(x, x);    // 1
+    t1 = s.mul(y, y);    // 2
+    t2 = s.mul(z, z);    // 3
+    t3 = s.mul(x, y);    // 4
+    t3 = s.add(t3, t3);  // 5
+    z3 = s.mul(x, z);    // 6
+    z3 = s.add(z3, z3);  // 7
+    // x3 = s.mul(0, z3); // 8
+    y3 = s.mul(b3, t2);  // 9
+    // y3 = s.add(x3, y3); // 10
+    x3 = s.sub(t1, y3);  // 11
+    y3 = s.add(t1, y3);  // 12
+    y3 = s.mul(x3, y3);  // 13
+    x3 = s.mul(t3, x3);  // 14
+    z3 = s.mul(b3, z3);  // 15
+    // t2 = s.mul(0, t2); // 16
+    // t3 = s.sub(t0, t2); // 17
+    // t3 = s.mul(0, t3); // 18
+    t3 = z3;             // s.add(t3, z3);  // 19
+    z3 = s.add(t0, t0);  // 20
+    t0 = s.add(z3, t0);  // 21
+    // t0 = s.add(t0, t2); // 22
+    t0 = s.mul(t0, t3);  // 23
+    y3 = s.add(y3, t0);  // 24
+    t2 = s.mul(y, z);    // 25
+    t2 = s.add(t2, t2);  // 26
+    t0 = s.mul(t2, t3);  // 27
+    x3 = s.sub(x3, t0);  // 28
+    z3 = s.mul(t2, t1);  // 29
+    z3 = s.add(z3, z3);  // 30
+    z3 = s.add(z3, z3);  // 31
+
+    return {x3, y3, z3};
+}
+
+
 }  // namespace evmmax::ecc

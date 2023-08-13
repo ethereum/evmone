@@ -1,5 +1,4 @@
 #include "secp256k1.hpp"
-#include "bn254.hpp"
 
 namespace evmmax::secp256k1
 {
@@ -505,7 +504,6 @@ Point secp256k1_add(const Point& p, const Point& q) noexcept
 
 Point secp256k1_mul(const Point& pt, const uint256& c) noexcept
 {
-    using namespace evmmax::bn254;
     if (pt.is_inf())
         return pt;
 
@@ -529,13 +527,13 @@ Point secp256k1_mul(const Point& pt, const uint256& c) noexcept
             if (first_significant_met)
             {
                 q = ecc::add(s, p, q, b3);
-                p = point_doubling_a0(s, p, b3);
+                p = ecc::dbl(s, p, b3);
             }
         }
         else
         {
             p = ecc::add(s, p, q, b3);
-            q = point_doubling_a0(s, q, b3);
+            q = ecc::dbl(s, q, b3);
             first_significant_met = true;
         }
     }
