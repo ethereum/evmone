@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
+#include <evmmax/evmmax.hpp>
+
 namespace evmmax::ecc
 {
 
@@ -33,4 +35,16 @@ struct ProjPoint
     /// Checks if the point represents the special "infinity" value.
     [[nodiscard]] constexpr bool is_inf() const noexcept { return x == 0 && y == 0; }
 };
+
+template <typename IntT>
+using InvFn = IntT (*)(const ModArith<IntT>&, const IntT& x) noexcept;
+
+/// Converts a projected point to an affine point.
+template <typename IntT>
+inline Point<IntT> to_affine(
+    const ModArith<IntT>& s, InvFn<IntT> inv, const ProjPoint<IntT>& p) noexcept
+{
+    const auto z_inv = inv(s, p.z);
+    return {s.mul(p.x, z_inv), s.mul(p.y, z_inv)};
+}
 }  // namespace evmmax::ecc

@@ -3,6 +3,9 @@
 
 namespace evmmax::secp256k1
 {
+using Point = ecc::Point<uint256>;
+using ProjPoint = ecc::ProjPoint<uint256>;
+
 // Computes z = 1/x (mod p) and returns it.
 uint256 field_inv(const ModArith<uint256>& s, const uint256& x) noexcept
 {
@@ -482,19 +485,6 @@ static uint256 scalar_inv(const ModArith<uint256>& s, const uint256& x) noexcept
     return z;
 }
 
-
-namespace
-{
-
-std::tuple<uint256, uint256> from_proj(
-    const evmmax::ModArith<uint256>& s, const uint256& x, const uint256& y, const uint256& z)
-{
-    auto z_inv = field_inv(s, z);
-    return {s.mul(x, z_inv), s.mul(y, z_inv)};
-}
-
-}  // namespace
-
 Point secp256k1_add(const Point& pt1, const Point& pt2) noexcept
 {
     using namespace evmmax::bn254;
@@ -513,11 +503,10 @@ Point secp256k1_add(const Point& pt1, const Point& pt2) noexcept
 
     // b3 == 21 for y^2 == x^3 + 7
     const auto b3 = s.to_mont(21);
-    auto [x3, y3, z3] = point_addition_mixed_a0(s, x1, y1, x2, y2, b3);
+    const auto [x3, y3, z3] = point_addition_mixed_a0(s, x1, y1, x2, y2, b3);
 
-    std::tie(x3, y3) = from_proj(s, x3, y3, z3);
-
-    return {s.from_mont(x3), s.from_mont(y3)};
+    const auto r = ecc::to_affine(s, field_inv, {x3, y3, z3});
+    return {s.from_mont(r.x), s.from_mont(r.y)};
 }
 
 Point secp256k1_mul(const Point& pt, const uint256& c) noexcept
@@ -559,9 +548,7 @@ Point secp256k1_mul(const Point& pt, const uint256& c) noexcept
         }
     }
 
-    Point r;
-    std::tie(r.x, r.y) = from_proj(s, p.x, p.y, p.z);
-
+    const auto r = ecc::to_affine(s, field_inv, p);
     return {s.from_mont(r.x), s.from_mont(r.y)};
 }
 
