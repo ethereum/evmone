@@ -136,39 +136,13 @@ Point bn254_mul(const Point& pt, const uint256& c) noexcept
     if (c == 0)
         return {0, 0};
 
-    const evmmax::ModArith s{BN254Mod};
-
-    auto _1_mont = s.to_mont(1);
-
-    ProjPoint p{0, _1_mont, 0};
-    ProjPoint q{s.to_mont(pt.x), s.to_mont(pt.y), _1_mont};
-
+    const ModArith s{BN254Mod};
     const auto b3 = s.to_mont(9);
 
-    auto first_significant_met = false;
-
-    for (int i = 255; i >= 0; --i)
-    {
-        const uint256 d = c & (uint256{1} << i);
-        if (d == 0)
-        {
-            if (first_significant_met)
-            {
-                q = ecc::add(s, p, q, b3);
-                p = ecc::dbl(s, p, b3);
-            }
-        }
-        else
-        {
-            p = ecc::add(s, p, q, b3);
-            q = ecc::dbl(s, q, b3);
-            first_significant_met = true;
-        }
-    }
+    const auto pr = ecc::mul(s, ecc::to_proj(s, pt), c, b3);
 
     Point r;
-    std::tie(r.x, r.y) = from_proj(p.x, p.y, p.z);
-
+    std::tie(r.x, r.y) = from_proj(pr.x, pr.y, pr.z);
     return {s.from_mont(r.x), s.from_mont(r.y)};
 }
 

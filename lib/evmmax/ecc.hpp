@@ -190,5 +190,35 @@ ProjPoint<IntT> dbl(
     return {x3, y3, z3};
 }
 
+template <typename IntT, int A = 0>
+ProjPoint<IntT> mul(const evmmax::ModArith<IntT>& s, const ProjPoint<IntT>& z, const IntT& c,
+    const IntT& b3) noexcept
+{
+    ProjPoint<IntT> p{0, s.to_mont(1), 0};  // FIXME: Why z==0?
+    auto q = z;
+    auto first_significant_met = false;
+
+    for (int i = 255; i >= 0; --i)
+    {
+        const auto d = c & (IntT{1} << i);
+        if (d == 0)
+        {
+            if (first_significant_met)
+            {
+                q = ecc::add(s, p, q, b3);
+                p = ecc::dbl(s, p, b3);
+            }
+        }
+        else
+        {
+            p = ecc::add(s, p, q, b3);
+            q = ecc::dbl(s, q, b3);
+            first_significant_met = true;
+        }
+    }
+
+    return p;
+}
+
 
 }  // namespace evmmax::ecc

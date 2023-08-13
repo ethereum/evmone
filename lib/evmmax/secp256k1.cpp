@@ -502,43 +502,19 @@ Point secp256k1_add(const Point& p, const Point& q) noexcept
     return ecc::to_affine(s, field_inv, r);
 }
 
-Point secp256k1_mul(const Point& pt, const uint256& c) noexcept
+Point secp256k1_mul(const Point& p, const uint256& c) noexcept
 {
-    if (pt.is_inf())
-        return pt;
+    if (p.is_inf())
+        return p;
 
     if (c == 0)
         return {0, 0};
 
     const evmmax::ModArith s{Secp256K1Mod};
-
-    ProjPoint p{0, s.to_mont(1), 0};  // FIXME: Why z==0?
-    auto q = ecc::to_proj(s, pt);
-
     const auto b3 = s.to_mont(21);
 
-    auto first_significant_met = false;
-
-    for (int i = 255; i >= 0; --i)
-    {
-        const uint256 d = c & (uint256{1} << i);
-        if (d == 0)
-        {
-            if (first_significant_met)
-            {
-                q = ecc::add(s, p, q, b3);
-                p = ecc::dbl(s, p, b3);
-            }
-        }
-        else
-        {
-            p = ecc::add(s, p, q, b3);
-            q = ecc::dbl(s, q, b3);
-            first_significant_met = true;
-        }
-    }
-
-    return ecc::to_affine(s, field_inv, p);
+    const auto r = ecc::mul(s, ecc::to_proj(s, p), c, b3);
+    return ecc::to_affine(s, field_inv, r);
 }
 
 
