@@ -219,6 +219,16 @@ void MPTNode::insert(const Path& path, bytes&& value)  // NOLINT(misc-no-recursi
     }
 }
 
+/// Encodes a node and optionally hashes the encoded bytes
+/// if their length exceeds the specified threshold.
+static bytes encode_child(const MPTNode& child) noexcept  // NOLINT(misc-no-recursion)
+{
+    if (auto e = child.encode(); e.size() < 32)
+        return e;  // "short" node
+    else
+        return rlp::encode(keccak256(e));
+}
+
 bytes MPTNode::encode() const  // NOLINT(misc-no-recursion)
 {
     bytes encoded;
@@ -237,7 +247,7 @@ bytes MPTNode::encode() const  // NOLINT(misc-no-recursion)
         for (const auto& child : m_children)
         {
             if (child)
-                encoded += rlp::encode(keccak256(child->encode()));
+                encoded += encode_child(*child);
             else
                 encoded += empty;
         }
@@ -246,8 +256,7 @@ bytes MPTNode::encode() const  // NOLINT(misc-no-recursion)
     }
     case Kind::ext:
     {
-        encoded =
-            rlp::encode(m_path.encode(true)) + rlp::encode(keccak256(m_children[0]->encode()));
+        encoded = rlp::encode(m_path.encode(true)) + encode_child(*m_children[0]);
         break;
     }
     }
