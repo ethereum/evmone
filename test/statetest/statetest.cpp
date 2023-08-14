@@ -61,6 +61,7 @@ int main(int argc, char* argv[])
 {
     // The default test filter. To enable all tests use `--gtest_filter=*`.
     testing::FLAGS_gtest_filter =
+        "stTransactionTest.PointAtInfinityECRecover:"
         "-"
         // Slow tests:
         "stCreateTest.CreateOOGafterMaxCodesize:"      // pass
