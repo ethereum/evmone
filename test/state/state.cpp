@@ -55,7 +55,8 @@ int64_t compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& tx) noex
 /// Validates transaction and computes its execution gas limit (the amount of gas provided to EVM).
 /// @return  Execution gas limit or transaction validation error.
 std::variant<int64_t, std::error_code> validate_transaction(const Account& sender_acc,
-    const BlockInfo& block, const Transaction& tx, evmc_revision rev) noexcept
+    const BlockInfo& block, const Transaction& tx, evmc_revision rev,
+    int64_t block_gas_left) noexcept
 {
     switch (tx.type)
     {
@@ -77,7 +78,7 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
 
     assert(tx.max_priority_gas_price <= tx.max_gas_price);
 
-    if (tx.gas_limit > block.gas_limit)
+    if (tx.gas_limit > block_gas_left)
         return make_error_code(GAS_LIMIT_REACHED);
 
     if (tx.max_gas_price < block.base_fee)
@@ -147,11 +148,11 @@ void finalize(State& state, evmc_revision rev, const address& coinbase,
     }
 }
 
-std::variant<TransactionReceipt, std::error_code> transition(
-    State& state, const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm)
+std::variant<TransactionReceipt, std::error_code> transition(State& state, const BlockInfo& block,
+    const Transaction& tx, evmc_revision rev, evmc::VM& vm, int64_t block_gas_left)
 {
     auto& sender_acc = state.get(tx.sender);
-    const auto validation_result = validate_transaction(sender_acc, block, tx, rev);
+    const auto validation_result = validate_transaction(sender_acc, block, tx, rev, block_gas_left);
 
     if (holds_alternative<std::error_code>(validation_result))
         return get<std::error_code>(validation_result);
