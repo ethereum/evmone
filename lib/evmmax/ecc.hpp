@@ -33,7 +33,7 @@ struct ProjPoint
     IntT z = {};  // FIXME: 1?
 
     /// Checks if the point represents the special "infinity" value.
-    [[nodiscard]] constexpr bool is_inf() const noexcept { return x == 0 && y == 0; }
+    [[nodiscard]] constexpr bool is_inf() const noexcept { return x == 0 && z == 0; }
 };
 
 template <typename IntT>
@@ -63,9 +63,9 @@ ProjPoint<IntT> add(const evmmax::ModArith<IntT>& s, const ProjPoint<IntT>& p,
     static_assert(A == 0, "point addition procedure is simplified for a = 0");
 
     if (p.is_inf())
-        return p;
-    if (q.is_inf())
         return q;
+    if (q.is_inf())
+        return p;
 
     // https://eprint.iacr.org/2015/1060 algorithm 1.
     // Simplified with a == 0
