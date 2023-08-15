@@ -151,7 +151,7 @@ public:
 
     void insert(const Path& path, bytes&& value);
 
-    [[nodiscard]] hash256 hash() const;
+    [[nodiscard]] bytes encode() const;
 };
 
 void MPTNode::insert(const Path& path, bytes&& value)  // NOLINT(misc-no-recursion)
@@ -219,7 +219,7 @@ void MPTNode::insert(const Path& path, bytes&& value)  // NOLINT(misc-no-recursi
     }
 }
 
-hash256 MPTNode::hash() const  // NOLINT(misc-no-recursion)
+bytes MPTNode::encode() const  // NOLINT(misc-no-recursion)
 {
     bytes encoded;
     switch (m_kind)
@@ -237,7 +237,7 @@ hash256 MPTNode::hash() const  // NOLINT(misc-no-recursion)
         for (const auto& child : m_children)
         {
             if (child)
-                encoded += rlp::encode(child->hash());
+                encoded += rlp::encode(keccak256(child->encode()));
             else
                 encoded += empty;
         }
@@ -246,12 +246,13 @@ hash256 MPTNode::hash() const  // NOLINT(misc-no-recursion)
     }
     case Kind::ext:
     {
-        encoded = rlp::encode(m_path.encode(true)) + rlp::encode(m_children[0]->hash());
+        encoded =
+            rlp::encode(m_path.encode(true)) + rlp::encode(keccak256(m_children[0]->encode()));
         break;
     }
     }
 
-    return keccak256(rlp::internal::wrap_list(encoded));
+    return rlp::internal::wrap_list(encoded);
 }
 
 
@@ -270,7 +271,7 @@ void MPT::insert(bytes_view key, bytes&& value)
 {
     if (m_root == nullptr)
         return emptyMPTHash;
-    return m_root->hash();
+    return keccak256(m_root->encode());
 }
 
 }  // namespace evmone::state
