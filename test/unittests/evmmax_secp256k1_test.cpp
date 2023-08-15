@@ -253,12 +253,12 @@ struct TestCaseECRecovery
 };
 
 static const TestCaseECRecovery test_cases[] = {
-//    {"18c547e4f7b0f325ad1e56f57e26c745b09a3e503d86e00e5255ff7f715d3d1c000000000000000000000000000000000000000000000000000000000000001c73b1693892219d736caba55bdb67216e485557ea6b6af75f37096c9aa6a5a75feeb940b1d03b21e36b0e47e79769f095fe2ab855bd91e3a38756b7d75a9c4549"_hex,
-//        "000000000000000000000000a94f5374fce5edbc8e2a8697c15331677e6ebf0b"_hex},
-//    {"18c547e4f7b0f325ad1e56f57e26c745b09a3e503d86e00e5255ff7f715d3d1c000000000000000000000000000000000000000000000000000000000000001b7af9e73057870458f03c143483bc5fcb6f39d01c9b26d28ed9f3fe23714f66283134a4ba8fafe11b351a720538398a5635e235c0b3258dce19942000731079ec"_hex,
-//        "0000000000000000000000009a04aede774152f135315670f562c19c5726df2c"_hex},
-    {"6b8d2c81b11b2d699528dde488dbdf2f94293d0d33c32e347f255fa4a6c1f0a9000000000000000000000000000000000000000000000000000000000000001b79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f817986b8d2c81b11b2d699528dde488dbdf2f94293d0d33c32e347f255fa4a6c1f0a9"_hex,
+    {"18c547e4f7b0f325ad1e56f57e26c745b09a3e503d86e00e5255ff7f715d3d1c000000000000000000000000000000000000000000000000000000000000001c73b1693892219d736caba55bdb67216e485557ea6b6af75f37096c9aa6a5a75feeb940b1d03b21e36b0e47e79769f095fe2ab855bd91e3a38756b7d75a9c4549"_hex,
         "000000000000000000000000a94f5374fce5edbc8e2a8697c15331677e6ebf0b"_hex},
+    {"18c547e4f7b0f325ad1e56f57e26c745b09a3e503d86e00e5255ff7f715d3d1c000000000000000000000000000000000000000000000000000000000000001b7af9e73057870458f03c143483bc5fcb6f39d01c9b26d28ed9f3fe23714f66283134a4ba8fafe11b351a720538398a5635e235c0b3258dce19942000731079ec"_hex,
+        "0000000000000000000000009a04aede774152f135315670f562c19c5726df2c"_hex},
+    {"6b8d2c81b11b2d699528dde488dbdf2f94293d0d33c32e347f255fa4a6c1f0a9000000000000000000000000000000000000000000000000000000000000001b79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f817986b8d2c81b11b2d699528dde488dbdf2f94293d0d33c32e347f255fa4a6c1f0a9"_hex,
+        {}},
 };
 
 TEST(evmmax, ecrecovery)
@@ -266,7 +266,6 @@ TEST(evmmax, ecrecovery)
     for (const auto& t : test_cases)
     {
         ASSERT_EQ(t.input.size(), 128);
-        ASSERT_EQ(t.expected_output.size(), 32);
 
         ethash::hash256 hash;
         std::memcpy(hash.bytes, t.input.data(), 32);
@@ -274,14 +273,21 @@ TEST(evmmax, ecrecovery)
         ASSERT_TRUE(v == 27 || v == 28);
         const auto r{be::unsafe::load<uint256>(&t.input[64])};
         const auto s{be::unsafe::load<uint256>(&t.input[96])};
-
-        evmc::address e;
-        memcpy(&e.bytes[0], &t.expected_output[12], 20);
-
         const bool parity = v == 28;
 
         const auto result = ecrecover(hash, r, s, parity);
-        ASSERT_TRUE(result.has_value());
-        EXPECT_EQ(*result, e);
+
+        if (t.expected_output.empty())
+        {
+            EXPECT_FALSE(result.has_value());
+        }
+        else
+        {
+            ASSERT_EQ(t.expected_output.size(), 32);
+            evmc::address e;
+            memcpy(&e.bytes[0], &t.expected_output[12], 20);
+            ASSERT_TRUE(result.has_value());
+            EXPECT_EQ(*result, e);
+        }
     }
 }
