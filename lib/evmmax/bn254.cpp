@@ -61,12 +61,16 @@ std::tuple<uint256, uint256> from_proj(const uint256& x, const uint256& y, const
 
 }  // namespace
 
-std::tuple<uint256, uint256, uint256> point_addition_mixed_a0(const evmmax::ModArith<uint256>& s,
-    const uint256& x1, const uint256& y1, const uint256& x2, const uint256& y2,
-    const uint256& b3) noexcept
+ProjPoint point_addition_mixed_a0(
+    const evmmax::ModArith<uint256>& s, const Point& p, const Point& q, const uint256& b3) noexcept
 {
     // https://eprint.iacr.org/2015/1060 algorithm 2.
     // Simplified with z1 == 1, a == 0
+
+    const auto& x1 = p.x;
+    const auto& y1 = p.y;
+    const auto& x2 = q.x;
+    const auto& y2 = q.y;
 
     uint256 x3;
     uint256 y3;
@@ -113,19 +117,15 @@ Point bn254_add(const Point& pt1, const Point& pt2) noexcept
 
     const evmmax::ModArith s{BN254Mod};
 
-    const auto x1 = s.to_mont(pt1.x);
-    const auto y1 = s.to_mont(pt1.y);
-
-    const auto x2 = s.to_mont(pt2.x);
-    const auto y2 = s.to_mont(pt2.y);
+    const Point p{s.to_mont(pt1.x), s.to_mont(pt1.y)};
+    const Point q{s.to_mont(pt2.x), s.to_mont(pt2.y)};
 
     // b3 == 9 for y^2 == x^3 + 3
     const auto b3 = s.to_mont(9);
-    auto [x3, y3, z3] = point_addition_mixed_a0(s, x1, y1, x2, y2, b3);
+    const auto r = point_addition_mixed_a0(s, p, q, b3);
 
-    std::tie(x3, y3) = from_proj(x3, y3, z3);
-
-    return {s.from_mont(x3), s.from_mont(y3)};
+    const auto [rx, ry] = from_proj(r.x, r.y, r.z);
+    return {s.from_mont(rx), s.from_mont(ry)};
 }
 
 Point bn254_mul(const Point& pt, const uint256& c) noexcept
