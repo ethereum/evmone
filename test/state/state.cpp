@@ -211,6 +211,17 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
     // Cannot put it into constructor call because logs are std::moved from host instance.
     receipt.logs_bloom_filter = compute_bloom_filter(receipt.logs);
 
+    // Set accounts and their storage access status to cold in the end of transition process
+    for (auto& acc : state.get_accounts())
+    {
+        acc.second.access_status = EVMC_ACCESS_COLD;
+        for (auto& [_, val] : acc.second.storage)
+        {
+            val.access_status = EVMC_ACCESS_COLD;
+            val.original = val.current;
+        }
+    }
+
     return receipt;
 }
 
