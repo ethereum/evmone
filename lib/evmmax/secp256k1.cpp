@@ -4,6 +4,10 @@ namespace evmmax::secp256k1
 {
 namespace
 {
+const ModArith<uint256> Fp{FieldPrime};
+const auto B = Fp.to_mont(7);
+const auto B3 = Fp.to_mont(7 * 3);
+
 constexpr Point G{0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798_u256,
     0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8_u256};
 }  // namespace
@@ -494,15 +498,12 @@ Point add(const Point& p, const Point& q) noexcept
     if (q.is_inf())
         return p;
 
-    const ModArith m{FieldPrime};
-
-    const auto pp = ecc::to_proj(m, p);
-    const auto pq = ecc::to_proj(m, q);
+    const auto pp = ecc::to_proj(Fp, p);
+    const auto pq = ecc::to_proj(Fp, q);
 
     // b3 == 21 for y^2 == x^3 + 7
-    const auto b3 = m.to_mont(21);
-    const auto r = ecc::add(m, pp, pq, b3);
-    return ecc::to_affine(m, field_inv, r);
+    const auto r = ecc::add(Fp, pp, pq, B3);
+    return ecc::to_affine(Fp, field_inv, r);
 }
 
 Point mul(const Point& p, const uint256& c) noexcept
@@ -513,11 +514,8 @@ Point mul(const Point& p, const uint256& c) noexcept
     if (c == 0)
         return {0, 0};
 
-    const ModArith m{FieldPrime};
-    const auto b3 = m.to_mont(21);
-
-    const auto r = ecc::mul(m, ecc::to_proj(m, p), c, b3);
-    return ecc::to_affine(m, field_inv, r);
+    const auto r = ecc::mul(Fp, ecc::to_proj(Fp, p), c, B3);
+    return ecc::to_affine(Fp, field_inv, r);
 }
 
 
@@ -723,11 +721,9 @@ std::optional<Point> secp256k1_ecdsa_recover(
 std::optional<uint256> calculate_y(
     const ModArith<uint256>& s, const uint256& x, bool y_parity) noexcept
 {
-    static const auto Sec256k1_b = s.to_mont(7);
-
     // Calculate sqrt(x^3 + 7)
     const auto x3 = s.mul(s.mul(x, x), x);
-    const auto y = sqrt(s, s.add(x3, Sec256k1_b));
+    const auto y = sqrt(s, s.add(x3, B));
     if (!y.has_value())
         return std::nullopt;
 
