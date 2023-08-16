@@ -18,7 +18,7 @@ void state_transition::SetUp()
 void state_transition::TearDown()
 {
     auto& state = pre;
-    const auto res = evmone::state::transition(state, block, tx, rev, vm);
+    const auto res = evmone::state::transition(state, block, tx, rev, vm, block.gas_limit);
     ASSERT_TRUE(holds_alternative<TransactionReceipt>(res))
         << std::get<std::error_code>(res).message();
     const auto& receipt = std::get<TransactionReceipt>(res);

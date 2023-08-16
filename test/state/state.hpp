@@ -150,8 +150,9 @@ struct TransactionReceipt
 void finalize(State& state, evmc_revision rev, const address& coinbase,
     std::optional<uint64_t> block_reward, std::span<Withdrawal> withdrawals);
 
-[[nodiscard]] std::variant<TransactionReceipt, std::error_code> transition(
-    State& state, const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm);
+[[nodiscard]] std::variant<TransactionReceipt, std::error_code> transition(State& state,
+    const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm,
+    int64_t block_gas_left);
 
 /// Defines how to RLP-encode a Transaction.
 [[nodiscard]] bytes rlp_encode(const Transaction& tx);

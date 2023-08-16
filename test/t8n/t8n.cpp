@@ -2,6 +2,7 @@
 // Copyright 2023 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+#include "../state/errors.hpp"
 #include "../state/mpt_hash.hpp"
 #include "../state/rlp.hpp"
 #include "../statetest/statetest.hpp"
@@ -87,6 +88,7 @@ int main(int argc, const char* argv[])
         int64_t cumulative_gas_used = 0;
         std::vector<state::Transaction> transactions;
         std::vector<state::TransactionReceipt> receipts;
+        int64_t block_gas_left = block.gas_limit;
 
         // Parse and execute transactions
         if (!txs_file.empty())
@@ -107,9 +109,9 @@ int main(int argc, const char* argv[])
                     auto tx = test::from_json<state::Transaction>(j_txs[i]);
                     tx.chain_id = chain_id;
 
-                    auto res = state::transition(state, block, tx, rev, vm);
-
                     const auto computed_tx_hash = keccak256(rlp::encode(tx));
+
+                    auto res = state::transition(state, block, tx, rev, vm, block_gas_left);
 
                     if (j_txs[i].contains("hash"))
                     {
@@ -153,6 +155,7 @@ int main(int argc, const char* argv[])
                         j_receipt["status"] = "0x1";
                         j_receipt["transactionIndex"] = hex0x(i);
                         transactions.emplace_back(std::move(tx));
+                        block_gas_left -= receipt.gas_used;
                         receipts.emplace_back(std::move(receipt));
                     }
                 }
