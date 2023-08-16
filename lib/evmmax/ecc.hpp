@@ -12,8 +12,8 @@ namespace evmmax::ecc
 template <typename IntT>
 struct Point
 {
-    IntT x = {};
-    IntT y = {};
+    IntT x = 0;
+    IntT y = 0;
 
     friend constexpr bool operator==(const Point& a, const Point& b) noexcept
     {
@@ -48,6 +48,7 @@ template <typename IntT>
 inline ProjPoint<IntT> to_proj(const ModArith<IntT>& s, const Point<IntT>& p) noexcept
 {
     // FIXME: Add to_mont(1) to ModArith?
+    // FIXME: Handle inf
     return {s.to_mont(p.x), s.to_mont(p.y), s.to_mont(1)};
 }
 
@@ -56,6 +57,8 @@ template <typename IntT>
 inline Point<IntT> to_affine(
     const ModArith<IntT>& s, InvFn<IntT> inv, const ProjPoint<IntT>& p) noexcept
 {
+    // FIXME: Split to_affine() and to/from_mont(). This is not good idea.
+    // FIXME: Add tests for inf.
     const auto z_inv = inv(s, p.z);
     return {s.from_mont(s.mul(p.x, z_inv)), s.from_mont(s.mul(p.y, z_inv))};
 }
@@ -74,13 +77,12 @@ ProjPoint<IntT> add(const evmmax::ModArith<IntT>& s, const ProjPoint<IntT>& p,
     // https://eprint.iacr.org/2015/1060 algorithm 1.
     // Simplified with a == 0
 
-    auto& x1 = p.x;
-    auto& y1 = p.y;
-    auto& z1 = p.z;
-    auto& x2 = q.x;
-    auto& y2 = q.y;
-    auto& z2 = q.z;
-
+    const auto& x1 = p.x;
+    const auto& y1 = p.y;
+    const auto& z1 = p.z;
+    const auto& x2 = q.x;
+    const auto& y2 = q.y;
+    const auto& z2 = q.z;
     IntT x3;
     IntT y3;
     IntT z3;
@@ -147,10 +149,9 @@ ProjPoint<IntT> dbl(
     // https://eprint.iacr.org/2015/1060 algorithm 3.
     // Simplified with a == 0
 
-    auto& x = p.x;
-    auto& y = p.y;
-    auto& z = p.z;
-
+    const auto& x = p.x;
+    const auto& y = p.y;
+    const auto& z = p.z;
     IntT x3;
     IntT y3;
     IntT z3;
