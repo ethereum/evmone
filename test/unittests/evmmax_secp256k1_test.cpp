@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "../utils/utils.hpp"
-#include <evmmax/secp256k1.hpp>
+#include <evmone_precompiles/secp256k1.hpp>
 #include <gtest/gtest.h>
 
 using namespace evmmax::secp256k1;

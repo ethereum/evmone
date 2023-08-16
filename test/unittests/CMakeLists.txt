@@ -60,7 +60,7 @@ target_sources(
     statetest_withdrawals_test.cpp
     tracing_test.cpp
 )
-target_link_libraries(evmone-unittests PRIVATE evmone evmone::evmmax evmone::state evmone::statetestutils testutils evmc::instructions GTest::gtest GTest::gtest_main)
+target_link_libraries(evmone-unittests PRIVATE evmone evmone::evmmax evmone::precompiles evmone::state evmone::statetestutils testutils evmc::instructions GTest::gtest GTest::gtest_main)
 target_include_directories(evmone-unittests PRIVATE ${evmone_private_include_dir})
 
 gtest_discover_tests(evmone-unittests TEST_PREFIX ${PROJECT_NAME}/unittests/)

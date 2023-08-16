@@ -3,9 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "precompiles.hpp"
+#include "evmone_precompiles/bn254.hpp"
+#include "evmone_precompiles/secp256k1.hpp"
 #include "precompiles_cache.hpp"
-#include <evmmax/bn254.hpp>
-#include <evmmax/secp256k1.hpp>
 #include <intx/intx.hpp>
 #include <bit>
 #include <cassert>

@@ -5,7 +5,6 @@
 
 #include "ecc.hpp"
 #include "poly_extension_field.hpp"
-#include <evmmax/evmmax.hpp>
 
 using intx::operator""_u256;
 

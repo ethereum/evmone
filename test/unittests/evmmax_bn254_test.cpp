@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "../utils/utils.hpp"
-#include <evmmax/bn254.hpp>
+#include "evmone_precompiles/bn254.hpp"
 #include <gtest/gtest.h>
 
 using namespace evmmax::bn254;

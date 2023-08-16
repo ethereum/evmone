@@ -2,9 +2,9 @@
 // Copyright 2023 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+#include "evmone_precompiles/bn254.hpp"
 #include <benchmark/benchmark.h>
 #include <evmc/evmc.hpp>
-#include <evmmax/bn254.hpp>
 
 template <decltype(evmmax::bn254::bn254_add_precompile) Fn>
 void bn254_add(benchmark::State& state)
