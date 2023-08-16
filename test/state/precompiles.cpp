@@ -147,8 +147,6 @@ PrecompileAnalysis expmod_analyze(bytes_view input, evmc_revision rev) noexcept
 ExecutionResult ecrecover_execute(const uint8_t* input, size_t input_size, uint8_t* output,
     [[maybe_unused]] size_t output_size) noexcept
 {
-    std::cerr << evmc::hex(bytes_view{input, input_size}) << "\n\n\n";
-
     assert(output_size == 32);
 
     uint8_t input_buffer[128]{};
