@@ -2,8 +2,11 @@
 
 namespace evmmax::secp256k1
 {
-using Point = ecc::Point<uint256>;
-using ProjPoint = ecc::ProjPoint<uint256>;
+namespace
+{
+constexpr Point G{0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798_u256,
+    0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8_u256};
+}  // namespace
 
 // Computes z = 1/x (mod p) and returns it.
 uint256 field_inv(const ModArith<uint256>& s, const uint256& x) noexcept
@@ -484,7 +487,7 @@ static uint256 scalar_inv(const ModArith<uint256>& s, const uint256& x) noexcept
     return z;
 }
 
-Point secp256k1_add(const Point& p, const Point& q) noexcept
+Point add(const Point& p, const Point& q) noexcept
 {
     if (p.is_inf())
         return q;
@@ -502,7 +505,7 @@ Point secp256k1_add(const Point& p, const Point& q) noexcept
     return ecc::to_affine(m, field_inv, r);
 }
 
-Point secp256k1_mul(const Point& p, const uint256& c) noexcept
+Point mul(const Point& p, const uint256& c) noexcept
 {
     if (p.is_inf())
         return p;
@@ -655,12 +658,6 @@ std::optional<uint256> sqrt(const ModArith<uint256>& s, const uint256& x) noexce
     return (z2 == x ? std::make_optional(z) : std::nullopt);
 }
 
-namespace
-{
-constexpr Point G{0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798_u256,
-    0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8_u256};
-}  // namespace
-
 std::optional<Point> secp256k1_ecdsa_recover(
     const ethash::hash256& e, const uint256& r, const uint256& s, bool v) noexcept
 {
@@ -701,7 +698,7 @@ std::optional<Point> secp256k1_ecdsa_recover(
 
     // 2. Calculate y coordinate of R from r and v.
     const auto r_mont = m.to_mont(r);
-    const auto y_mont = sec256k1_calculate_y(m, r_mont, v);
+    const auto y_mont = calculate_y(m, r_mont, v);
     if (!y_mont.has_value())
         return std::nullopt;
     const auto y = m.from_mont(*y_mont);
@@ -723,8 +720,8 @@ std::optional<Point> secp256k1_ecdsa_recover(
     return Q;
 }
 
-std::optional<uint256> sec256k1_calculate_y(
-    const ModArith<uint256>& s, const uint256& x, bool is_odd) noexcept
+std::optional<uint256> calculate_y(
+    const ModArith<uint256>& s, const uint256& x, bool y_parity) noexcept
 {
     static const auto Sec256k1_b = s.to_mont(7);
 
@@ -734,9 +731,9 @@ std::optional<uint256> sec256k1_calculate_y(
     if (!y.has_value())
         return std::nullopt;
 
-    // Negate if different oddity requested
-    const auto y_is_odd = s.from_mont(*y) & 1;
-    return (is_odd == y_is_odd ? *y : s.sub(0, *y));
+    // Negate if different parity requested
+    const auto candidate_parity = s.from_mont(*y) & 1;
+    return (candidate_parity == y_parity ? *y : s.sub(0, *y));
 }
 
 evmc::address secp256k1_point_to_address(const Point& pt) noexcept

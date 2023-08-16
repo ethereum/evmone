@@ -77,11 +77,11 @@ TEST(evmmax, secp256k1_calculate_y)
     {
         const auto x = s.to_mont(t.x);
 
-        const auto y_even = sec256k1_calculate_y(s, x, false);
+        const auto y_even = calculate_y(s, x, false);
         ASSERT_TRUE(y_even.has_value());
         EXPECT_EQ(s.from_mont(*y_even), t.y_even);
 
-        const auto y_odd = sec256k1_calculate_y(s, x, true);
+        const auto y_odd = calculate_y(s, x, true);
         ASSERT_TRUE(y_odd.has_value());
         EXPECT_EQ(s.from_mont(*y_odd), t.y_odd);
     }
@@ -98,10 +98,10 @@ TEST(evmmax, secp256k1_calculate_y_invalid)
     {
         const auto x = s.to_mont(t);
 
-        const auto y_even = sec256k1_calculate_y(s, x, false);
+        const auto y_even = calculate_y(s, x, false);
         ASSERT_FALSE(y_even.has_value());
 
-        const auto y_odd = sec256k1_calculate_y(s, x, true);
+        const auto y_odd = calculate_y(s, x, true);
         ASSERT_FALSE(y_odd.has_value());
     }
 }
@@ -156,9 +156,9 @@ TEST(evmmax, secp256k1_pt_add_inf)
     const Point inf;
     ASSERT_TRUE(inf.is_inf());
 
-    EXPECT_EQ(secp256k1_add(p1, inf), p1);
-    EXPECT_EQ(secp256k1_add(inf, p1), p1);
-    EXPECT_EQ(secp256k1_add(inf, inf), inf);
+    EXPECT_EQ(add(p1, inf), p1);
+    EXPECT_EQ(add(inf, p1), p1);
+    EXPECT_EQ(add(inf, inf), inf);
 }
 
 TEST(evmmax, secp256k1_pt_add)
@@ -177,22 +177,22 @@ TEST(evmmax, secp256k1_pt_add)
     {
         const Point e = {0x40468d7704db3d11961ab9c222e35919d7e5d1baef59e0f46255d66bec3bd1d3_u256,
             0x6fff88d9f575236b6cc5c74e7d074832a460c2792fba888aea7b9986429dd7f7_u256};
-        EXPECT_EQ(secp256k1_add(p1, p2), e);
+        EXPECT_EQ(add(p1, p2), e);
     }
     {
         const Point e = {0xd8e7b42b8c82e185bf0669ce0754697a6eb46c156497d5d1971bd6a23f38ed9e_u256,
             0x628c3107fc73c92e7b8c534e239257fb2de95bd6b965dc1021f636da086a7e99_u256};
-        EXPECT_EQ(secp256k1_add(p1, p1), e);
+        EXPECT_EQ(add(p1, p1), e);
     }
     {
         const Point e = {0xdf592d726f42759020da10d3106db3880e514c783d6970d2a9085fb16879b37f_u256,
             0x10aa0ef9fe224e3797792b4b286b9f63542d4c11fe26d449a845b9db0f5993f9_u256};
-        EXPECT_EQ(secp256k1_add(p1, p3), e);
+        EXPECT_EQ(add(p1, p3), e);
     }
     {
         const Point e = {0x12a5fd099bcd30e7290e58d63f8d5008287239500e6d0108020040497c5cb9c9_u256,
             0x7f6bd83b5ac46e3b59e24af3bc9bfbb213ed13e21d754e4950ae635961742574_u256};
-        EXPECT_EQ(secp256k1_add(p1, p4), e);
+        EXPECT_EQ(add(p1, p4), e);
     }
 }
 
@@ -203,12 +203,12 @@ TEST(evmmax, secp256k1_pt_mul_inf)
     const Point inf;
     ASSERT_TRUE(inf.is_inf());
 
-    EXPECT_EQ(secp256k1_mul(p1, 0), inf);
-    EXPECT_EQ(secp256k1_mul(p1, evmmax::secp256k1::Order), inf);
-    EXPECT_EQ(secp256k1_mul(inf, 0), inf);
-    EXPECT_EQ(secp256k1_mul(inf, 1), inf);
-    EXPECT_EQ(secp256k1_mul(inf, evmmax::secp256k1::Order - 1), inf);
-    EXPECT_EQ(secp256k1_mul(inf, evmmax::secp256k1::Order), inf);
+    EXPECT_EQ(mul(p1, 0), inf);
+    EXPECT_EQ(mul(p1, evmmax::secp256k1::Order), inf);
+    EXPECT_EQ(mul(inf, 0), inf);
+    EXPECT_EQ(mul(inf, 1), inf);
+    EXPECT_EQ(mul(inf, evmmax::secp256k1::Order - 1), inf);
+    EXPECT_EQ(mul(inf, evmmax::secp256k1::Order), inf);
 }
 
 TEST(evmmax, secp256k1_pt_mul)
@@ -222,7 +222,7 @@ TEST(evmmax, secp256k1_pt_mul)
         const auto d{100000000000000000000_u256};
         const Point e{0x4c34e6dc48badd579d1ce4702fd490fb98fa0e666417bfc2d4ff8e957d99c565_u256,
             0xb53da5be179d80c7f07226ba79b6bce643d89496b37d6bc2d111b009e37cc28b_u256};
-        auto r = secp256k1_mul(p1, d);
+        auto r = mul(p1, d);
         EXPECT_EQ(r, e);
     }
 
@@ -230,7 +230,7 @@ TEST(evmmax, secp256k1_pt_mul)
         const auto d{100000000000000000000000000000000_u256};
         const Point e{0xf86902594c8a4e4fc5f6dfb27886784271302c6bab3dc4350a0fe7c5b056af66_u256,
             0xb5748aa8f9122bfdcbf5846f6f8ec76f41626642a3f2ea0f483c92bf915847ad_u256};
-        auto r = secp256k1_mul(p1, d);
+        auto r = mul(p1, d);
         EXPECT_EQ(r, e);
     }
 
@@ -240,7 +240,7 @@ TEST(evmmax, secp256k1_pt_mul)
             0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8_u256};
         const Point e{0x39cb41b2567f68137aae52e99dbe91cd38d9faa3ba6be536a04355b63a7964fe_u256,
             0xf31e6abd08cbd8e4896c9e0304b25000edcd52a9f6d2bac7cfbdad2c835c9a35_u256};
-        auto r = secp256k1_mul(G, u1);
+        auto r = mul(G, u1);
         EXPECT_EQ(r, e);
     }
 }
