@@ -691,25 +691,21 @@ std::optional<Point> secp256k1_ecdsa_recover(
     const auto u2_mont = n.mul(s_mont, r_inv);
     const auto u2 = n.from_mont(u2_mont);
 
-
-    const ModArith<uint256> m{FieldPrime};
-
     // 2. Calculate y coordinate of R from r and v.
-    const auto r_mont = m.to_mont(r);
-    const auto y_mont = calculate_y(m, r_mont, v);
+    const auto r_mont = Fp.to_mont(r);
+    const auto y_mont = calculate_y(Fp, r_mont, v);
     if (!y_mont.has_value())
         return std::nullopt;
-    const auto y = m.from_mont(*y_mont);
+    const auto y = Fp.from_mont(*y_mont);
 
     // 6. Calculate public key point Q.
-    const auto b3 = m.to_mont(21);
-    const auto R = ecc::to_proj(m, {r, y});
-    const auto pG = ecc::to_proj(m, G);
-    const auto T1 = ecc::mul(m, pG, u1, b3);
-    const auto T2 = ecc::mul(m, R, u2, b3);
-    const auto pQ = ecc::add(m, T1, T2, b3);
+    const auto R = ecc::to_proj(Fp, {r, y});
+    const auto pG = ecc::to_proj(Fp, G);
+    const auto T1 = ecc::mul(Fp, pG, u1, B3);
+    const auto T2 = ecc::mul(Fp, R, u2, B3);
+    const auto pQ = ecc::add(Fp, T1, T2, B3);
 
-    const auto Q = ecc::to_affine(m, field_inv, pQ);
+    const auto Q = ecc::to_affine(Fp, field_inv, pQ);
 
     // Any other validity check needed?
     if (Q.is_inf())
@@ -718,6 +714,7 @@ std::optional<Point> secp256k1_ecdsa_recover(
     return Q;
 }
 
+// FIXME: Change to "uncompress_point".
 std::optional<uint256> calculate_y(
     const ModArith<uint256>& s, const uint256& x, bool y_parity) noexcept
 {
