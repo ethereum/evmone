@@ -11,11 +11,13 @@ using namespace evmc::literals;
 
 TEST(evmmax, secp256k1_inv_1)
 {
-    const evmmax::ModArith s{Secp256K1Mod};
+    const evmmax::ModArith s{evmmax::secp256k1::FieldPrime};
 
-    for (const auto& t :
-        {1_u256, 0x6e140df17432311190232a91a38daed3ee9ed7f038645dd0278da7ca6e497de_u256,
-            Secp256K1Mod - 1})
+    for (const auto& t : {
+             1_u256,
+             0x6e140df17432311190232a91a38daed3ee9ed7f038645dd0278da7ca6e497de_u256,
+             evmmax::secp256k1::FieldPrime - 1,
+         })
     {
         const auto a = s.to_mont(t);
         const auto a_inv = field_inv(s, a);
@@ -26,7 +28,7 @@ TEST(evmmax, secp256k1_inv_1)
 
 TEST(evmmax, secp256k1_sqrt)
 {
-    const evmmax::ModArith s{Secp256K1Mod};
+    const evmmax::ModArith s{evmmax::secp256k1::FieldPrime};
 
     for (const auto& t :
         {1_u256, 0x6e140df17432311190232a91a38daed3ee9ed7f038645dd0278da7ca6e497de_u256,
@@ -40,7 +42,7 @@ TEST(evmmax, secp256k1_sqrt)
             0x9c76942a65df7c6a4a16b7d6a5f6c3a0b0c4b5c76a4b5c78a9f6d3c4a7a5b4_u256,
             0xad65931a55cf6b594915a6c5a4f5b2a9f0b3a4b6593a4b6789e5c2b39694a3_u256,
             0xbe54820a45bf5a48381495b494e4a1f8e9a293b548394a5678d4b1a28583a2_u256,
-            Secp256K1Mod - 1})
+            evmmax::secp256k1::FieldPrime - 1})
     {
         const auto a = s.to_mont(t);
         const auto a2 = s.mul(a, a);
@@ -52,7 +54,7 @@ TEST(evmmax, secp256k1_sqrt)
 
 TEST(evmmax, secp256k1_calculate_y)
 {
-    const evmmax::ModArith s{Secp256K1Mod};
+    const evmmax::ModArith s{evmmax::secp256k1::FieldPrime};
 
     struct TestCase
     {
@@ -87,10 +89,12 @@ TEST(evmmax, secp256k1_calculate_y)
 
 TEST(evmmax, secp256k1_calculate_y_invalid)
 {
-    const evmmax::ModArith s{Secp256K1Mod};
+    const evmmax::ModArith s{evmmax::secp256k1::FieldPrime};
 
-    for (const auto& t :
-        {0x207ea538f1835f6de40c793fc23d22b14da5a80015a0fecddf56f146b21d7949_u256, Secp256K1Mod - 1})
+    for (const auto& t : {
+             0x207ea538f1835f6de40c793fc23d22b14da5a80015a0fecddf56f146b21d7949_u256,
+             evmmax::secp256k1::FieldPrime - 1,
+         })
     {
         const auto x = s.to_mont(t);
 
@@ -109,7 +113,7 @@ TEST(evmmax, secp256k1_calculate_u1)
     const auto r = 0x71cd6bfc24665312ff489aba9279710a560eda74aca333bf298785dc3cd72f6e_u256;
     const auto expected = 0xd80ea4db5200c96e969270ab7c105e16abb9fc18a6e01cc99575dd3f5ce41eed_u256;
 
-    const evmmax::ModArith m{Secp256K1Mod};
+    const evmmax::ModArith m{evmmax::secp256k1::FieldPrime};
     const auto z_mont = m.to_mont(z);
     const auto r_mont = m.to_mont(r);
     const auto r_inv = field_inv(m, r_mont);
@@ -126,7 +130,7 @@ TEST(evmmax, secp256k1_calculate_u2)
     const auto s = 0x7ce91fc325f28e78a016fa674a80d85581cc278d15453ea2fede2471b1adaada_u256;
     const auto expected = 0xf888ea06899abc190fa37a165c98e6d4b00b13c50db1d1c34f38f0ab8fd9c29b_u256;
 
-    const evmmax::ModArith m{Secp256K1Mod};
+    const evmmax::ModArith m{evmmax::secp256k1::FieldPrime};
     const auto s_mont = m.to_mont(s);
     const auto r_mont = m.to_mont(r);
     const auto r_inv = field_inv(m, r_mont);
@@ -138,10 +142,10 @@ TEST(evmmax, secp256k1_calculate_u2)
 TEST(evmmax, secp256k1_hash_to_number)
 {
     const auto max_h = ~uint256{};
-    const auto hm = max_h % Secp256K1Mod;
+    const auto hm = max_h % evmmax::secp256k1::FieldPrime;
 
     // Optimized mod.
-    const auto hm2 = max_h - Secp256K1Mod;
+    const auto hm2 = max_h - evmmax::secp256k1::FieldPrime;
     EXPECT_EQ(hm2, hm);
 }
 
@@ -159,7 +163,7 @@ TEST(evmmax, secp256k1_pt_add_inf)
 
 TEST(evmmax, secp256k1_pt_add)
 {
-    const evmmax::ModArith s{Secp256K1Mod};
+    const evmmax::ModArith s{evmmax::secp256k1::FieldPrime};
 
     const Point p1{0x18f4057699e2d9679421de8f4e11d7df9fa4b9e7cb841ea48aed75f1567b9731_u256,
         0x6db5b7ecd8e226c06f538d15173267bf1e78acc02bb856e83b3d6daec6a68144_u256};
@@ -200,16 +204,16 @@ TEST(evmmax, secp256k1_pt_mul_inf)
     ASSERT_TRUE(inf.is_inf());
 
     EXPECT_EQ(secp256k1_mul(p1, 0), inf);
-    EXPECT_EQ(secp256k1_mul(p1, Secp256K1N), inf);
+    EXPECT_EQ(secp256k1_mul(p1, evmmax::secp256k1::Order), inf);
     EXPECT_EQ(secp256k1_mul(inf, 0), inf);
     EXPECT_EQ(secp256k1_mul(inf, 1), inf);
-    EXPECT_EQ(secp256k1_mul(inf, Secp256K1N - 1), inf);
-    EXPECT_EQ(secp256k1_mul(inf, Secp256K1N), inf);
+    EXPECT_EQ(secp256k1_mul(inf, evmmax::secp256k1::Order - 1), inf);
+    EXPECT_EQ(secp256k1_mul(inf, evmmax::secp256k1::Order), inf);
 }
 
 TEST(evmmax, secp256k1_pt_mul)
 {
-    const evmmax::ModArith s{Secp256K1Mod};
+    const evmmax::ModArith s{evmmax::secp256k1::FieldPrime};
 
     const Point p1{0x18f4057699e2d9679421de8f4e11d7df9fa4b9e7cb841ea48aed75f1567b9731_u256,
         0x6db5b7ecd8e226c06f538d15173267bf1e78acc02bb856e83b3d6daec6a68144_u256};

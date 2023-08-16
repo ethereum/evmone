@@ -9,15 +9,16 @@
 #include <evmmax/evmmax.hpp>
 #include <optional>
 
-using namespace intx;
-
-inline constexpr auto Secp256K1Mod =
-    0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f_u256;
-inline constexpr auto Secp256K1N =
-    0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141_u256;
 
 namespace evmmax::secp256k1
 {
+using namespace intx;
+
+inline constexpr auto FieldPrime =
+    0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f_u256;
+inline constexpr auto Order =
+    0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141_u256;
+
 using Point = ecc::Point<uint256>;
 
 uint256 field_inv(const ModArith<uint256>& s, const uint256& x) noexcept;

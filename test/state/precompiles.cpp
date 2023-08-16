@@ -156,13 +156,13 @@ ExecutionResult ecrecover_execute(const uint8_t* input, size_t input_size, uint8
     ethash::hash256 h{};
     std::memcpy(h.bytes, input_buffer, sizeof(h));
 
-    const auto v = intx::be::unsafe::load<uint256>(input_buffer + 32);
+    const auto v = intx::be::unsafe::load<intx::uint256>(input_buffer + 32);
     if (v != 27 && v != 28)
         return {EVMC_SUCCESS, 0};
     const bool parity = v == 28;
 
-    const auto r = intx::be::unsafe::load<uint256>(input_buffer + 64);
-    const auto s = intx::be::unsafe::load<uint256>(input_buffer + 96);
+    const auto r = intx::be::unsafe::load<intx::uint256>(input_buffer + 64);
+    const auto s = intx::be::unsafe::load<intx::uint256>(input_buffer + 96);
 
     const auto res = evmmax::secp256k1::ecrecover(h, r, s, parity);
     if (res)

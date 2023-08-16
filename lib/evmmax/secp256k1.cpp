@@ -491,15 +491,15 @@ Point secp256k1_add(const Point& p, const Point& q) noexcept
     if (q.is_inf())
         return p;
 
-    const evmmax::ModArith s{Secp256K1Mod};
+    const ModArith m{FieldPrime};
 
-    const auto pp = ecc::to_proj(s, p);
-    const auto pq = ecc::to_proj(s, q);
+    const auto pp = ecc::to_proj(m, p);
+    const auto pq = ecc::to_proj(m, q);
 
     // b3 == 21 for y^2 == x^3 + 7
-    const auto b3 = s.to_mont(21);
-    const auto r = ecc::add(s, pp, pq, b3);
-    return ecc::to_affine(s, field_inv, r);
+    const auto b3 = m.to_mont(21);
+    const auto r = ecc::add(m, pp, pq, b3);
+    return ecc::to_affine(m, field_inv, r);
 }
 
 Point secp256k1_mul(const Point& p, const uint256& c) noexcept
@@ -510,11 +510,11 @@ Point secp256k1_mul(const Point& p, const uint256& c) noexcept
     if (c == 0)
         return {0, 0};
 
-    const evmmax::ModArith s{Secp256K1Mod};
-    const auto b3 = s.to_mont(21);
+    const ModArith m{FieldPrime};
+    const auto b3 = m.to_mont(21);
 
-    const auto r = ecc::mul(s, ecc::to_proj(s, p), c, b3);
-    return ecc::to_affine(s, field_inv, r);
+    const auto r = ecc::mul(m, ecc::to_proj(m, p), c, b3);
+    return ecc::to_affine(m, field_inv, r);
 }
 
 
@@ -668,20 +668,20 @@ std::optional<Point> secp256k1_ecdsa_recover(
     // https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Public_key_recovery
 
     // 1. Validate r and s are within [1, n-1].
-    if (r == 0 || r >= Secp256K1N || s == 0 || s >= Secp256K1N)
+    if (r == 0 || r >= Order || s == 0 || s >= Order)
         return std::nullopt;
 
     // 3. Hash of the message is already calculated in e.
     // 4. Convert hash e to z field element by doing z = e % n.
     //    https://www.rfc-editor.org/rfc/rfc6979#section-2.3.2
     //    We can do this by n - e because n > 2^255.
-    static_assert(Secp256K1N > 1_u256 << 255);
+    static_assert(Order > 1_u256 << 255);
     auto z = intx::be::load<uint256>(e.bytes);
-    if (z >= Secp256K1N)
-        z -= Secp256K1N;
+    if (z >= Order)
+        z -= Order;
 
 
-    const ModArith<uint256> n{Secp256K1N};
+    const ModArith<uint256> n{Order};
 
     // 5. Calculate u1 and u2.
     const auto r_n = n.to_mont(r);
@@ -697,7 +697,7 @@ std::optional<Point> secp256k1_ecdsa_recover(
     const auto u2 = n.from_mont(u2_mont);
 
 
-    const ModArith<uint256> m{Secp256K1Mod};
+    const ModArith<uint256> m{FieldPrime};
 
     // 2. Calculate y coordinate of R from r and v.
     const auto r_mont = m.to_mont(r);
