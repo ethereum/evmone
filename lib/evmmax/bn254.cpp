@@ -52,11 +52,11 @@ bool validate(const Point& pt) noexcept
 namespace
 {
 
-std::tuple<uint256, uint256> from_proj(const uint256& x, const uint256& y, const uint256& z)
+Point from_proj(const ProjPoint& p)
 {
     static const BN254ModArith s;
-    auto z_inv = s.inv(z);
-    return {s.mul(x, z_inv), s.mul(y, z_inv)};
+    const auto z_inv = s.inv(p.z);
+    return {s.mul(p.x, z_inv), s.mul(p.y, z_inv)};
 }
 
 }  // namespace
@@ -124,7 +124,7 @@ Point bn254_add(const Point& pt1, const Point& pt2) noexcept
     const auto b3 = s.to_mont(9);
     const auto r = point_addition_mixed_a0(s, p, q, b3);
 
-    const auto [rx, ry] = from_proj(r.x, r.y, r.z);
+    const auto [rx, ry] = from_proj(r);
     return {s.from_mont(rx), s.from_mont(ry)};
 }
 
@@ -141,8 +141,7 @@ Point bn254_mul(const Point& pt, const uint256& c) noexcept
 
     const auto pr = ecc::mul(s, ecc::to_proj(s, pt), c, b3);
 
-    Point r;
-    std::tie(r.x, r.y) = from_proj(pr.x, pr.y, pr.z);
+    const auto r = from_proj(pr);
     return {s.from_mont(r.x), s.from_mont(r.y)};
 }
 
