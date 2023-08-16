@@ -15,7 +15,7 @@ struct Point
     IntT x = {};
     IntT y = {};
 
-    friend bool operator==(const Point& a, const Point& b) noexcept
+    friend constexpr bool operator==(const Point& a, const Point& b) noexcept
     {
         // TODO(intx): C++20 operator<=> = default does not work for uint256.
         return a.x == b.x && a.y == b.y;
@@ -25,16 +25,20 @@ struct Point
     [[nodiscard]] constexpr bool is_inf() const noexcept { return *this == Point{}; }
 };
 
+static_assert(Point<unsigned>{}.is_inf());
+
 template <typename IntT>
 struct ProjPoint
 {
-    IntT x = {};
-    IntT y = {};
-    IntT z = {};  // FIXME: 1?
+    IntT x = 0;
+    IntT y = 1;
+    IntT z = 0;
 
     /// Checks if the point represents the special "infinity" value.
     [[nodiscard]] constexpr bool is_inf() const noexcept { return x == 0 && z == 0; }
 };
+
+static_assert(ProjPoint<unsigned>{}.is_inf());
 
 template <typename IntT>
 using InvFn = IntT (*)(const ModArith<IntT>&, const IntT& x) noexcept;
@@ -194,7 +198,7 @@ template <typename IntT, int A = 0>
 ProjPoint<IntT> mul(const evmmax::ModArith<IntT>& s, const ProjPoint<IntT>& z, const IntT& c,
     const IntT& b3) noexcept
 {
-    ProjPoint<IntT> p{0, s.to_mont(1), 0};  // FIXME: Why z==0?
+    ProjPoint<IntT> p;
     auto q = z;
     auto first_significant_met = false;
 
