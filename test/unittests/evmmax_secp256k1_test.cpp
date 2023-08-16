@@ -145,6 +145,18 @@ TEST(evmmax, secp256k1_hash_to_number)
     EXPECT_EQ(hm2, hm);
 }
 
+TEST(evmmax, secp256k1_pt_add_inf)
+{
+    const Point p1{0x18f4057699e2d9679421de8f4e11d7df9fa4b9e7cb841ea48aed75f1567b9731_u256,
+        0x6db5b7ecd8e226c06f538d15173267bf1e78acc02bb856e83b3d6daec6a68144_u256};
+    const Point inf;
+    ASSERT_TRUE(inf.is_inf());
+
+    EXPECT_EQ(secp256k1_add(p1, inf), p1);
+    EXPECT_EQ(secp256k1_add(inf, p1), p1);
+    EXPECT_EQ(secp256k1_add(inf, inf), inf);
+}
+
 TEST(evmmax, secp256k1_pt_add)
 {
     const evmmax::ModArith s{Secp256K1Mod};
@@ -178,6 +190,21 @@ TEST(evmmax, secp256k1_pt_add)
             0x7f6bd83b5ac46e3b59e24af3bc9bfbb213ed13e21d754e4950ae635961742574_u256};
         EXPECT_EQ(secp256k1_add(p1, p4), e);
     }
+}
+
+TEST(evmmax, secp256k1_pt_mul_inf)
+{
+    const Point p1{0x18f4057699e2d9679421de8f4e11d7df9fa4b9e7cb841ea48aed75f1567b9731_u256,
+        0x6db5b7ecd8e226c06f538d15173267bf1e78acc02bb856e83b3d6daec6a68144_u256};
+    const Point inf;
+    ASSERT_TRUE(inf.is_inf());
+
+    EXPECT_EQ(secp256k1_mul(p1, 0), inf);
+    EXPECT_EQ(secp256k1_mul(p1, Secp256K1N), inf);
+    EXPECT_EQ(secp256k1_mul(inf, 0), inf);
+    EXPECT_EQ(secp256k1_mul(inf, 1), inf);
+    EXPECT_EQ(secp256k1_mul(inf, Secp256K1N - 1), inf);
+    EXPECT_EQ(secp256k1_mul(inf, Secp256K1N), inf);
 }
 
 TEST(evmmax, secp256k1_pt_mul)
