@@ -7,3 +7,4 @@ find_package(intx CONFIG REQUIRED)
 
 add_subdirectory(evmmax)
 add_subdirectory(evmone)
+add_subdirectory(evmone_precompiles)
