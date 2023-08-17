@@ -250,6 +250,7 @@ evmc_revision to_rev(std::string_view s)
 static void from_json_tx_common(const json::json& j, state::Transaction& o)
 {
     o.sender = from_json<evmc::address>(j.at("sender"));
+    o.nonce = from_json<uint64_t>(j.at("nonce"));
 
     if (const auto to_it = j.find("to"); to_it != j.end() && !to_it->get<std::string>().empty())
         o.to = from_json<evmc::address>(*to_it);
