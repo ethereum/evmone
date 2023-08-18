@@ -61,6 +61,7 @@ protected:
         .max_gas_price = block.base_fee + 1,
         .max_priority_gas_price = 1,
         .sender = Sender,
+        .nonce = 1,
     };
     State pre;
     Expectation expect;
