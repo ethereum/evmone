@@ -154,6 +154,10 @@ void finalize(State& state, evmc_revision rev, const address& coinbase,
     const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm,
     int64_t block_gas_left);
 
+std::variant<int64_t, std::error_code> validate_transaction(const Account& sender_acc,
+    const BlockInfo& block, const Transaction& tx, evmc_revision rev,
+    int64_t block_gas_left) noexcept;
+
 /// Defines how to RLP-encode a Transaction.
 [[nodiscard]] bytes rlp_encode(const Transaction& tx);
 
