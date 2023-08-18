@@ -16,6 +16,8 @@ enum ErrorCode : int
     TX_TYPE_NOT_SUPPORTED,
     INSUFFICIENT_FUNDS,
     NONCE_HAS_MAX_VALUE,
+    NONCE_TOO_HIGH,
+    NONCE_TOO_LOW,
     TIP_GT_FEE_CAP,
     FEE_CAP_LESS_THEN_BLOCKS,
     GAS_LIMIT_REACHED,
@@ -45,6 +47,10 @@ inline const std::error_category& evmone_category() noexcept
                 return "insufficient funds for gas * price + value";
             case NONCE_HAS_MAX_VALUE:
                 return "nonce has max value:";
+            case NONCE_TOO_HIGH:
+                return "nonce too high";
+            case NONCE_TOO_LOW:
+                return "nonce too low";
             case TIP_GT_FEE_CAP:
                 return "max priority fee per gas higher than max fee per gas";
             case FEE_CAP_LESS_THEN_BLOCKS:

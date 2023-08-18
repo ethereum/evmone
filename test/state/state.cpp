@@ -52,6 +52,25 @@ int64_t compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& tx) noex
            initcode_cost;
 }
 
+evmc_message build_message(const Transaction& tx, int64_t execution_gas_limit) noexcept
+{
+    const auto recipient = tx.to.has_value() ? *tx.to : evmc::address{};
+    return {
+        tx.to.has_value() ? EVMC_CALL : EVMC_CREATE,
+        0,
+        0,
+        execution_gas_limit,
+        recipient,
+        tx.sender,
+        tx.data.data(),
+        tx.data.size(),
+        intx::be::store<evmc::uint256be>(tx.value),
+        {},
+        recipient,
+    };
+}
+}  // namespace
+
 /// Validates transaction and computes its execution gas limit (the amount of gas provided to EVM).
 /// @return  Execution gas limit or transaction validation error.
 std::variant<int64_t, std::error_code> validate_transaction(const Account& sender_acc,
@@ -90,6 +109,12 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
     if (sender_acc.nonce == Account::NonceMax)
         return make_error_code(NONCE_HAS_MAX_VALUE);
 
+    if (sender_acc.nonce < tx.nonce)
+        return make_error_code(NONCE_TOO_HIGH);
+
+    if (sender_acc.nonce > tx.nonce)
+        return make_error_code(NONCE_TOO_LOW);
+
     // initcode size is limited by EIP-3860.
     if (rev >= EVMC_SHANGHAI && !tx.to.has_value() && tx.data.size() > max_initcode_size)
         return make_error_code(INIT_CODE_SIZE_LIMIT_EXCEEDED);
@@ -108,25 +133,6 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
 
     return execution_gas_limit;
 }
-
-evmc_message build_message(const Transaction& tx, int64_t execution_gas_limit) noexcept
-{
-    const auto recipient = tx.to.has_value() ? *tx.to : evmc::address{};
-    return {
-        tx.to.has_value() ? EVMC_CALL : EVMC_CREATE,
-        0,
-        0,
-        execution_gas_limit,
-        recipient,
-        tx.sender,
-        tx.data.data(),
-        tx.data.size(),
-        intx::be::store<evmc::uint256be>(tx.value),
-        {},
-        recipient,
-    };
-}
-}  // namespace
 
 void finalize(State& state, evmc_revision rev, const address& coinbase,
     std::optional<uint64_t> block_reward, std::span<Withdrawal> withdrawals)

@@ -82,7 +82,8 @@ TEST(statetest_loader, load_minimal_test)
                 "to": "",
                 "data": null,
                 "gasLimit": "0",
-                "value": null
+                "value": null,
+                "nonce" : "0"
             },
             "post": {},
             "env": {
@@ -110,6 +111,7 @@ TEST(statetest_loader, load_minimal_test)
     EXPECT_EQ(st.multi_tx.sender, address{});
     EXPECT_EQ(st.multi_tx.to, std::nullopt);
     EXPECT_EQ(st.multi_tx.value, 0);
+    EXPECT_EQ(st.multi_tx.nonce, 0);
     EXPECT_EQ(st.multi_tx.access_list.size(), 0);
     EXPECT_EQ(st.multi_tx.chain_id, 0);
     EXPECT_EQ(st.multi_tx.nonce, 0);
