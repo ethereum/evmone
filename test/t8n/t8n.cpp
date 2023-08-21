@@ -145,6 +145,7 @@ int main(int argc, const char* argv[])
                         j_receipt["transactionHash"] = hex0x(computed_tx_hash);
                         j_receipt["gasUsed"] = hex0x(static_cast<uint64_t>(receipt.gas_used));
                         cumulative_gas_used += receipt.gas_used;
+                        receipt.cumulative_gas_used = cumulative_gas_used;
                         j_receipt["cumulativeGasUsed"] = hex0x(cumulative_gas_used);
 
                         j_receipt["blockHash"] = hex0x(bytes32{});

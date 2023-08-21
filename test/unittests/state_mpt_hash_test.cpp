@@ -188,7 +188,7 @@ TEST(state_mpt_hash, legacy_and_eip1559_receipt_three_logs_no_logs)
     TransactionReceipt receipt0{};
     receipt0.type = evmone::state::Transaction::Type::legacy;
     receipt0.status = EVMC_SUCCESS;
-    receipt0.gas_used = 0x24522;
+    receipt0.cumulative_gas_used = 0x24522;
 
     Log l0;
     l0.addr = 0x84bf5c35c54a994c72ff9d8b4cca8f5034153a2c_address;
@@ -238,7 +238,7 @@ TEST(state_mpt_hash, legacy_and_eip1559_receipt_three_logs_no_logs)
     TransactionReceipt receipt1{};
     receipt1.type = evmone::state::Transaction::Type::eip1559;
     receipt1.status = EVMC_SUCCESS;
-    receipt1.gas_used = 0x2cd9b;
+    receipt1.cumulative_gas_used = 0x2cd9b;
     receipt1.logs_bloom_filter = compute_bloom_filter(receipt1.logs);
 
     EXPECT_EQ(mpt_hash(std::array{receipt0, receipt1}),

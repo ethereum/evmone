@@ -212,7 +212,8 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
     std::erase_if(state.get_accounts(),
         [](const std::pair<const address, Account>& p) noexcept { return p.second.destructed; });
 
-    auto receipt = TransactionReceipt{tx.type, result.status_code, gas_used, host.take_logs(), {}};
+    // Cumulative gas used is unknown in this scope.
+    TransactionReceipt receipt{tx.type, result.status_code, gas_used, {}, host.take_logs(), {}, {}};
 
     // Cannot put it into constructor call because logs are std::moved from host instance.
     receipt.logs_bloom_filter = compute_bloom_filter(receipt.logs);
@@ -275,7 +276,7 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
 {
     const auto prefix = receipt.type == Transaction::Type::eip1559 ? bytes{0x02} : bytes{};
     return prefix + rlp::encode_tuple(receipt.status == EVMC_SUCCESS,
-                        static_cast<uint64_t>(receipt.gas_used),
+                        static_cast<uint64_t>(receipt.cumulative_gas_used),
                         bytes_view(receipt.logs_bloom_filter), receipt.logs);
 }
 

@@ -134,11 +134,25 @@ struct Log
     std::vector<hash256> topics;
 };
 
+/// Transaction Receipt
+///
+/// This struct is used in two contexts:
+/// 1. As the formally specified, RLP-encode transaction receipt included in the Ethereum blocks.
+/// 2. As the internal representation of the transaction execution result.
+/// These both roles share most, but not all the information. There are some fields that cannot be
+/// assigned in the single transaction execution context. There are also fields that are not a part
+/// of the RLP-encoded transaction receipts.
+/// TODO: Consider splitting the struct into two based on the duality explained above.
 struct TransactionReceipt
 {
     Transaction::Type type = Transaction::Type::legacy;
     evmc_status_code status = EVMC_INTERNAL_ERROR;
+
+    /// Amount of gas used by this transaction.
     int64_t gas_used = 0;
+
+    /// Amount of gas used by this and previous transactions in the block.
+    int64_t cumulative_gas_used = 0;
     std::vector<Log> logs;
     BloomFilter logs_bloom_filter;
 };
