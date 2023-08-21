@@ -151,7 +151,7 @@ public:
 
     void insert(const Path& path, bytes&& value);
 
-    [[nodiscard]] hash256 hash() const;
+    [[nodiscard]] bytes encode() const;
 };
 
 void MPTNode::insert(const Path& path, bytes&& value)  // NOLINT(misc-no-recursion)
@@ -219,46 +219,49 @@ void MPTNode::insert(const Path& path, bytes&& value)  // NOLINT(misc-no-recursi
     }
 }
 
-hash256 MPTNode::hash() const  // NOLINT(misc-no-recursion)
+/// Encodes a node and optionally hashes the encoded bytes
+/// if their length exceeds the specified threshold.
+static bytes encode_child(const MPTNode& child) noexcept  // NOLINT(misc-no-recursion)
 {
+    if (auto e = child.encode(); e.size() < 32)
+        return e;  // "short" node
+    else
+        return rlp::encode(keccak256(e));
+}
+
+bytes MPTNode::encode() const  // NOLINT(misc-no-recursion)
+{
+    bytes encoded;
     switch (m_kind)
     {
     case Kind::leaf:
     {
-        return keccak256(rlp::encode_tuple(m_path.encode(false), m_value));
+        encoded = rlp::encode(m_path.encode(false)) + rlp::encode(m_value);
+        break;
     }
     case Kind::branch:
     {
         assert(m_path.length == 0);
+        static constexpr uint8_t empty = 0x80;  // encoded empty child
 
-        // Temporary storage for children hashes.
-        // The `bytes` type could be used instead, but this way dynamic allocation is avoided.
-        hash256 children_hashes[num_children];
-
-        // Views of children hash bytes.
-        // Additional always empty item is hash list terminator
-        // (required by the spec, although not needed for uniqueness).
-        bytes_view children_hash_bytes[num_children + 1];
-
-        for (size_t i = 0; i < num_children; ++i)
+        for (const auto& child : m_children)
         {
-            if (m_children[i])
-            {
-                children_hashes[i] = m_children[i]->hash();
-                children_hash_bytes[i] = children_hashes[i];
-            }
+            if (child)
+                encoded += encode_child(*child);
+            else
+                encoded += empty;
         }
-
-        return keccak256(rlp::encode(children_hash_bytes));
+        encoded += empty;  // end indicator
+        break;
     }
     case Kind::ext:
     {
-        return keccak256(rlp::encode_tuple(m_path.encode(true), m_children[0]->hash()));
+        encoded = rlp::encode(m_path.encode(true)) + encode_child(*m_children[0]);
+        break;
     }
     }
 
-    assert(false);
-    return {};
+    return rlp::internal::wrap_list(encoded);
 }
 
 
@@ -277,7 +280,7 @@ void MPT::insert(bytes_view key, bytes&& value)
 {
     if (m_root == nullptr)
         return emptyMPTHash;
-    return m_root->hash();
+    return keccak256(m_root->encode());
 }
 
 }  // namespace evmone::state
