@@ -244,3 +244,38 @@ TEST(state_mpt_hash, legacy_and_eip1559_receipt_three_logs_no_logs)
     EXPECT_EQ(mpt_hash(std::array{receipt0, receipt1}),
         0x7199a3a86010634dc205a1cdd6ec609f70b954167583cb3acb6a2e3057916016_bytes32);
 }
+
+TEST(state_mpt_hash, pre_byzantium_receipt)
+{
+    // Block taken from Ethereum mainnet
+    // https://etherscan.io/txs?block=4276370
+
+    using namespace evmone::state;
+
+    TransactionReceipt receipt0{
+        .type = Transaction::Type::legacy,
+        .cumulative_gas_used = 0x8323,
+        .logs = {},
+        .logs_bloom_filter = compute_bloom_filter(receipt0.logs),
+        .post_state = 0x4a8f9db452b100f9ec85830785b2d1744c3e727561c334c4f18022daa113290a_bytes32,
+    };
+
+    TransactionReceipt receipt1{
+        .type = Transaction::Type::legacy,
+        .cumulative_gas_used = 0x10646,
+        .logs = {},
+        .logs_bloom_filter = compute_bloom_filter(receipt1.logs),
+        .post_state = 0xb14ab7c32b3e126591731850976a15e2359c1f3628f1b0ff37776c210b9cadb8_bytes32,
+    };
+
+    TransactionReceipt receipt2{
+        .type = Transaction::Type::legacy,
+        .cumulative_gas_used = 0x1584e,
+        .logs = {},
+        .logs_bloom_filter = compute_bloom_filter(receipt2.logs),
+        .post_state = 0x7bda915deb201cae321d31028d322877e8fb98264db3ffcbfec7ea7b9b2106b1_bytes32,
+    };
+
+    EXPECT_EQ(mpt_hash(std::array{receipt0, receipt1, receipt2}),
+        0x8a4fa43a95939b06ad13ce8cd08e026ae6e79ea3c5fc80c732d252e2769ce778_bytes32);
+}

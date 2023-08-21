@@ -155,6 +155,9 @@ struct TransactionReceipt
     int64_t cumulative_gas_used = 0;
     std::vector<Log> logs;
     BloomFilter logs_bloom_filter;
+
+    /// Root hash of the state after this transaction. Used only in old pre-Byzantium transactions.
+    std::optional<bytes32> post_state;
 };
 
 /// Finalize state after applying a "block" of transactions.
