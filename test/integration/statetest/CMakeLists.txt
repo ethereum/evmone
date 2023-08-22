@@ -81,7 +81,7 @@ add_test(
 )
 set_tests_properties(
     ${PREFIX}/trace PROPERTIES
-    PASS_REGULAR_EXPRESSION [=[\{"pc":4,"op":1,"opName":"ADD","gas":0x5c872,"stack":\["0x1","0x1"\],"memorySize":0\}]=]
+    PASS_REGULAR_EXPRESSION [=[\{"pc":4,"op":1,"gas":"0x5c872","gasCost":"0x3","memSize":0,"stack":\["0x1","0x1"\],"depth":1,"refund":0,"opName":"ADD"\}]=]
 )
 
 add_test(
