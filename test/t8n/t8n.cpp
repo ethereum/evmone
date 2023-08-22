@@ -68,6 +68,7 @@ int main(int argc, const char* argv[])
 
         state::BlockInfo block;
         state::State state;
+        bool withdrawals_enabled = false;
 
         if (!alloc_file.empty())
         {
@@ -78,6 +79,8 @@ int main(int argc, const char* argv[])
         {
             const auto j = json::json::parse(std::ifstream{env_file});
             block = test::from_json<state::BlockInfo>(j);
+            if (j.contains("withdrawals"))
+                withdrawals_enabled = true;
         }
 
         json::json j_result;
@@ -172,6 +175,8 @@ int main(int argc, const char* argv[])
 
         j_result["logsBloom"] = hex0x(compute_bloom_filter(receipts));
         j_result["receiptsRoot"] = hex0x(state::mpt_hash(receipts));
+        if (withdrawals_enabled)
+            j_result["withdrawalsRoot"] = hex0x(state::mpt_hash(block.withdrawals));
         j_result["txRoot"] = hex0x(state::mpt_hash(transactions));
         j_result["gasUsed"] = hex0x(cumulative_gas_used);
 

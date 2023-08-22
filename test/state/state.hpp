@@ -68,6 +68,8 @@ public:
 
 struct Withdrawal
 {
+    uint64_t index = 0;
+    uint64_t validatorIndex = 0;
     address recipient;
     uint64_t amount_in_gwei = 0;  ///< The amount is denominated in gwei.
 

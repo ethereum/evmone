@@ -176,7 +176,9 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
     {
         for (const auto& withdrawal : *withdrawals_it)
         {
-            withdrawals.push_back({from_json<evmc::address>(withdrawal.at("address")),
+            withdrawals.push_back({from_json<uint64_t>(withdrawal.at("index")),
+                from_json<uint64_t>(withdrawal.at("validatorIndex")),
+                from_json<evmc::address>(withdrawal.at("address")),
                 from_json<uint64_t>(withdrawal.at("amount"))});
         }
     }
