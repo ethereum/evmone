@@ -87,6 +87,7 @@ struct BlockInfo
     bytes32 prev_randao;
     uint64_t base_fee = 0;
     std::vector<Withdrawal> withdrawals;
+    std::unordered_map<int64_t, hash256> known_block_hashes = {};
 };
 
 using AccessList = std::vector<std::pair<address, std::vector<bytes32>>>;

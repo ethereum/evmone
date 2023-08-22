@@ -320,9 +320,10 @@ evmc_tx_context Host::get_tx_context() const noexcept
 
 bytes32 Host::get_block_hash(int64_t block_number) const noexcept
 {
-    (void)block_number;
-    // TODO: This is not properly implemented, but only single state test requires BLOCKHASH
-    //       and is fine with any value.
+    if (const auto& it = m_block.known_block_hashes.find(block_number);
+        it != m_block.known_block_hashes.end())
+        return it->second;
+
     return {};
 }
 
