@@ -45,7 +45,7 @@ TEST(state_mpt_hash, two_accounts)
     Account acc2;
     acc2.nonce = 1;
     acc2.balance = -2_u256;
-    acc2.code = {0x00};
+    acc2.code = bytes{0x00};  // Note: `= {0x00}` causes GCC 12 warning at -O3.
     acc2.storage[0x01_bytes32] = {0xfe_bytes32};
     acc2.storage[0x02_bytes32] = {0xfd_bytes32};
     accounts[0x01_address] = acc2;
