@@ -10,16 +10,20 @@
 namespace evmone::state
 {
 struct Account;
-struct Transaction;
-struct TransactionReceipt;
 
 /// Computes Merkle Patricia Trie root hash for the given collection of state accounts.
 hash256 mpt_hash(const std::unordered_map<address, Account>& accounts);
 
-/// Computes Merkle Patricia Trie root hash for the given collection of transactions.
-hash256 mpt_hash(std::span<const Transaction> transactions);
+/// Computes Merkle Patricia Trie root hash for the given list of structures.
+template <typename T>
+hash256 mpt_hash(std::span<const T> list);
 
-/// Computes Merkle Patricia Trie root hash for the given collection of transactions receipts.
-hash256 mpt_hash(std::span<const TransactionReceipt> receipts);
+/// A helper to automatically convert collections (e.g. vector, array) to span.
+template <typename T>
+inline hash256 mpt_hash(const T& list)
+    requires std::is_convertible_v<T, std::span<const typename T::value_type>>
+{
+    return mpt_hash(std::span<const typename T::value_type>{list});
+}
 
 }  // namespace evmone::state

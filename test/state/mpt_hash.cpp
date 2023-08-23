@@ -35,22 +35,17 @@ hash256 mpt_hash(const std::unordered_map<address, Account>& accounts)
     return trie.hash();
 }
 
-hash256 mpt_hash(std::span<const Transaction> transactions)
+template <typename T>
+hash256 mpt_hash(std::span<const T> list)
 {
     MPT trie;
-    for (size_t i = 0; i < transactions.size(); ++i)
-        trie.insert(rlp::encode(i), rlp::encode(transactions[i]));
+    for (size_t i = 0; i < list.size(); ++i)
+        trie.insert(rlp::encode(i), rlp::encode(list[i]));
 
     return trie.hash();
 }
 
-hash256 mpt_hash(std::span<const TransactionReceipt> receipts)
-{
-    MPT trie;
-    for (size_t i = 0; i < receipts.size(); ++i)
-        trie.insert(rlp::encode(i), rlp::encode(receipts[i]));
-
-    return trie.hash();
-}
+template hash256 mpt_hash<Transaction>(std::span<const Transaction>);
+template hash256 mpt_hash<TransactionReceipt>(std::span<const TransactionReceipt>);
 
 }  // namespace evmone::state
