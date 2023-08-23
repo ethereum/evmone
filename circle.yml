@@ -440,7 +440,8 @@ jobs:
     steps:
       - build
       - build_silkworm:
-          commit: 3cc504f91460667e9417bb825d0f652dbcc8efc1
+          branch: evmc-v11.0.0-alpha.1
+          commit: evmc-v11.0.0-alpha.1
       - download_execution_tests:
           rev: v12.2
       - run:
