@@ -78,6 +78,9 @@ template <>
 state::BlockInfo from_json<state::BlockInfo>(const json::json& j);
 
 template <>
+state::Withdrawal from_json<state::Withdrawal>(const json::json& j);
+
+template <>
 state::State from_json<state::State>(const json::json& j);
 
 template <>

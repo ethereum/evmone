@@ -148,6 +148,13 @@ inline uint64_t calculate_current_base_fee_eip1559(
 }
 
 template <>
+state::Withdrawal from_json<state::Withdrawal>(const json::json& j)
+{
+    return {from_json<uint64_t>(j.at("index")), from_json<uint64_t>(j.at("validatorIndex")),
+        from_json<evmc::address>(j.at("address")), from_json<uint64_t>(j.at("amount"))};
+}
+
+template <>
 state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
 {
     evmc::bytes32 difficulty;
@@ -175,10 +182,7 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
     if (const auto withdrawals_it = j.find("withdrawals"); withdrawals_it != j.end())
     {
         for (const auto& withdrawal : *withdrawals_it)
-        {
-            withdrawals.push_back({from_json<evmc::address>(withdrawal.at("address")),
-                from_json<uint64_t>(withdrawal.at("amount"))});
-        }
+            withdrawals.push_back(from_json<state::Withdrawal>(withdrawal));
     }
 
     std::unordered_map<int64_t, hash256> block_hashes;
@@ -238,7 +242,7 @@ evmc_revision to_rev(std::string_view s)
         return EVMC_ISTANBUL;
     if (s == "Berlin")
         return EVMC_BERLIN;
-    if (s == "London")
+    if (s == "London" || s == "ArrowGlacier")
         return EVMC_LONDON;
     if (s == "Merge")
         return EVMC_PARIS;

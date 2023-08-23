@@ -279,3 +279,29 @@ TEST(state_mpt_hash, pre_byzantium_receipt)
     EXPECT_EQ(mpt_hash(std::array{receipt0, receipt1, receipt2}),
         0x8a4fa43a95939b06ad13ce8cd08e026ae6e79ea3c5fc80c732d252e2769ce778_bytes32);
 }
+
+TEST(state_mpt_hash, mpt_hashing_test)
+{
+    // The same data as in 'statetest_withdrawals.withdrawals_warmup_test_case' unit test.
+    MPT trie;
+
+    trie.insert("80"_hex, "db808094c000000000000000000000000000000000000001830186a0"_hex);
+    EXPECT_EQ(
+        trie.hash(), 0x4ae14e53d6bf2a9c73891aef9d2e6373ff06d400b6e7727b17a5eceb5e8dec9d_bytes32);
+
+    trie.insert("01"_hex, "db018094c000000000000000000000000000000000000002830186a0"_hex);
+    EXPECT_EQ(
+        trie.hash(), 0xc5128234c0282b256e2aa91ddc783ddb2c21556766f2e11e64159561b59f8ac7_bytes32);
+
+    trie.insert("0x02"_hex, "0xdb028094c000000000000000000000000000000000000003830186a0"_hex);
+    trie.insert("0x03"_hex, "0xdb038094c000000000000000000000000000000000000004830186a0"_hex);
+    trie.insert("0x04"_hex, "0xdb048094c000000000000000000000000000000000000005830186a0"_hex);
+    trie.insert("0x05"_hex, "0xdb058094c000000000000000000000000000000000000006830186a0"_hex);
+    trie.insert("0x06"_hex, "0xdb068094c000000000000000000000000000000000000007830186a0"_hex);
+    trie.insert("0x07"_hex, "0xdb078094c000000000000000000000000000000000000008830186a0"_hex);
+    trie.insert("0x08"_hex, "0xdb088094c000000000000000000000000000000000000009830186a0"_hex);
+    trie.insert("0x09"_hex, "0xdb098094c000000000000000000000000000000000000010830186a0"_hex);
+
+    EXPECT_EQ(
+        trie.hash(), 0xaa45c53e9f7d6a8362f80876029915da00b1441ef39eb9bbb74f98465ff433ad_bytes32);
+}
