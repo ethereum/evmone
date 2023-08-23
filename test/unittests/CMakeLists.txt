@@ -48,6 +48,7 @@ target_sources(
     statetest_loader_test.cpp
     statetest_loader_tx_test.cpp
     statetest_logs_hash_test.cpp
+    statetest_withdrawals_test.cpp
     tracing_test.cpp
 )
 target_link_libraries(evmone-unittests PRIVATE evmone evmone::evmmax evmone::state evmone::statetestutils testutils evmc::instructions GTest::gtest GTest::gtest_main)

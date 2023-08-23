@@ -12,7 +12,7 @@ TEST_F(state_transition, block_apply_withdrawal)
 {
     static constexpr auto withdrawal_address = 0x8888_address;
 
-    block.withdrawals = {{withdrawal_address, 3}};
+    block.withdrawals = {{0, 0, withdrawal_address, 3}};
     tx.to = To;
     expect.post[withdrawal_address].balance = intx::uint256{3} * 1'000'000'000;
 }

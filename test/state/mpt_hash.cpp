@@ -47,5 +47,6 @@ hash256 mpt_hash(std::span<const T> list)
 
 template hash256 mpt_hash<Transaction>(std::span<const Transaction>);
 template hash256 mpt_hash<TransactionReceipt>(std::span<const TransactionReceipt>);
+template hash256 mpt_hash<Withdrawal>(std::span<const Withdrawal>);
 
 }  // namespace evmone::state
