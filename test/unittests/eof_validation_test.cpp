@@ -24,6 +24,7 @@ TEST(eof_validation, get_error_message)
 {
     EXPECT_EQ(evmone::get_error_message(EOFValidationError::success), "success");
     EXPECT_EQ(evmone::get_error_message(EOFValidationError::invalid_prefix), "invalid_prefix");
+    EXPECT_EQ(evmone::get_error_message(EOFValidationError::stack_overflow), "stack_overflow");
     EXPECT_EQ(evmone::get_error_message(EOFValidationError::impossible), "impossible");
     EXPECT_EQ(evmone::get_error_message(static_cast<EOFValidationError>(-1)), "<unknown>");
 }
@@ -733,6 +734,75 @@ TEST(eof_validation, callf_invalid_code_section_index)
         EOFValidationError::invalid_code_section_index);
 }
 
+TEST(eof_validation, callf_stack_overflow)
+{
+    {
+        auto code =
+            eof1_bytecode(512 * push(1) + OP_CALLF + "0x0000" + 510 * OP_POP + OP_RETURN, 512);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+    }
+
+    {
+        auto code =
+            eof1_bytecode(513 * push(1) + OP_CALLF + "0x0000" + 511 * OP_POP + OP_RETURN, 513);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+
+    {
+        auto code =
+            eof1_bytecode(1023 * push(1) + OP_CALLF + "0x0000" + 1021 * OP_POP + OP_RETURN, 1023);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+}
+
+TEST(eof_validation, callf_with_inputs_stack_overflow)
+{
+    {
+        const auto code =
+            bytecode{"ef0001 010008 020002 0BFD 0003 040000 00 000003FF 02000002"_hex} +
+            1023 * push(1) + OP_CALLF + "0x0001" + 1019 * OP_POP + OP_RETURN + OP_POP + OP_POP +
+            OP_RETF;
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+    }
+
+    {
+        const auto code =
+            bytecode{"ef0001 010008 020002 0BFF 0004 040000 00 000003FF 03030004"_hex} +
+            1023 * push(1) + OP_CALLF + "0x0001" + 1021 * OP_POP + OP_RETURN + push(1) + OP_POP +
+            OP_RETF;
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+    }
+
+    {
+        const auto code =
+            bytecode{"ef0001 010008 020002 0BFF 0003 040000 00 000003FF 03050005"_hex} +
+            1023 * push(1) + OP_CALLF + "0x0001" + 1021 * OP_POP + OP_RETURN + OP_PUSH0 + OP_PUSH0 +
+            OP_RETF;
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+
+    {
+        const auto code =
+            bytecode{"ef0001 010008 020002 0BFF 0005 040000 00 000003FF 03030005"_hex} +
+            1023 * push(1) + OP_CALLF + "0x0001" + 1021 * OP_POP + OP_RETURN + OP_PUSH0 + OP_PUSH0 +
+            OP_POP + OP_POP + OP_RETF;
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+
+    {
+        const auto code =
+            bytecode{"ef0001 010008 020002 0C00 0005 040000 00 000003FF 02000003"_hex} +
+            1024 * push(1) + OP_CALLF + "0x0001" + 1020 * OP_POP + OP_RETURN + OP_PUSH0 + OP_POP +
+            OP_POP + OP_POP + OP_RETF;
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+}
+
 TEST(eof_validation, incomplete_section_size)
 {
     EXPECT_EQ(
@@ -1301,4 +1371,28 @@ TEST(eof_validation, dataloadn)
                            "0000000000000000111111111111111122222222222222223333333333333333"
                            "00000000000000001111111111111111222222222222222233333333333333"),
         EOFValidationError::invalid_dataloadn_index);
+}
+
+TEST(eof_validation, callf_stack_validation)
+{
+    // function 0: (0, 0) : CALLF{1} STOP
+    // function 1: (0, 1) : PUSH0 PUSH0 CALLF{2} RETF
+    // function 2: (2, 1) : POP RETF
+    EXPECT_EQ(validate_eof("EF0001 01000C 020003000400060002 040000 00 000000010001000202010002 "
+                           "E3000100 5F5FE30002E4 50E4"),
+        EOFValidationError::success);
+
+    // function 0: (0, 0) : CALLF{1} STOP
+    // function 1: (0, 1) : PUSH0 PUSH0 PUSH0 CALLF{2} RETF
+    // function 2: (2, 1) : POP RETF
+    EXPECT_EQ(validate_eof("EF0001 01000C 020003000400070002 040000 00 000000010001000202010002 "
+                           "E3000100 5F5F5FE30002E4 50E4"),
+        EOFValidationError::non_empty_stack_on_terminating_instruction);
+
+    // function 0: (0, 0) : CALLF{1} STOP
+    // function 1: (0, 1) : PUSH0 CALLF{2} RETF
+    // function 2: (2, 1) : POP RETF
+    EXPECT_EQ(validate_eof("EF0001 01000C 020003000400050002 040000 00 000000010001000202010002 "
+                           "E3000100 5FE30002E4 50E4"),
+        EOFValidationError::stack_underflow);
 }
