@@ -5,6 +5,7 @@
 
 #include <evmone/evmone.h>
 #include <gtest/gtest.h>
+#include <test/state/errors.hpp>
 #include <test/state/host.hpp>
 
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
@@ -43,6 +44,10 @@ protected:
 
     struct Expectation
     {
+        /// The transaction is invalid because of the given error.
+        /// The rest of Expectation is ignored if the error is expected.
+        ErrorCode tx_error = SUCCESS;
+
         evmc_status_code status = EVMC_SUCCESS;
         std::optional<int64_t> gas_used;
 
