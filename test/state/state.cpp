@@ -158,11 +158,20 @@ void finalize(State& state, evmc_revision rev, const address& coinbase,
 std::variant<TransactionReceipt, std::error_code> transition(State& state, const BlockInfo& block,
     const Transaction& tx, evmc_revision rev, evmc::VM& vm, int64_t block_gas_left)
 {
-    auto& sender_acc = state.get(tx.sender);
-    const auto validation_result = validate_transaction(sender_acc, block, tx, rev, block_gas_left);
+    auto* sender_ptr = state.find(tx.sender);
+
+    // Validate transaction. The validation needs the sender account, so in case
+    // it doesn't exist provide an empty one. The account isn't created in the state
+    // to prevent the state modification in case the transaction is invalid.
+    const auto validation_result = validate_transaction(
+        (sender_ptr != nullptr) ? *sender_ptr : Account{}, block, tx, rev, block_gas_left);
 
     if (holds_alternative<std::error_code>(validation_result))
         return get<std::error_code>(validation_result);
+
+    // Once the transaction is valid, create new sender account.
+    // The account won't be empty because its nonce will be bumped.
+    auto& sender_acc = (sender_ptr != nullptr) ? *sender_ptr : state.insert(tx.sender);
 
     const auto execution_gas_limit = get<int64_t>(validation_result);
 

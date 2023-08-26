@@ -17,8 +17,27 @@ void state_transition::SetUp()
 
 void state_transition::TearDown()
 {
-    auto& state = pre;
+    auto state = pre;
     const auto res = evmone::state::transition(state, block, tx, rev, vm, block.gas_limit);
+
+    if (const auto expected_error = make_error_code(expect.tx_error))
+    {
+        ASSERT_TRUE(holds_alternative<std::error_code>(res))
+            << "tx expected to be invalid with error: " << expected_error.message();
+        const auto tx_error = std::get<std::error_code>(res);
+        EXPECT_EQ(tx_error, expected_error)
+            << tx_error.message() << " vs " << expected_error.message();
+
+        // TODO: Compare states carefully, they should be identical.
+        EXPECT_EQ(state.get_accounts().size(), pre.get_accounts().size());
+        for (const auto& [addr, acc] : state.get_accounts())
+        {
+            EXPECT_TRUE(pre.get_accounts().contains(addr)) << "unexpected account " << addr;
+        }
+
+        return;  // Do not check anything else.
+    }
+
     ASSERT_TRUE(holds_alternative<TransactionReceipt>(res))
         << std::get<std::error_code>(res).message();
     const auto& receipt = std::get<TransactionReceipt>(res);
