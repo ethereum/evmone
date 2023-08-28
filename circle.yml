@@ -493,6 +493,11 @@ jobs:
           working_directory: ~/build
           command: |
             bin/evmone-statetest ~/tests/EIPTests/StateTests/stEOF
+      - run:
+          name: "EOF validation tests"
+          working_directory: ~/build
+          command: |
+            bin/evmone-eoftest ~/tests/EOFTests
       - collect_coverage_gcc
       - upload_coverage:
           flags: statetests
