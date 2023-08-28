@@ -53,7 +53,8 @@ void run_state_test(const StateTransitionTest& test, evmc::VM& vm, bool trace_su
             if (holds_alternative<state::TransactionReceipt>(res))
                 EXPECT_EQ(logs_hash(get<state::TransactionReceipt>(res).logs), expected.logs_hash);
             else
-                EXPECT_TRUE(expected.exception);
+                EXPECT_TRUE(expected.exception)
+                    << "unexpected invalid transaction: " << get<std::error_code>(res).message();
 
             EXPECT_EQ(state_root, expected.state_hash);
         }
