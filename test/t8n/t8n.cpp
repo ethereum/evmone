@@ -7,6 +7,7 @@
 #include "../state/mpt_hash.hpp"
 #include "../state/rlp.hpp"
 #include "../statetest/statetest.hpp"
+#include "../utils/utils.hpp"
 #include <evmone/evmone.h>
 #include <evmone/version.h>
 #include <nlohmann/json.hpp>
@@ -47,7 +48,7 @@ int main(int argc, const char* argv[])
                 return 0;
             }
             if (arg == "--state.fork" && ++i < argc)
-                rev = evmone::test::to_rev(argv[i]);
+                rev = to_rev(argv[i]);
             else if (arg == "--input.alloc" && ++i < argc)
                 alloc_file = argv[i];
             else if (arg == "--input.env" && ++i < argc)

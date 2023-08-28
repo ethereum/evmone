@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
+#include <evmc/evmc.hpp>
 #include <evmc/hex.hpp>
 
 using evmc::bytes;
@@ -10,6 +11,14 @@ using evmc::bytes_view;
 using evmc::from_hex;
 using evmc::from_spaced_hex;
 using evmc::hex;
+
+namespace evmone::test
+{
+
+/// Translates tests fork name to EVM revision
+evmc_revision to_rev(std::string_view s);
+
+}  // namespace evmone::test
 
 /// Converts a string to bytes by casting individual characters.
 inline bytes to_bytes(std::string_view s)
