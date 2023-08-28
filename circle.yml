@@ -486,7 +486,7 @@ jobs:
             ~/tests/EIPTests/StateTests/stEIP1153-transientStorage
       - download_execution_tests:
           repo: ipsilon/tests
-          rev: eof-rjumpv-20230803
+          rev: eof-update-20230828
           legacy: false
       - run:
           name: "State tests (EOF)"
