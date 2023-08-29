@@ -296,9 +296,11 @@ TEST(eof_validation, EOF1_invalid_type_section_size)
 
 TEST(eof_validation, EOF1_invalid_section_0_type)
 {
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040000 00 00000000 00"),
+        EOFValidationError::invalid_first_section_type);
     EXPECT_EQ(validate_eof("EF0001 010004 0200010003 040000 00 00010000 60005C"),
         EOFValidationError::invalid_first_section_type);
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010002 040000 00 01000000 5000"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040000 00 01800000 FE"),
         EOFValidationError::invalid_first_section_type);
     EXPECT_EQ(validate_eof("EF0001 010004 0200010003 040000 00 02030000 60005C"),
         EOFValidationError::invalid_first_section_type);
@@ -918,4 +920,60 @@ TEST(eof_validation, callf_stack_validation)
     EXPECT_EQ(validate_eof("EF0001 01000C 020003000400050002 040000 00 008000010001000202010002 "
                            "E3000100 5FE30002E4 50E4"),
         EOFValidationError::stack_underflow);
+}
+
+TEST(eof_validation, non_returning_status)
+{
+    // Non-returning with no JUMPF and no RETF
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040000 00 00800000 00"),
+        EOFValidationError::success);
+    // Non-returning with JUMPF
+    EXPECT_EQ(validate_eof("EF0001 010008 02000200030001 040000 00 0080000000800000 E50001 00"),
+        EOFValidationError::success);
+
+    // Returning with RETF
+    EXPECT_EQ(validate_eof("EF0001 010008 02000200010001 040000 00 0080000000000000 00 E4"),
+        EOFValidationError::success);
+    // Returning with JUMPF
+    EXPECT_EQ(
+        validate_eof(
+            "EF0001 01000c 020003000100030001 040000 00 008000000000000000000000 00 E50002 E4"),
+        EOFValidationError::success);
+    // Returning with JUMPF to returning and RETF
+    EXPECT_EQ(validate_eof("EF0001 01000C 020003000100070001 040000 00 008000000100000100000000 00 "
+                           "E10001E4E50002 E4"),
+        EOFValidationError::success);
+    // Returning with JUMPF to non-returning and RETF
+    EXPECT_EQ(
+        validate_eof("EF0001 010008 02000200010007 040000 00 0080000001000001 00 E10001E4E50000"),
+        EOFValidationError::success);
+
+    // Invalid with RETF
+    EXPECT_EQ(validate_eof("EF0001 010008 02000200010001 040000 00 0080000000800000 00 E4"),
+        EOFValidationError::invalid_non_returning_flag);
+    // Invalid with JUMPF to returning
+    EXPECT_EQ(
+        validate_eof(
+            "EF0001 01000c 020003000100030001 040000 00 008000000080000000000000 00 E50002 E4"),
+        EOFValidationError::invalid_non_returning_flag);
+    // Invalid with JUMPF to non-returning
+    EXPECT_EQ(validate_eof("EF0001 010008 02000200010003 040000 00 0080000000000000 00 E50000"),
+        EOFValidationError::invalid_non_returning_flag);
+    // Invalid with JUMPF to returning and RETF
+    EXPECT_EQ(validate_eof("EF0001 01000C 020003000100070001 040000 00 008000000180000100000000 00 "
+                           "E10001E4E50002 E4"),
+        EOFValidationError::invalid_non_returning_flag);
+    // Invalid with JUMPF to non-returning and RETF
+    EXPECT_EQ(
+        validate_eof("EF0001 010008 02000200010007 040000 00 0080000001800001 00 E10001E4E50000"),
+        EOFValidationError::invalid_non_returning_flag);
+}
+
+TEST(eof_validation, callf_into_nonreturning)
+{
+    // function 0: (0, non-returning) : CALLF{1} STOP
+    // function 2: (1, non-returning) : STOP
+    EXPECT_EQ(validate_eof("EF0001 010008 02000200040001 040000 00 00800000 00800000 "
+                           "E3000100 00"),
+        EOFValidationError::callf_to_non_returning_function);
 }
