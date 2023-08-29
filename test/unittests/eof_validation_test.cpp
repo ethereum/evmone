@@ -49,7 +49,7 @@ TEST(eof_validation, validate_EOF_prefix)
     EXPECT_EQ(validate_eof("EF0001"), EOFValidationError::section_headers_not_terminated);
 
     // valid except for magic
-    EXPECT_EQ(validate_eof("EFFF 01 010004 0200010003 030004 00 00000000 600000 AABBCCDD"),
+    EXPECT_EQ(validate_eof("EFFF 01 010004 0200010003 030004 00 00800000 600000 AABBCCDD"),
         EOFValidationError::invalid_prefix);
 }
 
@@ -59,45 +59,45 @@ TEST(eof_validation, validate_EOF_version)
     EXPECT_EQ(validate_eof("EF00FF"), EOFValidationError::eof_version_unknown);
 
     // valid except version
-    EXPECT_EQ(validate_eof("EF0000 010004 0200010003 020004 00 00000000 600000 AABBCCDD"),
+    EXPECT_EQ(validate_eof("EF0000 010004 0200010003 020004 00 00800000 600000 AABBCCDD"),
         EOFValidationError::eof_version_unknown);
-    EXPECT_EQ(validate_eof("EF0002 010004 0200010003 020004 00 00000000 600000 AABBCCDD"),
+    EXPECT_EQ(validate_eof("EF0002 010004 0200010003 020004 00 00800000 600000 AABBCCDD"),
         EOFValidationError::eof_version_unknown);
-    EXPECT_EQ(validate_eof("EF00FF 010004 0200010003 020004 00 00000000 600000 AABBCCDD"),
+    EXPECT_EQ(validate_eof("EF00FF 010004 0200010003 020004 00 00800000 600000 AABBCCDD"),
         EOFValidationError::eof_version_unknown);
 }
 
 TEST(eof_validation, valid_EOF1_code_pre_shanghai)
 {
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 00 00000000 FE", EVMC_PARIS),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 00 00800000 FE", EVMC_PARIS),
         EOFValidationError::eof_version_unknown);
 }
 
 TEST(eof_validation, minimal_valid_EOF1_code)
 {
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040000 00 00000000 FE"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040000 00 00800000 FE"),
         EOFValidationError::success);
 }
 
 TEST(eof_validation, minimal_valid_EOF1_code_with_data)
 {
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040001 00 00000000 FE DA"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040001 00 00800000 FE DA"),
         EOFValidationError::success);
 }
 
 TEST(eof_validation, minimal_valid_EOF1_multiple_code_sections)
 {
     // no data section
-    EXPECT_EQ(validate_eof("EF0001 010008 02000200010001 00  00000000 00000000  FE FE"),
+    EXPECT_EQ(validate_eof("EF0001 010008 02000200010001 00  00800000 00800000  FE FE"),
         EOFValidationError::data_section_missing);
     // with data section
-    EXPECT_EQ(validate_eof("EF0001 010008 02000200010001 040001 00  00000000 00000000  FE FE DA"),
+    EXPECT_EQ(validate_eof("EF0001 010008 02000200010001 040001 00  00800000 00800000  FE FE DA"),
         EOFValidationError::success);
 
     // non-void input and output types
     EXPECT_EQ(validate_eof("EF0001 010010 0200040001000200020002 040000 00 "
-                           "00000000 01000001 00010001 02030003"
-                           "FE 5000 3000 8000"),
+                           "00800000 01800001 00010001 02030003"
+                           "FE 5000 30e4 80e4"),
         EOFValidationError::success);
 }
 
@@ -118,13 +118,16 @@ TEST(eof_validation, EOF1_types_section_0_size)
 
 TEST(eof_validation, EOF1_type_section_missing)
 {
+    EXPECT_EQ(validate_eof("EF0001 0200010001 00 FE"), EOFValidationError::type_section_missing);
+    EXPECT_EQ(validate_eof("EF0001 0200010001 030001 00 FE DA"),
+        EOFValidationError::type_section_missing);
     EXPECT_EQ(validate_eof("EF0001 00"), EOFValidationError::type_section_missing);
 }
 
 TEST(eof_validation, EOF1_code_section_missing)
 {
     EXPECT_EQ(validate_eof("EF0001 010004 00"), EOFValidationError::code_section_missing);
-    EXPECT_EQ(validate_eof("EF0001 010004 040001 00 00000000 DA"),
+    EXPECT_EQ(validate_eof("EF0001 010004 040001 00 00800000 DA"),
         EOFValidationError::code_section_missing);
 }
 
@@ -137,25 +140,25 @@ TEST(eof_validation, EOF1_code_section_0_size)
 
 TEST(eof_validation, EOF1_data_section_0_size)
 {
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040000 00 00000000 FE"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040000 00 00800000 FE"),
         EOFValidationError::success);
 }
 
 TEST(eof_validation, EOF1_data_section_before_code_section)
 {
-    EXPECT_EQ(validate_eof("EF0001 010004 030001 0200010001 00 00000000 AA FE"),
+    EXPECT_EQ(validate_eof("EF0001 010004 030001 0200010001 00 00800000 AA FE"),
         EOFValidationError::code_section_missing);
 }
 
 TEST(eof_validation, EOF1_data_section_before_types_section)
 {
-    EXPECT_EQ(validate_eof("EF0001 040001 010004 0200010001 00 AA 00000000 FE"),
+    EXPECT_EQ(validate_eof("EF0001 040001 010004 0200010001 00 AA 00800000 FE"),
         EOFValidationError::type_section_missing);
 }
 
 TEST(eof_validation, EOF1_multiple_data_sections)
 {
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040001 040001 00 00000000 FE DA DA"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040001 040001 00 00800000 FE DA DA"),
         EOFValidationError::header_terminator_missing);
 }
 
@@ -163,13 +166,13 @@ TEST(eof_validation, EOF1_unknown_section)
 {
     EXPECT_EQ(validate_eof("EF0001 050001 00 FE"), EOFValidationError::type_section_missing);
     EXPECT_EQ(validate_eof("EF0001 FF0001 00 FE"), EOFValidationError::type_section_missing);
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 050001 00 00000000 FE 00"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 050001 00 00800000 FE 00"),
         EOFValidationError::data_section_missing);
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 FF0001 00 00000000 FE 00"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 FF0001 00 00800000 FE 00"),
         EOFValidationError::data_section_missing);
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040001 050001 00 00000000 FE AA 00"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040001 050001 00 00800000 FE AA 00"),
         EOFValidationError::header_terminator_missing);
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040001 FF0001 00 00000000 FE AA 00"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040001 FF0001 00 00800000 FE AA 00"),
         EOFValidationError::header_terminator_missing);
 }
 
@@ -209,20 +212,20 @@ TEST(eof_validation, EOF1_truncated_section)
 {
     EXPECT_EQ(validate_eof("EF0001 010004 0200010002 040000 00"),
         EOFValidationError::invalid_section_bodies_size);
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010002 040000 00 000000"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010002 040000 00 008000"),
         EOFValidationError::invalid_section_bodies_size);
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010002 040000 00 00000000 FE"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010002 040000 00 00800000 FE"),
         EOFValidationError::invalid_section_bodies_size);
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040002 00 00000000 FE"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040002 00 00800000 FE"),
         EOFValidationError::invalid_section_bodies_size);
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040002 00 00000000 FE AA"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040002 00 00800000 FE AA"),
         EOFValidationError::invalid_section_bodies_size);
 }
 
 TEST(eof_validation, EOF1_code_section_offset)
 {
     const auto eof =
-        "EF0001 010008 02000200030001 040004 00 00000001 00000000 6001fe fe 0000 0000"_hex;
+        "EF0001 010008 02000200030001 040004 00 00800001 00800000 6001fe fe 0000 0000"_hex;
     ASSERT_EQ(validate_eof(EVMC_PRAGUE, eof), EOFValidationError::success);
 
     const auto header = read_valid_eof1_header(eof);
@@ -236,9 +239,9 @@ TEST(eof_validation, EOF1_code_section_offset)
 
 TEST(eof_validation, EOF1_trailing_bytes)
 {
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040000 00 00000000 FE DEADBEEF"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040000 00 00800000 FE DEADBEEF"),
         EOFValidationError::invalid_section_bodies_size);
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040002 00 00000000 FE AABB DEADBEEF"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040002 00 00800000 FE AABB DEADBEEF"),
         EOFValidationError::invalid_section_bodies_size);
 }
 
@@ -251,7 +254,7 @@ TEST(eof_validation, EOF1_no_type_section)
 
 TEST(eof_validation, EOF1_multiple_type_sections)
 {
-    EXPECT_EQ(validate_eof("EF0001 010004 010004 02000200010001 00 00000000 00000000 FE FE"),
+    EXPECT_EQ(validate_eof("EF0001 010004 010004 02000200010001 00 00800000 00800000 FE FE"),
         EOFValidationError::code_section_missing);
 
     // Section order is must be (Types, Code+, Data)
@@ -261,16 +264,16 @@ TEST(eof_validation, EOF1_multiple_type_sections)
 
 TEST(eof_validation, EOF1_type_section_not_first)
 {
-    EXPECT_EQ(validate_eof("EF0001 0200010001 010004 00 FE 00000000"),
+    EXPECT_EQ(validate_eof("EF0001 0200010001 010004 00 FE 00800000"),
         EOFValidationError::type_section_missing);
 
-    EXPECT_EQ(validate_eof("EF0001 02000200010001 010004 00 FE FE 00000000"),
+    EXPECT_EQ(validate_eof("EF0001 02000200010001 010004 00 FE FE 00800000"),
         EOFValidationError::type_section_missing);
 
-    EXPECT_EQ(validate_eof("EF0001 0200010001 010004 040003 00 FE 00000000 AABBCC"),
+    EXPECT_EQ(validate_eof("EF0001 0200010001 010004 040003 00 FE 00800000 AABBCC"),
         EOFValidationError::type_section_missing);
 
-    EXPECT_EQ(validate_eof("EF0001 0200010001 040003 010004 00 FE AABBCC 00000000"),
+    EXPECT_EQ(validate_eof("EF0001 0200010001 040003 010004 00 FE AABBCC 00800000"),
         EOFValidationError::type_section_missing);
 }
 
@@ -278,16 +281,16 @@ TEST(eof_validation, EOF1_invalid_type_section_size)
 {
     EXPECT_EQ(validate_eof("EF0001 010001 0200010001 040000 00 00 FE"),
         EOFValidationError::invalid_type_section_size);
-    EXPECT_EQ(validate_eof("EF0001 010002 0200010001 040000 00 0000 FE"),
+    EXPECT_EQ(validate_eof("EF0001 010002 0200010001 040000 00 0080 FE"),
         EOFValidationError::invalid_type_section_size);
-    EXPECT_EQ(validate_eof("EF0001 010008 0200010001 040000 00 0000000000000000 FE"),
+    EXPECT_EQ(validate_eof("EF0001 010008 0200010001 040000 00 0080000000000000 FE"),
         EOFValidationError::invalid_type_section_size);
 
-    EXPECT_EQ(validate_eof("EF0001 010008 020003000100010001 040000 00 0000000000000000 FE FE FE"),
+    EXPECT_EQ(validate_eof("EF0001 010008 020003000100010001 040000 00 0080000000800000 FE FE FE"),
         EOFValidationError::invalid_type_section_size);
     EXPECT_EQ(
         validate_eof(
-            "EF0001 010010 020003000100010001 040000 00 00000000000000000000000000000000 FE FE FE"),
+            "EF0001 010010 020003000100010001 040000 00 00800000008000000080000000800000 FE FE FE"),
         EOFValidationError::invalid_type_section_size);
 }
 
@@ -304,11 +307,11 @@ TEST(eof_validation, EOF1_invalid_section_0_type)
 TEST(eof_validation, EOF1_too_many_code_sections)
 {
     const auto valid = "EF0001 011000" + bytecode{"020400"} + 0x400 * bytecode{"0001"} +
-                       "040000 00" + 0x400 * bytecode{"00000000"} + 0x400 * bytecode{"FE"};
+                       "040000 00" + 0x400 * bytecode{"00800000"} + 0x400 * bytecode{"FE"};
     EXPECT_EQ(validate_eof(valid), EOFValidationError::success);
 
     const auto invalid = "EF0001 011002" + bytecode{"020401"} + 0x401 * bytecode{"0001"} +
-                         "040000 00" + 0x401 * bytecode{"00000000"} + 0x401 * bytecode{"FE"};
+                         "040000 00" + 0x401 * bytecode{"00800000"} + 0x401 * bytecode{"FE"};
     EXPECT_EQ(validate_eof(invalid), EOFValidationError::too_many_code_sections);
 }
 
@@ -331,15 +334,14 @@ TEST(eof_validation, EOF1_undefined_opcodes)
             continue;
 
         auto cont =
-            "EF0001 010004 0200010014 040000 00 00000000 6001"
+            "EF0001 010004 0200010014 040000 00 00800000 6001"
             "80808080808080808080808080808080 "
             ""_hex;
 
         if (opcode == OP_RETF)
         {
-            cont += "5050505050505050505050505050505050"_hex;
-            cont += static_cast<uint8_t>(opcode);
-            cont[10] = 0x24;
+            // RETF can be tested in 2nd code section.
+            cont = "EF0001 010008 02000200010001 040000 00 00800000 00000000 00"_hex + OP_RETF;
         }
         else
         {
@@ -348,10 +350,10 @@ TEST(eof_validation, EOF1_undefined_opcodes)
                 cont += "00"_hex;
             else
                 cont[10] = 0x13;
-        }
 
-        auto op_stack_change = instr::traits[opcode].stack_height_change;
-        cont[18] = static_cast<uint8_t>(op_stack_change <= 0 ? 17 : 17 + op_stack_change);
+            auto op_stack_change = instr::traits[opcode].stack_height_change;
+            cont[18] = static_cast<uint8_t>(op_stack_change <= 0 ? 17 : 17 + op_stack_change);
+        }
 
         const auto expected = (gas_table[opcode] == evmone::instr::undefined ?
                                    EOFValidationError::undefined_instruction :
@@ -360,13 +362,13 @@ TEST(eof_validation, EOF1_undefined_opcodes)
         EXPECT_EQ(result, expected) << hex(cont);
     }
 
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040000 00 00000000 FE"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040000 00 00800000 FE"),
         EOFValidationError::success);
 }
 
 TEST(eof_validation, EOF1_truncated_push)
 {
-    auto eof_header = "EF0001 010004 0200010001 040000 00 00000000"_hex;
+    auto eof_header = "EF0001 010004 0200010001 040000 00 00800000"_hex;
     auto& code_size_byte = eof_header[10];
     for (uint8_t opcode = OP_PUSH1; opcode <= OP_PUSH32; ++opcode)
     {
@@ -395,219 +397,219 @@ TEST(eof_validation, EOF1_truncated_push)
 TEST(eof_validation, EOF1_valid_rjump)
 {
     // offset = 0
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 040000 00 00000000 E0000000"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 040000 00 00800000 E0000000"),
         EOFValidationError::success);
 
     // offset = 3
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010009 040000 00 00000001 E00003600100E0FFFA"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010009 040000 00 00800001 E00003600100E0FFFA"),
         EOFValidationError::success);
 
     // offset = -4
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 040000 00 00000000 5BE0FFFC"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 040000 00 00800000 5BE0FFFC"),
         EOFValidationError::success);
 }
 
 TEST(eof_validation, EOF1_valid_rjumpi)
 {
     // offset = 0
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 040000 00 00000001 6000E1000000"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 040000 00 00800001 6000E1000000"),
         EOFValidationError::success);
 
     // offset = 3
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010009 040000 00 00000001 6000E100035B5B5B00"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010009 040000 00 00800001 6000E100035B5B5B00"),
         EOFValidationError::success);
 
     // offset = -5
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 040000 00 00000001 6000E1FFFB00"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 040000 00 00800001 6000E1FFFB00"),
         EOFValidationError::success);
 }
 
 TEST(eof_validation, EOF1_valid_rjumpv)
 {
     // table = [0] case = 0
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010009 040000 00 00000001 6000E2000000600100"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010009 040000 00 00800001 6000E2000000600100"),
         EOFValidationError::success);
 
     // table = [0,3] case = 0
     EXPECT_EQ(
-        validate_eof("EF0001 010004 020001000E 040000 00 00000001 6000E20100000003600100600200"),
+        validate_eof("EF0001 010004 020001000E 040000 00 00800001 6000E20100000003600100600200"),
         EOFValidationError::success);
 
     // table = [0,3] case = 2
     EXPECT_EQ(
-        validate_eof("EF0001 010004 020001000E 040000 00 00000001 6002E20100000003600100600200"),
+        validate_eof("EF0001 010004 020001000E 040000 00 00800001 6002E20100000003600100600200"),
         EOFValidationError::success);
 
     // table = [0,3,-10] case = 2
     EXPECT_EQ(validate_eof(
-                  "EF0001 010004 0200010010 040000 00 00000001 6002E20200000003FFF6600100600200"),
+                  "EF0001 010004 0200010010 040000 00 00800001 6002E20200000003FFF6600100600200"),
         EOFValidationError::success);
 }
 
 TEST(eof_validation, EOF1_rjump_truncated)
 {
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040000 00 00000000 E0"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040000 00 00800000 E0"),
         EOFValidationError::truncated_instruction);
 
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010002 040000 00 00000000 E000"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010002 040000 00 00800000 E000"),
         EOFValidationError::truncated_instruction);
 }
 
 TEST(eof_validation, EOF1_rjumpi_truncated)
 {
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010003 040000 00 00000000 6000E1"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010003 040000 00 00800000 6000E1"),
         EOFValidationError::truncated_instruction);
 
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 040000 00 00000000 6000E100"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 040000 00 00800000 6000E100"),
         EOFValidationError::truncated_instruction);
 }
 
 TEST(eof_validation, EOF1_rjumpv_truncated)
 {
     // table = [0] case = 0
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 040000 00 00000000 6000E20000"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 040000 00 00800000 6000E20000"),
         EOFValidationError::truncated_instruction);
 
     // table = [0,3] case = 0
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010007 040000 00 00000000 6000E201000000"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010007 040000 00 00800000 6000E201000000"),
         EOFValidationError::truncated_instruction);
 
     // table = [0,3] case = 2
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 040000 00 00000000 6002E2010000"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 040000 00 00800000 6002E2010000"),
         EOFValidationError::truncated_instruction);
 
     // table = [0,3,-10] case = 2
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010009 040000 00 00000000 6002E20200000003FF"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010009 040000 00 00800000 6002E20200000003FF"),
         EOFValidationError::truncated_instruction);
 }
 
 TEST(eof_validation, EOF1_rjump_invalid_destination)
 {
     // Into header (offset = -5)
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 040000 00 00000000 E0FFFB00"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 040000 00 00800000 E0FFFB00"),
         EOFValidationError::invalid_rjump_destination);
 
     // To before code begin (offset = -13)
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 040000 00 00000000 E0FFF300"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 040000 00 00800000 E0FFF300"),
         EOFValidationError::invalid_rjump_destination);
 
     // To after code end (offset = 2)
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 040000 00 00000000 E0000200"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 040000 00 00800000 E0000200"),
         EOFValidationError::invalid_rjump_destination);
 
     // To code end (offset = 1)
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 040000 00 00000000 E0000100"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 040000 00 00800000 E0000100"),
         EOFValidationError::invalid_rjump_destination);
 
     // To the same RJUMP immediate (offset = -1)
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 040000 00 00000000 E0FFFF00"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 040000 00 00800000 E0FFFF00"),
         EOFValidationError::invalid_rjump_destination);
 
     // To PUSH immediate (offset = -4)
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 040000 00 00000000 6000E0FFFC00"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 040000 00 00800000 6000E0FFFC00"),
         EOFValidationError::invalid_rjump_destination);
 }
 
 TEST(eof_validation, EOF1_rjumpi_invalid_destination)
 {
     // Into header (offset = -7)
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 040000 00 00000000 6000E1FFF900"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 040000 00 00800000 6000E1FFF900"),
         EOFValidationError::invalid_rjump_destination);
 
     // To before code begin (offset = -15)
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 040000 00 00000000 6000E1FFF100"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 040000 00 00800000 6000E1FFF100"),
         EOFValidationError::invalid_rjump_destination);
 
     // To after code end (offset = 2)
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 040000 00 00000000 6000E1000200"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 040000 00 00800000 6000E1000200"),
         EOFValidationError::invalid_rjump_destination);
 
     // To code end (offset = 1)
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 040000 00 00000000 6000E1000100"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 040000 00 00800000 6000E1000100"),
         EOFValidationError::invalid_rjump_destination);
 
     // To the same RJUMPI immediate (offset = -1)
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 040000 00 00000000 6000E1FFFF00"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 040000 00 00800000 6000E1FFFF00"),
         EOFValidationError::invalid_rjump_destination);
 
     // To PUSH immediate (offset = -4)
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 040000 00 00000000 6000E1FFFC00"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 040000 00 00800000 6000E1FFFC00"),
         EOFValidationError::invalid_rjump_destination);
 }
 
 TEST(eof_validation, EOF1_rjumpv_invalid_destination)
 {
     // table = [-23] case = 0
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010008 040000 00 00000000 6000E200FFE96001"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010008 040000 00 00800000 6000E200FFE96001"),
         EOFValidationError::invalid_rjump_destination);
 
     // table = [-8] case = 0
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010008 040000 00 00000000 6000E200FFF86001"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010008 040000 00 00800000 6000E200FFF86001"),
         EOFValidationError::invalid_rjump_destination);
 
     // table = [-1] case = 0
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010008 040000 00 00000000 6000E200FFFF6001"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010008 040000 00 00800000 6000E200FFFF6001"),
         EOFValidationError::invalid_rjump_destination);
 
     // table = [2] case = 0
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010008 040000 00 00000000 6000E20000026001"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010008 040000 00 00800000 6000E20000026001"),
         EOFValidationError::invalid_rjump_destination);
 
     // table = [3] case = 0
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010008 040000 00 00000000 6000E20000036001"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010008 040000 00 00800000 6000E20000036001"),
         EOFValidationError::invalid_rjump_destination);
 
 
     // table = [0,3,-27] case = 2
     EXPECT_EQ(
-        validate_eof("EF0001 010004 020001000F 040000 00 00000000 6002E20200000003FFE56001006002"),
+        validate_eof("EF0001 010004 020001000F 040000 00 00800000 6002E20200000003FFE56001006002"),
         EOFValidationError::invalid_rjump_destination);
 
     // table = [0,3,-12] case = 2
     EXPECT_EQ(
-        validate_eof("EF0001 010004 020001000F 040000 00 00000000 6002E20200000003FFF46001006002"),
+        validate_eof("EF0001 010004 020001000F 040000 00 00800000 6002E20200000003FFF46001006002"),
         EOFValidationError::invalid_rjump_destination);
 
     // table = [0,3,-1] case = 2
     EXPECT_EQ(
-        validate_eof("EF0001 010004 020001000F 040000 00 00000000 6002E20200000003FFFF6001006002"),
+        validate_eof("EF0001 010004 020001000F 040000 00 00800000 6002E20200000003FFFF6001006002"),
         EOFValidationError::invalid_rjump_destination);
 
     // table = [0,3,5] case = 2
     EXPECT_EQ(
-        validate_eof("EF0001 010004 020001000F 040000 00 00000000 6002E2020000000300056001006002"),
+        validate_eof("EF0001 010004 020001000F 040000 00 00800000 6002E2020000000300056001006002"),
         EOFValidationError::invalid_rjump_destination);
 
     // table = [0,3,6] case = 2
     EXPECT_EQ(
-        validate_eof("EF0001 010004 020001000F 040000 00 00000000 6002E2020000000300066001006002"),
+        validate_eof("EF0001 010004 020001000F 040000 00 00800000 6002E2020000000300066001006002"),
         EOFValidationError::invalid_rjump_destination);
 }
 
 TEST(eof_validation, EOF1_section_order)
 {
     // 01 02 03
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 040002 00 00000001 6000E0000000 AABB"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 040002 00 00800001 6000E0000000 AABB"),
         EOFValidationError::success);
 
     // 01 03 02
-    EXPECT_EQ(validate_eof("EF0001 010004 040002 0200010006 00 00000000 AABB 6000E0000000"),
+    EXPECT_EQ(validate_eof("EF0001 010004 040002 0200010006 00 00800000 AABB 6000E0000000"),
         EOFValidationError::code_section_missing);
 
     // 02 01 03
-    EXPECT_EQ(validate_eof("EF0001 0200010006 010004 040002 00 6000E0000000 00000000 AABB"),
+    EXPECT_EQ(validate_eof("EF0001 0200010006 010004 040002 00 6000E0000000 00800000 AABB"),
         EOFValidationError::type_section_missing);
 
     // 02 03 01
-    EXPECT_EQ(validate_eof("EF0001 0200010006 040002 010004 00 6000E0000000 AABB 00000000"),
+    EXPECT_EQ(validate_eof("EF0001 0200010006 040002 010004 00 6000E0000000 AABB 00800000"),
         EOFValidationError::type_section_missing);
 
     // 03 01 02
-    EXPECT_EQ(validate_eof("EF0001 040002 010004 0200010006 00 AABB 00000000 6000E0000000"),
+    EXPECT_EQ(validate_eof("EF0001 040002 010004 0200010006 00 AABB 00800000 6000E0000000"),
         EOFValidationError::type_section_missing);
 
     // 03 02 01
-    EXPECT_EQ(validate_eof("EF0001 040002 0200010006 010004 00 AABB 6000E0000000 00000000"),
+    EXPECT_EQ(validate_eof("EF0001 040002 0200010006 010004 00 AABB 6000E0000000 00800000"),
         EOFValidationError::type_section_missing);
 }
 
@@ -621,35 +623,35 @@ TEST(eof_validation, deprecated_instructions)
 
 TEST(eof_validation, max_arguments_count)
 {
-    EXPECT_EQ(validate_eof("EF0001 010008 02000200010001 040000 00 00000000 7F7F007F E4 E4"),
+    EXPECT_EQ(validate_eof("EF0001 010008 02000200010001 040000 00 00800000 7F7F007F 00 E4"),
         EOFValidationError::success);
 
-    EXPECT_EQ(validate_eof("EF0001 010008 02000200010001 040000 00 00000000 80800080 E4 E4"),
+    EXPECT_EQ(validate_eof("EF0001 010008 02000200010001 040000 00 00800000 80800080 00 E4"),
         EOFValidationError::inputs_outputs_num_above_limit);
 
     {
-        auto code = bytecode{"EF0001 010008 020002000100FF 040000 00 00000000 007F007F"} + OP_RETF +
+        auto code = bytecode{"EF0001 010008 020002000100FF 040000 00 00800000 007F007F"} + OP_STOP +
                     127 * bytecode{1} + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::success);
     }
 
     {
-        auto code = bytecode{"EF0001 010008 02000200010101 040000 00 00000000 00800080"} + OP_RETF +
+        auto code = bytecode{"EF0001 010008 02000200010101 040000 00 00800000 00810081"} + OP_STOP +
                     128 * bytecode{1} + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::inputs_outputs_num_above_limit);
     }
 
     {
-        auto code = bytecode{"EF0001 010008 02000200010080 040000 00 00000000 7F00007F"} + OP_RETF +
+        auto code = bytecode{"EF0001 010008 02000200010080 040000 00 00800000 7F00007F"} + OP_STOP +
                     127 * OP_POP + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::success);
     }
 
     {
-        auto code = bytecode{"EF0001 010008 02000200010081 040000 00 00000000 80000080"} + OP_RETF +
+        auto code = bytecode{"EF0001 010008 02000200010081 040000 00 00800000 80000080"} + OP_STOP +
                     128 * OP_POP + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::inputs_outputs_num_above_limit);
@@ -659,61 +661,61 @@ TEST(eof_validation, max_arguments_count)
 TEST(eof_validation, max_stack_height)
 {
     {
-        auto code = bytecode{"EF0001 010008 02000200010BFE 040000 00 00000000 000003FF"} + OP_RETF +
+        auto code = bytecode{"EF0001 010008 02000200010BFE 040000 00 00800000 000003FF"} + OP_STOP +
                     0x3FF * bytecode{1} + 0x3FF * OP_POP + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::success);
     }
 
     {
-        auto code = "EF0001 010008 0200020BFE0001 040000 00 000003FF 00000000" +
-                    0x3FF * bytecode{1} + 0x3FF * OP_POP + OP_RETF + OP_RETF;
+        auto code = "EF0001 010008 0200020BFE0001 040000 00 008003FF 00000000" +
+                    0x3FF * bytecode{1} + 0x3FF * OP_POP + OP_STOP + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::success);
     }
 
     {
-        auto code = bytecode{"EF0001 010008 02000200010C01 040000 00 00000000 00000400"} + OP_RETF +
+        auto code = bytecode{"EF0001 010008 02000200010C01 040000 00 00800000 00000400"} + OP_STOP +
                     0x400 * bytecode{1} + 0x400 * OP_POP + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::max_stack_height_above_limit);
     }
 
     {
-        auto code = "EF0001 010008 0200020C010001 040000 00 00000400 00000000" +
-                    0x400 * bytecode{1} + 0x400 * OP_POP + OP_RETF + OP_RETF;
+        auto code = "EF0001 010008 0200020C010001 040000 00 00800400 00000000" +
+                    0x400 * bytecode{1} + 0x400 * OP_POP + OP_STOP + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::max_stack_height_above_limit);
     }
 
     {
-        auto code = bytecode{"EF0001 010008 02000200010C01 040000 00 00000000 000003FF"} + OP_RETF +
+        auto code = bytecode{"EF0001 010008 02000200010C01 040000 00 00800000 000003FF"} + OP_STOP +
                     0x400 * bytecode{1} + 0x400 * OP_POP + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::invalid_max_stack_height);
     }
 
     {
-        auto code = "EF0001 010008 0200020C010001 040000 00 000003FF 00000000" +
-                    0x400 * bytecode{1} + 0x400 * OP_POP + OP_RETF + OP_RETF;
+        auto code = "EF0001 010008 0200020C010001 040000 00 008003FF 00000000" +
+                    0x400 * bytecode{1} + 0x400 * OP_POP + OP_STOP + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::invalid_max_stack_height);
     }
 
     {
-        auto code = eof1_bytecode(rjumpi(2, 0) + 1 + OP_RETF, 1);
+        auto code = eof1_bytecode(rjumpi(2, 0) + 1 + OP_STOP, 1);
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::stack_height_mismatch);
     }
 
     {
-        auto code = eof1_bytecode(rjumpi(-3, 0) + OP_RETF, 1);
+        auto code = eof1_bytecode(rjumpi(-3, 0) + OP_STOP, 1);
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::stack_height_mismatch);
     }
 
     {
-        auto code = eof1_bytecode(rjumpv({-4}, 0) + OP_RETF, 1);
+        auto code = eof1_bytecode(rjumpv({-4}, 0) + OP_STOP, 1);
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::stack_height_mismatch);
     }
@@ -721,36 +723,39 @@ TEST(eof_validation, max_stack_height)
 
 TEST(eof_validation, EOF1_callf_truncated)
 {
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040000 00 00000000 E3"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040000 00 00800000 E3"),
         EOFValidationError::truncated_instruction);
 
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010002 040000 00 00000000 E300"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010002 040000 00 00800000 E300"),
         EOFValidationError::truncated_instruction);
 }
 
 TEST(eof_validation, callf_invalid_code_section_index)
 {
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 040000 00 00000000 E3000100"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010004 040000 00 00800000 E3000100"),
         EOFValidationError::invalid_code_section_index);
 }
 
 TEST(eof_validation, callf_stack_overflow)
 {
     {
-        auto code =
-            eof1_bytecode(512 * push(1) + OP_CALLF + "0x0000" + 510 * OP_POP + OP_RETURN, 512);
+        auto code = bytecode{"ef0001 010008 020002 0004 0604 040000 00 00800000 00000200"} +
+                    OP_CALLF + "0001" + OP_STOP + 512 * push(1) + OP_CALLF + "0001" + 512 * OP_POP +
+                    OP_RETF;
         EXPECT_EQ(validate_eof(code), EOFValidationError::success);
     }
 
     {
-        auto code =
-            eof1_bytecode(513 * push(1) + OP_CALLF + "0x0000" + 511 * OP_POP + OP_RETURN, 513);
+        auto code = bytecode{"ef0001 010008 020002 0004 0607 040000 00 00800000 00000201"} +
+                    OP_CALLF + "0001" + OP_STOP + 513 * push(1) + OP_CALLF + "0001" + 513 * OP_POP +
+                    OP_RETF;
         EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
     }
 
     {
-        auto code =
-            eof1_bytecode(1023 * push(1) + OP_CALLF + "0x0000" + 1021 * OP_POP + OP_RETURN, 1023);
+        auto code = bytecode{"ef0001 010008 020002 0004 0c01 040000 00 00800000 00000201"} +
+                    OP_CALLF + "0001" + OP_STOP + 1023 * push(1) + OP_CALLF + "0001" +
+                    1023 * OP_POP + OP_RETF;
         EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
     }
 }
@@ -758,46 +763,41 @@ TEST(eof_validation, callf_stack_overflow)
 TEST(eof_validation, callf_with_inputs_stack_overflow)
 {
     {
-        const auto code =
-            bytecode{"ef0001 010008 020002 0BFD 0003 040000 00 000003FF 02000002"_hex} +
-            1023 * push(1) + OP_CALLF + "0x0001" + 1019 * OP_POP + OP_RETURN + OP_POP + OP_POP +
-            OP_RETF;
+        const auto code = bytecode{"ef0001 010008 020002 0BFD 0003 040000 00 008003FF 02000002"} +
+                          1023 * push(1) + OP_CALLF + "0001" + 1019 * OP_POP + OP_RETURN + OP_POP +
+                          OP_POP + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::success);
     }
 
     {
-        const auto code =
-            bytecode{"ef0001 010008 020002 0BFF 0004 040000 00 000003FF 03030004"_hex} +
-            1023 * push(1) + OP_CALLF + "0x0001" + 1021 * OP_POP + OP_RETURN + push(1) + OP_POP +
-            OP_RETF;
+        const auto code = bytecode{"ef0001 010008 020002 0BFF 0004 040000 00 008003FF 03030004"} +
+                          1023 * push(1) + OP_CALLF + "0001" + 1021 * OP_POP + OP_RETURN + push(1) +
+                          OP_POP + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::success);
     }
 
     {
-        const auto code =
-            bytecode{"ef0001 010008 020002 0BFF 0003 040000 00 000003FF 03050005"_hex} +
-            1023 * push(1) + OP_CALLF + "0x0001" + 1021 * OP_POP + OP_RETURN + OP_PUSH0 + OP_PUSH0 +
-            OP_RETF;
+        const auto code = bytecode{"ef0001 010008 020002 0BFF 0003 040000 00 008003FF 03050005"} +
+                          1023 * push(1) + OP_CALLF + "0001" + 1021 * OP_POP + OP_RETURN +
+                          OP_PUSH0 + OP_PUSH0 + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
     }
 
     {
-        const auto code =
-            bytecode{"ef0001 010008 020002 0BFF 0005 040000 00 000003FF 03030005"_hex} +
-            1023 * push(1) + OP_CALLF + "0x0001" + 1021 * OP_POP + OP_RETURN + OP_PUSH0 + OP_PUSH0 +
-            OP_POP + OP_POP + OP_RETF;
+        const auto code = bytecode{"ef0001 010008 020002 0BFF 0005 040000 00 008003FF 03030005"} +
+                          1023 * push(1) + OP_CALLF + "0001" + 1021 * OP_POP + OP_RETURN +
+                          OP_PUSH0 + OP_PUSH0 + OP_POP + OP_POP + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
     }
 
     {
-        const auto code =
-            bytecode{"ef0001 010008 020002 0C00 0005 040000 00 000003FF 02000003"_hex} +
-            1024 * push(1) + OP_CALLF + "0x0001" + 1020 * OP_POP + OP_RETURN + OP_PUSH0 + OP_POP +
-            OP_POP + OP_POP + OP_RETF;
+        const auto code = bytecode{"ef0001 010008 020002 0C00 0005 040000 00 008003FF 02000003"} +
+                          1024 * push(1) + OP_CALLF + "0001" + 1020 * OP_POP + OP_RETURN +
+                          OP_PUSH0 + OP_POP + OP_POP + OP_POP + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
     }
@@ -811,563 +811,86 @@ TEST(eof_validation, incomplete_section_size)
 
 TEST(eof_validation, data_section_missing)
 {
-    EXPECT_EQ(validate_eof("ef0001 010004 0200010001 00 00000000 fe"),
+    EXPECT_EQ(validate_eof("ef0001 010004 0200010001 00 00800000 fe"),
         EOFValidationError::data_section_missing);
 }
 
 TEST(eof_validation, multiple_code_sections_headers)
 {
-    EXPECT_EQ(validate_eof("0xef0001 010008 020001 0004 020001 0005 040000 00 00040000 045c0000 "
+    EXPECT_EQ(validate_eof("0xef0001 010008 020001 0004 020001 0005 040000 00 00800000 045c0000 "
                            "00405c00 00002e0005"),
         EOFValidationError::data_section_missing);
 }
 
 TEST(eof_validation, many_code_sections_1023)
 {
-    auto code =
-        "0xef0001010ffc0203ff0001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010400000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "0000000000000000000000000000000000000000";
+    auto code = bytecode{"ef0001 010ffc 0203ff"} + 1023 * bytecode{"0001"} + "040000 00" +
+                1023 * bytecode{"00800000"} + bytecode{bytes(1023, OP_STOP)};
     EXPECT_EQ(validate_eof(code), EOFValidationError::success);
 }
 
 TEST(eof_validation, many_code_sections_1024)
 {
-    auto code =
-        "0xef00010110000204000001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001040000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000";
+    auto code = bytecode{"ef0001 011000 020400"} + 1024 * bytecode{"0001"} + "040000 00" +
+                1024 * bytecode{"00800000"} + bytecode{bytes(1024, OP_STOP)};
     EXPECT_EQ(validate_eof(code), EOFValidationError::success);
 }
 
 TEST(eof_validation, too_many_code_sections)
 {
-    auto code =
-        "0xef00010110040204010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000100010001000100010001"
-        "000100010001000100010001000100010001000100010001000100010001000100010001000100010001000100"
-        "010001000100010001000100010001000100010001000100010001000100010001000104000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        "00000000000000000000000000000000000000000000000000000000000000000000";
+    auto code = bytecode{"ef0001 011004 020401"} + 1025 * bytecode{"0001"} + "040000 00" +
+                1025 * bytecode{"00800000"} + bytecode{bytes(1025, OP_STOP)};
     EXPECT_EQ(validate_eof(code), EOFValidationError::too_many_code_sections);
 }
 
 TEST(eof_validation, EOF1_dataloadn_truncated)
 {
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040000 00 00000000 E9"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010001 040000 00 00800000 E9"),
         EOFValidationError::truncated_instruction);
 
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010002 040000 00 00000000 E900"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010002 040000 00 00800000 E900"),
         EOFValidationError::truncated_instruction);
 }
 
 TEST(eof_validation, dataloadn)
 {
     // DATALOADN{0}
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 040020 00 00000001 E900005000"
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 040020 00 00800001 E900005000"
                            "0000000000000000111111111111111122222222222222223333333333333333"),
         EOFValidationError::success);
 
     // DATALOADN{1}
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 040021 00 00000001 E900015000"
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 040021 00 00800001 E900015000"
                            "000000000000000011111111111111112222222222222222333333333333333344"),
         EOFValidationError::success);
 
     // DATALOADN{32}
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 040040 00 00000001 E900205000"
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 040040 00 00800001 E900205000"
                            "0000000000000000111111111111111122222222222222223333333333333333"
                            "0000000000000000111111111111111122222222222222223333333333333333"),
         EOFValidationError::success);
 
     // DATALOADN{0} - no data section
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 040000 00 00000001 E900005000"),
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 040000 00 00800001 E900005000"),
         EOFValidationError::invalid_dataloadn_index);
 
     // DATALOADN{1} - out of data section bounds
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 040001 00 00000001 E900015000"
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 040001 00 00800001 E900015000"
                            "00"),
         EOFValidationError::invalid_dataloadn_index);
 
     // DATALOADN{32} - out of data section bounds
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 040020 00 00000001 E900205000"
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 040020 00 00800001 E900205000"
                            "0000000000000000111111111111111122222222222222223333333333333333"),
         EOFValidationError::invalid_dataloadn_index);
 
     // DATALOADN{uint16_max} - out of data section bounds
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 040020 00 00000001 E9ffff5000"
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 040020 00 00800001 E9ffff5000"
                            "0000000000000000111111111111111122222222222222223333333333333333"),
         EOFValidationError::invalid_dataloadn_index);
 
     // DATALOADN{32} - truncated word
-    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 04003F 00 00000001 E900205000"
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010005 04003F 00 00800001 E900205000"
                            "0000000000000000111111111111111122222222222222223333333333333333"
                            "00000000000000001111111111111111222222222222222233333333333333"),
         EOFValidationError::invalid_dataloadn_index);
@@ -1375,24 +898,24 @@ TEST(eof_validation, dataloadn)
 
 TEST(eof_validation, callf_stack_validation)
 {
-    // function 0: (0, 0) : CALLF{1} STOP
-    // function 1: (0, 1) : PUSH0 PUSH0 CALLF{2} RETF
-    // function 2: (2, 1) : POP RETF
-    EXPECT_EQ(validate_eof("EF0001 01000C 020003000400060002 040000 00 000000010001000202010002 "
+    // function 0: (0, non-returning) : CALLF{1} STOP
+    // function 1: (0, 1) :             PUSH0 PUSH0 CALLF{2} RETF
+    // function 2: (2, 1) :             POP RETF
+    EXPECT_EQ(validate_eof("EF0001 01000C 020003000400060002 040000 00 008000010001000202010002 "
                            "E3000100 5F5FE30002E4 50E4"),
         EOFValidationError::success);
 
-    // function 0: (0, 0) : CALLF{1} STOP
-    // function 1: (0, 1) : PUSH0 PUSH0 PUSH0 CALLF{2} RETF
-    // function 2: (2, 1) : POP RETF
-    EXPECT_EQ(validate_eof("EF0001 01000C 020003000400070002 040000 00 000000010001000202010002 "
+    // function 0: (0, non-returning) : CALLF{1} STOP
+    // function 1: (0, 1) :             PUSH0 PUSH0 PUSH0 CALLF{2} RETF
+    // function 2: (2, 1) :             POP RETF
+    EXPECT_EQ(validate_eof("EF0001 01000C 020003000400070002 040000 00 008000010001000202010002 "
                            "E3000100 5F5F5FE30002E4 50E4"),
         EOFValidationError::non_empty_stack_on_terminating_instruction);
 
-    // function 0: (0, 0) : CALLF{1} STOP
-    // function 1: (0, 1) : PUSH0 CALLF{2} RETF
-    // function 2: (2, 1) : POP RETF
-    EXPECT_EQ(validate_eof("EF0001 01000C 020003000400050002 040000 00 000000010001000202010002 "
+    // function 0: (0, non-returning) : CALLF{1} STOP
+    // function 1: (0, 1) :             PUSH0 CALLF{2} RETF
+    // function 2: (2, 1) :             POP RETF
+    EXPECT_EQ(validate_eof("EF0001 01000C 020003000400050002 040000 00 008000010001000202010002 "
                            "E3000100 5FE30002E4 50E4"),
         EOFValidationError::stack_underflow);
 }

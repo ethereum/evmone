@@ -57,14 +57,14 @@ TEST_P(evm, eof1_codecopy_full)
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
-        "ef0001010004020001000c0400000000000003601f6000600039601f6000f3"_hex);
+        "ef0001010004020001000c0400000000800003601f6000600039601f6000f3"_hex);
 
     code = eof1_bytecode(bytecode{35} + 0 + 0 + OP_CODECOPY + ret(0, 35), 3, "deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
-        "ef0001010004020001000c04000400000000036023600060003960236000f3deadbeef"_hex);
+        "ef0001010004020001000c04000400008000036023600060003960236000f3deadbeef"_hex);
 }
 
 TEST_P(evm, eof1_codecopy_header)
@@ -121,20 +121,20 @@ TEST_P(evm, eof1_codecopy_out_of_bounds)
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
-        "ef0001010004020001000c04000000000000036023600060003960236000f300000000"_hex);
+        "ef0001010004020001000c04000000008000036023600060003960236000f300000000"_hex);
 
     code = eof1_bytecode(bytecode{39} + 0 + 0 + OP_CODECOPY + ret(0, 39), 3, "deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
-        "ef0001010004020001000c04000400000000036027600060003960276000f3deadbeef00000000"_hex);
+        "ef0001010004020001000c04000400008000036027600060003960276000f3deadbeef00000000"_hex);
 }
 
 TEST_P(evm, eof_data_only_contract)
 {
     rev = EVMC_PRAGUE;
-    auto code = "EF0001 010004 020001 0001 04daaa 00 00000000 FE"_hex;
+    auto code = "EF0001 010004 020001 0001 04daaa 00 00800000 FE"_hex;
     const auto data_size_ptr = &code[code.find(0xda)];
 
     intx::be::unsafe::store(data_size_ptr, uint16_t{0});
