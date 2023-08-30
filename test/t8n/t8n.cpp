@@ -93,6 +93,10 @@ int main(int argc, const char* argv[])
         std::vector<state::TransactionReceipt> receipts;
         int64_t block_gas_left = block.gas_limit;
 
+        // Validate eof code in pre-state
+        if (rev >= EVMC_PRAGUE)
+            validate_deployed_code(state, rev);
+
         // Parse and execute transactions
         if (!txs_file.empty())
         {

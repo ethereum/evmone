@@ -402,11 +402,6 @@ void validate_deployed_code(const state::State& state, evmc_revision rev)
                         " is invalid: " + std::string(get_error_message(result)));
                 }
             }
-            else
-            {
-                throw std::invalid_argument("code at " + hex0x(addr) + " starts with 0xEF00 in " +
-                                            evmc_revision_to_string(rev));
-            }
         }
     }
 }
