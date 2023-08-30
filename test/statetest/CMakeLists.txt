@@ -15,6 +15,7 @@ target_sources(
     statetest.hpp
     statetest_loader.cpp
     statetest_logs_hash.cpp
+    statetest_runner.cpp
 )
 
 add_executable(evmone-statetest)
@@ -23,5 +24,4 @@ target_include_directories(evmone-statetest PRIVATE ${evmone_private_include_dir
 target_sources(
     evmone-statetest PRIVATE
     statetest.cpp
-    statetest_runner.cpp
 )
