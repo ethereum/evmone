@@ -22,6 +22,10 @@ using namespace evmc::literals;
 /// Better than ethash::hash256 because has some additional handy constructors.
 using hash256 = bytes32;
 
+/// The hash of the empty RLP list, i.e. keccak256({0xc0}).
+static constexpr auto EmptyListHash =
+    0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347_bytes32;
+
 /// Computes Keccak hash out of input bytes (wrapper of ethash::keccak256).
 inline hash256 keccak256(bytes_view data) noexcept
 {

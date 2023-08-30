@@ -50,7 +50,7 @@ struct StateTransitionTest
         {
             TestMultiTransaction::Indexes indexes;
             hash256 state_hash;
-            hash256 logs_hash;
+            hash256 logs_hash = EmptyListHash;
             bool exception = false;
         };
 
