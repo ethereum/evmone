@@ -25,6 +25,12 @@ TEST(state_rlp, empty_bytes_hash)
     EXPECT_EQ(keccak256({}), emptyBytesHash);
 }
 
+TEST(state_rlp, empty_list_hash)
+{
+    EXPECT_EQ(keccak256(bytes{0xc0}), EmptyListHash);  // Hash of empty RLP list: 0xc0.
+    EXPECT_EQ(keccak256(rlp::encode(std::vector<uint64_t>{})), EmptyListHash);
+}
+
 TEST(state_rlp, empty_mpt_hash)
 {
     const auto rlp_null = rlp::encode(0);

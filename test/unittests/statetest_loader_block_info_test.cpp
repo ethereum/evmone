@@ -139,7 +139,7 @@ TEST(statetest_loader, block_info_0_parent_difficulty)
         "parentBaseFee": "7",
         "parentGasUsed": "0",
         "parentGasLimit": "100000000000000000",
-        "parentTimstamp": "0",
+        "parentTimestamp": "253",
         "blockHashes": {
             "0": "0xc305d826e3784046a7e9d31128ef98d3e96133fe454c16ef630574d967dfdb1a"
         },
@@ -155,6 +155,7 @@ TEST(statetest_loader, block_info_0_parent_difficulty)
     EXPECT_EQ(bi.base_fee, 7);
     EXPECT_EQ(bi.timestamp, 1000);
     EXPECT_EQ(bi.number, 1);
+    EXPECT_EQ(bi.parent_timestamp, 253);
 }
 
 TEST(statetest_loader, block_info_0_random)
@@ -217,4 +218,42 @@ TEST(statetest_loader, block_info_withdrawals)
     EXPECT_EQ(bi.withdrawals[0].get_amount(), intx::uint256{0x800000000} * 1'000'000'000);
     EXPECT_EQ(bi.withdrawals[1].recipient, 0x0000000000000000000000000000000000000200_address);
     EXPECT_EQ(bi.withdrawals[1].get_amount(), intx::uint256{0xffffffffffffffff} * 1'000'000'000);
+}
+
+TEST(statetest_loader, block_info_ommers)
+{
+    constexpr std::string_view input = R"({
+            "currentCoinbase": "0x1111111111111111111111111111111111111111",
+            "currentDifficulty": "0x0",
+            "currentGasLimit": "0x0",
+            "currentNumber": "0",
+            "currentTimestamp": "0",
+            "currentBaseFee": "7",
+            "currentRandom": "0x00",
+            "ommers": [
+                {
+                    "address": "0x0000000000000000000000000000000000000100",
+                    "delta": 1
+                },
+                {
+                    "address": "0x0000000000000000000000000000000000000200",
+                    "delta": 4
+                }
+            ],
+            "withdrawals": []
+        })";
+
+    const auto bi = test::from_json<state::BlockInfo>(json::json::parse(input));
+    EXPECT_EQ(bi.coinbase, 0x1111111111111111111111111111111111111111_address);
+    EXPECT_EQ(bi.prev_randao, 0x00_bytes32);
+    EXPECT_EQ(bi.gas_limit, 0x0);
+    EXPECT_EQ(bi.base_fee, 7);
+    EXPECT_EQ(bi.timestamp, 0);
+    EXPECT_EQ(bi.number, 0);
+    EXPECT_EQ(bi.withdrawals.size(), 0);
+    EXPECT_EQ(bi.ommers.size(), 2);
+    EXPECT_EQ(bi.ommers[0].beneficiary, 0x0000000000000000000000000000000000000100_address);
+    EXPECT_EQ(bi.ommers[0].delta, 1);
+    EXPECT_EQ(bi.ommers[1].beneficiary, 0x0000000000000000000000000000000000000200_address);
+    EXPECT_EQ(bi.ommers[1].delta, 4);
 }

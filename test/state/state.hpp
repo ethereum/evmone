@@ -66,6 +66,12 @@ public:
     [[nodiscard]] const auto& get_accounts() const noexcept { return m_accounts; }
 };
 
+struct Ommer
+{
+    address beneficiary;  ///< Ommer block beneficiary address.
+    uint32_t delta = 0;   ///< Difference between current and ommer block number.
+};
+
 struct Withdrawal
 {
     uint64_t index = 0;
@@ -84,10 +90,15 @@ struct BlockInfo
 {
     int64_t number = 0;
     int64_t timestamp = 0;
+    int64_t parent_timestamp = 0;
     int64_t gas_limit = 0;
     address coinbase;
+    int64_t difficulty = 0;
+    int64_t parent_difficulty = 0;
+    hash256 parent_ommers_hash = {};
     bytes32 prev_randao;
     uint64_t base_fee = 0;
+    std::vector<Ommer> ommers = {};
     std::vector<Withdrawal> withdrawals;
     std::unordered_map<int64_t, hash256> known_block_hashes = {};
 };
@@ -168,7 +179,8 @@ struct TransactionReceipt
 /// Applies block reward to coinbase, withdrawals (post Shanghai) and deletes empty touched accounts
 /// (post Spurious Dragon).
 void finalize(State& state, evmc_revision rev, const address& coinbase,
-    std::optional<uint64_t> block_reward, std::span<Withdrawal> withdrawals);
+    std::optional<uint64_t> block_reward, std::span<Ommer> ommers,
+    std::span<Withdrawal> withdrawals);
 
 [[nodiscard]] std::variant<TransactionReceipt, std::error_code> transition(State& state,
     const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm,

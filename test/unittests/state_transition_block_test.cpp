@@ -34,3 +34,21 @@ TEST_F(state_transition, known_block_hash)
     expect.post[To].storage[0x01_bytes32] =
         0x0000000000000000000000000000000000000000000000000000000000000111_bytes32;
 }
+
+TEST_F(state_transition, block_apply_ommers_reward)
+{
+    rev = EVMC_LONDON;
+
+    static constexpr auto o1 = Ommer{0x0eeee1_address, 1};
+    static constexpr auto o2 = Ommer{0x0eeee2_address, 3};
+
+    // Use high value 5 ETH to catch potential uint64 overflows.
+    block_reward = 5'000'000'000'000'000'000;
+    block.ommers = {o1, o2};
+    tx.to = To;
+    expect.post[o1.beneficiary].balance = intx::uint256{block_reward} * (8 - o1.delta) / 8;
+    expect.post[o2.beneficiary].balance = intx::uint256{block_reward} * (8 - o2.delta) / 8;
+
+    // Two ommers +1/32 * block_reward for each. +21000 cost of the tx goes to coinbase.
+    expect.post[Coinbase].balance = 21000 + intx::uint256{block_reward} + block_reward / 16;
+}

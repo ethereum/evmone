@@ -34,6 +34,7 @@ target_sources(
     execution_state_test.cpp
     instructions_test.cpp
     state_bloom_filter_test.cpp
+    state_difficulty_test.cpp
     state_mpt_hash_test.cpp
     state_mpt_test.cpp
     state_new_account_address_test.cpp

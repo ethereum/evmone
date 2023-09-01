@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "../state/errors.hpp"
+#include "../state/ethash_difficulty.hpp"
 #include "../state/mpt_hash.hpp"
 #include "../state/rlp.hpp"
 #include "../statetest/statetest.hpp"
@@ -84,8 +85,24 @@ int main(int argc, const char* argv[])
         }
 
         json::json j_result;
-        // FIXME: Calculate difficulty properly
-        j_result["currentDifficulty"] = "0x20000";
+
+        // Difficulty was received from upstream. No need to calc
+        // TODO: Check if it's needed by the blockchain test. If not remove if statement true branch
+        if (block.difficulty != 0)
+            j_result["currentDifficulty"] = hex0x(block.difficulty);
+        else
+        {
+            const auto current_difficulty = state::calculate_difficulty(block.parent_difficulty,
+                block.parent_ommers_hash != EmptyListHash, block.parent_timestamp, block.timestamp,
+                block.number, rev);
+
+            j_result["currentDifficulty"] = hex0x(current_difficulty);
+            block.difficulty = current_difficulty;
+
+            if (rev < EVMC_PARIS)  // Override prev_randao with difficulty pre-Merge
+                block.prev_randao = intx::be::store<bytes32>(intx::uint256{current_difficulty});
+        }
+
         j_result["currentBaseFee"] = hex0x(block.base_fee);
 
         int64_t cumulative_gas_used = 0;
@@ -193,7 +210,8 @@ int main(int argc, const char* argv[])
                 }
             }
 
-            state::finalize(state, rev, block.coinbase, block_reward, block.withdrawals);
+            state::finalize(
+                state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
 
             j_result["logsHash"] = hex0x(logs_hash(txs_logs));
             j_result["stateRoot"] = hex0x(state::mpt_hash(state.get_accounts()));
