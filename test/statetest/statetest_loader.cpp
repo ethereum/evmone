@@ -192,9 +192,19 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
             block_hashes[from_json<int64_t>(j_num)] = from_json<hash256>(j_hash);
     }
 
+    std::vector<state::Ommer> ommers;
+    if (const auto ommers_it = j.find("ommers"); ommers_it != j.end())
+    {
+        for (const auto& ommer : *ommers_it)
+        {
+            ommers.push_back(
+                {from_json<evmc::address>(ommer.at("address")), ommer.at("delta").get<uint32_t>()});
+        }
+    }
+
     return {from_json<int64_t>(j.at("currentNumber")), from_json<int64_t>(j.at("currentTimestamp")),
         from_json<int64_t>(j.at("currentGasLimit")),
-        from_json<evmc::address>(j.at("currentCoinbase")), difficulty, base_fee,
+        from_json<evmc::address>(j.at("currentCoinbase")), difficulty, base_fee, std::move(ommers),
         std::move(withdrawals), std::move(block_hashes)};
 }
 

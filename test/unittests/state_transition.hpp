@@ -56,6 +56,7 @@ protected:
 
 
     evmc_revision rev = EVMC_SHANGHAI;
+    uint64_t block_reward = 0;
     BlockInfo block{
         .gas_limit = 1'000'000,
         .coinbase = Coinbase,

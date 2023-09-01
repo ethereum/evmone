@@ -218,3 +218,41 @@ TEST(statetest_loader, block_info_withdrawals)
     EXPECT_EQ(bi.withdrawals[1].recipient, 0x0000000000000000000000000000000000000200_address);
     EXPECT_EQ(bi.withdrawals[1].get_amount(), intx::uint256{0xffffffffffffffff} * 1'000'000'000);
 }
+
+TEST(statetest_loader, block_info_ommers)
+{
+    constexpr std::string_view input = R"({
+            "currentCoinbase": "0x1111111111111111111111111111111111111111",
+            "currentDifficulty": "0x0",
+            "currentGasLimit": "0x0",
+            "currentNumber": "0",
+            "currentTimestamp": "0",
+            "currentBaseFee": "7",
+            "currentRandom": "0x00",
+            "ommers": [
+                {
+                    "address": "0x0000000000000000000000000000000000000100",
+                    "delta": 1
+                },
+                {
+                    "address": "0x0000000000000000000000000000000000000200",
+                    "delta": 4
+                }
+            ],
+            "withdrawals": []
+        })";
+
+    const auto bi = test::from_json<state::BlockInfo>(json::json::parse(input));
+    EXPECT_EQ(bi.coinbase, 0x1111111111111111111111111111111111111111_address);
+    EXPECT_EQ(bi.prev_randao, 0x00_bytes32);
+    EXPECT_EQ(bi.gas_limit, 0x0);
+    EXPECT_EQ(bi.base_fee, 7);
+    EXPECT_EQ(bi.timestamp, 0);
+    EXPECT_EQ(bi.number, 0);
+    EXPECT_EQ(bi.withdrawals.size(), 0);
+    EXPECT_EQ(bi.ommers.size(), 2);
+    EXPECT_EQ(bi.ommers[0].beneficiary, 0x0000000000000000000000000000000000000100_address);
+    EXPECT_EQ(bi.ommers[0].delta, 1);
+    EXPECT_EQ(bi.ommers[1].beneficiary, 0x0000000000000000000000000000000000000200_address);
+    EXPECT_EQ(bi.ommers[1].delta, 4);
+}

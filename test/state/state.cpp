@@ -136,11 +136,24 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
 }
 
 void finalize(State& state, evmc_revision rev, const address& coinbase,
-    std::optional<uint64_t> block_reward, std::span<Withdrawal> withdrawals)
+    std::optional<uint64_t> block_reward, std::span<Ommer> ommers,
+    std::span<Withdrawal> withdrawals)
 {
     // TODO: The block reward can be represented as a withdrawal.
     if (block_reward.has_value())
-        state.touch(coinbase).balance += *block_reward;
+    {
+        const auto reward = *block_reward;
+        assert(reward % 32 == 0);  // Assume block reward is divisible by 32.
+        const auto reward_by_32 = reward / 32;
+        const auto reward_by_8 = reward / 8;
+
+        state.touch(coinbase).balance += reward + reward_by_32 * ommers.size();
+        for (const auto& ommer : ommers)
+        {
+            assert(ommer.delta > 0 && ommer.delta < 8);
+            state.touch(ommer.beneficiary).balance += reward_by_8 * (8 - ommer.delta);
+        }
+    }
 
     for (const auto& withdrawal : withdrawals)
         state.touch(withdrawal.recipient).balance += withdrawal.get_amount();

@@ -193,7 +193,8 @@ int main(int argc, const char* argv[])
                 }
             }
 
-            state::finalize(state, rev, block.coinbase, block_reward, block.withdrawals);
+            state::finalize(
+                state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
 
             j_result["logsHash"] = hex0x(logs_hash(txs_logs));
             j_result["stateRoot"] = hex0x(state::mpt_hash(state.get_accounts()));
