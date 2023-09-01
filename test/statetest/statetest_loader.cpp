@@ -157,16 +157,30 @@ state::Withdrawal from_json<state::Withdrawal>(const json::json& j)
 template <>
 state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
 {
-    evmc::bytes32 difficulty;
+    evmc::bytes32 prev_randao;
+    int64_t current_difficulty = 0;
+    int64_t parent_difficulty = 0;
     const auto prev_randao_it = j.find("currentRandom");
     const auto current_difficulty_it = j.find("currentDifficulty");
     const auto parent_difficulty_it = j.find("parentDifficulty");
+
+    if (current_difficulty_it != j.end())
+        current_difficulty = from_json<int64_t>(*current_difficulty_it);
+    if (parent_difficulty_it != j.end())
+        parent_difficulty = from_json<int64_t>(*parent_difficulty_it);
+
+    // When it's not defined init it with difficulty value.
     if (prev_randao_it != j.end())
-        difficulty = from_json<bytes32>(*prev_randao_it);
+        prev_randao = from_json<bytes32>(*prev_randao_it);
     else if (current_difficulty_it != j.end())
-        difficulty = from_json<bytes32>(*current_difficulty_it);
+        prev_randao = from_json<bytes32>(*current_difficulty_it);
     else if (parent_difficulty_it != j.end())
-        difficulty = from_json<bytes32>(*parent_difficulty_it);
+        prev_randao = from_json<bytes32>(*parent_difficulty_it);
+
+    hash256 parent_uncle_hash;
+    const auto parent_uncle_hash_it = j.find("parentUncleHash");
+    if (parent_uncle_hash_it != j.end())
+        parent_uncle_hash = from_json<hash256>(*parent_uncle_hash_it);
 
     uint64_t base_fee = 0;
     if (j.contains("currentBaseFee"))
@@ -202,10 +216,16 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
         }
     }
 
+    int64_t parent_timestamp = 0;
+    auto parent_timestamp_it = j.find("parentTimestamp");
+    if (parent_timestamp_it != j.end())
+        parent_timestamp = from_json<int64_t>(*parent_timestamp_it);
+
     return {from_json<int64_t>(j.at("currentNumber")), from_json<int64_t>(j.at("currentTimestamp")),
-        from_json<int64_t>(j.at("currentGasLimit")),
-        from_json<evmc::address>(j.at("currentCoinbase")), difficulty, base_fee, std::move(ommers),
-        std::move(withdrawals), std::move(block_hashes)};
+        parent_timestamp, from_json<int64_t>(j.at("currentGasLimit")),
+        from_json<evmc::address>(j.at("currentCoinbase")), current_difficulty, parent_difficulty,
+        parent_uncle_hash, prev_randao, base_fee, std::move(ommers), std::move(withdrawals),
+        std::move(block_hashes)};
 }
 
 template <>

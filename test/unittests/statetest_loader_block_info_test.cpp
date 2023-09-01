@@ -139,7 +139,7 @@ TEST(statetest_loader, block_info_0_parent_difficulty)
         "parentBaseFee": "7",
         "parentGasUsed": "0",
         "parentGasLimit": "100000000000000000",
-        "parentTimstamp": "0",
+        "parentTimestamp": "253",
         "blockHashes": {
             "0": "0xc305d826e3784046a7e9d31128ef98d3e96133fe454c16ef630574d967dfdb1a"
         },
@@ -155,6 +155,7 @@ TEST(statetest_loader, block_info_0_parent_difficulty)
     EXPECT_EQ(bi.base_fee, 7);
     EXPECT_EQ(bi.timestamp, 1000);
     EXPECT_EQ(bi.number, 1);
+    EXPECT_EQ(bi.parent_timestamp, 253);
 }
 
 TEST(statetest_loader, block_info_0_random)

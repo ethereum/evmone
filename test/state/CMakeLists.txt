@@ -12,6 +12,8 @@ target_sources(
     bloom_filter.hpp
     bloom_filter.cpp
     errors.hpp
+    ethash_difficulty.hpp
+    ethash_difficulty.cpp
     hash_utils.hpp
     hash_utils.cpp
     host.hpp
