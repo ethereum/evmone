@@ -466,13 +466,16 @@ jobs:
     steps:
       - build
       - download_execution_tests:
-          rev: v12.2
+          commit: 9b00b68593f5869eb51a6659e1cc983e875e616b
       - run:
           name: "State tests"
           working_directory: ~/build
-          command: |
-            export EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json 
-            bin/evmone-statetest ~/tests/GeneralStateTests ~/tests/LegacyTests/Constantinople/GeneralStateTests
+          command: >
+            EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json 
+            bin/evmone-statetest 
+            ~/tests/GeneralStateTests 
+            ~/tests/LegacyTests/Constantinople/GeneralStateTests
+            ~/tests/EIPTests/StateTests/stEIP1153-transientStorage
       - download_execution_tests:
           repo: ipsilon/tests
           rev: eof-rjumpv-20230803
