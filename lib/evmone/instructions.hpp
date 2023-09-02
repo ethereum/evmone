@@ -764,6 +764,25 @@ inline Result gas(StackTop stack, int64_t gas_left, ExecutionState& /*state*/) n
     return {EVMC_SUCCESS, gas_left};
 }
 
+inline void tload(StackTop stack, ExecutionState& state) noexcept
+{
+    auto& x = stack.top();
+    const auto key = intx::be::store<evmc::bytes32>(x);
+    const auto value = state.host.get_transient_storage(state.msg->recipient, key);
+    x = intx::be::load<uint256>(value);
+}
+
+inline Result tstore(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
+{
+    if (state.in_static_mode())
+        return {EVMC_STATIC_MODE_VIOLATION, 0};
+
+    const auto key = intx::be::store<evmc::bytes32>(stack.pop());
+    const auto value = intx::be::store<evmc::bytes32>(stack.pop());
+    state.host.set_transient_storage(state.msg->recipient, key, value);
+    return {EVMC_SUCCESS, gas_left};
+}
+
 inline void push0(StackTop stack) noexcept
 {
     stack.push({});

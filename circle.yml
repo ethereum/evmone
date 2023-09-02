@@ -440,7 +440,8 @@ jobs:
     steps:
       - build
       - build_silkworm:
-          commit: 3cc504f91460667e9417bb825d0f652dbcc8efc1
+          branch: evmc-v11.0.0-alpha.1
+          commit: evmc-v11.0.0-alpha.1
       - download_execution_tests:
           rev: v12.2
       - run:
@@ -465,13 +466,16 @@ jobs:
     steps:
       - build
       - download_execution_tests:
-          rev: v12.2
+          commit: 9b00b68593f5869eb51a6659e1cc983e875e616b
       - run:
           name: "State tests"
           working_directory: ~/build
-          command: |
-            export EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json 
-            bin/evmone-statetest ~/tests/GeneralStateTests ~/tests/LegacyTests/Constantinople/GeneralStateTests
+          command: >
+            EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json 
+            bin/evmone-statetest 
+            ~/tests/GeneralStateTests 
+            ~/tests/LegacyTests/Constantinople/GeneralStateTests
+            ~/tests/EIPTests/StateTests/stEIP1153-transientStorage
       - download_execution_tests:
           repo: ipsilon/tests
           rev: eof-rjumpv-20230803
