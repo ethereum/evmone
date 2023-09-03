@@ -9,6 +9,8 @@ target_sources(
     evmone_precompiles PRIVATE
     bn254.cpp
     bn254.hpp
+    bls12.cpp
+    bls12.hpp
     ecc.hpp
     poly_extension_field.hpp
     secp256k1.cpp

@@ -6,24 +6,27 @@
 #include "ecc.hpp"
 #include "poly_extension_field.hpp"
 
-using intx::operator""_u256;
-using intx::uint256;
-
-inline constexpr auto BN254Mod =
-    0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47_u256;
-
-namespace evmmax::bn254
+inline constexpr intx::uint384 operator"" _u384(const char* s)
 {
-using Point = ecc::Point<uint256>;
-using ProjPoint = ecc::ProjPoint<uint256>;
+    return intx::from_string<intx::uint384>(s);
+}
+
+inline constexpr auto BLS12Mod =
+    0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab_u384;
+
+namespace evmmax::bls12
+{
+using intx::uint384;
+using Point = ecc::Point<uint384>;
+using ProjPoint = ecc::ProjPoint<uint384>;
 
 struct ModCoeffs2
 {
     static constexpr uint8_t DEGREE = 2;
     // Polynomial modulus FQ2 (x^2 + 1). Coefficients in Montgomery form.
-    static constexpr const std::pair<uint8_t, uint256> MODULUS_COEFFS[1] = {
+    static constexpr const std::pair<uint8_t, uint384> MODULUS_COEFFS[1] = {
         /* 1 in mont */ {
-            0, 0xe0a77c19a07df2f666ea36f7879462c0a78eb28f5c70b3dd35d438dc58f0d9d_u256}};
+            0, 0xe0a77c19a07df2f666ea36f7879462c0a78eb28f5c70b3dd35d438dc58f0d9d_u384}};
     // Implied + [1 in mont form]
 };
 
@@ -31,44 +34,44 @@ struct ModCoeffs12
 {
     static constexpr uint8_t DEGREE = 12;
     // Polynomial modulus FQ2 (x^12 -18x^6 + 82). Coefficients in Montgomery form.
-    static constexpr std::pair<uint8_t, uint256> MODULUS_COEFFS[2] = {
+    static constexpr std::pair<uint8_t, uint384> MODULUS_COEFFS[2] = {
         /* 82 in mont */ {
-            0, 0x26574fb11b10196f403a164ef43989b2be1ac00e5788671d4cf30d5bd4979ae9_u256},
+            0, 0x26574fb11b10196f403a164ef43989b2be1ac00e5788671d4cf30d5bd4979ae9_u384},
         /* (-18 == mod - 18) in mont */
-        {6, 0x259d6b14729c0fa51e1a247090812318d087f6872aabf4f68c3488912edefaa0_u256}};
+        {6, 0x259d6b14729c0fa51e1a247090812318d087f6872aabf4f68c3488912edefaa0_u384}};
     // Implied + [1 in mont form]
 };
 
-class BN254ModArith : public ModArith<uint256>
+class BLS12ModArith : public ModArith<uint384>
 {
 public:
-    explicit BN254ModArith() : ModArith<uint256>(BN254Mod) {}
+    explicit BLS12ModArith() : ModArith<uint384>(BLS12Mod) {}
 
-    uint256 inv(const uint256& x) const noexcept;
+    uint384 inv(const uint384& x) const noexcept;
 
-    uint256 div(const uint256& x, const uint256& y) const noexcept;
+    uint384 div(const uint384& x, const uint384& y) const noexcept;
 
-    uint256 pow(const uint256& x, const uint256& y) const noexcept;
+    uint384 pow(const uint384& x, const uint384& y) const noexcept;
 
-    uint256 neg(const uint256& x) const noexcept;
+    uint384 neg(const uint384& x) const noexcept;
 
     // Calculates Montgomery form for integer literal. Used for optimization only.
     template <size_t N>
-    uint256 in_mont() const noexcept
+    uint384 in_mont() const noexcept
     {
         static const auto n_value = to_mont(N);
         return n_value;
     }
 
-    uint256 one_mont() const noexcept { return in_mont<1>(); }
+    uint384 one_mont() const noexcept { return in_mont<1>(); }
 
-    using UIntType = uint256;
+    using UIntType = uint384;
 };
 
 ProjPoint point_addition_mixed_a0(
-    const evmmax::ModArith<uint256>& s, const Point& p, const Point& q, const uint256& b3) noexcept;
+    const evmmax::ModArith<uint384>& s, const Point& p, const Point& q, const uint384& b3) noexcept;
 
-inline uint256 expmod(const evmmax::ModArith<uint256>& s, uint256 base, uint256 exponent) noexcept
+inline uint384 expmod(const evmmax::ModArith<uint384>& s, uint384 base, uint384 exponent) noexcept
 {
     auto result = s.to_mont(1);
 
@@ -116,23 +119,23 @@ struct PointExt
 
 bool validate(const Point& pt) noexcept;
 
-Point bn254_add(const Point& pt1, const Point& pt2) noexcept;
-Point bn254_mul(const Point& pt, const uint256& c) noexcept;
+Point bls12_add(const Point& pt1, const Point& pt2) noexcept;
+Point bls12_mul(const Point& pt, const uint384& c) noexcept;
 
-bool bn254_add_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept;
-bool bn254_mul_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept;
-bool bn254_ecpairing_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept;
+bool bls12_add_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept;
+bool bls12_mul_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept;
+bool bls12_ecpairing_precompile(const uint8_t* input, size_t input_size, uint8_t* output) noexcept;
 
 // Extension field FQ2 (x^2 + 1) element
-using FE2 = PolyExtFieldElem<BN254ModArith, ModCoeffs2>;
+using FE2 = PolyExtFieldElem<BLS12ModArith, ModCoeffs2>;
 // Extension field FQ12 (x^12 -18x^6 + 82) element
-using FE12 = PolyExtFieldElem<BN254ModArith, ModCoeffs12>;
+using FE12 = PolyExtFieldElem<BLS12ModArith, ModCoeffs12>;
 // Point of dwo dim space (FQ2xFQ2)
 using FE2Point = PointExt<FE2>;
 // Point of dwo dim space (FQ12xFQ12)
 using FE12Point = PointExt<FE12>;
 
-bool is_on_curve_b(const uint256& x, const uint256& y, const uint256& z) noexcept;
+bool is_on_curve_b(const uint384& x, const uint384& y, const uint384& z) noexcept;
 bool is_on_curve_b2(const FE2Point& p) noexcept;
 bool is_on_curve_b12(const FE12Point& p) noexcept;
 
@@ -158,15 +161,15 @@ PointExt<FieldElemT> point_add(
 
 // Elliptic curve point multiplication over extension field
 template <typename FieldElemT>
-PointExt<FieldElemT> point_multiply(const PointExt<FieldElemT>& pt, const uint256& n) noexcept;
+PointExt<FieldElemT> point_multiply(const PointExt<FieldElemT>& pt, const uint384& n) noexcept;
 
-// Miller loop for pairing bn254 curve points.
+// Miller loop for pairing bls12 curve points.
 FE12 miller_loop(const FE12Point& Q, const FE12Point& P, bool run_final_exp) noexcept;
 
-// Computes paring of bn254 curve points.
-FE12 bn254_pairing(const FE2Point& Q, const Point& P) noexcept;
+// Computes paring of bls12 curve points.
+FE12 bls12_pairing(const FE2Point& Q, const Point& P) noexcept;
 
-// Computes final exponentiation of bn254 pairing result.
+// Computes final exponentiation of bls12 pairing result.
 FE12 final_exponentiation(const FE12& a) noexcept;
 
-}  // namespace evmmax::bn254
+}  // namespace evmmax::bls12
