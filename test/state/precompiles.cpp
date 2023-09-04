@@ -145,7 +145,7 @@ PrecompileAnalysis expmod_analyze(bytes_view input, evmc_revision rev) noexcept
 ExecutionResult identity_execute(const uint8_t* input, size_t input_size, uint8_t* output,
     [[maybe_unused]] size_t output_size) noexcept
 {
-    assert(output_size == input_size);
+    assert(output_size >= input_size);
     std::copy_n(input, input_size, output);
     return {EVMC_SUCCESS, input_size};
 }
@@ -221,11 +221,15 @@ std::optional<evmc::Result> call_precompile(evmc_revision rev, const evmc_messag
     if (auto r = cache.find(static_cast<PrecompileId>(id), input, gas_left); r.has_value())
         return r;
 
-    uint8_t output_buf[256];  // Big enough to handle all "expmod" tests.
+    // Buffer for the precompile's output.
+    // Big enough to handle all "expmod" tests, but in case does not match the size requirement
+    // from analysis, the result will likely be incorrect.
+    // TODO: Replace with std::pmr::monotonic_buffer_resource?
+    uint8_t output_buf[4096];
     assert(std::size(output_buf) >= max_output_size);
 
     const auto [status_code, output_size] =
-        execute(msg.input_data, msg.input_size, output_buf, max_output_size);
+        execute(msg.input_data, msg.input_size, output_buf, std::size(output_buf));
 
     evmc::Result result{
         status_code, status_code == EVMC_SUCCESS ? gas_left : 0, 0, output_buf, output_size};
