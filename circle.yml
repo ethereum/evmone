@@ -331,7 +331,7 @@ jobs:
     executor: win/server-2022
     environment:
       CMAKE_BUILD_TYPE: Release
-      CMAKE_BUILD_PARALLEL_LEVEL: 4
+      CMAKE_BUILD_PARALLEL_LEVEL: 1
     steps:
       - checkout
       - checkout_submodules
