@@ -24,15 +24,23 @@ TEST_F(state_transition, known_block_hash)
         {2, 0x0000000000000000000000000000000000000000000000000000000000000111_bytes32}};
     block.number = 5;
 
-    const auto code =
-        push(1) + OP_BLOCKHASH + push(0) + OP_SSTORE + push(2) + OP_BLOCKHASH + push(1) + OP_SSTORE;
-
     tx.to = To;
-    pre.insert(*tx.to, {.nonce = 1, .code = code});
+    pre.insert(*tx.to, {.nonce = 1, .code = sstore(0, blockhash(1)) + sstore(1, blockhash(2))});
     expect.post[To].storage[0x00_bytes32] =
         0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421_bytes32;
     expect.post[To].storage[0x01_bytes32] =
         0x0000000000000000000000000000000000000000000000000000000000000111_bytes32;
+}
+
+TEST_F(state_transition, known_block_hash_fake)
+{
+    block.number = 2;
+    tx.to = To;
+    pre.insert(*tx.to, {.nonce = 1, .code = sstore(0, blockhash(0)) + sstore(1, blockhash(1))});
+    expect.post[To].storage[0x00_bytes32] =
+        0x044852b2a670ade5407e78fb2863c51de9fcb96542a07186fe3aeda6bb8a116d_bytes32;
+    expect.post[To].storage[0x01_bytes32] =
+        0xc89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6_bytes32;
 }
 
 TEST_F(state_transition, block_apply_ommers_reward)
