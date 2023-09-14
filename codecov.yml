@@ -1,3 +1,6 @@
+codecov:
+  require_ci_to_pass: false
+
 comment:
   layout: "diff, flags, files"
 
