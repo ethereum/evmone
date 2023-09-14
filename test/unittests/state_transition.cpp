@@ -33,7 +33,9 @@ void state_transition::TearDown()
     auto& selected_vm = trace ? tracing_vm : vm;
 
     /// Optionally enable trace capturing in form of a RAII object.
-    const auto trace_capture = trace ? std::optional<TraceCapture>{std::in_place} : std::nullopt;
+    std::optional<TraceCapture> trace_capture;
+    if (trace)
+        trace_capture.emplace();
 
     const auto res = evmone::state::transition(state, block, tx, rev, selected_vm, block.gas_limit);
 
