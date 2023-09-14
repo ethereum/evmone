@@ -32,6 +32,7 @@ protected:
     static constexpr auto Coinbase = 0xc014bace_address;
 
     static inline evmc::VM vm{evmc_create_evmone()};
+    static inline evmc::VM tracing_vm{evmc_create_evmone(), {{"trace", "1"}}};
 
     struct ExpectedAccount
     {
@@ -48,10 +49,18 @@ protected:
         /// The rest of Expectation is ignored if the error is expected.
         ErrorCode tx_error = SUCCESS;
 
+        /// The expected EVM status code of the transaction execution.
         evmc_status_code status = EVMC_SUCCESS;
+
+        /// The expected amount of gas used by the transaction.
         std::optional<int64_t> gas_used;
 
+        /// The expected post-execution state.
         std::unordered_map<address, ExpectedAccount> post;
+
+        /// The expected EVM execution trace. If not empty transaction execution will be performed
+        /// with tracing enabled and the output compared.
+        std::string_view trace;
     };
 
 

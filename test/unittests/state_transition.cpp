@@ -15,10 +15,27 @@ void state_transition::SetUp()
     expect.post[tx.sender].exists = true;
 }
 
+class TraceCapture
+{
+    std::streambuf* m_orig_rdbuf = nullptr;
+    std::ostringstream m_trace_stream;
+
+public:
+    TraceCapture() { m_orig_rdbuf = std::clog.rdbuf(m_trace_stream.rdbuf()); }
+    ~TraceCapture() { std::clog.rdbuf(m_orig_rdbuf); }
+    [[maybe_unused]] std::string get_capture() const { return m_trace_stream.str(); }
+};
+
 void state_transition::TearDown()
 {
     auto state = pre;
-    const auto res = evmone::state::transition(state, block, tx, rev, vm, block.gas_limit);
+    const auto trace = !expect.trace.empty();
+    auto& selected_vm = trace ? tracing_vm : vm;
+
+    /// Optionally enable trace capturing in form of a RAII object.
+    const auto trace_capture = trace ? std::optional<TraceCapture>{std::in_place} : std::nullopt;
+
+    const auto res = evmone::state::transition(state, block, tx, rev, selected_vm, block.gas_limit);
 
     if (const auto expected_error = make_error_code(expect.tx_error))
     {
@@ -90,6 +107,13 @@ void state_transition::TearDown()
     for (const auto& [addr, _] : state.get_accounts())
     {
         EXPECT_TRUE(expect.post.contains(addr)) << "unexpected account " << addr;
+    }
+
+    if (trace)
+    {
+        if (expect.trace.starts_with('\n'))  // It's easier to define expected trace with \n.
+            expect.trace.remove_prefix(1);
+        EXPECT_EQ(trace_capture->get_capture(), expect.trace);
     }
 }
 }  // namespace evmone::test
