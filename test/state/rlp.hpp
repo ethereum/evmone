@@ -21,7 +21,7 @@ namespace internal
 template <uint8_t ShortBase, uint8_t LongBase>
 inline bytes encode_length(size_t l)
 {
-    static constexpr auto short_cutoff = 55;
+    static constexpr uint8_t short_cutoff = 55;
     static_assert(ShortBase + short_cutoff <= 0xff);
     assert(l <= 0xffffff);
 
