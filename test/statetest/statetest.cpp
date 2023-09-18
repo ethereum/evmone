@@ -14,27 +14,28 @@ class StateTest : public testing::Test
 {
     fs::path m_json_test_file;
     evmc::VM& m_vm;
+    bool m_trace = false;
 
 public:
-    explicit StateTest(fs::path json_test_file, evmc::VM& vm) noexcept
-      : m_json_test_file{std::move(json_test_file)}, m_vm{vm}
+    explicit StateTest(fs::path json_test_file, evmc::VM& vm, bool trace) noexcept
+      : m_json_test_file{std::move(json_test_file)}, m_vm{vm}, m_trace{trace}
     {}
 
     void TestBody() final
     {
         std::ifstream f{m_json_test_file};
-        evmone::test::run_state_test(evmone::test::load_state_test(f), m_vm);
+        evmone::test::run_state_test(evmone::test::load_state_test(f), m_vm, m_trace);
     }
 };
 
-void register_test(const std::string& suite_name, const fs::path& file, evmc::VM& vm)
+void register_test(const std::string& suite_name, const fs::path& file, evmc::VM& vm, bool trace)
 {
     testing::RegisterTest(suite_name.c_str(), file.stem().string().c_str(), nullptr, nullptr,
         file.string().c_str(), 0,
-        [file, &vm]() -> testing::Test* { return new StateTest(file, vm); });
+        [file, &vm, trace]() -> testing::Test* { return new StateTest(file, vm, trace); });
 }
 
-void register_test_files(const fs::path& root, evmc::VM& vm)
+void register_test_files(const fs::path& root, evmc::VM& vm, bool trace)
 {
     if (is_directory(root))
     {
@@ -46,11 +47,11 @@ void register_test_files(const fs::path& root, evmc::VM& vm)
         std::sort(test_files.begin(), test_files.end());
 
         for (const auto& p : test_files)
-            register_test(fs::relative(p, root).parent_path().string(), p, vm);
+            register_test(fs::relative(p, root).parent_path().string(), p, vm, trace);
     }
     else  // Treat as a file.
     {
-        register_test(root.parent_path().string(), root, vm);
+        register_test(root.parent_path().string(), root, vm, trace);
     }
 }
 }  // namespace
@@ -80,18 +81,21 @@ int main(int argc, char* argv[])
             ->required()
             ->check(CLI::ExistingPath);
 
-        bool trace_flag = false;
-        app.add_flag("--trace", trace_flag, "Enable EVM tracing");
+        bool trace = false;
+        bool trace_summary = false;
+        const auto trace_opt = app.add_flag("--trace", trace, "Enable EVM tracing");
+        app.add_flag("--trace-summary", trace_summary, "Output trace summary only")
+            ->excludes(trace_opt);
 
         CLI11_PARSE(app, argc, argv);
 
         evmc::VM vm{evmc_create_evmone(), {{"O", "0"}}};
 
-        if (trace_flag)
+        if (trace)
             vm.set_option("trace", "1");
 
         for (const auto& p : paths)
-            register_test_files(p, vm);
+            register_test_files(p, vm, trace || trace_summary);
 
         return RUN_ALL_TESTS();
     }

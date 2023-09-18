@@ -74,7 +74,6 @@ TEST(statetest_loader, load_minimal_test)
 {
     std::istringstream s{R"({
         "test": {
-            "_info": {},
             "pre": {},
             "transaction": {
                 "gasPrice": "",

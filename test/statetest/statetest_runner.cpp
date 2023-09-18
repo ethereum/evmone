@@ -9,7 +9,7 @@
 
 namespace evmone::test
 {
-void run_state_test(const StateTransitionTest& test, evmc::VM& vm)
+void run_state_test(const StateTransitionTest& test, evmc::VM& vm, bool trace_summary)
 {
     for (const auto& [rev, cases] : test.cases)
     {
@@ -33,12 +33,30 @@ void run_state_test(const StateTransitionTest& test, evmc::VM& vm)
             // Finalize block with reward 0.
             state::finalize(state, rev, test.block.coinbase, 0, {}, {});
 
+            const auto state_root = state::mpt_hash(state.get_accounts());
+
+            if (trace_summary)
+            {
+                std::clog << '{';
+                if (holds_alternative<state::TransactionReceipt>(res))  // if tx valid
+                {
+                    const auto& r = get<state::TransactionReceipt>(res);
+                    if (r.status == EVMC_SUCCESS)
+                        std::clog << R"("pass":true)";
+                    else
+                        std::clog << R"("pass":false,"error":")" << r.status << '"';
+                    std::clog << R"(,"gasUsed":"0x)" << std::hex << r.gas_used << R"(",)";
+                }
+                std::clog << R"("stateRoot":"0x)" << hex(state_root) << "\"}\n";
+            }
+
             if (holds_alternative<state::TransactionReceipt>(res))
                 EXPECT_EQ(logs_hash(get<state::TransactionReceipt>(res).logs), expected.logs_hash);
             else
-                EXPECT_TRUE(expected.exception);
+                EXPECT_TRUE(expected.exception)
+                    << "unexpected invalid transaction: " << get<std::error_code>(res).message();
 
-            EXPECT_EQ(state::mpt_hash(state.get_accounts()), expected.state_hash);
+            EXPECT_EQ(state_root, expected.state_hash);
         }
     }
 }
