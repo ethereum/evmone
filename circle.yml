@@ -86,6 +86,14 @@ commands:
           command: |
             curl -L https://github.com/Kitware/CMake/releases/download/v<<parameters.version>>/cmake-<<parameters.version>>-linux-x86_64.tar.gz | sudo tar -xz --strip=1
 
+  install_riscv_toolchain:
+    steps:
+      - run:
+          name: "Install RISC-V Toolchain"
+          working_directory: /usr/local
+          command: |
+            curl -L https://github.com/riscv-collab/riscv-gnu-toolchain/releases/download/2023.07.07/riscv32-glibc-ubuntu-22.04-llvm-nightly-2023.07.07-nightly.tar.gz | sudo tar -xz
+
   checkout_submodules:
     steps:
       - run:
@@ -659,6 +667,16 @@ jobs:
           working_directory: ~/build
           command: (! qemu-x86_64-static bin/evmone-unittests 2>&1) | grep "CPU does not support"
 
+  riscv32:
+    executor: linux-gcc-latest
+    environment:
+      BUILD_TYPE: Release
+      CMAKE_OPTIONS: -DCMAKE_TOOLCHAIN_FILE=~/project/cmake/toolchains/riscv32.cmake
+    steps:
+      - install_riscv_toolchain
+      - build
+      - test
+
 
 
 workflows:
@@ -705,4 +723,5 @@ workflows:
       # - xcode-min
       - gcc-32bit
       - x86-64-v1
+      - riscv32
       - fuzzing
