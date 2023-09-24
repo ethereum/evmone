@@ -191,6 +191,12 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
     const BlockInfo& block, const Transaction& tx, evmc_revision rev,
     int64_t block_gas_left) noexcept;
 
+/// Performs the system call.
+///
+/// Executes code at pre-defined accounts from the system sender (0xff...fe).
+/// The sender's nonce is not increased.
+void system_call(State& state, const BlockInfo& block, evmc_revision rev, evmc::VM& vm);
+
 /// Defines how to RLP-encode a Transaction.
 [[nodiscard]] bytes rlp_encode(const Transaction& tx);
 
