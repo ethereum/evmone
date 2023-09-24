@@ -97,6 +97,7 @@ struct BlockInfo
     int64_t parent_difficulty = 0;
     hash256 parent_ommers_hash;
     bytes32 prev_randao;
+    hash256 parent_beacon_block_root;
     uint64_t base_fee = 0;
     std::vector<Ommer> ommers;
     std::vector<Withdrawal> withdrawals;

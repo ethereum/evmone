@@ -35,6 +35,7 @@ struct BlockHeader
     hash256 hash;
     hash256 transactions_root;
     hash256 withdrawal_root;
+    hash256 parent_beacon_block_root;
 };
 
 struct TestBlock

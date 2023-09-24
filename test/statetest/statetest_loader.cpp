@@ -231,6 +231,7 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
         .parent_difficulty = parent_difficulty,
         .parent_ommers_hash = parent_uncle_hash,
         .prev_randao = prev_randao,
+        .parent_beacon_block_root = {},
         .base_fee = base_fee,
         .ommers = std::move(ommers),
         .withdrawals = std::move(withdrawals),
