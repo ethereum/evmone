@@ -36,12 +36,22 @@ class Host : public evmc::Host
     const BlockInfo& m_block;
     const Transaction& m_tx;
     std::vector<Log> m_logs;
+    std::vector<const uint8_t*> m_initcode_ptrs;
+    std::vector<size_t> m_initcode_sizes;
 
 public:
     Host(evmc_revision rev, evmc::VM& vm, State& state, const BlockInfo& block,
         const Transaction& tx) noexcept
       : m_rev{rev}, m_vm{vm}, m_state{state}, m_block{block}, m_tx{tx}
-    {}
+    {
+        m_initcode_ptrs.reserve(tx.initcodes.size());
+        m_initcode_sizes.reserve(tx.initcodes.size());
+        for (const auto& initcode : tx.initcodes)
+        {
+            m_initcode_ptrs.push_back(initcode.data());
+            m_initcode_sizes.push_back(initcode.size());
+        }
+    }
 
     [[nodiscard]] std::vector<Log>&& take_logs() noexcept { return std::move(m_logs); }
 

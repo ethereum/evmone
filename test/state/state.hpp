@@ -123,6 +123,13 @@ struct Transaction
         /// The typed transaction with priority gas price.
         /// Introduced by EIP-1559 https://eips.ethereum.org/EIPS/eip-1559.
         eip1559 = 2,
+
+        /// The blob transaction.
+        /// Introduced by EIP-4844 https://eips.ethereum.org/EIPS/eip-4844.
+        // blob = 3,
+
+        /// The typed transaction with initcode list.
+        initcodes = 4,
     };
 
     Type type = Type::legacy;
@@ -139,6 +146,7 @@ struct Transaction
     intx::uint256 r;
     intx::uint256 s;
     uint8_t v = 0;
+    std::vector<bytes> initcodes;
 };
 
 struct Log

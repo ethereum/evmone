@@ -342,7 +342,7 @@ evmc_tx_context Host::get_tx_context() const noexcept
         0x01_bytes32,                              // Chain ID is expected to be 1.
         uint256be{m_block.base_fee}, uint256be{},  // TODO: Add blob base fee.
         nullptr,                                   // TODO: Add blob hashes.
-        0, nullptr, nullptr, 0};
+        0, m_initcode_ptrs.data(), m_initcode_sizes.data(), m_tx.initcodes.size()};
 }
 
 bytes32 Host::get_block_hash(int64_t block_number) const noexcept
