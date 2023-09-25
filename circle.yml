@@ -58,13 +58,13 @@ executors:
   macos:
     resource_class: macos.x86.medium.gen2
     macos:
-      xcode: 14.3.1
+      xcode: 15.0.0
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 4
   macos-m1:
     resource_class: macos.m1.large.gen1
     macos:
-      xcode: 14.3.1
+      xcode: 15.0.0
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 8
   macos-xcode-min:
@@ -451,7 +451,7 @@ jobs:
           branch: evmc-v11.0.0-alpha.1
           commit: evmc-v11.0.0-alpha.1
       - download_execution_tests:
-          rev: v12.2
+          rev: v12.4
       - run:
           name: "Silkworm-driven blockchain tests (Advanced)"
           working_directory: ~/build
@@ -474,7 +474,7 @@ jobs:
     steps:
       - build
       - download_execution_tests:
-          commit: 9b00b68593f5869eb51a6659e1cc983e875e616b
+          rev: v12.4
       - run:
           name: "State tests"
           working_directory: ~/build
@@ -508,7 +508,7 @@ jobs:
           command: sudo apt-get -q update && sudo apt-get -qy install libgmp-dev
       - build
       - download_execution_tests:
-          rev: v12.2
+          rev: v12.4
       - run:
           name: "State tests"
           working_directory: ~/build
@@ -719,8 +719,7 @@ workflows:
       - clang-latest-sanitizers
       - clang-latest-coverage
       - macos-asan
-      # TODO: Re-enable on next Xcode upgrade
-      # - xcode-min
+      - xcode-min
       - gcc-32bit
       - x86-64-v1
       - riscv32
