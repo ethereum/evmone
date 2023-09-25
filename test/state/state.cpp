@@ -107,7 +107,7 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
     if (!sender_acc.code.empty())
         return make_error_code(SENDER_NOT_EOA);  // Origin must not be a contract (EIP-3607).
 
-    if (sender_acc.nonce == Account::NonceMax)
+    if (sender_acc.nonce == Account::NonceMax)  // Nonce value limit (EIP-2681).
         return make_error_code(NONCE_HAS_MAX_VALUE);
 
     if (sender_acc.nonce < tx.nonce)

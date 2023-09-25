@@ -140,28 +140,29 @@ address compute_new_account_address(const address& sender, uint64_t sender_nonce
 
 std::optional<evmc_message> Host::prepare_message(evmc_message msg)
 {
-    auto& sender_acc = m_state.get(msg.sender);
-    const auto sender_nonce = sender_acc.nonce;
-
-    // Bump sender nonce.
     if (msg.depth == 0 || msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2)
     {
+        auto& sender_acc = m_state.get(msg.sender);
+        const auto sender_nonce = sender_acc.nonce;
+
+        // EIP-2681 (already checked for depth 0 during transaction validation).
         if (sender_nonce == Account::NonceMax)
-            return {};  // Light early exception, cannot happen for depth == 0.
-        ++sender_acc.nonce;
-    }
+            return {};  // Light early exception.
 
-    if (msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2)
-    {
-        // Compute and fill create address.
-        assert(msg.recipient == address{});
-        assert(msg.code_address == address{});
-        msg.recipient = compute_new_account_address(msg.sender, sender_nonce,
-            (msg.kind == EVMC_CREATE2) ? std::optional{msg.create2_salt} : std::nullopt,
-            {msg.input_data, msg.input_size});
+        ++sender_acc.nonce;  // Bump sender nonce.
 
-        // By EIP-2929, the  access to new created address is never reverted.
-        access_account(msg.recipient);
+        if (msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2)
+        {
+            // Compute and set the address of the account being created.
+            assert(msg.recipient == address{});
+            assert(msg.code_address == address{});
+            msg.recipient = compute_new_account_address(msg.sender, sender_nonce,
+                (msg.kind == EVMC_CREATE2) ? std::optional{msg.create2_salt} : std::nullopt,
+                {msg.input_data, msg.input_size});
+
+            // By EIP-2929, the access to new created address is never reverted.
+            access_account(msg.recipient);
+        }
     }
 
     return msg;
@@ -252,9 +253,10 @@ evmc::Result Host::execute_message(const evmc_message& msg) noexcept
     auto* const dst_acc =
         (msg.kind == EVMC_CALL) ? &m_state.touch(msg.recipient) : m_state.find(msg.code_address);
 
-    if (msg.kind == EVMC_CALL)
+    if (msg.kind == EVMC_CALL && !evmc::is_zero(msg.value))
     {
-        // Transfer value.
+        // Transfer value: sender → recipient.
+        // The sender's balance is already checked therefore the sender account must exist.
         const auto value = intx::be::load<intx::uint256>(msg.value);
         assert(m_state.get(msg.sender).balance >= value);
         m_state.get(msg.sender).balance -= value;

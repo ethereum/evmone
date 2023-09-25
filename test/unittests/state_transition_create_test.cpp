@@ -32,3 +32,15 @@ TEST_F(state_transition, create_tx)
 
     expect.post[create_address].code = bytes{0xFE};
 }
+
+TEST_F(state_transition, create2_max_nonce)
+{
+    // The address to be created by CREATE2 of the "To" sender and empty initcode.
+    static constexpr auto create_address = 0x36fd63ce1cb5ee2993f19d1fae4e84d52f6f1595_address;
+
+    tx.to = To;
+    pre.insert(*tx.to, {.nonce = ~uint64_t{0}, .code = create2()});
+
+    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // Nonce is unchanged.
+    expect.post[create_address].exists = false;
+}
