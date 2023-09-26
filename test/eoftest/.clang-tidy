@@ -1,0 +1,3 @@
+InheritParentConfig: true
+Checks: >
+  -clang-analyzer-cplusplus.NewDeleteLeaks

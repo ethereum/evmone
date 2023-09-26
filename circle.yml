@@ -486,13 +486,18 @@ jobs:
             ~/tests/EIPTests/StateTests/stEIP1153-transientStorage
       - download_execution_tests:
           repo: ipsilon/tests
-          rev: eof-rjumpv-20230803
+          rev: eof-update-20230828
           legacy: false
       - run:
           name: "State tests (EOF)"
           working_directory: ~/build
           command: |
             bin/evmone-statetest ~/tests/EIPTests/StateTests/stEOF
+      - run:
+          name: "EOF validation tests"
+          working_directory: ~/build
+          command: |
+            bin/evmone-eoftest ~/tests/EOFTests
       - collect_coverage_gcc
       - upload_coverage:
           flags: statetests
