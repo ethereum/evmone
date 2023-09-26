@@ -54,4 +54,12 @@ BloomFilter compute_bloom_filter(std::span<const TransactionReceipt> receipts) n
     return res;
 }
 
+BloomFilter bloom_filter_from_bytes(const bytes_view& data) noexcept
+{
+    assert(data.size() == 256);
+    BloomFilter res;
+    std::copy(std::begin(data), std::end(data), std::begin(res.bytes));
+    return res;
+}
+
 }  // namespace evmone::state

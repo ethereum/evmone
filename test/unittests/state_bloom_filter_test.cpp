@@ -12,17 +12,6 @@
 using namespace evmc::literals;
 using namespace evmone::state;
 
-namespace
-{
-BloomFilter bloom_filter_from_bytes(const bytes_view& data) noexcept
-{
-    assert(data.size() == 256);
-    BloomFilter res;
-    std::copy(std::begin(data), std::end(data), std::begin(res.bytes));
-    return res;
-}
-}  // namespace
-
 TEST(state_bloom_filter, combine_blooms)
 {
     // https://sepolia.etherscan.io/block/2946594
