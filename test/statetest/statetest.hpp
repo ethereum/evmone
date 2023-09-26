@@ -72,6 +72,15 @@ template <>
 int64_t from_json<int64_t>(const json::json& j);
 
 template <>
+address from_json<address>(const json::json& j);
+
+template <>
+hash256 from_json<hash256>(const json::json& j);
+
+template <>
+bytes from_json<bytes>(const json::json& j);
+
+template <>
 state::BlockInfo from_json<state::BlockInfo>(const json::json& j);
 
 template <>
