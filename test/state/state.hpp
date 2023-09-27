@@ -88,6 +88,9 @@ struct Withdrawal
 
 struct BlockInfo
 {
+    /// Max amount of blob gas allowed in block. It's constant now but can be dynamic in the future.
+    static constexpr int64_t MAX_BLOB_GAS_PER_BLOCK = 786432;
+
     int64_t number = 0;
     int64_t timestamp = 0;
     int64_t parent_timestamp = 0;
@@ -133,17 +136,30 @@ struct Transaction
         /// The typed transaction with priority gas price.
         /// Introduced by EIP-1559 https://eips.ethereum.org/EIPS/eip-1559.
         eip1559 = 2,
+
+        /// The typed blob transaction (with array of blob hashes).
+        /// Introduced by EIP-4844 https://eips.ethereum.org/EIPS/eip-4844.
+        blob = 3,
     };
+
+    /// Returns amount of blob gas used by this transaction
+    [[nodiscard]] int64_t blob_gas_used() const
+    {
+        static constexpr auto GAS_PER_BLOB = 0x20000;
+        return GAS_PER_BLOB * static_cast<int64_t>(blob_hashes.size());
+    }
 
     Type type = Type::legacy;
     bytes data;
     int64_t gas_limit;
     intx::uint256 max_gas_price;
     intx::uint256 max_priority_gas_price;
+    intx::uint256 max_blob_gas_price;
     address sender;
     std::optional<address> to;
     intx::uint256 value;
     AccessList access_list;
+    std::vector<bytes32> blob_hashes;
     uint64_t chain_id = 0;
     uint64_t nonce = 0;
     intx::uint256 r;
@@ -197,11 +213,11 @@ void finalize(State& state, evmc_revision rev, const address& coinbase,
 
 [[nodiscard]] std::variant<TransactionReceipt, std::error_code> transition(State& state,
     const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm,
-    int64_t block_gas_left);
+    int64_t block_gas_left, int64_t blob_gas_left);
 
 std::variant<int64_t, std::error_code> validate_transaction(const Account& sender_acc,
-    const BlockInfo& block, const Transaction& tx, evmc_revision rev,
-    int64_t block_gas_left) noexcept;
+    const BlockInfo& block, const Transaction& tx, evmc_revision rev, int64_t block_gas_left,
+    int64_t blob_gas_left) noexcept;
 
 /// Performs the system call.
 ///

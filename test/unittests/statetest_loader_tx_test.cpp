@@ -182,6 +182,56 @@ TEST(statetest_loader, tx_type_1)
     EXPECT_EQ(tx.v, 1);
 }
 
+TEST(statetest_loader, tx_type_3)
+{
+    constexpr std::string_view input = R"({
+        "input": "",
+        "gas": "0",
+        "type": "3",
+        "value": "0",
+        "sender": "",
+        "to": "",
+        "maxFeePerGas": "0",
+        "maxPriorityFeePerGas": "0",
+        "accessList": [
+            {"address": "ac01", "storageKeys": []},
+            {"address": "ac02", "storageKeys": ["fe", "00"]}
+        ],
+        "maxFeePerBlobGas": "1",
+        "blobVersionedHashes": [
+            "0x0111111111111111111111111111111111111111111111111111111111111111",
+            "0x0222222222222222222222222222222222222222222222222222222222222222"
+        ],
+        "nonce": "0",
+        "r": "0x1111111111111111111111111111111111111111111111111111111111111111",
+        "s": "0x2222222222222222222222222222222222222222222222222222222222222222",
+        "v": "1"
+    })";
+
+    const auto tx = test::from_json<state::Transaction>(json::json::parse(input));
+    EXPECT_EQ(tx.type, state::Transaction::Type::blob);
+    EXPECT_TRUE(tx.data.empty());
+    EXPECT_EQ(tx.gas_limit, 0);
+    EXPECT_EQ(tx.value, 0);
+    EXPECT_EQ(tx.sender, 0x00_address);
+    EXPECT_FALSE(tx.to.has_value());
+    EXPECT_EQ(tx.max_gas_price, 0);
+    EXPECT_EQ(tx.max_priority_gas_price, 0);
+    ASSERT_EQ(tx.access_list.size(), 2);
+    EXPECT_EQ(tx.access_list[0].first, 0xac01_address);
+    EXPECT_EQ(tx.access_list[0].second.size(), 0);
+    EXPECT_EQ(tx.access_list[1].first, 0xac02_address);
+    EXPECT_EQ(tx.access_list[1].second, (std::vector{0xfe_bytes32, 0x00_bytes32}));
+    EXPECT_EQ(tx.nonce, 0);
+    EXPECT_EQ(tx.r, 0x1111111111111111111111111111111111111111111111111111111111111111_u256);
+    EXPECT_EQ(tx.s, 0x2222222222222222222222222222222222222222222222222222222222222222_u256);
+    EXPECT_EQ(tx.v, 1);
+    EXPECT_EQ(tx.max_blob_gas_price, 1);
+    EXPECT_EQ(tx.blob_hashes.size(), 2);
+    EXPECT_EQ(tx.blob_hashes[0],
+        0x0111111111111111111111111111111111111111111111111111111111111111_bytes32);
+}
+
 TEST(statetest_loader, invalid_tx_type)
 {
     {
@@ -204,7 +254,7 @@ TEST(statetest_loader, invalid_tx_type)
             })";
 
         EXPECT_THAT([&] { test::from_json<state::Transaction>(json::json::parse(input)); },
-            ThrowsMessage<std::invalid_argument>("wrong transaction type"));
+            ThrowsMessage<std::invalid_argument>("wrong transaction type: 2, expected: 1"));
     }
     {
         constexpr std::string_view input = R"({
@@ -222,7 +272,7 @@ TEST(statetest_loader, invalid_tx_type)
         })";
 
         EXPECT_THAT([&] { test::from_json<state::Transaction>(json::json::parse(input)); },
-            ThrowsMessage<std::invalid_argument>("wrong transaction type"));
+            ThrowsMessage<std::invalid_argument>("wrong transaction type: 1, expected: 0"));
     }
 
     {
@@ -246,7 +296,7 @@ TEST(statetest_loader, invalid_tx_type)
         })";
 
         EXPECT_THAT([&] { test::from_json<state::Transaction>(json::json::parse(input)); },
-            ThrowsMessage<std::invalid_argument>("wrong transaction type"));
+            ThrowsMessage<std::invalid_argument>("wrong transaction type: 1, expected: 2"));
     }
 }
 

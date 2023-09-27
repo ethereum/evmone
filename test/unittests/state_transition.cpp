@@ -47,7 +47,8 @@ void state_transition::TearDown()
     if (trace)
         trace_capture.emplace();
 
-    const auto res = evmone::state::transition(state, block, tx, rev, selected_vm, block.gas_limit);
+    const auto res = state::transition(state, block, tx, rev, selected_vm, block.gas_limit,
+        state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK);
 
     if (const auto expected_error = make_error_code(expect.tx_error))
     {
@@ -70,8 +71,7 @@ void state_transition::TearDown()
     ASSERT_TRUE(holds_alternative<TransactionReceipt>(res))
         << std::get<std::error_code>(res).message();
     const auto& receipt = std::get<TransactionReceipt>(res);
-    evmone::state::finalize(
-        state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
+    state::finalize(state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
 
     if (trace)
     {

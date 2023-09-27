@@ -306,6 +306,16 @@ static void from_json_tx_common(const json::json& j, state::Transaction& o)
         o.max_gas_price = from_json<intx::uint256>(j.at("maxFeePerGas"));
         o.max_priority_gas_price = from_json<intx::uint256>(j.at("maxPriorityFeePerGas"));
     }
+
+    if (const auto it = j.find("maxFeePerBlobGas"); it != j.end())
+        o.max_blob_gas_price = from_json<intx::uint256>(*it);
+
+    if (const auto it = j.find("blobVersionedHashes"); it != j.end())
+    {
+        o.type = state::Transaction::Type::blob;
+        for (const auto& hash : *it)
+            o.blob_hashes.push_back(from_json<bytes32>(hash));
+    }
 }
 
 template <>
@@ -337,8 +347,11 @@ state::Transaction from_json<state::Transaction>(const json::json& j)
 
     if (const auto type_it = j.find("type"); type_it != j.end())
     {
-        if (stdx::to_underlying(o.type) != from_json<uint8_t>(*type_it))
-            throw std::invalid_argument("wrong transaction type");
+        const auto infered_type = stdx::to_underlying(o.type);
+        const auto type = from_json<uint8_t>(*type_it);
+        if (type != infered_type)
+            throw std::invalid_argument("wrong transaction type: " + std::to_string(type) +
+                                        ", expected: " + std::to_string(infered_type));
     }
 
     o.nonce = from_json<uint64_t>(j.at("nonce"));

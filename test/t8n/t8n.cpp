@@ -165,7 +165,8 @@ int main(int argc, const char* argv[])
                         std::clog.rdbuf(trace_file_output.rdbuf());
                     }
 
-                    auto res = state::transition(state, block, tx, rev, vm, block_gas_left);
+                    // FIXME: Handle blob gas.
+                    auto res = state::transition(state, block, tx, rev, vm, block_gas_left, 0);
 
                     if (holds_alternative<std::error_code>(res))
                     {

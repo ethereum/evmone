@@ -37,6 +37,7 @@ TransitionResult apply_block(state::State& state, evmc::VM& vm, const state::Blo
 
     std::vector<state::Log> txs_logs;
     int64_t block_gas_left = block.gas_limit;
+    int64_t blob_gas_left = state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK;
 
     std::vector<RejectedTransaction> rejected_txs;
     std::vector<state::TransactionReceipt> receipts;
@@ -48,7 +49,7 @@ TransitionResult apply_block(state::State& state, evmc::VM& vm, const state::Blo
         const auto& tx = txs[i];
 
         const auto computed_tx_hash = keccak256(rlp::encode(tx));
-        auto res = state::transition(state, block, tx, rev, vm, block_gas_left);
+        auto res = state::transition(state, block, tx, rev, vm, block_gas_left, blob_gas_left);
 
         if (holds_alternative<std::error_code>(res))
         {
@@ -68,6 +69,7 @@ TransitionResult apply_block(state::State& state, evmc::VM& vm, const state::Blo
                 receipt.post_state = state::mpt_hash(state.get_accounts());
 
             block_gas_left -= receipt.gas_used;
+            blob_gas_left -= tx.blob_gas_used();
             receipts.emplace_back(std::move(receipt));
         }
     }
