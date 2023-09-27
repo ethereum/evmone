@@ -63,6 +63,13 @@ void state_transition::TearDown()
     evmone::state::finalize(
         state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
 
+    if (trace)
+    {
+        if (expect.trace.starts_with('\n'))  // It's easier to define expected trace with \n.
+            expect.trace.remove_prefix(1);
+        EXPECT_EQ(trace_capture->get_capture(), expect.trace);
+    }
+
     EXPECT_EQ(receipt.status, expect.status);
     if (expect.gas_used.has_value())
     {
@@ -109,13 +116,6 @@ void state_transition::TearDown()
     for (const auto& [addr, _] : state.get_accounts())
     {
         EXPECT_TRUE(expect.post.contains(addr)) << "unexpected account " << addr;
-    }
-
-    if (trace)
-    {
-        if (expect.trace.starts_with('\n'))  // It's easier to define expected trace with \n.
-            expect.trace.remove_prefix(1);
-        EXPECT_EQ(trace_capture->get_capture(), expect.trace);
     }
 }
 }  // namespace evmone::test
