@@ -7,6 +7,7 @@ add_executable(evmone-unittests)
 target_sources(
     evmone-unittests PRIVATE
     analysis_test.cpp
+    blockchaintest_loader_test.cpp
     bytecode_test.cpp
     eof_test.cpp
     eof_validation_test.cpp
