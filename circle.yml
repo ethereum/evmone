@@ -484,6 +484,29 @@ jobs:
             ~/tests/GeneralStateTests 
             ~/tests/LegacyTests/Constantinople/GeneralStateTests
             ~/tests/EIPTests/StateTests/stEIP1153-transientStorage
+      - run:
+          name: "Blockchain tests (Pyspecs)"
+          working_directory: ~/build
+          command: >
+            EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json 
+            bin/evmone-blockchaintest
+            ~/tests/BlockchainTests/Pyspecs
+      - run:
+          name: "Blockchain tests (GeneralStateTests)"
+          working_directory: ~/build
+          command: >
+            EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json 
+            bin/evmone-blockchaintest
+            --gtest_filter='*:-VMTests/vmPerformance.*:*.*Call50000_sha256'
+            ~/tests/BlockchainTests/GeneralStateTests
+      - run:
+          name: "Blockchain tests (ValidBlocks)"
+          working_directory: ~/build
+          command: >
+            EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json 
+            bin/evmone-blockchaintest
+            --gtest_filter='*:-bcMultiChainTest.*:bcTotalDifficultyTest.*:bcForkStressTest.ForkStressTest:bcGasPricerTest.RPC_API_Test:bcValidBlockTest.SimpleTx3LowS'
+            ~/tests/BlockchainTests/ValidBlocks
       - download_execution_tests:
           repo: ipsilon/tests
           rev: eof-update-20230828
