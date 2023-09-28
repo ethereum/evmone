@@ -81,7 +81,8 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
     case Transaction::Type::initcodes:
         if (rev < EVMC_PRAGUE)
             return make_error_code(TX_TYPE_NOT_SUPPORTED);
-        // TODO initcodes size validation
+        if (tx.initcodes.size() > 4096)
+            return make_error_code(INIT_CODE_SIZE_LIMIT_EXCEEDED);
         [[fallthrough]];
 
     case Transaction::Type::eip1559:
