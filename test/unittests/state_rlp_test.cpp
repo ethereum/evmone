@@ -592,3 +592,246 @@ TEST(rlp, decode_error)
         ThrowsMessage<std::runtime_error>("rlp decoding error: payload too big"));
 }
 
+TEST(state_rlp, decode_eip1559)
+{
+    // https://sepolia.etherscan.io/tx/0x8e35aa725df0dac49303324d2315f8a31b1c40fcd42e5b7839a3b78e58ff7b52
+
+    const auto input =
+        "0x02f87883aa36a782993c8477359400852e90edd00082520894b2b7174595d042cbec11d9e71df6f6b07ab912"
+        "71881bafa9ee16e7800080c080a0102d8426eae3027b62a74a81e09c570af6cd8a79dcf819ab79fd845a867d4e"
+        "64a03b1c7eaa931012815784f39d139cb24e6f9e75cd903dde47ab29da98eee7c0ff"_hex;
+
+    state::Transaction tx;
+    auto bv = bytes_view{input};
+    rlp::decode(bv, tx);
+
+    EXPECT_EQ(tx.chain_id, 11155111);
+    EXPECT_EQ(tx.nonce, 39228);
+    EXPECT_EQ(tx.max_priority_gas_price, 2000000000);
+    EXPECT_EQ(tx.max_gas_price, 200000000000);
+    EXPECT_EQ(tx.gas_limit, 21000);
+    EXPECT_EQ(tx.to, 0xb2b7174595d042cbec11d9e71df6f6b07ab91271_address);
+    EXPECT_EQ(tx.value, 1995000000000000000);
+    EXPECT_EQ(tx.data, bytes());
+    EXPECT_EQ(tx.access_list, state::AccessList{});
+    EXPECT_EQ(tx.v, 0);
+    EXPECT_EQ(tx.r, 0x102d8426eae3027b62a74a81e09c570af6cd8a79dcf819ab79fd845a867d4e64_u256);
+    EXPECT_EQ(tx.s, 0x3b1c7eaa931012815784f39d139cb24e6f9e75cd903dde47ab29da98eee7c0ff_u256);
+}
+
+TEST(state_rlp, decode_eip1559_with_data)
+{
+    // https://sepolia.etherscan.io/tx/0xd9fd2faba25978a9af401418bd4a6c31f50af0e4b243746af6c44ff4a61e909d
+
+    const auto input =
+        "0x02f8f483aa36a78242e68459682f008459682f0e82962494d0f723c6b2226df56fe41e63b9eaa66eb540bcb8"
+        "80b884abac047b0000000000000000000000000000000000000000000000000000000000fe5f25d289f0fc646b"
+        "735f24409f6b5c41f0ab2ee279c9676f60ef958a537cd67c7c3e80000000000000000000000000000000000000"
+        "000000000000000000001a0e8b8322f0645f57da2d65a174644c2855d145395daafcdec72018405167bb31c0af"
+        "c001a05b2846d2555b0c5eed39603732290ef320dca6ee4f0a399e193fe628592fe99da04e19a7efb8a4ac5ca3"
+        "619acd6de8c57611e4289955f028664aac42f7a57a4b5e"_hex;
+
+    state::Transaction tx;
+    auto bv = bytes_view{input};
+    rlp::decode(bv, tx);
+
+    EXPECT_EQ(tx.chain_id, 11155111);
+    EXPECT_EQ(tx.nonce, 17126);
+    EXPECT_EQ(tx.max_priority_gas_price, 1500000000);
+    EXPECT_EQ(tx.max_gas_price, 1500000014);
+    EXPECT_EQ(tx.gas_limit, 38436);
+    EXPECT_EQ(tx.to, 0xd0f723c6b2226df56fe41e63b9eaa66eb540bcb8_address);
+    EXPECT_EQ(tx.value, 0);
+    EXPECT_EQ(tx.data,
+        "0xabac047b0000000000000000000000000000000000000000000000000000000000fe5f25d289f0fc646b735f"
+        "24409f6b5c41f0ab2ee279c9676f60ef958a537cd67c7c3e800000000000000000000000000000000000000000"
+        "00000000000000001a0e8b8322f0645f57da2d65a174644c2855d145395daafcdec72018405167bb31c0af"
+        ""_hex);
+    EXPECT_EQ(tx.access_list, state::AccessList{});
+    EXPECT_EQ(tx.v, 1);
+    EXPECT_EQ(tx.r, 0x5b2846d2555b0c5eed39603732290ef320dca6ee4f0a399e193fe628592fe99d_u256);
+    EXPECT_EQ(tx.s, 0x4e19a7efb8a4ac5ca3619acd6de8c57611e4289955f028664aac42f7a57a4b5e_u256);
+}
+
+TEST(state_rlp, decode_legacy)
+{
+    // https://sepolia.etherscan.io/tx/0x3d5ed47bf255e67602a12f7d44cf215a83cad4aef5195e7700707233ff7437dd
+
+    const auto input =
+        "0xf87082cbc584ae0baa0082520894611e4a6f03bd0a1c2ff483f4c2cb1c0c6da6eed1872386f26fc100008084"
+        "01546d71a0612617dc772e3170b3d65363849e97e4c96c63596a6b4c0d208babce80527aa1a01df2f3207e9c10"
+        "35384ec77ab12a55be9f5a7ce3fe456b814cd8d95d7e07e41f"_hex;
+
+    state::Transaction tx;
+    auto bv = bytes_view{input};
+    rlp::decode(bv, tx);
+
+    EXPECT_EQ(tx.chain_id, 11155111);
+    EXPECT_EQ(tx.nonce, 52165);
+    EXPECT_EQ(tx.max_priority_gas_price, 2920000000);
+    EXPECT_EQ(tx.max_gas_price, 2920000000);
+    EXPECT_EQ(tx.gas_limit, 21000);
+    EXPECT_EQ(tx.to, 0x611e4a6f03bd0a1c2ff483f4c2cb1c0c6da6eed1_address);
+    EXPECT_EQ(tx.value, 10000000000000000);
+    EXPECT_EQ(tx.data, bytes());
+    EXPECT_EQ(tx.v, 0);
+    EXPECT_EQ(tx.r, 0x612617dc772e3170b3d65363849e97e4c96c63596a6b4c0d208babce80527aa1_u256);
+    EXPECT_EQ(tx.s, 0x1df2f3207e9c1035384ec77ab12a55be9f5a7ce3fe456b814cd8d95d7e07e41f_u256);
+}
+
+TEST(state_rlp, decode_legacy_with_data)
+{
+    // https://sepolia.etherscan.io/tx/0x7f7b1d6fe0797374f6a65a5fd7771c6691fa38497f5773207e649a1271e48554
+
+    const auto input =
+        "0xf8b083016b40843b9aca008307a120945c7a6cf20cbd3eef32e19b9cad4eca17c432a79480b844202ee0ed00"
+        "0000000000000000000000000000000000000000000000000000000000172f0000000000000000000000000000"
+        "00000000000000000000000000009ac790d08401546d72a02c9688636199d0a2c5965aa9380f764b70f2fc1d29"
+        "3164d71c2d66649a955b6da00139f9afc4885673c6b9d1b2d33afc5c3867c362ae55357a3b8038ed164ccad4"
+        ""_hex;
+
+    state::Transaction tx;
+    auto bv = bytes_view{input};
+    rlp::decode(bv, tx);
+
+    EXPECT_EQ(tx.chain_id, 11155111);  // For legacy tx chain id in encoded in v value.
+    EXPECT_EQ(tx.nonce, 92992);
+    EXPECT_EQ(tx.max_priority_gas_price, 1000000000);
+    EXPECT_EQ(tx.max_gas_price, 1000000000);
+    EXPECT_EQ(tx.gas_limit, 500000);
+    EXPECT_EQ(tx.to, 0x5c7a6cf20cbd3eef32e19b9cad4eca17c432a794_address);
+    EXPECT_EQ(tx.value, 0);
+    EXPECT_EQ(tx.data,
+        "0x202ee0ed000000000000000000000000000000000000000000000000000000000000172f0000000000000000"
+        "00000000000000000000000000000000000000009ac790d0"_hex);
+    EXPECT_EQ(tx.v, 1);
+    EXPECT_EQ(tx.r, 0x2c9688636199d0a2c5965aa9380f764b70f2fc1d293164d71c2d66649a955b6d_u256);
+    EXPECT_EQ(tx.s, 0x0139f9afc4885673c6b9d1b2d33afc5c3867c362ae55357a3b8038ed164ccad4_u256);
+}
+
+TEST(state_rlp, decode_access_list_with_data)
+{
+    // https://etherscan.io/tx/0xf076e75aa935552e20e5d9fd4d1dda4ff33399ff3d6ac22843ae646f82c385d4
+
+    const auto input =
+        "0x01f8e4013e8503a4dec79482c835949232a548dd9e81bac65500b5e0d918f8ba93675c80b844095ea7b30000"
+        "00000000000000000000f17d23136b4fead139f54fb766c8795faae09660ffffffffffffffffffffffffffffff"
+        "fffffffffffffffffffffffffffffffffff838f7949232a548dd9e81bac65500b5e0d918f8ba93675ce1a08e94"
+        "7fe742892ee6fffe7cfc013acac35d33a3892c58597344bed88b21eb1d2f01a02cfaa5ffa42172bfa9f83207a2"
+        "57c53ba3a106844ee58e9131466f655ecc11e9a0419366dadd905a16cd433f2953f9ed976560822bb2611ac192"
+        "b939f7b9c2a98c"_hex;
+
+    state::Transaction tx;
+    auto bv = bytes_view{input};
+    rlp::decode(bv, tx);
+
+    EXPECT_EQ(tx.type, evmone::state::Transaction::Type::access_list);
+    EXPECT_EQ(tx.data,
+        "0x095ea7b3000000000000000000000000f17d23136b4fead139f54fb766c8795faae09660ffffffffffffffff"
+        "ffffffffffffffffffffffffffffffffffffffffffffffff"_hex);
+    EXPECT_EQ(tx.gas_limit, 51253);
+    EXPECT_EQ(tx.max_gas_price, 15650965396);
+    EXPECT_EQ(tx.max_priority_gas_price, 15650965396);
+    EXPECT_EQ(tx.to, 0x9232a548dd9e81bac65500b5e0d918f8ba93675c_address);
+    EXPECT_EQ(tx.value, 0);
+    EXPECT_EQ(tx.access_list[0].first, 0x9232a548dd9e81bac65500b5e0d918f8ba93675c_address);
+    EXPECT_EQ(tx.access_list[0].second[0],
+        0x8e947fe742892ee6fffe7cfc013acac35d33a3892c58597344bed88b21eb1d2f_bytes32);
+    EXPECT_EQ(tx.nonce, 62);
+    EXPECT_EQ(tx.r, 0x2cfaa5ffa42172bfa9f83207a257c53ba3a106844ee58e9131466f655ecc11e9_u256);
+    EXPECT_EQ(tx.s, 0x419366dadd905a16cd433f2953f9ed976560822bb2611ac192b939f7b9c2a98c_u256);
+    EXPECT_EQ(tx.v, 1);
+    EXPECT_EQ(tx.chain_id, 1);
+}
+
+TEST(state_rlp, decode_transaction_list)
+{
+    const auto tx0 =
+        "f8b083016b40843b9aca008307a120945c7a6cf20cbd3eef32e19b9cad4eca17c432a79480b844202ee0ed00"
+        "0000000000000000000000000000000000000000000000000000000000172f0000000000000000000000000000"
+        "00000000000000000000000000009ac790d08401546d72a02c9688636199d0a2c5965aa9380f764b70f2fc1d29"
+        "3164d71c2d66649a955b6da00139f9afc4885673c6b9d1b2d33afc5c3867c362ae55357a3b8038ed164ccad4";
+
+    const auto tx1 =
+        "01f8e4013e8503a4dec79482c835949232a548dd9e81bac65500b5e0d918f8ba93675c80b844095ea7b30000"
+        "00000000000000000000f17d23136b4fead139f54fb766c8795faae09660ffffffffffffffffffffffffffffff"
+        "fffffffffffffffffffffffffffffffffff838f7949232a548dd9e81bac65500b5e0d918f8ba93675ce1a08e94"
+        "7fe742892ee6fffe7cfc013acac35d33a3892c58597344bed88b21eb1d2f01a02cfaa5ffa42172bfa9f83207a2"
+        "57c53ba3a106844ee58e9131466f655ecc11e9a0419366dadd905a16cd433f2953f9ed976560822bb2611ac192"
+        "b939f7b9c2a98c";
+
+    const auto input = std::string("0xf90199") + tx0 + tx1;
+
+    auto txs = decode_helper<std::vector<state::Transaction>>(input);
+
+    EXPECT_EQ(txs[0].chain_id, 11155111);  // For legacy tx chain id in encoded in v value.
+    EXPECT_EQ(txs[0].nonce, 92992);
+    EXPECT_EQ(txs[0].max_priority_gas_price, 1000000000);
+    EXPECT_EQ(txs[0].max_gas_price, 1000000000);
+    EXPECT_EQ(txs[0].gas_limit, 500000);
+    EXPECT_EQ(txs[0].to, 0x5c7a6cf20cbd3eef32e19b9cad4eca17c432a794_address);
+    EXPECT_EQ(txs[0].value, 0);
+    EXPECT_EQ(txs[0].data,
+        "0x202ee0ed000000000000000000000000000000000000000000000000000000000000172f0000000000000000"
+        "00000000000000000000000000000000000000009ac790d0"_hex);
+    EXPECT_EQ(txs[0].v, 1);
+    EXPECT_EQ(txs[0].r, 0x2c9688636199d0a2c5965aa9380f764b70f2fc1d293164d71c2d66649a955b6d_u256);
+    EXPECT_EQ(txs[0].s, 0x0139f9afc4885673c6b9d1b2d33afc5c3867c362ae55357a3b8038ed164ccad4_u256);
+
+    EXPECT_EQ(txs[1].type, evmone::state::Transaction::Type::access_list);
+    EXPECT_EQ(txs[1].data,
+        "0x095ea7b3000000000000000000000000f17d23136b4fead139f54fb766c8795faae09660ffffffffffffffff"
+        "ffffffffffffffffffffffffffffffffffffffffffffffff"_hex);
+    EXPECT_EQ(txs[1].gas_limit, 51253);
+    EXPECT_EQ(txs[1].max_gas_price, 15650965396);
+    EXPECT_EQ(txs[1].max_priority_gas_price, 15650965396);
+    EXPECT_EQ(txs[1].to, 0x9232a548dd9e81bac65500b5e0d918f8ba93675c_address);
+    EXPECT_EQ(txs[1].value, 0);
+    EXPECT_EQ(txs[1].access_list[0].first, 0x9232a548dd9e81bac65500b5e0d918f8ba93675c_address);
+    EXPECT_EQ(txs[1].access_list[0].second[0],
+        0x8e947fe742892ee6fffe7cfc013acac35d33a3892c58597344bed88b21eb1d2f_bytes32);
+    EXPECT_EQ(txs[1].nonce, 62);
+    EXPECT_EQ(txs[1].r, 0x2cfaa5ffa42172bfa9f83207a257c53ba3a106844ee58e9131466f655ecc11e9_u256);
+    EXPECT_EQ(txs[1].s, 0x419366dadd905a16cd433f2953f9ed976560822bb2611ac192b939f7b9c2a98c_u256);
+    EXPECT_EQ(txs[1].v, 1);
+    EXPECT_EQ(txs[1].chain_id, 1);
+}
+
+TEST(state_rlp, decode_invalid_transaction)
+{
+    {
+        const auto input =
+            "05f8e4013e8503a4dec79482c835949232a548dd9e81bac65500b5e0d918f8ba93675c80b844095ea7b300"
+            "00"
+            "00000000000000000000f17d23136b4fead139f54fb766c8795faae09660ffffffffffffffffffffffffff"
+            "ffff"
+            "fffffffffffffffffffffffffffffffffff838f7949232a548dd9e81bac65500b5e0d918f8ba93675ce1a0"
+            "8e94"
+            "7fe742892ee6fffe7cfc013acac35d33a3892c58597344bed88b21eb1d2f01a02cfaa5ffa42172bfa9f832"
+            "07a2"
+            "57c53ba3a106844ee58e9131466f655ecc11e9a0419366dadd905a16cd433f2953f9ed976560822bb2611a"
+            "c192"
+            "b939f7b9c2a98c";
+
+        EXPECT_THAT([&] { decode_helper<state::Transaction>(input); },
+            ThrowsMessage<std::runtime_error>("rlp decoding error: unexpected transaction type."));
+    }
+    {
+        const auto input =
+            "01b8e4013e8503a4dec79482c835949232a548dd9e81bac65500b5e0d918f8ba93675c80b844095ea7b300"
+            "00"
+            "00000000000000000000f17d23136b4fead139f54fb766c8795faae09660ffffffffffffffffffffffffff"
+            "ffff"
+            "fffffffffffffffffffffffffffffffffff838f7949232a548dd9e81bac65500b5e0d918f8ba93675ce1a0"
+            "8e94"
+            "7fe742892ee6fffe7cfc013acac35d33a3892c58597344bed88b21eb1d2f01a02cfaa5ffa42172bfa9f832"
+            "07a2"
+            "57c53ba3a106844ee58e9131466f655ecc11e9a0419366dadd905a16cd433f2953f9ed976560822bb2611a"
+            "c192"
+            "b939f7b9c2a98c";
+
+        EXPECT_THAT([&] { decode_helper<state::Transaction>(input); },
+            ThrowsMessage<std::runtime_error>(
+                "rlp decoding error: unexpected type. list expected"));
+    }
+}
