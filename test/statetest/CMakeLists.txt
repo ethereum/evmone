@@ -12,6 +12,7 @@ target_link_libraries(evmone-statetestutils PRIVATE evmone::state evmone::testut
 target_include_directories(evmone-statetestutils PRIVATE ${evmone_private_include_dir})
 target_sources(
     evmone-statetestutils PRIVATE
+    ../blockchaintest/blockchaintest_loader.cpp
     statetest.hpp
     statetest_loader.cpp
     statetest_logs_hash.cpp
