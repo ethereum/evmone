@@ -27,6 +27,7 @@ target_sources(
     precompiles_cache.hpp
     precompiles_cache.cpp
     rlp.hpp
+    rlp.cpp
     state.hpp
     state.cpp
 )

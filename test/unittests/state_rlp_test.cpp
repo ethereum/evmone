@@ -457,3 +457,138 @@ TEST(state_rlp, tx_to_rlp_eip2930_with_non_empty_access_list)
     EXPECT_EQ(keccak256(rlp::encode(tx)),
         0xf076e75aa935552e20e5d9fd4d1dda4ff33399ff3d6ac22843ae646f82c385d4_bytes32);
 }
+
+template <typename T>
+T decode_helper(const std::string& hex_str)
+{
+    T to{};
+    const auto from = from_hex(hex_str);
+    if (from.has_value())
+    {
+        auto bv = bytes_view(*from);
+        rlp::decode(bv, to);
+    }
+
+    return to;
+}
+
+TEST(state_rlp, unsinged_int_loading)
+{
+    EXPECT_EQ(rlp::load<uint64_t>("0x0102030405060708"_hex), 0x0102030405060708);
+
+    EXPECT_THAT([&] { (void)rlp::load<uint64_t>("0x010203040506070809"_hex); },
+        ThrowsMessage<std::runtime_error>("load: input too big"));
+}
+
+TEST(rlp, decode_simple)
+{
+    EXPECT_EQ(decode_helper<uint8_t>("0x03"), 3);
+    EXPECT_EQ(decode_helper<uint16_t>("0x03"), 3);
+    EXPECT_EQ(decode_helper<uint32_t>("0x03"), 3);
+    EXPECT_EQ(decode_helper<uint64_t>("0x03"), 3);
+    EXPECT_EQ(decode_helper<uint128>("0x03"), 3);
+    EXPECT_EQ(decode_helper<uint256>("0x03"), 3);
+    EXPECT_EQ(decode_helper<uint512>("0x03"), 3);
+
+    EXPECT_EQ(decode_helper<uint16_t>("0x8203E8"), 1000);
+    EXPECT_EQ(decode_helper<uint32_t>("0x8203E8"), 1000);
+    EXPECT_EQ(decode_helper<uint128>("0x8203E8"), 1000);
+    EXPECT_EQ(decode_helper<uint256>("0x8203E8"), 1000);
+    EXPECT_EQ(decode_helper<uint512>("0x8203E8"), 1000);
+
+    EXPECT_EQ(decode_helper<uint256>(
+                  "0xA00102030405060708091011121314151617181920212223242526272829303132"),
+        0x0102030405060708091011121314151617181920212223242526272829303132_u256);
+
+    EXPECT_EQ(decode_helper<uint512>(
+                  "0xb8400102030405060708091011121314151617181920212223242526272829303132"
+                  "3334353637383940414243444546474849505152535455565758596061626364"),
+        0x01020304050607080910111213141516171819202122232425262728293031323334353637383940414243444546474849505152535455565758596061626364_u512);
+
+    EXPECT_EQ(decode_helper<std::vector<uint8_t>>("0xc20304"), (std::vector<uint8_t>{3, 4}));
+    EXPECT_EQ(decode_helper<bytes>("0x820301"), (bytes{3, 1}));
+
+    EXPECT_EQ(decode_helper<address>("0x940102030405060708091011121314151617181920"),
+        0x0102030405060708091011121314151617181920_address);
+
+    EXPECT_EQ((decode_helper<std::pair<uint8_t, uint64_t>>("0xc20304")),
+        (std::pair<uint8_t, uint64_t>{3, 4}));
+}
+
+TEST(rlp, decode_error)
+{
+    EXPECT_THAT([&] { decode_helper<uint8_t>(""); },
+        ThrowsMessage<std::runtime_error>("rlp decoding error: input is empty"));
+
+    EXPECT_THAT([&] { decode_helper<uint16_t>("0x8203"); },
+        ThrowsMessage<std::runtime_error>("rlp decoding error: input too short"));
+
+    EXPECT_THAT([&] { decode_helper<uint16_t>("0xb903"); },
+        ThrowsMessage<std::runtime_error>("rlp decoding error: input too short"));
+
+    EXPECT_THAT(
+        [&] {
+            decode_helper<uint512>(
+                "0xb8400102030405060708091011121314151617181920212223242526272829303132"
+                "33343536373839404142434445464748495051525354555657585960616263");
+        },
+        ThrowsMessage<std::runtime_error>("rlp decoding error: input too short"));
+
+    EXPECT_THAT(
+        [&] {
+            decode_helper<intx::uint<2048>>(
+                "0xb90100"
+                "0102030405060708091011121314151617181920212223242526272829303132"
+                "3334353637383940414243444546474849505152535455565758596061626364"
+                "0102030405060708091011121314151617181920212223242526272829303132"
+                "3334353637383940414243444546474849505152535455565758596061626364"
+                "0102030405060708091011121314151617181920212223242526272829303132"
+                "3334353637383940414243444546474849505152535455565758596061626364"
+                "0102030405060708091011121314151617181920212223242526272829303132"
+                "33343536373839404142434445464748495051525354555657585960616263");
+        },
+        ThrowsMessage<std::runtime_error>("rlp decoding error: input too short"));
+
+    EXPECT_THAT([&] { decode_helper<std::vector<uint8_t>>("0xc203"); },
+        ThrowsMessage<std::runtime_error>("rlp decoding error: input too short"));
+
+    EXPECT_THAT([&] { decode_helper<std::vector<uint8_t>>("0xf903"); },
+        ThrowsMessage<std::runtime_error>("rlp decoding error: input too short"));
+
+    EXPECT_THAT(
+        [&] {
+            decode_helper<std::vector<uint8_t>>(
+                "0xf90100"
+                "0102030405060708091011121314151617181920212223242526272829303132"
+                "3334353637383940414243444546474849505152535455565758596061626364"
+                "0102030405060708091011121314151617181920212223242526272829303132"
+                "3334353637383940414243444546474849505152535455565758596061626364"
+                "0102030405060708091011121314151617181920212223242526272829303132"
+                "3334353637383940414243444546474849505152535455565758596061626364"
+                "0102030405060708091011121314151617181920212223242526272829303132"
+                "33343536373839404142434445464748495051525354555657585960616263");
+        },
+        ThrowsMessage<std::runtime_error>("rlp decoding error: input too short"));
+
+    EXPECT_THAT([&] { decode_helper<bytes>("0xc20301"); },
+        ThrowsMessage<std::runtime_error>("rlp decoding error: unexpected list type"));
+
+    EXPECT_THAT([&] { decode_helper<uint16_t>("0x83030201"); },
+        ThrowsMessage<std::runtime_error>("rlp decoding error: unexpected type"));
+
+    EXPECT_THAT([&] { decode_helper<uint16_t>("0xc20301"); },
+        ThrowsMessage<std::runtime_error>("rlp decoding error: unexpected list type"));
+
+    EXPECT_THAT([&] { decode_helper<address>("0xD40102030405060708091011121314151617181920"); },
+        ThrowsMessage<std::runtime_error>("rlp decoding error: unexpected list type"));
+
+    EXPECT_THAT([&] { decode_helper<std::vector<uint8_t>>("0x820301"); },
+        ThrowsMessage<std::runtime_error>("rlp decoding error: unexpected type. list expected"));
+
+    EXPECT_THAT([&] { (decode_helper<std::pair<uint8_t, uint64_t>>("0x820304")); },
+        ThrowsMessage<std::runtime_error>("rlp decoding error: unexpected type. list expected"));
+
+    EXPECT_THAT([&] { decode_helper<address>("0x95010203040506070809101112131415161718192021"); },
+        ThrowsMessage<std::runtime_error>("rlp decoding error: payload too big"));
+}
+
