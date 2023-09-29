@@ -33,6 +33,7 @@ target_sources(
     evm_benchmark_test.cpp
     evmmax_test.cpp
     evmmax_secp256k1_test.cpp
+    evmmax_bls12_test.cpp
     evmone_test.cpp
     execution_state_test.cpp
     instructions_test.cpp
