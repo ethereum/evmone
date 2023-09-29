@@ -35,6 +35,7 @@ target_sources(
     evmmax_bn254_mul_test.cpp
     evmmax_bn254_pairing_test.cpp
     evmmax_secp256k1_test.cpp
+    evmmax_bls12_test.cpp
     evmone_test.cpp
     execution_state_test.cpp
     instructions_test.cpp
