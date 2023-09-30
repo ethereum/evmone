@@ -255,10 +255,11 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
         delete_empty_accounts(state);
 
     // Set accounts and their storage access status to cold in the end of transition process
-    for (auto& acc : state.get_accounts())
+    for (auto& [addr, acc] : state.get_accounts())
     {
-        acc.second.access_status = EVMC_ACCESS_COLD;
-        for (auto& [_, val] : acc.second.storage)
+        acc.transient_storage.clear();
+        acc.access_status = EVMC_ACCESS_COLD;
+        for (auto& [key, val] : acc.storage)
         {
             val.access_status = EVMC_ACCESS_COLD;
             val.original = val.current;
