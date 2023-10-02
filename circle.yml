@@ -507,6 +507,13 @@ jobs:
             bin/evmone-blockchaintest
             --gtest_filter='*:-bcMultiChainTest.*:bcTotalDifficultyTest.*:bcForkStressTest.ForkStressTest:bcGasPricerTest.RPC_API_Test:bcValidBlockTest.SimpleTx3LowS'
             ~/tests/BlockchainTests/ValidBlocks
+      - run:
+          name: "Blockchain tests (EIPs)"
+          working_directory: ~/build
+          command: >
+            EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json 
+            bin/evmone-blockchaintest
+            ~/tests/EIPTests/BlockchainTests/bcEIP1153-transientStorage
       - download_execution_tests:
           repo: ipsilon/tests
           rev: eof-update-20230828
