@@ -30,4 +30,7 @@ struct BloomFilter
 [[nodiscard]] BloomFilter compute_bloom_filter(
     std::span<const TransactionReceipt> receipts) noexcept;
 
+/// Loads BloomFilter from bytes_view
+BloomFilter bloom_filter_from_bytes(const bytes_view& data) noexcept;
+
 }  // namespace evmone::state

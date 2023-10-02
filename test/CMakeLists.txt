@@ -15,6 +15,7 @@ find_package(benchmark CONFIG REQUIRED)
 
 add_subdirectory(utils)
 add_subdirectory(bench)
+add_subdirectory(blockchaintest)
 add_subdirectory(eofparse)
 add_subdirectory(integration)
 add_subdirectory(internal_benchmarks)
@@ -24,7 +25,7 @@ add_subdirectory(eoftest)
 add_subdirectory(t8n)
 add_subdirectory(unittests)
 
-set(targets evmone-bench evmone-bench-internal evmone-eofparse evmone-state evmone-statetest evmone-eoftest evmone-t8n evmone-unittests)
+set(targets evmone-bench evmone-bench-internal evmone-eofparse evmone-blockchaintest evmone-state evmone-statetest evmone-eoftest evmone-t8n evmone-unittests)
 
 if(EVMONE_FUZZING)
     add_subdirectory(eofparsefuzz)
