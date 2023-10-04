@@ -4,6 +4,7 @@
 
 #include "precompiles.hpp"
 #include "precompiles_cache.hpp"
+#include <evmone_precompiles/bn254.hpp>
 #include <evmone_precompiles/secp256k1.hpp>
 #include <intx/intx.hpp>
 #include <bit>
@@ -174,6 +175,61 @@ ExecutionResult ecrecover_execute(const uint8_t* input, size_t input_size, uint8
         return {EVMC_SUCCESS, 0};
 }
 
+ExecutionResult ecadd_execute(const uint8_t* input, size_t input_size, uint8_t* output,
+    [[maybe_unused]] size_t output_size) noexcept
+{
+    assert(output_size >= 64);
+
+    uint8_t input_buffer[128]{};
+    if (input_size != 0)
+        std::memcpy(input_buffer, input, std::min(input_size, std::size(input_buffer)));
+
+    ethash::hash256 h{};
+    std::memcpy(h.bytes, input_buffer, sizeof(h));
+
+    const evmmax::bn254::Point p = {intx::be::unsafe::load<intx::uint256>(input_buffer),
+        intx::be::unsafe::load<intx::uint256>(input_buffer + 32)};
+    const evmmax::bn254::Point q = {intx::be::unsafe::load<intx::uint256>(input_buffer + 64),
+        intx::be::unsafe::load<intx::uint256>(input_buffer + 96)};
+
+    if (evmmax::bn254::validate(p) && evmmax::bn254::validate(q))
+    {
+        const auto res = evmmax::bn254::add(p, q);
+        intx::be::unsafe::store(output, res.x);
+        intx::be::unsafe::store(output + 32, res.y);
+        return {EVMC_SUCCESS, 64};
+    }
+    else
+        return {EVMC_PRECOMPILE_FAILURE, 0};
+}
+
+ExecutionResult ecmul_execute(const uint8_t* input, size_t input_size, uint8_t* output,
+    [[maybe_unused]] size_t output_size) noexcept
+{
+    assert(output_size >= 64);
+
+    uint8_t input_buffer[96]{};
+    if (input_size != 0)
+        std::memcpy(input_buffer, input, std::min(input_size, std::size(input_buffer)));
+
+    ethash::hash256 h{};
+    std::memcpy(h.bytes, input_buffer, sizeof(h));
+
+    const evmmax::bn254::Point p = {intx::be::unsafe::load<intx::uint256>(input_buffer),
+        intx::be::unsafe::load<intx::uint256>(input_buffer + 32)};
+    const auto c = intx::be::unsafe::load<intx::uint256>(input_buffer + 64);
+
+    if (evmmax::bn254::validate(p))
+    {
+        const auto res = evmmax::bn254::mul(p, c);
+        intx::be::unsafe::store(output, res.x);
+        intx::be::unsafe::store(output + 32, res.y);
+        return {EVMC_SUCCESS, 64};
+    }
+    else
+        return {EVMC_PRECOMPILE_FAILURE, 0};
+}
+
 ExecutionResult identity_execute(const uint8_t* input, size_t input_size, uint8_t* output,
     [[maybe_unused]] size_t output_size) noexcept
 {
@@ -203,8 +259,8 @@ inline constexpr auto traits = []() noexcept {
         {ripemd160_analyze, dummy_execute<PrecompileId::ripemd160>},
         {identity_analyze, identity_execute},
         {expmod_analyze, dummy_execute<PrecompileId::expmod>},
-        {ecadd_analyze, dummy_execute<PrecompileId::ecadd>},
-        {ecmul_analyze, dummy_execute<PrecompileId::ecmul>},
+        {ecadd_analyze, ecadd_execute},
+        {ecmul_analyze, ecmul_execute},
         {ecpairing_analyze, dummy_execute<PrecompileId::ecpairing>},
         {blake2bf_analyze, dummy_execute<PrecompileId::blake2bf>},
     }};
@@ -213,8 +269,8 @@ inline constexpr auto traits = []() noexcept {
     tbl[static_cast<size_t>(PrecompileId::sha256)].execute = silkpre_sha256_execute;
     tbl[static_cast<size_t>(PrecompileId::ripemd160)].execute = silkpre_ripemd160_execute;
     tbl[static_cast<size_t>(PrecompileId::expmod)].execute = silkpre_expmod_execute;
-    tbl[static_cast<size_t>(PrecompileId::ecadd)].execute = silkpre_ecadd_execute;
-    tbl[static_cast<size_t>(PrecompileId::ecmul)].execute = silkpre_ecmul_execute;
+    // tbl[static_cast<size_t>(PrecompileId::ecadd)].execute = silkpre_ecadd_execute;
+    // tbl[static_cast<size_t>(PrecompileId::ecmul)].execute = silkpre_ecmul_execute;
     tbl[static_cast<size_t>(PrecompileId::ecpairing)].execute = silkpre_ecpairing_execute;
     tbl[static_cast<size_t>(PrecompileId::blake2bf)].execute = silkpre_blake2bf_execute;
 #endif
