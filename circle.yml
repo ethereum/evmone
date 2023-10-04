@@ -515,7 +515,8 @@ jobs:
           command: >
             EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json 
             bin/evmone-blockchaintest
-            ~/tests/EIPTests/BlockchainTests/bcEIP1153-transientStorage
+            --gtest_filter='-*StateTests/stEOF/*.*'
+            ~/tests/EIPTests/BlockchainTests/
       - download_execution_tests:
           repo: ipsilon/tests
           rev: eof-nrf-20231128
