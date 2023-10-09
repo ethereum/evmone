@@ -28,6 +28,29 @@ int64_t get_bomb_delay(evmc_revision rev) noexcept
         return 9'700'000;
     }
 }
+
+int64_t calculate_difficulty_pre_byzantium(int64_t parent_difficulty, int64_t parent_timestamp,
+    int64_t current_timestamp, int64_t block_number, evmc_revision rev)
+{
+    // According to https://eips.ethereum.org/EIPS/eip-2
+    const auto period_count = block_number / 100'000;
+    const auto offset = parent_difficulty / 2048;
+
+    auto diff = parent_difficulty;
+
+    if (rev < EVMC_HOMESTEAD)
+        diff += offset * (current_timestamp - parent_timestamp < 13 ? 1 : -1);
+    else
+        diff += offset * std::max(1 - (current_timestamp - parent_timestamp) / 10, int64_t{-99});
+
+    if (period_count > 2)
+        diff += 2 << (block_number / 100'000 - 3);
+    else if (period_count == 2)
+        diff += 1;
+
+    return diff;
+}
+
 }  // namespace
 
 int64_t calculate_difficulty(int64_t parent_difficulty, bool parent_has_ommers,
@@ -39,9 +62,9 @@ int64_t calculate_difficulty(int64_t parent_difficulty, bool parent_has_ommers,
     if (rev >= EVMC_PARIS)
         return 0;  // No difficulty after the Merge.
 
-    // TODO: Implement for older revisions
     if (rev < EVMC_BYZANTIUM)
-        return 0x020000;
+        return calculate_difficulty_pre_byzantium(
+            parent_difficulty, parent_timestamp, current_timestamp, block_number, rev);
 
     static constexpr auto min_difficulty = int64_t{1} << 17;
 
