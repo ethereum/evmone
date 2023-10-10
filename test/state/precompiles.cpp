@@ -16,6 +16,10 @@
 #include "precompiles_silkpre.hpp"
 #endif
 
+#ifdef EVMONE_PRECOMPILES_CKZG
+#include "precompiles_ckzg.hpp"
+#endif
+
 namespace evmone::state
 {
 using namespace evmc::literals;
@@ -207,6 +211,7 @@ inline constexpr auto traits = []() noexcept {
         {ecmul_analyze, dummy_execute<PrecompileId::ecmul>},
         {ecpairing_analyze, dummy_execute<PrecompileId::ecpairing>},
         {blake2bf_analyze, dummy_execute<PrecompileId::blake2bf>},
+        {blake2bf_analyze, dummy_execute<PrecompileId::point_evaluation>},
     }};
 #ifdef EVMONE_PRECOMPILES_SILKPRE
     // tbl[static_cast<size_t>(PrecompileId::ecrecover)].execute = silkpre_ecrecover_execute;
@@ -217,6 +222,10 @@ inline constexpr auto traits = []() noexcept {
     tbl[static_cast<size_t>(PrecompileId::ecmul)].execute = silkpre_ecmul_execute;
     tbl[static_cast<size_t>(PrecompileId::ecpairing)].execute = silkpre_ecpairing_execute;
     tbl[static_cast<size_t>(PrecompileId::blake2bf)].execute = silkpre_blake2bf_execute;
+#endif
+#ifdef EVMONE_PRECOMPILES_CKZG
+    tbl[static_cast<size_t>(PrecompileId::point_evaluation)].execute =
+        ckzg_point_evaluation_execute;
 #endif
     return tbl;
 }();
@@ -236,6 +245,9 @@ std::optional<evmc::Result> call_precompile(evmc_revision rev, const evmc_messag
         return {};
 
     if (rev < EVMC_ISTANBUL && id > 8)
+        return {};
+
+    if (rev < EVMC_CANCUN && id > 9)
         return {};
 
     assert(id > 0);

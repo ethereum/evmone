@@ -10,7 +10,7 @@
 namespace evmone::state
 {
 /// The total number of known precompiles ids, including 0.
-inline constexpr std::size_t NumPrecompiles = 10;
+inline constexpr std::size_t NumPrecompiles = 11;
 
 enum class PrecompileId : uint8_t
 {
@@ -23,6 +23,7 @@ enum class PrecompileId : uint8_t
     ecmul = 0x07,
     ecpairing = 0x08,
     blake2bf = 0x09,
+    point_evaluation = 0x0a,
 };
 
 struct ExecutionResult

@@ -2,6 +2,8 @@
 # Copyright 2022 The evmone Authors.
 # SPDX-License-Identifier: Apache-2.0
 
+include(FetchContent)
+
 add_library(evmone-state STATIC)
 add_library(evmone::state ALIAS evmone-state)
 target_link_libraries(evmone-state PUBLIC evmc::evmc_cpp PRIVATE evmone evmone::precompiles ethash::keccak)
@@ -33,7 +35,6 @@ target_sources(
 
 option(EVMONE_PRECOMPILES_SILKPRE "Enable precompiles support via silkpre library" OFF)
 if(EVMONE_PRECOMPILES_SILKPRE)
-    include(FetchContent)
     FetchContent_Declare(
         silkpre
         GIT_REPOSITORY https://github.com/torquem-ch/silkpre
@@ -58,5 +59,30 @@ if(EVMONE_PRECOMPILES_SILKPRE)
         evmone-state PRIVATE
         precompiles_silkpre.hpp
         precompiles_silkpre.cpp
+    )
+endif()
+
+option(EVMONE_PRECOMPILES_CKZG "Add c-kzg dependency for the pointEvaluation precompile")
+if(EVMONE_PRECOMPILES_CKZG)
+    FetchContent_Declare(
+        C-KZG-4844
+        GIT_REPOSITORY https://github.com/ethereum/c-kzg-4844
+        GIT_TAG v0.3.1
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(C-KZG-4844)
+    message(${c-kzg-4844_SOURCE_DIR})
+    add_library(c_kzg_4844 STATIC ${c-kzg-4844_SOURCE_DIR}/src/c_kzg_4844.c)
+    target_include_directories(c_kzg_4844 PUBLIC ${c-kzg-4844_SOURCE_DIR}/src ${c-kzg-4844_SOURCE_DIR}/blst/bindings)
+    target_compile_definitions(c_kzg_4844 PUBLIC FIELD_ELEMENTS_PER_BLOB=4096)
+    target_compile_options(c_kzg_4844 PRIVATE -Wno-error)
+    target_link_libraries(c_kzg_4844 PRIVATE ${c-kzg-4844_SOURCE_DIR}/blst/libblst.a)
+
+    target_link_libraries(evmone-state PRIVATE c_kzg_4844)
+    target_compile_definitions(evmone-state PRIVATE EVMONE_PRECOMPILES_CKZG=1)
+    target_sources(
+        evmone-state PRIVATE
+        precompiles_ckzg.hpp
+        precompiles_ckzg.cpp
     )
 endif()
