@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "state_transition.hpp"
+#include <evmone/eof.hpp>
 
 namespace evmone::test
 {
@@ -28,6 +29,15 @@ public:
 
 void state_transition::TearDown()
 {
+    for (const auto& [addr, acc] : pre.get_accounts())
+    {
+        if (is_eof_container(acc.code))
+        {
+            ASSERT_EQ(validate_eof(rev, acc.code), EOFValidationError::success)
+                << "invalid EOF in prestate at " << addr;
+        }
+    }
+
     auto state = pre;
     const auto trace = !expect.trace.empty();
     auto& selected_vm = trace ? tracing_vm : vm;
