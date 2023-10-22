@@ -17,6 +17,7 @@
 #include <stack>
 #include <variant>
 #include <vector>
+#include <set>
 
 namespace evmone
 {
@@ -481,6 +482,27 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
     return max_stack_height;
 }
 
+std::set<size_t> update_accessed_code_sections(
+    std::set<size_t> accessed_code_sections,
+    const EOF1Header& header,
+    size_t code_index,
+    bytes_view container) noexcept
+{
+    const bytes_view code{header.get_code(container, code_index)};
+    for (size_t i = 0; i < code.size(); ++i)
+    {
+        const auto opcode = code[i];
+        if (opcode == OP_CALLF)
+        {
+          const auto fid = read_uint16_be(&code[i + 1]);
+          accessed_code_sections.insert(fid);
+          i += 2;
+        } else
+          i += instr::traits[opcode].immediate_size;
+    }
+    return accessed_code_sections;
+}
+
 std::variant<EOF1Header, EOFValidationError> validate_eof1(
     evmc_revision rev, bytes_view container) noexcept
 {
@@ -510,6 +532,7 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(
         offset += code_size;
     }
 
+    std::set<size_t> accessed_code_sections = { 0 };
     EOF1Header header{container[2], code_sizes, code_offsets, data_size, types};
 
     for (size_t code_idx = 0; code_idx < header.code_sizes.size(); ++code_idx)
@@ -517,6 +540,9 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(
         const auto error_instr = validate_instructions(rev, header, code_idx, container);
         if (error_instr != EOFValidationError::success)
             return error_instr;
+
+        accessed_code_sections = update_accessed_code_sections(
+            accessed_code_sections, header, code_idx, container);
 
         if (!validate_rjump_destinations(header.get_code(container, code_idx)))
             return EOFValidationError::invalid_rjump_destination;
@@ -528,6 +554,9 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(
         if (std::get<int32_t>(msh_or_error) != header.types[code_idx].max_stack_height)
             return EOFValidationError::invalid_max_stack_height;
     }
+
+    if (accessed_code_sections.size() != header.code_sizes.size())
+        return EOFValidationError::unreachable_code_sections;
 
     return header;
 }
@@ -653,6 +682,8 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "section_headers_not_terminated";
     case EOFValidationError::invalid_section_bodies_size:
         return "invalid_section_bodies_size";
+    case EOFValidationError::unreachable_code_sections:
+        return "unreachable_code_sections";
     case EOFValidationError::undefined_instruction:
         return "undefined_instruction";
     case EOFValidationError::truncated_instruction:
