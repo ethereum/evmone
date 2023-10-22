@@ -93,13 +93,14 @@ TEST(eof_validation, minimal_valid_EOF1_multiple_code_sections)
     EXPECT_EQ(validate_eof("EF0001 010008 02000200010001 00  00800000 00800000  FE FE"),
         EOFValidationError::data_section_missing);
     // with data section
-    EXPECT_EQ(validate_eof("EF0001 010008 02000200010001 040001 00  00800000 00800000  FE FE DA"),
+    EXPECT_EQ(
+        validate_eof("EF0001 010008 02000200030001 040001 00  00800000 00800000 E50001 FE DA"),
         EOFValidationError::success);
 
     // non-void input and output types
-    EXPECT_EQ(validate_eof("EF0001 010010 0200040001000200020002 040000 00 "
-                           "00800000 01800001 00010001 02030003"
-                           "FE 5000 30e4 80e4"),
+    EXPECT_EQ(validate_eof("EF0001 010010 0200040005000600080002 040000 00 "
+                           "00800001 01000001 00010003 02030003"
+                           "5FE3000100 50E3000250E4 3080E300035050E4 80E4"),
         EOFValidationError::success);
 }
 
@@ -227,7 +228,7 @@ TEST(eof_validation, EOF1_truncated_section)
 TEST(eof_validation, EOF1_code_section_offset)
 {
     const auto eof =
-        "EF0001 010008 02000200030001 040004 00 00800001 00800000 6001fe fe 0000 0000"_hex;
+        "EF0001 010008 02000200030001 040004 00 00800000 00800000 E50001 FE 00000000"_hex;
     ASSERT_EQ(validate_eof(EVMC_PRAGUE, eof), EOFValidationError::success);
 
     const auto header = read_valid_eof1_header(eof);
@@ -310,12 +311,19 @@ TEST(eof_validation, EOF1_invalid_section_0_type)
 
 TEST(eof_validation, EOF1_too_many_code_sections)
 {
-    const auto valid = "EF0001 011000" + bytecode{"020400"} + 0x400 * bytecode{"0001"} +
-                       "040000 00" + 0x400 * bytecode{"00800000"} + 0x400 * bytecode{"FE"};
+    std::string cs_calling_next;
+    for (int i = 0; i < 1023; ++i)
+        cs_calling_next += "E5" + hex(big_endian(static_cast<uint16_t>(i + 1)));
+
+    const std::string code_sections_1024 = cs_calling_next + "5B5B00";
+    const std::string code_sections_1025 = cs_calling_next + "E504005B5B00";
+
+    const auto valid = "EF0001 011000" + bytecode{"020400"} + 0x400 * bytecode{"0003"} +
+                       "040000 00" + 0x400 * bytecode{"00800000"} + code_sections_1024;
     EXPECT_EQ(validate_eof(valid), EOFValidationError::success);
 
     const auto invalid = "EF0001 011002" + bytecode{"020401"} + 0x401 * bytecode{"0001"} +
-                         "040000 00" + 0x401 * bytecode{"00800000"} + 0x401 * bytecode{"FE"};
+                         "040000 00" + 0x401 * bytecode{"00800000"} + code_sections_1025;
     EXPECT_EQ(validate_eof(invalid), EOFValidationError::too_many_code_sections);
 }
 
@@ -345,7 +353,8 @@ TEST(eof_validation, EOF1_undefined_opcodes)
         if (opcode == OP_RETF)
         {
             // RETF can be tested in 2nd code section.
-            cont = "EF0001 010008 02000200010001 040000 00 00800000 00000000 00"_hex + OP_RETF;
+            cont =
+                "EF0001 010008 02000200040001 040000 00 00800000 00000000 E3000100 "_hex + OP_RETF;
         }
         else
         {
@@ -627,14 +636,15 @@ TEST(eof_validation, deprecated_instructions)
 
 TEST(eof_validation, max_arguments_count)
 {
-    EXPECT_EQ(validate_eof("EF0001 010008 02000200010001 040000 00 00800000 7F7F007F 00 E4"),
+    EXPECT_EQ(validate_eof("EF0001 010008 02000200830001 040000 00 0080007F 7F7F007F" +
+                           127 * bytecode{"5F"} + "E3000100 E4"),
         EOFValidationError::success);
 
     EXPECT_EQ(validate_eof("EF0001 010008 02000200010001 040000 00 00800000 80800080 00 E4"),
         EOFValidationError::inputs_outputs_num_above_limit);
 
     {
-        auto code = bytecode{"EF0001 010008 020002000100FF 040000 00 00800000 007F007F"} + OP_STOP +
+        auto code = bytecode{"EF0001 010008 020002000400FF 040000 00 0080007F 007F007F E3000100"} +
                     127 * bytecode{1} + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::success);
@@ -648,8 +658,8 @@ TEST(eof_validation, max_arguments_count)
     }
 
     {
-        auto code = bytecode{"EF0001 010008 02000200010080 040000 00 00800000 7F00007F"} + OP_STOP +
-                    127 * OP_POP + OP_RETF;
+        auto code = bytecode{"EF0001 010008 02000200830080 040000 00 0080007F 7F00007F"} +
+                    127 * bytecode{"5F"} + "E3000100" + 127 * OP_POP + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::success);
     }
@@ -665,15 +675,15 @@ TEST(eof_validation, max_arguments_count)
 TEST(eof_validation, max_stack_height)
 {
     {
-        auto code = bytecode{"EF0001 010008 02000200010BFE 040000 00 00800000 000003FF"} + OP_STOP +
+        auto code = bytecode{"EF0001 010008 02000200040BFE 040000 00 00800000 000003FF E3000100"} +
                     0x3FF * bytecode{1} + 0x3FF * OP_POP + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::success);
     }
 
     {
-        auto code = "EF0001 010008 0200020BFE0001 040000 00 008003FF 00000000" +
-                    0x3FF * bytecode{1} + 0x3FF * OP_POP + OP_STOP + OP_RETF;
+        auto code = "EF0001 010008 0200020C010001 040000 00 008003FF 00000000" +
+                    0x3FF * bytecode{1} + 0x3FF * OP_POP + "E3000100" + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::success);
     }
@@ -852,15 +862,27 @@ TEST(eof_validation, multiple_code_sections_headers)
 
 TEST(eof_validation, many_code_sections_1023)
 {
-    auto code = bytecode{"ef0001 010ffc 0203ff"} + 1023 * bytecode{"0001"} + "040000 00" +
-                1023 * bytecode{"00800000"} + bytecode{bytes(1023, OP_STOP)};
+    std::string code_sections_1023;
+    for (auto i = 0; i < 1022; ++i)
+        code_sections_1023 += "E5" + hex(big_endian(static_cast<uint16_t>(i + 1)));
+    code_sections_1023 += "5B5B00";
+
+    const auto code = "EF0001 010FFC 0203FF " + 1023 * bytecode{"0003"} + "040000 00" +
+                      1023 * bytecode{"00800000"} + code_sections_1023;
+
     EXPECT_EQ(validate_eof(code), EOFValidationError::success);
 }
 
 TEST(eof_validation, many_code_sections_1024)
 {
-    auto code = bytecode{"ef0001 011000 020400"} + 1024 * bytecode{"0001"} + "040000 00" +
-                1024 * bytecode{"00800000"} + bytecode{bytes(1024, OP_STOP)};
+    std::string code_sections_1024;
+    for (auto i = 0; i < 1023; ++i)
+        code_sections_1024 += "E5" + hex(big_endian(static_cast<uint16_t>(i + 1)));
+    code_sections_1024 += "5B5B00";
+
+    const auto code = "EF0001 011000 020400 " + 1024 * bytecode{"0003"} + "040000 00" +
+                      1024 * bytecode{"00800000"} + code_sections_1024;
+
     EXPECT_EQ(validate_eof(code), EOFValidationError::success);
 }
 
@@ -970,20 +992,21 @@ TEST(eof_validation, non_returning_status)
         EOFValidationError::success);
 
     // Returning with RETF
-    EXPECT_EQ(validate_eof("EF0001 010008 02000200010001 040000 00 0080000000000000 00 E4"),
+    EXPECT_EQ(validate_eof("EF0001 010008 02000200040001 040000 00 0080000000000000 E3000100 E4"),
         EOFValidationError::success);
     // Returning with JUMPF
-    EXPECT_EQ(
-        validate_eof(
-            "EF0001 01000c 020003000100030001 040000 00 008000000000000000000000 00 E50002 E4"),
+    EXPECT_EQ(validate_eof("EF0001 01000c 020003000400030001 040000 00 008000000000000000000000 "
+                           "E3000100 E50002 E4"),
         EOFValidationError::success);
     // Returning with JUMPF to returning and RETF
-    EXPECT_EQ(validate_eof("EF0001 01000C 020003000100070001 040000 00 008000000100000100000000 00 "
-                           "E10001E4E50002 E4"),
+    EXPECT_EQ(validate_eof(
+                  "EF0001 01000C 020003000500070001 040000 00 008000010100000100000000 5FE3000100 "
+                  "E10001E4E50002 E4"),
         EOFValidationError::success);
     // Returning with JUMPF to non-returning and RETF
     EXPECT_EQ(
-        validate_eof("EF0001 010008 02000200010007 040000 00 0080000001000001 00 E10001E4E50000"),
+        validate_eof(
+            "EF0001 010008 02000200050007 040000 00 0080000101000001 5FE3000100 E10001E4E50000"),
         EOFValidationError::success);
 
     // Invalid with RETF
@@ -1065,7 +1088,7 @@ TEST(eof_validation, jumpf_into_returning_stack_validation)
     // JUMPF into a function with the same number of outputs as current one
 
     // Exactly required inputs on stack at JUMPF
-    EXPECT_EQ(validate_eof(eof_bytecode(bytecode{OP_STOP})
+    EXPECT_EQ(validate_eof(eof_bytecode(bytecode{OP_CALLF} + "0001" + OP_STOP, 2)
                                .code(push0() + push0() + push0() + OP_JUMPF + "0002", 0, 2, 3)
                                .code(bytecode(OP_POP) + OP_RETF, 3, 2, 3)),
         EOFValidationError::success);
@@ -1088,7 +1111,7 @@ TEST(eof_validation, jumpf_into_returning_stack_validation)
 
     // Exactly required inputs on stack at JUMPF
     EXPECT_EQ(
-        validate_eof(eof_bytecode(bytecode{OP_STOP})
+        validate_eof(eof_bytecode(bytecode{OP_CALLF} + "0001" + OP_STOP, 2)
                          .code(push0() + push0() + push0() + push0() + OP_JUMPF + "0002", 0, 2, 4)
                          .code(bytecode(OP_POP) + OP_POP + OP_RETF, 3, 1, 3)),
         EOFValidationError::success);
@@ -1159,5 +1182,83 @@ TEST(eof_validation, jumpf_with_inputs_stack_overflow)
                               .code(push0() + OP_STOP, 2, 0x80, 3);
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+}
+
+TEST(eof_validation, unreachable_code_sections)
+{
+    {
+        const auto code = eof_bytecode(OP_INVALID).code(OP_INVALID, 0, 0x80, 0);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::unreachable_code_sections);
+    }
+
+    {
+        const auto code = eof_bytecode(bytecode{OP_CALLF} + "0001" + OP_STOP, 0)
+                              .code(bytecode{"5B"} + OP_RETF, 0, 0, 0)
+                              .code(bytecode{"FE"}, 0, 0x80, 0);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::unreachable_code_sections);
+    }
+
+    {
+        const auto code = eof_bytecode(bytecode{OP_CALLF} + "0002" + OP_STOP, 0)
+                              .code(bytecode{"FE"}, 0, 0x80, 0)
+                              .code(bytecode{"5B"} + OP_RETF, 0, 0, 0);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::unreachable_code_sections);
+    }
+
+    {
+        const auto code = eof_bytecode(bytecode{OP_CALLF} + "0003" + OP_STOP, 0)
+                              .code(bytecode{"FE"}, 0, 0x80, 0)
+                              .code(bytecode{"5B"} + OP_RETF, 0, 0, 0)
+                              .code(bytecode{OP_CALLF} + "0002" + OP_RETF, 0, 0, 0);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::unreachable_code_sections);
+    }
+
+    {
+        const auto code =
+            eof_bytecode(bytecode{OP_JUMPF} + "0000").code(bytecode{OP_JUMPF} + "0001", 0, 0x80, 0);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::unreachable_code_sections);
+    }
+
+    {
+        const auto code = eof_bytecode(bytecode{OP_JUMPF} + "0001")
+                              .code(bytecode{OP_STOP}, 0, 0x80, 0)
+                              .code(bytecode{"5B"} + OP_RETF, 0, 0, 0);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::unreachable_code_sections);
+    }
+
+    {
+        auto code_sections_256_err_001 =
+            eof_bytecode(bytecode{OP_JUMPF} + "0001").code(bytecode{OP_JUMPF} + "0001", 0, 0x80, 0);
+        auto code_sections_256_err_254 =
+            eof_bytecode(bytecode{OP_JUMPF} + "0001").code(bytecode{OP_JUMPF} + "0002", 0, 0x80, 0);
+        for (int i = 2; i < 254; ++i)
+        {
+            code_sections_256_err_001.code(
+                bytecode{OP_JUMPF} + hex(big_endian(static_cast<uint16_t>(i + 1))), 0, 0x80, 0);
+            code_sections_256_err_254.code(
+                bytecode{OP_JUMPF} + hex(big_endian(static_cast<uint16_t>(i + 1))), 0, 0x80, 0);
+            ;
+        }
+
+        code_sections_256_err_001.code(bytecode{OP_JUMPF} + "00FF", 0, 0x80, 0)
+            .code(3 * bytecode{"5B"} + OP_STOP, 0, 0x80, 0);
+        code_sections_256_err_254.code(bytecode{OP_JUMPF} + "00FE", 0, 0x80, 0)
+            .code(3 * bytecode{"5B"} + OP_STOP, 0, 0x80, 0);
+
+        // Code Section 1 calls itself instead of code section 2, leaving code section 2 unreachable
+        EXPECT_EQ(
+            validate_eof(code_sections_256_err_001), EOFValidationError::unreachable_code_sections);
+
+        // Code Section 254 calls itself instead of code section 255, leaving code section 255
+        // unreachable
+        EXPECT_EQ(
+            validate_eof(code_sections_256_err_254), EOFValidationError::unreachable_code_sections);
     }
 }
