@@ -7,7 +7,9 @@
 #include <gtest/gtest.h>
 #include <test/utils/bytecode.hpp>
 #include <test/utils/utils.hpp>
+#include <format>
 
+using namespace std;
 using namespace evmone;
 
 namespace
@@ -91,14 +93,13 @@ TEST(eof_validation, minimal_valid_EOF1_multiple_code_sections)
     EXPECT_EQ(validate_eof("EF0001 010008 02000200010001 00  00800000 00800000  FE FE"),
         EOFValidationError::data_section_missing);
     // with data section
-    EXPECT_EQ(validate_eof("EF0001 010008 02000200010001 040001 00  00800000 00800000  FE FE DA"),
+    EXPECT_EQ(validate_eof("EF0001 010008 02000200040001 040001 00  00800000 00800000  E3000100 FE DA"),
         EOFValidationError::success);
 
     // non-void input and output types
-    EXPECT_EQ(validate_eof("EF0001 010010 0200040001000200020002 040000 00 "
-                           "00800000 01800001 00010001 02030003"
-                           "FE 5000 30e4 80e4"),
-        EOFValidationError::success);
+    EXPECT_EQ(validate_eof("EF0001 010010 0200040005000500080002 040000 00 "
+                           "00800001 01800001 00010003 02030003"
+                           "5FE3000100 50E3000200 3080E30003505000 8000"), EOFValidationError::success);
 }
 
 TEST(eof_validation, EOF1_types_section_missing)
@@ -225,16 +226,16 @@ TEST(eof_validation, EOF1_truncated_section)
 TEST(eof_validation, EOF1_code_section_offset)
 {
     const auto eof =
-        "EF0001 010008 02000200030001 040004 00 00800001 00800000 6001fe fe 0000 0000"_hex;
+        "EF0001 010008 02000200040001 040000 00 00800000 00800000 E30001FE FE"_hex;
     ASSERT_EQ(validate_eof(EVMC_PRAGUE, eof), EOFValidationError::success);
 
     const auto header = read_valid_eof1_header(eof);
     ASSERT_EQ(header.code_sizes.size(), 2);
-    EXPECT_EQ(header.code_sizes[0], 3);
+    EXPECT_EQ(header.code_sizes[0], 4);
     EXPECT_EQ(header.code_sizes[1], 1);
     ASSERT_EQ(header.code_offsets.size(), 2);
     EXPECT_EQ(header.code_offsets[0], 25);
-    EXPECT_EQ(header.code_offsets[1], 28);
+    EXPECT_EQ(header.code_offsets[1], 29);
 }
 
 TEST(eof_validation, EOF1_trailing_bytes)
@@ -308,8 +309,15 @@ TEST(eof_validation, EOF1_invalid_section_0_type)
 
 TEST(eof_validation, EOF1_too_many_code_sections)
 {
-    const auto valid = "EF0001 011000" + bytecode{"020400"} + 0x400 * bytecode{"0001"} +
-                       "040000 00" + 0x400 * bytecode{"00800000"} + 0x400 * bytecode{"FE"};
+    std::string code_sections_1024;
+    for (int i = 0; i < 1024; ++i)
+      if (i < 1023)
+        code_sections_1024 += "E3" + std::format("{:04X}", i+1) + "00";
+      else
+        code_sections_1024 += "5B5B5B00";
+
+    const auto valid = "EF0001 011000" + bytecode{"020400"} + 0x400 * bytecode{"0004"} +
+                       "040000 00" + 0x400 * bytecode{"00800000"} + code_sections_1024;
     EXPECT_EQ(validate_eof(valid), EOFValidationError::success);
 
     const auto invalid = "EF0001 011002" + bytecode{"020401"} + 0x401 * bytecode{"0001"} +
@@ -625,14 +633,14 @@ TEST(eof_validation, deprecated_instructions)
 
 TEST(eof_validation, max_arguments_count)
 {
-    EXPECT_EQ(validate_eof("EF0001 010008 02000200010001 040000 00 00800000 7F7F007F 00 E4"),
+    EXPECT_EQ(validate_eof("EF0001 010008 02000200830001 040000 00 0080007F 7F7F007F" + 127 * bytecode{"5F"} + "E3000100 E4"),
         EOFValidationError::success);
 
     EXPECT_EQ(validate_eof("EF0001 010008 02000200010001 040000 00 00800000 80800080 00 E4"),
         EOFValidationError::inputs_outputs_num_above_limit);
 
     {
-        auto code = bytecode{"EF0001 010008 020002000100FF 040000 00 00800000 007F007F"} + OP_STOP +
+        auto code = bytecode{"EF0001 010008 020002000400FF 040000 00 0080007F 007F007F E3000100"} +
                     127 * bytecode{1} + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::success);
@@ -646,7 +654,7 @@ TEST(eof_validation, max_arguments_count)
     }
 
     {
-        auto code = bytecode{"EF0001 010008 02000200010080 040000 00 00800000 7F00007F"} + OP_STOP +
+        auto code = bytecode{"EF0001 010008 02000200830080 040000 00 0080007F 7F00007F"} + 127 * bytecode{"5F"} +  "E3000100" +
                     127 * OP_POP + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::success);
@@ -663,15 +671,15 @@ TEST(eof_validation, max_arguments_count)
 TEST(eof_validation, max_stack_height)
 {
     {
-        auto code = bytecode{"EF0001 010008 02000200010BFE 040000 00 00800000 000003FF"} + OP_STOP +
+        auto code = bytecode{"EF0001 010008 02000200040BFE 040000 00 00800000 000003FF E3000100"} +
                     0x3FF * bytecode{1} + 0x3FF * OP_POP + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::success);
     }
 
     {
-        auto code = "EF0001 010008 0200020BFE0001 040000 00 008003FF 00000000" +
-                    0x3FF * bytecode{1} + 0x3FF * OP_POP + OP_STOP + OP_RETF;
+        auto code = "EF0001 010008 0200020C010001 040000 00 008003FF 00000000" +
+                    0x3FF * bytecode{1} + 0x3FF * OP_POP + "E3000100" + OP_RETF;
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::success);
     }
@@ -826,15 +834,31 @@ TEST(eof_validation, multiple_code_sections_headers)
 
 TEST(eof_validation, many_code_sections_1023)
 {
-    auto code = bytecode{"ef0001 010ffc 0203ff"} + 1023 * bytecode{"0001"} + "040000 00" +
-                1023 * bytecode{"00800000"} + bytecode{bytes(1023, OP_STOP)};
+    std::string code_sections_1023;
+    for (auto i = 0; i < 1023; ++i)
+      if (i < 1022)
+        code_sections_1023 += "E3" + std::format("{:04X}", i+1) + "00";
+      else
+        code_sections_1023 += "5B5B5B00";
+
+    const auto code = "EF0001 010FFC 0203FF " + 1023 * bytecode{"0004"} + "040000 00" +
+      1023 * bytecode{"00800000"} + code_sections_1023;
+
     EXPECT_EQ(validate_eof(code), EOFValidationError::success);
 }
 
 TEST(eof_validation, many_code_sections_1024)
 {
-    auto code = bytecode{"ef0001 011000 020400"} + 1024 * bytecode{"0001"} + "040000 00" +
-                1024 * bytecode{"00800000"} + bytecode{bytes(1024, OP_STOP)};
+    std::string code_sections_1024;
+    for (auto i = 0; i < 1024; ++i)
+      if (i < 1023)
+        code_sections_1024 += "E3" + std::format("{:04X}", i+1) + "00";
+      else
+        code_sections_1024 += "5B5B5B00";
+
+    const auto code = "EF0001 011000 020400 " + 1024 * bytecode{"0004"} + "040000 00" +
+      1024 * bytecode{"00800000"} + code_sections_1024;
+
     EXPECT_EQ(validate_eof(code), EOFValidationError::success);
 }
 
