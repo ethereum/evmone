@@ -212,13 +212,14 @@ Result create_eof_impl(
     if constexpr (Op == OP_CREATE3)
     {
         const auto initcontainer_index = uint8_t{pos[1]};
-        pos += 1;
+        pos += 2;
         const auto& container = state.original_code;
         const auto eof_header = read_valid_eof1_header(state.original_code);
         initcontainer = eof_header.get_container(container, initcontainer_index);
     }
     else
     {
+        pos += 1;
         const auto initcode_index256 = stack.pop();
         const auto& tx_context = state.get_tx_context();
         if (initcode_index256 >= tx_context.initcodes_count)
@@ -284,7 +285,6 @@ Result create_eof_impl(
     if (result.status_code == EVMC_SUCCESS)
         stack.top() = intx::be::load<uint256>(result.create_address);
 
-    pos += 1;
     return {EVMC_SUCCESS, gas_left};
 }
 
