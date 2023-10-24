@@ -301,7 +301,9 @@ EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& he
                 const auto container_idx = code[i + 1];
                 if (container_idx >= header.container_sizes.size())
                     return EOFValidationError::invalid_container_section_index;
-                // TODO validate that no truncated container is used
+                if (header.container_sizes[container_idx] !=
+                    header.container_deploy_sizes[container_idx])
+                    return EOFValidationError::truncated_container_used_as_initcode;
                 ++i;
             }
             else
@@ -838,6 +840,8 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "too_many_container_sections";
     case EOFValidationError::invalid_container_section_index:
         return "invalid_container_section_index";
+    case EOFValidationError::truncated_container_used_as_initcode:
+        return "truncated_container_used_as_initcode";
     case EOFValidationError::impossible:
         return "impossible";
     }

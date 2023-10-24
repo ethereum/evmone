@@ -133,6 +133,7 @@ enum class EOFValidationError
     invalid_dataloadn_index,
     too_many_container_sections,
     invalid_container_section_index,
+    truncated_container_used_as_initcode,
 
     impossible,
 };
