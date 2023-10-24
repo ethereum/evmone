@@ -145,6 +145,9 @@ enum class EOFValidationError
 [[nodiscard]] EVMC_EXPORT EOFValidationError validate_eof(
     evmc_revision rev, bytes_view container) noexcept;
 
+[[nodiscard]] EVMC_EXPORT EOFValidationError validate_eof(
+    evmc_revision rev, bytes_view container, uint16_t container_deploy_size) noexcept;
+
 /// Returns the error message corresponding to an error code.
 [[nodiscard]] EVMC_EXPORT std::string_view get_error_message(EOFValidationError err) noexcept;
 

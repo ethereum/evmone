@@ -254,8 +254,8 @@ std::variant<std::vector<EOFCodeType>, EOFValidationError> validate_types(
     return types;
 }
 
-EOFValidationError validate_instructions(
-    evmc_revision rev, const EOF1Header& header, size_t code_idx, bytes_view container) noexcept
+EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& header,
+    size_t code_idx, bytes_view container, uint16_t container_deploy_size) noexcept
 {
     const bytes_view code{header.get_code(container, code_idx)};
     assert(!code.empty());  // guaranteed by EOF headers validation
@@ -288,8 +288,9 @@ EOFValidationError validate_instructions(
         else if (op == OP_DATALOADN)
         {
             const auto index = read_uint16_be(&code[i + 1]);
-            // TODO use full appended container size
-            if (header.data_size < 32 || index > header.data_size - 32)
+            const auto aux_data_size = container_deploy_size - container.size();
+            const auto data_size = header.data_size + aux_data_size;
+            if (data_size < 32 || index > data_size - 32)
                 return EOFValidationError::invalid_dataloadn_index;
             i += 2;
         }
@@ -512,7 +513,7 @@ std::variant<std::vector<uint16_t>, EOFValidationError> validate_container_types
 }
 
 std::variant<EOF1Header, EOFValidationError> validate_eof1(  // NOLINT(misc-no-recursion)
-    evmc_revision rev, bytes_view container) noexcept
+    evmc_revision rev, bytes_view container, uint16_t container_deploy_size) noexcept
 {
     // TODO iteration instead of recursion
 
@@ -569,7 +570,8 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(  // NOLINT(misc-no-r
 
     for (size_t code_idx = 0; code_idx < header.code_sizes.size(); ++code_idx)
     {
-        const auto error_instr = validate_instructions(rev, header, code_idx, container);
+        const auto error_instr =
+            validate_instructions(rev, header, code_idx, container, container_deploy_size);
         if (error_instr != EOFValidationError::success)
             return error_instr;
 
@@ -588,7 +590,8 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(  // NOLINT(misc-no-r
     {
         const bytes_view subcontainer{header.get_container(container, subcont_idx)};
 
-        const auto error_subcont = validate_eof(rev, subcontainer);
+        const auto error_subcont =
+            validate_eof(rev, subcontainer, container_deploy_sizes[subcont_idx]);
         if (error_subcont != EOFValidationError::success)
             return error_subcont;
     }
@@ -730,7 +733,8 @@ uint8_t get_eof_version(bytes_view container) noexcept
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
-EOFValidationError validate_eof(evmc_revision rev, bytes_view container) noexcept
+EOFValidationError validate_eof(
+    evmc_revision rev, bytes_view container, uint16_t container_deploy_size) noexcept
 {
     if (!is_eof_container(container))
         return EOFValidationError::invalid_prefix;
@@ -742,7 +746,7 @@ EOFValidationError validate_eof(evmc_revision rev, bytes_view container) noexcep
         if (rev < EVMC_PRAGUE)
             return EOFValidationError::eof_version_unknown;
 
-        const auto header_or_error = validate_eof1(rev, container);
+        const auto header_or_error = validate_eof1(rev, container, container_deploy_size);
         if (const auto* error = std::get_if<EOFValidationError>(&header_or_error))
             return *error;
         else
@@ -750,6 +754,12 @@ EOFValidationError validate_eof(evmc_revision rev, bytes_view container) noexcep
     }
     else
         return EOFValidationError::eof_version_unknown;
+}
+
+EOFValidationError validate_eof(evmc_revision rev, bytes_view container) noexcept
+{
+    assert(container.size() <= std::numeric_limits<uint16_t>::max());
+    return validate_eof(rev, container, static_cast<uint16_t>(container.size()));
 }
 
 std::string_view get_error_message(EOFValidationError err) noexcept
