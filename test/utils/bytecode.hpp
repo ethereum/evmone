@@ -102,11 +102,14 @@ inline bytecode eof_header(uint8_t version, uint16_t code_size, uint16_t max_sta
     out += "020001" + big_endian(code_size);
 
     if (!embedded_container_sizes.empty())
+    {
         out += "03" + big_endian(static_cast<uint16_t>(embedded_container_sizes.size()));
-    for (const auto container_size : embedded_container_sizes)
-        out += big_endian(container_size);
+        for (const auto container_size : embedded_container_sizes)
+            out += big_endian(container_size);
+        out += "04" + big_endian(static_cast<uint16_t>(embedded_container_sizes.size() * 2));
+    }
 
-    out += "04" + big_endian(data_size);
+    out += "05" + big_endian(data_size);
 
     out += "00";
     out += "0000" + big_endian(max_stack_height);  // type section
@@ -119,31 +122,13 @@ inline bytecode eof1_header(uint16_t code_size, uint16_t max_stack_height, uint1
     return eof_header(1, code_size, max_stack_height, data_size, embedded_container_sizes);
 }
 
-inline bytecode eof1_bytecode(bytecode code, uint16_t max_stack_height = 0, bytecode data = {},
-    bytecode embedded_container = {})
+inline bytecode eof1_bytecode_with_truncated_containers(bytecode code, uint16_t max_stack_height,
+    bytecode data, uint16_t data_size, std::span<const bytecode> embedded_containers,
+    std::span<const uint16_t> container_deploy_sizes)
 {
     assert(code.size() <= std::numeric_limits<uint16_t>::max());
     assert(data.size() <= std::numeric_limits<uint16_t>::max());
-    assert(embedded_container.size() <= std::numeric_limits<uint16_t>::max());
-
-    const auto code_size = static_cast<uint16_t>(code.size());
-    const auto data_size = static_cast<uint16_t>(data.size());
-
-    if (!embedded_container.empty())
-    {
-        const auto embedded_container_size = static_cast<uint16_t>(embedded_container.size());
-        return eof1_header(code_size, max_stack_height, data_size, {&embedded_container_size, 1}) +
-               code + embedded_container + data;
-    }
-    else
-        return eof1_header(code_size, max_stack_height, data_size, {}) + code + data;
-}
-
-inline bytecode eof1_bytecode(bytecode code, uint16_t max_stack_height, bytecode data,
-    std::span<const bytecode> embedded_containers)
-{
-    assert(code.size() <= std::numeric_limits<uint16_t>::max());
-    assert(data.size() <= std::numeric_limits<uint16_t>::max());
+    assert(embedded_containers.size() == container_deploy_sizes.size());
 
     std::vector<uint16_t> embedded_container_sizes;
     std::transform(embedded_containers.begin(), embedded_containers.end(),
@@ -151,14 +136,54 @@ inline bytecode eof1_bytecode(bytecode code, uint16_t max_stack_height, bytecode
         [](const auto& container) { return static_cast<uint16_t>(container.size()); });
 
     bytecode container = eof1_header(static_cast<uint16_t>(code.size()), max_stack_height,
-                             static_cast<uint16_t>(data.size()), embedded_container_sizes) +
+                             data_size, embedded_container_sizes) +
                          code;
     for (const auto& embedded_container : embedded_containers)
         container += embedded_container;
+    for (const auto deploy_size : container_deploy_sizes)
+        container += big_endian(deploy_size);
     container += data;
 
     return container;
 }
+
+inline bytecode eof1_bytecode_with_containers(bytecode code, uint16_t max_stack_height,
+    bytecode data, uint16_t data_size, std::span<const bytecode> embedded_containers)
+{
+    std::vector<uint16_t> embedded_container_sizes;
+    std::transform(embedded_containers.begin(), embedded_containers.end(),
+        std::back_inserter(embedded_container_sizes),
+        [](const auto& container) { return static_cast<uint16_t>(container.size()); });
+
+    return eof1_bytecode_with_truncated_containers(
+        code, max_stack_height, data, data_size, embedded_containers, embedded_container_sizes);
+}
+
+inline bytecode eof1_bytecode_with_container(bytecode code, uint16_t max_stack_height,
+    bytecode data, uint16_t data_size, bytecode embedded_container)
+{
+    return eof1_bytecode_with_containers(
+        code, max_stack_height, data, data_size, {&embedded_container, 1});
+}
+
+inline bytecode eof1_bytecode_with_truncated_container(bytecode code, uint16_t max_stack_height,
+    bytecode data, uint16_t data_size, bytecode embedded_container, uint16_t container_deploy_size)
+{
+    return eof1_bytecode_with_truncated_containers(code, max_stack_height, data, data_size,
+        {&embedded_container, 1}, {&container_deploy_size, 1});
+}
+
+inline bytecode eof1_bytecode(bytecode code, uint16_t max_stack_height = 0, bytecode data = {})
+{
+    return eof1_bytecode_with_containers(
+        code, max_stack_height, data, static_cast<uint16_t>(data.size()), {});
+}
+
+// inline bytecode eof1_bytecode_truncated_data(
+//     bytecode code, uint16_t max_stack_height, bytecode data, uint16_t deploy_data_size)
+//{
+//     return eof1_bytecode_with_containers(code, max_stack_height, data, deploy_data_size, {});
+// }
 
 inline bytecode push(bytes_view data)
 {

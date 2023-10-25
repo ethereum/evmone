@@ -1133,10 +1133,12 @@ inline TermResult returncontract(
     const auto header = read_valid_eof1_header(state.original_code);
     bytes deploy_container{header.get_container(state.original_code, deploy_container_index)};
 
+    // Guaranteed by aux_data size statically calculated from expected deploy size
+    assert(deploy_container.size() + size == header.container_deploy_sizes[deploy_container_index]);
+
     // Append (offset, size) to data section
-    if (!append_data_section(deploy_container,
-            {&state.memory[static_cast<size_t>(offset)], static_cast<size_t>(size)}))
-        return {EVMC_OUT_OF_GAS, gas_left};
+    append_data_section(
+        deploy_container, {&state.memory[static_cast<size_t>(offset)], static_cast<size_t>(size)});
 
     state.deploy_container = std::move(deploy_container);
 

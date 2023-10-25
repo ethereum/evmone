@@ -42,10 +42,11 @@ TEST_F(state_transition, create3_empty_auxdata)
     const auto deploy_container = eof1_bytecode(bytecode(OP_INVALID), 0, deploy_data);
 
     const auto init_code = returncontract(0, 0, 0);
-    const auto init_container = eof1_bytecode(init_code, 2, {}, deploy_container);
+    const auto init_container = eof1_bytecode_with_container(init_code, 2, {}, 0, deploy_container);
 
     const auto factory_code = create3().container(0).input(0, 0).salt(0xff) + ret_top();
-    const auto factory_container = eof1_bytecode(factory_code, 4, {}, init_container);
+    const auto factory_container =
+        eof1_bytecode_with_container(factory_code, 4, {}, 0, init_container);
 
     tx.to = To;
 
@@ -58,24 +59,29 @@ TEST_F(state_transition, create3_empty_auxdata)
 
 TEST_F(state_transition, create3_non_empty_auxdata)
 {
-    static constexpr auto create_address = 0xabf0ed28d2be9e07324fe0d0c27baa875bc766a2_address;
+    static constexpr auto create_address = 0x90886bf4e18c915240d6816a1e9d30a8aa5eafbb_address;
+
 
     rev = EVMC_PRAGUE;
     const auto deploy_data = "abcdef"_hex;
+    const auto aux_data = "aabbccddeeff"_hex;
     const auto deploy_container = eof1_bytecode(bytecode(OP_INVALID), 0, deploy_data);
 
     const auto init_code =
         calldatacopy(0, 0, OP_CALLDATASIZE) + returncontract(0, 0, OP_CALLDATASIZE);
-    const auto init_container = eof1_bytecode(init_code, 3, {}, deploy_container);
+    const auto deploy_container_size =
+        static_cast<uint16_t>(deploy_container.size() + aux_data.size());
+    const auto init_container = eof1_bytecode_with_truncated_container(
+        init_code, 3, {}, 0, deploy_container, deploy_container_size);
 
     const auto factory_code = calldatacopy(0, 0, OP_CALLDATASIZE) +
                               create3().container(0).input(0, OP_CALLDATASIZE).salt(0xff) +
                               ret_top();
-    const auto factory_container = eof1_bytecode(factory_code, 4, {}, init_container);
+    const auto factory_container =
+        eof1_bytecode_with_container(factory_code, 4, {}, 0, init_container);
 
     tx.to = To;
 
-    const auto aux_data = "aabbccddeeff"_hex;
     tx.data = aux_data;
 
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
@@ -89,25 +95,28 @@ TEST_F(state_transition, create3_non_empty_auxdata)
 
 TEST_F(state_transition, create3_dataloadn_referring_to_auxdata)
 {
-    static constexpr auto create_address = 0x9f4a0b1e63b729f0f35c057ab297bb9a6cec2216_address;
+    static constexpr auto create_address = 0xe5fe70b6d7178214ada3dc7f42962e4f74980a62_address;
 
     rev = EVMC_PRAGUE;
     const auto deploy_data = bytes(64, 0);
+    const auto aux_data = bytes(32, 0);
     // DATALOADN{64} - referring to data that will be appended as cux_data
     const auto deploy_code = bytecode(OP_DATALOADN) + "0040" + ret_top();
     const auto deploy_container = eof1_bytecode(deploy_code, 2, deploy_data);
 
     const auto init_code = returncontract(0, 0, 32);
-    const auto init_container = eof1_bytecode(init_code, 2, {}, deploy_container);
+    const auto deploy_container_size = static_cast<uint16_t>(deploy_data.size() + aux_data.size());
+    const auto init_container = eof1_bytecode_with_truncated_container(
+        init_code, 2, {}, 0, deploy_container, deploy_container_size);
 
     const auto factory_code = create3().container(0).input(0, 0).salt(0xff) + ret_top();
-    const auto factory_container = eof1_bytecode(factory_code, 4, {}, init_container);
+    const auto factory_container =
+        eof1_bytecode_with_container(factory_code, 4, {}, 0, init_container);
 
     tx.to = To;
 
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
-    const auto aux_data = bytes(32, 0);
     const auto expected_container = eof1_bytecode(deploy_code, 2, deploy_data + aux_data);
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
@@ -125,7 +134,8 @@ TEST_F(state_transition, create3_revert_empty_returndata)
         calldatacopy(0, 0, OP_CALLDATASIZE) +
         sstore(0, create3().container(0).input(0, OP_CALLDATASIZE).salt(0xff)) +
         sstore(1, OP_RETURNDATASIZE) + OP_STOP;
-    const auto factory_container = eof1_bytecode(factory_code, 4, {}, init_container);
+    const auto factory_container =
+        eof1_bytecode_with_container(factory_code, 4, {}, 0, init_container);
 
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
@@ -145,7 +155,8 @@ TEST_F(state_transition, create3_revert_non_empty_returndata)
         calldatacopy(0, 0, OP_CALLDATASIZE) +
         sstore(0, create3().container(0).input(0, OP_CALLDATASIZE).salt(0xff)) +
         sstore(1, OP_RETURNDATASIZE) + OP_STOP;
-    const auto factory_container = eof1_bytecode(factory_code, 4, {}, init_container);
+    const auto factory_container =
+        eof1_bytecode_with_container(factory_code, 4, {}, 0, init_container);
 
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
@@ -155,23 +166,24 @@ TEST_F(state_transition, create3_revert_non_empty_returndata)
     expect.post[*tx.to].storage[0x01_bytes32] = 0x01_bytes32;
 }
 
-TEST_F(state_transition, create3_invalid_initcontainer)
-{
-    rev = EVMC_PRAGUE;
-    const auto init_code = bytecode{Opcode{OP_PUSH0}};
-    const auto init_container = eof1_bytecode(init_code, 0);
-
-    const auto factory_code =
-        calldatacopy(0, 0, OP_CALLDATASIZE) +
-        sstore(0, create3().container(0).input(0, OP_CALLDATASIZE).salt(0xff)) + OP_STOP;
-    const auto factory_container = eof1_bytecode(factory_code, 4, {}, init_container);
-
-    tx.to = To;
-    pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
-
-    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
-    expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
-}
+// TODO not possible with new CREATE3 design, should be covered by CREATE4 validation tests
+// TEST_F(state_transition, create3_invalid_initcontainer)
+//{
+//    rev = EVMC_PRAGUE;
+//    const auto init_code = bytecode{Opcode{OP_PUSH0}};
+//    const auto init_container = eof1_bytecode(init_code, 0);
+//
+//    const auto factory_code =
+//        calldatacopy(0, 0, OP_CALLDATASIZE) +
+//        sstore(0, create3().container(0).input(0, OP_CALLDATASIZE).salt(0xff)) + OP_STOP;
+//    const auto factory_container = eof1_bytecode(factory_code, 4, {}, 0, init_container);
+//
+//    tx.to = To;
+//    pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
+//
+//    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
+//    expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
+//}
 
 TEST_F(state_transition, create3_initcontainer_aborts)
 {
@@ -182,7 +194,8 @@ TEST_F(state_transition, create3_initcontainer_aborts)
     const auto factory_code =
         calldatacopy(0, 0, OP_CALLDATASIZE) +
         sstore(0, create3().container(0).input(0, OP_CALLDATASIZE).salt(0xff)) + OP_STOP;
-    const auto factory_container = eof1_bytecode(factory_code, 4, {}, init_container);
+    const auto factory_container =
+        eof1_bytecode_with_container(factory_code, 4, {}, 0, init_container);
 
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
@@ -200,7 +213,8 @@ TEST_F(state_transition, create3_initcontainer_return)
     const auto factory_code =
         calldatacopy(0, 0, OP_CALLDATASIZE) +
         sstore(0, create3().container(0).input(0, OP_CALLDATASIZE).salt(0xff)) + OP_STOP;
-    const auto factory_container = eof1_bytecode(factory_code, 4, {}, init_container);
+    const auto factory_container =
+        eof1_bytecode_with_container(factory_code, 4, {}, 0, init_container);
 
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
@@ -218,7 +232,8 @@ TEST_F(state_transition, create3_initcontainer_stop)
     const auto factory_code =
         calldatacopy(0, 0, OP_CALLDATASIZE) +
         sstore(0, create3().container(0).input(0, OP_CALLDATASIZE).salt(0xff)) + OP_STOP;
-    const auto factory_container = eof1_bytecode(factory_code, 4, {}, init_container);
+    const auto factory_container =
+        eof1_bytecode_with_container(factory_code, 4, {}, 0, init_container);
 
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
@@ -227,27 +242,29 @@ TEST_F(state_transition, create3_initcontainer_stop)
     expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
 }
 
-TEST_F(state_transition, create3_invalid_deploy_container)
-{
-    rev = EVMC_PRAGUE;
-    const auto deploy_data = "abcdef"_hex;
-    const auto deploy_container = eof1_bytecode(bytecode{Opcode{OP_PUSH0}}, 0, deploy_data);
-
-    const auto init_code =
-        calldatacopy(0, 0, OP_CALLDATASIZE) + returncontract(0, 0, OP_CALLDATASIZE);
-    const auto init_container = eof1_bytecode(init_code, 3, {}, deploy_container);
-
-    const auto factory_code =
-        calldatacopy(0, 0, OP_CALLDATASIZE) +
-        sstore(0, create3().container(0).input(0, OP_CALLDATASIZE).salt(0xff)) + OP_STOP;
-    const auto factory_container = eof1_bytecode(factory_code, 4, {}, init_container);
-
-    tx.to = To;
-    pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
-
-    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
-    expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
-}
+// TODO not possible with new CREATE3 design, will be covered in CREATE4 valiation tests
+// TEST_F(state_transition, create3_invalid_deploy_container)
+//{
+//     rev = EVMC_PRAGUE;
+//     const auto deploy_data = "abcdef"_hex;
+//     const auto deploy_container = eof1_bytecode(
+//         bytecode{Opcode{OP_PUSH0}}, 0, deploy_data, static_cast<uint16_t>(deploy_data.size()));
+//
+//     const auto init_code =
+//         calldatacopy(0, 0, OP_CALLDATASIZE) + returncontract(0, 0, OP_CALLDATASIZE);
+//     const auto init_container = eof1_bytecode(init_code, 3, {}, 0, deploy_container);
+//
+//     const auto factory_code =
+//         calldatacopy(0, 0, OP_CALLDATASIZE) +
+//         sstore(0, create3().container(0).input(0, OP_CALLDATASIZE).salt(0xff)) + OP_STOP;
+//     const auto factory_container = eof1_bytecode(factory_code, 4, {}, 0, init_container);
+//
+//     tx.to = To;
+//     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
+//
+//     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
+//     expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
+// }
 
 TEST_F(state_transition, create3_deploy_container_max_size)
 {
@@ -264,12 +281,13 @@ TEST_F(state_transition, create3_deploy_container_max_size)
 
     // no aux data
     const auto init_code = returncontract(0, 0, 0);
-    const auto init_container = eof1_bytecode(init_code, 2, {}, deploy_container);
+    const auto init_container = eof1_bytecode_with_container(init_code, 2, {}, 0, deploy_container);
 
     const auto factory_code =
         calldatacopy(0, 0, OP_CALLDATASIZE) +
         sstore(0, create3().container(0).input(0, OP_CALLDATASIZE).salt(0xff)) + OP_STOP;
-    const auto factory_container = eof1_bytecode(factory_code, 4, {}, init_container);
+    const auto factory_container =
+        eof1_bytecode_with_container(factory_code, 4, {}, 0, init_container);
 
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
@@ -294,12 +312,13 @@ TEST_F(state_transition, create3_deploy_container_too_large)
 
     // no aux data
     const auto init_code = returncontract(0, 0, 0);
-    const auto init_container = eof1_bytecode(init_code, 2, {}, deploy_container);
+    const auto init_container = eof1_bytecode_with_container(init_code, 2, {}, 0, deploy_container);
 
     const auto factory_code =
         calldatacopy(0, 0, OP_CALLDATASIZE) +
         sstore(0, create3().container(0).input(0, OP_CALLDATASIZE).salt(0xff)) + OP_STOP;
-    const auto factory_container = eof1_bytecode(factory_code, 4, {}, init_container);
+    const auto factory_container =
+        eof1_bytecode_with_container(factory_code, 4, {}, 0, init_container);
 
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
@@ -321,12 +340,13 @@ TEST_F(state_transition, create3_deploy_container_with_aux_data_too_large)
 
     // 1 byte aux data
     const auto init_code = returncontract(0, 0, 1);
-    const auto init_container = eof1_bytecode(init_code, 2, {}, deploy_container);
+    const auto init_container = eof1_bytecode_with_container(init_code, 2, {}, 0, deploy_container);
 
     const auto factory_code =
         calldatacopy(0, 0, OP_CALLDATASIZE) +
         sstore(0, create3().container(0).input(0, OP_CALLDATASIZE).salt(0xff)) + OP_STOP;
-    const auto factory_container = eof1_bytecode(factory_code, 4, {}, init_container);
+    const auto factory_container =
+        eof1_bytecode_with_container(factory_code, 4, {}, 0, init_container);
 
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
@@ -335,30 +355,33 @@ TEST_F(state_transition, create3_deploy_container_with_aux_data_too_large)
     expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
 }
 
-TEST_F(state_transition, create3_deploy_code_with_dataloadn_invalid)
-{
-    rev = EVMC_PRAGUE;
-    const auto deploy_data = bytes(32, 0);
-    // DATALOADN{64} - referring to offset out of bounds even after appending aux_data later
-    const auto deploy_code = bytecode(OP_DATALOADN) + "0040" + ret_top();
-    const auto deploy_container = eof1_bytecode(deploy_code, 2, deploy_data);
-
-    const auto init_code = returncontract(0, 0, 32);
-    const auto init_container = eof1_bytecode(init_code, 2, {}, deploy_container);
-
-    const auto factory_code = create3().container(0).input(0, 0).salt(0xff) + ret_top();
-    const auto factory_container = eof1_bytecode(factory_code, 4, {}, init_container);
-
-    tx.to = To;
-
-    pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
-
-    const auto aux_data = bytes(32, 0);
-    const auto expected_container = eof1_bytecode(deploy_code, 2, deploy_data + aux_data);
-
-    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
-    expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
-}
+// TODO not possible with new CREATE3 design, should be covered by CREATE4 validation tests
+// TEST_F(state_transition, create3_deploy_code_with_dataloadn_invalid)
+//{
+//    rev = EVMC_PRAGUE;
+//    const auto deploy_data = bytes(32, 0);
+//    // DATALOADN{64} - referring to offset out of bounds even after appending aux_data later
+//    const auto deploy_code = bytecode(OP_DATALOADN) + "0040" + ret_top();
+//    const auto aux_data = bytes(32, 0);
+//    const auto deploy_data_size = static_cast<uint16_t>(deploy_data.size() + aux_data.size());
+//    const auto deploy_container = eof1_bytecode(deploy_code, 2, deploy_data, deploy_data_size);
+//
+//    const auto init_code = returncontract(0, 0, 32);
+//    const auto init_container = eof1_bytecode(init_code, 2, {}, 0, deploy_container);
+//
+//    const auto factory_code = create3().container(0).input(0, 0).salt(0xff) + ret_top();
+//    const auto factory_container = eof1_bytecode(factory_code, 4, {}, 0, init_container);
+//
+//    tx.to = To;
+//
+//    pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
+//
+//    const auto expected_container =
+//        eof1_bytecode(deploy_code, 2, deploy_data + aux_data, deploy_data_size);
+//
+//    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
+//    expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
+//}
 
 TEST_F(state_transition, create3_nested_create3)
 {
@@ -375,14 +398,15 @@ TEST_F(state_transition, create3_nested_create3)
 
     const auto init_code_nested = returncontract(0, 0, 0);
     const auto init_container_nested =
-        eof1_bytecode(init_code_nested, 2, {}, deploy_container_nested);
+        eof1_bytecode_with_container(init_code_nested, 2, {}, 0, deploy_container_nested);
 
     const auto init_code = sstore(0, create3().container(1).salt(0xff)) + returncontract(0, 0, 0);
     const std::array embedded_conts = {deploy_container, init_container_nested};
-    const auto init_container = eof1_bytecode(init_code, 4, {}, embedded_conts);
+    const auto init_container = eof1_bytecode_with_containers(init_code, 4, {}, 0, embedded_conts);
 
     const auto factory_code = sstore(0, create3().container(0).salt(0xff)) + OP_STOP;
-    const auto factory_container = eof1_bytecode(factory_code, 4, {}, init_container);
+    const auto factory_container =
+        eof1_bytecode_with_container(factory_code, 4, {}, 0, init_container);
 
     tx.to = To;
 
@@ -407,13 +431,15 @@ TEST_F(state_transition, create3_nested_create3_revert)
 
     const auto init_code_nested = returncontract(0, 0, 0);
     const auto init_container_nested =
-        eof1_bytecode(init_code_nested, 2, {}, deploy_container_nested);
+        eof1_bytecode_with_container(init_code_nested, 2, {}, 0, deploy_container_nested);
 
     const auto init_code = sstore(0, create3().container(0).salt(0xff)) + revert(0, 0);
-    const auto init_container = eof1_bytecode(init_code, 4, {}, init_container_nested);
+    const auto init_container =
+        eof1_bytecode_with_container(init_code, 4, {}, 0, init_container_nested);
 
     const auto factory_code = sstore(0, create3().container(0).salt(0xff)) + OP_STOP;
-    const auto factory_container = eof1_bytecode(factory_code, 4, {}, init_container);
+    const auto factory_container =
+        eof1_bytecode_with_container(factory_code, 4, {}, 0, init_container);
 
     tx.to = To;
 
@@ -431,12 +457,13 @@ TEST_F(state_transition, create3_caller_balance_too_low)
 
     const auto init_code =
         calldatacopy(0, 0, OP_CALLDATASIZE) + returncontract(0, 0, OP_CALLDATASIZE);
-    const auto init_container = eof1_bytecode(init_code, 3, {}, deploy_container);
+    const auto init_container = eof1_bytecode_with_container(init_code, 3, {}, 0, deploy_container);
 
     const auto factory_code =
         calldatacopy(0, 0, OP_CALLDATASIZE) +
         sstore(0, create3().container(0).input(0, OP_CALLDATASIZE).salt(0xff).value(10)) + OP_STOP;
-    const auto factory_container = eof1_bytecode(factory_code, 4, {}, init_container);
+    const auto factory_container =
+        eof1_bytecode_with_container(factory_code, 4, {}, 0, init_container);
 
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});

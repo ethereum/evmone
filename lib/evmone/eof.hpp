@@ -39,8 +39,11 @@ struct EOF1Header
     std::vector<uint16_t> code_offsets;
 
     uint16_t data_size = 0;
+    uint16_t data_offset = 0;
     /// Size of every container section.
     std::vector<uint16_t> container_sizes;
+    /// Size of every container section at deploy time, read from Container Type section.
+    std::vector<uint16_t> container_deploy_sizes;
     /// Offset of every container section start;
     std::vector<uint16_t> container_offsets;
 
@@ -72,6 +75,9 @@ struct EOF1Header
 
     /// Offset of the data section size value in the header.
     [[nodiscard]] size_t data_size_position() const noexcept;
+
+    /// Offset of the data section body.
+    //    [[nodiscard]] size_t data_body_position() const noexcept;
 };
 
 /// Checks if code starts with EOF FORMAT + MAGIC, doesn't validate the format.
@@ -83,7 +89,7 @@ struct EOF1Header
 
 /// Modifies container by appending aux_data to data section and updating data section size
 /// in the header.
-bool append_data_section(bytes& container, bytes_view aux_data);
+void append_data_section(bytes& container, bytes_view aux_data);
 
 enum class EOFValidationError
 {
@@ -98,6 +104,7 @@ enum class EOFValidationError
     header_terminator_missing,
     type_section_missing,
     code_section_missing,
+    container_type_section_missing,
     data_section_missing,
     zero_section_size,
     section_headers_not_terminated,
@@ -107,7 +114,9 @@ enum class EOFValidationError
     invalid_rjump_destination,
     too_many_code_sections,
     invalid_type_section_size,
+    invalid_container_type_section_size,
     invalid_first_section_type,
+    invalid_container_deploy_size,
     invalid_max_stack_height,
     no_terminating_instruction,
     stack_height_mismatch,
