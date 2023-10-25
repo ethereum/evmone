@@ -261,7 +261,7 @@ Result create_eof_impl(
 
     auto msg = evmc_message{};
     msg.gas = gas_left - gas_left / 64;
-    msg.kind = EVMC_CREATE3;
+    msg.kind = Op == OP_CREATE3 ? EVMC_CREATE3 : EVMC_CREATE4;
     if (input_size > 0)
     {
         // input_data may be garbage if init_code_size == 0.
