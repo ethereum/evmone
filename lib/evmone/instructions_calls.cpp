@@ -199,6 +199,75 @@ Result create_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noex
     return {EVMC_SUCCESS, gas_left};
 }
 
+Result create3(StackTop stack, int64_t gas_left, ExecutionState& state, code_iterator& pos) noexcept
+{
+    if (state.in_static_mode())
+        return {EVMC_STATIC_MODE_VIOLATION, gas_left};
+
+    const auto initcontainer_index = uint8_t{pos[1]};
+    pos += 2;
+
+    const auto& container = state.original_code;
+    const auto eof_header = read_valid_eof1_header(state.original_code);
+    const auto initcontainer = eof_header.get_container(container, initcontainer_index);
+
+    const auto endowment = stack.pop();
+    const auto salt = stack.pop();
+    const auto input_offset_u256 = stack.pop();
+    const auto input_size_u256 = stack.pop();
+
+    stack.push(0);  // Assume failure.
+    state.return_data.clear();
+    state.deploy_container.reset();
+
+    // Charge for initcode validation and hashing.
+    const auto initcode_word_cost = 8;
+    const auto initcode_cost = num_words(initcontainer.size()) * initcode_word_cost;
+    if ((gas_left -= initcode_cost) < 0)
+        return {EVMC_OUT_OF_GAS, gas_left};
+
+    if (!check_memory(gas_left, state.memory, input_offset_u256, input_size_u256))
+        return {EVMC_OUT_OF_GAS, gas_left};
+
+    const auto input_offset = static_cast<size_t>(input_offset_u256);
+    const auto input_size = static_cast<size_t>(input_size_u256);
+
+    if (state.msg->depth >= 1024)
+        return {EVMC_SUCCESS, gas_left};  // "Light" failure.
+
+    if (endowment != 0 &&
+        intx::be::load<uint256>(state.host.get_balance(state.msg->recipient)) < endowment)
+        return {EVMC_SUCCESS, gas_left};  // "Light" failure.
+
+    auto msg = evmc_message{};
+    msg.gas = gas_left - gas_left / 64;
+    msg.kind = EVMC_CREATE3;
+    if (input_size > 0)
+    {
+        // input_data may be garbage if init_code_size == 0.
+        msg.input_data = &state.memory[input_offset];
+        msg.input_size = input_size;
+    }
+
+    msg.sender = state.msg->recipient;
+    msg.depth = state.msg->depth + 1;
+    msg.create2_salt = intx::be::store<evmc::bytes32>(salt);
+    msg.value = intx::be::store<evmc::uint256be>(endowment);
+    // init_code is guaranteed to be non-empty by validation of container sections
+    msg.init_code = initcontainer.data();
+    msg.init_code_size = initcontainer.size();
+
+    const auto result = state.host.call(msg);
+    gas_left -= msg.gas - result.gas_left;
+    state.gas_refund += result.gas_refund;
+
+    state.return_data.assign(result.output_data, result.output_size);
+    if (result.status_code == EVMC_SUCCESS)
+        stack.top() = intx::be::load<uint256>(result.create_address);
+
+    return {EVMC_SUCCESS, gas_left};
+}
+
 template Result create_impl<OP_CREATE>(
     StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;
 template Result create_impl<OP_CREATE2>(
