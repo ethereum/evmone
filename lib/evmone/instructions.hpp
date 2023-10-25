@@ -1119,26 +1119,32 @@ inline constexpr auto revert = return_impl<EVMC_REVERT>;
 inline TermResult returncontract(
     StackTop stack, int64_t gas_left, ExecutionState& state, code_iterator pos) noexcept
 {
-    const auto& offset = stack[0];
-    const auto& size = stack[1];
-
     if (state.msg->kind != EVMC_CREATE3)
         return {EVMC_UNDEFINED_INSTRUCTION, gas_left};
 
-    if (!check_memory(gas_left, state.memory, offset, size))
-        return {EVMC_OUT_OF_GAS, gas_left};
+    const auto& offset = stack[0];
 
     const auto deploy_container_index = size_t{pos[1]};
 
     const auto header = read_valid_eof1_header(state.original_code);
     bytes deploy_container{header.get_container(state.original_code, deploy_container_index)};
 
-    // Guaranteed by aux_data size statically calculated from expected deploy size
-    assert(deploy_container.size() + size == header.container_deploy_sizes[deploy_container_index]);
+    // Guaranteed by container type section validation
+    assert(header.container_deploy_sizes[deploy_container_index] >= deploy_container.size());
+    const auto size =
+        header.container_deploy_sizes[deploy_container_index] - deploy_container.size();
+
+    if (!check_memory(gas_left, state.memory, offset, size))
+        return {EVMC_OUT_OF_GAS, gas_left};
 
     // Append (offset, size) to data section
     append_data_section(
         deploy_container, {&state.memory[static_cast<size_t>(offset)], static_cast<size_t>(size)});
+
+    // Append (offset, size) to data section
+    const bytes_view aux_data = {
+        &state.memory[static_cast<size_t>(offset)], static_cast<size_t>(size)};
+    deploy_container.append(aux_data);
 
     state.deploy_container = std::move(deploy_container);
 

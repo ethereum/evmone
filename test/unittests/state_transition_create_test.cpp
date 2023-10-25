@@ -35,14 +35,14 @@ TEST_F(state_transition, create_tx)
 
 TEST_F(state_transition, create3_empty_auxdata)
 {
-    static constexpr auto create_address = 0x1a17d9dbad5251ab89e6bf23332064bd930bb555_address;
+    static constexpr auto create_address = 0xdf589b6fe2c1975ee795ff99edd02dee52866f51_address;
 
     rev = EVMC_PRAGUE;
     const auto deploy_data = "abcdef"_hex;
     const auto deploy_container = eof1_bytecode(bytecode(OP_INVALID), 0, deploy_data);
 
-    const auto init_code = returncontract(0, 0, 0);
-    const auto init_container = eof1_bytecode_with_container(init_code, 2, {}, 0, deploy_container);
+    const auto init_code = returncontract(0, 0);
+    const auto init_container = eof1_bytecode_with_container(init_code, 1, {}, 0, deploy_container);
 
     const auto factory_code = create3().container(0).input(0, 0).salt(0xff) + ret_top();
     const auto factory_container =
@@ -59,16 +59,14 @@ TEST_F(state_transition, create3_empty_auxdata)
 
 TEST_F(state_transition, create3_non_empty_auxdata)
 {
-    static constexpr auto create_address = 0x90886bf4e18c915240d6816a1e9d30a8aa5eafbb_address;
-
+    static constexpr auto create_address = 0x3e74c58e5cf9a4b102a840f31b080114eece53db_address;
 
     rev = EVMC_PRAGUE;
     const auto deploy_data = "abcdef"_hex;
     const auto aux_data = "aabbccddeeff"_hex;
     const auto deploy_container = eof1_bytecode(bytecode(OP_INVALID), 0, deploy_data);
 
-    const auto init_code =
-        calldatacopy(0, 0, OP_CALLDATASIZE) + returncontract(0, 0, OP_CALLDATASIZE);
+    const auto init_code = calldatacopy(0, 0, OP_CALLDATASIZE) + returncontract(0, 0);
     const auto deploy_container_size =
         static_cast<uint16_t>(deploy_container.size() + aux_data.size());
     const auto init_container = eof1_bytecode_with_truncated_container(
@@ -95,7 +93,7 @@ TEST_F(state_transition, create3_non_empty_auxdata)
 
 TEST_F(state_transition, create3_dataloadn_referring_to_auxdata)
 {
-    static constexpr auto create_address = 0xe5fe70b6d7178214ada3dc7f42962e4f74980a62_address;
+    static constexpr auto create_address = 0x3b38a75a554d5dc4c9e910cd353f93a3f61cf125_address;
 
     rev = EVMC_PRAGUE;
     const auto deploy_data = bytes(64, 0);
@@ -104,10 +102,10 @@ TEST_F(state_transition, create3_dataloadn_referring_to_auxdata)
     const auto deploy_code = bytecode(OP_DATALOADN) + "0040" + ret_top();
     const auto deploy_container = eof1_bytecode(deploy_code, 2, deploy_data);
 
-    const auto init_code = returncontract(0, 0, 32);
+    const auto init_code = returncontract(0, 0);
     const auto deploy_container_size = static_cast<uint16_t>(deploy_data.size() + aux_data.size());
     const auto init_container = eof1_bytecode_with_truncated_container(
-        init_code, 2, {}, 0, deploy_container, deploy_container_size);
+        init_code, 1, {}, 0, deploy_container, deploy_container_size);
 
     const auto factory_code = create3().container(0).input(0, 0).salt(0xff) + ret_top();
     const auto factory_container =
@@ -273,15 +271,15 @@ TEST_F(state_transition, create3_deploy_container_max_size)
     tx.gas_limit = block.gas_limit;
     pre.get(tx.sender).balance = tx.gas_limit * tx.max_gas_price + tx.value + 1;
 
-    static constexpr auto create_address = 0x5f66e98844f255a5604591eb42e7678d9cbf10c1_address;
+    static constexpr auto create_address = 0xd6b615b2b3587fb382ec849b3a018d6c703abbee_address;
 
     const auto eof_header_size = static_cast<int>(eof1_bytecode({OP_INVALID}).size() - 1);
     const auto deploy_code = (0x5fff - eof_header_size) * bytecode{Opcode{OP_JUMPDEST}} + OP_STOP;
     const auto deploy_container = eof1_bytecode(deploy_code, 0);
 
     // no aux data
-    const auto init_code = returncontract(0, 0, 0);
-    const auto init_container = eof1_bytecode_with_container(init_code, 2, {}, 0, deploy_container);
+    const auto init_code = returncontract(0, 0);
+    const auto init_container = eof1_bytecode_with_container(init_code, 1, {}, 0, deploy_container);
 
     const auto factory_code =
         calldatacopy(0, 0, OP_CALLDATASIZE) +
@@ -311,8 +309,8 @@ TEST_F(state_transition, create3_deploy_container_too_large)
     const auto deploy_container = eof1_bytecode(deploy_code, 0);
 
     // no aux data
-    const auto init_code = returncontract(0, 0, 0);
-    const auto init_container = eof1_bytecode_with_container(init_code, 2, {}, 0, deploy_container);
+    const auto init_code = returncontract(0, 0);
+    const auto init_container = eof1_bytecode_with_container(init_code, 1, {}, 0, deploy_container);
 
     const auto factory_code =
         calldatacopy(0, 0, OP_CALLDATASIZE) +
@@ -336,11 +334,13 @@ TEST_F(state_transition, create3_deploy_container_with_aux_data_too_large)
 
     const auto eof_header_size = static_cast<int>(eof1_bytecode({OP_INVALID}).size() - 1);
     const auto deploy_code = (0x5fff - eof_header_size) * bytecode{Opcode{OP_JUMPDEST}} + OP_STOP;
-    const auto deploy_container = eof1_bytecode(deploy_code, 0);
+    const auto deploy_container = eof1_bytecode(deploy_code, 0, {});
 
+    const auto init_code = returncontract(0, 0);
     // 1 byte aux data
-    const auto init_code = returncontract(0, 0, 1);
-    const auto init_container = eof1_bytecode_with_container(init_code, 2, {}, 0, deploy_container);
+    const auto deploy_container_size = static_cast<uint16_t>(deploy_container.size() + 1);
+    const auto init_container = eof1_bytecode_with_truncated_container(
+        init_code, 1, {}, 0, deploy_container, deploy_container_size);
 
     const auto factory_code =
         calldatacopy(0, 0, OP_CALLDATASIZE) +
@@ -385,9 +385,9 @@ TEST_F(state_transition, create3_deploy_container_with_aux_data_too_large)
 
 TEST_F(state_transition, create3_nested_create3)
 {
-    static constexpr auto create_address = 0x1dc1778b99fd65fe35687b077c83ce3366cc1740_address;
+    static constexpr auto create_address = 0x6c0913a358dfc7288c0e99c6a4b5c2144b63334b_address;
     static constexpr auto create_address_nested =
-        0xb17965a14b3ea78718d615c0a1e4f1bcd61b84ec_address;
+        0xa3d888342611dd1203f0a4616da6290b632e4214_address;
 
     rev = EVMC_PRAGUE;
     const auto deploy_data = "abcdef"_hex;
@@ -396,11 +396,11 @@ TEST_F(state_transition, create3_nested_create3)
     const auto deploy_data_nested = "ffffff"_hex;
     const auto deploy_container_nested = eof1_bytecode(bytecode(OP_INVALID), 0, deploy_data_nested);
 
-    const auto init_code_nested = returncontract(0, 0, 0);
+    const auto init_code_nested = returncontract(0, 0);
     const auto init_container_nested =
-        eof1_bytecode_with_container(init_code_nested, 2, {}, 0, deploy_container_nested);
+        eof1_bytecode_with_container(init_code_nested, 1, {}, 0, deploy_container_nested);
 
-    const auto init_code = sstore(0, create3().container(1).salt(0xff)) + returncontract(0, 0, 0);
+    const auto init_code = sstore(0, create3().container(1).salt(0xff)) + returncontract(0, 0);
     const std::array embedded_conts = {deploy_container, init_container_nested};
     const auto init_container = eof1_bytecode_with_containers(init_code, 4, {}, 0, embedded_conts);
 
@@ -413,11 +413,11 @@ TEST_F(state_transition, create3_nested_create3)
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
-    expect.post[*tx.to].storage[0x00_bytes32] = 0x1dc1778b99fd65fe35687b077c83ce3366cc1740_bytes32;
+    expect.post[*tx.to].storage[0x00_bytes32] = 0x6c0913a358dfc7288c0e99c6a4b5c2144b63334b_bytes32;
     expect.post[create_address].code = deploy_container;
     expect.post[create_address].nonce = 2;
     expect.post[create_address].storage[0x00_bytes32] =
-        0xb17965a14b3ea78718d615c0a1e4f1bcd61b84ec_bytes32;
+        0xa3d888342611dd1203f0a4616da6290b632e4214_bytes32;
     expect.post[create_address_nested].code = deploy_container_nested;
     expect.post[create_address_nested].nonce = 1;
 }
@@ -429,9 +429,9 @@ TEST_F(state_transition, create3_nested_create3_revert)
     const auto deploy_data_nested = "ffffff"_hex;
     const auto deploy_container_nested = eof1_bytecode(bytecode(OP_INVALID), 0, deploy_data_nested);
 
-    const auto init_code_nested = returncontract(0, 0, 0);
+    const auto init_code_nested = returncontract(0, 0);
     const auto init_container_nested =
-        eof1_bytecode_with_container(init_code_nested, 2, {}, 0, deploy_container_nested);
+        eof1_bytecode_with_container(init_code_nested, 1, {}, 0, deploy_container_nested);
 
     const auto init_code = sstore(0, create3().container(0).salt(0xff)) + revert(0, 0);
     const auto init_container =
@@ -455,8 +455,7 @@ TEST_F(state_transition, create3_caller_balance_too_low)
     const auto deploy_data = "abcdef"_hex;
     const auto deploy_container = eof1_bytecode(bytecode{Opcode{OP_INVALID}}, 0, deploy_data);
 
-    const auto init_code =
-        calldatacopy(0, 0, OP_CALLDATASIZE) + returncontract(0, 0, OP_CALLDATASIZE);
+    const auto init_code = calldatacopy(0, 0, OP_CALLDATASIZE) + returncontract(0, 0);
     const auto init_container = eof1_bytecode_with_container(init_code, 3, {}, 0, deploy_container);
 
     const auto factory_code =

@@ -353,8 +353,7 @@ TEST_P(evm, eof_create3)
     const auto aux_data = "aabbccddeeff"_hex;
     const auto deploy_container = eof1_bytecode(bytecode(OP_INVALID), 0, deploy_data);
 
-    const auto init_code =
-        calldatacopy(0, 0, OP_CALLDATASIZE) + OP_CALLDATASIZE + 0 + OP_RETURNCONTRACT + Opcode{0};
+    const auto init_code = calldatacopy(0, 0, OP_CALLDATASIZE) + 0 + OP_RETURNCONTRACT + Opcode{0};
     const auto deploy_container_size =
         static_cast<uint16_t>(deploy_container.size() + aux_data.size());
     const auto init_container = eof1_bytecode_with_truncated_container(

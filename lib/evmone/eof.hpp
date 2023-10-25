@@ -38,7 +38,10 @@ struct EOF1Header
     /// Offset of every code section from the beginning of the EOF container.
     std::vector<uint16_t> code_offsets;
 
+    /// Size of the data section.
+    /// In case container has truncated data section, this is full deploy-time size.
     uint16_t data_size = 0;
+    /// Offset of the data section from the beginning of the EOF container.
     uint16_t data_offset = 0;
     /// Size of every container section.
     std::vector<uint16_t> container_sizes;
