@@ -42,14 +42,14 @@ TEST(eof, read_valid_eof1_header)
 
     std::string section_size_256;
     for (int i = 0; i < 256; ++i)
-        section_size_256 += "0004";
+        section_size_256 += "0003";
 
     std::string code_sections_256;
     for (int i = 0; i < 256; ++i)
         if ( i < 255 )
-            code_sections_256 += "E3" + std::format("{:04X}", i+1) + "00";
+            code_sections_256 += "E5" + std::format("{:04X}", i+1);
         else
-            code_sections_256 += "5B5B5B00";
+            code_sections_256 += "5B5B00";
 
     std::string section_types_256;
     for (int i = 0; i < 256; ++i)
@@ -60,16 +60,16 @@ TEST(eof, read_valid_eof1_header)
         {"EF00 01 010004 0200010006 040000 00 00800002 600160005500", 4, 0, {6}},
         {"EF00 01 010004 0200010001 040001 00 00800000 00 AA", 4, 1, {1}},
         {"EF00 01 010004 0200010006 040004 00 00800002 600160005500 AABBCCDD", 4, 4, {6}},
-        {"EF00 01 01000C 020003000400050003 040000 00 008000000080000000800000 E3000100 E300025B00 5B5B00", 12,
-            0, {4, 5, 3}},
-        {"EF00 01 01000C 020003000400050003 040004 00 008000000080000000800000 E3000100 E300025B00 5B5B00"
+        {"EF00 01 01000C 020003000300030003 040000 00 008000000080000000800000 E50001 E50002 5B5B00", 12,
+            0, {3, 3, 3}},
+        {"EF00 01 01000C 020003000300030003 040004 00 008000000080000000800000 E50001 E50002 5B5B00"
          "FFFFFFFF",
-            12, 4, {4, 5, 3}},
+            12, 4, {3, 3, 3}},
         {"EF00 01 010004 0200010100 041000 00 00800000" + nops_255 + "00" + std::string(8192, 'F'),
             4, 4096, {256}},
         {"EF00 01 010400 020100" + section_size_256 + " 041000 00 " +
-                std::string(4 * 256 * 2, '0') + code_sections_256 + std::string(8192, 'F'),
-            4 * 256, 4096, std::vector<uint16_t>(256, 4)},
+                section_types_256 + code_sections_256 + std::string(8192, 'F'),
+            4 * 256, 4096, std::vector<uint16_t>(256, 3)},
     };
 
     for (const auto& test_case : test_cases)
