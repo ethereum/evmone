@@ -22,6 +22,7 @@ target_sources(
     evm_eip3855_push0_test.cpp
     evm_eip3860_initcode_test.cpp
     evm_eip4844_blobhash_test.cpp
+    evm_eip7516_blobbasefee_test.cpp
     evm_eof_test.cpp
     evm_eof_calls_test.cpp
     evm_eof_function_test.cpp
