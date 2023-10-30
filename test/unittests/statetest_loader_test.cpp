@@ -52,9 +52,16 @@ TEST(json_loader, int64_t)
         from_json<int64_t>(basic_json("9223372036854775807")), std::numeric_limits<int64_t>::max());
     EXPECT_EQ(from_json<int64_t>(basic_json("-9223372036854775808")),
         std::numeric_limits<int64_t>::min());
-    EXPECT_THROW(from_json<int64_t>(basic_json("0xffffffffffffffff")), std::out_of_range);
-    EXPECT_THROW(from_json<int64_t>(basic_json("9223372036854775808")), std::out_of_range);
-    EXPECT_THROW(from_json<int64_t>(basic_json("-9223372036854775809")), std::out_of_range);
+
+    // Unfortunate conversion results:
+    EXPECT_EQ(from_json<int64_t>(basic_json("0xffffffffffffffff")), int64_t{-1});
+    EXPECT_EQ(
+        from_json<int64_t>(basic_json("9223372036854775808")), std::numeric_limits<int64_t>::min());
+    EXPECT_EQ(from_json<int64_t>(basic_json("-9223372036854775809")),
+        std::numeric_limits<int64_t>::max());
+
+    EXPECT_THROW(from_json<uint64_t>(basic_json("0x10000000000000000")), std::out_of_range);
+    EXPECT_THROW(from_json<uint64_t>(basic_json("18446744073709551616")), std::out_of_range);
 
     // Octal is also supported.
     EXPECT_EQ(from_json<int64_t>(basic_json("0777")), 0777);

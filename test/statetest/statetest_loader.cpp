@@ -33,13 +33,12 @@ static std::optional<T> integer_from_json(const json::json& j)
         return {};
 
     const auto s = j.get<std::string>();
-    size_t num_processed = 0;
-    T v = 0;
-    if constexpr (std::is_same_v<T, uint64_t>)
-        v = std::stoull(s, &num_processed, 0);
-    else
-        v = std::stoll(s, &num_processed, 0);
 
+    // Always load integers as unsigned and cast to the required type.
+    // This will work for cases where a test case uses uint64 timestamps while we use int64.
+    // TODO: Change timestamp type to uint64.
+    size_t num_processed = 0;
+    const auto v = static_cast<T>(std::stoull(s, &num_processed, 0));
     if (num_processed == 0 || num_processed != s.size())
         return {};
     return v;
