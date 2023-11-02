@@ -360,7 +360,17 @@ evmc_tx_context Host::get_tx_context() const noexcept
         0x01_bytes32,                              // Chain ID is expected to be 1.
         uint256be{m_block.base_fee}, uint256be{},  // TODO: Add blob base fee.
         nullptr,                                   // TODO: Add blob hashes.
-        0, m_initcode_ptrs.data(), m_initcode_sizes.data(), m_tx.initcodes.size()};
+        0};
+}
+
+evmc_tx_initcode Host::get_tx_initcode_by_hash(const evmc_bytes32& hash) const noexcept
+{
+    if (const auto& it = m_initcodes.find(hash); it != m_initcodes.end())
+    {
+        return evmc_tx_initcode{it->second.data(), it->second.size()};
+    }
+
+    return evmc_tx_initcode{nullptr, 0};
 }
 
 bytes32 Host::get_block_hash(int64_t block_number) const noexcept

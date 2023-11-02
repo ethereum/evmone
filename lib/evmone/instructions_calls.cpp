@@ -220,15 +220,15 @@ Result create_eof_impl(
     else
     {
         pos += 1;
-        const auto initcode_index256 = stack.pop();
-        const auto& tx_context = state.get_tx_context();
-        if (initcode_index256 >= tx_context.initcodes_count)
+        const evmc_bytes32 initcode_hash = intx::be::store<evmc::bytes32>(stack.pop());
+
+        const auto initcode = state.get_tx_initcode_by_hash(initcode_hash);
+        if (initcode.data == nullptr)
         {
             stack.push(0);
             return {EVMC_SUCCESS, gas_left};
         }
-        const auto index = initcode_index256[0];
-        initcontainer = {tx_context.initcodes[index], tx_context.initcode_sizes[index]};
+        initcontainer = {initcode.data, initcode.size};
     }
 
     const auto endowment = stack.pop();
