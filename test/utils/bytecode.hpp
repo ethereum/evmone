@@ -491,7 +491,7 @@ private:
     bytecode m_input_size = 0;
     bytecode m_salt = 0;
     uint8_t m_container_index = 0;
-    uint8_t m_initcode_index = 0;
+    bytecode m_initcode_hash = 0;
 
 public:
     auto& value(bytecode v)
@@ -524,9 +524,9 @@ public:
     }
 
     template <Opcode k = kind>
-    typename std::enable_if<k == OP_CREATE4, create_instruction&>::type initcode(uint8_t index)
+    typename std::enable_if<k == OP_CREATE4, create_instruction&>::type initcode(bytecode hash)
     {
-        m_initcode_index = index;
+        m_initcode_hash = std::move(hash);
         return *this;
     }
 
@@ -544,7 +544,7 @@ public:
         code += m_value;
 
         if constexpr (kind == OP_CREATE4)
-            code += push(m_initcode_index);
+            code += m_initcode_hash;
 
         code += bytecode{kind};
         if constexpr (kind == OP_CREATE3)

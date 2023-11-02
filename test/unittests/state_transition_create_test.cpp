@@ -426,7 +426,8 @@ TEST_F(state_transition, create4_empty_auxdata)
     tx.type = Transaction::Type::initcodes;
     tx.initcodes.push_back(init_container);
 
-    const auto factory_code = create4().initcode(0).input(0, 0).salt(0xff) + ret_top();
+    const auto factory_code =
+        create4().initcode(keccak256(init_container)).input(0, 0).salt(0xff) + ret_top();
     const auto factory_container = eof1_bytecode(factory_code, 5);
 
     tx.to = To;
@@ -452,8 +453,8 @@ TEST_F(state_transition, create4_invalid_initcode)
     tx.initcodes.push_back(init_container);
 
     // TODO: extract this common code for a testing deployer contract
-    const auto factory_code =
-        create4().initcode(0).input(0, 0).salt(0xff) + OP_DUP1 + push(1) + OP_SSTORE + ret_top();
+    const auto factory_code = create4().initcode(keccak256(init_container)).input(0, 0).salt(0xff) +
+                              OP_DUP1 + push(1) + OP_SSTORE + ret_top();
     const auto factory_container = eof1_bytecode(factory_code, 5);
 
     tx.to = To;
@@ -480,8 +481,8 @@ TEST_F(state_transition, create4_invalid_deploycode)
     tx.type = Transaction::Type::initcodes;
     tx.initcodes.push_back(init_container);
 
-    const auto factory_code =
-        create4().initcode(0).input(0, 0).salt(0xff) + OP_DUP1 + push(1) + OP_SSTORE + ret_top();
+    const auto factory_code = create4().initcode(keccak256(init_container)).input(0, 0).salt(0xff) +
+                              OP_DUP1 + push(1) + OP_SSTORE + ret_top();
     const auto factory_container = eof1_bytecode(factory_code, 5);
 
     tx.to = To;
@@ -504,8 +505,8 @@ TEST_F(state_transition, create4_missing_deploycontainer)
     tx.type = Transaction::Type::initcodes;
     tx.initcodes.push_back(init_container);
 
-    const auto factory_code =
-        create4().initcode(0).input(0, 0).salt(0xff) + OP_DUP1 + push(1) + OP_SSTORE + ret_top();
+    const auto factory_code = create4().initcode(keccak256(init_container)).input(0, 0).salt(0xff) +
+                              OP_DUP1 + push(1) + OP_SSTORE + ret_top();
     const auto factory_container = eof1_bytecode(factory_code, 5);
 
     tx.to = To;
@@ -537,8 +538,8 @@ TEST_F(state_transition, create4_deploy_code_with_dataloadn_invalid)
     tx.type = Transaction::Type::initcodes;
     tx.initcodes.push_back(init_container);
 
-    const auto factory_code =
-        create4().initcode(0).input(0, 0).salt(0xff) + OP_DUP1 + push(1) + OP_SSTORE + ret_top();
+    const auto factory_code = create4().initcode(keccak256(init_container)).input(0, 0).salt(0xff) +
+                              OP_DUP1 + push(1) + OP_SSTORE + ret_top();
     const auto factory_container = eof1_bytecode(factory_code, 5);
 
     tx.to = To;
