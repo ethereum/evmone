@@ -246,8 +246,9 @@ std::variant<std::vector<EOFCodeType>, EOFValidationError> validate_types(
     return types;
 }
 
-EOFValidationError validate_instructions(
-    evmc_revision rev, const EOF1Header& header, size_t code_idx, bytes_view container) noexcept
+EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& header,
+    std::span<const EOF1Header> subcontainer_headers, size_t code_idx,
+    bytes_view container) noexcept
 {
     const bytes_view code{header.get_code(container, code_idx)};
     assert(!code.empty());  // guaranteed by EOF headers validation
@@ -291,6 +292,12 @@ EOFValidationError validate_instructions(
                 const auto container_idx = code[i + 1];
                 if (container_idx >= header.container_sizes.size())
                     return EOFValidationError::invalid_container_section_index;
+
+                if (op == OP_CREATE3 && subcontainer_headers[container_idx].data_offset +
+                                                subcontainer_headers[container_idx].data_size !=
+                                            header.container_sizes[container_idx])
+                    return EOFValidationError::create3_with_truncated_container;
+
                 ++i;
             }
             else
@@ -477,6 +484,9 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
     return max_stack_height;
 }
 
+std::variant<EOF1Header, EOFValidationError> validate_eof_container(
+    evmc_revision rev, bytes_view container) noexcept;
+
 std::variant<EOF1Header, EOFValidationError> validate_eof1(  // NOLINT(misc-no-recursion)
     evmc_revision rev, bytes_view container) noexcept
 {
@@ -521,9 +531,23 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(  // NOLINT(misc-no-r
     EOF1Header header{container[2], code_sizes, code_offsets, data_size, data_offset,
         container_sizes, container_offsets, types};
 
+    std::vector<EOF1Header> subcontainer_headers;
+    for (size_t subcont_idx = 0; subcont_idx < header.container_sizes.size(); ++subcont_idx)
+    {
+        const bytes_view subcontainer{header.get_container(container, subcont_idx)};
+
+        auto error_subcont_or_header = validate_eof_container(rev, subcontainer);
+        if (const auto* error_subcont = std::get_if<EOFValidationError>(&error_subcont_or_header))
+            return *error_subcont;
+
+        auto& subcont_header = std::get<EOF1Header>(error_subcont_or_header);
+        subcontainer_headers.emplace_back(std::move(subcont_header));
+    }
+
     for (size_t code_idx = 0; code_idx < header.code_sizes.size(); ++code_idx)
     {
-        const auto error_instr = validate_instructions(rev, header, code_idx, container);
+        const auto error_instr =
+            validate_instructions(rev, header, subcontainer_headers, code_idx, container);
         if (error_instr != EOFValidationError::success)
             return error_instr;
 
@@ -538,18 +562,28 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(  // NOLINT(misc-no-r
             return EOFValidationError::invalid_max_stack_height;
     }
 
-    for (size_t subcont_idx = 0; subcont_idx < header.container_sizes.size(); ++subcont_idx)
-    {
-        const bytes_view subcontainer{header.get_container(container, subcont_idx)};
-
-        const auto error_subcont = validate_eof(rev, subcontainer);
-        if (error_subcont != EOFValidationError::success)
-            return error_subcont;
-    }
-
     return header;
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
+std::variant<EOF1Header, EOFValidationError> validate_eof_container(
+    evmc_revision rev, bytes_view container) noexcept
+{
+    if (!is_eof_container(container))
+        return EOFValidationError::invalid_prefix;
+
+    const auto version = get_eof_version(container);
+
+    if (version == 1)
+    {
+        if (rev < EVMC_PRAGUE)
+            return EOFValidationError::eof_version_unknown;
+
+        return validate_eof1(rev, container);
+    }
+    else
+        return EOFValidationError::eof_version_unknown;
+}
 }  // namespace
 
 
@@ -663,27 +697,13 @@ uint8_t get_eof_version(bytes_view container) noexcept
                0;
 }
 
-// NOLINTNEXTLINE(misc-no-recursion)
 EOFValidationError validate_eof(evmc_revision rev, bytes_view container) noexcept
 {
-    if (!is_eof_container(container))
-        return EOFValidationError::invalid_prefix;
-
-    const auto version = get_eof_version(container);
-
-    if (version == 1)
-    {
-        if (rev < EVMC_PRAGUE)
-            return EOFValidationError::eof_version_unknown;
-
-        const auto header_or_error = validate_eof1(rev, container);
-        if (const auto* error = std::get_if<EOFValidationError>(&header_or_error))
-            return *error;
-        else
-            return EOFValidationError::success;
-    }
+    const auto header_or_error = validate_eof_container(rev, container);
+    if (const auto* error = std::get_if<EOFValidationError>(&header_or_error))
+        return *error;
     else
-        return EOFValidationError::eof_version_unknown;
+        return EOFValidationError::success;
 }
 
 std::string_view get_error_message(EOFValidationError err) noexcept
@@ -756,6 +776,8 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "too_many_container_sections";
     case EOFValidationError::invalid_container_section_index:
         return "invalid_container_section_index";
+    case EOFValidationError::create3_with_truncated_container:
+        return "create3_with_truncated_container";
     case EOFValidationError::impossible:
         return "impossible";
     }
