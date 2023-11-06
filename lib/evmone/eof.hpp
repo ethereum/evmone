@@ -127,6 +127,7 @@ enum class EOFValidationError
     callf_to_non_returning_function,
     too_many_container_sections,
     invalid_container_section_index,
+    create3_with_truncated_container,
 
     impossible,
 };

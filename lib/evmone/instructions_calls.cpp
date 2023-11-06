@@ -211,12 +211,6 @@ Result create3(StackTop stack, int64_t gas_left, ExecutionState& state, code_ite
     const auto eof_header = read_valid_eof1_header(state.original_code);
     const auto initcontainer = eof_header.get_container(container, initcontainer_index);
 
-    const auto initcontainer_header = read_valid_eof1_header(initcontainer);
-    const auto size_from_header =
-        static_cast<size_t>(initcontainer_header.data_offset + initcontainer_header.data_size);
-    if (size_from_header != initcontainer.size())
-        return {EVMC_CONTRACT_VALIDATION_FAILURE, gas_left};
-
     const auto endowment = stack.pop();
     const auto salt = stack.pop();
     const auto input_offset_u256 = stack.pop();
