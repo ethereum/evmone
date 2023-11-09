@@ -133,7 +133,9 @@ commands:
             git submodule update --init --recursive --progress
       - run:
           name: "Install conan"
-          command: sudo pip install --break-system-packages conan==1.58
+          # Use conan version from the Silkworm documentation.
+          # https://github.com/erigontech/silkworm#building-on-linux--macos
+          command: sudo pip install --break-system-packages conan==1.60.2
       - run:
           name: "Configure Silkworm"
           working_directory: ~/silkworm
