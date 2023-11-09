@@ -133,7 +133,7 @@ commands:
             git submodule update --init --recursive --progress
       - run:
           name: "Install conan"
-          command: sudo pip install --break-system-packages conan==1.58
+          command: sudo pip install --break-system-packages conan==1.60.2
       - run:
           name: "Configure Silkworm"
           working_directory: ~/silkworm
