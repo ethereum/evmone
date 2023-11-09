@@ -912,7 +912,7 @@ TEST(eof_validation, callf_stack_validation)
     // function 2: (2, 1) :             POP RETF
     EXPECT_EQ(validate_eof("EF0001 01000C 020003000400070002 040000 00 008000010001000202010002 "
                            "E3000100 5F5F5FE30002E4 50E4"),
-        EOFValidationError::non_empty_stack_on_terminating_instruction);
+        EOFValidationError::code_section_outputs_mismatch);
 
     // function 0: (0, non-returning) : CALLF{1} STOP
     // function 1: (0, 1) :             PUSH0 CALLF{2} RETF
@@ -1034,7 +1034,7 @@ TEST(eof_validation, jumpf_into_returning_stack_validation)
     // Extra items on stack at JUMPF
     EXPECT_EQ(validate_eof("EF0001 01000C 020003000100070002 040000 00 008000000002000403020003 00 "
                            "5F5F5F5FE50002 50e4"),
-        EOFValidationError::non_empty_stack_on_terminating_instruction);
+        EOFValidationError::code_section_outputs_mismatch);
 
     // Not enough inputs on stack at JUMPF
     EXPECT_EQ(validate_eof("EF0001 01000C 020003000100050002 040000 00 008000000002000203020003 00 "
@@ -1052,7 +1052,7 @@ TEST(eof_validation, jumpf_into_returning_stack_validation)
     // Extra items on stack at JUMPF
     EXPECT_EQ(validate_eof("EF0001 01000C 020003000100080003 040000 00 008000000002000503010003 00 "
                            "5F5F5F5F5FE50002 5050e4"),
-        EOFValidationError::non_empty_stack_on_terminating_instruction);
+        EOFValidationError::code_section_outputs_mismatch);
 
     // Not enough inputs on stack at JUMPF
     EXPECT_EQ(validate_eof("EF0001 01000C 020003000100060003 040000 00 008000000002000303010003 00 "
