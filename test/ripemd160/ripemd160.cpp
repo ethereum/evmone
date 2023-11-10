@@ -141,20 +141,17 @@ void rmd160_compress(uint32_t* h, const uint32_t* X) noexcept
  */
 static inline void rmd160_finish(uint32_t* MDbuf, uint8_t const* strptr, uint32_t lswlen)
 {
-    unsigned int i; /* counter       */
-    uint32_t X[16]; /* message words */
-
-    __builtin_memset(X, 0, 16 * sizeof(uint32_t));
+    uint32_t X[16] = {}; /* message words */
 
     /* put bytes from strptr into X */
-    for (i = 0; i < (lswlen & 63); i++)
+    for (size_t i = 0; i < (lswlen & 63); i++)
     {
         /* byte i goes into word X[i div 4] at pos.  8*(i mod 4)  */
-        X[i >> 2] ^= (uint32_t)*strptr++ << (8 * (i & 3));
+        X[i >> 2] ^= uint32_t{*strptr++} << (8 * (i & 3));
     }
 
     /* append the bit m_n == 1 */
-    X[(lswlen >> 2) & 15] ^= (uint32_t)1 << (8 * (lswlen & 3) + 7);
+    X[(lswlen >> 2) & 15] ^= uint32_t{1} << (8 * (lswlen & 3) + 7);
 
     if ((lswlen & 63) > 55)
     {
@@ -195,9 +192,9 @@ void ripemd160(uint8_t out[20], const uint8_t* ptr, size_t len)
     uint32_t current[16];
     for (size_t remaining = len; remaining >= 64; remaining -= 64)
     {
-        for (unsigned i = 0; i < 16; ++i)
+        for (unsigned int& i : current)
         {
-            current[i] = load32(ptr);
+            i = load32(ptr);
             ptr += 4;
         }
         rmd160_compress(buf, current);
