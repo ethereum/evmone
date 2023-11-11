@@ -8,7 +8,11 @@
 #include "execution_state.hpp"
 #include "instructions_traits.hpp"
 #include "instructions_xmacro.hpp"
+#ifdef __ZKLLVM__
+#include <crypto3/hash/keccak.hpp>
+#else
 #include <ethash/keccak.hpp>
+#endif
 
 namespace evmone
 {
@@ -363,7 +367,11 @@ inline Result keccak256(StackTop stack, int64_t gas_left, ExecutionState& state)
         return {EVMC_OUT_OF_GAS, gas_left};
 
     auto data = s != 0 ? &state.memory[i] : nullptr;
+#ifdef __ZKLLVM__
+    size = crypto3::hashes::keccak<256>(data, s);
+#else
     size = intx::be::load<uint256>(ethash::keccak256(data, s));
+#endif
     return {EVMC_SUCCESS, gas_left};
 }
 
@@ -383,24 +391,39 @@ inline Result balance(StackTop stack, int64_t gas_left, ExecutionState& state) n
         if ((gas_left -= instr::additional_cold_account_access_cost) < 0)
             return {EVMC_OUT_OF_GAS, gas_left};
     }
-
+#ifdef __ZKLLVM__
+    x = state.host.get_balance(addr);
+#else
     x = intx::be::load<uint256>(state.host.get_balance(addr));
+#endif
     return {EVMC_SUCCESS, gas_left};
 }
 
 inline void origin(StackTop stack, ExecutionState& state) noexcept
 {
+#ifdef __ZKLLVM__
+    stack.push(state.get_tx_context().tx_origin);
+#else
     stack.push(intx::be::load<uint256>(state.get_tx_context().tx_origin));
+#endif
 }
 
 inline void caller(StackTop stack, ExecutionState& state) noexcept
 {
+#ifdef __ZKLLVM__
+    stack.push(state.msg->sender);
+#else
     stack.push(intx::be::load<uint256>(state.msg->sender));
+#endif
 }
 
 inline void callvalue(StackTop stack, ExecutionState& state) noexcept
 {
+#ifdef __ZKLLVM__
+    stack.push(state.msg->value);
+#else
     stack.push(intx::be::load<uint256>(state.msg->value));
+#endif
 }
 
 inline void calldataload(StackTop stack, ExecutionState& state) noexcept
@@ -417,8 +440,11 @@ inline void calldataload(StackTop stack, ExecutionState& state) noexcept
         uint8_t data[32] = {};
         for (size_t i = 0; i < (end - begin); ++i)
             data[i] = state.msg->input_data[begin + i];
-
+#ifdef __ZKLLVM__
+        index = data;
+#else
         index = intx::be::load<uint256>(data);
+#endif
     }
 }
 
@@ -492,12 +518,24 @@ inline Result codecopy(StackTop stack, int64_t gas_left, ExecutionState& state) 
 
 inline void gasprice(StackTop stack, ExecutionState& state) noexcept
 {
-    stack.push(intx::be::load<uint256>(state.get_tx_context().tx_gas_price));
+    stack.push(
+#ifdef __ZKLLVM__
+        state.get_tx_context().tx_gas_price
+#else
+        intx::be::load<uint256>(state.get_tx_context().tx_gas_price)
+#endif
+        );
 }
 
 inline void basefee(StackTop stack, ExecutionState& state) noexcept
 {
-    stack.push(intx::be::load<uint256>(state.get_tx_context().block_base_fee));
+    stack.push(
+#ifdef __ZKLLVM__
+        state.get_tx_context().block_base_fee
+#else
+        intx::be::load<uint256>(state.get_tx_context().block_base_fee)
+#endif
+        );
 }
 
 inline void blobhash(StackTop stack, ExecutionState& state) noexcept
@@ -506,13 +544,23 @@ inline void blobhash(StackTop stack, ExecutionState& state) noexcept
     const auto& tx = state.get_tx_context();
 
     index = (index < tx.blob_hashes_count) ?
+#ifdef __ZKLLVM__
+                tx.blob_hashes[index] :
+#else
                 intx::be::load<uint256>(tx.blob_hashes[static_cast<size_t>(index)]) :
+#endif
                 0;
 }
 
 inline void blobbasefee(StackTop stack, ExecutionState& state) noexcept
 {
-    stack.push(intx::be::load<uint256>(state.get_tx_context().blob_base_fee));
+    stack.push(
+#ifdef __ZKLLVM__
+        state.get_tx_context().blob_base_fee
+#else
+        intx::be::load<uint256>(state.get_tx_context().blob_base_fee)
+#endif
+        );
 }
 
 inline Result extcodesize(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
@@ -607,7 +655,11 @@ inline Result extcodehash(StackTop stack, int64_t gas_left, ExecutionState& stat
             return {EVMC_OUT_OF_GAS, gas_left};
     }
 
+#ifdef __ZKLLVM__
+    x = state.host.get_code_hash(addr);
+#else
     x = intx::be::load<uint256>(state.host.get_code_hash(addr));
+#endif
     return {EVMC_SUCCESS, gas_left};
 }
 
@@ -621,12 +673,22 @@ inline void blockhash(StackTop stack, ExecutionState& state) noexcept
     const auto n = static_cast<int64_t>(number);
     const auto header =
         (number < upper_bound && n >= lower_bound) ? state.host.get_block_hash(n) : evmc::bytes32{};
+#ifdef __ZKLLVM__
+    number = header;
+#else
     number = intx::be::load<uint256>(header);
+#endif
 }
 
 inline void coinbase(StackTop stack, ExecutionState& state) noexcept
 {
-    stack.push(intx::be::load<uint256>(state.get_tx_context().block_coinbase));
+    stack.push(
+#ifdef __ZKLLVM__
+        state.get_tx_context().block_coinbase
+#else
+        intx::be::load<uint256>(state.get_tx_context().block_coinbase)
+#endif
+        );
 }
 
 inline void timestamp(StackTop stack, ExecutionState& state) noexcept
@@ -643,7 +705,13 @@ inline void number(StackTop stack, ExecutionState& state) noexcept
 
 inline void prevrandao(StackTop stack, ExecutionState& state) noexcept
 {
-    stack.push(intx::be::load<uint256>(state.get_tx_context().block_prev_randao));
+    stack.push(
+#ifdef __ZKLLVM__
+        state.get_tx_context().block_prev_randao
+#else
+        intx::be::load<uint256>(state.get_tx_context().block_prev_randao)
+#endif
+        );
 }
 
 inline void gaslimit(StackTop stack, ExecutionState& state) noexcept
@@ -653,13 +721,25 @@ inline void gaslimit(StackTop stack, ExecutionState& state) noexcept
 
 inline void chainid(StackTop stack, ExecutionState& state) noexcept
 {
-    stack.push(intx::be::load<uint256>(state.get_tx_context().chain_id));
+    stack.push(
+#ifdef __ZKLLVM__
+        state.get_tx_context().chain_id
+#else
+        intx::be::load<uint256>(state.get_tx_context().chain_id)
+#endif
+        );
 }
 
 inline void selfbalance(StackTop stack, ExecutionState& state) noexcept
 {
     // TODO: introduce selfbalance in EVMC?
-    stack.push(intx::be::load<uint256>(state.host.get_balance(state.msg->recipient)));
+    stack.push(
+#ifdef __ZKLLVM__
+        state.host.get_balance(state.msg->recipient)
+#else
+        intx::be::load<uint256>(state.host.get_balance(state.msg->recipient))
+#endif
+        );
 }
 
 inline Result mload(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept

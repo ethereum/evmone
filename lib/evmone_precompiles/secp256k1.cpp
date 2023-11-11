@@ -2,7 +2,11 @@
 // Copyright 2023 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 #include "secp256k1.hpp"
+#ifdef __ZKLLVM__
+#include <nil/crypto3/hash/keccak.hpp>
+#else
 #include <ethash/keccak.hpp>
+#endif
 
 namespace evmmax::secp256k1
 {
