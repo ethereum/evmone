@@ -37,6 +37,9 @@ std::optional<uint256> calculate_y(
 
 Point add(const Point& p, const Point& q) noexcept
 {
+#ifdef __ZKLLVM__
+    return p + q;
+#else
     if (p.is_inf())
         return q;
     if (q.is_inf())
@@ -48,10 +51,14 @@ Point add(const Point& p, const Point& q) noexcept
     // b3 == 21 for y^2 == x^3 + 7
     const auto r = ecc::add(Fp, pp, pq, B3);
     return ecc::to_affine(Fp, field_inv, r);
+#endif
 }
 
 Point mul(const Point& p, const uint256& c) noexcept
 {
+#ifdef __ZKLLVM__
+    return c * p;
+#else
     if (p.is_inf())
         return p;
 
@@ -60,6 +67,7 @@ Point mul(const Point& p, const uint256& c) noexcept
 
     const auto r = ecc::mul(Fp, ecc::to_proj(Fp, p), c, B3);
     return ecc::to_affine(Fp, field_inv, r);
+#endif
 }
 
 evmc::address to_address(const Point& pt) noexcept
@@ -90,8 +98,19 @@ std::optional<Point> secp256k1_ecdsa_recover(
     // 4. Convert hash e to z field element by doing z = e % n.
     //    https://www.rfc-editor.org/rfc/rfc6979#section-2.3.2
     //    We can do this by n - e because n > 2^255.
-    static_assert(Order > 1_u256 << 255);
-    auto z = intx::be::load<uint256>(e.bytes);
+#ifdef __ZKLLVM__
+    __builtin_assigner_exit_check(
+#else
+    static_assert(
+#endif
+        Order > 1_u256 << 255);
+
+    auto z = 
+#ifdef __ZKLLVM__
+    e.bytes;
+#else
+    intx::be::load<uint256>(e.bytes);
+#endif
     if (z >= Order)
         z -= Order;
 

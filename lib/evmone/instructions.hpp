@@ -9,7 +9,7 @@
 #include "instructions_traits.hpp"
 #include "instructions_xmacro.hpp"
 #ifdef __ZKLLVM__
-#include <crypto3/hash/keccak.hpp>
+#include <nil/crypto3/hash/keccak.hpp>
 #else
 #include <ethash/keccak.hpp>
 #endif
