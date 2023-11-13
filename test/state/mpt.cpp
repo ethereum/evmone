@@ -213,9 +213,6 @@ void MPTNode::insert(const Path& path, bytes&& value)  // NOLINT(misc-no-recursi
             std::move(new_leaf));
         break;
     }
-
-    default:
-        assert(false);
     }
 }
 

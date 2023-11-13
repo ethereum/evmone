@@ -47,18 +47,61 @@ cable_configure_compiler(NO_STACK_PROTECTION)
 if(CABLE_COMPILER_GNULIKE)
     add_compile_options(
         -Wmissing-declarations
-        -Wno-attributes  # Allow using unknown attributes.
+        $<$<CXX_COMPILER_ID:Clang>:-Wno-unknown-attributes>
+        $<$<CXX_COMPILER_ID:GNU>:-Wno-attributes>  # Allow using unknown attributes.
         $<$<COMPILE_LANGUAGE:CXX>:-Wextra-semi>
+
+        $<$<CXX_COMPILER_ID:GNU>:-Warray-bounds=2>
+        $<$<CXX_COMPILER_ID:GNU>:-Warith-conversion>
+        -Wmismatched-tags
+        -Wenum-conversion
+
+#        -Wcast-qual FIXME
+        -Wmissing-declarations
+        -Wsign-conversion
+        -Wundef
+        -Wunreachable-code
+        $<$<COMPILE_LANGUAGE:C>:-Wmissing-prototypes>
+        $<$<CXX_COMPILER_ID:Clang>:-Wduplicate-enum>
+        $<$<CXX_COMPILER_ID:Clang>:-Wnewline-eof>
+        $<$<CXX_COMPILER_ID:Clang>:-Wunreachable-code-aggressive>
+        $<$<CXX_COMPILER_ID:Clang>:-Wcovered-switch-default>
+        $<$<CXX_COMPILER_ID:Clang>:-Wextra-semi-stmt>
+
+        $<$<CXX_COMPILER_ID:GNU>:-Wduplicated-cond>
+
+        $<$<CXX_COMPILER_ID:Clang>:-Wfinal-dtor-non-final-class>
+        $<$<CXX_COMPILER_ID:GNU>:-Wlogical-op>
+        $<$<CXX_COMPILER_ID:Clang>:-Wnewline-eof>
+        $<$<CXX_COMPILER_ID:Clang>:-Wsuggest-destructor-override>
+        $<$<CXX_COMPILER_ID:Clang>:-Wunreachable-code-break>
     )
-    cable_add_cxx_compiler_flag_if_supported(-Wduplicated-cond)
-    cable_add_cxx_compiler_flag_if_supported(-Wduplicate-enum)
-    cable_add_cxx_compiler_flag_if_supported(-Wfinal-dtor-non-final-class)
-    cable_add_cxx_compiler_flag_if_supported(-Wlogical-op)
-    cable_add_cxx_compiler_flag_if_supported(-Wnewline-eof)
-    cable_add_cxx_compiler_flag_if_supported(-Wsuggest-destructor-override)
-    cable_add_cxx_compiler_flag_if_supported(-Wunreachable-code-break)
+
+
+
 
     if(CABLE_COMPILER_CLANG)
+        add_compile_options(
+            -Weverything
+            -Wno-unknown-warning-option  # FIXME
+            -Wno-c++98-compat
+            -Wno-padded
+            -Wno-old-style-cast
+            -Wno-cast-qual
+            -Wno-cast-align
+            -Wno-c++98-compat-pedantic
+            -Wno-documentation-unknown-command
+            -Wno-array-bounds-pointer-arithmetic
+            -Wno-weak-vtables
+            -Wno-undefined-func-template
+            -Wno-global-constructors
+            -Wno-exit-time-destructors
+            -Wno-missing-variable-declarations
+            -Wno-unsafe-buffer-usage
+            -Wno-deprecated-copy-with-dtor
+            -Wno-switch-enum
+            -Wno-used-but-marked-unused
+        )
         set(CMAKE_CXX_FLAGS_COVERAGE "-fprofile-instr-generate -fcoverage-mapping")
     elseif(CABLE_COMPILER_GNU)
         set(CMAKE_CXX_FLAGS_COVERAGE "--coverage")
