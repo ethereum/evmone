@@ -108,8 +108,11 @@ Result sload(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
             return {EVMC_OUT_OF_GAS, gas_left};
     }
 
+#ifdef __ZKLLVM__
+    x = state.host.get_storage(state.msg->recipient, key);
+#else
     x = intx::be::load<uint256>(state.host.get_storage(state.msg->recipient, key));
-
+#endif
     return {EVMC_SUCCESS, gas_left};
 }
 

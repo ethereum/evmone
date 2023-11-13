@@ -93,7 +93,12 @@ Result call_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noexce
     if (state.msg->depth >= 1024)
         return {EVMC_SUCCESS, gas_left};  // "Light" failure.
 
-    if (has_value && intx::be::load<uint256>(state.host.get_balance(state.msg->recipient)) < value)
+    if (has_value && 
+#ifdef __ZKLLVM__
+        state.host.get_balance(state.msg->recipient) < value)
+#else
+        intx::be::load<uint256>(state.host.get_balance(state.msg->recipient)) < value)
+#endif
         return {EVMC_SUCCESS, gas_left};  // "Light" failure.
 
     if constexpr (Op == OP_DELEGATECALL)
@@ -168,7 +173,11 @@ Result create_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noex
         return {EVMC_SUCCESS, gas_left};  // "Light" failure.
 
     if (endowment != 0 &&
+#ifdef __ZKLLVM__
+        state.host.get_balance(state.msg->recipient) < endowment)
+#else
         intx::be::load<uint256>(state.host.get_balance(state.msg->recipient)) < endowment)
+#endif
         return {EVMC_SUCCESS, gas_left};  // "Light" failure.
 
     auto msg = evmc_message{};
@@ -194,7 +203,11 @@ Result create_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noex
 
     state.return_data.assign(result.output_data, result.output_size);
     if (result.status_code == EVMC_SUCCESS)
+#ifdef __ZKLLVM__
+        stack.top() = result.create_address;
+#else
         stack.top() = intx::be::load<uint256>(result.create_address);
+#endif
 
     return {EVMC_SUCCESS, gas_left};
 }
