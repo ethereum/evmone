@@ -139,7 +139,7 @@ void rmd160_compress(uint32_t* h, const uint32_t* X) noexcept
  *  note: length in bits == 8 * lswlen.
  *  note: there are (lswlen mod 64) bytes left in strptr.
  */
-static inline void rmd160_finish(uint32_t* MDbuf, uint8_t const* strptr, uint32_t lswlen)
+static inline void rmd160_finish(uint32_t* MDbuf, uint8_t const* strptr, size_t lswlen)
 {
     uint32_t X[16] = {}; /* message words */
 
@@ -160,9 +160,11 @@ static inline void rmd160_finish(uint32_t* MDbuf, uint8_t const* strptr, uint32_
         __builtin_memset(X, 0, 16 * sizeof(uint32_t));
     }
 
-    /* append length in bits*/
-    X[14] = lswlen << 3;
-    X[15] = lswlen >> 29;
+    // Append length in bits.
+    // https://en.wikipedia.org/wiki/Merkle%E2%80%93Damg%C3%A5rd_construction
+    const auto length_in_bits = uint64_t{lswlen} * 8;
+    X[14] = static_cast<uint32_t>(length_in_bits);
+    X[15] = static_cast<uint32_t>(length_in_bits >> 32);
     rmd160_compress(MDbuf, X);
 }
 
@@ -200,7 +202,7 @@ void ripemd160(uint8_t out[20], const uint8_t* ptr, size_t len)
         rmd160_compress(buf, current);
     }
 
-    rmd160_finish(buf, ptr, static_cast<uint32_t>(len));
+    rmd160_finish(buf, ptr, len);
 
     for (unsigned i = 0; i < 20; i += 4)
     {
