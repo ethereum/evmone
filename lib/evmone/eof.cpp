@@ -63,7 +63,11 @@ EOFValidationError get_section_missing_error(uint8_t section_id) noexcept
     case DATA_SECTION:
         return EOFValidationError::data_section_missing;
     default:
+#ifdef __ZKLLVM__
+        __builtin_assigner_exit_check(false);
+#else
         intx::unreachable();
+#endif
     }
 }
 

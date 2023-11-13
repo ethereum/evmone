@@ -271,7 +271,11 @@ int64_t dispatch(const CostTable& cost_table, ExecutionState& state, int64_t gas
             return gas;
         }
     }
+#ifdef __ZKLLVM__
+    __builtin_assigner_exit_check(false);
+#else
     intx::unreachable();
+#endif
 }
 
 #if EVMONE_CGOTO_SUPPORTED
