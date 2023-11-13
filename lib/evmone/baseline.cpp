@@ -233,42 +233,45 @@ int64_t dispatch(const CostTable& cost_table, ExecutionState& state, int64_t gas
 
     while (true)  // Guaranteed to terminate because padded code ends with STOP.
     {
-        if constexpr (TracingEnabled)
+#pragma zk_multi_prover
         {
-            const auto offset = static_cast<uint32_t>(position.code_it - code);
-            const auto stack_height = static_cast<int>(position.stack_top - stack_bottom);
-            if (offset < state.original_code.size())  // Skip STOP from code padding.
+            if constexpr (TracingEnabled)
             {
-                tracer->notify_instruction_start(
-                    offset, position.stack_top, stack_height, gas, state);
+                const auto offset = static_cast<uint32_t>(position.code_it - code);
+                const auto stack_height = static_cast<int>(position.stack_top - stack_bottom);
+                if (offset < state.original_code.size())  // Skip STOP from code padding.
+                {
+                    tracer->notify_instruction_start(
+                        offset, position.stack_top, stack_height, gas, state);
+                }
             }
-        }
 
-        const auto op = *position.code_it;
-        switch (op)
-        {
-#define ON_OPCODE(OPCODE)                                                                     \
-    case OPCODE:                                                                              \
-        ASM_COMMENT(OPCODE);                                                                  \
-        if (const auto next = invoke<OPCODE>(cost_table, stack_bottom, position, gas, state); \
-            next.code_it == nullptr)                                                          \
-        {                                                                                     \
-            return gas;                                                                       \
-        }                                                                                     \
-        else                                                                                  \
-        {                                                                                     \
-            /* Update current position only when no error,                                    \
-               this improves compiler optimization. */                                        \
-            position = next;                                                                  \
-        }                                                                                     \
-        break;
+            const auto op = *position.code_it;
+            switch (op)
+            {
+    #define ON_OPCODE(OPCODE)                                                                     \
+        case OPCODE:                                                                              \
+            ASM_COMMENT(OPCODE);                                                                  \
+            if (const auto next = invoke<OPCODE>(cost_table, stack_bottom, position, gas, state); \
+                next.code_it == nullptr)                                                          \
+            {                                                                                     \
+                return gas;                                                                       \
+            }                                                                                     \
+            else                                                                                  \
+            {                                                                                     \
+                /* Update current position only when no error,                                    \
+                this improves compiler optimization. */                                        \
+                position = next;                                                                  \
+            }                                                                                     \
+            break;
 
-            MAP_OPCODES
-#undef ON_OPCODE
+                MAP_OPCODES
+    #undef ON_OPCODE
 
-        default:
-            state.status = EVMC_UNDEFINED_INSTRUCTION;
-            return gas;
+            default:
+                state.status = EVMC_UNDEFINED_INSTRUCTION;
+                return gas;
+            }
         }
     }
 #ifdef __ZKLLVM__
