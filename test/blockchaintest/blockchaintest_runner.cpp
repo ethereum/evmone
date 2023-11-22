@@ -108,7 +108,10 @@ std::string print_state(const state::State& s)
             out << "\tstorage : "
                 << "\n";
             for (const auto& [s_key, val] : ordered_storage)
-                out << "\t\t" << s_key << " : " << hex0x(val.current) << "\n";
+            {
+                if (val.current)  // Skip 0 values.
+                    out << "\t\t" << s_key << " : " << hex0x(val.current) << "\n";
+            }
         }
     }
 
