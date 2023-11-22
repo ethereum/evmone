@@ -278,25 +278,31 @@ inline constexpr auto traits = []() noexcept {
 }();
 }  // namespace
 
-std::optional<evmc::Result> call_precompile(evmc_revision rev, const evmc_message& msg) noexcept
+bool is_precompile(evmc_revision rev, const evmc::address& addr) noexcept
 {
     // Define compile-time constant,
-    // TODO: workaround for Clang Analyzer bug https://github.com/llvm/llvm-project/issues/59493.
-    static constexpr evmc::address address_boundary{NumPrecompiles};
+    // TODO(clang18): workaround for Clang Analyzer bug, fixed in clang 18.
+    //                https://github.com/llvm/llvm-project/issues/59493.
+    static constexpr evmc::address address_boundary{stdx::to_underlying(PrecompileId::latest)};
 
-    if (evmc::is_zero(msg.code_address) || msg.code_address >= address_boundary)
-        return {};
+    if (evmc::is_zero(addr) || addr > address_boundary)
+        return false;
 
-    const auto id = msg.code_address.bytes[19];
-    if (rev < EVMC_BYZANTIUM && id > 4)
-        return {};
+    const auto id = addr.bytes[19];
+    if (rev < EVMC_BYZANTIUM && id >= stdx::to_underlying(PrecompileId::since_byzantium))
+        return false;
 
-    if (rev < EVMC_ISTANBUL && id > 8)
-        return {};
+    if (rev < EVMC_ISTANBUL && id >= stdx::to_underlying(PrecompileId::since_istanbul))
+        return false;
 
-    assert(id > 0);
+    return true;
+}
+
+evmc::Result call_precompile(evmc_revision rev, const evmc_message& msg) noexcept
+{
     assert(msg.gas >= 0);
 
+    const auto id = msg.code_address.bytes[19];
     const auto [analyze, execute] = traits[id];
 
     const bytes_view input{msg.input_data, msg.input_size};
@@ -307,7 +313,7 @@ std::optional<evmc::Result> call_precompile(evmc_revision rev, const evmc_messag
 
     static Cache cache;
     if (auto r = cache.find(static_cast<PrecompileId>(id), input, gas_left); r.has_value())
-        return r;
+        return std::move(*r);
 
     // Buffer for the precompile's output.
     // Big enough to handle all "expmod" tests, but in case does not match the size requirement

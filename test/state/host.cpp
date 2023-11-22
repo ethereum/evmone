@@ -263,8 +263,8 @@ evmc::Result Host::execute_message(const evmc_message& msg) noexcept
         dst_acc->balance += value;
     }
 
-    if (auto precompiled_result = call_precompile(m_rev, msg); precompiled_result.has_value())
-        return std::move(*precompiled_result);
+    if (is_precompile(m_rev, msg.code_address))
+        return call_precompile(m_rev, msg);
 
     // Copy of the code. Revert will invalidate the account.
     const auto code = dst_acc != nullptr ? dst_acc->code : bytes{};
@@ -350,7 +350,7 @@ evmc_access_status Host::access_account(const address& addr) noexcept
     const auto status = std::exchange(acc.access_status, EVMC_ACCESS_WARM);
 
     // Overwrite status for precompiled contracts: they are always warm.
-    if (status == EVMC_ACCESS_COLD && addr >= 0x01_address && addr <= 0x09_address)
+    if (status == EVMC_ACCESS_COLD && is_precompile(m_rev, addr))
         return EVMC_ACCESS_WARM;
 
     return status;
