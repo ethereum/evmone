@@ -144,6 +144,12 @@ PrecompileAnalysis expmod_analyze(bytes_view input, evmc_revision rev) noexcept
         static_cast<size_t>(mod_len)};
 }
 
+PrecompileAnalysis point_evaluation_analyze(bytes_view, evmc_revision) noexcept
+{
+    static constexpr auto POINT_EVALUATION_PRECOMPILE_GAS = 50000;
+    return {POINT_EVALUATION_PRECOMPILE_GAS, 64};
+}
+
 ExecutionResult ecrecover_execute(const uint8_t* input, size_t input_size, uint8_t* output,
     [[maybe_unused]] size_t output_size) noexcept
 {
@@ -263,6 +269,7 @@ inline constexpr auto traits = []() noexcept {
         {ecmul_analyze, ecmul_execute},
         {ecpairing_analyze, dummy_execute<PrecompileId::ecpairing>},
         {blake2bf_analyze, dummy_execute<PrecompileId::blake2bf>},
+        {point_evaluation_analyze, dummy_execute<PrecompileId::point_evaluation>},
     }};
 #ifdef EVMONE_PRECOMPILES_SILKPRE
     // tbl[static_cast<size_t>(PrecompileId::ecrecover)].execute = silkpre_ecrecover_execute;
@@ -293,6 +300,9 @@ bool is_precompile(evmc_revision rev, const evmc::address& addr) noexcept
         return false;
 
     if (rev < EVMC_ISTANBUL && id >= stdx::to_underlying(PrecompileId::since_istanbul))
+        return false;
+
+    if (rev < EVMC_CANCUN && id >= stdx::to_underlying(PrecompileId::since_cancun))
         return false;
 
     return true;

@@ -31,8 +31,10 @@ TEST(state_precompiles, is_precompile)
         // Istanbul:
         EXPECT_EQ(is_precompile(rev, 0x09_address), rev >= EVMC_ISTANBUL);
 
+        // Cancun:
+        EXPECT_EQ(is_precompile(rev, 0x0a_address), rev >= EVMC_CANCUN);
+
         // Future?
-        EXPECT_FALSE(is_precompile(rev, 0x0a_address));
         EXPECT_FALSE(is_precompile(rev, 0x0b_address));
         EXPECT_FALSE(is_precompile(rev, 0x0c_address));
         EXPECT_FALSE(is_precompile(rev, 0x0d_address));
