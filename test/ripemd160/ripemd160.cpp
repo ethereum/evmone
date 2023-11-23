@@ -133,40 +133,6 @@ void rmd160_compress(uint32_t* h, const uint32_t* X) noexcept
     h[0] = t;
 }
 
-/*
- *  puts bytes from strptr into X and pad out; appends length
- *  and finally, compresses the last block(s)
- *  note: length in bits == 8 * lswlen.
- *  note: there are (lswlen mod 64) bytes left in strptr.
- */
-static inline void rmd160_finish(uint32_t* MDbuf, uint8_t const* strptr, size_t lswlen)
-{
-    uint32_t X[16] = {}; /* message words */
-
-    /* put bytes from strptr into X */
-    for (size_t i = 0; i < (lswlen & 63); i++)
-    {
-        /* byte i goes into word X[i div 4] at pos.  8*(i mod 4)  */
-        X[i >> 2] ^= uint32_t{*strptr++} << (8 * (i & 3));
-    }
-
-    /* append the bit m_n == 1 */
-    X[(lswlen >> 2) & 15] ^= uint32_t{1} << (8 * (lswlen & 3) + 7);
-
-    if ((lswlen & 63) > 55)
-    {
-        /* length goes to next block */
-        rmd160_compress(MDbuf, X);
-        __builtin_memset(X, 0, 16 * sizeof(uint32_t));
-    }
-
-    // Append length in bits.
-    // https://en.wikipedia.org/wiki/Merkle%E2%80%93Damg%C3%A5rd_construction
-    const auto length_in_bits = uint64_t{lswlen} * 8;
-    X[14] = static_cast<uint32_t>(length_in_bits);
-    X[15] = static_cast<uint32_t>(length_in_bits >> 32);
-    rmd160_compress(MDbuf, X);
-}
 
 inline uint32_t load32le(const uint8_t* d) noexcept
 {
@@ -181,20 +147,56 @@ inline void store32le(uint8_t* o, uint32_t x) noexcept
     o[3] = static_cast<uint8_t>(x >> 24);
 }
 
+/*
+ *  puts bytes from strptr into X and pad out; appends length
+ *  and finally, compresses the last block(s)
+ *  note: length in bits == 8 * lswlen.
+ *  note: there are (lswlen mod 64) bytes left in strptr.
+ */
+static inline void rmd160_finish(uint32_t* h, uint8_t const* ptr, size_t total_len)
+{
+    uint32_t X[16] = {};
+
+    const auto len = total_len % 64;
+
+    for (size_t i = 0; i < len; i++)
+    {
+        /* byte i goes into word X[i div 4] at pos.  8*(i mod 4)  */
+        X[i >> 2] ^= uint32_t{*ptr++} << (8 * (i & 3));
+    }
+
+    /* append the bit m_n == 1 */
+    X[(total_len >> 2) & 15] ^= uint32_t{1} << (8 * (total_len & 3) + 7);
+
+    if (len > 55)
+    {
+        /* length goes to next block */
+        rmd160_compress(h, X);
+        __builtin_memset(X, 0, 16 * sizeof(uint32_t));
+    }
+
+    // Append length in bits.
+    // https://en.wikipedia.org/wiki/Merkle%E2%80%93Damg%C3%A5rd_construction
+    const auto length_in_bits = uint64_t{total_len} * 8;
+    X[14] = static_cast<uint32_t>(length_in_bits);
+    X[15] = static_cast<uint32_t>(length_in_bits >> 32);
+    rmd160_compress(h, X);
+}
+
 
 void ripemd160(uint8_t out[20], const uint8_t* ptr, size_t len)
 {
     uint32_t state[] = {0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0};
 
-    uint32_t current[16];
+    uint32_t x[16];
     for (size_t remaining = len; remaining >= 64; remaining -= 64)
     {
-        for (unsigned int& i : current)
+        for (unsigned int& i : x)
         {
             i = load32le(ptr);
             ptr += 4;
         }
-        rmd160_compress(state, current);
+        rmd160_compress(state, x);
     }
 
     rmd160_finish(state, ptr, len);
