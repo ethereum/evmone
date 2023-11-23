@@ -38,7 +38,13 @@ struct EOF1Header
     /// Offset of every code section from the beginning of the EOF container.
     std::vector<uint16_t> code_offsets;
 
+    /// Size of the data section.
+    /// In case of deploy container it is the minimal data size of the container that will be
+    /// deployed, taking into account part of data appended at deploy-time (aux_data). In this case
+    /// the size of data section present in current container can be less than @data_size.
     uint16_t data_size = 0;
+    /// Offset of data container section start.
+    uint16_t data_offset = 0;
     /// Size of every container section.
     std::vector<uint16_t> container_sizes;
     /// Offset of every container section start;
@@ -56,10 +62,7 @@ struct EOF1Header
     /// A helper to extract reference to the data section.
     [[nodiscard]] bytes_view get_data(bytes_view container) const noexcept
     {
-        if (data_size == 0)
-            return {};
-
-        return container.substr(code_offsets.back() + code_sizes.back(), data_size);
+        return container.substr(data_offset);
     }
 
     /// A helper to extract reference to a specific container section.

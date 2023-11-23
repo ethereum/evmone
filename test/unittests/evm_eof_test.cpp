@@ -350,22 +350,24 @@ TEST_P(evm, eof_create3)
 
     rev = EVMC_PRAGUE;
     const auto deploy_data = "abcdef"_hex;
-    const auto deploy_container = eof1_bytecode(bytecode(OP_INVALID), 0, deploy_data);
+    const auto aux_data = "aabbccddeeff"_hex;
+    const auto deploy_data_size = static_cast<uint16_t>(deploy_data.size() + aux_data.size());
+    const auto deploy_container =
+        eof1_bytecode_truncated_data(bytecode(OP_INVALID), 0, deploy_data, deploy_data_size);
 
     const auto init_code =
         calldatacopy(0, 0, OP_CALLDATASIZE) + OP_CALLDATASIZE + 0 + OP_RETURNCONTRACT + Opcode{0};
-    const auto init_container = eof1_bytecode(init_code, 3, {}, deploy_container);
+    const auto init_container = eof1_bytecode_with_container(init_code, 3, {}, 0, deploy_container);
 
     const auto create_code = calldatacopy(0, 0, OP_CALLDATASIZE) +
                              create3().input(0, OP_CALLDATASIZE).salt(0xff) + ret_top();
-    const auto container = eof1_bytecode(create_code, 4, {}, init_container);
+    const auto container = eof1_bytecode_with_container(create_code, 4, {}, 0, init_container);
 
     // test executing create code mocking CREATE3 call
     host.call_result.output_data = deploy_container.data();
     host.call_result.output_size = deploy_container.size();
     host.call_result.create_address = 0xcc010203040506070809010203040506070809ce_address;
 
-    const auto aux_data = "aabbccddeeff"_hex;
     execute(container, aux_data);
     EXPECT_STATUS(EVMC_SUCCESS);
 
