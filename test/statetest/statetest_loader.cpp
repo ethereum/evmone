@@ -222,11 +222,21 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
     if (parent_timestamp_it != j.end())
         parent_timestamp = from_json<int64_t>(*parent_timestamp_it);
 
-    return {from_json<int64_t>(j.at("currentNumber")), from_json<int64_t>(j.at("currentTimestamp")),
-        parent_timestamp, from_json<int64_t>(j.at("currentGasLimit")),
-        from_json<evmc::address>(j.at("currentCoinbase")), current_difficulty, parent_difficulty,
-        parent_uncle_hash, prev_randao, base_fee, std::move(ommers), std::move(withdrawals),
-        std::move(block_hashes)};
+    return state::BlockInfo{
+        .number = from_json<int64_t>(j.at("currentNumber")),
+        .timestamp = from_json<int64_t>(j.at("currentTimestamp")),
+        .parent_timestamp = parent_timestamp,
+        .gas_limit = from_json<int64_t>(j.at("currentGasLimit")),
+        .coinbase = from_json<evmc::address>(j.at("currentCoinbase")),
+        .difficulty = current_difficulty,
+        .parent_difficulty = parent_difficulty,
+        .parent_ommers_hash = parent_uncle_hash,
+        .prev_randao = prev_randao,
+        .base_fee = base_fee,
+        .ommers = std::move(ommers),
+        .withdrawals = std::move(withdrawals),
+        .known_block_hashes = std::move(block_hashes),
+    };
 }
 
 template <>
