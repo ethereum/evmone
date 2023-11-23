@@ -21,10 +21,12 @@ enum class PrecompileId : uint8_t
     ecmul = 0x07,
     ecpairing = 0x08,
     blake2bf = 0x09,
+    point_evaluation = 0x0a,
 
-    since_byzantium = expmod,   ///< The first precompile introduced in Byzantium.
-    since_istanbul = blake2bf,  ///< The first precompile introduced in Istanbul.
-    latest = blake2bf           ///< The latest introduced precompile (highest address).
+    since_byzantium = expmod,         ///< The first precompile introduced in Byzantium.
+    since_istanbul = blake2bf,        ///< The first precompile introduced in Istanbul.
+    since_cancun = point_evaluation,  ///< The first precompile introduced in Cancun.
+    latest = point_evaluation         ///< The latest introduced precompile (highest address).
 };
 
 /// The total number of known precompiles ids, including 0.
