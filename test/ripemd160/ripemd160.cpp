@@ -166,9 +166,9 @@ static inline void rmd160_finish(uint32_t* h, uint8_t const* ptr, size_t total_l
     }
 
     /* append the bit m_n == 1 */
-    X[(total_len >> 2) & 15] ^= uint32_t{1} << (8 * (total_len & 3) + 7);
+    X[len / 4] ^= uint32_t{0x80} << (8 * (len % 4));
 
-    if (len > 55)
+    if ((64 - len) < 8 + 1)
     {
         /* length goes to next block */
         rmd160_compress(h, X);
