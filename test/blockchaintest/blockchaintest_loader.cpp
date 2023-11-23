@@ -41,6 +41,7 @@ BlockHeader from_json<BlockHeader>(const json::json& j)
         .transactions_root = from_json<hash256>(j.at("transactionsTrie")),
         .withdrawal_root = load_if_exists<hash256>(j, "withdrawalsRoot"),
         .parent_beacon_block_root = load_if_exists<hash256>(j, "parentBeaconBlockRoot"),
+        .excess_blob_gas = load_if_exists<uint64_t>(j, "excessBlobGas"),
     };
 }
 

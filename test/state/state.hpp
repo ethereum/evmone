@@ -99,6 +99,11 @@ struct BlockInfo
     bytes32 prev_randao;
     hash256 parent_beacon_block_root;
     uint64_t base_fee = 0;
+
+    /// The "excess blob gas" parameter from EIP-4844
+    /// for computing the blob gas price in the current block.
+    uint64_t excess_blob_gas = 0;
+
     std::vector<Ommer> ommers;
     std::vector<Withdrawal> withdrawals;
     std::unordered_map<int64_t, hash256> known_block_hashes;

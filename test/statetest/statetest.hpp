@@ -121,4 +121,7 @@ inline std::string hex0x(const bytes_view& v)
     return "0x" + evmc::hex(v);
 }
 
+/// Computes the current blob gas price based on the excess blob gas.
+intx::uint256 compute_blob_gas_price(uint64_t excess_blob_gas) noexcept;
+
 }  // namespace evmone::test
