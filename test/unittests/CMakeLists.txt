@@ -44,6 +44,7 @@ target_sources(
     state_mpt_hash_test.cpp
     state_mpt_test.cpp
     state_new_account_address_test.cpp
+    state_precompiles_test.cpp
     state_rlp_test.cpp
     state_transition.hpp
     state_transition.cpp
