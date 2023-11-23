@@ -199,17 +199,36 @@ Result create_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noex
     return {EVMC_SUCCESS, gas_left};
 }
 
-Result create3(StackTop stack, int64_t gas_left, ExecutionState& state, code_iterator& pos) noexcept
+template <Opcode Op>
+Result create_eof_impl(
+    StackTop stack, int64_t gas_left, ExecutionState& state, code_iterator& pos) noexcept
 {
+    static_assert(Op == OP_CREATE3 || Op == OP_CREATE4);
+
     if (state.in_static_mode())
         return {EVMC_STATIC_MODE_VIOLATION, gas_left};
 
-    const auto initcontainer_index = uint8_t{pos[1]};
-    pos += 2;
-
-    const auto& container = state.original_code;
-    const auto eof_header = read_valid_eof1_header(state.original_code);
-    const auto initcontainer = eof_header.get_container(container, initcontainer_index);
+    bytes_view initcontainer;
+    if constexpr (Op == OP_CREATE3)
+    {
+        const auto initcontainer_index = uint8_t{pos[1]};
+        pos += 1;
+        const auto& container = state.original_code;
+        const auto eof_header = read_valid_eof1_header(state.original_code);
+        initcontainer = eof_header.get_container(container, initcontainer_index);
+    }
+    else
+    {
+        const auto initcode_index256 = stack.pop();
+        const auto& tx_context = state.get_tx_context();
+        if (initcode_index256 >= tx_context.initcodes_count)
+        {
+            stack.push(0);
+            return {EVMC_SUCCESS, gas_left};
+        }
+        const auto index = initcode_index256[0];
+        initcontainer = {tx_context.initcodes[index], tx_context.initcode_sizes[index]};
+    }
 
     const auto endowment = stack.pop();
     const auto salt = stack.pop();
@@ -265,6 +284,7 @@ Result create3(StackTop stack, int64_t gas_left, ExecutionState& state, code_ite
     if (result.status_code == EVMC_SUCCESS)
         stack.top() = intx::be::load<uint256>(result.create_address);
 
+    pos += 1;
     return {EVMC_SUCCESS, gas_left};
 }
 
@@ -272,4 +292,8 @@ template Result create_impl<OP_CREATE>(
     StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;
 template Result create_impl<OP_CREATE2>(
     StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;
+template Result create_eof_impl<OP_CREATE3>(
+    StackTop stack, int64_t gas_left, ExecutionState& state, code_iterator& pos) noexcept;
+template Result create_eof_impl<OP_CREATE4>(
+    StackTop stack, int64_t gas_left, ExecutionState& state, code_iterator& pos) noexcept;
 }  // namespace evmone::instr::core

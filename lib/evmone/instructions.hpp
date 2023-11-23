@@ -1060,8 +1060,11 @@ Result create_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noex
 inline constexpr auto create = create_impl<OP_CREATE>;
 inline constexpr auto create2 = create_impl<OP_CREATE2>;
 
-Result create3(
+template <Opcode Op>
+Result create_eof_impl(
     StackTop stack, int64_t gas_left, ExecutionState& state, code_iterator& pos) noexcept;
+inline constexpr auto create3 = create_eof_impl<OP_CREATE3>;
+inline constexpr auto create4 = create_eof_impl<OP_CREATE4>;
 
 inline code_iterator callf(StackTop stack, ExecutionState& state, code_iterator pos) noexcept
 {

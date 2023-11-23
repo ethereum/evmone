@@ -126,6 +126,7 @@ constexpr bool instruction_only_in_evmone(evmc_revision rev, Opcode op) noexcept
     case OP_TLOAD:
     case OP_TSTORE:
     case OP_CREATE3:
+    case OP_CREATE4:
     case OP_RETURNCONTRACT:
         return true;
     default:
