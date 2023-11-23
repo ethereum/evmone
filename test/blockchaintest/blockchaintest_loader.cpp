@@ -61,6 +61,8 @@ static TestBlock load_test_block(const json::json& j, evmc_revision rev)
         tb.block_info.prev_randao = tb.expected_block_header.prev_randao;
         tb.block_info.base_fee = tb.expected_block_header.base_fee_per_gas;
         tb.block_info.parent_beacon_block_root = tb.expected_block_header.parent_beacon_block_root;
+        tb.block_info.blob_base_fee =
+            compute_blob_gas_price(tb.expected_block_header.excess_blob_gas);
 
         // Override prev_randao with difficulty pre-Merge
         if (rev < EVMC_PARIS)

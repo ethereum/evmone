@@ -249,6 +249,7 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
         .parent_beacon_block_root = {},
         .base_fee = base_fee,
         .excess_blob_gas = excess_blob_gas,
+        .blob_base_fee = state::compute_blob_gas_price(excess_blob_gas),
         .ommers = std::move(ommers),
         .withdrawals = std::move(withdrawals),
         .known_block_hashes = std::move(block_hashes),

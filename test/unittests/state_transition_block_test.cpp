@@ -60,3 +60,14 @@ TEST_F(state_transition, block_apply_ommers_reward)
     // Two ommers +1/32 * block_reward for each. +21000 cost of the tx goes to coinbase.
     expect.post[Coinbase].balance = 21000 + intx::uint256{block_reward} + block_reward / 16;
 }
+
+TEST_F(state_transition, eip7516_blob_base_fee)
+{
+    rev = EVMC_CANCUN;
+
+    block.blob_base_fee = 0xabcd;
+    tx.to = To;
+    pre.insert(*tx.to, {.code = sstore(0x4a, OP_BLOBBASEFEE)});
+
+    expect.post[To].storage[0x4a_bytes32] = 0xabcd_bytes32;
+}

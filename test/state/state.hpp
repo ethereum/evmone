@@ -104,6 +104,10 @@ struct BlockInfo
     /// for computing the blob gas price in the current block.
     uint64_t excess_blob_gas = 0;
 
+    /// The blob gas price parameter from EIP-4844.
+    /// This values is not stored in block headers directly but computed from excess_blob_gas.
+    intx::uint256 blob_base_fee = 0;
+
     std::vector<Ommer> ommers;
     std::vector<Withdrawal> withdrawals;
     std::unordered_map<int64_t, hash256> known_block_hashes;
@@ -179,6 +183,9 @@ struct TransactionReceipt
     /// Root hash of the state after this transaction. Used only in old pre-Byzantium transactions.
     std::optional<bytes32> post_state;
 };
+
+/// Computes the current blob gas price based on the excess blob gas.
+intx::uint256 compute_blob_gas_price(uint64_t excess_blob_gas) noexcept;
 
 /// Finalize state after applying a "block" of transactions.
 ///

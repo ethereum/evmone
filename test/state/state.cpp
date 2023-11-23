@@ -72,6 +72,29 @@ evmc_message build_message(const Transaction& tx, int64_t execution_gas_limit) n
 }
 }  // namespace
 
+intx::uint256 compute_blob_gas_price(uint64_t excess_blob_gas) noexcept
+{
+    /// A helper function approximating `factor * e ** (numerator / denominator)`.
+    /// https://eips.ethereum.org/EIPS/eip-4844#helpers
+    static constexpr auto fake_exponential = [](uint64_t factor, uint64_t numerator,
+                                                 uint64_t denominator) noexcept {
+        intx::uint256 i = 1;
+        intx::uint256 output = 0;
+        intx::uint256 numerator_accum = factor * denominator;
+        while (numerator_accum > 0)
+        {
+            output += numerator_accum;
+            numerator_accum = (numerator_accum * numerator) / (denominator * i);
+            i += 1;
+        }
+        return output / denominator;
+    };
+
+    static constexpr auto MIN_BLOB_GASPRICE = 1;
+    static constexpr auto BLOB_GASPRICE_UPDATE_FRACTION = 3338477;
+    return fake_exponential(MIN_BLOB_GASPRICE, excess_blob_gas, BLOB_GASPRICE_UPDATE_FRACTION);
+}
+
 /// Validates transaction and computes its execution gas limit (the amount of gas provided to EVM).
 /// @return  Execution gas limit or transaction validation error.
 std::variant<int64_t, std::error_code> validate_transaction(const Account& sender_acc,

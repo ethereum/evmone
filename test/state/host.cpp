@@ -335,7 +335,7 @@ evmc_tx_context Host::get_tx_context() const noexcept
         m_block.prev_randao,
         0x01_bytes32,  // Chain ID is expected to be 1.
         uint256be{m_block.base_fee},
-        uint256be{},  // TODO: Add blob base fee.
+        intx::be::store<uint256be>(m_block.blob_base_fee),
         nullptr,      // TODO: Add blob hashes.
         0,
     };
