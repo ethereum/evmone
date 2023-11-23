@@ -53,6 +53,9 @@ struct Account
     /// or it is a newly created temporary account.
     bool erasable = false;
 
+    /// The account has been created in the current transaction.
+    bool just_created = false;
+
     evmc_access_status access_status = EVMC_ACCESS_COLD;
 
     [[nodiscard]] bool is_empty() const noexcept
