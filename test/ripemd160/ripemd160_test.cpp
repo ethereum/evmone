@@ -70,3 +70,5 @@ TEST(ripemd160, input_length)
         EXPECT_EQ(evmc::hex({hash, std::size(hash)}), t.hash_hex) << t.input_length;
     }
 }
+
+// TODO: More tests: https://homes.esat.kuleuven.be/~bosselae/ripemd160.html

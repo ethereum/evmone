@@ -24,7 +24,7 @@ static constexpr BinaryFunction binary_functions[] = {
 };
 
 static constexpr size_t L = 2;
-static constexpr size_t M = 5;
+static constexpr size_t M = 5;  // TODO: 160/32.
 static constexpr size_t N = 80;
 
 /// Added constants.
@@ -176,20 +176,9 @@ static inline uint32_t load32(const void* src)
 }
 
 
-static inline void rmd160_init(uint32_t* MDbuf)
-{
-    MDbuf[0] = 0x67452301UL;
-    MDbuf[1] = 0xefcdab89UL;
-    MDbuf[2] = 0x98badcfeUL;
-    MDbuf[3] = 0x10325476UL;
-    MDbuf[4] = 0xc3d2e1f0UL;
-}
-
 void ripemd160(uint8_t out[20], const uint8_t* ptr, size_t len)
 {
-    uint32_t buf[160 / 32];
-
-    rmd160_init(buf);
+    uint32_t state[] = {0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0};
 
     uint32_t current[16];
     for (size_t remaining = len; remaining >= 64; remaining -= 64)
@@ -199,16 +188,16 @@ void ripemd160(uint8_t out[20], const uint8_t* ptr, size_t len)
             i = load32(ptr);
             ptr += 4;
         }
-        rmd160_compress(buf, current);
+        rmd160_compress(state, current);
     }
 
-    rmd160_finish(buf, ptr, len);
+    rmd160_finish(state, ptr, len);
 
     for (unsigned i = 0; i < 20; i += 4)
     {
-        out[i] = static_cast<uint8_t>(buf[i >> 2]);
-        out[i + 1] = static_cast<uint8_t>(buf[i >> 2] >> 8);
-        out[i + 2] = static_cast<uint8_t>(buf[i >> 2] >> 16);
-        out[i + 3] = static_cast<uint8_t>(buf[i >> 2] >> 24);
+        out[i] = static_cast<uint8_t>(state[i >> 2]);
+        out[i + 1] = static_cast<uint8_t>(state[i >> 2] >> 8);
+        out[i + 2] = static_cast<uint8_t>(state[i >> 2] >> 16);
+        out[i + 3] = static_cast<uint8_t>(state[i >> 2] >> 24);
     }
 }
