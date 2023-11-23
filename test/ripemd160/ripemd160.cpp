@@ -168,11 +168,17 @@ static inline void rmd160_finish(uint32_t* MDbuf, uint8_t const* strptr, size_t 
     rmd160_compress(MDbuf, X);
 }
 
-static inline uint32_t load32(const void* src)
+inline uint32_t load32le(const uint8_t* d) noexcept
 {
-    uint32_t w;
-    __builtin_memcpy(&w, src, sizeof w);
-    return w;
+    return uint32_t{d[0]} | (uint32_t{d[1]} << 8) | (uint32_t{d[2]} << 16) | (uint32_t{d[3]} << 24);
+}
+
+inline void store32le(uint8_t* o, uint32_t x) noexcept
+{
+    o[0] = static_cast<uint8_t>(x);
+    o[1] = static_cast<uint8_t>(x >> 8);
+    o[2] = static_cast<uint8_t>(x >> 16);
+    o[3] = static_cast<uint8_t>(x >> 24);
 }
 
 
@@ -185,7 +191,7 @@ void ripemd160(uint8_t out[20], const uint8_t* ptr, size_t len)
     {
         for (unsigned int& i : current)
         {
-            i = load32(ptr);
+            i = load32le(ptr);
             ptr += 4;
         }
         rmd160_compress(state, current);
@@ -193,11 +199,9 @@ void ripemd160(uint8_t out[20], const uint8_t* ptr, size_t len)
 
     rmd160_finish(state, ptr, len);
 
-    for (unsigned i = 0; i < 20; i += 4)
-    {
-        out[i] = static_cast<uint8_t>(state[i >> 2]);
-        out[i + 1] = static_cast<uint8_t>(state[i >> 2] >> 8);
-        out[i + 2] = static_cast<uint8_t>(state[i >> 2] >> 16);
-        out[i + 3] = static_cast<uint8_t>(state[i >> 2] >> 24);
-    }
+    store32le(out, state[0]);
+    store32le(out + 4, state[1]);
+    store32le(out + 8, state[2]);
+    store32le(out + 12, state[3]);
+    store32le(out + 16, state[4]);
 }
