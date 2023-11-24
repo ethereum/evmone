@@ -95,12 +95,12 @@ struct BlockInfo
     address coinbase;
     int64_t difficulty = 0;
     int64_t parent_difficulty = 0;
-    hash256 parent_ommers_hash = {};
+    hash256 parent_ommers_hash;
     bytes32 prev_randao;
     uint64_t base_fee = 0;
-    std::vector<Ommer> ommers = {};
+    std::vector<Ommer> ommers;
     std::vector<Withdrawal> withdrawals;
-    std::unordered_map<int64_t, hash256> known_block_hashes = {};
+    std::unordered_map<int64_t, hash256> known_block_hashes;
 };
 
 using AccessList = std::vector<std::pair<address, std::vector<bytes32>>>;

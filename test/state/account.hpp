@@ -35,15 +35,15 @@ struct Account
     uint64_t nonce = 0;
 
     /// The account balance.
-    intx::uint256 balance = {};
+    intx::uint256 balance;
 
     /// The account storage map.
-    std::unordered_map<bytes32, StorageValue> storage = {};
+    std::unordered_map<bytes32, StorageValue> storage;
 
-    std::unordered_map<bytes32, bytes32> transient_storage = {};
+    std::unordered_map<bytes32, bytes32> transient_storage;
 
     /// The account code.
-    bytes code = {};
+    bytes code;
 
     /// The account has been destructed and should be erased at the end of of a transaction.
     bool destructed = false;
