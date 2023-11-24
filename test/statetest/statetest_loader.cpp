@@ -33,13 +33,12 @@ static std::optional<T> integer_from_json(const json::json& j)
         return {};
 
     const auto s = j.get<std::string>();
-    size_t num_processed = 0;
-    T v = 0;
-    if constexpr (std::is_same_v<T, uint64_t>)
-        v = std::stoull(s, &num_processed, 0);
-    else
-        v = std::stoll(s, &num_processed, 0);
 
+    // Always load integers as unsigned and cast to the required type.
+    // This will work for cases where a test case uses uint64 timestamps while we use int64.
+    // TODO: Change timestamp type to uint64.
+    size_t num_processed = 0;
+    const auto v = static_cast<T>(std::stoull(s, &num_processed, 0));
     if (num_processed == 0 || num_processed != s.size())
         return {};
     return v;
@@ -222,11 +221,21 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
     if (parent_timestamp_it != j.end())
         parent_timestamp = from_json<int64_t>(*parent_timestamp_it);
 
-    return {from_json<int64_t>(j.at("currentNumber")), from_json<int64_t>(j.at("currentTimestamp")),
-        parent_timestamp, from_json<int64_t>(j.at("currentGasLimit")),
-        from_json<evmc::address>(j.at("currentCoinbase")), current_difficulty, parent_difficulty,
-        parent_uncle_hash, prev_randao, base_fee, std::move(ommers), std::move(withdrawals),
-        std::move(block_hashes)};
+    return state::BlockInfo{
+        .number = from_json<int64_t>(j.at("currentNumber")),
+        .timestamp = from_json<int64_t>(j.at("currentTimestamp")),
+        .parent_timestamp = parent_timestamp,
+        .gas_limit = from_json<int64_t>(j.at("currentGasLimit")),
+        .coinbase = from_json<evmc::address>(j.at("currentCoinbase")),
+        .difficulty = current_difficulty,
+        .parent_difficulty = parent_difficulty,
+        .parent_ommers_hash = parent_uncle_hash,
+        .prev_randao = prev_randao,
+        .base_fee = base_fee,
+        .ommers = std::move(ommers),
+        .withdrawals = std::move(withdrawals),
+        .known_block_hashes = std::move(block_hashes),
+    };
 }
 
 template <>

@@ -23,15 +23,24 @@ T load_if_exists(const json::json& j, std::string_view key)
 template <>
 BlockHeader from_json<BlockHeader>(const json::json& j)
 {
-    return {from_json<hash256>(j.at("parentHash")), from_json<address>(j.at("coinbase")),
-        from_json<hash256>(j.at("stateRoot")), from_json<hash256>(j.at("receiptTrie")),
-        state::bloom_filter_from_bytes(from_json<bytes>(j.at("bloom"))),
-        load_if_exists<int64_t>(j, "difficulty"), load_if_exists<bytes32>(j, "mixHash"),
-        from_json<int64_t>(j.at("number")), from_json<int64_t>(j.at("gasLimit")),
-        from_json<int64_t>(j.at("gasUsed")), from_json<int64_t>(j.at("timestamp")),
-        from_json<bytes>(j.at("extraData")), load_if_exists<uint64_t>(j, "baseFeePerGas"),
-        from_json<hash256>(j.at("hash")), from_json<hash256>(j.at("transactionsTrie")),
-        load_if_exists<hash256>(j, "withdrawalsRoot")};
+    return {
+        .parent_hash = from_json<hash256>(j.at("parentHash")),
+        .coinbase = from_json<address>(j.at("coinbase")),
+        .state_root = from_json<hash256>(j.at("stateRoot")),
+        .receipts_root = from_json<hash256>(j.at("receiptTrie")),
+        .logs_bloom = state::bloom_filter_from_bytes(from_json<bytes>(j.at("bloom"))),
+        .difficulty = load_if_exists<int64_t>(j, "difficulty"),
+        .prev_randao = load_if_exists<bytes32>(j, "mixHash"),
+        .block_number = from_json<int64_t>(j.at("number")),
+        .gas_limit = from_json<int64_t>(j.at("gasLimit")),
+        .gas_used = from_json<int64_t>(j.at("gasUsed")),
+        .timestamp = from_json<int64_t>(j.at("timestamp")),
+        .extra_data = from_json<bytes>(j.at("extraData")),
+        .base_fee_per_gas = load_if_exists<uint64_t>(j, "baseFeePerGas"),
+        .hash = from_json<hash256>(j.at("hash")),
+        .transactions_root = from_json<hash256>(j.at("transactionsTrie")),
+        .withdrawal_root = load_if_exists<hash256>(j, "withdrawalsRoot"),
+    };
 }
 
 static TestBlock load_test_block(const json::json& j, evmc_revision rev)
