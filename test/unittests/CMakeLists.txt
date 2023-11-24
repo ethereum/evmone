@@ -46,6 +46,7 @@ target_sources(
     state_new_account_address_test.cpp
     state_precompiles_test.cpp
     state_rlp_test.cpp
+    state_system_call_test.cpp
     state_transition.hpp
     state_transition.cpp
     state_transition_block_test.cpp
