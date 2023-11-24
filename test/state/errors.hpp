@@ -23,6 +23,7 @@ enum ErrorCode : int
     GAS_LIMIT_REACHED,
     SENDER_NOT_EOA,
     INIT_CODE_SIZE_LIMIT_EXCEEDED,
+    EOF_CREATION_TRANSACTION,
     UNKNOWN_ERROR,
 };
 
@@ -61,6 +62,8 @@ inline const std::error_category& evmone_category() noexcept
                 return "sender not an eoa:";
             case INIT_CODE_SIZE_LIMIT_EXCEEDED:
                 return "max initcode size exceeded";
+            case EOF_CREATION_TRANSACTION:
+                return "EOF in creation transaction";
             case UNKNOWN_ERROR:
                 return "Unknown error";
             default:
