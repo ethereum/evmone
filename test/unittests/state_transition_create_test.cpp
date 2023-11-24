@@ -482,3 +482,28 @@ TEST_F(state_transition, create3_caller_balance_too_low)
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;
     expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
 }
+
+TEST_F(state_transition, create4_empty_auxdata)
+{
+    static constexpr auto create_address = 0x4fe3707830bc93c282c3702cfbdc048ad3762190_address;
+
+    rev = EVMC_PRAGUE;
+    const auto deploy_data = "abcdef"_hex;
+    const auto deploy_container = eof1_bytecode(bytecode(OP_INVALID), 0, deploy_data);
+
+    const auto init_code = returncontract(0, 0, 0);
+    const auto init_container = eof1_bytecode_with_container(init_code, 2, {}, 0, deploy_container);
+
+    tx.type = Transaction::Type::initcodes;
+    tx.initcodes.push_back(init_container);
+
+    const auto factory_code = create4().initcode(0).input(0, 0).salt(0xff) + ret_top();
+    const auto factory_container = eof1_bytecode(factory_code, 5);
+
+    tx.to = To;
+    pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
+
+    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
+    expect.post[create_address].code = deploy_container;
+    expect.post[create_address].nonce = 1;
+}
