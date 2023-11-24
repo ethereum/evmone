@@ -47,17 +47,13 @@ TEST_F(state_transition, create2_max_nonce)
 
 TEST_F(state_transition, create_tx_with_eof_initcode)
 {
-    static constexpr auto create_address = 0x3442a1dec1e72f337007125aa67221498cdd759d_address;
-
     rev = EVMC_PRAGUE;
 
     const bytecode init_container = eof_bytecode(ret(0, 1));
 
     tx.data = init_container;
 
-    expect.status = EVMC_FAILURE;
-    expect.post[Sender].nonce = pre.get(Sender).nonce + 1;
-    expect.post[create_address].exists = false;
+    expect.tx_error = EOF_CREATION_TRANSACTION;
 }
 
 TEST_F(state_transition, create_with_eof_initcode)
