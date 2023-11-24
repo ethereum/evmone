@@ -48,6 +48,7 @@ if(CABLE_COMPILER_GNULIKE)
     add_compile_options(
         -Wmissing-declarations
         -Wno-attributes  # Allow using unknown attributes.
+        $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wno-missing-field-initializers>
         $<$<COMPILE_LANGUAGE:CXX>:-Wextra-semi>
     )
     cable_add_cxx_compiler_flag_if_supported(-Wduplicated-cond)

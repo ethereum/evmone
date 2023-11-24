@@ -8,8 +8,6 @@
 #include <test/state/errors.hpp>
 #include <test/state/host.hpp>
 
-#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
-
 namespace evmone::test
 {
 using namespace evmone;
