@@ -127,7 +127,7 @@ struct Transaction
 
     Type type = Type::legacy;
     bytes data;
-    int64_t gas_limit;
+    int64_t gas_limit = 0;
     intx::uint256 max_gas_price;
     intx::uint256 max_priority_gas_price;
     address sender;
@@ -201,5 +201,8 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
 
 /// Defines how to RLP-encode a Withdrawal.
 [[nodiscard]] bytes rlp_encode(const Withdrawal& withdrawal);
+
+/// Defines how to RLP-decode a Transaction.
+void rlp_decode(bytes_view& from, Transaction& to);
 
 }  // namespace evmone::state
