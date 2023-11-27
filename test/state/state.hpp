@@ -97,6 +97,7 @@ struct BlockInfo
     int64_t parent_difficulty = 0;
     hash256 parent_ommers_hash;
     bytes32 prev_randao;
+    hash256 parent_beacon_block_root;
     uint64_t base_fee = 0;
     std::vector<Ommer> ommers;
     std::vector<Withdrawal> withdrawals;
@@ -189,6 +190,12 @@ void finalize(State& state, evmc_revision rev, const address& coinbase,
 std::variant<int64_t, std::error_code> validate_transaction(const Account& sender_acc,
     const BlockInfo& block, const Transaction& tx, evmc_revision rev,
     int64_t block_gas_left) noexcept;
+
+/// Performs the system call.
+///
+/// Executes code at pre-defined accounts from the system sender (0xff...fe).
+/// The sender's nonce is not increased.
+void system_call(State& state, const BlockInfo& block, evmc_revision rev, evmc::VM& vm);
 
 /// Defines how to RLP-encode a Transaction.
 [[nodiscard]] bytes rlp_encode(const Transaction& tx);
