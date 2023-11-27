@@ -254,11 +254,14 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
     if (rev >= EVMC_SPURIOUS_DRAGON)
         delete_empty_accounts(state);
 
-    // Set accounts and their storage access status to cold in the end of transition process
+    // Post-transaction clean-up.
+    // - Set accounts and their storage access status to cold.
+    // - Clear the "just created" account flag.
     for (auto& [addr, acc] : state.get_accounts())
     {
         acc.transient_storage.clear();
         acc.access_status = EVMC_ACCESS_COLD;
+        acc.just_created = false;
         for (auto& [key, val] : acc.storage)
         {
             val.access_status = EVMC_ACCESS_COLD;

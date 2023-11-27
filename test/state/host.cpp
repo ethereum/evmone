@@ -100,12 +100,27 @@ size_t Host::copy_code(const address& addr, size_t code_offset, uint8_t* buffer_
 
 bool Host::selfdestruct(const address& addr, const address& beneficiary) noexcept
 {
-    // Touch beneficiary and transfer all balance to it.
-    // This may happen multiple times per single account as account's balance
-    // can be increased with a call following previous selfdestruct.
     auto& acc = m_state.get(addr);
-    m_state.touch(beneficiary).balance += acc.balance;
-    acc.balance = 0;  // Zero balance (this can be the beneficiary).
+    const auto balance = acc.balance;
+    auto& beneficiary_acc = m_state.touch(beneficiary);
+
+    if (m_rev >= EVMC_CANCUN && !acc.just_created)
+    {
+        // EIP-6780:
+        // "SELFDESTRUCT is executed in a transaction that is not the same
+        // as the contract invoking SELFDESTRUCT was created"
+        acc.balance = 0;
+        beneficiary_acc.balance += balance;  // Keep balance if acc is the beneficiary.
+
+        // Return "selfdestruct not registered".
+        // In practice this affects only refunds before Cancun.
+        return false;
+    }
+
+    // Transfer may happen multiple times per single account as account's balance
+    // can be increased with a call following previous selfdestruct.
+    beneficiary_acc.balance += balance;
+    acc.balance = 0;  // Zero balance if acc is the beneficiary.
 
     // Mark the destruction if not done already.
     return !std::exchange(acc.destructed, true);
@@ -183,6 +198,8 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
     assert(new_acc.nonce == 0);
     if (m_rev >= EVMC_SPURIOUS_DRAGON)
         new_acc.nonce = 1;
+
+    new_acc.just_created = true;
 
     // Clear the new account storage, but keep the access status (from tx access list).
     // This is only needed for tests and cannot happen in real networks.
