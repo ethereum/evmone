@@ -29,6 +29,7 @@ constexpr auto legacy_cost_tables = []() noexcept {
     tables[EVMC_PRAGUE][OP_RJUMPV] = instr::undefined;
     tables[EVMC_PRAGUE][OP_CALLF] = instr::undefined;
     tables[EVMC_PRAGUE][OP_RETF] = instr::undefined;
+    tables[EVMC_PRAGUE][OP_JUMPF] = instr::undefined;
     tables[EVMC_PRAGUE][OP_DATALOAD] = instr::undefined;
     tables[EVMC_PRAGUE][OP_DATALOADN] = instr::undefined;
     tables[EVMC_PRAGUE][OP_DATASIZE] = instr::undefined;

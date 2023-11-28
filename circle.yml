@@ -518,7 +518,7 @@ jobs:
             ~/tests/EIPTests/BlockchainTests/bcEIP1153-transientStorage
       - download_execution_tests:
           repo: ipsilon/tests
-          rev: eof-update-20230828
+          rev: eof-nrf-20231128
           legacy: false
       - run:
           name: "State tests (EOF)"
