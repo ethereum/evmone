@@ -120,10 +120,10 @@ BlockchainTest load_blockchain_test_case(const std::string& name, const json::js
     bt.name = name;
     bt.genesis_block_header = from_json<BlockHeader>(j.at("genesisBlockHeader"));
     bt.pre_state = from_json<State>(j.at("pre"));
-    bt.rev = to_rev(j.at("network").get<std::string>());
+    bt.rev = to_rev_schedule(j.at("network").get<std::string>());
 
     for (const auto& el : j.at("blocks"))
-        bt.test_blocks.emplace_back(load_test_block(el, bt.rev));
+        bt.test_blocks.emplace_back(load_test_block(el, bt.rev.get_revision(0)));
 
     bt.expectation.last_block_hash = from_json<hash256>(j.at("lastblockhash"));
 

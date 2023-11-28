@@ -5,6 +5,7 @@
 
 #include "../state/bloom_filter.hpp"
 #include "../state/state.hpp"
+#include "../utils/utils.hpp"
 #include <evmc/evmc.hpp>
 #include <span>
 #include <vector>
@@ -61,7 +62,7 @@ struct BlockchainTest
     std::vector<TestBlock> test_blocks;
     BlockHeader genesis_block_header;
     state::State pre_state;
-    evmc_revision rev;
+    RevisionSchedule rev;
 
     Expectation expectation;
 };

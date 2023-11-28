@@ -128,8 +128,8 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
     for (size_t case_index = 0; case_index != tests.size(); ++case_index)
     {
         const auto& c = tests[case_index];
-        SCOPED_TRACE(
-            std::string{evmc::to_string(c.rev)} + '/' + std::to_string(case_index) + '/' + c.name);
+        SCOPED_TRACE(std::string{evmc::to_string(c.rev.get_revision(0))} + '/' +
+                     std::to_string(case_index) + '/' + c.name);
 
         auto state = c.pre_state;
 
@@ -149,12 +149,12 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
             .known_block_hashes = {},
         };
 
-        const auto genesis_res = apply_block(state, vm, genesis, {}, c.rev, {});
+        const auto genesis_res = apply_block(state, vm, genesis, {}, c.rev.get_revision(0), {});
 
         EXPECT_EQ(
             state::mpt_hash(state.get_accounts()), state::mpt_hash(c.pre_state.get_accounts()));
 
-        if (c.rev >= EVMC_SHANGHAI)
+        if (c.rev.get_revision(0) >= EVMC_SHANGHAI)
         {
             EXPECT_EQ(state::mpt_hash(genesis.withdrawals), c.genesis_block_header.withdrawal_root);
         }
@@ -171,19 +171,22 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
         {
             auto bi = test_block.block_info;
             bi.known_block_hashes = known_block_hashes;
+
+            const auto rev = c.rev.get_revision(bi.timestamp);
+
             const auto res =
-                apply_block(state, vm, bi, test_block.transactions, c.rev, mining_reward(c.rev));
+                apply_block(state, vm, bi, test_block.transactions, rev, mining_reward(rev));
 
             known_block_hashes[test_block.expected_block_header.block_number] =
                 test_block.expected_block_header.hash;
 
-            SCOPED_TRACE(std::string{evmc::to_string(c.rev)} + '/' + std::to_string(case_index) +
+            SCOPED_TRACE(std::string{evmc::to_string(rev)} + '/' + std::to_string(case_index) +
                          '/' + c.name + '/' + std::to_string(test_block.block_info.number));
 
             EXPECT_EQ(
                 state::mpt_hash(state.get_accounts()), test_block.expected_block_header.state_root);
 
-            if (c.rev >= EVMC_SHANGHAI)
+            if (rev >= EVMC_SHANGHAI)
             {
                 EXPECT_EQ(state::mpt_hash(test_block.block_info.withdrawals),
                     test_block.expected_block_header.withdrawal_root);

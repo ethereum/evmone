@@ -138,7 +138,7 @@ TEST(json_loader, blockchain_test)
 
     EXPECT_EQ(btt.size(), 1);
     EXPECT_EQ(btt[0].test_blocks.size(), 1);
-    EXPECT_EQ(btt[0].rev, evmc_revision::EVMC_SHANGHAI);
+    EXPECT_EQ(btt[0].rev.get_revision(0), evmc_revision::EVMC_SHANGHAI);
     EXPECT_EQ(btt[0].name, "000-fork=Shanghai-fill_stack");
     EXPECT_EQ(btt[0].genesis_block_header.timestamp, 0);
     EXPECT_EQ(btt[0].genesis_block_header.gas_limit, 0x016345785d8a0000);
@@ -229,7 +229,7 @@ TEST(json_loader, blockchain_test_post_state_hash)
                 "hash": "0xe1bcc830589216abdc79cb3075f06f7b133f7b0cf257ecb346da33c354099700"
             },
             "lastblockhash": "0x01de610f00331cea813e8143d51eb44ca352cdd90c602bb4b4bcf3c6cf9d5531",
-            "network": "Shanghai",
+            "network": "ShanghaiToCancunAtTime15k",
             "pre": {
                 "0x0000000000000000000000000000000000000100": {
                     "nonce": "0x00",
@@ -253,7 +253,8 @@ TEST(json_loader, blockchain_test_post_state_hash)
 
     EXPECT_EQ(btt.size(), 1);
     EXPECT_EQ(btt[0].test_blocks.size(), 1);
-    EXPECT_EQ(btt[0].rev, evmc_revision::EVMC_SHANGHAI);
+    EXPECT_EQ(btt[0].rev.get_revision(0), evmc_revision::EVMC_SHANGHAI);
+    EXPECT_EQ(btt[0].rev.get_revision(15'000), evmc_revision::EVMC_CANCUN);
     EXPECT_EQ(btt[0].name, "000-fork=Shanghai-fill_stack");
     EXPECT_EQ(btt[0].genesis_block_header.timestamp, 0);
     EXPECT_EQ(btt[0].genesis_block_header.gas_limit, 0x016345785d8a0000);
@@ -360,7 +361,7 @@ TEST(json_loader, blockchain_test_pre_paris)
 
     EXPECT_EQ(btt.size(), 1);
     EXPECT_EQ(btt[0].test_blocks.size(), 1);
-    EXPECT_EQ(btt[0].rev, evmc_revision::EVMC_LONDON);
+    EXPECT_EQ(btt[0].rev.get_revision(0), evmc_revision::EVMC_LONDON);
     EXPECT_EQ(btt[0].name, "000-fork=Shanghai-fill_stack");
     EXPECT_EQ(btt[0].genesis_block_header.timestamp, 0);
     EXPECT_EQ(btt[0].genesis_block_header.gas_limit, 0x016345785d8a0000);

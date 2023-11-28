@@ -42,4 +42,13 @@ evmc_revision to_rev(std::string_view s)
     throw std::invalid_argument{"unknown revision: " + std::string{s}};
 }
 
+RevisionSchedule to_rev_schedule(std::string_view s)
+{
+    if (s == "ShanghaiToCancunAtTime15k")
+        return {EVMC_SHANGHAI, EVMC_CANCUN, 15'000};
+
+    const auto single_rev = to_rev(s);
+    return {single_rev, single_rev, 0};
+}
+
 }  // namespace evmone::test
