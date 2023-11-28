@@ -186,6 +186,15 @@ commands:
                 working_directory: ~/tests
                 command: git submodule update --init --recursive --depth=1 --progress
 
+  download_execution_spec_tests:
+    steps:
+      - run:
+          name: "Download execution-spec-tests"
+          working_directory: ~/spec-tests
+          command: |
+            curl -L https://github.com/ethereum/execution-spec-tests/releases/download/v1.0.6/fixtures_develop.tar.gz | tar -xz
+            ls -l
+
   build:
     description: "Build"
     steps:
@@ -453,7 +462,7 @@ jobs:
           branch: evmc-v11.0.0-alpha.1
           commit: evmc-v11.0.0-alpha.1
       - download_execution_tests:
-          rev: v12.4
+          rev: v13
       - run:
           name: "Silkworm-driven blockchain tests (Advanced)"
           working_directory: ~/build
@@ -474,9 +483,17 @@ jobs:
       BUILD_TYPE: Coverage
       CMAKE_OPTIONS: -DCMAKE_CXX_FLAGS=-Og
     steps:
+      - download_execution_spec_tests
       - build
+      - run:
+          name: "Execution spec tests"
+          working_directory: ~/build
+          command: >
+            EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json 
+            bin/evmone-blockchaintest ~/spec-tests/fixtures
+
       - download_execution_tests:
-          rev: v12.4
+          rev: v13
       - run:
           name: "State tests"
           working_directory: ~/build
@@ -485,14 +502,6 @@ jobs:
             bin/evmone-statetest 
             ~/tests/GeneralStateTests 
             ~/tests/LegacyTests/Constantinople/GeneralStateTests
-            ~/tests/EIPTests/StateTests/stEIP1153-transientStorage
-      - run:
-          name: "Blockchain tests (Pyspecs)"
-          working_directory: ~/build
-          command: >
-            EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json 
-            bin/evmone-blockchaintest
-            ~/tests/BlockchainTests/Pyspecs
       - run:
           name: "Blockchain tests (GeneralStateTests)"
           working_directory: ~/build
