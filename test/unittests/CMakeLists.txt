@@ -39,6 +39,7 @@ target_sources(
     evmone_test.cpp
     execution_state_test.cpp
     instructions_test.cpp
+    state_block_test.cpp
     state_bloom_filter_test.cpp
     state_difficulty_test.cpp
     state_mpt_hash_test.cpp

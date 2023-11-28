@@ -120,5 +120,4 @@ inline std::string hex0x(const bytes_view& v)
 {
     return "0x" + evmc::hex(v);
 }
-
 }  // namespace evmone::test

@@ -221,6 +221,21 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
     if (parent_timestamp_it != j.end())
         parent_timestamp = from_json<int64_t>(*parent_timestamp_it);
 
+    uint64_t excess_blob_gas = 0;
+    if (const auto it = j.find("parentExcessBlobGas"); it != j.end())
+    {
+        const auto parent_excess_blob_gas = from_json<uint64_t>(*it);
+        const auto parent_blob_gas_used = from_json<uint64_t>(j.at("parentBlobGasUsed"));
+        static constexpr uint64_t TARGET_BLOB_GAS_PER_BLOCK = 0x60000;
+        excess_blob_gas =
+            std::max(parent_excess_blob_gas + parent_blob_gas_used, TARGET_BLOB_GAS_PER_BLOCK) -
+            TARGET_BLOB_GAS_PER_BLOCK;
+    }
+    else if (const auto it2 = j.find("currentExcessBlobGas"); it2 != j.end())
+    {
+        excess_blob_gas = from_json<uint64_t>(*it2);
+    }
+
     return state::BlockInfo{
         .number = from_json<int64_t>(j.at("currentNumber")),
         .timestamp = from_json<int64_t>(j.at("currentTimestamp")),
@@ -233,6 +248,8 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
         .prev_randao = prev_randao,
         .parent_beacon_block_root = {},
         .base_fee = base_fee,
+        .excess_blob_gas = excess_blob_gas,
+        .blob_base_fee = state::compute_blob_gas_price(excess_blob_gas),
         .ommers = std::move(ommers),
         .withdrawals = std::move(withdrawals),
         .known_block_hashes = std::move(block_hashes),
@@ -289,6 +306,16 @@ static void from_json_tx_common(const json::json& j, state::Transaction& o)
         o.max_gas_price = from_json<intx::uint256>(j.at("maxFeePerGas"));
         o.max_priority_gas_price = from_json<intx::uint256>(j.at("maxPriorityFeePerGas"));
     }
+
+    if (const auto it = j.find("maxFeePerBlobGas"); it != j.end())
+        o.max_blob_gas_price = from_json<intx::uint256>(*it);
+
+    if (const auto it = j.find("blobVersionedHashes"); it != j.end())
+    {
+        o.type = state::Transaction::Type::blob;
+        for (const auto& hash : *it)
+            o.blob_hashes.push_back(from_json<bytes32>(hash));
+    }
 }
 
 template <>
@@ -320,8 +347,11 @@ state::Transaction from_json<state::Transaction>(const json::json& j)
 
     if (const auto type_it = j.find("type"); type_it != j.end())
     {
-        if (stdx::to_underlying(o.type) != from_json<uint8_t>(*type_it))
-            throw std::invalid_argument("wrong transaction type");
+        const auto infered_type = stdx::to_underlying(o.type);
+        const auto type = from_json<uint8_t>(*type_it);
+        if (type != infered_type)
+            throw std::invalid_argument("wrong transaction type: " + std::to_string(type) +
+                                        ", expected: " + std::to_string(infered_type));
     }
 
     o.nonce = from_json<uint64_t>(j.at("nonce"));
