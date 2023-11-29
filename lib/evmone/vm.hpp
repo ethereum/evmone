@@ -6,11 +6,11 @@
 #include "tracing.hpp"
 #include <evmc/evmc.h>
 
-#if defined(_MSC_VER) && !defined(__clang__)
+// #if defined(_MSC_VER) && !defined(__clang__)
 #define EVMONE_CGOTO_SUPPORTED 0
-#else
-#define EVMONE_CGOTO_SUPPORTED 1
-#endif
+// #else
+// #define EVMONE_CGOTO_SUPPORTED 1
+// #endif
 
 namespace evmone
 {

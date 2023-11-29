@@ -233,7 +233,7 @@ int64_t dispatch(const CostTable& cost_table, ExecutionState& state, int64_t gas
 
     while (true)  // Guaranteed to terminate because padded code ends with STOP.
     {
-#pragma zk_multi_prover
+// #pragma zk_multi_prover
         {
             if constexpr (TracingEnabled)
             {
