@@ -409,6 +409,37 @@ inline bytecode blobhash(bytecode index)
     return index + OP_BLOBHASH;
 }
 
+inline bytecode setupx(
+    bytecode num_val_slots, bytecode mod_size, bytecode mod_offset, bytecode mod_id)
+{
+    return num_val_slots + mod_size + mod_offset + mod_id + OP_SETUPX;
+}
+
+inline bytecode storex(bytecode num_vals, bytecode val_offset, bytecode val_slot)
+{
+    return num_vals + val_offset + val_slot + OP_STOREX;
+}
+
+inline bytecode loadx(bytecode num_vals, bytecode val_idx, bytecode mem_offset)
+{
+    return num_vals + val_idx + mem_offset + OP_LOADX;
+}
+
+inline bytecode addmodx(uint8_t result_slot_idx, uint8_t x_slot_idx, uint8_t y_slot_idx)
+{
+    return hex(OP_ADDMODX) + hex(result_slot_idx) + hex(x_slot_idx) + hex(y_slot_idx);
+}
+
+inline bytecode submodx(uint8_t result_slot_idx, uint8_t x_slot_idx, uint8_t y_slot_idx)
+{
+    return hex(OP_SUBMODX) + hex(result_slot_idx) + hex(x_slot_idx) + hex(y_slot_idx);
+}
+
+inline bytecode mulmodx(uint8_t result_slot_idx, uint8_t x_slot_idx, uint8_t y_slot_idx)
+{
+    return hex(OP_MULMODX) + hex(result_slot_idx) + hex(x_slot_idx) + hex(y_slot_idx);
+}
+
 template <Opcode kind>
 struct call_instruction
 {
