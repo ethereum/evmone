@@ -253,12 +253,6 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
         create_msg.input_size = 0;
     }
 
-    if (m_rev >= EVMC_PRAGUE && (is_eof_container(initcode) || is_eof_container(sender_acc.code)))
-    {
-        if (validate_eof(m_rev, initcode) != EOFValidationError::success)
-            return evmc::Result{EVMC_CONTRACT_VALIDATION_FAILURE};
-    }
-
     auto result = m_vm.execute(*this, m_rev, create_msg, initcode.data(), initcode.size());
     if (result.status_code != EVMC_SUCCESS)
     {
@@ -287,12 +281,8 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
                                           evmc::Result{EVMC_FAILURE};
     }
 
-    if (m_rev >= EVMC_PRAGUE && (is_eof_container(initcode) || is_eof_container(code)))
-    {
-        if (validate_eof(m_rev, code) != EOFValidationError::success)
-            return evmc::Result{EVMC_CONTRACT_VALIDATION_FAILURE};
-    }
-    else if (m_rev >= EVMC_LONDON && !code.empty() && code[0] == 0xEF)  // Reject EF code.
+    if (m_rev >= EVMC_LONDON && m_rev < EVMC_PRAGUE && !code.empty() &&
+        code[0] == 0xEF)  // Reject EF code.
         return evmc::Result{EVMC_CONTRACT_VALIDATION_FAILURE};
 
     // TODO: The new_acc pointer is invalid because of the state revert implementation,
