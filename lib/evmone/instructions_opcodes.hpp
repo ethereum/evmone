@@ -172,6 +172,9 @@ enum Opcode : uint8_t
     OP_DATASIZE = 0xea,
     OP_DATACOPY = 0xeb,
 
+    OP_CREATE3 = 0xec,
+    OP_RETURNCONTRACT = 0xee,
+
     OP_CREATE = 0xf0,
     OP_CALL = 0xf1,
     OP_CALLCODE = 0xf2,

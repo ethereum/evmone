@@ -1062,6 +1062,9 @@ Result create_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noex
 inline constexpr auto create = create_impl<OP_CREATE>;
 inline constexpr auto create2 = create_impl<OP_CREATE2>;
 
+Result create3(
+    StackTop stack, int64_t gas_left, ExecutionState& state, code_iterator& pos) noexcept;
+
 inline code_iterator callf(StackTop stack, ExecutionState& state, code_iterator pos) noexcept
 {
     const auto index = read_uint16_be(&pos[1]);
@@ -1131,6 +1134,33 @@ inline TermResult return_impl(StackTop stack, int64_t gas_left, ExecutionState& 
 }
 inline constexpr auto return_ = return_impl<EVMC_SUCCESS>;
 inline constexpr auto revert = return_impl<EVMC_REVERT>;
+
+inline TermResult returncontract(
+    StackTop stack, int64_t gas_left, ExecutionState& state, code_iterator pos) noexcept
+{
+    const auto& offset = stack[0];
+    const auto& size = stack[1];
+
+    if (state.msg->kind != EVMC_CREATE3)
+        return {EVMC_UNDEFINED_INSTRUCTION, gas_left};
+
+    if (!check_memory(gas_left, state.memory, offset, size))
+        return {EVMC_OUT_OF_GAS, gas_left};
+
+    const auto deploy_container_index = size_t{pos[1]};
+
+    const auto header = read_valid_eof1_header(state.original_code);
+    bytes deploy_container{header.get_container(state.original_code, deploy_container_index)};
+
+    // Append (offset, size) to data section
+    if (!append_data_section(deploy_container,
+            {&state.memory[static_cast<size_t>(offset)], static_cast<size_t>(size)}))
+        return {EVMC_OUT_OF_GAS, gas_left};
+
+    state.deploy_container = std::move(deploy_container);
+
+    return {EVMC_SUCCESS, gas_left};
+}
 
 inline TermResult selfdestruct(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {

@@ -13,6 +13,7 @@
 
 namespace evmone
 {
+using bytes = std::basic_string<uint8_t>;
 using bytes_view = std::basic_string_view<uint8_t>;
 
 struct EOFCodeType
@@ -38,6 +39,10 @@ struct EOF1Header
     std::vector<uint16_t> code_offsets;
 
     uint16_t data_size = 0;
+    /// Size of every container section.
+    std::vector<uint16_t> container_sizes;
+    /// Offset of every container section start;
+    std::vector<uint16_t> container_offsets;
 
     std::vector<EOFCodeType> types;
 
@@ -56,6 +61,17 @@ struct EOF1Header
 
         return container.substr(code_offsets.back() + code_sizes.back(), data_size);
     }
+
+    /// A helper to extract reference to a specific container section.
+    [[nodiscard]] bytes_view get_container(
+        bytes_view container, size_t container_idx) const noexcept
+    {
+        assert(container_idx < container_offsets.size());
+        return container.substr(container_offsets[container_idx], container_sizes[container_idx]);
+    }
+
+    /// Offset of the data section size value in the header.
+    [[nodiscard]] size_t data_size_position() const noexcept;
 };
 
 /// Checks if code starts with EOF FORMAT + MAGIC, doesn't validate the format.
@@ -64,6 +80,10 @@ struct EOF1Header
 /// Reads the section sizes assuming that container has valid format.
 /// (must be true for all EOF contracts on-chain)
 [[nodiscard]] EVMC_EXPORT EOF1Header read_valid_eof1_header(bytes_view container);
+
+/// Modifies container by appending aux_data to data section and updating data section size
+/// in the header.
+bool append_data_section(bytes& container, bytes_view aux_data);
 
 enum class EOFValidationError
 {
@@ -102,6 +122,7 @@ enum class EOFValidationError
     jumpf_destination_incompatible_outputs,
     invalid_non_returning_flag,
     callf_to_non_returning_function,
+    too_many_container_sections,
 
     impossible,
 };

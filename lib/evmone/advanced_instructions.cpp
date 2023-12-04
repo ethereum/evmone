@@ -63,6 +63,22 @@ inline TermResult impl(AdvancedExecutionState& state) noexcept
 }
 
 template <Opcode Op,
+    Result CoreFn(StackTop, int64_t, ExecutionState&, code_iterator&) noexcept = core::impl<Op>>
+inline Result impl(AdvancedExecutionState& state, code_iterator pos) noexcept
+{
+    // Stack height adjustment may be omitted.
+    return CoreFn(state.stack.top_item, state.gas_left, state, pos);
+}
+
+template <Opcode Op,
+    TermResult CoreFn(StackTop, int64_t, ExecutionState&, code_iterator) noexcept = core::impl<Op>>
+inline TermResult impl(AdvancedExecutionState& state, code_iterator pos) noexcept
+{
+    // Stack height adjustment may be omitted.
+    return CoreFn(state.stack.top_item, state.gas_left, state, pos);
+}
+
+template <Opcode Op,
     code_iterator CoreFn(StackTop, ExecutionState&, code_iterator) noexcept = core::impl<Op>>
 inline code_iterator impl(AdvancedExecutionState& state, code_iterator pos) noexcept
 {
@@ -78,6 +94,14 @@ inline code_iterator impl(AdvancedExecutionState& state, code_iterator pos) noex
 /// implementation. Definition not provided.
 template <code_iterator InstrFn(AdvancedExecutionState&, code_iterator)>
 const Instruction* op(const Instruction* /*instr*/, AdvancedExecutionState& state) noexcept;
+
+/// Wraps the generic instruction implementation to advanced instruction function signature.
+template <Result InstrFn(AdvancedExecutionState&, code_iterator) noexcept>
+const Instruction* op(const Instruction* instr, AdvancedExecutionState& state) noexcept;
+
+/// Wraps the generic instruction implementation to advanced instruction function signature.
+template <TermResult InstrFn(AdvancedExecutionState&, code_iterator) noexcept>
+const Instruction* op(const Instruction* instr, AdvancedExecutionState& state) noexcept;
 
 namespace
 {
@@ -273,6 +297,8 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
 
     table[OP_DUPN] = op_undefined;
     table[OP_SWAPN] = op_undefined;
+    table[OP_CREATE3] = op_undefined;
+    table[OP_RETURNCONTRACT] = op_undefined;
 
     return table;
 }();
