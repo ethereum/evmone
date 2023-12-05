@@ -182,15 +182,21 @@ TEST_P(evm, eof1_dataload)
 
     // DATALOAD(33) - truncated word
     execute(code, "0000000000000000000000000000000000000000000000000000000000000021"_hex);
-    EXPECT_STATUS(EVMC_INVALID_MEMORY_ACCESS);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+        "aaaaaaaaaaaaaabbbbbbbbbbbbbbbbccccccccccccccccdddddddddddddddd00"_hex);
 
     // DATALOAD(64) - out of data bounds
     execute(code, "0000000000000000000000000000000000000000000000000000000000000040"_hex);
-    EXPECT_STATUS(EVMC_INVALID_MEMORY_ACCESS);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+        "0000000000000000000000000000000000000000000000000000000000000000"_hex);
 
     // DATALOAD(u256_max) - out of data bounds
     execute(code, "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"_hex);
-    EXPECT_STATUS(EVMC_INVALID_MEMORY_ACCESS);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+        "0000000000000000000000000000000000000000000000000000000000000000"_hex);
 }
 
 TEST_P(evm, eof1_dataloadn)
@@ -319,11 +325,15 @@ TEST_P(evm, eof1_datacopy)
 
     code = eof1_bytecode(bytecode(8) + 63 + 0 + OP_DATACOPY + ret(0, 32), 3, data);
     execute(code);
-    EXPECT_STATUS(EVMC_INVALID_MEMORY_ACCESS);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+        "dd00000000000000000000000000000000000000000000000000000000000000"_hex);
 
     code = eof1_bytecode(bytecode(0) + 65 + 0 + OP_DATACOPY + ret(0, 32), 3, data);
     execute(code);
-    EXPECT_STATUS(EVMC_INVALID_MEMORY_ACCESS);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+        "0000000000000000000000000000000000000000000000000000000000000000"_hex);
 }
 
 TEST_P(evm, datacopy_memory_cost)

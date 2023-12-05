@@ -959,16 +959,23 @@ inline Result mcopy(StackTop stack, int64_t gas_left, ExecutionState& state) noe
     return {EVMC_SUCCESS, gas_left};
 }
 
-inline Result dataload(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
+inline void dataload(StackTop stack, ExecutionState& state) noexcept
 {
     auto& index = stack.top();
 
-    if (state.data.size() < 32 || (state.data.size() - 32) < index)
-        return {EVMC_INVALID_MEMORY_ACCESS, gas_left};  // TODO: Introduce EVMC_INVALID_DATA_ACCESS
+    if (state.data.size() < index)
+        index = 0;
+    else
+    {
+        const auto begin = static_cast<size_t>(index);
+        const auto end = std::min(begin + 32, state.data.size());
 
-    const auto begin = static_cast<size_t>(index);
-    index = intx::be::unsafe::load<uint256>(&state.data[begin]);
-    return {EVMC_SUCCESS, gas_left};
+        uint8_t data[32] = {};
+        for (size_t i = 0; i < (end - begin); ++i)
+            data[i] = state.data[begin + i];
+
+        index = intx::be::unsafe::load<uint256>(data);
+    }
 }
 
 inline void datasize(StackTop stack, ExecutionState& state) noexcept
@@ -993,20 +1000,21 @@ inline Result datacopy(StackTop stack, int64_t gas_left, ExecutionState& state) 
     if (!check_memory(gas_left, state.memory, mem_index, size))
         return {EVMC_OUT_OF_GAS, gas_left};
 
+    const auto dst = static_cast<size_t>(mem_index);
+    // TODO why?
+    const auto src =
+        state.data.size() < data_index ? state.data.size() : static_cast<size_t>(data_index);
     const auto s = static_cast<size_t>(size);
-
-    if (state.data.size() < s || state.data.size() - s < data_index)
-        return {EVMC_INVALID_MEMORY_ACCESS, gas_left};  // TODO: Introduce EVMC_INVALID_DATA_ACCESS
+    const auto copy_size = std::min(s, state.data.size() - src);
 
     if (const auto cost = copy_cost(s); (gas_left -= cost) < 0)
         return {EVMC_OUT_OF_GAS, gas_left};
 
-    if (s > 0)
-    {
-        const auto src = static_cast<size_t>(data_index);
-        const auto dst = static_cast<size_t>(mem_index);
-        std::memcpy(&state.memory[dst], &state.data[src], s);
-    }
+    if (copy_size > 0)
+        std::memcpy(&state.memory[dst], &state.data[src], copy_size);
+
+    if (s - copy_size > 0)
+        std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
 
     return {EVMC_SUCCESS, gas_left};
 }
