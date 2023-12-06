@@ -1167,6 +1167,138 @@ inline TermResult selfdestruct(StackTop stack, int64_t gas_left, ExecutionState&
     return {EVMC_SUCCESS, gas_left};
 }
 
+/// EVMMAX instructions
+namespace
+{
+// TODO: Use it in `grom_memory` function
+[[nodiscard]] inline int64_t evm_memory_expansion_cost(
+    const Memory& memory, uint64_t new_size) noexcept
+{
+    const auto new_words = num_words(new_size);
+    const auto current_words = static_cast<int64_t>(memory.size() / word_size);
+    const auto new_cost = 3 * new_words + new_words * new_words / 512;
+    const auto current_cost = 3 * current_words + current_words * current_words / 512;
+    return new_cost - current_cost;
+}
+}  // namespace
+
+inline Result setupx(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
+{
+    static constexpr auto MAX_MOD_SIZE = 4096;
+
+    const auto mod_id = stack.pop();
+    const auto mod_offset_256 = stack.pop();
+    const auto mod_size_256 = stack.pop();
+    const auto vals_used_256 = stack.pop();
+
+    if (!check_memory(gas_left, state.memory, mod_offset_256, mod_size_256))
+        return {EVMC_OUT_OF_GAS, gas_left};
+
+    // Maximum allowed modulus size
+    if (mod_size_256 > MAX_MOD_SIZE / 8)
+        return {EVMC_FAILURE, gas_left};
+
+    const auto mod_ptr = &state.memory[static_cast<size_t>(mod_offset_256)];
+    const auto mod_size = static_cast<size_t>(mod_size_256);
+
+    // Modulus must be odd
+    if (mod_ptr[mod_size - 1] % 2 == 0)
+        return {EVMC_FAILURE, gas_left};
+
+    const auto vals_used = static_cast<size_t>(vals_used_256);
+    // max number of value slots is 256
+    if (vals_used_256 > 256)
+        return {EVMC_FAILURE, gas_left};
+
+    if (!state.evmmax_state.exists(mod_id))
+    {
+        const auto value_size_multiplier = (mod_size + 7) / 8;
+        if ((gas_left -= evm_memory_expansion_cost(
+                 state.memory, (vals_used * value_size_multiplier * 8 + 31) / 32)) < 0)
+        {
+            return {EVMC_OUT_OF_GAS, gas_left};
+        }
+    }
+
+    const auto status = state.evmmax_state.setupx(gas_left, mod_id, mod_ptr, mod_size, vals_used);
+    return {status, gas_left};
+}
+
+inline Result loadx(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
+{
+    const auto dst_offset = stack.pop();
+    const auto val_idx = stack.pop();
+    const auto num_vals = stack.pop();
+
+    if (!check_memory(gas_left, state.memory, dst_offset,
+            num_vals * state.evmmax_state.active_mod_value_size_multiplier() * 8))
+        return {EVMC_OUT_OF_GAS, gas_left};
+
+    const auto status =
+        state.evmmax_state.loadx(gas_left, &state.memory[static_cast<size_t>(dst_offset)],
+            static_cast<size_t>(val_idx), static_cast<size_t>(num_vals));
+
+    return {status, gas_left};
+}
+
+inline Result storex(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
+{
+    const auto dst_val = stack.pop();
+    const auto offset = stack.pop();
+    const auto num_vals = stack.pop();
+
+    if (!check_memory(gas_left, state.memory, offset,
+            num_vals * state.evmmax_state.active_mod_value_size_multiplier() * 8))
+        return {EVMC_OUT_OF_GAS, gas_left};
+
+    const auto status =
+        state.evmmax_state.storex(gas_left, &state.memory[static_cast<size_t>(offset)],
+            static_cast<size_t>(dst_val), static_cast<size_t>(num_vals));
+
+    return {status, gas_left};
+}
+
+inline code_iterator addmodx(
+    StackTop /*stack*/, ExecutionState& state, code_iterator pos, int64_t& gas_left) noexcept
+{
+    const auto dst_idx = pos[1];
+    const auto x_idx = pos[2];
+    const auto y_idx = pos[3];
+
+    state.status = state.evmmax_state.addmodx(gas_left, dst_idx, x_idx, y_idx);
+    if (state.status == EVMC_SUCCESS)
+        return pos + 4;
+    else
+        return nullptr;
+}
+
+inline code_iterator submodx(
+    StackTop /*stack*/, ExecutionState& state, code_iterator pos, int64_t& gas_left) noexcept
+{
+    const auto dst_idx = pos[1];
+    const auto x_idx = pos[2];
+    const auto y_idx = pos[3];
+
+    state.status = state.evmmax_state.submodx(gas_left, dst_idx, x_idx, y_idx);
+    if (state.status == EVMC_SUCCESS)
+        return pos + 4;
+    else
+        return nullptr;
+}
+
+inline code_iterator mulmodx(
+    StackTop /*stack*/, ExecutionState& state, code_iterator pos, int64_t& gas_left) noexcept
+{
+    const auto dst_idx = pos[1];
+    const auto x_idx = pos[2];
+    const auto y_idx = pos[3];
+
+    state.status = state.evmmax_state.mulmodx(gas_left, dst_idx, x_idx, y_idx);
+    if (state.status == EVMC_SUCCESS)
+        return pos + 4;
+    else
+        return nullptr;
+}
 
 /// Maps an opcode to the instruction implementation.
 ///
