@@ -4,6 +4,7 @@
 #pragma once
 
 #include <evmc/evmc.hpp>
+#include <evmmax/evmmax.hpp>
 #include <intx/intx.hpp>
 #include <string>
 #include <vector>
@@ -142,6 +143,8 @@ public:
     size_t output_offset = 0;
     size_t output_size = 0;
 
+    evmmax::EVMMAXState evmmax_state;
+
 private:
     evmc_tx_context m_tx = {};
 
@@ -190,6 +193,7 @@ public:
         output_offset = 0;
         output_size = 0;
         m_tx = {};
+        evmmax_state.clear();
     }
 
     [[nodiscard]] bool in_static_mode() const { return (msg->flags & EVMC_STATIC) != 0; }
