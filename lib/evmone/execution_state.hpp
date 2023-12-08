@@ -4,6 +4,7 @@
 #pragma once
 
 #include <evmc/evmc.hpp>
+#include <evmmax/evmmax.hpp>
 #include <intx/intx.hpp>
 #include <memory>
 #include <string>
@@ -170,6 +171,8 @@ public:
     /// Container to be deployed returned from RETURNCONTRACT, used only inside EOFCREATE execution.
     std::optional<bytes> deploy_container;
 
+    evmmax::EVMMAXState evmmax_state;
+
 private:
     evmc_tx_context m_tx = {};
 
@@ -215,6 +218,7 @@ public:
         deploy_container = {};
         m_tx = {};
         call_stack = {};
+        evmmax_state.clear();
     }
 
     [[nodiscard]] bool in_static_mode() const { return (msg->flags & EVMC_STATIC) != 0; }
