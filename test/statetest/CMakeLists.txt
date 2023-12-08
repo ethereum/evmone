@@ -14,6 +14,7 @@ target_sources(
     evmone-statetestutils PRIVATE
     ../blockchaintest/blockchaintest_loader.cpp
     statetest.hpp
+    statetest_export.cpp
     statetest_loader.cpp
     statetest_logs_hash.cpp
 )

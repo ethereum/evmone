@@ -238,19 +238,8 @@ int main(int argc, const char* argv[])
         std::ofstream{output_dir / output_result_file} << std::setw(2) << j_result;
 
         // Print out current state to outAlloc file
-        json::json j_alloc;
-        for (const auto& [addr, acc] : state.get_accounts())
-        {
-            j_alloc[hex0x(addr)]["nonce"] = hex0x(acc.nonce);
-            for (const auto& [key, val] : acc.storage)
-                if (!is_zero(val.current))
-                    j_alloc[hex0x(addr)]["storage"][hex0x(key)] = hex0x(val.current);
-
-            j_alloc[hex0x(addr)]["code"] = hex0x(bytes_view(acc.code.data(), acc.code.size()));
-            j_alloc[hex0x(addr)]["balance"] = hex0x(acc.balance);
-        }
-
-        std::ofstream{output_dir / output_alloc_file} << std::setw(2) << j_alloc;
+        std::ofstream{output_dir / output_alloc_file} << std::setw(2)
+                                                      << to_json(state.get_accounts());
 
         if (!output_body_file.empty())
             std::ofstream{output_dir / output_body_file} << hex0x(rlp::encode(transactions));

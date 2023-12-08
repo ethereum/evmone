@@ -5,9 +5,7 @@
 
 #include "../state/state.hpp"
 #include <nlohmann/json.hpp>
-#include <filesystem>
 
-namespace fs = std::filesystem;
 namespace json = nlohmann;
 
 namespace evmone::test
@@ -91,6 +89,9 @@ state::State from_json<state::State>(const json::json& j);
 
 template <>
 state::Transaction from_json<state::Transaction>(const json::json& j);
+
+/// Exports the State (accounts) to JSON format (aka pre/post/alloc state).
+json::json to_json(const std::unordered_map<address, state::Account>& accounts);
 
 StateTransitionTest load_state_test(std::istream& input);
 
