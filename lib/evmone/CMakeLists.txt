@@ -30,7 +30,7 @@ add_library(evmone
     vm.hpp
 )
 target_compile_features(evmone PUBLIC cxx_std_20)
-target_link_libraries(evmone PUBLIC evmc::evmc intx::intx PRIVATE ethash::keccak)
+target_link_libraries(evmone PUBLIC evmc::evmc intx::intx PRIVATE ethash::keccak crypto3::hash)
 target_include_directories(evmone PUBLIC
     $<BUILD_INTERFACE:${include_dir}>$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
@@ -103,7 +103,10 @@ function(add_circuit name)
     foreach(lib ${ARG_LINK_LIBRARIES})
         get_target_property(lib_include_dirs ${lib} INTERFACE_INCLUDE_DIRECTORIES)
         foreach(dir ${lib_include_dirs})
-            list(APPEND INCLUDE_DIRS_LIST "-I${dir}")
+            if (dir MATCHES ".*/.*")
+                list(APPEND INCLUDE_DIRS_LIST "-I${dir}")
+                message(STATUS "${lib}: -I${dir}")
+            endif()
         endforeach()
     endforeach()
     # Add passed include directories
@@ -129,7 +132,7 @@ function(add_circuit name)
         get_filename_component(source_base_name ${source} NAME)
         add_custom_target(${name}_${source_base_name}_ll
                         COMMAND ${CLANG} -target assigner -Xclang -fpreserve-vec3-type -Werror=unknown-attributes -D_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION
-                        # -D__ZKLLVM__
+                        -D__ZKLLVM__
                         ${INCLUDE_DIRS_LIST} -emit-llvm -O1 -S ${ARG_COMPILER_OPTIONS}  -o ${name}_${source_base_name}.ll ${source}
 
                         VERBATIM COMMAND_EXPAND_LISTS
@@ -160,7 +163,7 @@ add_circuit(evmone_circuit SOURCES
     instructions_storage.cpp
     tracing.cpp
     vm.cpp
-    LINK_LIBRARIES evmc::evmc intx::intx ethash::keccak
+    LINK_LIBRARIES evmc::evmc intx::intx ethash::keccak crypto3::hash
     INCLUDE_DIRECTORIES ${CMAKE_SOURCE_DIR}/include
-    COMPILER_OPTIONS -std=c++20 -DPROJECT_VERSION="dev"
+    COMPILER_OPTIONS -std=c++20 -DPROJECT_VERSION="dev" -DBOOST_ARCH_CURRENT_WORD_BITS=64
 )

@@ -18,8 +18,12 @@ namespace baseline
 {
 class CodeAnalysis;
 }
-
+#ifdef __ZKLLVM__
+using uint256 = __uint256_t;
+using int256 = __int256_t;
+#else
 using uint256 = intx::uint256;
+#endif
 using bytes = std::basic_string<uint8_t>;
 using bytes_view = std::basic_string_view<uint8_t>;
 

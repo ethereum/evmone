@@ -6,11 +6,11 @@
 #include "tracing.hpp"
 #include <evmc/evmc.h>
 
-// #if defined(_MSC_VER) && !defined(__clang__)
+#if defined(_MSC_VER) && !defined(__clang__) || defined(__ZKLLVM__)
 #define EVMONE_CGOTO_SUPPORTED 0
-// #else
-// #define EVMONE_CGOTO_SUPPORTED 1
-// #endif
+#else
+#define EVMONE_CGOTO_SUPPORTED 1
+#endif
 
 namespace evmone
 {
@@ -18,7 +18,7 @@ namespace evmone
 class VM : public evmc_vm
 {
 public:
-    bool cgoto = EVMONE_CGOTO_SUPPORTED;
+    bool cgoto = false;
 
 private:
     std::unique_ptr<Tracer> m_first_tracer;

@@ -103,10 +103,14 @@ inline constexpr int64_t copy_cost(uint64_t size_in_bytes) noexcept
 inline bool check_memory(
     int64_t& gas_left, Memory& memory, const uint256& offset, uint64_t size) noexcept
 {
+#ifdef __ZKLLVM__
+    if (offset > max_buffer_size)
+#else
     // TODO: This should be done in intx.
     // There is "branchless" variant of this using | instead of ||, but benchmarks difference
     // is within noise. This should be decided when moving the implementation to intx.
     if (((offset[3] | offset[2] | offset[1]) != 0) || (offset[0] > max_buffer_size))
+#endif
         return false;
 
     const auto new_size = static_cast<uint64_t>(offset) + size;
@@ -123,10 +127,14 @@ inline bool check_memory(
     if (size == 0)  // Copy of size 0 is always valid (even if offset is huge).
         return true;
 
+#ifdef __ZKLLVM__
+    if (size > max_buffer_size)
+#else
     // This check has 3 same word checks with the check above.
     // However, compilers do decent although not perfect job unifying common instructions.
     // TODO: This should be done in intx.
     if (((size[3] | size[2] | size[1]) != 0) || (size[0] > max_buffer_size))
+#endif
         return false;
 
     return check_memory(gas_left, memory, offset, static_cast<uint64_t>(size));
@@ -179,8 +187,14 @@ inline void div(StackTop stack) noexcept
 
 inline void sdiv(StackTop stack) noexcept
 {
+#ifdef __ZKLLVM__
+    auto u = reinterpret_cast<int256 &>(stack[0]);
+    auto v = reinterpret_cast<int256 &>(stack[1]);
+    stack[1] = v !=0 ? u / v : 0;
+#else
     auto& v = stack[1];
     v = v != 0 ? intx::sdivrem(stack[0], v).quot : 0;
+#endif
 }
 
 inline void mod(StackTop stack) noexcept
@@ -191,8 +205,14 @@ inline void mod(StackTop stack) noexcept
 
 inline void smod(StackTop stack) noexcept
 {
+#ifdef __ZKLLVM__
+    auto u = reinterpret_cast<int256 &>(stack[0]);
+    auto v = reinterpret_cast<int256 &>(stack[1]);
+    stack[1] = v !=0 ? u % v : 0;
+#else
     auto& v = stack[1];
     v = v != 0 ? intx::sdivrem(stack[0], v).rem : 0;
+#endif
 }
 
 inline void addmod(StackTop stack) noexcept
@@ -200,7 +220,11 @@ inline void addmod(StackTop stack) noexcept
     const auto& x = stack.pop();
     const auto& y = stack.pop();
     auto& m = stack.top();
+#ifdef __ZKLLVM__
+    m = m != 0 ? (x + y) % m : 0;
+#else
     m = m != 0 ? intx::addmod(x, y, m) : 0;
+#endif
 }
 
 inline void mulmod(StackTop stack) noexcept
@@ -208,7 +232,11 @@ inline void mulmod(StackTop stack) noexcept
     const auto& x = stack[0];
     const auto& y = stack[1];
     auto& m = stack[2];
+#ifdef __ZKLLVM__
+    m = m != 0 ? (x * y) % m : 0;
+#else
     m = m != 0 ? intx::mulmod(x, y, m) : 0;
+#endif
 }
 
 inline Result exp(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
@@ -274,14 +302,26 @@ inline void gt(StackTop stack) noexcept
 
 inline void slt(StackTop stack) noexcept
 {
+#ifdef __ZKLLVM__
+    auto x = reinterpret_cast<int256 &>(stack.pop());
+    auto y = reinterpret_cast<int256 &>(stack[0]);
+    stack[0] = x < y;
+#else
     const auto& x = stack.pop();
     stack[0] = slt(x, stack[0]);
+#endif
 }
 
 inline void sgt(StackTop stack) noexcept
 {
+#ifdef __ZKLLVM__
+    auto x = reinterpret_cast<int256 &>(stack.pop());
+    auto y = reinterpret_cast<int256 &>(stack[0]);
+    stack[0] = x > y;
+#else
     const auto& x = stack.pop();
     stack[0] = slt(stack[0], x);  // Arguments are swapped and SLT is used.
+#endif
 }
 
 inline void eq(StackTop stack) noexcept
@@ -322,11 +362,15 @@ inline void byte(StackTop stack) noexcept
     const bool n_valid = n < 32;
     const uint64_t byte_mask = (n_valid ? 0xff : 0);
 
+#ifdef __ZKLLVM__
+    x = (x >>(248 - n * 8)) & byte_mask;
+#else
     const auto index = 31 - static_cast<unsigned>(n[0] % 32);
     const auto word = x[index / 8];
     const auto byte_index = index % 8;
     const auto byte = (word >> (byte_index * 8)) & byte_mask;
     x = byte;
+#endif
 }
 
 inline void shl(StackTop stack) noexcept
@@ -344,11 +388,15 @@ inline void sar(StackTop stack) noexcept
     const auto& y = stack.pop();
     auto& x = stack.top();
 
+#ifdef __ZKLLVM__
+    x = reinterpret_cast<int256&>(x) >> y;
+#else
     const bool is_neg = static_cast<int64_t>(x[3]) < 0;  // Inspect the top bit (words are LE).
     const auto sign_mask = is_neg ? ~uint256{} : uint256{};
 
     const auto mask_shift = (y < 256) ? (256 - y[0]) : 0;
     x = (x >> y) | (sign_mask << mask_shift);
+#endif
 }
 
 inline Result keccak256(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
@@ -368,7 +416,7 @@ inline Result keccak256(StackTop stack, int64_t gas_left, ExecutionState& state)
 
     auto data = s != 0 ? &state.memory[i] : nullptr;
 #ifdef __ZKLLVM__
-    size = crypto3::hashes::keccak<256>(data, s);
+    size = nil::crypto3::hashes::keccak<256>(data, s);
 #else
     size = intx::be::load<uint256>(ethash::keccak256(data, s));
 #endif

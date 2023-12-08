@@ -9,6 +9,7 @@
 #include "instructions.hpp"
 #include "vm.hpp"
 #include <memory>
+#include <iostream>
 
 #ifdef NDEBUG
 #define release_inline gnu::always_inline, msvc::forceinline
@@ -263,6 +264,7 @@ int64_t dispatch(const CostTable& cost_table, ExecutionState& state, int64_t gas
                 this improves compiler optimization. */                                        \
                 position = next;                                                                  \
             }                                                                                     \
+            std::cout << #OPCODE << std::endl; \
             break;
 
                 MAP_OPCODES
@@ -340,6 +342,26 @@ evmc_result execute(
     const auto& cost_table = get_baseline_cost_table(state.rev, analysis.eof_header.version);
 
     auto* tracer = vm.get_tracer();
+    // Print code
+    size_t idx = 0;
+    while (idx < code.size())
+    {
+        auto op = code[idx];
+        switch (op) {
+#define ON_OPCODE(OPCODE)                  \
+    case OPCODE:                           \
+        std::cout << #OPCODE << std::endl; \
+        break;
+            MAP_OPCODES
+        }
+        if (op >= OP_PUSH1 && op <= OP_PUSH32)
+        {
+            idx += op - OP_PUSH0;
+        }
+        idx += 1;
+    }
+
+
     if (INTX_UNLIKELY(tracer != nullptr))
     {
         tracer->notify_execution_start(state.rev, *state.msg, analysis.executable_code);
