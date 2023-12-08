@@ -8,6 +8,8 @@
 #include <gtest/gtest.h>
 #include <iostream>
 
+namespace fs = std::filesystem;
+
 namespace
 {
 class StateTest : public testing::Test

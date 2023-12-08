@@ -116,3 +116,27 @@ set_tests_properties(
     ${PREFIX}/tx_invalid_nonce PROPERTIES
     PASS_REGULAR_EXPRESSION "unexpected invalid transaction: nonce too high"
 )
+
+# Tests for exporting JSON tests
+
+set(EXPORT_DIR exported_tests)
+
+add_test(
+    NAME ${PREFIX}/export_to_json
+    COMMAND evmone-unittests --gtest_filter=state_transition.*
+)
+set_tests_properties(
+    ${PREFIX}/export_to_json PROPERTIES
+    ENVIRONMENT EVMONE_EXPORT_TESTS=${EXPORT_DIR}
+    FIXTURES_SETUP EXPORT_JSON_TESTS
+)
+
+add_test(
+    NAME ${PREFIX}/execute_exported_tests
+    # TODO: Broken exported tests are filtered out.
+    COMMAND evmone-statetest ${EXPORT_DIR} --gtest_filter=-*block.*:*tx.tx_non_existing_sender
+)
+set_tests_properties(
+    ${PREFIX}/execute_exported_tests PROPERTIES
+    FIXTURES_REQUIRED EXPORT_JSON_TESTS
+)

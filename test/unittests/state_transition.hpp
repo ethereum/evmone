@@ -24,6 +24,10 @@ protected:
     /// Private key: 0x2b1263d2b.
     static constexpr auto Sender = 0xe100713FC15400D1e94096a545879E7c6407001e_address;
 
+    /// The secret (private) key of the Sender address.
+    static constexpr auto SenderSecretKey =
+        0x00000000000000000000000000000000000000000000000000000002b1263d2b_bytes32;
+
     /// The default destination address of the test transaction.
     static constexpr auto To = 0xc0de_address;
 
@@ -65,6 +69,7 @@ protected:
     evmc_revision rev = EVMC_SHANGHAI;
     uint64_t block_reward = 0;
     BlockInfo block{
+        .number = 1,  // Some EVMs don't like blocks with number 0.
         .gas_limit = 1'000'000,
         .coinbase = Coinbase,
         .base_fee = 999,
@@ -83,6 +88,10 @@ protected:
 
     /// The test runner.
     void TearDown() override;
+
+    /// Exports the test in the JSON State Test format in the given directory.
+    void export_state_test(
+        const TransactionReceipt& receipt, const State& post, std::string_view export_dir);
 };
 
 }  // namespace evmone::test
