@@ -208,6 +208,15 @@ Result create_eof_impl(
     if (state.in_static_mode())
         return {EVMC_STATIC_MODE_VIOLATION, gas_left};
 
+    const auto initcode_hash = (Op == OP_CREATE4) ? stack.pop() : uint256{};
+    const auto endowment = stack.pop();
+    const auto salt = stack.pop();
+    const auto input_offset_u256 = stack.pop();
+    const auto input_size_u256 = stack.pop();
+
+    stack.push(0);  // Assume failure.
+    state.return_data.clear();
+
     bytes_view initcontainer;
     if constexpr (Op == OP_CREATE3)
     {
@@ -220,14 +229,12 @@ Result create_eof_impl(
     else
     {
         pos += 1;
-        const evmc_bytes32 initcode_hash = intx::be::store<evmc::bytes32>(stack.pop());
 
-        const auto initcode = state.get_tx_initcode_by_hash(initcode_hash);
+        const auto initcode =
+            state.get_tx_initcode_by_hash(intx::be::store<evmc::bytes32>(initcode_hash));
         if (initcode.data == nullptr)
-        {
-            stack.push(0);
             return {EVMC_SUCCESS, gas_left};  // "Light" failure
-        }
+
         initcontainer = {initcode.data, initcode.size};
 
         // Charge for initcode validation.
@@ -240,26 +247,13 @@ Result create_eof_impl(
         const auto error_subcont = validate_eof(state.rev, initcontainer);
 
         if (error_subcont != EOFValidationError::success)
-        {
-            stack.push(0);
             return {EVMC_SUCCESS, gas_left};  // "Light" failure.
-        }
 
         const auto initcontainer_header = read_valid_eof1_header(initcontainer);
         if (!initcontainer_header.can_init(initcontainer))
-        {
-            stack.push(0);
             return {EVMC_SUCCESS, gas_left};  // "Light" failure.
-        }
     }
 
-    const auto endowment = stack.pop();
-    const auto salt = stack.pop();
-    const auto input_offset_u256 = stack.pop();
-    const auto input_size_u256 = stack.pop();
-
-    stack.push(0);  // Assume failure.
-    state.return_data.clear();
     state.deploy_container.reset();
 
     if (!check_memory(gas_left, state.memory, input_offset_u256, input_size_u256))

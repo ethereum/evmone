@@ -536,6 +536,26 @@ TEST_F(state_transition, create4_missing_initcontainer)
     expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;  // CREATE must fail
 }
 
+TEST_F(state_transition, create4_light_failure_stack)
+{
+    rev = EVMC_PRAGUE;
+    tx.type = Transaction::Type::initcodes;
+
+    const auto factory_code =
+        push(0x123) + create4().value(1).initcode(0x43_bytes32).input(2, 3).salt(0xff) + push(1) +
+        OP_SSTORE +  // store result from create4
+        push(2) +
+        OP_SSTORE +  // store the preceding push value, nothing else should remain on stack
+        ret(0);
+    const auto factory_container = eof1_bytecode(factory_code, 6);
+
+    tx.to = To;
+    pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
+    expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;  // CREATE4 has pushed 0x0 on stack
+    expect.post[*tx.to].storage[0x02_bytes32] =
+        0x0123_bytes32;  // CREATE4 fails but has cleared its args first
+}
+
 TEST_F(state_transition, create4_missing_deploycontainer)
 {
     rev = EVMC_PRAGUE;
