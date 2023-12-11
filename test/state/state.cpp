@@ -390,6 +390,8 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
 
 [[nodiscard]] bytes rlp_encode(const Transaction& tx)
 {
+    assert(tx.type <= Transaction::Type::blob);
+
     // TODO: Refactor this function. For all type of transactions most of the code is similar.
     if (tx.type == Transaction::Type::legacy)
     {
@@ -422,7 +424,7 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
                    tx.to.has_value() ? tx.to.value() : bytes_view(), tx.value, tx.data,
                    tx.access_list, static_cast<bool>(tx.v), tx.r, tx.s);
     }
-    else
+    else  // Transaction::Type::blob
     {
         if (tx.v > 1)
             throw std::invalid_argument("`v` value for blob transaction must be 0 or 1");
