@@ -1,167 +1,69 @@
-# evmone
+# zkEVM1
 
-[![ethereum badge]][ethereum]
-[![readme style standard badge]][standard readme]
-[![codecov badge]][codecov]
-[![circleci badge]][circleci]
-[![appveyor badge]][appveyor]
-[![license badge]][Apache License, Version 2.0]
+> Direct compilation of Ethereum Virtual Machine
 
-> Fast Ethereum Virtual Machine implementation
+_zkEVM1_ is the first implementation of a zk-EVM compiled directly from a C++ EVM implementation.
+It is based on _evmone_ -- a widely used C++ implementation of the Ethereum Virtual Machine (EVM).
 
-_evmone_ is a C++ implementation of the Ethereum Virtual Machine (EVM). 
-Created by members of the [Ipsilon] (ex-[Ewasm]) team, the project aims for clean, standalone EVM implementation 
-that can be imported as an execution module by Ethereum Client projects. 
-The codebase of _evmone_ is optimized to provide fast and efficient execution of EVM smart contracts.
+### Characteristic of zkEVM1
 
-### Characteristic of evmone
-
-1. Exposes the [EVMC] API.
-2. Requires C++20 standard.
-3. The [intx] library is used to provide 256-bit integer precision.
-4. The [ethash] library is used to provide Keccak hash function implementation
-   needed for the special `KECCAK256` instruction.
-5. Contains two interpreters: 
-   - **Baseline** (default)
-   - **Advanced** (select with the `advanced` option)
-
-### Baseline Interpreter
-
-1. Provides relatively straight-forward but efficient EVM implementation.
-2. Performs only minimalistic `JUMPDEST` analysis.
-
-### Advanced Interpreter
-
-1. The _indirect call threading_ is the dispatch method used -
-   a loaded EVM program is a table with pointers to functions implementing virtual instructions.
-2. The gas cost and stack requirements of block of instructions is precomputed 
-   and applied once per block during execution.
-3. Performs extensive and expensive bytecode analysis before execution.
-
+1. Can be used both as an EVM and as a zk-EVM.
+2. Fully compatible with _evmone_ EVM implementation.
+3. Uses [crypto3](https://github.com/NilFoundation/crypto3) cryptography library to provide circuit-friendly cryptographic primitives.
 
 ## Usage
 
-### As geth plugin
+### Usage as an EVM
 
-evmone implements the [EVMC] API for Ethereum Virtual Machines.
-It can be used as a plugin replacing geth's internal EVM. But for that a modified
-version of geth is needed. The [Ewasm]'s fork
-of go-ethereum provides [binary releases of geth with EVMC support](https://github.com/ewasm/go-ethereum/releases).
+The _zkEVM1_ is fully compatible with _evmone_. Since we provide the same interface, you can use the usage instruction from [evmone usage documentation](https://github.com/ethereum/evmone#usage).
 
-Next, download evmone from [Releases].
+### Usage as a zk-EVM
 
-Start the downloaded geth with `--vm.evm` option pointing to the evmone shared library.
+# Binary Installation
 
-```bash
-geth --vm.evm=./libevmone.so
-```
-
-### Building from source
-
-To build the evmone EVMC module (shared library), test, and benchmark:
-
-1. Fetch the source code:
-   ```
-   git clone --recursive https://github.com/ethereum/evmone
-   cd evmone
-   ```
-
-2. Configure the project build and dependencies:
-   ##### Linux / OSX
-   ```
-   cmake -S . -B build -DEVMONE_TESTING=ON
-   ```
-
-   ##### Windows
-   ```
-   cmake -S . -B build -DEVMONE_TESTING=ON -G "Visual Studio 16 2019" -A x64
-   ```
-   
-3. Build:
-   ```
-   cmake --build build --parallel
-   ```
-
-
-3. Run the unit tests or benchmarking tool:
-   ```
-   build/bin/evmone-unittests
-   build/bin/evmone-bench test/evm-benchmarks/benchmarks
-   ```
-
-### Precompiles
-
-Ethereum Precompiled Contracts (_precompiles_ for short) are not directly supported by evmone.
-
-However, there are options to enable limited precompiles support for testing.
-
-1. The [test/state/precompiles_stub.json](./test/state/precompiles_stub.json) contains
-   precompiles execution results for inputs commonly used in tests.
-   You can use the precompiles STUB by setting the environment variable
-   `EVMONE_PRECOMPILES_STUB=./test/state/precompiles_stub.json`.
-2. The CMake option `EVMONE_PRECOMPILES_SILKPRE=1` enables building of
-   the [silkpre] third party library with the implementation of the precompiles.
-   This library also requires [GMP] (e.g. libgmp-dev) library for building and execution.
-
-### Tools
-
-#### evm-test
-
-The **evm-test** executes a collection of unit tests on 
-any EVMC-compatible Ethereum Virtual Machine implementation.
-The collection of tests comes from the evmone project.
+zkLLVM is distributed as a deb package, so you can install it using the following commands:
 
 ```bash
-evm-test ./evmone.so
+echo 'deb [trusted=yes]  http://deb.nil.foundation/ubuntu/ all main' >>/etc/apt/sources.list
+apt update
+apt install -y zkllvm cmake libboost-all-dev
 ```
 
-### Docker
+# Installation from sources
 
-Docker images with evmone are available on Docker Hub:
-https://hub.docker.com/r/ethereum/evmone.
+Sometimes you may want to install zkLLVM from sources. This is useful if you want to contribute to the project or if you want to use the latest version of the project.
 
-Having the evmone shared library inside a docker is not very useful on its own,
-but the image can be used as the base of another one or you can run benchmarks 
-with it.
+## Clone repository
+
+Clone the repository and all its submodules:
+
+```
+git clone --recurse-submodules git@github.com:NilFoundation/zkllvm.git
+cd zkllvm
+```
+
+## **Configure cmake**
 
 ```bash
-docker run --entrypoint evmone-bench ethereum/evmone /src/test/benchmarks
+cmake -G "Unix Makefiles" -B ${ZKEVM1_BUILD:-build} -DCMAKE_BUILD_TYPE=Release .
 ```
 
-## References
+## **Build**
 
-1. [Efficient gas calculation algorithm for EVM](docs/efficient_gas_calculation_algorithm.md)
+```bash
+ make -C ${ZKEVM1_BUILD:-build} evmone_circuit -j$(nproc) 
+```
 
-## Maintainer
+## **Generate Execution trace**
 
-Paweł Bylica [@chfast]
+This generates an execution trace for the arithmetic example built.
 
-## License
+```
+$assigner -b ${ZKEVM1_BUILD:-build}/lib/evmone/evmone_circuit -i input-examples/input0.ll -t assignment.tbl -c circuit.crct
+```
 
-[![license badge]][Apache License, Version 2.0]
+## **Generate the proof**
 
-Licensed under the [Apache License, Version 2.0].
+To generate the proof, you need to either local proof producer or to use the proof market CLI. 
+Both approaches are described in [Proof Market usage documentation](https://github.com/NilFoundation/proof-market-toolchain/).
 
-
-[@chfast]: https://github.com/chfast
-[appveyor]: https://ci.appveyor.com/project/chfast/evmone/branch/master
-[circleci]: https://circleci.com/gh/ethereum/evmone/tree/master
-[codecov]: https://codecov.io/gh/ethereum/evmone/
-[Apache License, Version 2.0]: LICENSE
-[ethereum]: https://ethereum.org
-[EVMC]: https://github.com/ethereum/evmc
-[Ipsilon]: https://github.com/ipsilon
-[Ewasm]: https://github.com/ewasm
-[GMP]: https://gmplib.org
-[intx]: https://github.com/chfast/intx
-[ethash]: https://github.com/chfast/ethash
-[Releases]: https://github.com/ethereum/evmone/releases
-[standard readme]: https://github.com/RichardLitt/standard-readme
-[silkpre]: https://github.com/torquem-ch/silkpre
-
-[appveyor badge]: https://img.shields.io/appveyor/ci/chfast/evmone/master.svg?logo=appveyor
-[circleci badge]: https://img.shields.io/circleci/project/github/ethereum/evmone/master.svg?logo=circleci
-[codecov badge]: https://img.shields.io/codecov/c/github/ethereum/evmone.svg?logo=codecov
-[ethereum badge]: https://img.shields.io/badge/ethereum-EVM-informational.svg?logo=ethereum
-[license badge]: https://img.shields.io/github/license/ethereum/evmone.svg?logo=apache
-[readme style standard badge]: https://img.shields.io/badge/readme%20style-standard-brightgreen.svg
