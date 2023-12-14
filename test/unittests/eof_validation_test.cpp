@@ -619,7 +619,7 @@ TEST(eof_validation, deprecated_instructions)
 {
     for (auto op : {OP_CALLCODE, OP_SELFDESTRUCT, OP_JUMP, OP_JUMPI, OP_PC})
     {
-        EXPECT_EQ(validate_eof(eof1_bytecode(op)), EOFValidationError::undefined_instruction);
+        EXPECT_EQ(validate_eof(eof_bytecode(op)), EOFValidationError::undefined_instruction);
     }
 }
 
@@ -705,19 +705,19 @@ TEST(eof_validation, max_stack_height)
     }
 
     {
-        auto code = eof1_bytecode(rjumpi(2, 0) + 1 + OP_STOP, 1);
+        auto code = eof_bytecode(rjumpi(2, 0) + 1 + OP_STOP, 1);
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::stack_height_mismatch);
     }
 
     {
-        auto code = eof1_bytecode(rjumpi(-3, 0) + OP_STOP, 1);
+        auto code = eof_bytecode(rjumpi(-3, 0) + OP_STOP, 1);
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::stack_height_mismatch);
     }
 
     {
-        auto code = eof1_bytecode(rjumpv({-4}, 0) + OP_STOP, 1);
+        auto code = eof_bytecode(rjumpv({-4}, 0) + OP_STOP, 1);
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::stack_height_mismatch);
     }
@@ -1063,17 +1063,17 @@ TEST(eof_validation, jumpf_into_returning_stack_validation)
 TEST(eof_validation, jumpf_stack_overflow)
 {
     {
-        const auto code = eof1_bytecode(512 * push(1) + OP_JUMPF + bytecode{"0x0000"_hex}, 512);
+        const auto code = eof_bytecode(512 * push(1) + OP_JUMPF + bytecode{"0x0000"_hex}, 512);
         EXPECT_EQ(validate_eof(code), EOFValidationError::success);
     }
 
     {
-        const auto code = eof1_bytecode(513 * push(1) + OP_JUMPF + bytecode{"0x0000"_hex}, 513);
+        const auto code = eof_bytecode(513 * push(1) + OP_JUMPF + bytecode{"0x0000"_hex}, 513);
         EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
     }
 
     {
-        const auto code = eof1_bytecode(1023 * push(1) + OP_JUMPF + bytecode{"0x0000"_hex}, 1023);
+        const auto code = eof_bytecode(1023 * push(1) + OP_JUMPF + bytecode{"0x0000"_hex}, 1023);
         EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
     }
 }

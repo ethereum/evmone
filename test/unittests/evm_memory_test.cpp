@@ -215,7 +215,7 @@ TEST_P(evm, memory_access)
                     continue;
 
                 code += bytecode{OP_STOP};
-                code = eof1_bytecode(code, 3, bytes(32, 0));
+                code = eof_bytecode(code, 3).data(bytes(32, 0));
             }
 
             const auto gas = 8796294610952;
