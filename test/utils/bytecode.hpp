@@ -4,6 +4,7 @@
 #pragma once
 
 #include <evmc/evmc.hpp>
+#include <evmone/eof.hpp>
 #include <evmone/instructions_traits.hpp>
 #include <intx/intx.hpp>
 #include <test/utils/utils.hpp>
@@ -93,33 +94,57 @@ big_endian(T value)
 struct eof_bytecode
 {
 private:
-    bytecode m_code;
+    std::vector<bytecode> m_codes;
+    std::vector<evmone::EOFCodeType> m_types;
     bytecode m_data;
-    uint16_t m_max_stack_height = 0;
 
     /// Constructs EOF header bytes
     bytecode header() const
     {
-        assert(m_code.size() <= std::numeric_limits<uint16_t>::max());
+        assert(!m_codes.empty());
+        assert(m_codes[0].size() <= std::numeric_limits<uint16_t>::max());
         assert(m_data.size() <= std::numeric_limits<uint16_t>::max());
+        assert(m_codes.size() == m_types.size());
 
         constexpr uint8_t version = 0x01;
-        const auto code_size = static_cast<uint16_t>(m_code.size());
-        const auto data_size = static_cast<uint16_t>(m_data.size());
 
         bytecode out{bytes{0xEF, 0x00, version}};
-        out += "01" + big_endian(uint16_t{4});  // type header
-        out += "02"_hex + big_endian(uint16_t{1}) + big_endian(code_size);
+
+        // type header
+        const auto types_size = static_cast<uint16_t>(m_types.size() * 4);
+        out += "01" + big_endian(types_size);
+
+        // codes header
+        const auto code_count = static_cast<uint16_t>(m_codes.size());
+        out += "02"_hex + big_endian(code_count);
+        for (const auto& code : m_codes)
+        {
+            const auto code_size = static_cast<uint16_t>(code.size());
+            out += big_endian(code_size);
+        }
+
+        // data header
+        const auto data_size = static_cast<uint16_t>(m_data.size());
         out += "04" + big_endian(data_size);
-        out += "00";
-        out += "0080"_hex + big_endian(m_max_stack_height);  // type section
+        out += "00";  // terminator
+
+        // types section
+        for (const auto& type : m_types)
+            out += bytes{type.inputs, type.outputs} + big_endian(type.max_stack_height);
         return out;
     }
 
 public:
     explicit eof_bytecode(bytecode code, uint16_t max_stack_height = 0)
-      : m_code{std::move(code)}, m_max_stack_height{max_stack_height}
+      : m_codes{std::move(code)}, m_types{{0, 0x80, max_stack_height}}
     {}
+
+    auto& code(bytecode c, uint8_t inputs, uint8_t outputs, uint8_t max_stack_height)
+    {
+        m_codes.emplace_back(std::move(c));
+        m_types.emplace_back(inputs, outputs, max_stack_height);
+        return *this;
+    }
 
     auto& data(bytecode d)
     {
@@ -127,8 +152,20 @@ public:
         return *this;
     }
 
-    operator bytecode() const { return header() + m_code + m_data; }
+    operator bytecode() const
+    {
+        bytecode out{header()};
+        for (const auto& code : m_codes)
+            out += code;
+        out += m_data;
+        return out;
+    }
 };
+
+inline bytecode push0()
+{
+    return OP_PUSH0;
+}
 
 inline bytecode push(bytes_view data)
 {
