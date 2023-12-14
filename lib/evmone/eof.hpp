@@ -65,6 +65,15 @@ struct EOF1Header
         return container.substr(data_offset);
     }
 
+    /// A helper to check whether the container can be an initcontainer.
+    [[nodiscard]] bool can_init(bytes_view container) const noexcept
+    {
+        // Containers with truncated data section cannot be initcontainers.
+        const auto truncated_data =
+            static_cast<size_t>(data_offset + data_size) != container.size();
+        return !truncated_data;
+    }
+
     /// A helper to extract reference to a specific container section.
     [[nodiscard]] bytes_view get_container(
         bytes_view container, size_t container_idx) const noexcept

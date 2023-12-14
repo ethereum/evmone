@@ -10,6 +10,7 @@
 #include <evmone/eof.hpp>
 #include <evmone/evmone.h>
 #include <evmone/execution_state.hpp>
+#include <algorithm>
 
 namespace evmone::state
 {
@@ -122,7 +123,10 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
     case Transaction::Type::initcodes:
         if (rev < EVMC_PRAGUE)
             return make_error_code(TX_TYPE_NOT_SUPPORTED);
-        if (tx.initcodes.size() > 4096)
+        if (tx.initcodes.size() > max_initcode_count)
+            return make_error_code(INIT_CODE_COUNT_LIMIT_EXCEEDED);
+        if (std::any_of(tx.initcodes.begin(), tx.initcodes.end(),
+                [](const bytes& v) { return v.size() > max_initcode_size; }))
             return make_error_code(INIT_CODE_SIZE_LIMIT_EXCEEDED);
         break;
 

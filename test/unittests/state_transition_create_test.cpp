@@ -440,8 +440,6 @@ TEST_F(state_transition, create4_empty_auxdata)
 
 TEST_F(state_transition, create4_invalid_initcode)
 {
-    static constexpr auto create_address = 0xd36e347ece81daae0bdc883ed269fd59ca0a2b60_address;
-
     rev = EVMC_PRAGUE;
     const auto deploy_container = eof1_bytecode(bytecode(OP_INVALID), 0);
 
@@ -460,18 +458,42 @@ TEST_F(state_transition, create4_invalid_initcode)
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
-    expect.gas_used = 987433;
+    expect.gas_used = 55752;
 
     expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
-    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;  // CREATE caller's nonce must be bumped
+    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
     expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;  // CREATE must fail
-    expect.post[create_address].exists = false;
+}
+
+TEST_F(state_transition, create4_truncated_data_initcode)
+{
+    rev = EVMC_PRAGUE;
+    const auto deploy_container = eof1_bytecode(bytecode(OP_INVALID), 0);
+
+    const auto init_code = returncontract(0, 0, 0);
+    const auto init_container =
+        eof1_bytecode_with_container(init_code, 2, {}, 1, deploy_container);  // Truncated data
+
+    tx.type = Transaction::Type::initcodes;
+    tx.initcodes.push_back(init_container);
+
+    // TODO: extract this common code for a testing deployer contract
+    const auto factory_code = create4().initcode(keccak256(init_container)).input(0, 0).salt(0xff) +
+                              OP_DUP1 + push(1) + OP_SSTORE + ret_top();
+    const auto factory_container = eof1_bytecode(factory_code, 5);
+
+    tx.to = To;
+    pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
+
+    expect.gas_used = 55764;
+
+    expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
+    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
+    expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;  // CREATE must fail
 }
 
 TEST_F(state_transition, create4_invalid_deploycode)
 {
-    static constexpr auto create_address = 0xd36e347ece81daae0bdc883ed269fd59ca0a2b60_address;
-
     rev = EVMC_PRAGUE;
     const auto deploy_container = eof1_bytecode(bytecode(OP_INVALID), 123);  // Invalid EOF
 
@@ -488,12 +510,30 @@ TEST_F(state_transition, create4_invalid_deploycode)
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
-    expect.gas_used = 987433;
+    expect.gas_used = 55764;
 
     expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
-    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;  // CREATE caller's nonce must be bumped
+    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
     expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;  // CREATE must fail
-    expect.post[create_address].exists = false;
+}
+
+TEST_F(state_transition, create4_missing_initcontainer)
+{
+    rev = EVMC_PRAGUE;
+    tx.type = Transaction::Type::initcodes;
+
+    const auto factory_code = create4().initcode(keccak256(bytecode())).input(0, 0).salt(0xff) +
+                              OP_DUP1 + push(1) + OP_SSTORE + ret_top();
+    const auto factory_container = eof1_bytecode(factory_code, 5);
+
+    tx.to = To;
+    pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
+
+    expect.gas_used = 55236;
+
+    expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
+    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
+    expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;  // CREATE must fail
 }
 
 TEST_F(state_transition, create4_missing_deploycontainer)
@@ -512,17 +552,15 @@ TEST_F(state_transition, create4_missing_deploycontainer)
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
-    expect.gas_used = 987429;
+    expect.gas_used = 55494;
 
     expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
-    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;  // CREATE caller's nonce must be bumped
+    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
     expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;  // CREATE must fail
 }
 
 TEST_F(state_transition, create4_deploy_code_with_dataloadn_invalid)
 {
-    static constexpr auto create_address = 0x4f5be2b567457034934821364b526ee0b330b96c_address;
-
     rev = EVMC_PRAGUE;
     const auto deploy_data = bytes(32, 0);
     // DATALOADN{64} - referring to offset out of bounds even after appending aux_data later
@@ -545,10 +583,9 @@ TEST_F(state_transition, create4_deploy_code_with_dataloadn_invalid)
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
-    expect.gas_used = 987438;
+    expect.gas_used = 56030;
 
     expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
-    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;  // CREATE caller's nonce must be bumped
+    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
     expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;  // CREATE must fail
-    expect.post[create_address].exists = false;
 }

@@ -226,9 +226,31 @@ Result create_eof_impl(
         if (initcode.data == nullptr)
         {
             stack.push(0);
-            return {EVMC_SUCCESS, gas_left};
+            return {EVMC_SUCCESS, gas_left};  // "Light" failure
         }
         initcontainer = {initcode.data, initcode.size};
+
+        // Charge for initcode validation.
+        constexpr auto initcode_word_cost_validation = 2;
+        const auto initcode_cost_validation =
+            num_words(initcontainer.size()) * initcode_word_cost_validation;
+        if ((gas_left -= initcode_cost_validation) < 0)
+            return {EVMC_OUT_OF_GAS, gas_left};
+
+        const auto error_subcont = validate_eof(state.rev, initcontainer);
+
+        if (error_subcont != EOFValidationError::success)
+        {
+            stack.push(0);
+            return {EVMC_SUCCESS, gas_left};  // "Light" failure.
+        }
+
+        const auto initcontainer_header = read_valid_eof1_header(initcontainer);
+        if (!initcontainer_header.can_init(initcontainer))
+        {
+            stack.push(0);
+            return {EVMC_SUCCESS, gas_left};  // "Light" failure.
+        }
     }
 
     const auto endowment = stack.pop();
@@ -239,12 +261,6 @@ Result create_eof_impl(
     stack.push(0);  // Assume failure.
     state.return_data.clear();
     state.deploy_container.reset();
-
-    // Charge for initcode validation and hashing.
-    const auto initcode_word_cost = 8;
-    const auto initcode_cost = num_words(initcontainer.size()) * initcode_word_cost;
-    if ((gas_left -= initcode_cost) < 0)
-        return {EVMC_OUT_OF_GAS, gas_left};
 
     if (!check_memory(gas_left, state.memory, input_offset_u256, input_size_u256))
         return {EVMC_OUT_OF_GAS, gas_left};
@@ -259,9 +275,15 @@ Result create_eof_impl(
         intx::be::load<uint256>(state.host.get_balance(state.msg->recipient)) < endowment)
         return {EVMC_SUCCESS, gas_left};  // "Light" failure.
 
+    // Charge for initcode hashing.
+    constexpr auto initcode_word_cost_hashing = 6;
+    const auto initcode_cost_hashing = num_words(initcontainer.size()) * initcode_word_cost_hashing;
+    if ((gas_left -= initcode_cost_hashing) < 0)
+        return {EVMC_OUT_OF_GAS, gas_left};
+
     auto msg = evmc_message{};
     msg.gas = gas_left - gas_left / 64;
-    msg.kind = Op == OP_CREATE3 ? EVMC_CREATE3 : EVMC_CREATE4;
+    msg.kind = EVMC_CREATE3_4;
     if (input_size > 0)
     {
         // input_data may be garbage if init_code_size == 0.

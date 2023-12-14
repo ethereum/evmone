@@ -14,6 +14,7 @@ using evmc::uint256be;
 
 inline constexpr size_t max_code_size = 0x6000;
 inline constexpr size_t max_initcode_size = 2 * max_code_size;
+inline constexpr size_t max_initcode_count = 256;
 
 /// Computes the address of to-be-created contract.
 ///
