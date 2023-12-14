@@ -12,15 +12,15 @@ TEST_P(evm, eof1_delegatecall_eof1)
 {
     rev = EVMC_PRAGUE;
     constexpr auto callee = 0xca11ee_address;
-    host.accounts[callee].code = eof1_bytecode(OP_STOP);
+    host.accounts[callee].code = eof_bytecode(OP_STOP);
     bytes call_output{0x01, 0x02, 0x03};
     host.call_result.output_data = std::data(call_output);
     host.call_result.output_size = std::size(call_output);
     host.call_result.gas_left = 100;
     host.call_result.status_code = EVMC_SUCCESS;
 
-    const auto code = eof1_bytecode(delegatecall(callee) + OP_RETURNDATASIZE + OP_PUSH0 + OP_PUSH0 +
-                                        OP_RETURNDATACOPY + ret(0, evmone::OP_RETURNDATASIZE),
+    const auto code = eof_bytecode(delegatecall(callee) + OP_RETURNDATASIZE + OP_PUSH0 + OP_PUSH0 +
+                                       OP_RETURNDATACOPY + ret(0, evmone::OP_RETURNDATASIZE),
         6);
 
     execute(code);
@@ -39,7 +39,7 @@ TEST_P(evm, eof1_delegatecall_legacy)
         SCOPED_TRACE("target code: " + hex(target_code));
         host.accounts[callee].code = target_code;
 
-        const auto code = eof1_bytecode(delegatecall(callee) + ret_top(), 6);
+        const auto code = eof_bytecode(delegatecall(callee) + ret_top(), 6);
 
         execute(code);
         EXPECT_GAS_USED(EVMC_SUCCESS, 133);  // Low gas usage because DELEGATECALL fails lightly.

@@ -9,7 +9,7 @@ using evmone::test::evm;
 
 TEST_P(evm, eof1_execution)
 {
-    const auto code = eof1_bytecode(OP_STOP);
+    const auto code = eof_bytecode(OP_STOP);
 
     rev = EVMC_CANCUN;
     execute(code);
@@ -24,7 +24,7 @@ TEST_P(evm, eof1_execution_with_data_section)
 {
     rev = EVMC_PRAGUE;
     // data section contains ret(0, 1)
-    const auto code = eof1_bytecode(mstore8(0, 1) + OP_STOP, 2, ret(0, 1));
+    const auto code = eof_bytecode(mstore8(0, 1) + OP_STOP, 2).data(ret(0, 1));
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -34,14 +34,14 @@ TEST_P(evm, eof1_execution_with_data_section)
 TEST_P(evm, eof1_codesize)
 {
     rev = EVMC_PRAGUE;
-    auto code = eof1_bytecode(mstore8(0, OP_CODESIZE) + ret(0, 1), 2);
+    auto code = eof_bytecode(mstore8(0, OP_CODESIZE) + ret(0, 1), 2);
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 28);
 
-    code = eof1_bytecode(mstore8(0, OP_CODESIZE) + ret(0, 1), 2, "deadbeef");
+    code = eof_bytecode(mstore8(0, OP_CODESIZE) + ret(0, 1), 2).data("deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -52,14 +52,14 @@ TEST_P(evm, eof1_codesize)
 TEST_P(evm, eof1_codecopy_full)
 {
     rev = EVMC_PRAGUE;
-    auto code = eof1_bytecode(bytecode{31} + 0 + 0 + OP_CODECOPY + ret(0, 31), 3);
+    auto code = eof_bytecode(bytecode{31} + 0 + 0 + OP_CODECOPY + ret(0, 31), 3);
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
         "ef0001010004020001000c0400000000800003601f6000600039601f6000f3"_hex);
 
-    code = eof1_bytecode(bytecode{35} + 0 + 0 + OP_CODECOPY + ret(0, 35), 3, "deadbeef");
+    code = eof_bytecode(bytecode{35} + 0 + 0 + OP_CODECOPY + ret(0, 35), 3).data("deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -70,14 +70,14 @@ TEST_P(evm, eof1_codecopy_full)
 TEST_P(evm, eof1_codecopy_header)
 {
     rev = EVMC_PRAGUE;
-    auto code = eof1_bytecode(bytecode{15} + 0 + 0 + OP_CODECOPY + ret(0, 15), 3);
+    auto code = eof_bytecode(bytecode{15} + 0 + 0 + OP_CODECOPY + ret(0, 15), 3);
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(
         bytes_view(result.output_data, result.output_size), "ef0001010004020001000c04000000"_hex);
 
-    code = eof1_bytecode(bytecode{15} + 0 + 0 + OP_CODECOPY + ret(0, 15), 3, "deadbeef");
+    code = eof_bytecode(bytecode{15} + 0 + 0 + OP_CODECOPY + ret(0, 15), 3).data("deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -88,13 +88,13 @@ TEST_P(evm, eof1_codecopy_header)
 TEST_P(evm, eof1_codecopy_code)
 {
     rev = EVMC_PRAGUE;
-    auto code = eof1_bytecode(bytecode{12} + 19 + 0 + OP_CODECOPY + ret(0, 12), 3);
+    auto code = eof_bytecode(bytecode{12} + 19 + 0 + OP_CODECOPY + ret(0, 12), 3);
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size), "600c6013600039600c6000f3"_hex);
 
-    code = eof1_bytecode(bytecode{12} + 19 + 0 + OP_CODECOPY + ret(0, 12), 3, "deadbeef");
+    code = eof_bytecode(bytecode{12} + 19 + 0 + OP_CODECOPY + ret(0, 12), 3).data("deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -105,7 +105,8 @@ TEST_P(evm, eof1_codecopy_data)
 {
     rev = EVMC_PRAGUE;
 
-    const auto code = eof1_bytecode(bytecode{4} + 31 + 0 + OP_CODECOPY + ret(0, 4), 3, "deadbeef");
+    const auto code =
+        eof_bytecode(bytecode{4} + 31 + 0 + OP_CODECOPY + ret(0, 4), 3).data("deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -116,14 +117,14 @@ TEST_P(evm, eof1_codecopy_out_of_bounds)
 {
     // 4 bytes out of container bounds - result is implicitly 0-padded
     rev = EVMC_PRAGUE;
-    auto code = eof1_bytecode(bytecode{35} + 0 + 0 + OP_CODECOPY + ret(0, 35), 3);
+    auto code = eof_bytecode(bytecode{35} + 0 + 0 + OP_CODECOPY + ret(0, 35), 3);
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
         "ef0001010004020001000c04000000008000036023600060003960236000f300000000"_hex);
 
-    code = eof1_bytecode(bytecode{39} + 0 + 0 + OP_CODECOPY + ret(0, 39), 3, "deadbeef");
+    code = eof_bytecode(bytecode{39} + 0 + 0 + OP_CODECOPY + ret(0, 39), 3).data("deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -160,7 +161,7 @@ TEST_P(evm, eof1_dataload)
     // data is 64 bytes long
     const auto data = bytes(8, 0x0) + bytes(8, 0x11) + bytes(8, 0x22) + bytes(8, 0x33) +
                       bytes(8, 0xaa) + bytes(8, 0xbb) + bytes(8, 0xcc) + bytes(8, 0xdd);
-    const auto code = eof1_bytecode(calldataload(0) + OP_DATALOAD + ret_top(), 2, data);
+    const auto code = eof_bytecode(calldataload(0) + OP_DATALOAD + ret_top(), 2).data(data);
 
     // DATALOAD(0)
     execute(code, "00"_hex);
@@ -211,21 +212,21 @@ TEST_P(evm, eof1_dataloadn)
                       bytes(8, 0xaa) + bytes(8, 0xbb) + bytes(8, 0xcc) + bytes(8, 0xdd);
 
     // DATALOADN{0}
-    auto code = eof1_bytecode(bytecode(OP_DATALOADN) + "0000" + ret_top(), 2, data);
+    auto code = eof_bytecode(bytecode(OP_DATALOADN) + "0000" + ret_top(), 2).data(data);
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
         "0000000000000000111111111111111122222222222222223333333333333333"_hex);
 
     // DATALOADN{1}
-    code = eof1_bytecode(bytecode(OP_DATALOADN) + "0001" + ret_top(), 2, data);
+    code = eof_bytecode(bytecode(OP_DATALOADN) + "0001" + ret_top(), 2).data(data);
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
         "00000000000000111111111111111122222222222222223333333333333333aa"_hex);
 
     // DATALOADN{32}
-    code = eof1_bytecode(bytecode(OP_DATALOADN) + "0020" + ret_top(), 2, data);
+    code = eof_bytecode(bytecode(OP_DATALOADN) + "0020" + ret_top(), 2).data(data);
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
@@ -241,35 +242,35 @@ TEST_P(evm, eof1_datasize)
     rev = EVMC_PRAGUE;
 
     // no data section
-    auto code = eof1_bytecode(bytecode(OP_DATASIZE) + ret_top(), 2);
+    auto code = eof_bytecode(bytecode(OP_DATASIZE) + ret_top(), 2);
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
         "0000000000000000000000000000000000000000000000000000000000000000"_hex);
 
     bytes data = {0x0};
-    code = eof1_bytecode(bytecode(OP_DATASIZE) + ret_top(), 2, data);
+    code = eof_bytecode(bytecode(OP_DATASIZE) + ret_top(), 2).data(data);
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
         "0000000000000000000000000000000000000000000000000000000000000001"_hex);
 
     data = bytes(32, 0x0);
-    code = eof1_bytecode(bytecode(OP_DATASIZE) + ret_top(), 2, data);
+    code = eof_bytecode(bytecode(OP_DATASIZE) + ret_top(), 2).data(data);
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
         "0000000000000000000000000000000000000000000000000000000000000020"_hex);
 
     data = bytes(64, 0x0);
-    code = eof1_bytecode(bytecode(OP_DATASIZE) + ret_top(), 2, data);
+    code = eof_bytecode(bytecode(OP_DATASIZE) + ret_top(), 2).data(data);
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
         "0000000000000000000000000000000000000000000000000000000000000040"_hex);
 
     data = bytes(80, 0x0);
-    code = eof1_bytecode(bytecode(OP_DATASIZE) + ret_top(), 2, data);
+    code = eof_bytecode(bytecode(OP_DATASIZE) + ret_top(), 2).data(data);
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
@@ -287,49 +288,49 @@ TEST_P(evm, eof1_datacopy)
     const auto data = bytes(8, 0x0) + bytes(8, 0x11) + bytes(8, 0x22) + bytes(8, 0x33) +
                       bytes(8, 0xaa) + bytes(8, 0xbb) + bytes(8, 0xcc) + bytes(8, 0xdd);
 
-    auto code = eof1_bytecode(bytecode(1) + 0 + 0 + OP_DATACOPY + ret(0, 32), 3, data);
+    auto code = eof_bytecode(bytecode(1) + 0 + 0 + OP_DATACOPY + ret(0, 32), 3).data(data);
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
         "0000000000000000000000000000000000000000000000000000000000000000"_hex);
 
-    code = eof1_bytecode(bytecode(1) + 8 + 0 + OP_DATACOPY + ret(0, 32), 3, data);
+    code = eof_bytecode(bytecode(1) + 8 + 0 + OP_DATACOPY + ret(0, 32), 3).data(data);
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
         "1100000000000000000000000000000000000000000000000000000000000000"_hex);
 
-    code = eof1_bytecode(bytecode(1) + 63 + 0 + OP_DATACOPY + ret(0, 32), 3, data);
+    code = eof_bytecode(bytecode(1) + 63 + 0 + OP_DATACOPY + ret(0, 32), 3).data(data);
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
         "dd00000000000000000000000000000000000000000000000000000000000000"_hex);
 
-    code = eof1_bytecode(bytecode(0) + 64 + 0 + OP_DATACOPY + ret(0, 32), 3, data);
+    code = eof_bytecode(bytecode(0) + 64 + 0 + OP_DATACOPY + ret(0, 32), 3).data(data);
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
         "0000000000000000000000000000000000000000000000000000000000000000"_hex);
 
-    code = eof1_bytecode(bytecode(16) + 8 + 0 + OP_DATACOPY + ret(0, 32), 3, data);
+    code = eof_bytecode(bytecode(16) + 8 + 0 + OP_DATACOPY + ret(0, 32), 3).data(data);
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
         "1111111111111111222222222222222200000000000000000000000000000000"_hex);
 
-    code = eof1_bytecode(bytecode(32) + 8 + 0 + OP_DATACOPY + ret(0, 32), 3, data);
+    code = eof_bytecode(bytecode(32) + 8 + 0 + OP_DATACOPY + ret(0, 32), 3).data(data);
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
         "111111111111111122222222222222223333333333333333aaaaaaaaaaaaaaaa"_hex);
 
-    code = eof1_bytecode(bytecode(8) + 63 + 0 + OP_DATACOPY + ret(0, 32), 3, data);
+    code = eof_bytecode(bytecode(8) + 63 + 0 + OP_DATACOPY + ret(0, 32), 3).data(data);
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
         "dd00000000000000000000000000000000000000000000000000000000000000"_hex);
 
-    code = eof1_bytecode(bytecode(0) + 65 + 0 + OP_DATACOPY + ret(0, 32), 3, data);
+    code = eof_bytecode(bytecode(0) + 65 + 0 + OP_DATACOPY + ret(0, 32), 3).data(data);
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
@@ -344,7 +345,7 @@ TEST_P(evm, datacopy_memory_cost)
 
     rev = EVMC_PRAGUE;
     const auto data = bytes{0};
-    const auto code = eof1_bytecode(bytecode(1) + 0 + 0 + OP_DATACOPY + OP_STOP, 3, data);
+    const auto code = eof_bytecode(bytecode(1) + 0 + 0 + OP_DATACOPY + OP_STOP, 3).data(data);
     execute(18, code);
     EXPECT_GAS_USED(EVMC_SUCCESS, 18);
 

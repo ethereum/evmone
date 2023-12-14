@@ -15,15 +15,15 @@ TEST_P(evm, eof1_rjump)
         return;
 
     rev = EVMC_PRAGUE;
-    auto code = eof1_bytecode(rjumpi(3, 0) + rjump(1) + OP_INVALID + mstore8(0, 1) + ret(0, 1), 2);
+    auto code = eof_bytecode(rjumpi(3, 0) + rjump(1) + OP_INVALID + mstore8(0, 1) + ret(0, 1), 2);
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 1);
 
-    code = eof1_bytecode(
-        rjumpi(3, 0) + rjump(1) + OP_INVALID + mstore8(0, 1) + ret(0, 1), 2, "deadbeef");
+    code = eof_bytecode(rjumpi(3, 0) + rjump(1) + OP_INVALID + mstore8(0, 1) + ret(0, 1), 2)
+               .data("deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -38,14 +38,14 @@ TEST_P(evm, eof1_rjump_backward)
         return;
 
     rev = EVMC_PRAGUE;
-    auto code = eof1_bytecode(rjump(10) + mstore8(0, 1) + ret(0, 1) + rjump(-13), 2);
+    auto code = eof_bytecode(rjump(10) + mstore8(0, 1) + ret(0, 1) + rjump(-13), 2);
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     ASSERT_EQ(result.output_size, 1);
     EXPECT_EQ(result.output_data[0], 1);
 
-    code = eof1_bytecode(rjump(10) + mstore8(0, 1) + ret(0, 1) + rjump(-13), 2, "deadbeef");
+    code = eof_bytecode(rjump(10) + mstore8(0, 1) + ret(0, 1) + rjump(-13), 2).data("deadbeef");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -60,7 +60,7 @@ TEST_P(evm, eof1_rjump_0_offset)
         return;
 
     rev = EVMC_PRAGUE;
-    auto code = eof1_bytecode(rjump(0) + mstore8(0, 1) + ret(0, 1), 2);
+    auto code = eof_bytecode(rjump(0) + mstore8(0, 1) + ret(0, 1), 2);
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -75,7 +75,7 @@ TEST_P(evm, eof1_rjumpi)
         return;
 
     rev = EVMC_PRAGUE;
-    auto code = eof1_bytecode(
+    auto code = eof_bytecode(
         rjumpi(10, calldataload(0)) + mstore8(0, 2) + ret(0, 1) + mstore8(0, 1) + ret(0, 1), 2);
 
     // RJUMPI condition is true
@@ -98,8 +98,8 @@ TEST_P(evm, eof1_rjumpi_backwards)
         return;
 
     rev = EVMC_PRAGUE;
-    auto code = eof1_bytecode(rjump(10) + mstore8(0, 1) + ret(0, 1) + rjumpi(-16, calldataload(0)) +
-                                  mstore8(0, 2) + ret(0, 1),
+    auto code = eof_bytecode(rjump(10) + mstore8(0, 1) + ret(0, 1) + rjumpi(-16, calldataload(0)) +
+                                 mstore8(0, 2) + ret(0, 1),
         2);
 
     // RJUMPI condition is true
@@ -122,7 +122,7 @@ TEST_P(evm, eof1_rjumpi_0_offset)
         return;
 
     rev = EVMC_PRAGUE;
-    auto code = eof1_bytecode(rjumpi(0, calldataload(0)) + mstore8(0, 1) + ret(0, 1), 2);
+    auto code = eof_bytecode(rjumpi(0, calldataload(0)) + mstore8(0, 1) + ret(0, 1), 2);
 
     // RJUMPI condition is true
     execute(code, "01"_hex);
@@ -144,9 +144,10 @@ TEST_P(evm, eof1_rjumpv_single_offset)
         return;
 
     rev = EVMC_PRAGUE;
-    auto code = eof1_bytecode(rjumpv({3}, 0) + OP_JUMPDEST + OP_JUMPDEST + OP_STOP + 20 + 40 + 0 +
-                                  OP_CODECOPY + ret(0, 20),
-        3, "ef000101000402000100010300000000000000fe");
+    auto code = eof_bytecode(rjumpv({3}, 0) + OP_JUMPDEST + OP_JUMPDEST + OP_STOP + 20 + 40 + 0 +
+                                 OP_CODECOPY + ret(0, 20),
+        3)
+                    .data("ef000101000402000100010300000000000000fe");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -162,10 +163,11 @@ TEST_P(evm, eof1_rjumpv_multiple_offsets)
         return;
 
     rev = EVMC_PRAGUE;
-    auto code = eof1_bytecode(rjump(12) + 10 + 68 + 0 + OP_CODECOPY + ret(0, 10) +
-                                  rjumpv({12, -22, 0}, 1) + 10 + 78 + 0 + OP_CODECOPY + ret(0, 10) +
-                                  20 + 68 + 0 + OP_CODECOPY + ret(0, 20),
-        3, "ef000101000402000100010300000000000000fe");
+    bytecode code = eof_bytecode(rjump(12) + 10 + 68 + 0 + OP_CODECOPY + ret(0, 10) +
+                                     rjumpv({12, -22, 0}, 1) + 10 + 78 + 0 + OP_CODECOPY +
+                                     ret(0, 10) + 20 + 68 + 0 + OP_CODECOPY + ret(0, 20),
+        3)
+                        .data("ef000101000402000100010300000000000000fe");
 
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
@@ -207,7 +209,7 @@ TEST_P(evm, eof1_rjumpv_long_jumps)
     code += rjumpv({-0x7FFF, 0x7FFF - 8 - 2 - 8}, 0) +
             (0x7fff - 8 - 2 - 8) * bytecode{OP_JUMPDEST} + 5 + ret_top();
 
-    code = eof1_bytecode(code, 2);
+    code = eof_bytecode(code, 2);
     auto& rjumpv_cond = code[0x7fff - 3 - 5 + 3 + 1 + 19];
 
     execute(code);

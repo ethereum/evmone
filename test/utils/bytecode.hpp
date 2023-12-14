@@ -90,31 +90,45 @@ big_endian(T value)
     return {static_cast<uint8_t>(value >> 8), static_cast<uint8_t>(value)};
 }
 
-inline bytecode eof_header(
-    uint8_t version, uint16_t code_size, uint16_t max_stack_height, uint16_t data_size)
+struct eof_bytecode
 {
-    bytecode out{bytes{0xEF, 0x00, version}};
-    out += "01" + big_endian(uint16_t{4});  // type header
-    out += "02"_hex + big_endian(uint16_t{1}) + big_endian(code_size);
-    out += "04" + big_endian(data_size);
-    out += "00";
-    out += "0080"_hex + big_endian(max_stack_height);  // type section
-    return out;
-}
+private:
+    bytecode m_code;
+    bytecode m_data;
+    uint16_t m_max_stack_height = 0;
 
-inline bytecode eof1_header(uint16_t code_size, uint16_t max_stack_height, uint16_t data_size = 0)
-{
-    return eof_header(1, code_size, max_stack_height, data_size);
-}
+    /// Constructs EOF header bytes
+    bytecode header() const
+    {
+        assert(m_code.size() <= std::numeric_limits<uint16_t>::max());
+        assert(m_data.size() <= std::numeric_limits<uint16_t>::max());
 
-inline bytecode eof1_bytecode(bytecode code, uint16_t max_stack_height = 0, bytecode data = {})
-{
-    assert(code.size() <= std::numeric_limits<uint16_t>::max());
-    assert(data.size() <= std::numeric_limits<uint16_t>::max());
-    return eof1_header(static_cast<uint16_t>(code.size()), max_stack_height,
-               static_cast<uint16_t>(data.size())) +
-           code + data;
-}
+        constexpr uint8_t version = 0x01;
+        const auto code_size = static_cast<uint16_t>(m_code.size());
+        const auto data_size = static_cast<uint16_t>(m_data.size());
+
+        bytecode out{bytes{0xEF, 0x00, version}};
+        out += "01" + big_endian(uint16_t{4});  // type header
+        out += "02"_hex + big_endian(uint16_t{1}) + big_endian(code_size);
+        out += "04" + big_endian(data_size);
+        out += "00";
+        out += "0080"_hex + big_endian(m_max_stack_height);  // type section
+        return out;
+    }
+
+public:
+    explicit eof_bytecode(bytecode code, uint16_t max_stack_height = 0)
+      : m_code{std::move(code)}, m_max_stack_height{max_stack_height}
+    {}
+
+    auto& data(bytecode d)
+    {
+        m_data = std::move(d);
+        return *this;
+    }
+
+    operator bytecode() const { return header() + m_code + m_data; }
+};
 
 inline bytecode push(bytes_view data)
 {
