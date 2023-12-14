@@ -146,10 +146,10 @@ inline constexpr auto jumpdest = noop;
 template <evmc_status_code Status>
 inline TermResult stop_impl(StackTop /*stack*/, int64_t gas_left, ExecutionState& state) noexcept
 {
-    // STOP is forbidden inside CREATE3 context
+    // STOP is forbidden inside CREATE3/4 context
     if constexpr (Status == EVMC_SUCCESS)
     {
-        if (state.msg->kind == EVMC_CREATE3)
+        if (state.msg->kind == EVMC_CREATE3 || state.msg->kind == EVMC_CREATE4)
             return {EVMC_UNDEFINED_INSTRUCTION, gas_left};
     }
 
@@ -1133,7 +1133,7 @@ inline TermResult return_impl(StackTop stack, int64_t gas_left, ExecutionState& 
     // RETURN is forbidden inside CREATE3 context
     if constexpr (StatusCode == EVMC_SUCCESS)
     {
-        if (state.msg->kind == EVMC_CREATE3)
+        if (state.msg->kind == EVMC_CREATE3 || state.msg->kind == EVMC_CREATE4)
             return {EVMC_UNDEFINED_INSTRUCTION, gas_left};
     }
 
@@ -1157,7 +1157,7 @@ inline TermResult returncontract(
     const auto& offset = stack[0];
     const auto& size = stack[1];
 
-    if (state.msg->kind != EVMC_CREATE3)
+    if (state.msg->kind != EVMC_CREATE3 && state.msg->kind != EVMC_CREATE4)
         return {EVMC_UNDEFINED_INSTRUCTION, gas_left};
 
     if (!check_memory(gas_left, state.memory, offset, size))
