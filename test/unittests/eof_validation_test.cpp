@@ -1171,9 +1171,14 @@ TEST(eof_validation, EOF1_embedded_container)
                            "EF000101000402000100010400000000800000FE"),
         EOFValidationError::success);
 
+    // no data section in container, but anticipated aux_data
+    EXPECT_EQ(validate_eof("EF0001 010004 0200010006 0300010014 040002 00 00800001 6000E0000000 "
+                           "EF000101000402000100010400000000800000FE"),
+        EOFValidationError::success);
+
     // with data section
     EXPECT_EQ(validate_eof("EF0001 010004 0200010006 0300010014 040002 00 00800001 6000E0000000 "
-                           "AABB EF000101000402000100010400000000800000FE"),
+                           "EF000101000402000100010400000000800000FE AABB"),
         EOFValidationError::success);
 
     // garbage in container section - not allowed

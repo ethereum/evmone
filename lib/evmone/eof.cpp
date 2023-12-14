@@ -569,7 +569,6 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(  // NOLINT(misc-no-r
         offset += code_size;
     }
 
-    offset += data_size;
     const auto& container_sizes = section_headers[CONTAINER_SECTION];
     std::vector<uint16_t> container_offsets;
     for (const auto container_size : container_sizes)
