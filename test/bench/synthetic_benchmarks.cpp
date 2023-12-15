@@ -256,9 +256,10 @@ void register_synthetic_benchmarks()
 
     for (auto& [vm_name, vm] : registered_vms)
     {
-        RegisterBenchmark((std::string{vm_name} + "/total/synth/loop_v1").c_str(),
+        // TODO(clang16): Simplify lambda capture [&vm].
+        RegisterBenchmark(std::string{vm_name} + "/total/synth/loop_v1",
             [&vm_ = vm](State& state) { bench_evmc_execute(state, vm_, generate_loop_v1({})); });
-        RegisterBenchmark((std::string{vm_name} + "/total/synth/loop_v2").c_str(),
+        RegisterBenchmark(std::string{vm_name} + "/total/synth/loop_v2",
             [&vm_ = vm](State& state) { bench_evmc_execute(state, vm_, generate_loop_v2({})); });
     }
 
@@ -266,7 +267,7 @@ void register_synthetic_benchmarks()
     {
         for (auto& [vm_name, vm] : registered_vms)
         {
-            RegisterBenchmark((std::string{vm_name} + "/total/synth/" + to_string(params)).c_str(),
+            RegisterBenchmark(std::string{vm_name} + "/total/synth/" + to_string(params),
                 [&vm_ = vm, params](
                     State& state) { bench_evmc_execute(state, vm_, generate_code(params)); })
                 ->Unit(kMicrosecond);

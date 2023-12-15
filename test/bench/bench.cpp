@@ -117,7 +117,7 @@ void register_benchmarks(std::span<const BenchmarkCase> benchmark_cases)
     {
         if (advanced_vm != nullptr)
         {
-            RegisterBenchmark(("advanced/analyse/" + b.name).c_str(), [&b](State& state) {
+            RegisterBenchmark("advanced/analyse/" + b.name, [&b](State& state) {
                 bench_analyse<advanced::AdvancedCodeAnalysis, advanced_analyse>(
                     state, default_revision, b.code);
             })->Unit(kMicrosecond);
@@ -125,7 +125,7 @@ void register_benchmarks(std::span<const BenchmarkCase> benchmark_cases)
 
         if (baseline_vm != nullptr)
         {
-            RegisterBenchmark(("baseline/analyse/" + b.name).c_str(), [&b](State& state) {
+            RegisterBenchmark("baseline/analyse/" + b.name, [&b](State& state) {
                 bench_analyse<baseline::CodeAnalysis, baseline_analyse>(
                     state, default_revision, b.code);
             })->Unit(kMicrosecond);
@@ -138,7 +138,7 @@ void register_benchmarks(std::span<const BenchmarkCase> benchmark_cases)
             if (advanced_vm != nullptr)
             {
                 const auto name = "advanced/execute/" + case_name;
-                RegisterBenchmark(name.c_str(), [&vm = *advanced_vm, &b, &input](State& state) {
+                RegisterBenchmark(name, [&vm = *advanced_vm, &b, &input](State& state) {
                     bench_advanced_execute(state, vm, b.code, input.input, input.expected_output);
                 })->Unit(kMicrosecond);
             }
@@ -146,7 +146,7 @@ void register_benchmarks(std::span<const BenchmarkCase> benchmark_cases)
             if (baseline_vm != nullptr)
             {
                 const auto name = "baseline/execute/" + case_name;
-                RegisterBenchmark(name.c_str(), [&vm = *baseline_vm, &b, &input](State& state) {
+                RegisterBenchmark(name, [&vm = *baseline_vm, &b, &input](State& state) {
                     bench_baseline_execute(state, vm, b.code, input.input, input.expected_output);
                 })->Unit(kMicrosecond);
             }
@@ -154,7 +154,7 @@ void register_benchmarks(std::span<const BenchmarkCase> benchmark_cases)
             if (basel_cg_vm != nullptr)
             {
                 const auto name = "bnocgoto/execute/" + case_name;
-                RegisterBenchmark(name.c_str(), [&vm = *basel_cg_vm, &b, &input](State& state) {
+                RegisterBenchmark(name, [&vm = *basel_cg_vm, &b, &input](State& state) {
                     bench_baseline_execute(state, vm, b.code, input.input, input.expected_output);
                 })->Unit(kMicrosecond);
             }
@@ -162,7 +162,7 @@ void register_benchmarks(std::span<const BenchmarkCase> benchmark_cases)
             for (auto& [vm_name, vm] : registered_vms)
             {
                 const auto name = std::string{vm_name} + "/total/" + case_name;
-                RegisterBenchmark(name.c_str(), [&vm_ = vm, &b, &input](State& state) {
+                RegisterBenchmark(name, [&vm_ = vm, &b, &input](State& state) {
                     bench_evmc_execute(state, vm_, b.code, input.input, input.expected_output);
                 })->Unit(kMicrosecond);
             }
