@@ -25,7 +25,7 @@
 # This is a gate file to Hunter package manager.
 # Include this file using `include` command and add package you need, example:
 #
-#     cmake_minimum_required(VERSION 3.2)
+#     cmake_minimum_required(VERSION 3.5)
 #
 #     include("cmake/HunterGate.cmake")
 #     HunterGate(
@@ -39,16 +39,16 @@
 #     hunter_add_package(Boo COMPONENTS Bar Baz)
 #
 # Projects:
-#     * https://github.com/hunter-packages/gate/
-#     * https://github.com/ruslo/hunter
+#     * https://github.com/cpp-pm/gate/
+#     * https://github.com/cpp-pm/hunter
 
 option(HUNTER_ENABLED "Enable Hunter package manager support" ON)
 
 if(HUNTER_ENABLED)
-  if(CMAKE_VERSION VERSION_LESS "3.2")
+  if(CMAKE_VERSION VERSION_LESS "3.5")
     message(
         FATAL_ERROR
-        "At least CMake version 3.2 required for Hunter dependency management."
+        "At least CMake version 3.5 required for Hunter dependency management."
         " Update CMake or set HUNTER_ENABLED to OFF."
     )
   endif()
@@ -59,8 +59,9 @@ include(CMakeParseArguments) # cmake_parse_arguments
 option(HUNTER_STATUS_PRINT "Print working status" ON)
 option(HUNTER_STATUS_DEBUG "Print a lot info" OFF)
 option(HUNTER_TLS_VERIFY "Enable/disable TLS certificate checking on downloads" ON)
+set(HUNTER_ROOT "" CACHE FILEPATH "Override the HUNTER_ROOT.")
 
-set(HUNTER_ERROR_PAGE "https://docs.hunter.sh/en/latest/reference/errors")
+set(HUNTER_ERROR_PAGE "https://hunter.readthedocs.io/en/latest/reference/errors")
 
 function(hunter_gate_status_print)
   if(HUNTER_STATUS_PRINT OR HUNTER_STATUS_DEBUG)
@@ -133,10 +134,14 @@ function(hunter_gate_self root version sha1 result)
 
   string(SUBSTRING "${sha1}" 0 7 archive_id)
 
-  set(
-      hunter_self
-      "${root}/_Base/Download/Hunter/${version}/${archive_id}/Unpacked"
-  )
+  if(EXISTS "${root}/cmake/Hunter")
+    set(hunter_self "${root}")
+  else()
+    set(
+        hunter_self
+        "${root}/_Base/Download/Hunter/${version}/${archive_id}/Unpacked"
+    )
+  endif()
 
   set("${result}" "${hunter_self}" PARENT_SCOPE)
 endfunction()
@@ -144,24 +149,21 @@ endfunction()
 # Set HUNTER_GATE_ROOT cmake variable to suitable value.
 function(hunter_gate_detect_root)
   # Check CMake variable
-  string(COMPARE NOTEQUAL "${HUNTER_ROOT}" "" not_empty)
-  if(not_empty)
+  if(HUNTER_ROOT)
     set(HUNTER_GATE_ROOT "${HUNTER_ROOT}" PARENT_SCOPE)
     hunter_gate_status_debug("HUNTER_ROOT detected by cmake variable")
     return()
   endif()
 
   # Check environment variable
-  string(COMPARE NOTEQUAL "$ENV{HUNTER_ROOT}" "" not_empty)
-  if(not_empty)
+  if(DEFINED ENV{HUNTER_ROOT})
     set(HUNTER_GATE_ROOT "$ENV{HUNTER_ROOT}" PARENT_SCOPE)
     hunter_gate_status_debug("HUNTER_ROOT detected by environment variable")
     return()
   endif()
 
   # Check HOME environment variable
-  string(COMPARE NOTEQUAL "$ENV{HOME}" "" result)
-  if(result)
+  if(DEFINED ENV{HOME})
     set(HUNTER_GATE_ROOT "$ENV{HOME}/.hunter" PARENT_SCOPE)
     hunter_gate_status_debug("HUNTER_ROOT set using HOME environment variable")
     return()
@@ -169,8 +171,7 @@ function(hunter_gate_detect_root)
 
   # Check SYSTEMDRIVE and USERPROFILE environment variable (windows only)
   if(WIN32)
-    string(COMPARE NOTEQUAL "$ENV{SYSTEMDRIVE}" "" result)
-    if(result)
+    if(DEFINED ENV{SYSTEMDRIVE})
       set(HUNTER_GATE_ROOT "$ENV{SYSTEMDRIVE}/.hunter" PARENT_SCOPE)
       hunter_gate_status_debug(
           "HUNTER_ROOT set using SYSTEMDRIVE environment variable"
@@ -178,8 +179,7 @@ function(hunter_gate_detect_root)
       return()
     endif()
 
-    string(COMPARE NOTEQUAL "$ENV{USERPROFILE}" "" result)
-    if(result)
+    if(DEFINED ENV{USERPROFILE})
       set(HUNTER_GATE_ROOT "$ENV{USERPROFILE}/.hunter" PARENT_SCOPE)
       hunter_gate_status_debug(
           "HUNTER_ROOT set using USERPROFILE environment variable"
@@ -253,7 +253,13 @@ function(hunter_gate_download dir)
   file(
       WRITE
       "${cmakelists}"
-      "cmake_minimum_required(VERSION 3.2)\n"
+      "cmake_minimum_required(VERSION 3.5)\n"
+      "if(POLICY CMP0114)\n"
+      "  cmake_policy(SET CMP0114 NEW)\n"
+      "endif()\n"
+      "if(POLICY CMP0135)\n"
+      "  cmake_policy(SET CMP0135 NEW)\n"
+      "endif()\n"
       "project(HunterDownload LANGUAGES NONE)\n"
       "include(ExternalProject)\n"
       "ExternalProject_Add(\n"
@@ -490,37 +496,46 @@ macro(HunterGate)
     )
 
     set(_master_location "${_hunter_self}/cmake/Hunter")
-    get_filename_component(_archive_id_location "${_hunter_self}/.." ABSOLUTE)
-    set(_done_location "${_archive_id_location}/DONE")
-    set(_sha1_location "${_archive_id_location}/SHA1")
+    if(EXISTS "${HUNTER_GATE_ROOT}/cmake/Hunter")
+      # Hunter downloaded manually (e.g. by 'git clone')
+      set(_unused "xxxxxxxxxx")
+      set(HUNTER_GATE_SHA1 "${_unused}")
+      set(HUNTER_GATE_VERSION "${_unused}")
+    else()
+      get_filename_component(_archive_id_location "${_hunter_self}/.." ABSOLUTE)
+      set(_done_location "${_archive_id_location}/DONE")
+      set(_sha1_location "${_archive_id_location}/SHA1")
 
-    # Check Hunter already downloaded by HunterGate
-    if(NOT EXISTS "${_done_location}")
-      hunter_gate_download("${_archive_id_location}")
-    endif()
+      # Check Hunter already downloaded by HunterGate
+      if(NOT EXISTS "${_done_location}")
+        hunter_gate_download("${_archive_id_location}")
+      endif()
 
-    if(NOT EXISTS "${_done_location}")
-      hunter_gate_internal_error("hunter_gate_download failed")
-    endif()
+      if(NOT EXISTS "${_done_location}")
+        hunter_gate_internal_error("hunter_gate_download failed")
+      endif()
 
-    if(NOT EXISTS "${_sha1_location}")
-      hunter_gate_internal_error("${_sha1_location} not found")
-    endif()
-    file(READ "${_sha1_location}" _sha1_value)
-    string(COMPARE EQUAL "${_sha1_value}" "${HUNTER_GATE_SHA1}" _is_equal)
-    if(NOT _is_equal)
-      hunter_gate_internal_error(
-          "Short SHA1 collision:"
-          "  ${_sha1_value} (from ${_sha1_location})"
-          "  ${HUNTER_GATE_SHA1} (HunterGate)"
-      )
-    endif()
-    if(NOT EXISTS "${_master_location}")
-      hunter_gate_user_error(
-          "Master file not found:"
-          "  ${_master_location}"
-          "try to update Hunter/HunterGate"
-      )
+      if(NOT EXISTS "${_sha1_location}")
+        hunter_gate_internal_error("${_sha1_location} not found")
+      endif()
+      file(READ "${_sha1_location}" _sha1_value)
+      string(TOLOWER "${_sha1_value}" _sha1_value_lower)
+      string(TOLOWER "${HUNTER_GATE_SHA1}" _HUNTER_GATE_SHA1_lower)
+      string(COMPARE EQUAL "${_sha1_value_lower}" "${_HUNTER_GATE_SHA1_lower}" _is_equal)
+      if(NOT _is_equal)
+        hunter_gate_internal_error(
+            "Short SHA1 collision:"
+            "  ${_sha1_value} (from ${_sha1_location})"
+            "  ${HUNTER_GATE_SHA1} (HunterGate)"
+        )
+      endif()
+      if(NOT EXISTS "${_master_location}")
+        hunter_gate_user_error(
+            "Master file not found:"
+            "  ${_master_location}"
+            "try to update Hunter/HunterGate"
+        )
+      endif()
     endif()
     include("${_master_location}")
     set_property(GLOBAL PROPERTY HUNTER_GATE_DONE YES)
