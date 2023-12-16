@@ -25,9 +25,8 @@ struct Path
         size_t i = 0;
         for (const auto b : key)
         {
-            // static_cast is only needed in GCC <= 8.
-            nibbles[i++] = static_cast<uint8_t>(b >> 4);
-            nibbles[i++] = static_cast<uint8_t>(b & 0x0f);
+            nibbles[i++] = b >> 4;
+            nibbles[i++] = b & 0x0f;
         }
     }
 
@@ -75,8 +74,6 @@ struct Path
 /// The MPT Node.
 ///
 /// The implementation is based on StackTrie from go-ethereum.
-// clang-tidy bug: https://github.com/llvm/llvm-project/issues/50006
-// NOLINTNEXTLINE(bugprone-reserved-identifier)
 class MPTNode
 {
     enum class Kind : uint8_t
