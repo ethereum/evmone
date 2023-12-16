@@ -900,25 +900,20 @@ TEST(eof_validation, dataloadn)
 
 TEST(eof_validation, callf_stack_validation)
 {
-    // function 0: (0, non-returning) : CALLF{1} STOP
-    // function 1: (0, 1) :             PUSH0 PUSH0 CALLF{2} RETF
-    // function 2: (2, 1) :             POP RETF
-    EXPECT_EQ(validate_eof("EF0001 01000C 020003000400060002 040000 00 008000010001000202010002 "
-                           "E3000100 5F5FE30002E4 50E4"),
+    EXPECT_EQ(validate_eof(eof_bytecode(bytecode{OP_CALLF} + "0001" + OP_STOP, 1)
+                               .code(push0() + push0() + OP_CALLF + "0002" + OP_RETF, 0, 1, 2)
+                               .code(bytecode(OP_POP) + OP_RETF, 2, 1, 2)),
         EOFValidationError::success);
 
-    // function 0: (0, non-returning) : CALLF{1} STOP
-    // function 1: (0, 1) :             PUSH0 PUSH0 PUSH0 CALLF{2} RETF
-    // function 2: (2, 1) :             POP RETF
-    EXPECT_EQ(validate_eof("EF0001 01000C 020003000400070002 040000 00 008000010001000202010002 "
-                           "E3000100 5F5F5FE30002E4 50E4"),
+    EXPECT_EQ(
+        validate_eof(eof_bytecode(bytecode{OP_CALLF} + "0001" + OP_STOP, 1)
+                         .code(push0() + push0() + push0() + OP_CALLF + "0002" + OP_RETF, 0, 1, 3)
+                         .code(bytecode(OP_POP) + OP_RETF, 2, 1, 2)),
         EOFValidationError::code_section_outputs_mismatch);
 
-    // function 0: (0, non-returning) : CALLF{1} STOP
-    // function 1: (0, 1) :             PUSH0 CALLF{2} RETF
-    // function 2: (2, 1) :             POP RETF
-    EXPECT_EQ(validate_eof("EF0001 01000C 020003000400050002 040000 00 008000010001000202010002 "
-                           "E3000100 5FE30002E4 50E4"),
+    EXPECT_EQ(validate_eof(eof_bytecode(bytecode{OP_CALLF} + "0001" + OP_STOP, 1)
+                               .code(push0() + OP_CALLF + "0002" + OP_RETF, 0, 1, 1)
+                               .code(bytecode(OP_POP) + OP_RETF, 2, 1, 2)),
         EOFValidationError::stack_underflow);
 }
 
@@ -1027,36 +1022,46 @@ TEST(eof_validation, jumpf_into_returning_stack_validation)
     // JUMPF into a function with the same number of outputs as current one
 
     // Exactly required inputs on stack at JUMPF
-    EXPECT_EQ(validate_eof("EF0001 01000C 020003000100060002 040000 00 008000000002000303020003 00 "
-                           "5F5F5FE50002 50e4"),
+    EXPECT_EQ(validate_eof(eof_bytecode(bytecode{OP_STOP})
+                               .code(push0() + push0() + push0() + OP_JUMPF + "0002", 0, 2, 3)
+                               .code(bytecode(OP_POP) + OP_RETF, 3, 2, 3)),
         EOFValidationError::success);
 
     // Extra items on stack at JUMPF
-    EXPECT_EQ(validate_eof("EF0001 01000C 020003000100070002 040000 00 008000000002000403020003 00 "
-                           "5F5F5F5FE50002 50e4"),
+    EXPECT_EQ(
+        validate_eof(eof_bytecode(bytecode{OP_STOP})
+                         .code(push0() + push0() + push0() + push0() + OP_JUMPF + "0002", 0, 2, 4)
+                         .code(bytecode(OP_POP) + OP_RETF, 3, 2, 3)),
         EOFValidationError::code_section_outputs_mismatch);
 
     // Not enough inputs on stack at JUMPF
-    EXPECT_EQ(validate_eof("EF0001 01000C 020003000100050002 040000 00 008000000002000203020003 00 "
-                           "5F5FE50002 50e4"),
+    EXPECT_EQ(validate_eof(eof_bytecode(bytecode{OP_STOP})
+                               .code(push0() + push0() + OP_JUMPF + "0002", 0, 2, 2)
+                               .code(bytecode(OP_POP) + OP_RETF, 3, 2, 3)),
         EOFValidationError::stack_underflow);
 
     // JUMPF into a function with fewer outputs than current one
     // (0, 2) --JUMPF--> (3, 1): 3 inputs + 1 output = 4 items required
 
     // Exactly required inputs on stack at JUMPF
-    EXPECT_EQ(validate_eof("EF0001 01000C 020003000100070003 040000 00 008000000002000403010003 00 "
-                           "5F5F5F5FE50002 5050e4"),
+    EXPECT_EQ(
+        validate_eof(eof_bytecode(bytecode{OP_STOP})
+                         .code(push0() + push0() + push0() + push0() + OP_JUMPF + "0002", 0, 2, 4)
+                         .code(bytecode(OP_POP) + OP_POP + OP_RETF, 3, 1, 3)),
         EOFValidationError::success);
 
     // Extra items on stack at JUMPF
-    EXPECT_EQ(validate_eof("EF0001 01000C 020003000100080003 040000 00 008000000002000503010003 00 "
-                           "5F5F5F5F5FE50002 5050e4"),
+    EXPECT_EQ(
+        validate_eof(
+            eof_bytecode(bytecode{OP_STOP})
+                .code(push0() + push0() + push0() + push0() + push0() + OP_JUMPF + "0002", 0, 2, 5)
+                .code(bytecode(OP_POP) + OP_POP + OP_RETF, 3, 1, 3)),
         EOFValidationError::code_section_outputs_mismatch);
 
     // Not enough inputs on stack at JUMPF
-    EXPECT_EQ(validate_eof("EF0001 01000C 020003000100060003 040000 00 008000000002000303010003 00 "
-                           "5F5F5FE50002 5050e4"),
+    EXPECT_EQ(validate_eof(eof_bytecode(bytecode{OP_STOP})
+                               .code(push0() + push0() + push0() + OP_JUMPF + "0002", 0, 2, 3)
+                               .code(bytecode(OP_POP) + OP_POP + OP_RETF, 3, 1, 3)),
         EOFValidationError::stack_underflow);
 }
 
