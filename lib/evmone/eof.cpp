@@ -409,6 +409,12 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
                     return EOFValidationError::code_section_outputs_mismatch;
             }
         }
+        else if (opcode == OP_RETF)
+        {
+            stack_height_required = static_cast<int8_t>(code_types[func_index].outputs);
+            if (stack_height > code_types[func_index].outputs)
+                return EOFValidationError::code_section_outputs_mismatch;
+        }
 
         if (stack_height < stack_height_required)
             return EOFValidationError::stack_underflow;
@@ -469,8 +475,6 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
                     return EOFValidationError::stack_height_mismatch;
             }
         }
-        else if (opcode == OP_RETF && stack_height != code_types[func_index].outputs)
-            return EOFValidationError::code_section_outputs_mismatch;
     }
 
     const auto max_stack_height = *std::max_element(stack_heights.begin(), stack_heights.end());
