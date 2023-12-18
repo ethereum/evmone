@@ -406,8 +406,14 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
                     static_cast<int8_t>(code_types[func_index].outputs + code_types[fid].inputs -
                                         code_types[fid].outputs);
                 if (stack_heights[i] > stack_height_required)
-                    return EOFValidationError::code_section_outputs_mismatch;
+                    return EOFValidationError::stack_higher_than_outputs_required;
             }
+        }
+        else if (opcode == OP_RETF)
+        {
+            stack_height_required = static_cast<int8_t>(code_types[func_index].outputs);
+            if (stack_height > code_types[func_index].outputs)
+                return EOFValidationError::stack_higher_than_outputs_required;
         }
 
         if (stack_height < stack_height_required)
@@ -469,8 +475,6 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
                     return EOFValidationError::stack_height_mismatch;
             }
         }
-        else if (opcode == OP_RETF && stack_height != code_types[func_index].outputs)
-            return EOFValidationError::code_section_outputs_mismatch;
     }
 
     const auto max_stack_height = *std::max_element(stack_heights.begin(), stack_heights.end());
@@ -675,8 +679,8 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "no_terminating_instruction";
     case EOFValidationError::stack_height_mismatch:
         return "stack_height_mismatch";
-    case EOFValidationError::code_section_outputs_mismatch:
-        return "code_section_outputs_mismatch";
+    case EOFValidationError::stack_higher_than_outputs_required:
+        return "stack_higher_than_outputs_required";
     case EOFValidationError::unreachable_instructions:
         return "unreachable_instructions";
     case EOFValidationError::stack_underflow:
