@@ -909,7 +909,7 @@ TEST(eof_validation, callf_stack_validation)
         validate_eof(eof_bytecode(bytecode{OP_CALLF} + "0001" + OP_STOP, 1)
                          .code(push0() + push0() + push0() + OP_CALLF + "0002" + OP_RETF, 0, 1, 3)
                          .code(bytecode(OP_POP) + OP_RETF, 2, 1, 2)),
-        EOFValidationError::code_section_outputs_mismatch);
+        EOFValidationError::stack_higher_than_outputs_required);
 
     EXPECT_EQ(validate_eof(eof_bytecode(bytecode{OP_CALLF} + "0001" + OP_STOP, 1)
                                .code(push0() + OP_CALLF + "0002" + OP_RETF, 0, 1, 1)
@@ -931,7 +931,7 @@ TEST(eof_validation, retf_stack_validation)
     // 2 outputs, RETF has 3 values on stack
     code = eof_bytecode(bytecode{OP_CALLF} + "0001" + OP_STOP, 2)
                .code(push0() + push0() + push0() + OP_RETF, 0, 2, 3);
-    EXPECT_EQ(validate_eof(code), EOFValidationError::code_section_outputs_mismatch);
+    EXPECT_EQ(validate_eof(code), EOFValidationError::stack_higher_than_outputs_required);
 }
 
 TEST(eof_validation, non_returning_status)
@@ -1049,7 +1049,7 @@ TEST(eof_validation, jumpf_into_returning_stack_validation)
         validate_eof(eof_bytecode(bytecode{OP_STOP})
                          .code(push0() + push0() + push0() + push0() + OP_JUMPF + "0002", 0, 2, 4)
                          .code(bytecode(OP_POP) + OP_RETF, 3, 2, 3)),
-        EOFValidationError::code_section_outputs_mismatch);
+        EOFValidationError::stack_higher_than_outputs_required);
 
     // Not enough inputs on stack at JUMPF
     EXPECT_EQ(validate_eof(eof_bytecode(bytecode{OP_STOP})
@@ -1073,7 +1073,7 @@ TEST(eof_validation, jumpf_into_returning_stack_validation)
             eof_bytecode(bytecode{OP_STOP})
                 .code(push0() + push0() + push0() + push0() + push0() + OP_JUMPF + "0002", 0, 2, 5)
                 .code(bytecode(OP_POP) + OP_POP + OP_RETF, 3, 1, 3)),
-        EOFValidationError::code_section_outputs_mismatch);
+        EOFValidationError::stack_higher_than_outputs_required);
 
     // Not enough inputs on stack at JUMPF
     EXPECT_EQ(validate_eof(eof_bytecode(bytecode{OP_STOP})
