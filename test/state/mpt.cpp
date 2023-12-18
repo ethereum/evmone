@@ -53,23 +53,9 @@ public:
     }
 
     [[nodiscard]] static constexpr size_t capacity() noexcept { return max_size; }
-    [[nodiscard]] size_t size() const noexcept { return m_size; }
     [[nodiscard]] bool empty() const noexcept { return m_size == 0; }
-    [[nodiscard]] uint8_t operator[](size_t index) const noexcept { return m_nibbles[index]; }
     [[nodiscard]] const uint8_t* begin() const noexcept { return m_nibbles; }
     [[nodiscard]] const uint8_t* end() const noexcept { return m_nibbles + m_size; }
-
-    [[nodiscard]] Path tail(size_t pos) const noexcept
-    {
-        assert(pos > 0 && pos <= m_size);  // MPT never requests whole path copy (pos == 0).
-        return {begin() + pos, end()};
-    }
-
-    [[nodiscard]] Path head(size_t size) const noexcept
-    {
-        assert(size < m_size);  // MPT never requests whole path copy (size == length).
-        return {begin(), begin() + size};
-    }
 
     [[nodiscard]] bytes encode(Kind kind) const
     {
@@ -139,13 +125,6 @@ class MPTNode
                                  std::move(br);
     }
 
-    /// Finds the position at witch two paths differ.
-    static size_t mismatch(const Path& p1, const Path& p2) noexcept
-    {
-        assert(p1.size() <= p2.size());
-        return static_cast<size_t>(std::ranges::mismatch(p1, p2).in1 - p1.begin());
-    }
-
 public:
     MPTNode() = default;
 
@@ -166,56 +145,55 @@ void MPTNode::insert(const Path& path, bytes&& value)  // NOLINT(misc-no-recursi
     // in an existing branch node. Otherwise, we need to create new branch node
     // (possibly with an adjusted extended node) and transform existing nodes around it.
 
+    const auto [this_idx, insert_idx] = std::ranges::mismatch(m_path, path);
+
+    // insert_idx is always valid if requirements are fulfilled:
+    // - if m_path is not shorter than path they must have mismatched nibbles,
+    //   given the requirement of key uniqueness and not being a prefix if existing key,
+    // - if m_path is shorter and matches the path prefix
+    //   then insert_idx points at path[m_path.size()].
+    assert(insert_idx != path.end() && "a key must not be a prefix of another key");
+
+    const Path common{m_path.begin(), this_idx};
+    const Path insert_tail{insert_idx + 1, path.end()};
+
     switch (m_kind)
     {
     case Kind::branch:
     {
         assert(m_path.empty());  // Branch has no path.
-
-        auto& child = m_children[path[0]];
-        if (!child)
-            child = leaf(path.tail(1), std::move(value));
+        if (auto& child = m_children[*insert_idx]; child)
+            child->insert(insert_tail, std::move(value));
         else
-            child->insert(path.tail(1), std::move(value));
+            child = leaf(insert_tail, std::move(value));
         break;
     }
 
     case Kind::ext:
     {
-        assert(!m_path.empty());  // Ext must have non-empty path.
-
-        const auto mismatch_pos = mismatch(m_path, path);
-
-        if (mismatch_pos == m_path.size())  // Paths match: go into the child.
-            return m_children[0]->insert(path.tail(mismatch_pos), std::move(value));
-
-        const auto orig_idx = m_path[mismatch_pos];
-        const auto new_idx = path[mismatch_pos];
+        assert(!m_path.empty());       // Ext must have non-empty path.
+        if (this_idx == m_path.end())  // Paths match: go into the child.
+            return m_children[0]->insert({insert_idx, path.end()}, std::move(value));
 
         // The original branch node must be pushed down, possible extended with
         // the adjusted extended node if the path split point is not directly at the branch node.
         // Clang Analyzer bug: https://github.com/llvm/llvm-project/issues/47814
         // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-        auto orig_branch = optional_ext(m_path.tail(mismatch_pos + 1), std::move(m_children[0]));
-        auto new_leaf = leaf(path.tail(mismatch_pos + 1), std::move(value));
-        *this = ext_branch(m_path.head(mismatch_pos), orig_idx, std::move(orig_branch), new_idx,
-            std::move(new_leaf));
+        auto this_branch = optional_ext({this_idx + 1, m_path.end()}, std::move(m_children[0]));
+        auto new_leaf = leaf(insert_tail, std::move(value));
+        *this =
+            ext_branch(common, *this_idx, std::move(this_branch), *insert_idx, std::move(new_leaf));
         break;
     }
 
     case Kind::leaf:
     {
         assert(!m_path.empty());  // Leaf must have non-empty path.
-
-        const auto mismatch_pos = mismatch(m_path, path);
-        assert(mismatch_pos != m_path.size());  // Paths must be different.
-
-        const auto orig_idx = m_path[mismatch_pos];
-        const auto new_idx = path[mismatch_pos];
-        auto orig_leaf = leaf(m_path.tail(mismatch_pos + 1), std::move(m_value));
-        auto new_leaf = leaf(path.tail(mismatch_pos + 1), std::move(value));
-        *this = ext_branch(m_path.head(mismatch_pos), orig_idx, std::move(orig_leaf), new_idx,
-            std::move(new_leaf));
+        assert(this_idx != m_path.end() && "a key must be unique");
+        auto this_leaf = leaf({this_idx + 1, m_path.end()}, std::move(m_value));
+        auto new_leaf = leaf(insert_tail, std::move(value));
+        *this =
+            ext_branch(common, *this_idx, std::move(this_leaf), *insert_idx, std::move(new_leaf));
         break;
     }
 
@@ -275,10 +253,13 @@ MPT::~MPT() noexcept = default;
 
 void MPT::insert(bytes_view key, bytes&& value)
 {
+    assert(key.size() <= Path::capacity() / 2);  // must fit the path impl. length limit
+    const Path path{key};
+
     if (m_root == nullptr)
-        m_root = MPTNode::leaf(Path{key}, std::move(value));
+        m_root = MPTNode::leaf(path, std::move(value));
     else
-        m_root->insert(Path{key}, std::move(value));
+        m_root->insert(path, std::move(value));
 }
 
 [[nodiscard]] hash256 MPT::hash() const
