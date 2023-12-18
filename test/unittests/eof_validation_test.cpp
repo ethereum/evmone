@@ -917,6 +917,23 @@ TEST(eof_validation, callf_stack_validation)
         EOFValidationError::stack_underflow);
 }
 
+TEST(eof_validation, retf_stack_validation)
+{
+    // 2 outputs, RETF has 2 values on stack
+    auto code = eof_bytecode(bytecode{OP_CALLF} + "0001" + OP_STOP, 2)
+                    .code(push0() + push0() + OP_RETF, 0, 2, 2);
+    EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+
+    // 2 outputs, RETF has 1 value on stack
+    code = eof_bytecode(bytecode{OP_CALLF} + "0001" + OP_STOP, 2).code(push0() + OP_RETF, 0, 2, 1);
+    EXPECT_EQ(validate_eof(code), EOFValidationError::code_section_outputs_mismatch);
+
+    // 2 outputs, RETF has 3 values on stack
+    code = eof_bytecode(bytecode{OP_CALLF} + "0001" + OP_STOP, 2)
+               .code(push0() + push0() + push0() + OP_RETF, 0, 2, 3);
+    EXPECT_EQ(validate_eof(code), EOFValidationError::code_section_outputs_mismatch);
+}
+
 TEST(eof_validation, non_returning_status)
 {
     // Non-returning with no JUMPF and no RETF
