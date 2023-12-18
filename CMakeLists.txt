@@ -2,7 +2,7 @@
 # Copyright 2019 The evmone Authors.
 # SPDX-License-Identifier: Apache-2.0
 
-cmake_minimum_required(VERSION 3.16...3.24)
+cmake_minimum_required(VERSION 3.16...3.27)
 
 if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/evmc/.git)
     message(FATAL_ERROR "Git submodules not initialized, execute:\n  git submodule update --init")
@@ -47,17 +47,18 @@ cable_configure_compiler(NO_STACK_PROTECTION)
 if(CABLE_COMPILER_GNULIKE)
     add_compile_options(
         -Wmissing-declarations
-        -Wno-attributes  # Allow using unknown attributes.
-        $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wno-missing-field-initializers>
         $<$<COMPILE_LANGUAGE:CXX>:-Wextra-semi>
+
+        $<$<CXX_COMPILER_ID:GNU>:-Wno-attributes>
+        $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wno-missing-field-initializers>
+        $<$<CXX_COMPILER_ID:GNU>:-Wduplicated-cond>
+        $<$<CXX_COMPILER_ID:GNU>:-Wlogical-op>
+
+        $<$<CXX_COMPILER_ID:Clang,AppleClang>:-Wno-unknown-attributes>
+        $<$<CXX_COMPILER_ID:Clang,AppleClang>:-Wduplicate-enum>
+        $<$<CXX_COMPILER_ID:Clang,AppleClang>:-Wnewline-eof>
+        $<$<CXX_COMPILER_ID:Clang,AppleClang>:-Wunreachable-code-aggressive>
     )
-    cable_add_cxx_compiler_flag_if_supported(-Wduplicated-cond)
-    cable_add_cxx_compiler_flag_if_supported(-Wduplicate-enum)
-    cable_add_cxx_compiler_flag_if_supported(-Wfinal-dtor-non-final-class)
-    cable_add_cxx_compiler_flag_if_supported(-Wlogical-op)
-    cable_add_cxx_compiler_flag_if_supported(-Wnewline-eof)
-    cable_add_cxx_compiler_flag_if_supported(-Wsuggest-destructor-override)
-    cable_add_cxx_compiler_flag_if_supported(-Wunreachable-code-break)
 
     if(CABLE_COMPILER_CLANG)
         set(CMAKE_CXX_FLAGS_COVERAGE "-fprofile-instr-generate -fcoverage-mapping")

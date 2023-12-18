@@ -7,7 +7,7 @@ set(HUNTER_CONFIGURATION_TYPES Release CACHE STRING "Build type of Hunter packag
 include(HunterGate)
 
 HunterGate(
-    URL "https://github.com/cpp-pm/hunter/archive/v0.24.11.tar.gz"
-    SHA1 "e49fb20a135675e406e95fbe9a591a630ccbbeaf"
+    URL "https://github.com/cpp-pm/hunter/archive/v0.25.3.tar.gz"
+    SHA1 "0dfbc2cb5c4cf7e83533733bdfd2125ff96680cb"
     LOCAL
 )
