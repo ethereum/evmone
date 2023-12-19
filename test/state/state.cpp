@@ -72,6 +72,73 @@ evmc_message build_message(const Transaction& tx, int64_t execution_gas_limit) n
 }
 }  // namespace
 
+void State::rollback(size_t checkpoint)
+{
+    while (m_journal.size() != checkpoint)
+    {
+        std::visit(
+            [this](const auto& e) {
+                using T = std::decay_t<decltype(e)>;
+                if constexpr (std::is_same_v<T, JournalNonceBump>)
+                {
+                    get(e.addr).nonce -= 1;
+                }
+                else if constexpr (std::is_same_v<T, JournalTouched>)
+                {
+                    get(e.addr).erasable = false;
+                }
+                else if constexpr (std::is_same_v<T, JournalDestruct>)
+                {
+                    get(e.addr).destructed = false;
+                }
+                else if constexpr (std::is_same_v<T, JournalAccessAccount>)
+                {
+                    get(e.addr).access_status = EVMC_ACCESS_COLD;
+                }
+                else if constexpr (std::is_same_v<T, JournalCreate>)
+                {
+                    if (e.existed)
+                    {
+                        // This account is not always "touched". TODO: Why?
+                        auto& a = get(e.addr);
+                        a.nonce = 0;
+                        a.code.clear();
+                    }
+                    else
+                    {
+                        // TODO: Before Spurious Dragon we don't clear empty accounts ("erasable")
+                        //       so we need to delete them here explicitly.
+                        //       This should be changed by tuning "erasable" flag
+                        //       and clear in all revisions.
+                        m_accounts.erase(e.addr);
+                    }
+                }
+                else if constexpr (std::is_same_v<T, JournalStorageChange>)
+                {
+                    auto& s = get(e.addr).storage.find(e.key)->second;
+                    s.current = e.prev_value;
+                    s.access_status = e.prev_access_status;
+                }
+                else if constexpr (std::is_same_v<T, JournalTransientStorageChange>)
+                {
+                    auto& s = get(e.addr).transient_storage.find(e.key)->second;
+                    s = e.prev_value;
+                }
+                else if constexpr (std::is_same_v<T, JournalBalanceChange>)
+                {
+                    get(e.addr).balance = e.prev_balance;
+                }
+                else
+                {
+                    // TODO(C++23): Change condition to `false` once CWG2518 is in.
+                    static_assert(std::is_void_v<T>, "unhandled journal entry type");
+                }
+            },
+            m_journal.back());
+        m_journal.pop_back();
+    }
+}
+
 intx::uint256 compute_blob_gas_price(uint64_t excess_blob_gas) noexcept
 {
     /// A helper function approximating `factor * e ** (numerator / denominator)`.
@@ -326,7 +393,7 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
     gas_used -= refund;
     assert(gas_used > 0);
 
-    state.get(tx.sender).balance += tx_max_cost - gas_used * effective_gas_price;
+    sender_acc.balance += tx_max_cost - gas_used * effective_gas_price;
     state.touch(block.coinbase).balance += gas_used * priority_gas_price;
 
     // Apply destructs.

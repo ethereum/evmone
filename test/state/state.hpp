@@ -14,9 +14,60 @@
 
 namespace evmone::state
 {
+struct JournalBase
+{
+    address addr;
+};
+
+struct JournalBalanceChange : JournalBase
+{
+    intx::uint256 prev_balance;
+};
+
+struct JournalTouched : JournalBase
+{};
+
+struct JournalStorageChange : JournalBase
+{
+    bytes32 key;
+    bytes32 prev_value;
+    evmc_access_status prev_access_status;
+};
+
+struct JournalTransientStorageChange : JournalBase
+{
+    bytes32 key;
+    bytes32 prev_value;
+};
+
+struct JournalNonceBump : JournalBase
+{};
+
+struct JournalCreate : JournalBase
+{
+    bool existed;
+};
+
+struct JournalDestruct : JournalBase
+{};
+
+struct JournalAccessAccount : JournalBase
+{};
+
+using JournalEntry =
+    std::variant<JournalBalanceChange, JournalTouched, JournalStorageChange, JournalNonceBump,
+        JournalCreate, JournalTransientStorageChange, JournalDestruct, JournalAccessAccount>;
+
+/// The Ethereum State: the collection of accounts mapped by their addresses.
+///
+/// TODO: This class is copyable for testing. Consider making it non-copyable.
 class State
 {
     std::unordered_map<address, Account> m_accounts;
+
+    /// The state journal: the list of changes made in the state
+    /// with information how to revert them.
+    std::vector<JournalEntry> m_journal;
 
 public:
     /// Inserts the new account at the address.
@@ -57,13 +108,55 @@ public:
     Account& touch(const address& addr)
     {
         auto& acc = get_or_insert(addr);
-        acc.erasable = true;
+        if (!acc.erasable)
+        {
+            acc.erasable = true;
+            m_journal.emplace_back(JournalTouched{addr});
+        }
         return acc;
     }
 
     [[nodiscard]] auto& get_accounts() noexcept { return m_accounts; }
 
     [[nodiscard]] const auto& get_accounts() const noexcept { return m_accounts; }
+
+    void journal_balance_change(const address& addr, const intx::uint256& prev_balance)
+    {
+        m_journal.emplace_back(JournalBalanceChange{{addr}, prev_balance});
+    }
+
+    void journal_storage_change(const address& addr, const bytes32& key, const StorageValue& value)
+    {
+        m_journal.emplace_back(
+            JournalStorageChange{{addr}, key, value.current, value.access_status});
+    }
+
+    void journal_transient_storage_change(
+        const address& addr, const bytes32& key, const bytes32& value)
+    {
+        m_journal.emplace_back(JournalTransientStorageChange{{addr}, key, value});
+    }
+
+    void journal_bump_nonce(const address& addr) { m_journal.emplace_back(JournalNonceBump{addr}); }
+
+    void journal_create(const address& addr, bool existed)
+    {
+        m_journal.emplace_back(JournalCreate{{addr}, existed});
+    }
+
+    void journal_destruct(const address& addr) { m_journal.emplace_back(JournalDestruct{addr}); }
+
+    void journal_access_account(const address& addr)
+    {
+        m_journal.emplace_back(JournalAccessAccount{addr});
+    }
+
+    /// Returns the state journal checkpoint. It can be later used to in rollback()
+    /// to revert changes newer than the checkpoint.
+    size_t checkpoint() const noexcept { return m_journal.size(); }
+
+    /// Reverts state changes made after the checkpoint.
+    void rollback(size_t checkpoint);
 };
 
 struct Ommer
