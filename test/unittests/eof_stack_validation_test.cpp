@@ -665,3 +665,149 @@ TEST(eof_stack_validation, jumpf_to_nonreturning_variable_stack)
     code = eof_bytecode(prolog + OP_JUMPF + "0001", 3).code(Opcode{OP_INVALID}, 0, 0x80, 0);
     EXPECT_EQ(validate_eof(code), EOFValidationError::success);
 }
+
+TEST(eof_stack_validation, callf_stack_overflow)
+{
+    {
+        const auto code =
+            eof_bytecode(bytecode{OP_CALLF} + "0001" + OP_STOP)
+                .code(512 * push(1) + OP_CALLF + "0001" + 512 * OP_POP + OP_RETF, 0, 0, 512);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+    }
+
+    {
+        const auto code =
+            eof_bytecode(bytecode{OP_CALLF} + "0001" + OP_STOP)
+                .code(513 * push(1) + OP_CALLF + "0001" + 513 * OP_POP + OP_RETF, 0, 0, 513);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+
+    {
+        const auto code =
+            eof_bytecode(bytecode{OP_CALLF} + "0001" + OP_STOP)
+                .code(1023 * push(1) + OP_CALLF + "0001" + 1023 * OP_POP + OP_RETF, 0, 0, 1023);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+
+    {
+        const auto code =
+            eof_bytecode(bytecode{OP_CALLF} + "0001" + OP_STOP)
+                .code(1023 * push(1) + OP_CALLF + "0002" + 1023 * OP_POP + OP_RETF, 0, 0, 1023)
+                .code(push0() + OP_POP + OP_RETF, 0, 0, 1);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+    }
+
+    {
+        const auto code =
+            eof_bytecode(bytecode{OP_CALLF} + "0001" + OP_STOP)
+                .code(1023 * push(1) + OP_CALLF + "0002" + 1023 * OP_POP + OP_RETF, 0, 0, 1023)
+                .code(push0() + push0() + OP_POP + OP_POP + OP_RETF, 0, 0, 2);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+}
+
+TEST(eof_stack_validation, callf_with_inputs_stack_overflow)
+{
+    {
+        const auto code =
+            eof_bytecode(1023 * push(1) + OP_CALLF + "0001" + 1019 * OP_POP + OP_RETURN, 1023)
+                .code(bytecode{OP_POP} + OP_POP + OP_RETF, 2, 0, 2);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+    }
+
+    {
+        const auto code =
+            eof_bytecode(1023 * push(1) + OP_CALLF + "0001" + 1021 * OP_POP + OP_RETURN, 1023)
+                .code(push(1) + OP_POP + OP_RETF, 3, 3, 4);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+    }
+
+    {
+        const auto code =
+            eof_bytecode(1023 * push(1) + OP_CALLF + "0001" + 1021 * OP_POP + OP_RETURN, 1023)
+                .code(push0() + push0() + OP_RETF, 3, 5, 5);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+
+    {
+        const auto code =
+            eof_bytecode(1023 * push(1) + OP_CALLF + "0001" + 1021 * OP_POP + OP_RETURN, 1023)
+                .code(push0() + push0() + OP_POP + OP_POP + OP_RETF, 3, 3, 5);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+
+    {
+        const auto code =
+            eof_bytecode(1024 * push(1) + OP_CALLF + "0001" + 1020 * OP_POP + OP_RETURN, 1023)
+                .code(push0() + OP_POP + OP_POP + OP_POP + OP_RETF, 2, 0, 3);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+
+    {
+        const auto code =
+            eof_bytecode(1023 * push(1) + OP_CALLF + "0001" + 1020 * OP_POP + OP_RETURN, 1023)
+                .code(push0() + push0() + OP_POP + OP_POP + OP_POP + OP_POP + OP_RETF, 2, 0, 4);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+}
+
+
+TEST(eof_stack_validation, jumpf_stack_overflow)
+{
+    {
+        const auto code = eof_bytecode(512 * push(1) + OP_JUMPF + bytecode{"0x0000"_hex}, 512);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+    }
+
+    {
+        const auto code = eof_bytecode(513 * push(1) + OP_JUMPF + bytecode{"0x0000"_hex}, 513);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+
+    {
+        const auto code = eof_bytecode(1023 * push(1) + OP_JUMPF + bytecode{"0x0000"_hex}, 1023);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+
+    {
+        const auto code = eof_bytecode(1023 * push(1) + OP_JUMPF + "0001", 1023)
+                              .code(push0() + OP_STOP, 0, 0x80, 1);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+    }
+
+    {
+        const auto code = eof_bytecode(1023 * push(1) + OP_JUMPF + "0001", 1023)
+                              .code(push0() + push0() + OP_STOP, 0, 0x80, 2);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+}
+
+TEST(eof_stack_validation, jumpf_with_inputs_stack_overflow)
+{
+    {
+        const auto code = eof_bytecode(1023 * push0() + OP_JUMPF + "0001", 1023)
+                              .code(push0() + OP_STOP, 2, 0x80, 3);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+    }
+
+    {
+        const auto code = eof_bytecode(1023 * push0() + OP_JUMPF + "0001", 1023)
+                              .code(push0() + push0() + OP_STOP, 2, 0x80, 4);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+
+    {
+        const auto code = eof_bytecode(1024 * push0() + OP_JUMPF + "0001", 1023)
+                              .code(push0() + OP_STOP, 2, 0x80, 3);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+}
