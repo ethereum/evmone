@@ -760,6 +760,22 @@ TEST(eof_validation, callf_stack_overflow)
                 .code(1023 * push(1) + OP_CALLF + "0001" + 1023 * OP_POP + OP_RETF, 0, 0, 1023);
         EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
     }
+
+    {
+        const auto code =
+            eof_bytecode(bytecode{OP_CALLF} + "0001" + OP_STOP)
+                .code(1023 * push(1) + OP_CALLF + "0002" + 1023 * OP_POP + OP_RETF, 0, 0, 1023)
+                .code(push0() + OP_POP + OP_RETF, 0, 0, 1);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+    }
+
+    {
+        const auto code =
+            eof_bytecode(bytecode{OP_CALLF} + "0001" + OP_STOP)
+                .code(1023 * push(1) + OP_CALLF + "0002" + 1023 * OP_POP + OP_RETF, 0, 0, 1023)
+                .code(push0() + push0() + OP_POP + OP_POP + OP_RETF, 0, 0, 2);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
 }
 
 TEST(eof_validation, callf_with_inputs_stack_overflow)
@@ -800,6 +816,14 @@ TEST(eof_validation, callf_with_inputs_stack_overflow)
         const auto code =
             eof_bytecode(1024 * push(1) + OP_CALLF + "0001" + 1020 * OP_POP + OP_RETURN, 1023)
                 .code(push0() + OP_POP + OP_POP + OP_POP + OP_RETF, 2, 0, 3);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+
+    {
+        const auto code =
+            eof_bytecode(1023 * push(1) + OP_CALLF + "0001" + 1020 * OP_POP + OP_RETURN, 1023)
+                .code(push0() + push0() + OP_POP + OP_POP + OP_POP + OP_POP + OP_RETF, 2, 0, 4);
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
     }
@@ -1096,6 +1120,18 @@ TEST(eof_validation, jumpf_stack_overflow)
 
     {
         const auto code = eof_bytecode(1023 * push(1) + OP_JUMPF + bytecode{"0x0000"_hex}, 1023);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+
+    {
+        const auto code = eof_bytecode(1023 * push(1) + OP_JUMPF + "0001", 1023)
+                              .code(push0() + OP_STOP, 0, 0x80, 1);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+    }
+
+    {
+        const auto code = eof_bytecode(1023 * push(1) + OP_JUMPF + "0001", 1023)
+                              .code(push0() + push0() + OP_STOP, 0, 0x80, 2);
         EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
     }
 }
