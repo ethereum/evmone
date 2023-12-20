@@ -139,7 +139,7 @@ public:
       : m_codes{std::move(code)}, m_types{{0, 0x80, max_stack_height}}
     {}
 
-    auto& code(bytecode c, uint8_t inputs, uint8_t outputs, uint8_t max_stack_height)
+    auto& code(bytecode c, uint8_t inputs, uint8_t outputs, uint16_t max_stack_height)
     {
         m_codes.emplace_back(std::move(c));
         m_types.emplace_back(inputs, outputs, max_stack_height);
