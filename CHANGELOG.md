@@ -5,6 +5,130 @@ Documentation of all notable changes to the **evmone** project.
 The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
+## [0.11.0] — unreleased
+
+This release is focused on [Cancun] and EOF.
+
+### Added
+
+- **[Cancun] Network Upgrade fully supported**
+  - [EIP-1153]: Transient storage opcodes
+    - transient storage & `TLOAD` and `TSTORE` instructions
+      [#669](https://github.com/ethereum/evmone/pull/669)
+    - clearing of transient storage between transactions
+      [#715](https://github.com/ethereum/evmone/pull/715)
+  - [EIP-4788]: Beacon block root in the EVM
+    - don't assume the transaction sender exists
+      [#731](https://github.com/ethereum/evmone/pull/731)
+    - system call to the _Beacon Roots_ contract
+      [#709](https://github.com/ethereum/evmone/pull/709)
+  - [EIP-4844]: Shard Blob Transactions
+    - `BLOBHASH` instruction
+      [#668](https://github.com/ethereum/evmone/pull/668)
+    - blob transactions
+      [#713](https://github.com/ethereum/evmone/pull/713)
+    - stub of the `point_evaluation` precompile
+      [#730](https://github.com/ethereum/evmone/pull/730)
+  - [EIP-5656]: `MCOPY` - Memory copying instruction
+    [#629](https://github.com/ethereum/evmone/pull/629)
+    [#648](https://github.com/ethereum/evmone/pull/648)
+  - [EIP-6780]: `SELFDESTRUCT` only in same transaction
+    [#735](https://github.com/ethereum/evmone/pull/735)
+  - [EIP-7516]: `BLOBBASEFEE` opcode
+    [#708](https://github.com/ethereum/evmone/pull/708)
+- **EVM Modular Arithmetic Extensions ([EVMMAX])**
+  - Added basic EVMMAX support in form of C++ API.
+    [#673](https://github.com/ethereum/evmone/pull/673)
+  - Implementation of secp256k1 ECDSA recovery (`ecrecovery` precompile) using EVMMAX
+    [#688](https://github.com/ethereum/evmone/pull/688)
+  - Implementation of `ecadd` and `ecmul` BN254 precompiles using EVMMAX
+    [#716](https://github.com/ethereum/evmone/pull/716)
+- Initial support for [Blockchain Tests]
+  - block execution
+    [#681](https://github.com/ethereum/evmone/pull/681)
+    [#679](https://github.com/ethereum/evmone/pull/679)
+    [#685](https://github.com/ethereum/evmone/pull/685)
+    [#701](https://github.com/ethereum/evmone/pull/701)
+  - test format support & results encoding
+    [#680](https://github.com/ethereum/evmone/pull/680)
+    [#690](https://github.com/ethereum/evmone/pull/690)
+    [#694](https://github.com/ethereum/evmone/pull/694)
+    [#711](https://github.com/ethereum/evmone/pull/711)
+    [#736](https://github.com/ethereum/evmone/pull/736)
+  - PoW difficulty calculation
+    [#682](https://github.com/ethereum/evmone/pull/682)
+    [#718](https://github.com/ethereum/evmone/pull/718)
+- Optionally use [Silkworm] as the precompiles implementation.
+  [#660](https://github.com/ethereum/evmone/pull/660)
+- Support for executing [JSON EOF Tests](https://github.com/ethereum/tests/tree/v13/EOFTests)
+  (thanks @gzanitti)
+  [#678](https://github.com/ethereum/evmone/pull/678)
+- EVM tracing option `--trace` in `evmone-t8n`
+  [#616](https://github.com/ethereum/evmone/pull/616)
+- Support for compiling for `riscv32` architecture
+  [#700](https://github.com/ethereum/evmone/pull/700)
+- Ability to export evmone's unit tests to the JSON State Test format
+  [#743](https://github.com/ethereum/evmone/pull/743)
+
+### Changed
+
+- **EVM Object Format (EOF)**:
+  EOF implementation follows the [EOF spec] (aka _Mega EOF Endgame_)
+  and is tentatively enabled in the **Prague** EVM revision.
+  - Tests have been migrated to [ipsilon/tests/eof](https://github.com/ipsilon/tests/tree/eof)
+    [#651](https://github.com/ethereum/evmone/pull/651)
+  - Implementation of four new instructions for accessing _data sections_:
+    `DATALOAD`, `DATALOADN`, `DATASIZE`, `DATACOPY`
+    [#586](https://github.com/ethereum/evmone/pull/586)
+    [#663](https://github.com/ethereum/evmone/pull/663)
+    [#717](https://github.com/ethereum/evmone/pull/717)
+    [#741](https://github.com/ethereum/evmone/pull/741)
+  - Forbid `DELEGATECALL` from EOF to legacy contracts during execution
+    [#588](https://github.com/ethereum/evmone/pull/588)
+  - The data section kind has been changed to `0x04`
+    [#632](https://github.com/ethereum/evmone/pull/632)
+  - The `RJUMPV` immediate argument meaning has been changed to "max index"
+    [#640](https://github.com/ethereum/evmone/pull/640)
+  - Implementation of the `JUMPF` instruction and the _non-returning_ functions
+    [#644](https://github.com/ethereum/evmone/pull/644)
+- Opcodes of new instructions have been assigned following
+  [the execution-spec opcodes list](https://github.com/ethereum/execution-specs/tree/master/lists/evm)
+  [#665](https://github.com/ethereum/evmone/pull/665)
+- State changes are now reverted with the journal
+  [#689](https://github.com/ethereum/evmone/pull/689)
+- Compatibility of `evmone-statetest` with [goevmlab] has been improved
+  [#658](https://github.com/ethereum/evmone/pull/658)
+  [#757](https://github.com/ethereum/evmone/pull/757)
+- Minimal tested/supported compilers versions:
+  [#675](https://github.com/ethereum/evmone/pull/675)
+  - GCC 11
+  - Clang 13
+  - XCode 14.3.1 (bumped from 13.4)
+  - Visual Studio 2022
+  - CMake 3.16...3.27
+- [EVMC] has been upgraded to version [11.0.1][EVMC 11.0.1].
+  [#754](https://github.com/ethereum/evmone/pull/754)
+  [#738](https://github.com/ethereum/evmone/pull/738)
+  [#707](https://github.com/ethereum/evmone/pull/707)
+  [#669](https://github.com/ethereum/evmone/pull/669)
+- [intx] has been upgraded to version [0.10.1][intx 0.10.1].
+  [#674](https://github.com/ethereum/evmone/pull/674)
+- [Ethereum Execution Tests] has been upgraded to version [13][tests 13]
+  and [Execution Spec Tests] version [1.0.6][Execution Spec Tests 1.0.6] has been added.
+  [#737](https://github.com/ethereum/evmone/pull/737)
+
+### Fixed
+
+- EOF: Fix `CALLF` runtime stack overflow check
+  [#677](https://github.com/ethereum/evmone/pull/677)
+- EOF: Fix missing `CALLF` stack overflow validation
+  [#619](https://github.com/ethereum/evmone/pull/619)
+- Fixed processing of withdrawals with 0 amount (testing infrastructure)
+  [#630](https://github.com/ethereum/evmone/pull/630)
+- Fixed handling of _short_ nodes in Merkle Patricia Trie (testing infrastructure)
+  [#686](https://github.com/ethereum/evmone/pull/686)
+
+
 ## [0.10.0] — 2023-05-08
 
 The highlights of this release are support for [Shanghai] execution specification upgrade
@@ -48,7 +172,8 @@ the Baseline interpreter is now:
   [#609](https://github.com/ethereum/evmone/pull/609)
 - Added **[t8n]** tool `evmone-t8n`
   — a command line utility for transaction execution and state transition testing.
-  It allows executing and generating tests with cooperation of [retesteth] or [execution-spec-tests].
+  It allows executing and generating tests with cooperation of [retesteth]
+  or [Execution Spec Tests].
   [#552](https://github.com/ethereum/evmone/pull/552)
   [#555](https://github.com/ethereum/evmone/pull/555)
   [#558](https://github.com/ethereum/evmone/pull/558)
@@ -488,7 +613,7 @@ It delivers fully-compatible and high-speed EVM implementation.
 - Exposes [EVMC] 6 ABI.
 - The [intx 0.2.0](https://github.com/chfast/intx/releases/tag/v0.2.0) library is used for 256-bit precision arithmetic. 
 
-
+[0.11.0]: https://github.com/ethereum/evmone/compare/v0.10.0..master
 [0.10.0]: https://github.com/ethereum/evmone/releases/tag/v0.10.0
 [0.9.1]: https://github.com/ethereum/evmone/releases/tag/v0.9.1
 [0.9.0]: https://github.com/ethereum/evmone/releases/tag/v0.9.0
@@ -505,9 +630,9 @@ It delivers fully-compatible and high-speed EVM implementation.
 [0.1.1]: https://github.com/ethereum/evmone/releases/tag/v0.1.1
 [0.1.0]: https://github.com/ethereum/evmone/releases/tag/v0.1.0
 
-[Aleth]: https://github.com/ethereum/aleth
 [EIP-170]: https://eips.ethereum.org/EIPS/eip-170
 [EIP-663]: https://eips.ethereum.org/EIPS/eip-663
+[EIP-1153]: https://eips.ethereum.org/EIPS/eip-1153
 [EIP-1884]: https://eips.ethereum.org/EIPS/eip-1884
 [EIP-1344]: https://eips.ethereum.org/EIPS/eip-1344
 [EIP-2200]: https://eips.ethereum.org/EIPS/eip-2200
@@ -521,8 +646,14 @@ It delivers fully-compatible and high-speed EVM implementation.
 [EIP-3860]: https://eips.ethereum.org/EIPS/eip-3860
 [EIP-4200]: https://eips.ethereum.org/EIPS/eip-4200
 [EIP-4750]: https://eips.ethereum.org/EIPS/eip-4750
+[EIP-4788]: https://eips.ethereum.org/EIPS/eip-4788
+[EIP-4844]: https://eips.ethereum.org/EIPS/eip-4844
 [EIP-4895]: https://eips.ethereum.org/EIPS/eip-4895
 [EIP-5450]: https://eips.ethereum.org/EIPS/eip-5450
+[EIP-5656]: https://eips.ethereum.org/EIPS/eip-5656
+[EIP-6780]: https://eips.ethereum.org/EIPS/eip-6780
+[EIP-7516]: https://eips.ethereum.org/EIPS/eip-7516
+
 [Spurious Dragon]: https://eips.ethereum.org/EIPS/eip-607
 [Petersburg]: https://eips.ethereum.org/EIPS/eip-1716
 [Istanbul]: https://eips.ethereum.org/EIPS/eip-1679
@@ -530,8 +661,9 @@ It delivers fully-compatible and high-speed EVM implementation.
 [London]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/london.md
 [Shanghai]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/shanghai.md
 [Cancun]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/cancun.md
-[EOF]: https://notes.ethereum.org/@ipsilon/evm-object-format-overview
+
 [EVMC]: https://github.com/ethereum/evmc
+[EVMC 11.0.1]: https://github.com/ethereum/evmc/releases/tag/v11.0.1
 [EVMC 10.1.0]: https://github.com/ethereum/evmc/releases/tag/v10.1.0
 [EVMC 10.0.0]: https://github.com/ethereum/evmc/releases/tag/v10.0.0
 [EVMC 9.0.0]: https://github.com/ethereum/evmc/releases/tag/v9.0.0
@@ -540,22 +672,37 @@ It delivers fully-compatible and high-speed EVM implementation.
 [EVMC 7.4.0]: https://github.com/ethereum/evmc/releases/tag/v7.4.0
 [EVMC 7.1.0]: https://github.com/ethereum/evmc/releases/tag/v7.1.0
 [EVMC 7.0.0]: https://github.com/ethereum/evmc/releases/tag/v7.0.0
+
 [intx]: https://github.com/chfast/intx
+[intx 0.10.1]: https://github.com/chfast/intx/releases/tag/v0.10.1
 [intx 0.10.0]: https://github.com/chfast/intx/releases/tag/v0.10.0
 [intx 0.8.0]: https://github.com/chfast/intx/releases/tag/v0.8.0
 [intx 0.6.0]: https://github.com/chfast/intx/releases/tag/v0.6.0
 [intx 0.5.0]: https://github.com/chfast/intx/releases/tag/v0.5.0
+
 [ethash]: https://github.com/chfast/ethash
 [ethash 0.7.0]: https://github.com/chfast/ethash/releases/tag/v0.7.0
 [ethash 1.0.0]: https://github.com/chfast/ethash/releases/tag/v1.0.0
+
 [Ethereum Execution Tests]: https://github.com/ethereum/tests
+[tests 13]: https://github.com/ethereum/tests/releases/tag/v13
 [tests 12.2]: https://github.com/ethereum/tests/releases/tag/v12.2
 [tests 9.0.2]: https://github.com/ethereum/tests/releases/tag/9.0.2
 [tests 8.0.4]: https://github.com/ethereum/tests/releases/tag/8.0.4
+
+[Execution Spec Tests]: https://github.com/ethereum/execution-spec-tests
+[Execution Spec Tests 1.0.6]: https://github.com/ethereum/execution-spec-tests/releases/tag/v1.0.6
+
+[Aleth]: https://github.com/ethereum/aleth
+[Blockchain Tests]: https://ethereum-tests.readthedocs.io/en/latest/blockchain-ref.html
 [evm-benchmarks]: https://github.com/ipsilon/evm-benchmarks
-[execution-spec-tests]: https://github.com/ethereum/execution-spec-tests
+[EVMMAX]: https://github.com/ethereum/EIPs/pull/6601
+[EOF]: https://notes.ethereum.org/@ipsilon/evm-object-format-overview
+[EOF spec]: https://github.com/ipsilon/eof/blob/main/spec/eof.md
+[goevmlab]: https://github.com/holiman/goevmlab
 [retesteth]: https://github.com/ethereum/retesteth
 [Silkworm]: https://github.com/torquem-ch/silkworm
 [t8n]: https://ethereum-tests.readthedocs.io/en/develop/t8ntool-ref.html
+
 [Keep a Changelog]: https://keepachangelog.com/en/1.1.0/
 [Semantic Versioning]: https://semver.org/spec/v2.0.0.html
