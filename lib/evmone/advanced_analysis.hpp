@@ -135,7 +135,7 @@ using instruction_exec_fn = const Instruction* (*)(const Instruction*, AdvancedE
 ///
 /// These intrinsic instructions may be injected to the code in the analysis phase.
 /// They contain additional and required logic to be executed by the interpreter.
-enum intrinsic_opcodes
+enum intrinsic_opcodes : uint8_t
 {
     /// The BEGINBLOCK instruction.
     ///

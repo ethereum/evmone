@@ -641,10 +641,7 @@ TEST_P(evm, undefined_instruction_analysis_overflow)
 {
     rev = EVMC_PETERSBURG;
 
-    auto undefined_opcode = static_cast<Opcode>(0x0c);
-    auto code = bytecode{undefined_opcode};
-
-    execute(code);
+    execute(bytecode{"0c"});  // undefined opcode
     EXPECT_EQ(result.status_code, EVMC_UNDEFINED_INSTRUCTION);
 }
 

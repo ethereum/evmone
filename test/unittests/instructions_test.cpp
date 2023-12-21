@@ -22,7 +22,7 @@ namespace
 {
 constexpr int unspecified = -1000000;
 
-constexpr int get_revision_defined_in(size_t op) noexcept
+constexpr int get_revision_defined_in(uint8_t op) noexcept
 {
     for (size_t r = EVMC_FRONTIER; r <= EVMC_MAX_REVISION; ++r)
     {
@@ -32,7 +32,7 @@ constexpr int get_revision_defined_in(size_t op) noexcept
     return unspecified;
 }
 
-constexpr bool is_terminating(Opcode op) noexcept
+constexpr bool is_terminating(uint8_t op) noexcept
 {
     switch (op)
     {
@@ -49,7 +49,7 @@ constexpr bool is_terminating(Opcode op) noexcept
     }
 }
 
-template <Opcode Op>
+template <uint8_t Op>
 constexpr void validate_traits_of() noexcept
 {
     constexpr auto tr = instr::traits[Op];

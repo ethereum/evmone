@@ -7,17 +7,17 @@
 #include <gtest/gtest.h>
 #include <type_traits>
 
-static_assert(std::is_default_constructible<evmone::ExecutionState>::value);
-static_assert(!std::is_move_constructible<evmone::ExecutionState>::value);
-static_assert(!std::is_copy_constructible<evmone::ExecutionState>::value);
-static_assert(!std::is_move_assignable<evmone::ExecutionState>::value);
-static_assert(!std::is_copy_assignable<evmone::ExecutionState>::value);
+static_assert(std::is_default_constructible_v<evmone::ExecutionState>);
+static_assert(!std::is_move_constructible_v<evmone::ExecutionState>);
+static_assert(!std::is_copy_constructible_v<evmone::ExecutionState>);
+static_assert(!std::is_move_assignable_v<evmone::ExecutionState>);
+static_assert(!std::is_copy_assignable_v<evmone::ExecutionState>);
 
-static_assert(std::is_default_constructible<evmone::advanced::AdvancedExecutionState>::value);
-static_assert(!std::is_move_constructible<evmone::advanced::AdvancedExecutionState>::value);
-static_assert(!std::is_copy_constructible<evmone::advanced::AdvancedExecutionState>::value);
-static_assert(!std::is_move_assignable<evmone::advanced::AdvancedExecutionState>::value);
-static_assert(!std::is_copy_assignable<evmone::advanced::AdvancedExecutionState>::value);
+static_assert(std::is_default_constructible_v<evmone::advanced::AdvancedExecutionState>);
+static_assert(!std::is_move_constructible_v<evmone::advanced::AdvancedExecutionState>);
+static_assert(!std::is_copy_constructible_v<evmone::advanced::AdvancedExecutionState>);
+static_assert(!std::is_move_assignable_v<evmone::advanced::AdvancedExecutionState>);
+static_assert(!std::is_copy_assignable_v<evmone::advanced::AdvancedExecutionState>);
 
 TEST(execution_state, construct)
 {
