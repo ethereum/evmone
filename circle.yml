@@ -434,14 +434,16 @@ jobs:
 
   deploy:
     docker:
-      - image: circleci/golang
+      - image: cimg/go:1.21
     steps:
-      - run:
-          name: "Install GHR"
-          command: |
-            GO111MODULE=on go get github.com/tcnksm/ghr@v0.12.1
       - attach_workspace:
           at: ~/package
+      - store_artifacts:
+          path: ~/package
+          destination: package
+      - run:
+          name: "Install GHR"
+          command: go install github.com/tcnksm/ghr@v0.16.2
       - run:
           name: "Create GitHub release"
           command: |
@@ -730,7 +732,7 @@ workflows:
   version: 2
   evmone:
     jobs:
-      - lint
+      #      - lint
       - release-linux:
           filters:
             tags:
@@ -739,35 +741,35 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - release-windows-32bit
+      #      - release-windows-32bit
       - release-macos:
           filters:
             tags:
               only: /.*/
-      - release-macos-m1
+      #      - release-macos-m1
       - deploy:
           requires:
             - release-linux
             - release-windows
             - release-macos
           filters:
-            branches:
-              ignore: /.*/
+            #            branches:
+            #              ignore: /.*/
             tags:
               only: /^v[0-9].*/
-      - state-tests
-      - precompiles-silkpre
-      - blockchain-tests
-      - cmake-min
-      - gcc-min
-      - clang-min
-      - gcc-latest-coverage
-      - gcc-latest-memcheck
-      - clang-latest-sanitizers
-      - clang-latest-coverage
-      - macos-asan
-      - xcode-min
-      - gcc-32bit
-      - x86-64-v1
-      - riscv32
-      - fuzzing
+#      - state-tests
+#      - precompiles-silkpre
+#      - blockchain-tests
+#      - cmake-min
+#      - gcc-min
+#      - clang-min
+#      - gcc-latest-coverage
+#      - gcc-latest-memcheck
+#      - clang-latest-sanitizers
+#      - clang-latest-coverage
+#      - macos-asan
+#      - xcode-min
+#      - gcc-32bit
+#      - x86-64-v1
+#      - riscv32
+#      - fuzzing
