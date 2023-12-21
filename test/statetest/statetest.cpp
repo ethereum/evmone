@@ -94,7 +94,10 @@ int main(int argc, char* argv[])
         evmc::VM vm{evmc_create_evmone(), {{"O", "0"}}};
 
         if (trace)
+        {
+            std::ios::sync_with_stdio(false);
             vm.set_option("trace", "1");
+        }
 
         for (const auto& p : paths)
             register_test_files(p, vm, trace || trace_summary);
