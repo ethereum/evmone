@@ -48,9 +48,9 @@ if(CABLE_COMPILER_GNULIKE)
     add_compile_options(
         -Wmissing-declarations
         $<$<COMPILE_LANGUAGE:CXX>:-Wextra-semi>
+        $<$<COMPILE_LANGUAGE:CXX>:-Wno-missing-field-initializers>
 
         $<$<CXX_COMPILER_ID:GNU>:-Wno-attributes>
-        $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wno-missing-field-initializers>
         $<$<CXX_COMPILER_ID:GNU>:-Wduplicated-cond>
         $<$<CXX_COMPILER_ID:GNU>:-Wlogical-op>
 
