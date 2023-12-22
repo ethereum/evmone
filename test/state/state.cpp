@@ -103,8 +103,8 @@ Account& State::get_or_insert(const address& addr, Account account)
 
 Account& State::touch(const address& addr)
 {
-    auto& acc = get_or_insert(addr);
-    if (!acc.erase_if_empty)
+    auto& acc = get_or_insert(addr, {.erase_if_empty = true});
+    if (!acc.erase_if_empty && acc.is_empty())
     {
         acc.erase_if_empty = true;
         m_journal.emplace_back(JournalTouched{addr});
