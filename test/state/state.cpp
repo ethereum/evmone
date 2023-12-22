@@ -149,14 +149,18 @@ Account& State::get_or_insert(const address& addr, Account account)
 
 Account& State::touch(const address& addr)
 {
-    auto& acc = get_or_insert(addr, {.erase_if_empty = true});
-    if (!acc.erase_if_empty && acc.is_empty())
+    const auto acc = find(addr);
+    if (acc == nullptr)
     {
-        acc.erase_if_empty = true;
+        return insert(addr, {.erase_if_empty = true});
+    }
+    else if (!acc->erase_if_empty && acc->is_empty())
+    {
+        acc->erase_if_empty = true;
         m_journal.emplace_back(JournalTouched{addr});
         JournalStats::inst().counters[JournalStats::touched].all += 1;
     }
-    return acc;
+    return *acc;
 }
 
 void State::journal_balance_change(const address& addr, const intx::uint256& prev_balance)
