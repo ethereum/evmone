@@ -103,7 +103,7 @@ size_t Host::copy_code(const address& addr, size_t code_offset, uint8_t* buffer_
 
 bool Host::selfdestruct(const address& addr, const address& beneficiary) noexcept
 {
-    if (m_state.find(beneficiary) == nullptr)
+    if (m_rev < EVMC_SPURIOUS_DRAGON && m_state.find(beneficiary) == nullptr)
         m_state.journal_create(beneficiary, false);
     auto& acc = m_state.get(addr);
     const auto balance = acc.balance;
@@ -288,7 +288,7 @@ evmc::Result Host::execute_message(const evmc_message& msg) noexcept
     if (msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2)
         return create(msg);
 
-    if (msg.kind == EVMC_CALL)
+    if (m_rev < EVMC_SPURIOUS_DRAGON && msg.kind == EVMC_CALL)
     {
         const auto exists = m_state.find(msg.recipient) != nullptr;
         if (!exists)
