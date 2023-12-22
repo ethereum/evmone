@@ -17,6 +17,36 @@ TEST_F(state_transition, block_apply_withdrawal)
     expect.post[withdrawal_address].balance = intx::uint256{3} * 1'000'000'000;
 }
 
+TEST_F(state_transition, empty_coinbase_fee_0)
+{
+    rev = EVMC_BERLIN;
+
+    block_reward = 0;
+    block.base_fee = 0;
+    tx.type = Transaction::Type::legacy;
+    tx.max_gas_price = 0;
+    tx.max_priority_gas_price = 0;
+    tx.to = To;
+    pre.insert(Coinbase, {});
+    expect.post[To].exists = false;
+    expect.post[Coinbase].exists = false;
+}
+
+TEST_F(state_transition, empty_coinbase_fee_0_tw)
+{
+    rev = EVMC_TANGERINE_WHISTLE;
+
+    block_reward = 0;
+    block.base_fee = 0;
+    tx.type = Transaction::Type::legacy;
+    tx.max_gas_price = 0;
+    tx.max_priority_gas_price = 0;
+    tx.to = To;
+    pre.insert(Coinbase, {});
+    expect.post[To].exists = true;
+    expect.post[Coinbase].balance = 0;
+}
+
 TEST_F(state_transition, known_block_hash)
 {
     block.known_block_hashes = {
