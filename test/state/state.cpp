@@ -147,14 +147,14 @@ Account& State::get_or_insert(const address& addr, Account account)
     return insert(addr, std::move(account));
 }
 
-Account& State::touch(const address& addr)
+Account& State::touch(evmc_revision rev, const address& addr)
 {
     const auto acc = find(addr);
     if (acc == nullptr)
     {
-        return insert(addr, {.erase_if_empty = true});
+        return insert(addr, {.erase_if_empty = rev >= EVMC_SPURIOUS_DRAGON});
     }
-    else if (!acc->erase_if_empty && acc->is_empty())
+    else if (!acc->erase_if_empty && acc->is_empty() && rev >= EVMC_SPURIOUS_DRAGON)
     {
         acc->erase_if_empty = true;
         m_journal.emplace_back(JournalTouched{addr});
@@ -444,16 +444,16 @@ void finalize(State& state, evmc_revision rev, const address& coinbase,
         const auto reward_by_32 = reward / 32;
         const auto reward_by_8 = reward / 8;
 
-        state.touch(coinbase).balance += reward + reward_by_32 * ommers.size();
+        state.touch(rev, coinbase).balance += reward + reward_by_32 * ommers.size();
         for (const auto& ommer : ommers)
         {
             assert(ommer.delta > 0 && ommer.delta < 8);
-            state.touch(ommer.beneficiary).balance += reward_by_8 * (8 - ommer.delta);
+            state.touch(rev, ommer.beneficiary).balance += reward_by_8 * (8 - ommer.delta);
         }
     }
 
     for (const auto& withdrawal : withdrawals)
-        state.touch(withdrawal.recipient).balance += withdrawal.get_amount();
+        state.touch(rev, withdrawal.recipient).balance += withdrawal.get_amount();
 
     // Delete potentially empty block reward recipients.
     if (rev >= EVMC_SPURIOUS_DRAGON)
@@ -530,7 +530,7 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
     assert(gas_used > 0);
 
     sender_acc.balance += tx_max_cost - gas_used * effective_gas_price;
-    state.touch(block.coinbase).balance += gas_used * priority_gas_price;
+    state.touch(rev, block.coinbase).balance += gas_used * priority_gas_price;
 
     // Apply destructs.
     std::erase_if(state.get_accounts(),
