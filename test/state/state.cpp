@@ -160,6 +160,11 @@ Account& State::touch(evmc_revision rev, const address& addr)
         m_journal.emplace_back(JournalTouched{addr});
         JournalStats::inst().counters[JournalStats::touched].all += 1;
     }
+    else if (acc->erase_if_empty && rev < EVMC_SPURIOUS_DRAGON)
+    {
+        acc->erase_if_empty = false;
+        journal_create(addr, false);
+    }
     return *acc;
 }
 
@@ -233,21 +238,11 @@ void State::rollback(size_t checkpoint)
                 }
                 else if constexpr (std::is_same_v<T, JournalCreate>)
                 {
-                    if (e.existed)
-                    {
-                        // This account is not always "touched". TODO: Why?
-                        auto& a = get(e.addr);
-                        a.nonce = 0;
-                        a.code.clear();
-                    }
-                    else
-                    {
-                        // TODO: Before Spurious Dragon we don't clear empty accounts ("erasable")
-                        //       so we need to delete them here explicitly.
-                        //       This should be changed by tuning "erasable" flag
-                        //       and clear in all revisions.
-                        m_accounts.erase(e.addr);
-                    }
+                    auto& a = get(e.addr);
+                    a.nonce = 0;
+                    a.code.clear();
+                    if (!e.existed)
+                        a.erase_if_empty = true;  // Before Dragon.
                 }
                 else if constexpr (std::is_same_v<T, JournalStorageChange>)
                 {
