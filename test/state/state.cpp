@@ -456,8 +456,7 @@ void finalize(State& state, evmc_revision rev, const address& coinbase,
         state.touch(rev, withdrawal.recipient).balance += withdrawal.get_amount();
 
     // Delete potentially empty block reward recipients.
-    if (rev >= EVMC_SPURIOUS_DRAGON)
-        delete_empty_accounts(state);
+    delete_empty_accounts(state);
 }
 
 std::variant<TransactionReceipt, std::error_code> transition(State& state, const BlockInfo& block,
@@ -545,8 +544,7 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
     // Delete empty accounts after every transaction. This is strictly required until Byzantium
     // where intermediate state root hashes are part of the transaction receipt.
     // TODO: Consider limiting this only to Spurious Dragon.
-    if (rev >= EVMC_SPURIOUS_DRAGON)
-        delete_empty_accounts(state);
+    delete_empty_accounts(state);
 
     // Post-transaction clean-up.
     // - Set accounts and their storage access status to cold.
