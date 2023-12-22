@@ -9,6 +9,8 @@
 #include "rlp.hpp"
 #include <evmone/evmone.h>
 #include <evmone/execution_state.hpp>
+#include <format>
+#include <iostream>
 
 namespace evmone::state
 {
@@ -70,6 +72,50 @@ evmc_message build_message(const Transaction& tx, int64_t execution_gas_limit) n
         recipient,
     };
 }
+
+
+struct JournalStats
+{
+    enum JournalEntryKind : size_t
+    {
+        balance,
+        touched,
+        storage,
+        nonce,
+        create,
+        tstorage,
+        destruct,
+        access,
+
+        SIZE
+    };
+
+    static constexpr const char* names[] = {
+        "balance", "touched", "storage", "nonce", "create", "tstorage", "destruct", "access"};
+
+    struct Entry
+    {
+        uint32_t all = 0;
+        uint32_t reverted = 0;
+    };
+
+    ~JournalStats()
+    {
+        std::string out;
+        size_t i = 0;
+        for (const auto& c : counters)
+            out += std::format("{:8}: {:8} {:8}\n", names[i++], c.all, c.reverted);
+        std::cerr << "JOURNAL STATS  all reverted\n" + out;
+    }
+
+    static JournalStats& inst() noexcept
+    {
+        static JournalStats instance;
+        return instance;
+    }
+
+    Entry counters[JournalEntryKind::SIZE];
+};
 }  // namespace
 
 Account& State::insert(const address& addr, Account account)
@@ -108,6 +154,7 @@ Account& State::touch(const address& addr)
     {
         acc.erase_if_empty = true;
         m_journal.emplace_back(JournalTouched{addr});
+        JournalStats::inst().counters[JournalStats::touched].all += 1;
     }
     return acc;
 }
@@ -115,44 +162,52 @@ Account& State::touch(const address& addr)
 void State::journal_balance_change(const address& addr, const intx::uint256& prev_balance)
 {
     m_journal.emplace_back(JournalBalanceChange{{addr}, prev_balance});
+    JournalStats::inst().counters[JournalStats::balance].all += 1;
 }
 
 void State::journal_storage_change(
     const address& addr, const bytes32& key, const StorageValue& value)
 {
     m_journal.emplace_back(JournalStorageChange{{addr}, key, value.current, value.access_status});
+    JournalStats::inst().counters[JournalStats::storage].all += 1;
 }
 
 void State::journal_transient_storage_change(
     const address& addr, const bytes32& key, const bytes32& value)
 {
     m_journal.emplace_back(JournalTransientStorageChange{{addr}, key, value});
+    JournalStats::inst().counters[JournalStats::tstorage].all += 1;
 }
 
 void State::journal_bump_nonce(const address& addr)
 {
     m_journal.emplace_back(JournalNonceBump{addr});
+    JournalStats::inst().counters[JournalStats::nonce].all += 1;
 }
 
 void State::journal_create(const address& addr, bool existed)
 {
     m_journal.emplace_back(JournalCreate{{addr}, existed});
+    JournalStats::inst().counters[JournalStats::create].all += 1;
 }
 
 void State::journal_destruct(const address& addr)
 {
     m_journal.emplace_back(JournalDestruct{addr});
+    JournalStats::inst().counters[JournalStats::destruct].all += 1;
 }
 
 void State::journal_access_account(const address& addr)
 {
     m_journal.emplace_back(JournalAccessAccount{addr});
+    JournalStats::inst().counters[JournalStats::access].all += 1;
 }
 
 void State::rollback(size_t checkpoint)
 {
     while (m_journal.size() != checkpoint)
     {
+        JournalStats::inst().counters[m_journal.back().index()].reverted += 1;
         std::visit(
             [this](const auto& e) {
                 using T = std::decay_t<decltype(e)>;
