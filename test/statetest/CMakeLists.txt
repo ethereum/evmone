@@ -2,9 +2,6 @@
 # Copyright 2022 The evmone Authors.
 # SPDX-License-Identifier: Apache-2.0
 
-hunter_add_package(nlohmann_json)
-find_package(nlohmann_json CONFIG REQUIRED)
-
 add_library(evmone-statetestutils STATIC)
 add_library(evmone::statetestutils ALIAS evmone-statetestutils)
 target_compile_features(evmone-statetestutils PUBLIC cxx_std_20)
