@@ -45,7 +45,7 @@ executors:
       CMAKE_BUILD_PARALLEL_LEVEL: 4
   linux-clang-min:
     docker:
-      - image: ethereum/cpp-build-env:18-clang-13
+      - image: ethereum/cpp-build-env:19-clang-15
     resource_class: small
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
