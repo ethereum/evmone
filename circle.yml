@@ -573,6 +573,8 @@ jobs:
 
   clang-min:
     executor: linux-clang-min
+    environment:
+      CMAKE_OPTIONS=-DEVMONE_X86_64_ARCH_LEVEL=3
     steps:
       - build
       - test
