@@ -32,12 +32,6 @@ enum class PrecompileId : uint8_t
 /// The total number of known precompiles ids, including 0.
 inline constexpr std::size_t NumPrecompiles = stdx::to_underlying(PrecompileId::latest) + 1;
 
-struct ExecutionResult
-{
-    evmc_status_code status_code;
-    size_t output_size;
-};
-
 /// Checks if the address @p addr is considered a precompiled contract in the revision @p rev.
 bool is_precompile(evmc_revision rev, const evmc::address& addr) noexcept;
 

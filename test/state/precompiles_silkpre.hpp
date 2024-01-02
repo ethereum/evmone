@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
-#include "precompiles.hpp"
+#include "precompiles_internal.hpp"
 
 namespace evmone::state
 {
