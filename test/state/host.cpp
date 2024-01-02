@@ -210,6 +210,7 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
         collision_acc != nullptr && (collision_acc->nonce != 0 || !collision_acc->code.empty()))
         return evmc::Result{EVMC_FAILURE};
 
+    // TODO: msg.recipient lookup is done 3x here.
     const bool exists = m_state.find(msg.recipient) != nullptr;
     auto& new_acc = m_state.get_or_insert(msg.recipient);
     m_state.journal_create(msg.recipient, exists);
@@ -277,9 +278,7 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
     else if (m_rev >= EVMC_LONDON && !code.empty() && code[0] == 0xEF)  // Reject EF code.
         return evmc::Result{EVMC_CONTRACT_VALIDATION_FAILURE};
 
-    // TODO: The new_acc pointer is invalid because of the state revert implementation,
-    //       but this should change if state journal is implemented.
-    m_state.get(msg.recipient).code = code;
+    new_acc.code = code;
 
     return evmc::Result{result.status_code, gas_left, result.gas_refund, msg.recipient};
 }
