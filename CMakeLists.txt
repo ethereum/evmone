@@ -41,7 +41,16 @@ find_package(ethash CONFIG REQUIRED)
 
 option(EVMC_TOOLS "Build EVMC test tools" ${EVMONE_TESTING})
 option(EVMC_INSTALL "Install EVMC" OFF)
-add_subdirectory(evmc)
+
+if(COMMAND block) # TODO(cmake-3.25)
+    block()
+        set(CMAKE_C_CLANG_TIDY "")
+        set(CMAKE_CXX_CLANG_TIDY "")
+        add_subdirectory(evmc)
+    endblock()
+else()
+    add_subdirectory(evmc)
+endif()
 
 cable_configure_compiler(NO_STACK_PROTECTION)
 if(CABLE_COMPILER_GNULIKE)
