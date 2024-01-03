@@ -19,6 +19,7 @@ class VM : public evmc_vm
 {
 public:
     bool cgoto = EVMONE_CGOTO_SUPPORTED;
+    bool validate_eof = false;
 
 private:
     std::unique_ptr<Tracer> m_first_tracer;
