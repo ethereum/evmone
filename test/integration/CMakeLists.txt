@@ -29,6 +29,11 @@ DUP1,4
 {\"pc\":6,\"op\":3,\"gas\":\"0xf4234\",\"gasCost\":\"0x3\",\"memSize\":0,\"stack\":\\[\"0x0\",\"0x4\"\\],\"depth\":1,\"refund\":0,\"opName\":\"SUB\"}
 ")
 
+    add_test(NAME ${PREFIX}/validate_eof COMMAND evmc::tool --vm $<TARGET_FILE:evmone>,validate_eof run --rev 13 EF0001)
+    set_tests_properties(
+        ${PREFIX}/validate_eof PROPERTIES PASS_REGULAR_EXPRESSION
+        "contract validation failure")
+
 endif()
 
 add_subdirectory(statetest)

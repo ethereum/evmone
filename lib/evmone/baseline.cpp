@@ -366,6 +366,13 @@ evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_co
 {
     auto vm = static_cast<VM*>(c_vm);
     const bytes_view container{code, code_size};
+
+    if (vm->validate_eof && rev >= EVMC_PRAGUE && is_eof_container(container))
+    {
+        if (validate_eof(rev, container) != EOFValidationError::success)
+            return evmc_make_result(EVMC_CONTRACT_VALIDATION_FAILURE, 0, 0, nullptr, 0);
+    }
+
     const auto code_analysis = analyze(rev, container);
     const auto data = code_analysis.eof_header.get_data(container);
     auto state = std::make_unique<ExecutionState>(*msg, rev, *host, ctx, container, data);
