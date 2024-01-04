@@ -4,6 +4,7 @@
 
 #include "precompiles.hpp"
 #include "precompiles_cache.hpp"
+#include "precompiles_internal.hpp"
 #include <evmone_precompiles/bn254.hpp>
 #include <evmone_precompiles/secp256k1.hpp>
 #include <intx/intx.hpp>
@@ -25,12 +26,6 @@ namespace
 {
 constexpr auto GasCostMax = std::numeric_limits<int64_t>::max();
 
-struct PrecompileAnalysis
-{
-    int64_t gas_cost;
-    size_t max_output_size;
-};
-
 inline constexpr int64_t num_words(size_t size_in_bytes) noexcept
 {
     return static_cast<int64_t>((size_in_bytes + 31) / 32);
@@ -41,6 +36,7 @@ inline constexpr int64_t cost_per_input_word(size_t input_size) noexcept
 {
     return BaseCost + WordCost * num_words(input_size);
 }
+}  // namespace
 
 PrecompileAnalysis ecrecover_analyze(bytes_view /*input*/, evmc_revision /*rev*/) noexcept
 {
@@ -244,6 +240,8 @@ ExecutionResult identity_execute(const uint8_t* input, size_t input_size, uint8_
     return {EVMC_SUCCESS, input_size};
 }
 
+namespace
+{
 struct PrecompileTraits
 {
     decltype(identity_analyze)* analyze = nullptr;

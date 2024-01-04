@@ -26,6 +26,7 @@ target_sources(
     precompiles.cpp
     precompiles_cache.hpp
     precompiles_cache.cpp
+    precompiles_internal.hpp
     rlp.hpp
     state.hpp
     state.cpp
@@ -53,7 +54,7 @@ if(EVMONE_PRECOMPILES_SILKPRE)
     )
 
     target_link_libraries(evmone-state PRIVATE silkpre)
-    target_compile_definitions(evmone-state PRIVATE EVMONE_PRECOMPILES_SILKPRE=1)
+    target_compile_definitions(evmone-state PUBLIC EVMONE_PRECOMPILES_SILKPRE=1)
     target_sources(
         evmone-state PRIVATE
         precompiles_silkpre.hpp

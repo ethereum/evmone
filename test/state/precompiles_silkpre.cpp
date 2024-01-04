@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "precompiles_silkpre.hpp"
+#include "precompiles.hpp"
 #include <silkpre/precompile.h>
 #include <cassert>
 #include <cstring>
