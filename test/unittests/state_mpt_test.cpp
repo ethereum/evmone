@@ -7,6 +7,8 @@
 #include <test/state/rlp.hpp>
 #include <test/utils/utils.hpp>
 #include <numeric>
+#include <random>
+#include <ranges>
 
 using namespace evmone;
 using namespace evmone::state;
@@ -85,10 +87,33 @@ TEST(state_mpt, branch_node_example1)
     EXPECT_EQ(hex(trie.hash()), "1aaa6f712413b9a115730852323deb5f5d796c29151a60a1f55f41a25354cd26");
 }
 
+TEST(state_mpt, branch_node_of_3)
+{
+    // A trie of single branch node and three leaf nodes with paths of length 2.
+    // The branch node has leaf nodes at positions [0], [1] and [2]. All leaves have path 0.
+    // {0:0 1:0 2:0}
+
+    MPT trie;
+    trie.insert("00"_hex, "X"_b);
+    trie.insert("10"_hex, "Y"_b);
+    trie.insert("20"_hex, "Z"_b);
+    EXPECT_EQ(hex(trie.hash()), "5c5154e8d108dcf8b9946c8d33730ec8178345ce9d36e6feed44f0134515482d");
+}
+
+TEST(state_mpt, leaf_node_with_empty_path)
+{
+    // Both inserted leaves have empty path in the end.
+    // 0:{0:"X", 1:"Y"}
+    MPT trie;
+    trie.insert("00"_hex, "X"_b);
+    trie.insert("01"_hex, "Y"_b);
+    EXPECT_EQ(hex(trie.hash()), "0a923005d10fbd4e571655cec425db7c5091db03c33891224073a55d3abc2415");
+}
+
 TEST(state_mpt, extension_node_example1)
 {
     // A trie of an extension node followed by a branch node with
-    // two leafs with single nibble paths.
+    // two leaves with single nibble paths.
     // 5858:{4:1, 5:a}
 
     auto value1 = "v___________________________1"_b;
@@ -118,7 +143,7 @@ TEST(state_mpt, extension_node_example1)
 TEST(state_mpt, extension_node_example2)
 {
     // A trie of an extension node followed by a branch node with
-    // two leafs with longer paths.
+    // two leaves with longer paths.
     // 585:{8:41, 9:5a}
 
     auto value1 = "v___________________________1"_b;
@@ -153,6 +178,69 @@ TEST(state_mpt, extension_node_example2)
     trie.insert(key1, std::move(value1));
     trie.insert(key2, std::move(value2));
     EXPECT_EQ(hex(trie.hash()), "ac28c08fa3ff1d0d2cc9a6423abb7af3f4dcc37aa2210727e7d3009a9b4a34e8");
+}
+
+TEST(state_mpt, keys_length_desc)
+{
+    const auto k127 = rlp::encode(127);
+    const auto k128 = rlp::encode(128);
+    EXPECT_EQ(k127, "7f"_hex);
+    EXPECT_EQ(k128, "8180"_hex);
+
+    MPT asc;
+    asc.insert(k127, {});
+    asc.insert(k128, {});
+    EXPECT_EQ(hex(asc.hash()), "2fb7f2dee94138d79248ea2545a3ba1ceecb39e2037ed4e1d571c4d8bfbfa535");
+
+    MPT desc;
+    desc.insert(k128, {});
+    desc.insert(k127, {});
+    EXPECT_EQ(hex(desc.hash()), "2fb7f2dee94138d79248ea2545a3ba1ceecb39e2037ed4e1d571c4d8bfbfa535");
+}
+
+// In Ethereum lists are merkalized by creating a trie with keys of RLP-encoded enumeration.
+// Therefore, the keys are of different length but none of them is a prefix of another.
+// These tests create a list of N elements with empty values.
+// TODO: Check with go-ethereum implementation.
+static constexpr uint64_t LONG_LIST_SIZE = 100'000;
+static constexpr auto LONG_LIST_HASH =
+    0x70760bc8a0ebcc93601519d778576ae67a81731112df8d8c1518437a52f13520_bytes32;
+
+TEST(state_mpt, long_list_asc)
+{
+    uint64_t keys[LONG_LIST_SIZE];
+    std::iota(std::begin(keys), std::end(keys), uint64_t{0});
+
+    MPT trie;
+    for (const auto key : keys)
+        trie.insert(rlp::encode(key), {});
+    EXPECT_EQ(trie.hash(), LONG_LIST_HASH);
+}
+
+TEST(state_mpt, long_list_desc)
+{
+    uint64_t keys[LONG_LIST_SIZE];
+    std::iota(std::begin(keys), std::end(keys), uint64_t{0});
+    std::ranges::reverse(keys);
+
+    MPT trie;
+    for (const auto key : keys)
+        trie.insert(rlp::encode(key), {});
+    EXPECT_EQ(trie.hash(), LONG_LIST_HASH);
+}
+
+TEST(state_mpt, long_list_random)
+{
+    std::random_device rd;
+    std::mt19937_64 gen{rd()};
+    uint64_t keys[LONG_LIST_SIZE];
+    std::iota(std::begin(keys), std::end(keys), uint64_t{0});
+    std::ranges::shuffle(keys, gen);
+
+    MPT trie;
+    for (const auto key : keys)
+        trie.insert(rlp::encode(key), {});
+    EXPECT_EQ(trie.hash(), LONG_LIST_HASH);
 }
 
 TEST(state_mpt, trie_topologies)
@@ -356,7 +444,7 @@ TEST(state_mpt, trie_topologies)
         // Check if all insert order permutations give the same final hash.
         std::vector<size_t> order(test.size());
         std::iota(order.begin(), order.end(), size_t{0});
-        while (std::next_permutation(order.begin(), order.end()))
+        while (std::ranges::next_permutation(order).found)
         {
             MPT trie;
             for (size_t i = 0; i < test.size(); ++i)

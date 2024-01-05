@@ -11,63 +11,63 @@ namespace evmone::state
 {
 namespace
 {
-/// The collection of nibbles (4-bit values) representing a path in a MPT.
-struct Path
+/// The MPT node kind.
+enum class Kind : uint8_t
 {
-    size_t length = 0;  // TODO: Can be converted to uint8_t.
-    uint8_t nibbles[64]{};
+    leaf,
+    ext,
+    branch
+};
 
+/// The collection of nibbles (4-bit values) representing a path in a MPT.
+///
+/// TODO(c++26): This is an instance of std::inplace_vector.
+class Path
+{
+    static constexpr size_t max_size = 64;
+
+    size_t m_size = 0;  // TODO: Can be converted to uint8_t.
+    uint8_t m_nibbles[max_size]{};
+
+public:
     Path() = default;
 
-    explicit Path(bytes_view key) noexcept : length{2 * key.size()}
+    /// Constructs a path from a pair of iterators.
+    Path(const uint8_t* first, const uint8_t* last) noexcept
+      : m_size(static_cast<size_t>(last - first))
     {
-        assert(length <= std::size(nibbles));
+        assert(m_size <= std::size(m_nibbles));
+        std::copy(first, last, m_nibbles);
+    }
+
+    /// Constructs a path from bytes - each byte will produce 2 nibbles in the path.
+    explicit Path(bytes_view key) noexcept : m_size{2 * key.size()}
+    {
+        assert(m_size <= std::size(m_nibbles) && "a keys must not be longer than 32 bytes");
         size_t i = 0;
         for (const auto b : key)
         {
-            // static_cast is only needed in GCC <= 8.
-            nibbles[i++] = static_cast<uint8_t>(b >> 4);
-            nibbles[i++] = static_cast<uint8_t>(b & 0x0f);
+            m_nibbles[i++] = b >> 4;
+            m_nibbles[i++] = b & 0x0f;
         }
     }
 
-    [[nodiscard]] Path tail(size_t pos) const noexcept
-    {
-        assert(pos > 0 && pos <= length);  // MPT never requests whole path copy (pos == 0).
-        Path p;
-        p.length = length - pos;
-        std::copy_n(&nibbles[pos], p.length, p.nibbles);
-        return p;
-    }
+    [[nodiscard]] static constexpr size_t capacity() noexcept { return max_size; }
+    [[nodiscard]] bool empty() const noexcept { return m_size == 0; }
+    [[nodiscard]] const uint8_t* begin() const noexcept { return m_nibbles; }
+    [[nodiscard]] const uint8_t* end() const noexcept { return m_nibbles + m_size; }
 
-    [[nodiscard]] Path head(size_t size) const noexcept
+    [[nodiscard]] bytes encode(Kind kind) const
     {
-        assert(size < length);  // MPT never requests whole path copy (size == length).
-        Path p;
-        p.length = size;
-        std::copy_n(nibbles, size, p.nibbles);
-        return p;
-    }
+        assert(kind == Kind::leaf || kind == Kind::ext);
+        const auto kind_prefix = kind == Kind::leaf ? 0x20 : 0x00;
+        const auto has_odd_size = m_size % 2 != 0;
+        const auto nibble_prefix = has_odd_size ? (0x10 | m_nibbles[0]) : 0x00;
 
-    [[nodiscard]] bytes encode(bool extended) const
-    {
-        bytes bs;
-        const auto is_even = length % 2 == 0;
-        if (is_even)
-            bs.push_back(0x00);
-        else
-            bs.push_back(0x10 | nibbles[0]);
-        for (size_t i = is_even ? 0 : 1; i < length; ++i)
-        {
-            const auto h = nibbles[i++];
-            const auto l = nibbles[i];
-            assert(h <= 0x0f);
-            assert(l <= 0x0f);
-            bs.push_back(static_cast<uint8_t>((h << 4) | l));
-        }
-        if (!extended)
-            bs[0] |= 0x20;
-        return bs;
+        bytes encoded{static_cast<uint8_t>(kind_prefix | nibble_prefix)};
+        for (auto i = size_t{has_odd_size}; i < m_size; i += 2)
+            encoded.push_back(static_cast<uint8_t>((m_nibbles[i] << 4) | m_nibbles[i + 1]));
+        return encoded;
     }
 };
 }  // namespace
@@ -75,17 +75,10 @@ struct Path
 /// The MPT Node.
 ///
 /// The implementation is based on StackTrie from go-ethereum.
-// clang-tidy bug: https://github.com/llvm/llvm-project/issues/50006
+// TODO(clang-tidy-17): bug https://github.com/llvm/llvm-project/issues/50006
 // NOLINTNEXTLINE(bugprone-reserved-identifier)
 class MPTNode
 {
-    enum class Kind : uint8_t
-    {
-        leaf,
-        ext,
-        branch
-    };
-
     static constexpr size_t num_children = 16;
 
     Kind m_kind = Kind::leaf;
@@ -111,8 +104,8 @@ class MPTNode
     static std::unique_ptr<MPTNode> optional_ext(
         const Path& path, std::unique_ptr<MPTNode> child) noexcept
     {
-        return (path.length != 0) ? std::make_unique<MPTNode>(ext(path, std::move(child))) :
-                                    std::move(child);
+        return (!path.empty()) ? std::make_unique<MPTNode>(ext(path, std::move(child))) :
+                                 std::move(child);
     }
 
     /// Creates a branch node out of two children and optionally extends it with an extended
@@ -128,16 +121,8 @@ class MPTNode
         br.m_children[idx1] = std::move(child1);
         br.m_children[idx2] = std::move(child2);
 
-        return (path.length != 0) ? ext(path, std::make_unique<MPTNode>(std::move(br))) :
-                                    std::move(br);
-    }
-
-    /// Finds the position at witch two paths differ.
-    static size_t mismatch(const Path& p1, const Path& p2) noexcept
-    {
-        assert(p1.length <= p2.length);
-        return static_cast<size_t>(
-            std::mismatch(p1.nibbles, p1.nibbles + p1.length, p2.nibbles).first - p1.nibbles);
+        return (!path.empty()) ? ext(path, std::make_unique<MPTNode>(std::move(br))) :
+                                 std::move(br);
     }
 
 public:
@@ -160,57 +145,55 @@ void MPTNode::insert(const Path& path, bytes&& value)  // NOLINT(misc-no-recursi
     // in an existing branch node. Otherwise, we need to create new branch node
     // (possibly with an adjusted extended node) and transform existing nodes around it.
 
+    const auto [this_idx, insert_idx] = std::ranges::mismatch(m_path, path);
+
+    // insert_idx is always valid if requirements are fulfilled:
+    // - if m_path is not shorter than path they must have mismatched nibbles,
+    //   given the requirement of key uniqueness and not being a prefix if existing key,
+    // - if m_path is shorter and matches the path prefix
+    //   then insert_idx points at path[m_path.size()].
+    assert(insert_idx != path.end() && "a key must not be a prefix of another key");
+
+    const Path common{m_path.begin(), this_idx};
+    const Path insert_tail{insert_idx + 1, path.end()};
+
     switch (m_kind)
     {
     case Kind::branch:
     {
-        assert(m_path.length == 0);  // Branch has no path.
-
-        const auto idx = path.nibbles[0];
-        auto& child = m_children[idx];
-        if (!child)
-            child = leaf(path.tail(1), std::move(value));
+        assert(m_path.empty());  // Branch has no path.
+        if (auto& child = m_children[*insert_idx]; child)
+            child->insert(insert_tail, std::move(value));
         else
-            child->insert(path.tail(1), std::move(value));
+            child = leaf(insert_tail, std::move(value));
         break;
     }
 
     case Kind::ext:
     {
-        assert(m_path.length != 0);  // Ext must have non-empty path.
-
-        const auto mismatch_pos = mismatch(m_path, path);
-
-        if (mismatch_pos == m_path.length)  // Paths match: go into the child.
-            return m_children[0]->insert(path.tail(mismatch_pos), std::move(value));
-
-        const auto orig_idx = m_path.nibbles[mismatch_pos];
-        const auto new_idx = path.nibbles[mismatch_pos];
+        assert(!m_path.empty());       // Ext must have non-empty path.
+        if (this_idx == m_path.end())  // Paths match: go into the child.
+            return m_children[0]->insert({insert_idx, path.end()}, std::move(value));
 
         // The original branch node must be pushed down, possible extended with
         // the adjusted extended node if the path split point is not directly at the branch node.
         // Clang Analyzer bug: https://github.com/llvm/llvm-project/issues/47814
         // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-        auto orig_branch = optional_ext(m_path.tail(mismatch_pos + 1), std::move(m_children[0]));
-        auto new_leaf = leaf(path.tail(mismatch_pos + 1), std::move(value));
-        *this = ext_branch(m_path.head(mismatch_pos), orig_idx, std::move(orig_branch), new_idx,
-            std::move(new_leaf));
+        auto this_branch = optional_ext({this_idx + 1, m_path.end()}, std::move(m_children[0]));
+        auto new_leaf = leaf(insert_tail, std::move(value));
+        *this =
+            ext_branch(common, *this_idx, std::move(this_branch), *insert_idx, std::move(new_leaf));
         break;
     }
 
     case Kind::leaf:
     {
-        assert(m_path.length != 0);  // Leaf must have non-empty path.
-
-        const auto mismatch_pos = mismatch(m_path, path);
-        assert(mismatch_pos != m_path.length);  // Paths must be different.
-
-        const auto orig_idx = m_path.nibbles[mismatch_pos];
-        const auto new_idx = path.nibbles[mismatch_pos];
-        auto orig_leaf = leaf(m_path.tail(mismatch_pos + 1), std::move(m_value));
-        auto new_leaf = leaf(path.tail(mismatch_pos + 1), std::move(value));
-        *this = ext_branch(m_path.head(mismatch_pos), orig_idx, std::move(orig_leaf), new_idx,
-            std::move(new_leaf));
+        assert(!m_path.empty());  // Leaf must have non-empty path.
+        assert(this_idx != m_path.end() && "a key must be unique");
+        auto this_leaf = leaf({this_idx + 1, m_path.end()}, std::move(m_value));
+        auto new_leaf = leaf(insert_tail, std::move(value));
+        *this =
+            ext_branch(common, *this_idx, std::move(this_leaf), *insert_idx, std::move(new_leaf));
         break;
     }
 
@@ -236,12 +219,12 @@ bytes MPTNode::encode() const  // NOLINT(misc-no-recursion)
     {
     case Kind::leaf:
     {
-        encoded = rlp::encode(m_path.encode(false)) + rlp::encode(m_value);
+        encoded = rlp::encode(m_path.encode(m_kind)) + rlp::encode(m_value);
         break;
     }
     case Kind::branch:
     {
-        assert(m_path.length == 0);
+        assert(m_path.empty());
         static constexpr uint8_t empty = 0x80;  // encoded empty child
 
         for (const auto& child : m_children)
@@ -256,7 +239,7 @@ bytes MPTNode::encode() const  // NOLINT(misc-no-recursion)
     }
     case Kind::ext:
     {
-        encoded = rlp::encode(m_path.encode(true)) + encode_child(*m_children[0]);
+        encoded = rlp::encode(m_path.encode(m_kind)) + encode_child(*m_children[0]);
         break;
     }
     }
@@ -270,10 +253,13 @@ MPT::~MPT() noexcept = default;
 
 void MPT::insert(bytes_view key, bytes&& value)
 {
+    assert(key.size() <= Path::capacity() / 2);  // must fit the path impl. length limit
+    const Path path{key};
+
     if (m_root == nullptr)
-        m_root = MPTNode::leaf(Path{key}, std::move(value));
+        m_root = MPTNode::leaf(path, std::move(value));
     else
-        m_root->insert(Path{key}, std::move(value));
+        m_root->insert(path, std::move(value));
 }
 
 [[nodiscard]] hash256 MPT::hash() const
