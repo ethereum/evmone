@@ -104,6 +104,20 @@ public:
         return insert(addr, std::move(account));
     }
 
+    [[nodiscard]] auto& get_accounts() noexcept { return m_accounts; }
+
+    [[nodiscard]] const auto& get_accounts() const noexcept { return m_accounts; }
+
+    /// Returns the state journal checkpoint. It can be later used to in rollback()
+    /// to revert changes newer than the checkpoint.
+    size_t checkpoint() const noexcept { return m_journal.size(); }
+
+    /// Reverts state changes made after the checkpoint.
+    void rollback(size_t checkpoint);
+
+    /// Methods performing changes to the state which can be reverted by rollback().
+    /// @{
+
     /// Touches (as in EIP-161) an existing account or inserts new erasable account.
     Account& touch(const address& addr)
     {
@@ -115,10 +129,6 @@ public:
         }
         return acc;
     }
-
-    [[nodiscard]] auto& get_accounts() noexcept { return m_accounts; }
-
-    [[nodiscard]] const auto& get_accounts() const noexcept { return m_accounts; }
 
     void journal_balance_change(const address& addr, const intx::uint256& prev_balance)
     {
@@ -151,12 +161,7 @@ public:
         m_journal.emplace_back(JournalAccessAccount{addr});
     }
 
-    /// Returns the state journal checkpoint. It can be later used to in rollback()
-    /// to revert changes newer than the checkpoint.
-    size_t checkpoint() const noexcept { return m_journal.size(); }
-
-    /// Reverts state changes made after the checkpoint.
-    void rollback(size_t checkpoint);
+    /// @}
 };
 
 struct Ommer
