@@ -104,6 +104,7 @@ void ecadd(benchmark::State& state)
     state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
 }
 BENCHMARK_TEMPLATE(ecadd, evmone::state::ecadd_execute);
+BENCHMARK_TEMPLATE(ecadd, evmone::state::ecadd_evm_execute);
 #ifdef EVMONE_PRECOMPILES_SILKPRE
 BENCHMARK_TEMPLATE(ecadd, evmone::state::silkpre_ecadd_execute);
 #endif
@@ -137,6 +138,7 @@ void ecmul(benchmark::State& state)
     state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
 }
 BENCHMARK_TEMPLATE(ecmul, evmone::state::ecmul_execute);
+BENCHMARK_TEMPLATE(ecadd, evmone::state::ecmul_evm_execute);
 #ifdef EVMONE_PRECOMPILES_SILKPRE
 BENCHMARK_TEMPLATE(ecmul, evmone::state::silkpre_ecmul_execute);
 #endif

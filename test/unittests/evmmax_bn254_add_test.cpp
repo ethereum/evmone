@@ -4,6 +4,7 @@
 
 #include "../utils/utils.hpp"
 #include "evmone_precompiles/bn254.hpp"
+#include "test/precompiles_evm/bn254_evm.hpp"
 #include <gtest/gtest.h>
 
 using namespace evmmax::bn254;
@@ -151,6 +152,7 @@ TEST(evmmax, bn254_pt_add)
             be::unsafe::load<uint256>(&t.expected_output[32])};
 
         EXPECT_EQ(add(a, b), e);
+        EXPECT_EQ(evmmax::evm::bn254::add(a, b), e);
     }
 }
 
