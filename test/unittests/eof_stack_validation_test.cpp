@@ -706,6 +706,52 @@ TEST(eof_stack_validation, callf_stack_overflow)
     }
 }
 
+TEST(eof_stack_validation, callf_stack_overflow_variable_stack)
+{
+    // code prologue that creates a segment starting with possible stack heights 1 and 3
+    const auto prolog = push0() + rjumpi(2, 0) + OP_PUSH0 + OP_PUSH0;
+
+    {
+        const auto code = eof_bytecode(prolog + 509 * push(1) + OP_CALLF + "0001" + OP_STOP, 512)
+                              .code(512 * push(1) + 512 * OP_POP + OP_RETF, 0, 0, 512);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+    }
+
+    // CALLF from [510, 512] stack to function with 515 max stack - both min and max stack overflow
+    {
+        const auto code = eof_bytecode(prolog + 509 * push(1) + OP_CALLF + "0001" + OP_STOP, 512)
+                              .code(515 * push(1) + 515 * OP_POP + OP_RETF, 0, 0, 515);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+    // CALLF from [510, 512] stack to function with 514 max stack - only max stack overflow
+    {
+        const auto code = eof_bytecode(prolog + 509 * push(1) + OP_CALLF + "0001" + OP_STOP, 512)
+                              .code(514 * push(1) + 514 * OP_POP + OP_RETF, 0, 0, 514);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+
+    // CALLF from [1021, 1023] stack to function with 1 max stack
+    {
+        const auto code = eof_bytecode(prolog + 1020 * push(1) + OP_CALLF + "0001" + OP_STOP, 1023)
+                              .code(push0() + OP_POP + OP_RETF, 0, 0, 1);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+    }
+
+    // CALLF from [1021, 1023] stack to function with 5 max stack - both min and  max stack overflow
+    {
+        const auto code = eof_bytecode(prolog + 1020 * push(1) + OP_CALLF + "0001" + OP_STOP, 1023)
+                              .code(5 * push0() + 5 * OP_POP + OP_RETF, 0, 0, 5);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+
+    // CALLF from [1021, 1023] stack to function with 2 max stack - only max stack overflow
+    {
+        const auto code = eof_bytecode(prolog + 1020 * push(1) + OP_CALLF + "0001" + OP_STOP, 1023)
+                              .code(push0() + push0() + OP_POP + OP_POP + OP_RETF, 0, 0, 2);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+}
+
 TEST(eof_stack_validation, callf_with_inputs_stack_overflow)
 {
     {
@@ -757,6 +803,88 @@ TEST(eof_stack_validation, callf_with_inputs_stack_overflow)
     }
 }
 
+TEST(eof_stack_validation, callf_with_inputs_stack_overflow_variable_stack)
+{
+    // code prologue that creates a segment starting with possible stack heights 1 and 3
+    const auto prolog = push0() + rjumpi(2, 0) + OP_PUSH0 + OP_PUSH0;
+
+    {
+        // CALLF from [1021, 1023] stack to function with 2 inputs and 2 max stack
+        const auto code = eof_bytecode(prolog + 1020 * push(1) + OP_CALLF + "0001" + OP_STOP, 1023)
+                              .code(bytecode{OP_POP} + OP_POP + OP_RETF, 2, 0, 2);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+    }
+
+    {
+        // CALLF from [1021, 1023] stack to function with 3 inputs and 4 max stack
+        const auto code = eof_bytecode(prolog + 1020 * push(1) + OP_CALLF + "0001" + OP_STOP, 1023)
+                              .code(push(1) + OP_POP + OP_RETF, 3, 3, 4);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+    }
+
+    {
+        // CALLF from [1021, 1023] stack to 3 inputs and 7 outputs - min and max stack overflow
+        const auto code = eof_bytecode(prolog + 1020 * push(1) + OP_CALLF + "0001" + OP_STOP, 1023)
+                              .code(4 * push0() + OP_RETF, 3, 7, 7);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+    {
+        // CALLF from [1021, 1023] stack to 3 inputs and 5 outputs - only max stack overflow
+        const auto code = eof_bytecode(prolog + 1020 * push(1) + OP_CALLF + "0001" + OP_STOP, 1023)
+                              .code(push0() + push0() + OP_RETF, 3, 5, 5);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+
+    {
+        // CALLF from [1021, 1023] stack to 3 inputs and 7 max stack - min and max stack overflow
+        const auto code = eof_bytecode(prolog + 1020 * push(1) + OP_CALLF + "0001" + OP_STOP, 1023)
+                              .code(4 * push0() + OP_POP + OP_POP + OP_RETF, 3, 3, 7);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+    {
+        // CALLF from [1021, 1023] stack to 3 inputs and 5 max stack - only max stack overflow
+        const auto code = eof_bytecode(prolog + 1020 * push(1) + OP_CALLF + "0001" + OP_STOP, 1023)
+                              .code(push0() + push0() + OP_POP + OP_POP + OP_RETF, 3, 3, 5);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+
+    {
+        // CALLF from [1022, 1024] stack to 2 inputs and 5 max stack - min and max stack overflow
+        const auto code = eof_bytecode(prolog + 1021 * push(1) + OP_CALLF + "0001" + OP_STOP, 1023)
+                              .code(3 * push0() + 5 * OP_POP + OP_RETF, 2, 0, 5);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+    {
+        // CALLF from [1022, 1024] stack to 2 inputs and 3 max stack - only max stack overflow
+        const auto code = eof_bytecode(prolog + 1021 * push(1) + OP_CALLF + "0001" + OP_STOP, 1023)
+                              .code(push0() + OP_POP + OP_POP + OP_POP + OP_RETF, 2, 0, 3);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+
+
+    {
+        // CALLF from [1021, 1023] stack to 2 inputs and 6 max stack - min and max stack overflow
+        const auto code = eof_bytecode(prolog + 1020 * push(1) + OP_CALLF + "0001" + OP_STOP, 1023)
+                              .code(4 * push0() + 6 * OP_POP + OP_RETF, 2, 0, 6);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+    {
+        // CALLF from [1021, 1023] stack to 2 inputs and 4 max stack - only max stack overflow
+        const auto code = eof_bytecode(prolog + 1020 * push(1) + OP_CALLF + "0001" + OP_STOP, 1023)
+                              .code(push0() + push0() + 4 * OP_POP + OP_RETF, 2, 0, 4);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+}
 
 TEST(eof_stack_validation, jumpf_stack_overflow)
 {
@@ -788,6 +916,51 @@ TEST(eof_stack_validation, jumpf_stack_overflow)
     }
 }
 
+TEST(eof_stack_validation, jumpf_stack_overflow_variable_stack)
+{
+    // code prologue that creates a segment starting with possible stack heights 1 and 3
+    const auto prolog = push0() + rjumpi(2, 0) + OP_PUSH0 + OP_PUSH0;
+
+    {
+        const auto code = eof_bytecode(prolog + 509 * OP_PUSH0 + OP_JUMPF + "0000", 512);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+    }
+
+    // JUMPF from [510, 512] stack to function with 515 max stack - both min and max stack overflow
+    {
+        const auto code = eof_bytecode(prolog + 509 * OP_PUSH0 + OP_JUMPF + "0001", 512)
+                              .code(515 * OP_PUSH0 + OP_STOP, 0, 0x80, 515);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+    // JUMPF from [510, 512] stack to function with 514 max stack - only max stack overflow
+    {
+        const auto code = eof_bytecode(prolog + 509 * OP_PUSH0 + OP_JUMPF + "0001", 512)
+                              .code(514 * OP_PUSH0 + OP_STOP, 0, 0x80, 514);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+
+    // JUMPF from [1021, 1023] stack to function with 1 max stack
+    {
+        const auto code = eof_bytecode(prolog + 1020 * OP_PUSH0 + OP_JUMPF + "0001", 1023)
+                              .code(push0() + OP_STOP, 0, 0x80, 1);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+    }
+
+    // JUMPF from [1021, 1023] stack to function with 5 max stack - both min and max stack overflow
+    {
+        const auto code = eof_bytecode(prolog + 1020 * OP_PUSH0 + OP_JUMPF + "0001", 1023)
+                              .code(5 * push0() + OP_STOP, 0, 0x80, 5);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+
+    // JUMPF from [1021, 1023] stack to function with 2 max stack - only max stack overflow
+    {
+        const auto code = eof_bytecode(prolog + 1020 * OP_PUSH0 + OP_JUMPF + "0001", 1023)
+                              .code(push0() + push0() + OP_STOP, 0, 0x80, 2);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+}
+
 TEST(eof_stack_validation, jumpf_with_inputs_stack_overflow)
 {
     {
@@ -806,6 +979,50 @@ TEST(eof_stack_validation, jumpf_with_inputs_stack_overflow)
 
     {
         const auto code = eof_bytecode(1024 * push0() + OP_JUMPF + "0001", 1023)
+                              .code(push0() + OP_STOP, 2, 0x80, 3);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+}
+
+TEST(eof_stack_validation, jumpf_with_inputs_stack_overflow_variable_stack)
+{
+    // code prologue that creates a segment starting with possible stack heights 1 and 3
+    const auto prolog = push0() + rjumpi(2, 0) + OP_PUSH0 + OP_PUSH0;
+
+    {
+        // JUMPF from [1021, 1023] stack to 2 inputs and 3 max stack
+        const auto code = eof_bytecode(prolog + 1020 * push0() + OP_JUMPF + "0001", 1023)
+                              .code(push0() + OP_STOP, 2, 0x80, 3);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
+    }
+
+    {
+        // JUMPF from [1021, 1023] stack to 2 inputs and 6 max stack - min and max stack overflow
+        const auto code = eof_bytecode(prolog + 1020 * push0() + OP_JUMPF + "0001", 1023)
+                              .code(4 * push0() + OP_STOP, 2, 0x80, 6);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+    {
+        // JUMPF from [1021, 1023] stack to 2 inputs and 4 max stack - only max stack overflow
+        const auto code = eof_bytecode(prolog + 1020 * push0() + OP_JUMPF + "0001", 1023)
+                              .code(push0() + push0() + OP_STOP, 2, 0x80, 4);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+
+    {
+        // JUMPF from [1022, 1024] stack to 2 inputs and 5 max stack - min and max stack overflow
+        const auto code = eof_bytecode(prolog + 1021 * push0() + OP_JUMPF + "0001", 1023)
+                              .code(3 * push0() + OP_STOP, 2, 0x80, 5);
+
+        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
+    }
+    {
+        // JUMPF from [1022, 1024] stack to 2 inputs and 3 max stack - only max stack overflow
+        const auto code = eof_bytecode(prolog + 1021 * push0() + OP_JUMPF + "0001", 1023)
                               .code(push0() + OP_STOP, 2, 0x80, 3);
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::stack_overflow);
