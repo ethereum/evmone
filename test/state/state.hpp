@@ -72,37 +72,16 @@ class State
 public:
     /// Inserts the new account at the address.
     /// There must not exist any account under this address before.
-    Account& insert(const address& addr, Account account = {})
-    {
-        const auto r = m_accounts.insert({addr, std::move(account)});
-        assert(r.second);
-        return r.first->second;
-    }
+    Account& insert(const address& addr, Account account = {});
 
     /// Returns the pointer to the account at the address if the account exists. Null otherwise.
-    Account* find(const address& addr) noexcept
-    {
-        const auto it = m_accounts.find(addr);
-        if (it != m_accounts.end())
-            return &it->second;
-        return nullptr;
-    }
+    Account* find(const address& addr) noexcept;
 
     /// Gets the account at the address (the account must exist).
-    Account& get(const address& addr) noexcept
-    {
-        auto acc = find(addr);
-        assert(acc != nullptr);
-        return *acc;
-    }
+    Account& get(const address& addr) noexcept;
 
     /// Gets an existing account or inserts new account.
-    Account& get_or_insert(const address& addr, Account account = {})
-    {
-        if (const auto acc = find(addr); acc != nullptr)
-            return *acc;
-        return insert(addr, std::move(account));
-    }
+    Account& get_or_insert(const address& addr, Account account = {});
 
     [[nodiscard]] auto& get_accounts() noexcept { return m_accounts; }
 
@@ -110,7 +89,7 @@ public:
 
     /// Returns the state journal checkpoint. It can be later used to in rollback()
     /// to revert changes newer than the checkpoint.
-    size_t checkpoint() const noexcept { return m_journal.size(); }
+    [[nodiscard]] size_t checkpoint() const noexcept { return m_journal.size(); }
 
     /// Reverts state changes made after the checkpoint.
     void rollback(size_t checkpoint);
@@ -119,47 +98,22 @@ public:
     /// @{
 
     /// Touches (as in EIP-161) an existing account or inserts new erasable account.
-    Account& touch(const address& addr)
-    {
-        auto& acc = get_or_insert(addr);
-        if (!acc.erase_if_empty)
-        {
-            acc.erase_if_empty = true;
-            m_journal.emplace_back(JournalTouched{addr});
-        }
-        return acc;
-    }
+    Account& touch(const address& addr);
 
-    void journal_balance_change(const address& addr, const intx::uint256& prev_balance)
-    {
-        m_journal.emplace_back(JournalBalanceChange{{addr}, prev_balance});
-    }
+    void journal_balance_change(const address& addr, const intx::uint256& prev_balance);
 
-    void journal_storage_change(const address& addr, const bytes32& key, const StorageValue& value)
-    {
-        m_journal.emplace_back(
-            JournalStorageChange{{addr}, key, value.current, value.access_status});
-    }
+    void journal_storage_change(const address& addr, const bytes32& key, const StorageValue& value);
 
     void journal_transient_storage_change(
-        const address& addr, const bytes32& key, const bytes32& value)
-    {
-        m_journal.emplace_back(JournalTransientStorageChange{{addr}, key, value});
-    }
+        const address& addr, const bytes32& key, const bytes32& value);
 
-    void journal_bump_nonce(const address& addr) { m_journal.emplace_back(JournalNonceBump{addr}); }
+    void journal_bump_nonce(const address& addr);
 
-    void journal_create(const address& addr, bool existed)
-    {
-        m_journal.emplace_back(JournalCreate{{addr}, existed});
-    }
+    void journal_create(const address& addr, bool existed);
 
-    void journal_destruct(const address& addr) { m_journal.emplace_back(JournalDestruct{addr}); }
+    void journal_destruct(const address& addr);
 
-    void journal_access_account(const address& addr)
-    {
-        m_journal.emplace_back(JournalAccessAccount{addr});
-    }
+    void journal_access_account(const address& addr);
 
     /// @}
 };
