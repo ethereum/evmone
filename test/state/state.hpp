@@ -14,55 +14,55 @@
 
 namespace evmone::state
 {
-struct JournalBase
-{
-    address addr;
-};
-
-struct JournalBalanceChange : JournalBase
-{
-    intx::uint256 prev_balance;
-};
-
-struct JournalTouched : JournalBase
-{};
-
-struct JournalStorageChange : JournalBase
-{
-    bytes32 key;
-    bytes32 prev_value;
-    evmc_access_status prev_access_status;
-};
-
-struct JournalTransientStorageChange : JournalBase
-{
-    bytes32 key;
-    bytes32 prev_value;
-};
-
-struct JournalNonceBump : JournalBase
-{};
-
-struct JournalCreate : JournalBase
-{
-    bool existed;
-};
-
-struct JournalDestruct : JournalBase
-{};
-
-struct JournalAccessAccount : JournalBase
-{};
-
-using JournalEntry =
-    std::variant<JournalBalanceChange, JournalTouched, JournalStorageChange, JournalNonceBump,
-        JournalCreate, JournalTransientStorageChange, JournalDestruct, JournalAccessAccount>;
-
 /// The Ethereum State: the collection of accounts mapped by their addresses.
 ///
 /// TODO: This class is copyable for testing. Consider making it non-copyable.
 class State
 {
+    struct JournalBase
+    {
+        address addr;
+    };
+
+    struct JournalBalanceChange : JournalBase
+    {
+        intx::uint256 prev_balance;
+    };
+
+    struct JournalTouched : JournalBase
+    {};
+
+    struct JournalStorageChange : JournalBase
+    {
+        bytes32 key;
+        bytes32 prev_value;
+        evmc_access_status prev_access_status;
+    };
+
+    struct JournalTransientStorageChange : JournalBase
+    {
+        bytes32 key;
+        bytes32 prev_value;
+    };
+
+    struct JournalNonceBump : JournalBase
+    {};
+
+    struct JournalCreate : JournalBase
+    {
+        bool existed;
+    };
+
+    struct JournalDestruct : JournalBase
+    {};
+
+    struct JournalAccessAccount : JournalBase
+    {};
+
+    using JournalEntry =
+        std::variant<JournalBalanceChange, JournalTouched, JournalStorageChange, JournalNonceBump,
+            JournalCreate, JournalTransientStorageChange, JournalDestruct, JournalAccessAccount>;
+
     std::unordered_map<address, Account> m_accounts;
 
     /// The state journal: the list of changes made in the state
