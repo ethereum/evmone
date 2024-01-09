@@ -314,9 +314,8 @@ EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& he
                 if (container_idx >= header.container_sizes.size())
                     return EOFValidationError::invalid_container_section_index;
 
-                if (op == OP_CREATE3 && subcontainer_headers[container_idx].data_offset +
-                                                subcontainer_headers[container_idx].data_size !=
-                                            header.container_sizes[container_idx])
+                if (op == OP_CREATE3 && !subcontainer_headers[container_idx].can_init(
+                                            header.container_sizes[container_idx]))
                     return EOFValidationError::create3_with_truncated_container;
 
                 ++i;

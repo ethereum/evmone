@@ -250,7 +250,7 @@ Result create_eof_impl(
             return {EVMC_SUCCESS, gas_left};  // "Light" failure.
 
         const auto initcontainer_header = read_valid_eof1_header(initcontainer);
-        if (!initcontainer_header.can_init(initcontainer))
+        if (!initcontainer_header.can_init(initcontainer.size()))
             return {EVMC_SUCCESS, gas_left};  // "Light" failure.
     }
 
