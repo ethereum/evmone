@@ -18,6 +18,7 @@ inline constexpr auto cold_sload_cost = 2100;
 inline constexpr auto cold_account_access_cost = 2600;
 inline constexpr auto warm_storage_read_cost = 100;
 
+static constexpr auto EVMC_EVMMAX = evmc_revision::EVMC_PRAGUE;
 /// Additional cold account access cost.
 ///
 /// The warm access cost is unconditionally applied for every account access instruction.
@@ -193,6 +194,13 @@ constexpr inline GasCostTable gas_costs = []() noexcept {
     table[EVMC_OSAKA][OP_EOFCREATE] = 32000;
     table[EVMC_OSAKA][OP_RETURNCONTRACT] = 0;
 
+    table[EVMC_EVMMAX][OP_SETUPX] = 3;
+    table[EVMC_EVMMAX][OP_ADDMODX] = 0;
+    table[EVMC_EVMMAX][OP_SUBMODX] = 0;
+    table[EVMC_EVMMAX][OP_MULMODX] = 0;
+    table[EVMC_EVMMAX][OP_LOADX] = 3;
+    table[EVMC_EVMMAX][OP_STOREX] = 3;
+
     return table;
 }();
 
@@ -245,7 +253,6 @@ consteval bool has_const_gas_cost(Opcode op) noexcept
     return true;
 }
 
-
 /// The global, EVM revision independent, table of traits of all known EVM instructions.
 constexpr inline std::array<Traits, 256> traits = []() noexcept {
     std::array<Traits, 256> table{};
@@ -278,7 +285,7 @@ constexpr inline std::array<Traits, 256> traits = []() noexcept {
     table[OP_SHR] = {"SHR", 0, false, 2, -1, EVMC_CONSTANTINOPLE, REV_EOF1};
     table[OP_SAR] = {"SAR", 0, false, 2, -1, EVMC_CONSTANTINOPLE, REV_EOF1};
 
-    table[OP_KECCAK256] = {"KECCAK256", 0, false, 2, -1, EVMC_FRONTIER, REV_EOF1};
+    table[OP_KECCAK256] = {"KECCAK256", 0, false, 2, -1, EVMC_FRONTIER};
 
     table[OP_ADDRESS] = {"ADDRESS", 0, false, 0, 1, EVMC_FRONTIER, REV_EOF1};
     table[OP_BALANCE] = {"BALANCE", 0, false, 1, 0, EVMC_FRONTIER, REV_EOF1};

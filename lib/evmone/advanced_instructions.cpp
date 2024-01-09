@@ -312,6 +312,10 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
     table[OP_EOFCREATE] = op_undefined;
     table[OP_RETURNCONTRACT] = op_undefined;
 
+    table[OP_ADDMODX] = op_undefined;
+    table[OP_SUBMODX] = op_undefined;
+    table[OP_MULMODX] = op_undefined;
+
     return table;
 }();
 }  // namespace
