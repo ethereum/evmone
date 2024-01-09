@@ -108,9 +108,9 @@ public:
     Account& touch(const address& addr)
     {
         auto& acc = get_or_insert(addr);
-        if (!acc.erasable)
+        if (!acc.erase_if_empty)
         {
-            acc.erasable = true;
+            acc.erase_if_empty = true;
             m_journal.emplace_back(JournalTouched{addr});
         }
         return acc;

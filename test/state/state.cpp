@@ -85,7 +85,7 @@ void State::rollback(size_t checkpoint)
                 }
                 else if constexpr (std::is_same_v<T, JournalTouched>)
                 {
-                    get(e.addr).erasable = false;
+                    get(e.addr).erase_if_empty = false;
                 }
                 else if constexpr (std::is_same_v<T, JournalDestruct>)
                 {
@@ -256,7 +256,7 @@ void delete_empty_accounts(State& state)
 {
     std::erase_if(state.get_accounts(), [](const std::pair<const address, Account>& p) noexcept {
         const auto& acc = p.second;
-        return acc.erasable && acc.is_empty();
+        return acc.erase_if_empty && acc.is_empty();
     });
 }
 }  // namespace
