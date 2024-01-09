@@ -51,7 +51,10 @@ struct Account
     /// The account should be erased if it is empty at the end of a transaction.
     /// This flag means the account has been "touched" as defined in EIP-161
     /// or it is a newly created temporary account.
-    bool erasable = false;
+    ///
+    /// Yellow Paper uses term "delete" but it is a keyword in C++ while
+    /// the term "erase" is used for deleting objects from C++ collections.
+    bool erase_if_empty = false;
 
     /// The account has been created in the current transaction.
     bool just_created = false;

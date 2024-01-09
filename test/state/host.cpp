@@ -333,7 +333,7 @@ evmc::Result Host::call(const evmc_message& orig_msg) noexcept
     {
         static constexpr auto addr_03 = 0x03_address;
         auto* const acc_03 = m_state.find(addr_03);
-        const auto is_03_touched = acc_03 != nullptr && acc_03->erasable;
+        const auto is_03_touched = acc_03 != nullptr && acc_03->erase_if_empty;
 
         // Revert.
         m_state.rollback(state_checkpoint);
@@ -394,7 +394,7 @@ evmc_access_status Host::access_account(const address& addr) noexcept
     if (m_rev < EVMC_BERLIN)
         return EVMC_ACCESS_COLD;  // Ignore before Berlin.
 
-    auto& acc = m_state.get_or_insert(addr, {.erasable = true});
+    auto& acc = m_state.get_or_insert(addr, {.erase_if_empty = true});
 
     if (acc.access_status == EVMC_ACCESS_WARM || is_precompile(m_rev, addr))
         return EVMC_ACCESS_WARM;
