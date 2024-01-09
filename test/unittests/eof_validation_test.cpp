@@ -325,11 +325,12 @@ TEST(eof_validation, EOF1_undefined_opcodes)
 
     for (uint16_t opcode = 0; opcode <= 0xff; ++opcode)
     {
-        // PUSH*, DUPN, SWAPN, RJUMP*, CALLF, JUMPF require immediate argument to be valid,
+        // PUSH*, DUPN, SWAPN, RJUMP*, CALLF, JUMPF, ***MODX require immediate argument to be valid,
         // checked in a separate test.
         if ((opcode >= OP_PUSH1 && opcode <= OP_PUSH32) || opcode == OP_DUPN ||
             opcode == OP_SWAPN || opcode == OP_RJUMP || opcode == OP_RJUMPI || opcode == OP_CALLF ||
-            opcode == OP_RJUMPV || opcode == OP_DATALOADN || opcode == OP_JUMPF)
+            opcode == OP_RJUMPV || opcode == OP_DATALOADN || opcode == OP_JUMPF ||
+            opcode == OP_ADDMODX || opcode == OP_SUBMODX || opcode == OP_MULMODX)
             continue;
         // These opcodes are deprecated since Prague.
         // gas_cost table current implementation does not allow to undef instructions.

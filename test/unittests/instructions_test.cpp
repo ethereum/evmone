@@ -65,6 +65,8 @@ constexpr void validate_traits_of() noexcept
         static_assert(tr.immediate_size == 1);
     else if constexpr (Op == OP_DATALOADN)
         static_assert(tr.immediate_size == 2);
+    else if constexpr (Op == OP_ADDMODX || Op == OP_SUBMODX || Op == OP_MULMODX)
+        static_assert(tr.immediate_size == 3);
     else
         static_assert(tr.immediate_size == 0);  // Including RJUMPV.
 
@@ -108,6 +110,12 @@ constexpr bool instruction_only_in_evmone(evmc_revision rev, Opcode op) noexcept
 
     switch (op)
     {
+    case OP_SETUPX:
+    case OP_ADDMODX:
+    case OP_SUBMODX:
+    case OP_MULMODX:
+    case OP_LOADX:
+    case OP_STOREX:
     case OP_BLOBHASH:
     case OP_BLOBBASEFEE:
     case OP_RJUMP:
