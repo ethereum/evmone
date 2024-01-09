@@ -550,16 +550,15 @@ inline std::string decode(bytes_view bytecode)
         {
             s += std::string{" + OP_"} + name;
 
-            if (opcode >= OP_PUSH1 && opcode <= OP_PUSH32)
+            if (size_t imm_size = evmone::instr::traits[opcode].immediate_size; imm_size > 0)
             {
-                const auto push_data_start = it + 1;
-                const auto push_data_size =
-                    std::min(static_cast<std::size_t>(opcode - OP_PUSH1 + 1),
-                        static_cast<std::size_t>(bytecode.end() - push_data_start));
-                if (push_data_size != 0)
+                const auto imm_start = it + 1;
+                imm_size = std::min(imm_size, static_cast<size_t>(bytecode.end() - imm_start));
+
+                if (imm_size != 0)
                 {
-                    s += " + \"" + hex({&*push_data_start, push_data_size}) + '"';
-                    it += push_data_size;
+                    s += " + \"" + hex({&*imm_start, imm_size}) + '"';
+                    it += imm_size;
                 }
             }
         }
