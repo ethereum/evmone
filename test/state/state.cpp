@@ -72,6 +72,83 @@ evmc_message build_message(const Transaction& tx, int64_t execution_gas_limit) n
 }
 }  // namespace
 
+Account& State::insert(const address& addr, Account account)
+{
+    const auto r = m_accounts.insert({addr, std::move(account)});
+    assert(r.second);
+    return r.first->second;
+}
+
+Account* State::find(const address& addr) noexcept
+{
+    const auto it = m_accounts.find(addr);
+    if (it != m_accounts.end())
+        return &it->second;
+    return nullptr;
+}
+
+Account& State::get(const address& addr) noexcept
+{
+    auto acc = find(addr);
+    assert(acc != nullptr);
+    return *acc;
+}
+
+Account& State::get_or_insert(const address& addr, Account account)
+{
+    if (const auto acc = find(addr); acc != nullptr)
+        return *acc;
+    return insert(addr, std::move(account));
+}
+
+Account& State::touch(const address& addr)
+{
+    auto& acc = get_or_insert(addr);
+    if (!acc.erase_if_empty)
+    {
+        acc.erase_if_empty = true;
+        m_journal.emplace_back(JournalTouched{addr});
+    }
+    return acc;
+}
+
+void State::journal_balance_change(const address& addr, const intx::uint256& prev_balance)
+{
+    m_journal.emplace_back(JournalBalanceChange{{addr}, prev_balance});
+}
+
+void State::journal_storage_change(
+    const address& addr, const bytes32& key, const StorageValue& value)
+{
+    m_journal.emplace_back(JournalStorageChange{{addr}, key, value.current, value.access_status});
+}
+
+void State::journal_transient_storage_change(
+    const address& addr, const bytes32& key, const bytes32& value)
+{
+    m_journal.emplace_back(JournalTransientStorageChange{{addr}, key, value});
+}
+
+void State::journal_bump_nonce(const address& addr)
+{
+    m_journal.emplace_back(JournalNonceBump{addr});
+}
+
+void State::journal_create(const address& addr, bool existed)
+{
+    m_journal.emplace_back(JournalCreate{{addr}, existed});
+}
+
+void State::journal_destruct(const address& addr)
+{
+    m_journal.emplace_back(JournalDestruct{addr});
+}
+
+void State::journal_access_account(const address& addr)
+{
+    m_journal.emplace_back(JournalAccessAccount{addr});
+}
+
 void State::rollback(size_t checkpoint)
 {
     while (m_journal.size() != checkpoint)
