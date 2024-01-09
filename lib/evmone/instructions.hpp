@@ -563,6 +563,28 @@ inline Result extcodecopy(StackTop stack, int64_t gas_left, ExecutionState& stat
     return {EVMC_SUCCESS, gas_left};
 }
 
+inline Result returndataload(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
+{
+    auto& index = stack.top();
+
+    if (state.return_data.size() < index)
+        return {EVMC_INVALID_MEMORY_ACCESS, gas_left};
+    else
+    {
+        const auto begin = static_cast<size_t>(index);
+        const auto end = begin + 32;
+        if (state.return_data.size() < end)
+            return {EVMC_INVALID_MEMORY_ACCESS, gas_left};
+
+        uint8_t data[32] = {};
+        for (size_t i = 0; i < (end - begin); ++i)
+            data[i] = state.return_data[begin + i];
+
+        index = intx::be::unsafe::load<uint256>(data);
+        return {EVMC_SUCCESS, gas_left};
+    }
+}
+
 inline void returndatasize(StackTop stack, ExecutionState& state) noexcept
 {
     stack.push(state.return_data.size());
