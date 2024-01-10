@@ -370,7 +370,7 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
 
         const auto opcode = static_cast<Opcode>(code[i]);
 
-        auto stack_height_required = instr::traits[opcode].stack_height_required;
+        int stack_height_required = instr::traits[opcode].stack_height_required;
         auto stack_height_change = instr::traits[opcode].stack_height_change;
 
         auto stack_height = stack_heights[i];
@@ -380,7 +380,7 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
         {
             const auto fid = read_uint16_be(&code[i + 1]);
 
-            stack_height_required = static_cast<int8_t>(code_types[fid].inputs);
+            stack_height_required = code_types[fid].inputs;
 
             if (stack_height + code_types[fid].max_stack_height - stack_height_required >
                 STACK_SIZE_LIMIT)
@@ -401,26 +401,29 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
 
             if (code_types[fid].outputs == NON_RETURNING_FUNCITON)
             {
-                stack_height_required = static_cast<int8_t>(code_types[fid].inputs);
+                stack_height_required = code_types[fid].inputs;
             }
             else
             {
                 if (code_types[func_index].outputs < code_types[fid].outputs)
                     return EOFValidationError::jumpf_destination_incompatible_outputs;
 
-                stack_height_required =
-                    static_cast<int8_t>(code_types[func_index].outputs + code_types[fid].inputs -
-                                        code_types[fid].outputs);
+                stack_height_required = code_types[func_index].outputs + code_types[fid].inputs -
+                                        code_types[fid].outputs;
                 if (stack_heights[i] > stack_height_required)
                     return EOFValidationError::stack_higher_than_outputs_required;
             }
         }
         else if (opcode == OP_RETF)
         {
-            stack_height_required = static_cast<int8_t>(code_types[func_index].outputs);
+            stack_height_required = code_types[func_index].outputs;
             if (stack_height > code_types[func_index].outputs)
                 return EOFValidationError::stack_higher_than_outputs_required;
         }
+        else if (opcode == OP_DUPN)
+            stack_height_required = code[i + 1] + 1;
+        else if (opcode == OP_SWAPN)
+            stack_height_required = code[i + 1] + 2;
 
         if (stack_height < stack_height_required)
             return EOFValidationError::stack_underflow;
