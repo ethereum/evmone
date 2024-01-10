@@ -18,6 +18,31 @@ inline EOFValidationError validate_eof(
 }
 }  // namespace
 
+TEST(eof_stack_validation, unreachable_instructions)
+{
+    auto code = eof_bytecode(bytecode{OP_STOP} + OP_STOP);
+    EXPECT_EQ(validate_eof(code), EOFValidationError::unreachable_instructions);
+
+    code = eof_bytecode(rjump(1) + OP_STOP + OP_STOP);
+    EXPECT_EQ(validate_eof(code), EOFValidationError::unreachable_instructions);
+
+    // STOP reachable only via backwards jump - invalid
+    code = eof_bytecode(rjump(1) + OP_STOP + rjump(-4));
+    EXPECT_EQ(validate_eof(code), EOFValidationError::unreachable_instructions);
+}
+
+TEST(eof_stack_validation, no_terminating_instruction)
+{
+    auto code = eof_bytecode(push0());
+    EXPECT_EQ(validate_eof(code), EOFValidationError::no_terminating_instruction);
+
+    code = eof_bytecode(add(1, 2));
+    EXPECT_EQ(validate_eof(code), EOFValidationError::no_terminating_instruction);
+
+    code = eof_bytecode(rjumpi(-5, 1));
+    EXPECT_EQ(validate_eof(code), EOFValidationError::no_terminating_instruction);
+}
+
 TEST(eof_stack_validation, non_constant_stack_height)
 {
     // Final "OP_PUSH0 + OP_PUSH0 + OP_REVERT" can be reached with stack heights: 0, 2 or 1
