@@ -78,6 +78,8 @@ int main(int argc, const char* argv[])
         {
             const auto j = json::json::parse(std::ifstream{alloc_file}, nullptr, false);
             state = test::from_json<state::State>(j);
+            if (rev >= EVMC_PRAGUE)  // Validate EOF code in the pre-state
+                validate_deployed_code(state, rev);
         }
         if (!env_file.empty())
         {
@@ -111,10 +113,6 @@ int main(int argc, const char* argv[])
         std::vector<state::Transaction> transactions;
         std::vector<state::TransactionReceipt> receipts;
         int64_t block_gas_left = block.gas_limit;
-
-        // Validate eof code in pre-state
-        if (rev >= EVMC_PRAGUE)
-            validate_deployed_code(state, rev);
 
         // Parse and execute transactions
         if (!txs_file.empty())

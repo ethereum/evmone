@@ -131,6 +131,7 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
         SCOPED_TRACE(std::string{evmc::to_string(c.rev.get_revision(0))} + '/' +
                      std::to_string(case_index) + '/' + c.name);
 
+        validate_deployed_code(c.pre_state, c.rev.get_revision(0));
         auto state = c.pre_state;
 
         const state::BlockInfo genesis{
