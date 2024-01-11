@@ -6,6 +6,16 @@
 
 namespace evmone::test
 {
+std::optional<state::StateView::Account> TestState::get_account(address addr) const noexcept
+{
+    const auto it = find(addr);
+    if (it == end())
+        return std::nullopt;
+
+    const auto& acc = it->second;
+    return Account{acc.nonce, acc.balance, acc.storage, acc.code};
+}
+
 TestState::TestState(const state::State& intra_state)
 {
     for (const auto& [addr, acc] : intra_state.get_accounts())
