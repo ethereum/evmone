@@ -30,15 +30,9 @@ TestState::TestState(const state::State& intra_state)
 
 state::State TestState::to_intra_state() const
 {
-    state::State intra_state;
-    for (const auto& [addr, acc] : *this)
-    {
-        auto& intra_acc = intra_state.insert(
-            addr, {.nonce = acc.nonce, .balance = acc.balance, .code = acc.code});
-        auto& storage = intra_acc.storage;
-        for (const auto& [key, value] : acc.storage)
-            storage[key] = {.current = value, .original = value};
-    }
+    state::State intra_state{*this};
+    for (const auto& [addr, _] : *this)
+        intra_state.find(addr);  // Preload all accounts.
     return intra_state;
 }
 }  // namespace evmone::test

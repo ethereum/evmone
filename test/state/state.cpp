@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "state.hpp"
+#include "state_view.hpp"
 #include "../utils/stdx/utility.hpp"
 #include "errors.hpp"
 #include "host.hpp"
@@ -81,9 +82,16 @@ Account& State::insert(const address& addr, Account account)
 
 Account* State::find(const address& addr) noexcept
 {
-    const auto it = m_accounts.find(addr);
-    if (it != m_accounts.end())
+    if (const auto it = m_accounts.find(addr); it != m_accounts.end())
         return &it->second;
+    if (const auto cacc = m_cold->get_account(addr); cacc)
+    {
+        auto& a =
+            insert(addr, {.nonce = cacc->nonce, .balance = cacc->balance, .code = cacc->code});
+        for (const auto& [k, v] : cacc->storage)
+            a.storage.insert({k, {.current = v, .original = v}});
+        return &a;
+    }
     return nullptr;
 }
 

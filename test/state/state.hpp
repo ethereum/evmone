@@ -14,6 +14,8 @@
 
 namespace evmone::state
 {
+class StateView;
+
 /// The Ethereum State: the collection of accounts mapped by their addresses.
 class State
 {
@@ -61,6 +63,8 @@ class State
         std::variant<JournalBalanceChange, JournalTouched, JournalStorageChange, JournalNonceBump,
             JournalCreate, JournalTransientStorageChange, JournalDestruct, JournalAccessAccount>;
 
+    const StateView* m_cold = nullptr;
+
     std::unordered_map<address, Account> m_accounts;
 
     /// The state journal: the list of changes made in the state
@@ -68,7 +72,7 @@ class State
     std::vector<JournalEntry> m_journal;
 
 public:
-    State() = default;
+    explicit State(const StateView& view) noexcept : m_cold{&view} {}
     State(const State&) = delete;
     State(State&&) = default;
     State& operator=(State&&) = default;
