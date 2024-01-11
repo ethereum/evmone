@@ -48,6 +48,7 @@ void state_transition::TearDown()
 
     // Execution:
 
+    auto state = pre;
     const auto trace = !expect.trace.empty();
     auto& selected_vm = trace ? tracing_vm : vm;
 
@@ -56,12 +57,10 @@ void state_transition::TearDown()
     if (trace)
         trace_capture.emplace();
 
-    auto intra_state = pre.to_intra_state();
-    const auto res = state::transition(intra_state, block, tx, rev, selected_vm, block.gas_limit,
+    const auto res = test::transition(state, block, tx, rev, selected_vm, block.gas_limit,
         state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK);
-    state::finalize(
-        intra_state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
-    TestState post{intra_state};
+    test::finalize(state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
+    const auto& post = state;
 
     if (const auto expected_error = make_error_code(expect.tx_error))
     {
