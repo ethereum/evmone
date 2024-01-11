@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
+#include "state_view.hpp"
 #include <evmc/evmc.hpp>
 #include <intx/intx.hpp>
 #include <unordered_map>
@@ -32,10 +33,12 @@ struct TestAccount
     bool operator==(const TestAccount&) const noexcept = default;
 };
 
-class TestState : public std::unordered_map<address, TestAccount>
+class TestState : public state::StateView, public std::unordered_map<address, TestAccount>
 {
 public:
     using unordered_map::unordered_map;
+
+    std::optional<Account> get_account(address addr) const noexcept override;
 
     void insert(const address& addr, TestAccount&& acc) { (*this)[addr] = std::move(acc); }
     TestAccount& get(const address& addr) { return (*this)[addr]; }
