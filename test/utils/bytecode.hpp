@@ -525,6 +525,7 @@ private:
     bytecode m_input_size = 0;
     bytecode m_salt = 0;
     uint8_t m_container_index = 0;
+    bytecode m_initcode_hash = 0;
 
 public:
     auto& value(bytecode v)
@@ -541,8 +542,9 @@ public:
     }
 
     template <Opcode k = kind>
-    typename std::enable_if<k == OP_CREATE2 || k == OP_CREATE3, create_instruction&>::type salt(
-        bytecode salt)
+    typename std::enable_if<k == OP_CREATE2 || k == OP_CREATE3 || k == OP_CREATE4,
+        create_instruction&>::type
+    salt(bytecode salt)
     {
         m_salt = std::move(salt);
         return *this;
@@ -555,18 +557,30 @@ public:
         return *this;
     }
 
+    template <Opcode k = kind>
+    typename std::enable_if<k == OP_CREATE4, create_instruction&>::type initcode(bytecode hash)
+    {
+        m_initcode_hash = std::move(hash);
+        return *this;
+    }
+
     operator bytecode() const
     {
         bytecode code;
         if constexpr (kind == OP_CREATE2)
             code += m_salt;
-        else if constexpr (kind == OP_CREATE3)
+        else if constexpr (kind == OP_CREATE3 || kind == OP_CREATE4)
             code += m_input_size + m_input + m_salt;
 
-        if constexpr (kind != OP_CREATE3)
+        if constexpr (kind == OP_CREATE || kind == OP_CREATE2)
             code += m_input_size + m_input;
 
-        code += m_value + kind;
+        code += m_value;
+
+        if constexpr (kind == OP_CREATE4)
+            code += m_initcode_hash;
+
+        code += bytecode{kind};
         if constexpr (kind == OP_CREATE3)
             code += bytecode{bytes{m_container_index}};  // immediate argument
         return code;
@@ -586,6 +600,11 @@ inline auto create2()
 inline auto create3()
 {
     return create_instruction<OP_CREATE3>{};
+}
+
+inline auto create4()
+{
+    return create_instruction<OP_CREATE4>{};
 }
 
 inline std::string hex(Opcode opcode) noexcept
