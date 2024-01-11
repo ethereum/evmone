@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
+#include "state_view.hpp"
 #include <evmc/evmc.hpp>
 #include <intx/intx.hpp>
 #include <map>
@@ -37,10 +38,12 @@ struct TestAccount
 /// This is a simplified variant of state::State:
 /// it hides some details related to transaction execution (e.g. original storage values)
 /// and is also easier to work with in tests.
-class TestState : public std::map<address, TestAccount>
+class TestState : public state::StateView, public std::map<address, TestAccount>
 {
 public:
     using map::map;
+
+    std::optional<Account> get_account(address addr) const noexcept override;
 
     /// Inserts new account to the state.
     ///
