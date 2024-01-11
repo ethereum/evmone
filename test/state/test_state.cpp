@@ -24,6 +24,9 @@ void TestState::apply_diff(evmc_revision rev, state::State&& intra_state)
         if (rev >= EVMC_SPURIOUS_DRAGON && acc.erase_if_empty && acc.is_empty())
             continue;
 
+        if (acc.destructed)
+            continue;
+
         auto& a = (*this)[addr] = {
             .nonce = acc.nonce, .balance = acc.balance, .code = std::move(acc.code)};
         for (const auto& [k, v] : acc.storage)
