@@ -98,7 +98,7 @@ bytecode add(const uint256& mod, const uint256& b3, field_inv_f inv) noexcept
     // return loaded result
     code += ret(0, mod_size * 2);
 
-    return code_init + setupx(reg.max_slots_used(), mod_size, mod_mem_offset, 1) + code;
+    return code_init + setupx(reg.max_slots_used(), mod_size, mod_mem_offset) + code;
 }
 
 bytecode mul(const uint256& mod, const uint256& b3, field_inv_f inv) noexcept
@@ -140,8 +140,8 @@ bytecode mul(const uint256& mod, const uint256& b3, field_inv_f inv) noexcept
     code += mstore(mod_mem_offset, push(mod));
     code += mstore(b3_mem_offset, push(b3));
 
-    code += setupx(0xFF, mod_size, mod_mem_offset, 1);
-    const auto num_slots_placeholder_start = code.size() - 8;
+    code += setupx(0xFF, mod_size, mod_mem_offset);
+    const auto num_slots_placeholder_start = code.size() - 6;
 
     SlotRegister reg;
 

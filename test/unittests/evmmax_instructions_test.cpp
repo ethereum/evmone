@@ -390,7 +390,7 @@ TEST_P(evm, exec_bn254_ecadd_test)
     code += ret(size * 6, size * 2);
 
     execute(
-        1000, code_init + setupx(vs_reg.max_slots_used(), size, 0, 1) + code, {calldata, size * 6});
+        1000, code_init + setupx(vs_reg.max_slots_used(), size, 0) + code, {calldata, size * 6});
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
 
     ASSERT_EQ(result.output_size, size * 2);
@@ -433,8 +433,8 @@ TEST_P(evm, exec_bn254_ecadd_function_test)
     EVMMAXFunction<1, 1> field_inv_f(scope, field_inv_bn254);
 
     auto code = calldatacopy(push(0), push(0), push(size * 6)) + mstore(size * 6, push(1)) +
-                setupx(0xFF, size, 0, 1);
-    const auto num_slots_placeholder_start = code.size() - 8;
+                setupx(0xFF, size, 0);
+    const auto num_slots_placeholder_start = code.size() - 6;
     code += storex(1, size * 6, 1);  // Init slot 1 to value 1.
 
     code += storex(2, size, bn254_ecadd_f.input_ids[0]) +
@@ -502,8 +502,8 @@ TEST_P(evm, exec_bn254_ecmul_test)
     intx::be::unsafe::store(&calldata[4 * size], 9_u256);
 
     auto code = calldatacopy(push(0), push(0), push(size * 5)) + mstore(size * 5, push(1)) +
-                setupx(0xFF, size, 0, 1);
-    const auto num_slots_placeholder_start = code.size() - 8;
+                setupx(0xFF, size, 0);
+    const auto num_slots_placeholder_start = code.size() - 6;
     code += storex(1, size * 5, 1);  // Store 1 in slot 1
 
     ValueSlotsRegister vs_reg;
@@ -603,8 +603,8 @@ TEST_P(evm, exec_secp256k1_ecrecovery_test)
 
     auto code = calldatacopy(push(0), push(0), push(calldata_size));
     auto free_mem_offset = calldata_size;
-    code += setupx(0xFF, size, order_offset, 1);
-    const auto order_num_slots_placeholder_start = code.size() - 8;
+    code += setupx(0xFF, size, order_offset);
+    const auto order_num_slots_placeholder_start = code.size() - 6;
 
     size_t u1_mem_offset = 0;
     size_t u2_mem_offset = 0;
@@ -648,8 +648,8 @@ TEST_P(evm, exec_secp256k1_ecrecovery_test)
 
         const auto r_idx = scope.register_slot();
 
-        code += setupx(0xFF, size, prime_field_offset, 2);
-        const auto prime_field_num_slots_placeholder_start = code.size() - 8;
+        code += setupx(0xFF, size, prime_field_offset);
+        const auto prime_field_num_slots_placeholder_start = code.size() - 6;
 
         code += storex(1, r_offset, r_idx);
 
