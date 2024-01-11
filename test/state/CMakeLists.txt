@@ -30,6 +30,7 @@ target_sources(
     rlp.hpp
     state.hpp
     state.cpp
+    state_view.hpp
     test_state.hpp
     test_state.cpp
 )
