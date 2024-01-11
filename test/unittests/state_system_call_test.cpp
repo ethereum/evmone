@@ -5,15 +5,18 @@
 #include <evmone/evmone.h>
 #include <gtest/gtest.h>
 #include <test/state/state.hpp>
+#include <test/statetest/statetest.hpp>
 #include <test/utils/bytecode.hpp>
 
 using namespace evmc;
 using namespace evmone::state;
+using namespace evmone::test;
 
 TEST(state_system_call, non_existient)
 {
     evmc::VM vm;
-    State state;
+    TestState ts;
+    State state{ts};
 
     system_call(state, {}, EVMC_CANCUN, vm);
 
@@ -26,7 +29,9 @@ TEST(state_system_call, sstore_timestamp)
 
     evmc::VM vm{evmc_create_evmone()};
     const BlockInfo block{.number = 1, .timestamp = 404};
-    State state;
+
+    TestState ts;
+    State state{ts};
     state.insert(BeaconRootsAddress, {.code = sstore(OP_NUMBER, OP_TIMESTAMP)});
 
     system_call(state, block, EVMC_CANCUN, vm);
