@@ -5,6 +5,7 @@
 #pragma once
 
 #include "bloom_filter.hpp"
+#include "state_diff.hpp"
 #include <intx/intx.hpp>
 #include <optional>
 #include <vector>
@@ -90,6 +91,7 @@ struct TransactionReceipt
     int64_t cumulative_gas_used = 0;
     std::vector<Log> logs;
     BloomFilter logs_bloom_filter;
+    StateDiff state_diff;
 
     /// Root hash of the state after this transaction. Used only in old pre-Byzantium transactions.
     std::optional<bytes32> post_state;

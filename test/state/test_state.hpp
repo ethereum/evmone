@@ -64,9 +64,6 @@ public:
     /// TODO: deprecate this method.
     TestAccount& get(const address& addr) { return (*this)[addr]; }
 
-    /// Converts the intra state to TestState.
-    explicit TestState(const state::State& intra_state);
-
     /// Converts the TestState to intra state for transaction execution.
     [[nodiscard]] state::State to_intra_state() const;
 

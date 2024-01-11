@@ -352,20 +352,7 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
     return execution_gas_limit;
 }
 
-namespace
-{
-/// Deletes "touched" (marked as erasable) empty accounts in the state.
-void delete_empty_accounts(State& state)
-{
-    std::erase_if(state.get_accounts(), [](const std::pair<const address, Account>& p) noexcept {
-        const auto& acc = p.second;
-        return acc.erase_if_empty && acc.is_empty();
-    });
-}
-}  // namespace
-
-
-void finalize(State& state, evmc_revision rev, const address& coinbase,
+StateDiff finalize(State& state, evmc_revision rev, const address& coinbase,
     std::optional<uint64_t> block_reward, std::span<const Ommer> ommers,
     std::span<const Withdrawal> withdrawals)
 {
@@ -388,9 +375,7 @@ void finalize(State& state, evmc_revision rev, const address& coinbase,
     for (const auto& withdrawal : withdrawals)
         state.touch(withdrawal.recipient).balance += withdrawal.get_amount();
 
-    // Delete potentially empty block reward recipients.
-    if (rev >= EVMC_SPURIOUS_DRAGON)
-        delete_empty_accounts(state);
+    return state.build_diff(rev);
 }
 
 std::variant<TransactionReceipt, std::error_code> transition(State& state, const BlockInfo& block,
@@ -468,36 +453,12 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
     sender_acc.balance += tx_max_cost - gas_used * effective_gas_price;
     state.touch(block.coinbase).balance += gas_used * priority_gas_price;
 
-    // Apply destructs.
-    std::erase_if(state.get_accounts(),
-        [](const std::pair<const address, Account>& p) noexcept { return p.second.destructed; });
-
     // Cumulative gas used is unknown in this scope.
-    TransactionReceipt receipt{tx.type, result.status_code, gas_used, {}, host.take_logs(), {}, {}};
+    TransactionReceipt receipt{
+        tx.type, result.status_code, gas_used, {}, host.take_logs(), {}, state.build_diff(rev)};
 
     // Cannot put it into constructor call because logs are std::moved from host instance.
     receipt.logs_bloom_filter = compute_bloom_filter(receipt.logs);
-
-    // Delete empty accounts after every transaction. This is strictly required until Byzantium
-    // where intermediate state root hashes are part of the transaction receipt.
-    // TODO: Consider limiting this only to Spurious Dragon.
-    if (rev >= EVMC_SPURIOUS_DRAGON)
-        delete_empty_accounts(state);
-
-    // Post-transaction clean-up.
-    // - Set accounts and their storage access status to cold.
-    // - Clear the "just created" account flag.
-    for (auto& [addr, acc] : state.get_accounts())
-    {
-        acc.transient_storage.clear();
-        acc.access_status = EVMC_ACCESS_COLD;
-        acc.just_created = false;
-        for (auto& [key, val] : acc.storage)
-        {
-            val.access_status = EVMC_ACCESS_COLD;
-            val.original = val.current;
-        }
-    }
 
     return receipt;
 }

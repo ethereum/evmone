@@ -87,10 +87,6 @@ public:
     /// Gets an existing account or inserts new account.
     Account& get_or_insert(const address& addr, Account account = {});
 
-    [[nodiscard]] auto& get_accounts() noexcept { return m_accounts; }
-
-    [[nodiscard]] const auto& get_accounts() const noexcept { return m_accounts; }
-
     StateDiff build_diff(evmc_revision rev) const;
 
     /// Returns the state journal checkpoint. It can be later used to in rollback()
@@ -128,7 +124,7 @@ public:
 ///
 /// Applies block reward to coinbase, withdrawals (post Shanghai) and deletes empty touched accounts
 /// (post Spurious Dragon).
-void finalize(State& state, evmc_revision rev, const address& coinbase,
+[[nodiscard]] StateDiff finalize(State& state, evmc_revision rev, const address& coinbase,
     std::optional<uint64_t> block_reward, std::span<const Ommer> ommers,
     std::span<const Withdrawal> withdrawals);
 

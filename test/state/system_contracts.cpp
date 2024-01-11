@@ -35,12 +35,12 @@ static_assert(std::ranges::is_sorted(SYSTEM_CONTRACTS,
 
 }  // namespace
 
-void system_call(State& state, const BlockInfo& block, evmc_revision rev, evmc::VM& vm)
+StateDiff system_call(State& state, const BlockInfo& block, evmc_revision rev, evmc::VM& vm)
 {
     for (const auto& [since, addr, get_input] : SYSTEM_CONTRACTS)
     {
         if (rev < since)
-            return;  // Because entries are ordered, there are no other contracts for this revision.
+            break;  // Because entries are ordered, there are no other contracts for this revision.
 
         // Skip the call if the target account doesn't exist. This is by EIP-4788 spec.
         // > if no code exists at [address], the call must fail silently.
@@ -65,13 +65,8 @@ void system_call(State& state, const BlockInfo& block, evmc_revision rev, evmc::
         [[maybe_unused]] const auto res = vm.execute(host, rev, msg, code.data(), code.size());
         assert(res.status_code == EVMC_SUCCESS);
         assert(acc->access_status == EVMC_ACCESS_COLD);
-
-        // Reset storage status.
-        for (auto& [_, val] : acc->storage)
-        {
-            val.access_status = EVMC_ACCESS_COLD;
-            val.original = val.current;
-        }
     }
+    // TODO: Should we return empty diff if no system contracts?
+    return state.build_diff(rev);
 }
 }  // namespace evmone::state
