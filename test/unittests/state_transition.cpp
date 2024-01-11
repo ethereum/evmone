@@ -49,7 +49,7 @@ void state_transition::TearDown()
 
     // Execution:
 
-    auto state = pre.to_intra_state();
+    auto state = pre;
     const auto trace = !expect.trace.empty();
     auto& selected_vm = trace ? tracing_vm : vm;
 
@@ -58,7 +58,7 @@ void state_transition::TearDown()
     if (trace)
         trace_capture.emplace();
 
-    const auto res = state::transition(state, block, tx, rev, selected_vm, block.gas_limit,
+    const auto res = test::transition(state, block, tx, rev, selected_vm, block.gas_limit,
         state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK);
 
     if (const auto expected_error = make_error_code(expect.tx_error))
@@ -69,7 +69,7 @@ void state_transition::TearDown()
         EXPECT_EQ(tx_error, expected_error)
             << tx_error.message() << " vs " << expected_error.message();
 
-        EXPECT_EQ(TestState{state}, pre) << "failed transaction has modified the state";
+        EXPECT_EQ(state, pre) << "failed transaction has modified the state";
 
         // TODO: Export also tests with invalid transactions.
         return;  // Do not check anything else.
@@ -78,7 +78,7 @@ void state_transition::TearDown()
     ASSERT_TRUE(holds_alternative<TransactionReceipt>(res))
         << std::get<std::error_code>(res).message();
     const auto& receipt = std::get<TransactionReceipt>(res);
-    state::finalize(state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
+    test::finalize(state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
 
     if (trace)
     {
@@ -93,7 +93,7 @@ void state_transition::TearDown()
         EXPECT_EQ(receipt.gas_used, *expect.gas_used);
     }
 
-    const TestState post{state};
+    const auto& post = state;
     for (const auto& [addr, expected_acc] : expect.post)
     {
         const auto ait = post.find(addr);
