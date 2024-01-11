@@ -16,11 +16,14 @@ std::optional<state::StateView::Account> TestState::get_account(address addr) co
     return Account{acc.nonce, acc.balance, acc.storage, acc.code};
 }
 
-void TestState::apply_diff(state::State&& intra_state)
+void TestState::apply_diff(evmc_revision rev, state::State&& intra_state)
 {
     clear();
     for (auto& [addr, acc] : intra_state.get_accounts())
     {
+        if (rev >= EVMC_SPURIOUS_DRAGON && acc.erase_if_empty && acc.is_empty())
+            continue;
+
         auto& a = (*this)[addr] = {
             .nonce = acc.nonce, .balance = acc.balance, .code = std::move(acc.code)};
         for (const auto& [k, v] : acc.storage)

@@ -339,10 +339,11 @@ namespace
 /// Deletes "touched" (marked as erasable) empty accounts in the state.
 void delete_empty_accounts(State& state)
 {
-    std::erase_if(state.get_accounts(), [](const std::pair<const address, Account>& p) noexcept {
-        const auto& acc = p.second;
-        return acc.erase_if_empty && acc.is_empty();
-    });
+    (void)state;
+    // std::erase_if(state.get_accounts(), [](const std::pair<const address, Account>& p) noexcept {
+    //     const auto& acc = p.second;
+    //     return acc.erase_if_empty && acc.is_empty();
+    // });
 }
 }  // namespace
 
