@@ -6,7 +6,6 @@
 #include "../state/ethash_difficulty.hpp"
 #include "../state/mpt_hash.hpp"
 #include "../state/rlp.hpp"
-#include "../state/system_contracts.hpp"
 #include "../statetest/statetest.hpp"
 #include "../utils/utils.hpp"
 #include <evmone/evmone.h>
@@ -76,14 +75,13 @@ int main(int argc, const char* argv[])
         }
 
         state::BlockInfo block;
-        state::State state;
+        TestState state;
 
         if (!alloc_file.empty())
         {
             const auto j = json::json::parse(std::ifstream{alloc_file}, nullptr, false);
-            const auto test_state = test::from_json<TestState>(j);
-            validate_state(test_state, rev);
-            state = test_state.to_intra_state();
+            state = from_json<TestState>(j);
+            validate_state(state, rev);
         }
         if (!env_file.empty())
         {
@@ -135,7 +133,7 @@ int main(int argc, const char* argv[])
                 j_result["receipts"] = json::json::array();
                 j_result["rejected"] = json::json::array();
 
-                state::system_call(state, block, rev, vm);
+                test::system_call(state, block, rev, vm);
 
                 for (size_t i = 0; i < j_txs.size(); ++i)
                 {
@@ -171,7 +169,7 @@ int main(int argc, const char* argv[])
                     }
 
                     auto res =
-                        state::transition(state, block, tx, rev, vm, block_gas_left, blob_gas_left);
+                        test::transition(state, block, tx, rev, vm, block_gas_left, blob_gas_left);
 
                     if (holds_alternative<std::error_code>(res))
                     {
@@ -196,7 +194,7 @@ int main(int argc, const char* argv[])
                         cumulative_gas_used += receipt.gas_used;
                         receipt.cumulative_gas_used = cumulative_gas_used;
                         if (rev < EVMC_BYZANTIUM)
-                            receipt.post_state = state::mpt_hash(TestState{state});
+                            receipt.post_state = state::mpt_hash(state);
                         j_receipt["cumulativeGasUsed"] = hex0x(cumulative_gas_used);
 
                         j_receipt["blockHash"] = hex0x(bytes32{});
@@ -218,11 +216,11 @@ int main(int argc, const char* argv[])
                 }
             }
 
-            state::finalize(
+            test::finalize(
                 state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
 
             j_result["logsHash"] = hex0x(logs_hash(txs_logs));
-            j_result["stateRoot"] = hex0x(state::mpt_hash(TestState{state}));
+            j_result["stateRoot"] = hex0x(state::mpt_hash(state));
         }
 
         j_result["logsBloom"] = hex0x(compute_bloom_filter(receipts));

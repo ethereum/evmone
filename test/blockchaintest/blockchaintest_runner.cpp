@@ -4,8 +4,6 @@
 
 #include "../state/mpt_hash.hpp"
 #include "../state/rlp.hpp"
-#include "../state/state.hpp"
-#include "../state/system_contracts.hpp"
 #include "../test/statetest/statetest.hpp"
 #include "blockchaintest.hpp"
 #include <gtest/gtest.h>
@@ -30,11 +28,11 @@ struct TransitionResult
 
 namespace
 {
-TransitionResult apply_block(state::State& state, evmc::VM& vm, const state::BlockInfo& block,
+TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockInfo& block,
     const std::vector<state::Transaction>& txs, evmc_revision rev,
     std::optional<int64_t> block_reward)
 {
-    state::system_call(state, block, rev, vm);
+    system_call(state, block, rev, vm);
 
     std::vector<state::Log> txs_logs;
     int64_t block_gas_left = block.gas_limit;
@@ -50,7 +48,7 @@ TransitionResult apply_block(state::State& state, evmc::VM& vm, const state::Blo
         const auto& tx = txs[i];
 
         const auto computed_tx_hash = keccak256(rlp::encode(tx));
-        auto res = state::transition(state, block, tx, rev, vm, block_gas_left, blob_gas_left);
+        auto res = test::transition(state, block, tx, rev, vm, block_gas_left, blob_gas_left);
 
         if (holds_alternative<std::error_code>(res))
         {
@@ -67,7 +65,7 @@ TransitionResult apply_block(state::State& state, evmc::VM& vm, const state::Blo
             cumulative_gas_used += receipt.gas_used;
             receipt.cumulative_gas_used = cumulative_gas_used;
             if (rev < EVMC_BYZANTIUM)
-                receipt.post_state = state::mpt_hash(TestState{state});
+                receipt.post_state = state::mpt_hash(state);
 
             block_gas_left -= receipt.gas_used;
             blob_gas_left -= tx.blob_gas_used();
@@ -75,7 +73,7 @@ TransitionResult apply_block(state::State& state, evmc::VM& vm, const state::Blo
         }
     }
 
-    state::finalize(state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
+    test::finalize(state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
 
     const auto bloom = compute_bloom_filter(receipts);
     return {std::move(receipts), std::move(rejected_txs), cumulative_gas_used, bloom};
@@ -137,7 +135,7 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
                 bytes32{});
         EXPECT_EQ(c.genesis_block_header.logs_bloom, bytes_view{state::BloomFilter{}});
 
-        auto state = c.pre_state.to_intra_state();
+        auto state = c.pre_state;
 
         std::unordered_map<int64_t, hash256> known_block_hashes{
             {c.genesis_block_header.block_number, c.genesis_block_header.hash}};
@@ -158,8 +156,7 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
             SCOPED_TRACE(std::string{evmc::to_string(rev)} + '/' + std::to_string(case_index) +
                          '/' + c.name + '/' + std::to_string(test_block.block_info.number));
 
-            EXPECT_EQ(
-                state::mpt_hash(TestState{state}), test_block.expected_block_header.state_root);
+            EXPECT_EQ(state::mpt_hash(state), test_block.expected_block_header.state_root);
 
             if (rev >= EVMC_SHANGHAI)
             {
@@ -178,14 +175,13 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
             // TODO: Add difficulty calculation verification.
         }
 
-        const TestState post{state};
         const auto expected_post_hash =
             std::holds_alternative<TestState>(c.expectation.post_state) ?
                 state::mpt_hash(std::get<TestState>(c.expectation.post_state)) :
                 std::get<hash256>(c.expectation.post_state);
-        EXPECT_TRUE(state::mpt_hash(post) == expected_post_hash)
+        EXPECT_TRUE(state::mpt_hash(state) == expected_post_hash)
             << "Result state:\n"
-            << print_state(post)
+            << print_state(state)
             << (std::holds_alternative<TestState>(c.expectation.post_state) ?
                        "\n\nExpected state:\n" +
                            print_state(std::get<TestState>(c.expectation.post_state)) :
