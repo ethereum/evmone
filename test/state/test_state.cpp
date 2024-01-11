@@ -17,15 +17,18 @@ std::optional<state::StateView::Account> TestState::get_account(address addr) co
         std::unordered_map{acc.storage.begin(), acc.storage.end()}, acc.code};
 }
 
-TestState::TestState(const state::State& intra_state)
+void TestState::apply_diff(state::State&& intra_state)
 {
-    for (const auto& [addr, acc] : intra_state.get_accounts())
+    clear();
+    for (auto& [addr, acc] : intra_state.get_accounts())
     {
-        auto& test_acc =
-            (*this)[addr] = {.nonce = acc.nonce, .balance = acc.balance, .code = acc.code};
-        auto& test_storage = test_acc.storage;
-        for (const auto& [key, value] : acc.storage)
-            test_storage[key] = value.current;
+        auto& a = (*this)[addr] = {
+            .nonce = acc.nonce, .balance = acc.balance, .code = std::move(acc.code)};
+        for (const auto& [k, v] : acc.storage)
+        {
+            if (v.current)
+                a.storage.insert({k, v.current});
+        }
     }
 }
 

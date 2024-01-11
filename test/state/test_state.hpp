@@ -64,6 +64,8 @@ public:
 
     /// Converts the TestState to intra state for transaction execution.
     [[nodiscard]] state::State to_intra_state() const;
+
+    void apply_diff(state::State&& intra_state);
 };
 
 }  // namespace test
