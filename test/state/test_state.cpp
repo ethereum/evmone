@@ -18,21 +18,23 @@ std::optional<state::StateView::Account> TestState::get_account(address addr) co
 
 void TestState::apply_diff(evmc_revision rev, state::State&& intra_state)
 {
-    clear();
     for (auto& [addr, acc] : intra_state.get_accounts())
     {
-        if (rev >= EVMC_SPURIOUS_DRAGON && acc.erase_if_empty && acc.is_empty())
+        if (acc.destructed || (rev >= EVMC_SPURIOUS_DRAGON && acc.erase_if_empty && acc.is_empty()))
+        {
+            erase(addr);
             continue;
+        }
 
-        if (acc.destructed)
-            continue;
-
-        auto& a = (*this)[addr] = {
-            .nonce = acc.nonce, .balance = acc.balance, .code = std::move(acc.code)};
+        auto& a = insert_or_assign(addr,
+            TestAccount{.nonce = acc.nonce, .balance = acc.balance, .code = std::move(acc.code)})
+                      .first->second;
         for (const auto& [k, v] : acc.storage)
         {
             if (v.current)
-                a.storage.insert({k, v.current});
+                a.storage.insert_or_assign(k, v.current);
+            else
+                a.storage.erase(k);
         }
     }
 }
