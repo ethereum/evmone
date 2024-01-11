@@ -15,6 +15,8 @@
 
 namespace evmone::state
 {
+class StateView;
+
 /// The Ethereum State: the collection of accounts mapped by their addresses.
 class State
 {
@@ -62,17 +64,21 @@ class State
         std::variant<JournalBalanceChange, JournalTouched, JournalStorageChange, JournalNonceBump,
             JournalCreate, JournalTransientStorageChange, JournalDestruct, JournalAccessAccount>;
 
-    std::unordered_map<address, Account> m_accounts;
+    /// The read-only view of the initial (cold) state.
+    const StateView& m_initial;
 
-    /// The state journal: the list of changes made in the state
+    /// The accounts loaded from the initial state and potentially modified.
+    std::unordered_map<address, Account> m_modified;
+
+    /// The state journal: the list of changes made to the state
     /// with information how to revert them.
     std::vector<JournalEntry> m_journal;
 
 public:
-    State() = default;
+    explicit State(const StateView& state_view) noexcept : m_initial{state_view} {}
     State(const State&) = delete;
-    State(State&&) = default;
-    State& operator=(State&&) = default;
+    State(State&&) = delete;
+    State& operator=(State&&) = delete;
 
     /// Inserts the new account at the address.
     /// There must not exist any account under this address before.
@@ -86,6 +92,10 @@ public:
 
     /// Gets an existing account or inserts new account.
     Account& get_or_insert(const address& addr, Account account = {});
+
+    bytes_view get_code(const address& addr);
+
+    StorageValue& get_storage(const address& addr, const bytes32& key);
 
     StateDiff build_diff(evmc_revision rev) const;
 
@@ -124,11 +134,11 @@ public:
 ///
 /// Applies block reward to coinbase, withdrawals (post Shanghai) and deletes empty touched accounts
 /// (post Spurious Dragon).
-[[nodiscard]] StateDiff finalize(State& state, evmc_revision rev, const address& coinbase,
-    std::optional<uint64_t> block_reward, std::span<const Ommer> ommers,
+[[nodiscard]] StateDiff finalize(const StateView& state_view, evmc_revision rev,
+    const address& coinbase, std::optional<uint64_t> block_reward, std::span<const Ommer> ommers,
     std::span<const Withdrawal> withdrawals);
 
-[[nodiscard]] std::variant<TransactionReceipt, std::error_code> transition(State& state,
+[[nodiscard]] std::variant<TransactionReceipt, std::error_code> transition(const StateView& state,
     const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm,
     int64_t block_gas_left, int64_t blob_gas_left);
 

@@ -5,6 +5,7 @@
 #include "state.hpp"
 #include "../utils/stdx/utility.hpp"
 #include "host.hpp"
+#include "state_view.hpp"
 #include <evmone/constants.hpp>
 #include <evmone/eof.hpp>
 #include <algorithm>
@@ -81,7 +82,7 @@ evmc_message build_message(
 StateDiff State::build_diff(evmc_revision rev) const
 {
     StateDiff diff;
-    for (const auto& [addr, m] : m_accounts)
+    for (const auto& [addr, m] : m_modified)
     {
         if (m.destructed)
         {
@@ -103,6 +104,9 @@ StateDiff State::build_diff(evmc_revision rev) const
         // TODO(clang): In old Clang emplace_back without Account doesn't compile.
         //   NOLINTNEXTLINE(modernize-use-emplace)
         auto& a = diff.modified_accounts.emplace_back(StateDiff::Entry{addr, m.nonce, m.balance});
+
+        // Output only the new code.
+        // TODO: Output also the code hash. It will be needed for DB update and MPT hash.
         if (m.just_created && !m.code.empty())
             a.code = m.code;
 
@@ -117,16 +121,22 @@ StateDiff State::build_diff(evmc_revision rev) const
 
 Account& State::insert(const address& addr, Account account)
 {
-    const auto r = m_accounts.insert({addr, std::move(account)});
+    const auto r = m_modified.insert({addr, std::move(account)});
     assert(r.second);
     return r.first->second;
 }
 
 Account* State::find(const address& addr) noexcept
 {
-    const auto it = m_accounts.find(addr);
-    if (it != m_accounts.end())
+    // TODO: Avoid double lookup (find+insert) and not cached initial state lookup for non-existent
+    //   accounts. If we want to cache non-existent account we need a proper flag for it.
+    if (const auto it = m_modified.find(addr); it != m_modified.end())
         return &it->second;
+    if (const auto cacc = m_initial.get_account(addr); cacc)
+        return &insert(addr, {.nonce = cacc->nonce,
+                                 .balance = cacc->balance,
+                                 .code_hash = cacc->code_hash,
+                                 .has_initial_storage = cacc->has_storage});
     return nullptr;
 }
 
@@ -144,6 +154,18 @@ Account& State::get_or_insert(const address& addr, Account account)
     return insert(addr, std::move(account));
 }
 
+bytes_view State::get_code(const address& addr)
+{
+    auto* a = find(addr);
+    if (a == nullptr)
+        return {};
+    if (a->code_hash == Account::EMPTY_CODE_HASH)
+        return {};
+    if (a->code.empty())
+        a->code = m_initial.get_account_code(addr);
+    return a->code;
+}
+
 Account& State::touch(const address& addr)
 {
     auto& acc = get_or_insert(addr, {.erase_if_empty = true});
@@ -153,6 +175,19 @@ Account& State::touch(const address& addr)
         m_journal.emplace_back(JournalTouched{addr});
     }
     return acc;
+}
+
+StorageValue& State::get_storage(const address& addr, const bytes32& key)
+{
+    // TODO: Avoid account lookup by giving the reference to the account's storage to Host.
+    auto& acc = get(addr);
+    const auto [it, missing] = acc.storage.try_emplace(key);
+    if (missing)
+    {
+        const auto initial_value = m_initial.get_storage(addr, key);
+        it->second = {initial_value, initial_value};
+    }
+    return it->second;
 }
 
 void State::journal_balance_change(const address& addr, const intx::uint256& prev_balance)
@@ -222,6 +257,7 @@ void State::rollback(size_t checkpoint)
                         // This account is not always "touched". TODO: Why?
                         auto& a = get(e.addr);
                         a.nonce = 0;
+                        a.code_hash = Account::EMPTY_CODE_HASH;
                         a.code.clear();
                     }
                     else
@@ -230,7 +266,7 @@ void State::rollback(size_t checkpoint)
                         //       so we need to delete them here explicitly.
                         //       This should be changed by tuning "erasable" flag
                         //       and clear in all revisions.
-                        m_accounts.erase(e.addr);
+                        m_modified.erase(e.addr);
                     }
                 }
                 else if constexpr (std::is_same_v<T, JournalStorageChange>)
@@ -314,7 +350,7 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
     if (tx.max_gas_price < block.base_fee)
         return make_error_code(FEE_CAP_LESS_THEN_BLOCKS);
 
-    if (!sender_acc.code.empty())
+    if (sender_acc.code_hash != Account::EMPTY_CODE_HASH)
         return make_error_code(SENDER_NOT_EOA);  // Origin must not be a contract (EIP-3607).
 
     if (sender_acc.nonce == Account::NonceMax)  // Nonce value limit (EIP-2681).
@@ -352,10 +388,11 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
     return execution_gas_limit;
 }
 
-StateDiff finalize(State& state, evmc_revision rev, const address& coinbase,
+StateDiff finalize(const StateView& state_view, evmc_revision rev, const address& coinbase,
     std::optional<uint64_t> block_reward, std::span<const Ommer> ommers,
     std::span<const Withdrawal> withdrawals)
 {
+    State state{state_view};
     // TODO: The block reward can be represented as a withdrawal.
     if (block_reward.has_value())
     {
@@ -378,10 +415,11 @@ StateDiff finalize(State& state, evmc_revision rev, const address& coinbase,
     return state.build_diff(rev);
 }
 
-std::variant<TransactionReceipt, std::error_code> transition(State& state, const BlockInfo& block,
-    const Transaction& tx, evmc_revision rev, evmc::VM& vm, int64_t block_gas_left,
-    int64_t blob_gas_left)
+std::variant<TransactionReceipt, std::error_code> transition(const StateView& state_view,
+    const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm,
+    int64_t block_gas_left, int64_t blob_gas_left)
 {
+    State state{state_view};
     auto* sender_ptr = state.find(tx.sender);
 
     // Validate transaction. The validation needs the sender account, so in case
@@ -429,10 +467,9 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
         host.access_account(*tx.to);
     for (const auto& [a, storage_keys] : tx.access_list)
     {
-        host.access_account(a);  // TODO: Return account ref.
-        auto& storage = state.get(a).storage;
+        host.access_account(a);
         for (const auto& key : storage_keys)
-            storage[key].access_status = EVMC_ACCESS_WARM;
+            state.get_storage(a, key).access_status = EVMC_ACCESS_WARM;
     }
     // EIP-3651: Warm COINBASE.
     // This may create an empty coinbase account. The account cannot be created unconditionally

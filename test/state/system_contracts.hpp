@@ -20,12 +20,12 @@ constexpr auto HISTORY_STORAGE_ADDRESS = 0x0aae40965e6800cd9b1f4b05ff21581047e3f
 
 struct BlockInfo;
 struct StateDiff;
-class State;
+class StateView;
 
 /// Performs the system call: invokes system contracts.
 ///
 /// Executes code of pre-defined accounts via pseudo-transaction from the system sender (0xff...fe).
 /// The sender's nonce is not increased.
 [[nodiscard]] StateDiff system_call(
-    State& state, const BlockInfo& block, evmc_revision rev, evmc::VM& vm);
+    const StateView& state_view, const BlockInfo& block, evmc_revision rev, evmc::VM& vm);
 }  // namespace evmone::state

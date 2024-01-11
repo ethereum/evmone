@@ -20,7 +20,6 @@ struct StateDiff;
 struct Transaction;
 struct TransactionReceipt;
 struct Withdrawal;
-class State;
 }  // namespace state
 
 namespace test
@@ -68,9 +67,6 @@ public:
     /// Don't use it in new tests, use std::map interface instead.
     /// TODO: deprecate this method.
     TestAccount& get(const address& addr) { return (*this)[addr]; }
-
-    /// Converts the TestState to intra state for transaction execution.
-    [[nodiscard]] state::State to_intra_state() const;
 
     /// Apply the state changes.
     void apply(const state::StateDiff& diff);

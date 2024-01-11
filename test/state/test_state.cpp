@@ -27,20 +27,6 @@ bytes TestState::get_account_code(const address& addr) const noexcept
     return it->second.code;
 }
 
-state::State TestState::to_intra_state() const
-{
-    state::State intra_state;
-    for (const auto& [addr, acc] : *this)
-    {
-        auto& intra_acc = intra_state.insert(
-            addr, {.nonce = acc.nonce, .balance = acc.balance, .code = get_account_code(addr)});
-        auto& storage = intra_acc.storage;
-        for (const auto& [key, value] : acc.storage)
-            storage[key] = {.current = value, .original = value};
-    }
-    return intra_state;
-}
-
 void TestState::apply(const state::StateDiff& diff)
 {
     for (const auto& m : diff.modified_accounts)
@@ -77,9 +63,8 @@ bytes32 TestState::get_storage(const address& addr, const bytes32& key) const no
     const state::BlockInfo& block, const state::Transaction& tx, evmc_revision rev, evmc::VM& vm,
     int64_t block_gas_left, int64_t blob_gas_left)
 {
-    auto intra_state = state.to_intra_state();
     const auto result_or_error =
-        state::transition(intra_state, block, tx, rev, vm, block_gas_left, blob_gas_left);
+        state::transition(state, block, tx, rev, vm, block_gas_left, blob_gas_left);
     if (const auto result = get_if<state::TransactionReceipt>(&result_or_error))
         state.apply(result->state_diff);
     return result_or_error;
@@ -89,16 +74,13 @@ void finalize(TestState& state, evmc_revision rev, const address& coinbase,
     std::optional<uint64_t> block_reward, std::span<const state::Ommer> ommers,
     std::span<const state::Withdrawal> withdrawals)
 {
-    auto intra_state = state.to_intra_state();
-    const auto diff =
-        state::finalize(intra_state, rev, coinbase, block_reward, ommers, withdrawals);
+    const auto diff = state::finalize(state, rev, coinbase, block_reward, ommers, withdrawals);
     state.apply(diff);
 }
 
 void system_call(TestState& state, const state::BlockInfo& block, evmc_revision rev, evmc::VM& vm)
 {
-    auto intra_state = state.to_intra_state();
-    const auto diff = state::system_call(intra_state, block, rev, vm);
+    const auto diff = state::system_call(state, block, rev, vm);
     state.apply(diff);
 }
 }  // namespace evmone::test
