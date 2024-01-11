@@ -45,7 +45,7 @@ public:
 
     state::State to_intra_state() const;
 
-    void apply_diff(state::State&& intra_state);
+    void apply_diff(evmc_revision rev, state::State&& intra_state);
 };
 
 }  // namespace test

@@ -18,7 +18,7 @@ namespace evmone::test
 {
     auto intra_state = state.to_intra_state();
     auto res = state::transition(intra_state, block, tx, rev, vm, block_gas_left, blob_gas_left);
-    state.apply_diff(std::move(intra_state));
+    state.apply_diff(rev, std::move(intra_state));
     return res;
 }
 
@@ -28,7 +28,7 @@ inline void finalize(TestState& state, evmc_revision rev, const address& coinbas
 {
     auto intra_state = state.to_intra_state();
     state::finalize(intra_state, rev, coinbase, block_reward, ommers, withdrawals);
-    state.apply_diff(std::move(intra_state));
+    state.apply_diff(rev, std::move(intra_state));
 }
 
 struct TestMultiTransaction : state::Transaction
