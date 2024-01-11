@@ -483,8 +483,8 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
     state.touch(block.coinbase).balance += gas_used * priority_gas_price;
 
     // Apply destructs.
-    std::erase_if(state.get_accounts(),
-        [](const std::pair<const address, Account>& p) noexcept { return p.second.destructed; });
+    // std::erase_if(state.get_accounts(),
+    //     [](const std::pair<const address, Account>& p) noexcept { return p.second.destructed; });
 
     // Cumulative gas used is unknown in this scope.
     TransactionReceipt receipt{tx.type, result.status_code, gas_used, {}, host.take_logs(), {}, {}};
