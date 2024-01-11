@@ -170,7 +170,7 @@ address compute_new_account_address(const address& sender, uint64_t sender_nonce
 static address compute_new_account_create3_address(
     const evmc_message& msg, bytes_view initcontainer) noexcept
 {
-    assert(msg.kind == EVMC_CREATE3);
+    assert(msg.kind == EVMC_CREATE3_4);
 
     const auto initcontainer_hash = keccak256(initcontainer);
     const auto buffer_size =
@@ -192,7 +192,7 @@ static address compute_new_account_create3_address(
 std::optional<evmc_message> Host::prepare_message(evmc_message msg)
 {
     if (msg.depth == 0 || msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2 ||
-        msg.kind == EVMC_CREATE3)
+        msg.kind == EVMC_CREATE3_4)
     {
         auto& sender_acc = m_state.get(msg.sender);
         const auto sender_nonce = sender_acc.nonce;
@@ -205,12 +205,12 @@ std::optional<evmc_message> Host::prepare_message(evmc_message msg)
             m_state.journal_bump_nonce(msg.sender);
         ++sender_acc.nonce;  // Bump sender nonce.
 
-        if (msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2 || msg.kind == EVMC_CREATE3)
+        if (msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2 || msg.kind == EVMC_CREATE3_4)
         {
             // Compute and set the address of the account being created.
             assert(msg.recipient == address{});
             assert(msg.code_address == address{});
-            if (msg.kind == EVMC_CREATE3)
+            if (msg.kind == EVMC_CREATE3_4)
             {
                 const bytes_view initcontainer{msg.init_code, msg.init_code_size};
                 msg.recipient = compute_new_account_create3_address(msg, initcontainer);
@@ -232,7 +232,7 @@ std::optional<evmc_message> Host::prepare_message(evmc_message msg)
 
 evmc::Result Host::create(const evmc_message& msg) noexcept
 {
-    assert(msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2 || msg.kind == EVMC_CREATE3);
+    assert(msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2 || msg.kind == EVMC_CREATE3_4);
 
     // Check collision as defined in pseudo-EIP https://github.com/ethereum/EIPs/issues/684.
     // All combinations of conditions (nonce, code, storage) are tested.
@@ -269,9 +269,9 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
 
     auto create_msg = msg;
     const auto initcode =
-        (msg.kind == EVMC_CREATE3 ? bytes_view{msg.init_code, msg.init_code_size} :
-                                    bytes_view{msg.input_data, msg.input_size});
-    if (msg.kind != EVMC_CREATE3)
+        (msg.kind == EVMC_CREATE3_4 ? bytes_view{msg.init_code, msg.init_code_size} :
+                                      bytes_view{msg.input_data, msg.input_size});
+    if (msg.kind != EVMC_CREATE3_4)
     {
         create_msg.input_data = nullptr;
         create_msg.input_size = 0;
@@ -289,9 +289,9 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
 
     const bytes_view code{result.output_data, result.output_size};
 
-    // for CREATE3 successful result is guaranteed to be non-empty
+    // for CREATE3/4 successful result is guaranteed to be non-empty
     // because container section is not allowed to be empty
-    assert(msg.kind != EVMC_CREATE3 || result.status_code != EVMC_SUCCESS || !code.empty());
+    assert(msg.kind != EVMC_CREATE3_4 || result.status_code != EVMC_SUCCESS || !code.empty());
 
     if (m_rev >= EVMC_SPURIOUS_DRAGON && code.size() > max_code_size)
         return evmc::Result{EVMC_FAILURE};
@@ -316,7 +316,7 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
 
 evmc::Result Host::execute_message(const evmc_message& msg) noexcept
 {
-    if (msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2 || msg.kind == EVMC_CREATE3)
+    if (msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2 || msg.kind == EVMC_CREATE3_4)
         return create(msg);
 
     if (msg.kind == EVMC_CALL)
@@ -391,7 +391,17 @@ evmc_tx_context Host::get_tx_context() const noexcept
         m_block.prev_randao,
         0x01_bytes32,  // Chain ID is expected to be 1.
         uint256be{m_block.base_fee}, intx::be::store<uint256be>(m_block.blob_base_fee),
-        m_tx.blob_hashes.data(), m_tx.blob_hashes.size(), nullptr, nullptr, 0};
+        m_tx.blob_hashes.data(), m_tx.blob_hashes.size()};
+}
+
+evmc_tx_initcode Host::get_tx_initcode_by_hash(const evmc_bytes32& hash) const noexcept
+{
+    if (const auto& it = m_initcodes.find(hash); it != m_initcodes.end())
+    {
+        return evmc_tx_initcode{it->second.data(), it->second.size()};
+    }
+
+    return evmc_tx_initcode{nullptr, 0};
 }
 
 bytes32 Host::get_block_hash(int64_t block_number) const noexcept

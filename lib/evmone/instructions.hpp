@@ -146,10 +146,10 @@ inline constexpr auto jumpdest = noop;
 template <evmc_status_code Status>
 inline TermResult stop_impl(StackTop /*stack*/, int64_t gas_left, ExecutionState& state) noexcept
 {
-    // STOP is forbidden inside CREATE3 context
+    // STOP is forbidden inside CREATE3/4 context
     if constexpr (Status == EVMC_SUCCESS)
     {
-        if (state.msg->kind == EVMC_CREATE3)
+        if (state.msg->kind == EVMC_CREATE3_4)
             return {EVMC_UNDEFINED_INSTRUCTION, gas_left};
     }
 
@@ -1068,8 +1068,11 @@ Result create_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noex
 inline constexpr auto create = create_impl<OP_CREATE>;
 inline constexpr auto create2 = create_impl<OP_CREATE2>;
 
-Result create3(
+template <Opcode Op>
+Result create_eof_impl(
     StackTop stack, int64_t gas_left, ExecutionState& state, code_iterator& pos) noexcept;
+inline constexpr auto create3 = create_eof_impl<OP_CREATE3>;
+inline constexpr auto create4 = create_eof_impl<OP_CREATE4>;
 
 inline code_iterator callf(StackTop stack, ExecutionState& state, code_iterator pos) noexcept
 {
@@ -1130,7 +1133,7 @@ inline TermResult return_impl(StackTop stack, int64_t gas_left, ExecutionState& 
     // RETURN is forbidden inside CREATE3 context
     if constexpr (StatusCode == EVMC_SUCCESS)
     {
-        if (state.msg->kind == EVMC_CREATE3)
+        if (state.msg->kind == EVMC_CREATE3_4)
             return {EVMC_UNDEFINED_INSTRUCTION, gas_left};
     }
 
@@ -1154,7 +1157,7 @@ inline TermResult returncontract(
     const auto& offset = stack[0];
     const auto& size = stack[1];
 
-    if (state.msg->kind != EVMC_CREATE3)
+    if (state.msg->kind != EVMC_CREATE3_4)
         return {EVMC_UNDEFINED_INSTRUCTION, gas_left};
 
     if (!check_memory(gas_left, state.memory, offset, size))

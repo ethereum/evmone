@@ -391,7 +391,7 @@ TEST_P(evm, eof_create3)
     EXPECT_EQ(output, "000000000000000000000000cc010203040506070809010203040506070809ce"_hex);
 
     // test executing initcontainer
-    msg.kind = EVMC_CREATE3;
+    msg.kind = EVMC_CREATE3_4;
     execute(init_container, aux_data);
     EXPECT_STATUS(EVMC_SUCCESS);
     const bytecode deployed_container =

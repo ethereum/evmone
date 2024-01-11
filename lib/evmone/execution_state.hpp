@@ -203,5 +203,10 @@ public:
             m_tx = host.get_tx_context();
         return m_tx;
     }
+
+    [[nodiscard]] evmc_tx_initcode get_tx_initcode_by_hash(const evmc_bytes32& hash) const noexcept
+    {
+        return host.get_tx_initcode_by_hash(hash);
+    }
 };
 }  // namespace evmone
