@@ -7,13 +7,33 @@
 
 namespace evmone::test
 {
+std::optional<state::StateView::Account> TestState::get_account(const address& addr) const noexcept
+{
+    const auto it = find(addr);
+    if (it == end())
+        return std::nullopt;
+
+    const auto& acc = it->second;
+    // TODO: Cache code hash for MTP root hash calculation?
+    return Account{acc.nonce, acc.balance, keccak256(acc.code), !acc.storage.empty()};
+}
+
+bytes TestState::get_account_code(const address& addr) const noexcept
+{
+    const auto it = find(addr);
+    if (it == end())
+        return {};
+
+    return it->second.code;
+}
+
 state::State TestState::to_intra_state() const
 {
     state::State intra_state;
     for (const auto& [addr, acc] : *this)
     {
         auto& intra_acc = intra_state.insert(
-            addr, {.nonce = acc.nonce, .balance = acc.balance, .code = acc.code});
+            addr, {.nonce = acc.nonce, .balance = acc.balance, .code = get_account_code(addr)});
         auto& storage = intra_acc.storage;
         for (const auto& [key, value] : acc.storage)
             storage[key] = {.current = value, .original = value};
@@ -41,6 +61,16 @@ void TestState::apply(const state::StateDiff& diff)
 
     for (const auto& addr : diff.deleted_accounts)
         erase(addr);
+}
+
+bytes32 TestState::get_storage(const address& addr, const bytes32& key) const noexcept
+{
+    const auto ait = find(addr);
+    if (ait == end())  // TODO: When?
+        return bytes32{};
+    const auto& storage = ait->second.storage;
+    const auto it = storage.find(key);
+    return (it != storage.end()) ? it->second : bytes32{};
 }
 
 [[nodiscard]] std::variant<state::TransactionReceipt, std::error_code> transition(TestState& state,
