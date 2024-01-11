@@ -41,9 +41,6 @@ void TestState::apply_diff(evmc_revision rev, state::State&& intra_state)
 
 state::State TestState::to_intra_state() const
 {
-    state::State intra_state{*this};
-    for (const auto& [addr, _] : *this)
-        intra_state.find(addr);  // Preload all accounts.
-    return intra_state;
+    return state::State{*this};
 }
 }  // namespace evmone::test
