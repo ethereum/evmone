@@ -24,7 +24,7 @@ TEST_P(evm, evmmax_32bytes_modulus_test)
     // Modulus size in bytes
     // Modulus offset in EVM memory
     // Modulus ID
-    code += setupx(3, 32, 0, 1);
+    code += setupx(3, 32, 0);
     // value 3
     code += mstore(32, 0x03);
     // value 6
@@ -61,7 +61,7 @@ TEST_P(evm, evmmax_1byte_modulus_test)
     // Modulus size in bytes
     // Modulus offset in EVM memory
     // Modulus ID
-    code += setupx(3, 1, 0, 1);
+    code += setupx(3, 1, 0);
     // value 3
     code += mstore8(8, 0x03);
     // value 6
@@ -101,7 +101,7 @@ TEST_P(evm, evmmax_2byte_modulus_test)
     // Modulus size in bytes
     // Modulus offset in EVM memory
     // Modulus ID
-    code += setupx(3, 2, 0, 1);
+    code += setupx(3, 2, 0);
     // value 258
     code += mstore8(8, 0x01);
     code += mstore8(9, 0x02);

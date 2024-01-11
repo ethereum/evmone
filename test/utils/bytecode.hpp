@@ -468,10 +468,9 @@ inline bytecode blobhash(bytecode index)
     return index + OP_BLOBHASH;
 }
 
-inline bytecode setupx(
-    bytecode num_val_slots, bytecode mod_size, bytecode mod_offset, bytecode mod_id)
+inline bytecode setupx(bytecode num_val_slots, bytecode mod_size, bytecode mod_offset)
 {
-    return num_val_slots + mod_size + mod_offset + mod_id + OP_SETUPX;
+    return num_val_slots + mod_size + mod_offset + OP_SETUPX;
 }
 
 inline bytecode storex(bytecode num_vals, bytecode val_offset, bytecode val_slot)
