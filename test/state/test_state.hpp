@@ -43,8 +43,9 @@ public:
     void insert(const address& addr, TestAccount&& acc) { (*this)[addr] = std::move(acc); }
     TestAccount& get(const address& addr) { return (*this)[addr]; }
 
-    explicit TestState(const state::State& intra_state);
     state::State to_intra_state() const;
+
+    void apply_diff(state::State&& intra_state);
 };
 
 }  // namespace test
