@@ -17,25 +17,27 @@ struct EXMMAXModStateInterface;
 /// Ephemeral EVMMAX (EVM Modular Arithmetic Extensions) state
 class EVMMAXState
 {
-    typedef std::unordered_map<evmc::bytes32, std::unique_ptr<EXMMAXModStateInterface>> ModulusMap;
-    ModulusMap mods;  ///< Map of initialized and available moduluses.
-    ModulusMap::const_iterator active_mod = mods.end();  ///< Current active modulus
+    struct OpcodesGasCost
+    {
+        int64_t addmodx = 0;
+        int64_t mulmodx = 0;
+    };
 
-    /// Validates that memory used by EVMMAX state does not exceed a predefined limit.
-    [[nodiscard]] bool validate_memory_usage(size_t val_size, size_t num_val) noexcept;
+    OpcodesGasCost current_gas_cost;
+
+    std::unique_ptr<EXMMAXModStateInterface> active_mod;  ///< Current active modulus
 
 public:
     /// Create new modulus and activates it. In case the modulus already exists, activates it.
     /// Deducts gas accordingly.
     ///
     /// \param gas_left Amount of gas before calling. Is modified by `setupx`
-    /// \param mod_id Modulus identifier
     /// \param mod_ptr Modulus big endian value memory pointer
     /// \param mod_size Modulus size in bytes
     /// \param vals_used Number of needed value slots
     /// \return Status code.
-    [[nodiscard]] evmc_status_code setupx(int64_t& gas_left, const uint256& mod_id,
-        const uint8_t* mod_ptr, size_t mod_size, size_t vals_used) noexcept;
+    [[nodiscard]] evmc_status_code setupx(
+        int64_t& gas_left, const uint8_t* mod_ptr, size_t mod_size, size_t vals_used) noexcept;
 
     /// Loads EVMMAX values into EVM memory. Deducts gas accordingly.
     /// Converts to the Montgomery form
@@ -71,8 +73,8 @@ public:
     [[nodiscard]] evmc_status_code mulmodx(
         int64_t& gas_left, size_t dst_idx, size_t x_idx, size_t y_idx) noexcept;
 
-    /// Checks that modulus with `mod_id` exists.
-    [[nodiscard]] bool exists(const uint256& mod_id) const noexcept;
+    /// Checks that there exists an active modulus
+    [[nodiscard]] bool is_activated() const noexcept;
 
     /// Returns active modulus size multiplier.
     /// Size (expressed in multiples of 8 bytes) needed to represent modulus.

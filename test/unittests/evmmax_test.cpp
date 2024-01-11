@@ -149,7 +149,7 @@ template <typename UintT>
 inline bytecode create_test_bytecode()
 {
     constexpr auto size = sizeof(UintT);
-    return calldatacopy(push(0), push(0), push(size * 3)) + setupx(3, size, 0, 1) +
+    return calldatacopy(push(0), push(0), push(size * 3)) + setupx(3, size, 0) +
            storex(2, size, 0) + mulmodx(2, 1, 0) + loadx(1, 2, size * 3) + ret(size * 3, size);
 }
 
@@ -261,7 +261,7 @@ TEST_P(evm, exec_invalid_test)
         constexpr auto size = sizeof(uint256);
         uint8_t calldata[size];
 
-        const auto code = calldatacopy(push(0), push(0), push(size)) + setupx(257, size, 0, 1);
+        const auto code = calldatacopy(push(0), push(0), push(size)) + setupx(257, size, 0);
         intx::be::unsafe::store(&calldata[0], BN254Mod);
         execute(1000, code, {calldata, size});
         EXPECT_EQ(result.status_code, EVMC_FAILURE);
@@ -283,10 +283,28 @@ TEST_P(evm, exec_invalid_test)
         constexpr auto size = sizeof(intx::uint<2048>);
         uint8_t calldata[size * 3];
 
-        const auto code = calldatacopy(push(0), push(0), push(size)) + setupx(1, size, 0, 1) +
-                          setupx(256, size, 0, 2);
+        const auto code =
+            calldatacopy(push(0), push(0), push(size)) + setupx(1, size, 0) + setupx(256, size, 0);
         intx::be::unsafe::store(&calldata[0], intx::uint<2048>(BN254Mod));
         execute(1000, code, {calldata, size});
+        EXPECT_EQ(result.status_code, EVMC_FAILURE);
+    }
+
+    {
+        // Invalid instruction index
+        constexpr auto size = sizeof(intx::uint<256>);
+        uint8_t calldata[size * 3];
+
+        const auto common_code = calldatacopy(push(0), push(0), push(size)) + setupx(1, size, 0);
+        intx::be::unsafe::store(&calldata[0], intx::uint<256>(BN254Mod));
+
+        execute(1000, common_code + addmodx(0, 0, 2), {calldata, size});
+        EXPECT_EQ(result.status_code, EVMC_FAILURE);
+
+        execute(1000, common_code + mulmodx(0, 0, 2), {calldata, size});
+        EXPECT_EQ(result.status_code, EVMC_FAILURE);
+
+        execute(1000, common_code + submodx(0, 0, 2), {calldata, size});
         EXPECT_EQ(result.status_code, EVMC_FAILURE);
     }
 

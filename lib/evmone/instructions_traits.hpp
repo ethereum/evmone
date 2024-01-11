@@ -269,7 +269,7 @@ constexpr inline std::array<Traits, 256> traits = []() noexcept {
     table[OP_SAR] = {"SAR", 0, false, 2, -1, EVMC_CONSTANTINOPLE};
 
     table[OP_KECCAK256] = {"KECCAK256", 0, false, 2, -1, EVMC_FRONTIER};
-    table[OP_SETUPX] = {"SETUPX", 0, false, 4, -4, EVMC_EVMMAX};
+    table[OP_SETUPX] = {"SETUPX", 0, false, 3, -3, EVMC_EVMMAX};
     table[OP_ADDMODX] = {"ADDMODX", 3, false, 0, 0, EVMC_EVMMAX};
     table[OP_SUBMODX] = {"SUBMODX", 3, false, 0, 0, EVMC_EVMMAX};
     table[OP_MULMODX] = {"MULMODX", 3, false, 0, 0, EVMC_EVMMAX};

@@ -10,15 +10,15 @@ namespace evmmax
 {
 struct EXMMAXModStateInterface
 {
-    virtual void loadx(uint8_t* out_ptr, size_t val_idx, size_t num_vals) const noexcept = 0;
-    virtual void storex(const uint8_t* in_ptr, size_t dst_val_idx, size_t num_vals) noexcept = 0;
-    virtual void addmodx(size_t dst_idx, size_t x_idx, size_t y_idx) noexcept = 0;
-    virtual void submodx(size_t dst_idx, size_t x_idx, size_t y_idx) noexcept = 0;
-    virtual void mulmodx(size_t dst_idx, size_t x_idx, size_t y_idx) noexcept = 0;
+    [[nodiscard]] virtual bool loadx(
+        uint8_t* out_ptr, size_t val_idx, size_t num_vals) const noexcept = 0;
+    [[nodiscard]] virtual bool storex(
+        const uint8_t* in_ptr, size_t dst_val_idx, size_t num_vals) noexcept = 0;
+    [[nodiscard]] virtual bool addmodx(size_t dst_idx, size_t x_idx, size_t y_idx) noexcept = 0;
+    [[nodiscard]] virtual bool submodx(size_t dst_idx, size_t x_idx, size_t y_idx) noexcept = 0;
+    [[nodiscard]] virtual bool mulmodx(size_t dst_idx, size_t x_idx, size_t y_idx) noexcept = 0;
 
     [[nodiscard]] virtual size_t value_size_multiplier() const noexcept = 0;
-    [[nodiscard]] virtual int64_t addmodx_gas_cost() const noexcept = 0;
-    [[nodiscard]] virtual int64_t mulmodx_gas_cost() const noexcept = 0;
     [[nodiscard]] virtual size_t num_values() const noexcept = 0;
 
     virtual ~EXMMAXModStateInterface() noexcept = default;
@@ -71,65 +71,75 @@ struct EXMMAXModState : public EXMMAXModStateInterface
     std::vector<UintT> values;
     const ModArith<UintT> arith;
     const size_t value_size_mult;
-    const int64_t addmodx_cost;
-    const int64_t mulmodx_cost;
 
     explicit EXMMAXModState(const UintT& mod, size_t mod_size, size_t vals_used) noexcept
-      : arith(mod),
-        value_size_mult((mod_size + 7) / 8),
-        addmodx_cost(compute_addmodx_cost(value_size_mult)),
-        mulmodx_cost(compute_mulmodx_cost(value_size_mult))
+      : arith(mod), value_size_mult((mod_size + 7) / 8)
     {
         values.resize(vals_used);
     }
 
-    void loadx(uint8_t* out_ptr, size_t val_idx, size_t num_vals) const noexcept override
+    [[nodiscard]] bool loadx(
+        uint8_t* out_ptr, size_t val_idx, size_t num_vals) const noexcept override
     {
-        assert(val_idx + num_vals <= values.size());
+        if (!(val_idx + num_vals <= values.size()))
+            return false;
 
         for (unsigned i = 0; i < num_vals; ++i)
         {
             store(out_ptr + i * value_size_mult * 8, arith.from_mont(values[val_idx + i]),
                 value_size_mult * 8);
         }
+
+        return true;
     }
 
-    void storex(const uint8_t* in_ptr, size_t dst_val_idx, size_t num_vals) noexcept override
+    [[nodiscard]] bool storex(
+        const uint8_t* in_ptr, size_t dst_val_idx, size_t num_vals) noexcept override
     {
-        assert(dst_val_idx + num_vals <= values.size());
+        if (!(dst_val_idx + num_vals <= values.size()))
+            return false;
 
         for (unsigned i = 0; i < num_vals; ++i)
         {
             values[dst_val_idx + i] =
                 arith.to_mont(load<UintT>(in_ptr + value_size_mult * 8 * i, value_size_mult * 8));
         }
+
+        return true;
     }
 
-    void addmodx(size_t dst_idx, size_t x_idx, size_t y_idx) noexcept override
+    [[nodiscard]] bool addmodx(size_t dst_idx, size_t x_idx, size_t y_idx) noexcept override
     {
-        assert(dst_idx < values.size() && x_idx < values.size() && y_idx < values.size());
+        if (!(dst_idx < values.size() && x_idx < values.size() && y_idx < values.size()))
+            return false;
 
         values[dst_idx] = arith.add(values[x_idx], values[y_idx]);
+
+        return true;
     }
 
-    void submodx(size_t dst_idx, size_t x_idx, size_t y_idx) noexcept override
+    [[nodiscard]] bool submodx(size_t dst_idx, size_t x_idx, size_t y_idx) noexcept override
     {
-        assert(dst_idx < values.size() && x_idx < values.size() && y_idx < values.size());
+        if (!(dst_idx < values.size() && x_idx < values.size() && y_idx < values.size()))
+            return false;
 
         values[dst_idx] = arith.sub(values[x_idx], values[y_idx]);
+
+        return true;
     }
 
-    void mulmodx(size_t dst_idx, size_t x_idx, size_t y_idx) noexcept override
+    [[nodiscard]] bool mulmodx(size_t dst_idx, size_t x_idx, size_t y_idx) noexcept override
     {
-        assert(dst_idx < values.size() && x_idx < values.size() && y_idx < values.size());
+        if (!(dst_idx < values.size() && x_idx < values.size() && y_idx < values.size()))
+            return false;
 
         values[dst_idx] = arith.mul(values[x_idx], values[y_idx]);
+
+        return true;
     }
 
     [[nodiscard]] size_t num_values() const noexcept override { return values.size(); }
     [[nodiscard]] size_t value_size_multiplier() const noexcept override { return value_size_mult; }
-    [[nodiscard]] int64_t addmodx_gas_cost() const noexcept override { return addmodx_cost; }
-    [[nodiscard]] int64_t mulmodx_gas_cost() const noexcept override { return mulmodx_cost; }
 };
 
 [[nodiscard]] std::unique_ptr<EXMMAXModStateInterface> create_mod_state(
@@ -140,47 +150,18 @@ struct EXMMAXModState : public EXMMAXModStateInterface
     // Max mod size must be <= 4096 bits
     assert(mod_size <= 512);
 
-    if (mod_size <= 16)
-    {
-        return std::make_unique<EXMMAXModState<intx::uint<128>>>(
-            load<intx::uint<128>>(mod_ptr, mod_size), mod_size, vals_used);
-    }
-    else if (mod_size <= 24)
-    {
-        return std::make_unique<EXMMAXModState<intx::uint<192>>>(
-            load<intx::uint<192>>(mod_ptr, mod_size), mod_size, vals_used);
-    }
-    else if (mod_size <= 32)
+    if (mod_size <= 32)
     {
         return std::make_unique<EXMMAXModState<uint256>>(
             load<uint256>(mod_ptr, mod_size), mod_size, vals_used);
-    }
-    else if (mod_size <= 40)
-    {
-        return std::make_unique<EXMMAXModState<uint320>>(
-            load<uint320>(mod_ptr, mod_size), mod_size, vals_used);
     }
     else if (mod_size <= 48)
     {
         return std::make_unique<EXMMAXModState<uint384>>(
             load<uint384>(mod_ptr, mod_size), mod_size, vals_used);
     }
-    else if (mod_size <= 56)
-    {
-        return std::make_unique<EXMMAXModState<intx::uint<448>>>(
-            load<intx::uint<448>>(mod_ptr, mod_size), mod_size, vals_used);
-    }
-    else if (mod_size <= 64)
-    {
-        return std::make_unique<EXMMAXModState<uint512>>(
-            load<uint512>(mod_ptr, mod_size), mod_size, vals_used);
-    }
     else
-    {
-        /// TODO: Implement for intermediate `mod_size` values up to 512 bytes
-        return std::make_unique<EXMMAXModState<intx::uint<4096>>>(
-            load<intx::uint<4096>>(mod_ptr, mod_size), mod_size, vals_used);
-    }
+        return nullptr;
 }
 
 [[nodiscard]] bool charge_gas_precompute_mont(int64_t& gas_left, size_t mod_size) noexcept
@@ -203,127 +184,115 @@ struct EXMMAXModState : public EXMMAXModStateInterface
     return gas_left >= 0;
 }
 
-}  // namespace
-
-[[nodiscard]] bool EVMMAXState::exists(const intx::uint256& mod_id) const noexcept
+[[nodiscard]] bool validate_memory_usage(size_t val_size, size_t num_val) noexcept
 {
-    // TODO: Add support for uint256 to be a key in std::unordered_map
-    const auto mod_id_bytes = intx::be::store<evmc::bytes32>(mod_id);
+    static constexpr auto EVMMAX_MAX_MEM_SIZE = 65536;
 
-    return mods.contains(mod_id_bytes);
+    return val_size * num_val <= EVMMAX_MAX_MEM_SIZE;
 }
 
-[[nodiscard]] evmc_status_code EVMMAXState::setupx(int64_t& gas_left, const uint256& mod_id,
-    const uint8_t* mod_ptr, size_t mod_size, size_t vals_used) noexcept
+}  // namespace
+
+[[nodiscard]] bool EVMMAXState::is_activated() const noexcept
 {
-    // TODO: Add support for uint256 to be a key in std::unordered_map
-    const auto mod_id_bytes = intx::be::store<evmc::bytes32>(mod_id);
+    return active_mod != nullptr;
+}
 
-    if (active_mod != mods.end() && active_mod->first == mod_id_bytes)
-        return EVMC_SUCCESS;
-
-    active_mod = mods.find(mod_id_bytes);
-    if (active_mod != mods.end())
-        return EVMC_SUCCESS;
-
+[[nodiscard]] evmc_status_code EVMMAXState::setupx(
+    int64_t& gas_left, const uint8_t* mod_ptr, size_t mod_size, size_t vals_used) noexcept
+{
     if (!validate_memory_usage(mod_size, vals_used))
         return EVMC_FAILURE;
 
     if (!charge_gas_precompute_mont(gas_left, mod_size))
         return EVMC_OUT_OF_GAS;
 
-    active_mod = mods.emplace(mod_id_bytes, create_mod_state(mod_ptr, mod_size, vals_used)).first;
-    return EVMC_SUCCESS;
+    active_mod = create_mod_state(mod_ptr, mod_size, vals_used);
+    if (active_mod != nullptr)
+    {
+        const auto current_value_size_multiplier = active_mod->value_size_multiplier();
+        current_gas_cost = {
+            .addmodx = compute_addmodx_cost(current_value_size_multiplier),
+            .mulmodx = compute_mulmodx_cost(current_value_size_multiplier),
+        };
+
+        return EVMC_SUCCESS;
+    }
+    else
+        return EVMC_FAILURE;
 }
 
 [[nodiscard]] evmc_status_code EVMMAXState::loadx(
     int64_t& gas_left, uint8_t* out_ptr, size_t val_idx, size_t num_vals) noexcept
 {
-    if (active_mod == mods.end())
+    if (!is_activated())
         return EVMC_FAILURE;
 
-    if ((gas_left -= active_mod->second->mulmodx_gas_cost() * static_cast<int64_t>(num_vals)) < 0)
+    if ((gas_left -= current_gas_cost.mulmodx * static_cast<int64_t>(num_vals)) < 0)
         return EVMC_OUT_OF_GAS;
 
-    active_mod->second->loadx(out_ptr, val_idx, num_vals);
-    return EVMC_SUCCESS;
+    return active_mod->loadx(out_ptr, val_idx, num_vals) ? EVMC_SUCCESS : EVMC_FAILURE;
 }
 
 [[nodiscard]] evmc_status_code EVMMAXState::storex(
     int64_t& gas_left, const uint8_t* in_ptr, size_t dst_val_idx, size_t num_vals) noexcept
 {
-    if (active_mod == mods.end())
+    if (!is_activated())
         return EVMC_FAILURE;
 
-    if ((gas_left -= active_mod->second->mulmodx_gas_cost() * static_cast<int64_t>(num_vals)) < 0)
+    if ((gas_left -= current_gas_cost.mulmodx * static_cast<int64_t>(num_vals)) < 0)
         return EVMC_OUT_OF_GAS;
 
-    active_mod->second->storex(in_ptr, dst_val_idx, num_vals);
-    return EVMC_SUCCESS;
+    return active_mod->storex(in_ptr, dst_val_idx, num_vals) ? EVMC_SUCCESS : EVMC_FAILURE;
 }
 
 [[nodiscard]] evmc_status_code EVMMAXState::addmodx(
     int64_t& gas_left, size_t dst_idx, size_t x_idx, size_t y_idx) noexcept
 {
-    if (active_mod == mods.end())
+    if (!is_activated())
         return EVMC_FAILURE;
 
-    if ((gas_left -= active_mod->second->addmodx_gas_cost()) < 0)
+    if ((gas_left -= current_gas_cost.addmodx) < 0)
         return EVMC_OUT_OF_GAS;
 
-    active_mod->second->addmodx(dst_idx, x_idx, y_idx);
-    return EVMC_SUCCESS;
+    return active_mod->addmodx(dst_idx, x_idx, y_idx) ? EVMC_SUCCESS : EVMC_FAILURE;
 }
 
 [[nodiscard]] evmc_status_code EVMMAXState::submodx(
     int64_t& gas_left, size_t dst_idx, size_t x_idx, size_t y_idx) noexcept
 {
-    if (active_mod == mods.end())
+    if (!is_activated())
         return EVMC_FAILURE;
 
-    if ((gas_left -= active_mod->second->addmodx_gas_cost()) < 0)
+    if ((gas_left -= current_gas_cost.addmodx) < 0)
         return EVMC_OUT_OF_GAS;
 
-    active_mod->second->submodx(dst_idx, x_idx, y_idx);
-    return EVMC_SUCCESS;
+    return active_mod->submodx(dst_idx, x_idx, y_idx) ? EVMC_SUCCESS : EVMC_FAILURE;
 }
 
 [[nodiscard]] evmc_status_code EVMMAXState::mulmodx(
     int64_t& gas_left, size_t dst_idx, size_t x_idx, size_t y_idx) noexcept
 {
-    if (active_mod == mods.end())
+    if (!is_activated())
         return EVMC_FAILURE;
 
-    if ((gas_left -= active_mod->second->mulmodx_gas_cost()) < 0)
+    if ((gas_left -= current_gas_cost.mulmodx) < 0)
         return EVMC_OUT_OF_GAS;
 
-    active_mod->second->mulmodx(dst_idx, x_idx, y_idx);
-    return EVMC_SUCCESS;
+    return active_mod->mulmodx(dst_idx, x_idx, y_idx) ? EVMC_SUCCESS : EVMC_FAILURE;
 }
 
 [[nodiscard]] size_t EVMMAXState::active_mod_value_size_multiplier() const noexcept
 {
-    if (active_mod == mods.end())
+    if (!is_activated())
         return 0;
 
-    return active_mod->second->value_size_multiplier();
-}
-
-[[nodiscard]] bool EVMMAXState::validate_memory_usage(size_t val_size, size_t num_val) noexcept
-{
-    static constexpr auto EVMMAX_MAX_MEM_SIZE = 65536;
-
-    size_t total_size = val_size * num_val;
-    for (const auto& item : mods)
-        total_size += item.second->num_values() * item.second->value_size_multiplier() * 8;
-
-    return total_size <= EVMMAX_MAX_MEM_SIZE;
+    return active_mod->value_size_multiplier();
 }
 
 void EVMMAXState::clear() noexcept
 {
-    mods.clear();
-    active_mod = mods.end();
+    active_mod = nullptr;
 }
 
 EVMMAXState::EVMMAXState() noexcept = default;

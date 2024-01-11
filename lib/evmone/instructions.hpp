@@ -1186,7 +1186,6 @@ inline Result setupx(StackTop stack, int64_t gas_left, ExecutionState& state) no
 {
     static constexpr auto MAX_MOD_SIZE = 4096;
 
-    const auto mod_id = stack.pop();
     const auto mod_offset_256 = stack.pop();
     const auto mod_size_256 = stack.pop();
     const auto vals_used_256 = stack.pop();
@@ -1210,17 +1209,14 @@ inline Result setupx(StackTop stack, int64_t gas_left, ExecutionState& state) no
     if (vals_used_256 > 256)
         return {EVMC_FAILURE, gas_left};
 
-    if (!state.evmmax_state.exists(mod_id))
+    const auto value_size_multiplier = (mod_size + 7) / 8;
+    if ((gas_left -= evm_memory_expansion_cost(
+             state.memory, (vals_used * value_size_multiplier * 8 + 31) / 32)) < 0)
     {
-        const auto value_size_multiplier = (mod_size + 7) / 8;
-        if ((gas_left -= evm_memory_expansion_cost(
-                 state.memory, (vals_used * value_size_multiplier * 8 + 31) / 32)) < 0)
-        {
-            return {EVMC_OUT_OF_GAS, gas_left};
-        }
+        return {EVMC_OUT_OF_GAS, gas_left};
     }
 
-    const auto status = state.evmmax_state.setupx(gas_left, mod_id, mod_ptr, mod_size, vals_used);
+    const auto status = state.evmmax_state.setupx(gas_left, mod_ptr, mod_size, vals_used);
     return {status, gas_left};
 }
 
