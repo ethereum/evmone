@@ -709,7 +709,7 @@ TEST(eof_validation, max_stack_height)
     {
         auto code = eof_bytecode(rjumpi(2, 0) + 1 + OP_STOP, 1);
 
-        EXPECT_EQ(validate_eof(code), EOFValidationError::stack_height_mismatch);
+        EXPECT_EQ(validate_eof(code), EOFValidationError::success);
     }
 
     {
