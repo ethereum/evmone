@@ -33,7 +33,7 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
     const std::vector<state::Transaction>& txs, evmc_revision rev,
     std::optional<int64_t> block_reward)
 {
-    auto intra_state = state.to_intra_state();
+    state::State intra_state{state};
     state::system_call(intra_state, block, rev, vm);
     state.apply_diff(rev, std::move(intra_state));
 

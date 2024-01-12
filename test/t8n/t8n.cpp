@@ -133,9 +133,9 @@ int main(int argc, const char* argv[])
                 j_result["receipts"] = json::json::array();
                 j_result["rejected"] = json::json::array();
 
-                auto intra_state = state.to_intra_state();
+                state::State intra_state{state};
                 state::system_call(intra_state, block, rev, vm);
-                state = TestState{intra_state};
+                state.apply_diff(rev, std::move(intra_state));
 
                 for (size_t i = 0; i < j_txs.size(); ++i)
                 {
