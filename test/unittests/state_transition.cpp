@@ -197,6 +197,9 @@ void state_transition::export_state_test(const TransactionReceipt& receipt, cons
         jtx["maxPriorityFeePerGas"] = hex0x(tx.max_priority_gas_price);
     }
 
+    for (size_t i = 0; i < tx.initcodes.size(); ++i)
+        jtx["initcodes"][i] = hex0x(tx.initcodes[i]);
+
     jtx["data"][0] = hex0x(tx.data);
     jtx["gasLimit"][0] = hex0x(tx.gas_limit);
     jtx["value"][0] = hex0x(tx.value);
