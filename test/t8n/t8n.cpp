@@ -114,7 +114,7 @@ int main(int argc, const char* argv[])
 
         // Validate eof code in pre-state
         if (rev >= EVMC_PRAGUE)
-            validate_deployed_code(state, rev);
+            validate_state(state, rev);
 
         // Parse and execute transactions
         if (!txs_file.empty())
