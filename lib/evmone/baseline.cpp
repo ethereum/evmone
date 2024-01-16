@@ -203,7 +203,30 @@ struct Position
     state.status = result.status;
     return nullptr;
 }
-/// @}
+
+[[release_inline]] inline code_iterator invoke(
+    Result (*instr_fn)(StackTop, int64_t, ExecutionState&, code_iterator&) noexcept, Position pos,
+    int64_t& gas, ExecutionState& state) noexcept
+{
+    const auto result = instr_fn(pos.stack_top, gas, state, pos.code_it);
+    gas = result.gas_left;
+    if (result.status != EVMC_SUCCESS)
+    {
+        state.status = result.status;
+        return nullptr;
+    }
+    return pos.code_it;
+}
+
+[[release_inline]] inline code_iterator invoke(
+    TermResult (*instr_fn)(StackTop, int64_t, ExecutionState&, code_iterator) noexcept,
+    Position pos, int64_t& gas, ExecutionState& state) noexcept
+{
+    const auto result = instr_fn(pos.stack_top, gas, state, pos.code_it);
+    gas = result.gas_left;
+    state.status = result.status;
+    return nullptr;
+}
 
 /// A helper to invoke the instruction implementation of the given opcode Op.
 template <Opcode Op>
@@ -352,8 +375,13 @@ evmc_result execute(
     const auto gas_refund = (state.status == EVMC_SUCCESS) ? state.gas_refund : 0;
 
     assert(state.output_size != 0 || state.output_offset == 0);
-    const auto result = evmc::make_result(state.status, gas_left, gas_refund,
-        state.output_size != 0 ? &state.memory[state.output_offset] : nullptr, state.output_size);
+    const auto result =
+        (state.deploy_container.has_value() ?
+                evmc::make_result(state.status, gas_left, gas_refund,
+                    state.deploy_container->data(), state.deploy_container->size()) :
+                evmc::make_result(state.status, gas_left, gas_refund,
+                    state.output_size != 0 ? &state.memory[state.output_offset] : nullptr,
+                    state.output_size));
 
     if (INTX_UNLIKELY(tracer != nullptr))
         tracer->notify_execution_end(result);
