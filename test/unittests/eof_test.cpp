@@ -34,17 +34,6 @@ TEST(eof, read_valid_eof1_header)
         uint16_t data_size;
         std::vector<uint16_t> code_sizes;
     };
-    std::string nops_255;
-    for (int i = 0; i < 255; ++i)
-        nops_255 += "5B";
-
-    std::string section_size_1_256;
-    for (int i = 0; i < 256; ++i)
-        section_size_1_256 += "0001";
-
-    std::string section_types_256;
-    for (int i = 0; i < 256; ++i)
-        section_types_256 += "00800000";
 
     const TestCase test_cases[] = {
         {"EF00 01 010004 0200010001 040000 00 00800000 00", 4, 0, {1}},
@@ -56,10 +45,11 @@ TEST(eof, read_valid_eof1_header)
         {"EF00 01 01000C 020003000100020003 040004 00 008000000080000000800000 00 5B00 5B5B00 "
          "FFFFFFFF",
             12, 4, {1, 2, 3}},
-        {"EF00 01 010004 0200010100 041000 00 00800000" + nops_255 + "00" + std::string(8192, 'F'),
+        {"EF00 01 010004 0200010100 041000 00 00800000" + hex(255 * bytecode("5B")) + "00" +
+                std::string(8192, 'F'),
             4, 4096, {256}},
-        {"EF00 01 010400 020100" + section_size_1_256 + " 041000 00 " + section_types_256 +
-                std::string(512, '0') + std::string(8192, 'F'),
+        {"EF00 01 010400 020100" + hex(256 * bytecode("0001")) + " 041000 00 " +
+                hex(256 * bytecode("00800000")) + std::string(512, '0') + std::string(8192, 'F'),
             4 * 256, 4096, std::vector<uint16_t>(256, 1)},
     };
 
