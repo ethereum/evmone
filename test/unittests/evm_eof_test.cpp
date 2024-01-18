@@ -419,3 +419,18 @@ TEST_P(evm, returncontract_undefined_in_legacy)
     execute(code);
     EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
 }
+
+
+TEST_P(evm, eof_create3_staticmode)
+{
+    if (is_advanced())
+        return;
+
+    rev = EVMC_PRAGUE;
+    msg.flags |= EVMC_STATIC;
+    const auto code = eof_bytecode(4 * push0() + OP_CREATE3 + "00" + OP_STOP, 4)
+                          .container(eof_bytecode(push0() + push0() + OP_REVERT, 2));
+    execute(code);
+    EXPECT_EQ(result.status_code, EVMC_STATIC_MODE_VIOLATION);
+    EXPECT_EQ(result.gas_left, 0);
+}
