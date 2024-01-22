@@ -15,6 +15,7 @@
 #include <ostream>
 #include <span>
 #include <stack>
+#include <unordered_set>
 #include <variant>
 #include <vector>
 
@@ -213,8 +214,9 @@ std::variant<std::vector<EOFCodeType>, EOFValidationError> validate_types(
     return types;
 }
 
-EOFValidationError validate_instructions(
-    evmc_revision rev, const EOF1Header& header, size_t code_idx, bytes_view container) noexcept
+EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& header,
+    size_t code_idx, bytes_view container,
+    std::unordered_set<uint16_t>& accessed_code_sections) noexcept
 {
     const bytes_view code{header.get_code(container, code_idx)};
     assert(!code.empty());  // guaranteed by EOF headers validation
@@ -246,6 +248,8 @@ EOFValidationError validate_instructions(
                 return EOFValidationError::invalid_code_section_index;
             if (header.types[fid].outputs == NON_RETURNING_FUNCITON)
                 return EOFValidationError::callf_to_non_returning_function;
+            if (code_idx != fid)
+                accessed_code_sections.insert(fid);
             i += 2;
         }
         else if (op == OP_RETF)
@@ -261,6 +265,8 @@ EOFValidationError validate_instructions(
             // JUMPF into returning function means current function is returning.
             if (header.types[fid].outputs != NON_RETURNING_FUNCITON)
                 is_returning = true;
+            if (code_idx != fid)
+                accessed_code_sections.insert(fid);
             i += 2;
         }
         else if (op == OP_DATALOADN)
@@ -514,11 +520,13 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(
         offset += code_size;
     }
 
+    std::unordered_set<uint16_t> accessed_code_sections = {0};
     EOF1Header header{container[2], code_sizes, code_offsets, data_size, types};
 
     for (size_t code_idx = 0; code_idx < header.code_sizes.size(); ++code_idx)
     {
-        const auto error_instr = validate_instructions(rev, header, code_idx, container);
+        const auto error_instr =
+            validate_instructions(rev, header, code_idx, container, accessed_code_sections);
         if (error_instr != EOFValidationError::success)
             return error_instr;
 
@@ -532,6 +540,9 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(
         if (std::get<int32_t>(msh_or_error) != header.types[code_idx].max_stack_height)
             return EOFValidationError::invalid_max_stack_height;
     }
+
+    if (accessed_code_sections.size() != header.code_sizes.size())
+        return EOFValidationError::unreachable_code_sections;
 
     return header;
 }
@@ -657,6 +668,8 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "section_headers_not_terminated";
     case EOFValidationError::invalid_section_bodies_size:
         return "invalid_section_bodies_size";
+    case EOFValidationError::unreachable_code_sections:
+        return "unreachable_code_sections";
     case EOFValidationError::undefined_instruction:
         return "undefined_instruction";
     case EOFValidationError::truncated_instruction:

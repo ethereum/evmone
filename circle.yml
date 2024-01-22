@@ -529,7 +529,7 @@ jobs:
             ~/tests/EIPTests/BlockchainTests/
       - download_execution_tests:
           repo: ipsilon/tests
-          rev: eof-nrf-20231128
+          rev: eof-unreachable-cs-20240122
           legacy: false
       - run:
           name: "State tests (EOF)"
