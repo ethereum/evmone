@@ -149,7 +149,7 @@ struct OpTableEntry
 {
     instruction_exec_fn fn;
     int16_t gas_cost;
-    int8_t stack_req;
+    uint8_t stack_req;
     int8_t stack_change;
 };
 

@@ -204,7 +204,7 @@ struct Traits
     bool is_terminating = false;
 
     /// The number of stack items the instruction accesses during execution.
-    int8_t stack_height_required = 0;
+    uint8_t stack_height_required = 0;
 
     /// The stack height change caused by the instruction execution. Can be negative.
     int8_t stack_height_change = 0;

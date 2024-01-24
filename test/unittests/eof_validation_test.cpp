@@ -982,6 +982,40 @@ TEST(eof_validation, retf_stack_validation)
     EXPECT_EQ(validate_eof(code), EOFValidationError::stack_higher_than_outputs_required);
 }
 
+TEST(eof_validation, dupn_stack_validation)
+{
+    const auto pushes = 20 * push(1);
+    EXPECT_EQ(validate_eof(eof_bytecode(pushes + OP_DUPN + "00" + OP_STOP, 21)),
+        EOFValidationError::success);
+    EXPECT_EQ(validate_eof(eof_bytecode(pushes + OP_DUPN + "13" + OP_STOP, 21)),
+        EOFValidationError::success);
+    EXPECT_EQ(validate_eof(eof_bytecode(pushes + OP_DUPN + "14" + OP_STOP, 21)),
+        EOFValidationError::stack_underflow);
+    EXPECT_EQ(validate_eof(eof_bytecode(pushes + OP_DUPN + "d0" + OP_STOP, 21)),
+        EOFValidationError::stack_underflow);
+    EXPECT_EQ(validate_eof(eof_bytecode(pushes + OP_DUPN + "fe" + OP_STOP, 21)),
+        EOFValidationError::stack_underflow);
+    EXPECT_EQ(validate_eof(eof_bytecode(pushes + OP_DUPN + "ff" + OP_STOP, 21)),
+        EOFValidationError::stack_underflow);
+}
+
+TEST(eof_validation, swapn_stack_validation)
+{
+    const auto pushes = 20 * push(1);
+    EXPECT_EQ(validate_eof(eof_bytecode(pushes + OP_SWAPN + "00" + OP_STOP, 20)),
+        EOFValidationError::success);
+    EXPECT_EQ(validate_eof(eof_bytecode(pushes + OP_SWAPN + "12" + OP_STOP, 20)),
+        EOFValidationError::success);
+    EXPECT_EQ(validate_eof(eof_bytecode(pushes + OP_SWAPN + "13" + OP_STOP, 20)),
+        EOFValidationError::stack_underflow);
+    EXPECT_EQ(validate_eof(eof_bytecode(pushes + OP_SWAPN + "d0" + OP_STOP, 20)),
+        EOFValidationError::stack_underflow);
+    EXPECT_EQ(validate_eof(eof_bytecode(pushes + OP_SWAPN + "fe" + OP_STOP, 20)),
+        EOFValidationError::stack_underflow);
+    EXPECT_EQ(validate_eof(eof_bytecode(pushes + OP_SWAPN + "ff" + OP_STOP, 20)),
+        EOFValidationError::stack_underflow);
+}
+
 TEST(eof_validation, non_returning_status)
 {
     // Non-returning with no JUMPF and no RETF
