@@ -67,12 +67,12 @@
     ON_OPCODE_UNDEFINED(0x1f)                               \
                                                             \
     ON_OPCODE_IDENTIFIER(OP_KECCAK256, keccak256)           \
-    ON_OPCODE_UNDEFINED(0x21)                               \
-    ON_OPCODE_UNDEFINED(0x22)                               \
-    ON_OPCODE_UNDEFINED(0x23)                               \
-    ON_OPCODE_UNDEFINED(0x24)                               \
-    ON_OPCODE_UNDEFINED(0x25)                               \
-    ON_OPCODE_UNDEFINED(0x26)                               \
+    ON_OPCODE_IDENTIFIER(OP_SETUPX, setupx)                 \
+    ON_OPCODE_IDENTIFIER(OP_ADDMODX, addmodx)               \
+    ON_OPCODE_IDENTIFIER(OP_SUBMODX, submodx)               \
+    ON_OPCODE_IDENTIFIER(OP_MULMODX, mulmodx)               \
+    ON_OPCODE_IDENTIFIER(OP_LOADX, loadx)                   \
+    ON_OPCODE_IDENTIFIER(OP_STOREX, storex)                 \
     ON_OPCODE_UNDEFINED(0x27)                               \
     ON_OPCODE_UNDEFINED(0x28)                               \
     ON_OPCODE_UNDEFINED(0x29)                               \

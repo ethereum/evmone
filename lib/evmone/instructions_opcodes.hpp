@@ -42,6 +42,12 @@ enum Opcode : uint8_t
     OP_SAR = 0x1d,
 
     OP_KECCAK256 = 0x20,
+    OP_SETUPX = 0x21,
+    OP_ADDMODX = 0x22,
+    OP_SUBMODX = 0x23,
+    OP_MULMODX = 0x24,
+    OP_LOADX = 0x25,
+    OP_STOREX = 0x26,
 
     OP_ADDRESS = 0x30,
     OP_BALANCE = 0x31,

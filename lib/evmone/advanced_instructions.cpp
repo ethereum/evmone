@@ -70,6 +70,15 @@ inline code_iterator impl(AdvancedExecutionState& state, code_iterator pos) noex
     state.stack.top_item += instr::traits[Op].stack_height_change;
     return new_pos;
 }
+
+template <Opcode Op, code_iterator CoreFn(StackTop, ExecutionState&, code_iterator,
+                         int64_t&) noexcept = core::impl<Op>>
+inline code_iterator impl(AdvancedExecutionState& state, code_iterator pos) noexcept
+{
+    const auto new_pos = CoreFn(state.stack.top_item, state, pos, state.gas_left);
+    state.stack.top_item += instr::traits[Op].stack_height_change;
+    return new_pos;
+}
 /// @}
 }  // namespace instr
 
@@ -273,6 +282,10 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
 
     table[OP_DUPN] = op_undefined;
     table[OP_SWAPN] = op_undefined;
+
+    table[OP_ADDMODX] = op_undefined;
+    table[OP_SUBMODX] = op_undefined;
+    table[OP_MULMODX] = op_undefined;
 
     return table;
 }();

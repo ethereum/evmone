@@ -195,6 +195,13 @@ struct Position
 }
 
 [[release_inline]] inline code_iterator invoke(
+    code_iterator (*instr_fn)(StackTop, ExecutionState&, code_iterator, int64_t&) noexcept,
+    Position pos, int64_t& gas, ExecutionState& state) noexcept
+{
+    return instr_fn(pos.stack_top, state, pos.code_it, gas);
+}
+
+[[release_inline]] inline code_iterator invoke(
     TermResult (*instr_fn)(StackTop, int64_t, ExecutionState&) noexcept, Position pos, int64_t& gas,
     ExecutionState& state) noexcept
 {
