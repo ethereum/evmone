@@ -247,6 +247,10 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
             return evmc::Result{EVMC_CONTRACT_VALIDATION_FAILURE};
     }
 
+    // EOF initcode is not allowed for legacy creation
+    if ((msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2) && is_eof_container(initcode))
+        return evmc::Result{EVMC_FAILURE};
+
     auto result = m_vm.execute(*this, m_rev, create_msg, msg.input_data, msg.input_size);
     if (result.status_code != EVMC_SUCCESS)
     {
