@@ -46,6 +46,8 @@ constexpr auto eof_cost_tables = []() noexcept {
     tables[EVMC_PRAGUE][OP_PC] = instr::undefined;
     tables[EVMC_PRAGUE][OP_CALLCODE] = instr::undefined;
     tables[EVMC_PRAGUE][OP_SELFDESTRUCT] = instr::undefined;
+    tables[EVMC_PRAGUE][OP_CREATE] = instr::undefined;
+    tables[EVMC_PRAGUE][OP_CREATE2] = instr::undefined;
     return tables;
 }();
 
