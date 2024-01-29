@@ -369,6 +369,11 @@ inline bytecode calldatacopy(bytecode dst, bytecode src, bytecode size)
     return std::move(size) + std::move(src) + std::move(dst) + OP_CALLDATACOPY;
 }
 
+inline bytecode returndataload(bytecode index)
+{
+    return index + OP_RETURNDATALOAD;
+}
+
 inline bytecode returndatasize()
 {
     return OP_RETURNDATASIZE;

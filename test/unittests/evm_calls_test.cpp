@@ -9,6 +9,9 @@
 using namespace evmc::literals;
 using evmone::test::evm;
 
+inline constexpr auto max_uint256 =
+    0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff_bytes32;
+
 TEST_P(evm, delegatecall)
 {
     auto code = bytecode{};
@@ -739,6 +742,174 @@ TEST_P(evm, returndatacopy_outofrange)
 
     execute(735, staticcall(0) + returndatacopy(0, 2, 0));
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+}
+
+TEST_P(evm, returndatacopy_outofrange_highbits)
+{
+    const uint8_t call_output[2]{};
+    host.call_result.output_data = std::data(call_output);
+    host.call_result.output_size = std::size(call_output);
+
+    // Covers an incorrect cast of RETURNDATALOAD arg to `size_t` ignoring the high bits.
+    const auto highbits =
+        0x1000000000000000000000000000000000000000000000000000000000000000_bytes32;
+    execute(735, staticcall(0) + returndatacopy(0, highbits, 0));
+    EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
+}
+
+TEST_P(evm, returndataload)
+{
+    // Not implemented in Advanced.
+    if (is_advanced())
+        return;
+
+    rev = EVMC_PRAGUE;
+    const auto call_output =
+        0x497f3c9f61479c1cfa53f0373d39d2bf4e5f73f71411da62f1d6b85c03a60735_bytes32;
+    host.call_result.output_data = std::data(call_output.bytes);
+    host.call_result.output_size = std::size(call_output.bytes);
+
+    const auto code = eof_bytecode(staticcall(0) + returndataload(0) + ret_top(), 6);
+    execute(code);
+    EXPECT_GAS_USED(EVMC_SUCCESS, 139);
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size), call_output);
+}
+
+TEST_P(evm, returndataload_cost)
+{
+    // Not implemented in Advanced.
+    if (is_advanced())
+        return;
+
+    rev = EVMC_PRAGUE;
+    const uint8_t call_output[32]{};
+    host.call_result.output_data = std::data(call_output);
+    host.call_result.output_size = std::size(call_output);
+
+    const auto code = eof_bytecode(staticcall(0) + returndataload(0) + OP_STOP, 6);
+    execute(124, code);
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    execute(123, code);
+    EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+}
+
+TEST_P(evm, returndataload_outofrange)
+{
+    // Not implemented in Advanced.
+    if (is_advanced())
+        return;
+
+    rev = EVMC_PRAGUE;
+    {
+        const uint8_t call_output[31]{};
+        host.call_result.output_data = std::data(call_output);
+        host.call_result.output_size = std::size(call_output);
+
+        execute(eof_bytecode(staticcall(0) + returndataload(0) + OP_STOP, 6));
+        EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
+    }
+    {
+        const uint8_t call_output[32]{};
+        host.call_result.output_data = std::data(call_output);
+        host.call_result.output_size = std::size(call_output);
+
+        execute(eof_bytecode(staticcall(0) + returndataload(1) + OP_STOP, 6));
+        EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
+
+        execute(eof_bytecode(staticcall(0) + returndataload(31) + OP_STOP, 6));
+        EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
+
+        execute(eof_bytecode(staticcall(0) + returndataload(32) + OP_STOP, 6));
+        EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
+
+        execute(eof_bytecode(staticcall(0) + returndataload(max_uint256) + OP_STOP, 6));
+        EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
+
+        execute(eof_bytecode(staticcall(0) + returndataload(0) + OP_STOP, 6));
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    }
+    {
+        const uint8_t call_output[34]{};
+        host.call_result.output_data = std::data(call_output);
+        host.call_result.output_size = std::size(call_output);
+
+        execute(eof_bytecode(staticcall(0) + returndataload(3) + OP_STOP, 6));
+        EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
+
+        execute(eof_bytecode(staticcall(0) + returndataload(max_uint256) + OP_STOP, 6));
+        EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
+
+        execute(eof_bytecode(staticcall(0) + returndataload(1) + OP_STOP, 6));
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+
+        execute(eof_bytecode(staticcall(0) + returndataload(2) + OP_STOP, 6));
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    }
+    {
+        const uint8_t call_output[64]{};
+        host.call_result.output_data = std::data(call_output);
+        host.call_result.output_size = std::size(call_output);
+
+        execute(eof_bytecode(staticcall(0) + returndataload(33) + OP_STOP, 6));
+        EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
+
+        execute(eof_bytecode(staticcall(0) + returndataload(max_uint256) + OP_STOP, 6));
+        EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
+
+
+        execute(eof_bytecode(staticcall(0) + returndataload(1) + OP_STOP, 6));
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+
+        execute(eof_bytecode(staticcall(0) + returndataload(31) + OP_STOP, 6));
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+
+        execute(eof_bytecode(staticcall(0) + returndataload(32) + OP_STOP, 6));
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        execute(eof_bytecode(staticcall(0) + returndataload(0) + OP_STOP, 6));
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    }
+}
+
+TEST_P(evm, returndataload_empty)
+{
+    // Not implemented in Advanced.
+    if (is_advanced())
+        return;
+
+    rev = EVMC_PRAGUE;
+    execute(eof_bytecode(staticcall(0) + returndataload(0) + OP_STOP, 6));
+    EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
+
+    execute(eof_bytecode(staticcall(0) + returndataload(1) + OP_STOP, 6));
+    EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
+
+    execute(eof_bytecode(staticcall(0) + returndataload(max_uint256) + OP_STOP, 6));
+    EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
+}
+
+TEST_P(evm, returndataload_outofrange_highbits)
+{
+    // Not implemented in Advanced.
+    if (is_advanced())
+        return;
+
+    rev = EVMC_PRAGUE;
+    const uint8_t call_output[34]{};
+    host.call_result.output_data = std::data(call_output);
+    host.call_result.output_size = std::size(call_output);
+
+    // Covers an incorrect cast of RETURNDATALOAD arg to `size_t` ignoring the high bits.
+    const auto highbits =
+        0x1000000000000000000000000000000000000000000000000000000000000000_bytes32;
+    execute(eof_bytecode(staticcall(0) + returndataload(highbits) + OP_STOP, 6));
+    EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
+}
+
+TEST_P(evm, returndataload_undefined_in_legacy)
+{
+    rev = EVMC_PRAGUE;
+    execute(staticcall(0) + returndataload(0));
+    EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
 }
 
 TEST_P(evm, call_gas_refund_propagation)

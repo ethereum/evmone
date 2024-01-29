@@ -123,6 +123,7 @@ constexpr bool instruction_only_in_evmone(evmc_revision rev, Opcode op) noexcept
     case OP_DATALOADN:
     case OP_DATASIZE:
     case OP_DATACOPY:
+    case OP_RETURNDATALOAD:
     case OP_TLOAD:
     case OP_TSTORE:
         return true;

@@ -36,6 +36,7 @@ constexpr auto legacy_cost_tables = []() noexcept {
     tables[EVMC_PRAGUE][OP_DATACOPY] = instr::undefined;
     tables[EVMC_PRAGUE][OP_DUPN] = instr::undefined;
     tables[EVMC_PRAGUE][OP_SWAPN] = instr::undefined;
+    tables[EVMC_PRAGUE][OP_RETURNDATALOAD] = instr::undefined;
     return tables;
 }();
 
