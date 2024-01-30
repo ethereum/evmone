@@ -5,6 +5,7 @@
 #pragma once
 
 #include "account.hpp"
+#include "state_view.hpp"
 #include "bloom_filter.hpp"
 #include "errors.hpp"
 #include "hash_utils.hpp"
@@ -15,8 +16,6 @@
 
 namespace evmone::state
 {
-class StateView;
-
 /// The Ethereum State: the collection of accounts mapped by their addresses.
 class State
 {
@@ -262,6 +261,8 @@ struct TransactionReceipt
 
     /// Root hash of the state after this transaction. Used only in old pre-Byzantium transactions.
     std::optional<bytes32> post_state;
+
+    StateDiff state_diff;
 };
 
 /// Computes the current blob gas price based on the excess blob gas.
