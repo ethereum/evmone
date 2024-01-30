@@ -38,4 +38,33 @@ void TestState::apply_diff(evmc_revision rev, state::State&& intra_state)
         }
     }
 }
+
+void TestState::apply_diff(const state::StateDiff& diff)
+{
+    for (const auto& [addr, e] : diff.modified_storage)
+    {
+        auto& a = (*this)[addr];
+        for (const auto& [k, v] : e)
+        {
+            if (v)
+                a.storage.insert_or_assign(k, v);
+            else
+                a.storage.erase(k);
+        }
+    }
+
+    for (auto& [addr, m] : diff.modified_accounts)
+    {
+        auto& a = (*this)[addr];
+        if (m.balance)
+            a.balance = *m.balance;
+        if (m.nonce)
+            a.nonce = *m.nonce;
+        if (m.code)
+            a.code = *m.code;
+    }
+
+    for (const auto& addr : diff.deleted_accounts)
+        erase(addr);
+}
 }  // namespace evmone::test
