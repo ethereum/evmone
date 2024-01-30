@@ -100,6 +100,8 @@ public:
     /// Reverts state changes made after the checkpoint.
     void rollback(size_t checkpoint);
 
+    StateDiff build_diff(evmc_revision rev);
+
     /// Methods performing changes to the state which can be reverted by rollback().
     /// @{
 
