@@ -18,7 +18,11 @@ namespace evmone::test
 {
     state::State intra_state{state};
     auto res = state::transition(intra_state, block, tx, rev, vm, block_gas_left, blob_gas_left);
-    state.apply_diff(rev, std::move(intra_state));
+    if (holds_alternative<state::TransactionReceipt>(res))
+    {
+        const auto& r = get<state::TransactionReceipt>(res);
+        state.apply_diff(r.state_diff);
+    }
     return res;
 }
 
