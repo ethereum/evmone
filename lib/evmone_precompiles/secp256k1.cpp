@@ -2,6 +2,7 @@
 // Copyright 2023 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 #include "secp256k1.hpp"
+#include "utils.hpp"
 #include <ethash/keccak.hpp>
 
 namespace evmmax::secp256k1
@@ -117,9 +118,8 @@ std::optional<Point> secp256k1_ecdsa_recover(
     // 6. Calculate public key point Q.
     const auto R = ecc::to_proj(Fp, {r, y});
     const auto pG = ecc::to_proj(Fp, G);
-    const auto T1 = ecc::mul(Fp, pG, u1, B3);
-    const auto T2 = ecc::mul(Fp, R, u2, B3);
-    const auto pQ = ecc::add(Fp, T1, T2, B3);
+
+    const auto pQ = utils::shamir_multipy(Fp, B3, u1, pG, u2, R);
 
     const auto Q = ecc::to_affine(Fp, field_inv, pQ);
 

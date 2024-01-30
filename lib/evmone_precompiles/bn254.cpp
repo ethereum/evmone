@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "bn254.hpp"
+#include "utils.hpp"
 
 namespace evmmax::bn254
 {
@@ -12,6 +13,56 @@ namespace
 const ModArith<uint256> Fp{FieldPrime};
 const auto B = Fp.to_mont(3);
 const auto B3 = Fp.to_mont(3 * 3);
+
+// Linearly independent short vectors (𝑣₁=(𝑥₁, 𝑦₁), 𝑣₂=(x₂, 𝑦₂)) such that f(𝑣₁) = f(𝑣₂) = 0, where
+// f : ℤ×ℤ → ℤₙ is defined as (𝑖,𝑗) → (𝑖+𝑗λ), where λ² + λ ≡ -1 mod n. n is bn245 curve order.
+// Here λ = 0xb3c4d79d41a917585bfc41088d8daaa78b17ea66b99c90dd. DET is (𝑣₁, 𝑣₂) matrix determinant.
+// For more details see
+inline constexpr auto X1 = 147946756881789319020627676272574806254_u512;
+// Y1 should be negative, hence we calculate the determinant below adding operands instead of
+// subtracting.
+inline constexpr auto Y1 = 147946756881789318990833708069417712965_u512;
+inline constexpr auto X2 = 147946756881789319000765030803803410728_u512;
+inline constexpr auto Y2 = 147946756881789319010696353538189108491_u512;
+inline constexpr auto DET =
+    43776485743678550444492811490514550177096728800832068687396408373151616991234_u256;
+
+// For bn254 curve and β ∈ 𝔽ₚ endomorphism ϕ : E₂ → E₂ defined as (𝑥,𝑦) → (β𝑥,𝑦) calculates [λ](𝑥,𝑦)
+// with only one multiplication in 𝔽ₚ. BETA value in Montgomery form;
+inline constexpr auto BETA =
+    20006444479023397533370224967097343182639219473961804911780625968796493078869_u256;
+
+// Decomposes scalar k into k₁ and k₂ such that k₁ + k₂λ ≡ k mod n
+std::pair<uint256, uint256> decompose(const uint256& k) noexcept
+{
+    const auto round_div = [](const uint512& n) {
+        const auto [q, r] = udivrem(n, DET);
+
+        return (r <= (DET / 2)) ? q : (q + 1);
+    };
+
+    const auto z1 = round_div(Y2 * k);
+    const auto z2 = round_div(Y1 * k);
+
+    auto const z1x1_z2x2 = z1 * X1 + z2 * X2;
+
+    auto tk = k;
+    if (tk < z1x1_z2x2)
+        tk += Order;
+
+    const auto k1 = (tk - (z1x1_z2x2)) % Order;
+
+    const uint512 z2y2 = z2 * Y2;
+    uint512 z1y1 = z1 * Y1;
+
+    if (z1y1 < z2y2)
+        z1y1 += Order;
+
+    const uint512 k2 = (z1y1 - z2y2) % Order;
+
+    return {uint256{k1}, uint256{k2}};
+}
+
 }  // namespace
 
 bool validate(const Point& pt) noexcept
@@ -49,9 +100,14 @@ Point mul(const Point& pt, const uint256& c) noexcept
     if (c == 0)
         return {};
 
-    const auto pr = ecc::mul(Fp, ecc::to_proj(Fp, pt), c, B3);
+    const auto [k1, k2] = decompose(c % Order);
 
-    return ecc::to_affine(Fp, field_inv, pr);
+    const ecc::ProjPoint<uint256> q = {
+        Fp.mul(BETA, Fp.to_mont(pt.x)), Fp.to_mont(pt.y), Fp.to_mont(1)};
+
+    const auto r = utils::shamir_multipy(Fp, B3, k1, ecc::to_proj(Fp, pt), k2, q);
+
+    return ecc::to_affine(Fp, field_inv, r);
 }
 
 uint256 field_inv(const ModArith<uint256>& m, const uint256& x) noexcept

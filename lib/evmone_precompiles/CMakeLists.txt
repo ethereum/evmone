@@ -12,4 +12,5 @@ target_sources(
     ecc.hpp
     secp256k1.cpp
     secp256k1.hpp
+    utils.hpp
 )
