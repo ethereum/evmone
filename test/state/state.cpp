@@ -3,11 +3,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "state.hpp"
-#include "state_view.hpp"
 #include "../utils/stdx/utility.hpp"
 #include "errors.hpp"
 #include "host.hpp"
 #include "rlp.hpp"
+#include "state_view.hpp"
 #include <evmone/evmone.h>
 #include <evmone/execution_state.hpp>
 
@@ -222,6 +222,65 @@ void State::rollback(size_t checkpoint)
             m_journal.back());
         m_journal.pop_back();
     }
+}
+
+StateDiff State::build_diff(evmc_revision rev)
+{
+    StateDiff d;
+    for (const auto& e : m_journal)
+    {
+        std::visit(
+            [&d, this, rev](const auto& e) {
+                using T = std::decay_t<decltype(e)>;
+                if constexpr (std::is_same_v<T, JournalNonceBump>)
+                {
+                    d.modified_accounts[e.addr].nonce = m_accounts[e.addr].nonce;
+                }
+                else if constexpr (std::is_same_v<T, JournalTouched>)
+                {
+                    const auto& acc = get(e.addr);
+                    assert(acc.erase_if_empty);
+                    if (rev >= EVMC_SPURIOUS_DRAGON && acc.is_empty())
+                        d.deleted_accounts.insert(e.addr);
+                }
+                else if constexpr (std::is_same_v<T, JournalDestruct>)
+                {
+                    d.deleted_accounts.insert(e.addr);
+                }
+                else if constexpr (std::is_same_v<T, JournalAccessAccount>)
+                {
+                }
+                else if constexpr (std::is_same_v<T, JournalCreate>)
+                {
+                    const auto& acc = get(e.addr);
+                    if (rev >= EVMC_SPURIOUS_DRAGON && acc.is_empty())
+                        return;
+
+                    auto& m = d.modified_accounts[e.addr];
+                    m.nonce = acc.nonce;
+                    m.balance = acc.balance;
+                    m.code = acc.code;
+                }
+                else if constexpr (std::is_same_v<T, JournalStorageChange>)
+                {
+                    d.modified_storage[e.addr][e.key] = get(e.addr).storage[e.key].current;
+                }
+                else if constexpr (std::is_same_v<T, JournalTransientStorageChange>)
+                {
+                }
+                else if constexpr (std::is_same_v<T, JournalBalanceChange>)
+                {
+                    d.modified_accounts[e.addr].balance = m_accounts[e.addr].balance;
+                }
+                else
+                {
+                    // TODO(C++23): Change condition to `false` once CWG2518 is in.
+                    static_assert(std::is_void_v<T>, "unhandled journal entry type");
+                }
+            },
+            e);
+    }
+    return d;
 }
 
 intx::uint256 compute_blob_gas_price(uint64_t excess_blob_gas) noexcept
@@ -505,6 +564,9 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
 
     // Cannot put it into constructor call because logs are std::moved from host instance.
     receipt.logs_bloom_filter = compute_bloom_filter(receipt.logs);
+
+    receipt.state_diff = state.build_diff(rev);
+
 
     // Delete empty accounts after every transaction. This is strictly required until Byzantium
     // where intermediate state root hashes are part of the transaction receipt.
