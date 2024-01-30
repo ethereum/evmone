@@ -192,7 +192,7 @@ commands:
           name: "Download execution-spec-tests"
           working_directory: ~/spec-tests
           command: |
-            curl -L https://github.com/ethereum/execution-spec-tests/releases/download/v1.0.6/fixtures_develop.tar.gz | tar -xz
+            curl -L https://github.com/ethereum/execution-spec-tests/releases/download/v2.1.0/fixtures_develop.tar.gz | tar -xz
             ls -l
 
   build:
@@ -487,11 +487,17 @@ jobs:
       - download_execution_spec_tests
       - build
       - run:
-          name: "Execution spec tests"
+          name: "Execution spec tests (blockchain_tests)"
           working_directory: ~/build
           command: >
             EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json 
-            bin/evmone-blockchaintest ~/spec-tests/fixtures
+            bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests
+      - run:
+          name: "Execution spec tests (state_tests)"
+          working_directory: ~/build
+          command: >
+            EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json 
+            bin/evmone-statetest ~/spec-tests/fixtures/state_tests
 
       - download_execution_tests:
           rev: v13
