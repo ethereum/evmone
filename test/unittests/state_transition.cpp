@@ -81,6 +81,10 @@ void state_transition::TearDown()
     ASSERT_TRUE(holds_alternative<TransactionReceipt>(res))
         << std::get<std::error_code>(res).message();
     const auto& receipt = std::get<TransactionReceipt>(res);
+
+    // TODO: This does not match the state test logic exactly:
+    //   There, finalize() runs also in case of an invalid transaction so the coinbase account
+    //   may be created empty if does not exist.
     test::finalize(state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
 
     if (trace)
