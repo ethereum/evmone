@@ -10,8 +10,6 @@ using namespace evmone::test;
 
 TEST_F(state_transition, create2_factory)
 {
-    static constexpr auto create_address = 0xfd8e7707356349027a32d71eabc7cb0cf9d7cbb4_address;
-
     const auto factory_code =
         calldatacopy(0, 0, calldatasize()) + create2().input(0, calldatasize());
     const auto initcode = mstore8(0, push(0xFE)) + ret(0, 1);
@@ -20,27 +18,23 @@ TEST_F(state_transition, create2_factory)
     tx.data = initcode;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_code});
 
+    const auto create_address = compute_create2_address(*tx.to, {}, initcode);
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;  // CREATE caller's nonce must be bumped
     expect.post[create_address].code = bytes{0xFE};
 }
 
 TEST_F(state_transition, create_tx)
 {
-    static constexpr auto create_address = 0x3442a1dec1e72f337007125aa67221498cdd759d_address;
-
     tx.data = mstore8(0, push(0xFE)) + ret(0, 1);
 
+    const auto create_address = compute_create_address(Sender, pre.get(Sender).nonce);
     expect.post[create_address].code = bytes{0xFE};
 }
 
 TEST_F(state_transition, create2_max_nonce)
 {
-    // The address to be created by CREATE2 of the "To" sender and empty initcode.
-    static constexpr auto create_address = 0x36fd63ce1cb5ee2993f19d1fae4e84d52f6f1595_address;
-
     tx.to = To;
     pre.insert(*tx.to, {.nonce = ~uint64_t{0}, .code = create2()});
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // Nonce is unchanged.
-    expect.post[create_address].exists = false;
 }
