@@ -34,8 +34,8 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
     std::optional<int64_t> block_reward)
 {
     state::State intra_state{state};
-    state::system_call(intra_state, block, rev, vm);
-    state.apply_diff(rev, std::move(intra_state));
+    const auto diff = state::system_call(intra_state, block, rev, vm);
+    state.apply_diff(diff);
 
     std::vector<state::Log> txs_logs;
     int64_t block_gas_left = block.gas_limit;
