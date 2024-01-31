@@ -396,18 +396,19 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
     return execution_gas_limit;
 }
 
-//namespace
+// namespace
 //{
 ///// Deletes "touched" (marked as erasable) empty accounts in the state.
-//void delete_empty_accounts(State& state)
+// void delete_empty_accounts(State& state)
 //{
-//    (void)state;
-//    // std::erase_if(state.get_accounts(), [](const std::pair<const address, Account>& p) noexcept {
-//    //     const auto& acc = p.second;
-//    //     return acc.erase_if_empty && acc.is_empty();
-//    // });
-//}
-//}  // namespace
+//     (void)state;
+//     // std::erase_if(state.get_accounts(), [](const std::pair<const address, Account>& p)
+//     noexcept {
+//     //     const auto& acc = p.second;
+//     //     return acc.erase_if_empty && acc.is_empty();
+//     // });
+// }
+// }  // namespace
 
 void system_call(State& state, const BlockInfo& block, evmc_revision rev, evmc::VM& vm)
 {
@@ -444,11 +445,10 @@ void system_call(State& state, const BlockInfo& block, evmc_revision rev, evmc::
     }
 }
 
-void finalize(State& state, evmc_revision rev, const address& coinbase,
+StateDiff finalize(State& state, evmc_revision rev, const address& coinbase,
     std::optional<uint64_t> block_reward, std::span<const Ommer> ommers,
     std::span<const Withdrawal> withdrawals)
 {
-    (void)rev;
     // TODO: The block reward can be represented as a withdrawal.
     if (block_reward.has_value())
     {
@@ -477,6 +477,8 @@ void finalize(State& state, evmc_revision rev, const address& coinbase,
         state.journal_balance_change(withdrawal.recipient, recipient_acc.balance);
         recipient_acc.balance += withdrawal.get_amount();
     }
+
+    return state.build_diff(rev);
 
     // Delete potentially empty block reward recipients.
     //if (rev >= EVMC_SPURIOUS_DRAGON)
