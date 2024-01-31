@@ -396,18 +396,18 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
     return execution_gas_limit;
 }
 
-namespace
-{
-/// Deletes "touched" (marked as erasable) empty accounts in the state.
-void delete_empty_accounts(State& state)
-{
-    (void)state;
-    // std::erase_if(state.get_accounts(), [](const std::pair<const address, Account>& p) noexcept {
-    //     const auto& acc = p.second;
-    //     return acc.erase_if_empty && acc.is_empty();
-    // });
-}
-}  // namespace
+//namespace
+//{
+///// Deletes "touched" (marked as erasable) empty accounts in the state.
+//void delete_empty_accounts(State& state)
+//{
+//    (void)state;
+//    // std::erase_if(state.get_accounts(), [](const std::pair<const address, Account>& p) noexcept {
+//    //     const auto& acc = p.second;
+//    //     return acc.erase_if_empty && acc.is_empty();
+//    // });
+//}
+//}  // namespace
 
 void system_call(State& state, const BlockInfo& block, evmc_revision rev, evmc::VM& vm)
 {
@@ -435,11 +435,11 @@ void system_call(State& state, const BlockInfo& block, evmc_revision rev, evmc::
             assert(acc->access_status == EVMC_ACCESS_COLD);
 
             // Reset storage status.
-            for (auto& [_, val] : acc->storage)
-            {
-                val.access_status = EVMC_ACCESS_COLD;
-                val.original = val.current;
-            }
+            //            for (auto& [_, val] : acc->storage)
+            //            {
+            //                val.access_status = EVMC_ACCESS_COLD;
+            //                val.original = val.current;
+            //            }
         }
     }
 }
@@ -448,6 +448,7 @@ void finalize(State& state, evmc_revision rev, const address& coinbase,
     std::optional<uint64_t> block_reward, std::span<const Ommer> ommers,
     std::span<const Withdrawal> withdrawals)
 {
+    (void)rev;
     // TODO: The block reward can be represented as a withdrawal.
     if (block_reward.has_value())
     {
@@ -478,8 +479,8 @@ void finalize(State& state, evmc_revision rev, const address& coinbase,
     }
 
     // Delete potentially empty block reward recipients.
-    if (rev >= EVMC_SPURIOUS_DRAGON)
-        delete_empty_accounts(state);
+    //if (rev >= EVMC_SPURIOUS_DRAGON)
+    //    delete_empty_accounts(state);
 }
 
 std::variant<TransactionReceipt, std::error_code> transition(State& state, const BlockInfo& block,
@@ -574,23 +575,23 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
     // Delete empty accounts after every transaction. This is strictly required until Byzantium
     // where intermediate state root hashes are part of the transaction receipt.
     // TODO: Consider limiting this only to Spurious Dragon.
-    if (rev >= EVMC_SPURIOUS_DRAGON)
-        delete_empty_accounts(state);
+    //if (rev >= EVMC_SPURIOUS_DRAGON)
+    //    delete_empty_accounts(state);
 
     // Post-transaction clean-up.
     // - Set accounts and their storage access status to cold.
     // - Clear the "just created" account flag.
-    for (auto& [addr, acc] : state.get_accounts())
-    {
-        acc.transient_storage.clear();
-        acc.access_status = EVMC_ACCESS_COLD;
-        acc.just_created = false;
-        for (auto& [key, val] : acc.storage)
-        {
-            val.access_status = EVMC_ACCESS_COLD;
-            val.original = val.current;
-        }
-    }
+    //    for (auto& [addr, acc] : state.get_accounts())
+    //    {
+    //        acc.transient_storage.clear();
+    //        acc.access_status = EVMC_ACCESS_COLD;
+    //        acc.just_created = false;
+    //        for (auto& [key, val] : acc.storage)
+    //        {
+    //            val.access_status = EVMC_ACCESS_COLD;
+    //            val.original = val.current;
+    //        }
+    //    }
 
     return receipt;
 }
