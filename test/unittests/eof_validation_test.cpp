@@ -1062,6 +1062,14 @@ TEST(eof_validation, non_returning_status)
     EXPECT_EQ(
         validate_eof("EF0001 010008 02000200010007 040000 00 0080000001800001 00 E10001E4E50000"),
         EOFValidationError::invalid_non_returning_flag);
+
+    // Circular JUMPF: can be both returning and non-returning
+    EXPECT_EQ(
+        validate_eof(eof_bytecode(jumpf(1)).code(jumpf(2), 0, 0x80, 0).code(jumpf(1), 0, 0x80, 0)),
+        EOFValidationError::success);
+    EXPECT_EQ(validate_eof(
+                  eof_bytecode(callf(1) + OP_STOP).code(jumpf(2), 0, 0, 0).code(jumpf(1), 0, 0, 0)),
+        EOFValidationError::success);
 }
 
 TEST(eof_validation, callf_into_nonreturning)
