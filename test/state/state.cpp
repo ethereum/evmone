@@ -410,14 +410,16 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
 // }
 // }  // namespace
 
-StateDiff system_call(State& state, const BlockInfo& block, evmc_revision rev, evmc::VM& vm)
+StateDiff system_call(
+    const StateView& state, const BlockInfo& block, evmc_revision rev, evmc::VM& vm)
 {
     static constexpr auto SystemAddress = 0xfffffffffffffffffffffffffffffffffffffffe_address;
     static constexpr auto BeaconRootsAddress = 0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02_address;
 
+    State ss{state};
     if (rev >= EVMC_CANCUN)
     {
-        if (const auto acc = state.find(BeaconRootsAddress); acc != nullptr)
+        if (const auto acc = state.get_account(BeaconRootsAddress))
         {
             const evmc_message msg{
                 .kind = EVMC_CALL,
@@ -429,11 +431,10 @@ StateDiff system_call(State& state, const BlockInfo& block, evmc_revision rev, e
             };
 
             const Transaction empty_tx{};
-            Host host{rev, vm, state, block, empty_tx};
+            Host host{rev, vm, ss, block, empty_tx};
             const auto& code = acc->code;
             [[maybe_unused]] const auto res = vm.execute(host, rev, msg, code.data(), code.size());
             assert(res.status_code == EVMC_SUCCESS);
-            assert(acc->access_status == EVMC_ACCESS_COLD);
 
             // Reset storage status.
             //            for (auto& [_, val] : acc->storage)
@@ -444,13 +445,14 @@ StateDiff system_call(State& state, const BlockInfo& block, evmc_revision rev, e
         }
     }
 
-    return state.build_diff(rev);
+    return ss.build_diff(rev);
 }
 
-StateDiff finalize(State& state, evmc_revision rev, const address& coinbase,
+StateDiff finalize(const StateView& sv, evmc_revision rev, const address& coinbase,
     std::optional<uint64_t> block_reward, std::span<const Ommer> ommers,
     std::span<const Withdrawal> withdrawals)
 {
+    State state{sv};
     // TODO: The block reward can be represented as a withdrawal.
     if (block_reward.has_value())
     {
@@ -487,10 +489,11 @@ StateDiff finalize(State& state, evmc_revision rev, const address& coinbase,
     //    delete_empty_accounts(state);
 }
 
-std::variant<TransactionReceipt, std::error_code> transition(State& state, const BlockInfo& block,
-    const Transaction& tx, evmc_revision rev, evmc::VM& vm, int64_t block_gas_left,
-    int64_t blob_gas_left)
+std::variant<TransactionReceipt, std::error_code> transition(const StateView& state_view,
+    const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm,
+    int64_t block_gas_left, int64_t blob_gas_left)
 {
+    State state{state_view};
     auto* sender_ptr = state.find(tx.sender);
 
     // Validate transaction. The validation needs the sender account, so in case

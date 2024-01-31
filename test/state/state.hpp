@@ -269,11 +269,11 @@ intx::uint256 compute_blob_gas_price(uint64_t excess_blob_gas) noexcept;
 ///
 /// Applies block reward to coinbase, withdrawals (post Shanghai) and deletes empty touched accounts
 /// (post Spurious Dragon).
-[[nodiscard]] StateDiff finalize(State& state, evmc_revision rev, const address& coinbase,
+[[nodiscard]] StateDiff finalize(const StateView& state, evmc_revision rev, const address& coinbase,
     std::optional<uint64_t> block_reward, std::span<const Ommer> ommers,
     std::span<const Withdrawal> withdrawals);
 
-[[nodiscard]] std::variant<TransactionReceipt, std::error_code> transition(State& state,
+[[nodiscard]] std::variant<TransactionReceipt, std::error_code> transition(const StateView& state,
     const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm,
     int64_t block_gas_left, int64_t blob_gas_left);
 
@@ -286,7 +286,7 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
 /// Executes code at pre-defined accounts from the system sender (0xff...fe).
 /// The sender's nonce is not increased.
 [[nodiscard]] StateDiff system_call(
-    State& state, const BlockInfo& block, evmc_revision rev, evmc::VM& vm);
+    const StateView& state, const BlockInfo& block, evmc_revision rev, evmc::VM& vm);
 
 /// Defines how to RLP-encode a Transaction.
 [[nodiscard]] bytes rlp_encode(const Transaction& tx);
