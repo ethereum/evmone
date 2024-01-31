@@ -43,7 +43,6 @@ public:
     void insert(const address& addr, TestAccount&& acc) { (*this)[addr] = std::move(acc); }
     TestAccount& get(const address& addr) { return (*this)[addr]; }
 
-    void apply_diff(evmc_revision rev, state::State&& intra_state);
     void apply_diff(const state::StateDiff& diff);
 };
 
