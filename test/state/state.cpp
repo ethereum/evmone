@@ -410,7 +410,7 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
 // }
 // }  // namespace
 
-void system_call(State& state, const BlockInfo& block, evmc_revision rev, evmc::VM& vm)
+StateDiff system_call(State& state, const BlockInfo& block, evmc_revision rev, evmc::VM& vm)
 {
     static constexpr auto SystemAddress = 0xfffffffffffffffffffffffffffffffffffffffe_address;
     static constexpr auto BeaconRootsAddress = 0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02_address;
@@ -443,6 +443,8 @@ void system_call(State& state, const BlockInfo& block, evmc_revision rev, evmc::
             //            }
         }
     }
+
+    return state.build_diff(rev);
 }
 
 StateDiff finalize(State& state, evmc_revision rev, const address& coinbase,

@@ -18,9 +18,10 @@ TEST(state_system_call, non_existient)
     TestState ts;
     State state{ts};
 
-    system_call(state, {}, EVMC_CANCUN, vm);
+    const auto diff = system_call(state, {}, EVMC_CANCUN, vm);
+    ts.apply_diff(diff);
 
-    EXPECT_EQ(state.get_accounts().size(), 0);
+    EXPECT_EQ(ts.size(), 0);
 }
 
 TEST(state_system_call, sstore_timestamp)
@@ -34,12 +35,13 @@ TEST(state_system_call, sstore_timestamp)
     State state{ts};
     state.insert(BeaconRootsAddress, {.code = sstore(OP_NUMBER, OP_TIMESTAMP)});
 
-    system_call(state, block, EVMC_CANCUN, vm);
+    const auto diff = system_call(state, block, EVMC_CANCUN, vm);
+    ts.apply_diff(diff);
 
-    ASSERT_EQ(state.get_accounts().size(), 1);
-    EXPECT_EQ(state.get(BeaconRootsAddress).nonce, 0);
-    EXPECT_EQ(state.get(BeaconRootsAddress).balance, 0);
-    const auto& storage = state.get(BeaconRootsAddress).storage;
+    ASSERT_EQ(ts.size(), 1);
+    EXPECT_EQ(ts[BeaconRootsAddress].nonce, 0);
+    EXPECT_EQ(ts[BeaconRootsAddress].balance, 0);
+    const auto& storage = ts[BeaconRootsAddress].storage;
     ASSERT_EQ(storage.size(), 1);
-    EXPECT_EQ(storage.at(0x01_bytes32).current, 404);
+    EXPECT_EQ(storage.at(0x01_bytes32), 404);
 }
