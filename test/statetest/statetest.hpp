@@ -16,8 +16,7 @@ namespace evmone::test
     TestState& state, const state::BlockInfo& block, const state::Transaction& tx,
     evmc_revision rev, evmc::VM& vm, int64_t block_gas_left, int64_t blob_gas_left)
 {
-    state::State intra_state{state};
-    auto res = state::transition(intra_state, block, tx, rev, vm, block_gas_left, blob_gas_left);
+    const auto res = state::transition(state, block, tx, rev, vm, block_gas_left, blob_gas_left);
     if (holds_alternative<state::TransactionReceipt>(res))
     {
         const auto& r = get<state::TransactionReceipt>(res);
@@ -30,9 +29,7 @@ inline void finalize(TestState& state, evmc_revision rev, const address& coinbas
     std::optional<uint64_t> block_reward, std::span<const state::Ommer> ommers,
     std::span<const state::Withdrawal> withdrawals)
 {
-    state::State intra_state{state};
-    const auto diff =
-        state::finalize(intra_state, rev, coinbase, block_reward, ommers, withdrawals);
+    const auto diff = state::finalize(state, rev, coinbase, block_reward, ommers, withdrawals);
     state.apply_diff(diff);
 }
 
