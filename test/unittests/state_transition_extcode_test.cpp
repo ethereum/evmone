@@ -8,6 +8,34 @@
 using namespace evmc::literals;
 using namespace evmone::test;
 
+TEST_F(state_transition, extcodehash_existent)
+{
+    rev = EVMC_ISTANBUL;  // before account access
+    block.base_fee = 0;
+
+    static constexpr auto EXT = 0xe4_address;
+    tx.to = To;
+    pre.insert(To, {.code = sstore(0, push(EXT) + OP_EXTCODEHASH)});
+    pre.insert(EXT, {.code = bytecode{"1234"}});
+
+    expect.post[EXT].exists = true;
+    expect.post[To].storage[0x00_bytes32] = keccak256(pre.get(EXT).code);
+}
+
+TEST_F(state_transition, extcodesize_existent)
+{
+    rev = EVMC_ISTANBUL;  // before account access
+    block.base_fee = 0;
+
+    static constexpr auto EXT = 0xe4_address;
+    tx.to = To;
+    pre.insert(To, {.code = sstore(0, push(EXT) + OP_EXTCODESIZE)});
+    pre.insert(EXT, {.code = bytes(3, 0)});
+
+    expect.post[EXT].exists = true;
+    expect.post[To].storage[0x00_bytes32] = 0x03_bytes32;
+}
+
 constexpr auto target = 0xfffffffffffffffffffffffffffffffffffffffe_address;
 
 TEST_F(state_transition, legacy_extcodesize_eof)
