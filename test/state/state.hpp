@@ -269,7 +269,7 @@ intx::uint256 compute_blob_gas_price(uint64_t excess_blob_gas) noexcept;
 ///
 /// Applies block reward to coinbase, withdrawals (post Shanghai) and deletes empty touched accounts
 /// (post Spurious Dragon).
-void finalize(State& state, evmc_revision rev, const address& coinbase,
+[[nodiscard]] StateDiff finalize(State& state, evmc_revision rev, const address& coinbase,
     std::optional<uint64_t> block_reward, std::span<const Ommer> ommers,
     std::span<const Withdrawal> withdrawals);
 
