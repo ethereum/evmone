@@ -324,6 +324,16 @@ inline bytecode rjumpv(const std::initializer_list<int16_t> offsets, bytecode co
     return ret;
 }
 
+inline bytecode callf(uint16_t target)
+{
+    return OP_CALLF + big_endian(target);
+}
+
+inline bytecode jumpf(uint16_t target)
+{
+    return OP_JUMPF + big_endian(target);
+}
+
 inline bytecode ret(bytecode index, bytecode size)
 {
     return size + index + OP_RETURN;

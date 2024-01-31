@@ -1228,7 +1228,7 @@ TEST(eof_validation, unreachable_code_sections)
     }
 
     {
-        const auto code = eof_bytecode(bytecode{OP_CALLF} + "0001" + OP_STOP, 0)
+        const auto code = eof_bytecode(callf(1) + OP_STOP, 0)
                               .code(bytecode{"5B"} + OP_RETF, 0, 0, 0)
                               .code(bytecode{"FE"}, 0, 0x80, 0);
 
@@ -1236,7 +1236,7 @@ TEST(eof_validation, unreachable_code_sections)
     }
 
     {
-        const auto code = eof_bytecode(bytecode{OP_CALLF} + "0002" + OP_STOP, 0)
+        const auto code = eof_bytecode(callf(2) + OP_STOP, 0)
                               .code(bytecode{"FE"}, 0, 0x80, 0)
                               .code(bytecode{"5B"} + OP_RETF, 0, 0, 0);
 
@@ -1244,23 +1244,22 @@ TEST(eof_validation, unreachable_code_sections)
     }
 
     {
-        const auto code = eof_bytecode(bytecode{OP_CALLF} + "0003" + OP_STOP, 0)
+        const auto code = eof_bytecode(callf(3) + OP_STOP, 0)
                               .code(bytecode{"FE"}, 0, 0x80, 0)
                               .code(bytecode{"5B"} + OP_RETF, 0, 0, 0)
-                              .code(bytecode{OP_CALLF} + "0002" + OP_RETF, 0, 0, 0);
+                              .code(callf(2) + OP_RETF, 0, 0, 0);
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::unreachable_code_sections);
     }
 
     {
-        const auto code =
-            eof_bytecode(bytecode{OP_JUMPF} + "0000").code(bytecode{OP_JUMPF} + "0001", 0, 0x80, 0);
+        const auto code = eof_bytecode(jumpf(0)).code(jumpf(1), 0, 0x80, 0);
 
         EXPECT_EQ(validate_eof(code), EOFValidationError::unreachable_code_sections);
     }
 
     {
-        const auto code = eof_bytecode(bytecode{OP_JUMPF} + "0001")
+        const auto code = eof_bytecode(jumpf(1))
                               .code(bytecode{OP_STOP}, 0, 0x80, 0)
                               .code(bytecode{"5B"} + OP_RETF, 0, 0, 0);
 
@@ -1268,22 +1267,17 @@ TEST(eof_validation, unreachable_code_sections)
     }
 
     {
-        auto code_sections_256_err_001 =
-            eof_bytecode(bytecode{OP_JUMPF} + "0001").code(bytecode{OP_JUMPF} + "0001", 0, 0x80, 0);
-        auto code_sections_256_err_254 =
-            eof_bytecode(bytecode{OP_JUMPF} + "0001").code(bytecode{OP_JUMPF} + "0002", 0, 0x80, 0);
+        auto code_sections_256_err_001 = eof_bytecode(jumpf(1)).code(jumpf(1), 0, 0x80, 0);
+        auto code_sections_256_err_254 = eof_bytecode(jumpf(1)).code(jumpf(2), 0, 0x80, 0);
         for (int i = 2; i < 254; ++i)
         {
-            code_sections_256_err_001.code(
-                bytecode{OP_JUMPF} + hex(big_endian(static_cast<uint16_t>(i + 1))), 0, 0x80, 0);
-            code_sections_256_err_254.code(
-                bytecode{OP_JUMPF} + hex(big_endian(static_cast<uint16_t>(i + 1))), 0, 0x80, 0);
-            ;
+            code_sections_256_err_001.code(jumpf(static_cast<uint16_t>(i + 1)), 0, 0x80, 0);
+            code_sections_256_err_254.code(jumpf(static_cast<uint16_t>(i + 1)), 0, 0x80, 0);
         }
 
-        code_sections_256_err_001.code(bytecode{OP_JUMPF} + "00FF", 0, 0x80, 0)
+        code_sections_256_err_001.code(jumpf(255), 0, 0x80, 0)
             .code(3 * bytecode{"5B"} + OP_STOP, 0, 0x80, 0);
-        code_sections_256_err_254.code(bytecode{OP_JUMPF} + "00FE", 0, 0x80, 0)
+        code_sections_256_err_254.code(jumpf(254), 0, 0x80, 0)
             .code(3 * bytecode{"5B"} + OP_STOP, 0, 0x80, 0);
 
         // Code Section 1 calls itself instead of code section 2, leaving code section 2 unreachable
