@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "state_transition.hpp"
+#include <test/utils/bytecode.hpp>
 
 using namespace evmc::literals;
 using namespace evmone::test;
@@ -92,4 +93,17 @@ TEST_F(state_transition, empty_coinbase_fee_0_tw)
     pre.insert(Coinbase, {});
     expect.post[To].exists = true;
     expect.post[Coinbase].balance = 0;
+}
+
+TEST_F(state_transition, access_list_storage)
+{
+    tx.to = To;
+    tx.access_list = {{To, {0x01_bytes32}}};
+
+    pre.insert(To,
+        {.storage = {{0x01_bytes32, {0x01_bytes32, 0x01_bytes32}}}, .code = sstore(2, sload(1))});
+
+    expect.post[To].storage[0x01_bytes32] = 0x01_bytes32;
+    expect.post[To].storage[0x02_bytes32] = 0x01_bytes32;
+    expect.gas_used = 47506;  // Without access list: 45206
 }
