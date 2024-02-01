@@ -7,6 +7,14 @@
 using namespace evmc::literals;
 using namespace evmone::test;
 
+TEST_F(state_transition, tx_legacy)
+{
+    rev = EVMC_ISTANBUL;
+    tx.to = To;
+
+    expect.post.at(Sender).nonce = pre.get(Sender).nonce + 1;
+}
+
 TEST_F(state_transition, tx_non_existing_sender)
 {
     tx.to = To;
