@@ -65,3 +65,31 @@ TEST_F(state_transition, blob_tx_insuficient_funds)
     expect.post.at(Coinbase).exists = false;
     expect.status = EVMC_SUCCESS;
 }
+
+TEST_F(state_transition, empty_coinbase_fee_0_sd)
+{
+    rev = EVMC_SPURIOUS_DRAGON;
+
+    block_reward = 0;
+    block.base_fee = 0;
+    tx.max_gas_price = 0;
+    tx.max_priority_gas_price = 0;
+    tx.to = To;
+    pre.insert(Coinbase, {});
+    expect.post[To].exists = false;
+    expect.post[Coinbase].exists = false;
+}
+
+TEST_F(state_transition, empty_coinbase_fee_0_tw)
+{
+    rev = EVMC_TANGERINE_WHISTLE;
+
+    block_reward = 0;
+    block.base_fee = 0;
+    tx.max_gas_price = 0;
+    tx.max_priority_gas_price = 0;
+    tx.to = To;
+    pre.insert(Coinbase, {});
+    expect.post[To].exists = true;
+    expect.post[Coinbase].balance = 0;
+}
