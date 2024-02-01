@@ -33,7 +33,20 @@ public:
 
 void state_transition::TearDown()
 {
+    // Validation:
+
+    if (rev < EVMC_LONDON)
+    {
+        ASSERT_EQ(tx.type, state::Transaction::Type::legacy);
+    }
+    if (tx.type == state::Transaction::Type::legacy)
+    {
+        ASSERT_EQ(tx.max_gas_price, tx.max_priority_gas_price);
+    }
+
     validate_state(pre, rev);
+
+    // Execution:
 
     auto state = pre;
     const auto trace = !expect.trace.empty();
@@ -155,8 +168,16 @@ void state_transition::export_state_test(const TransactionReceipt& receipt, cons
     jtx["sender"] = hex0x(tx.sender);
     jtx["secretKey"] = hex0x(SenderSecretKey);
     jtx["nonce"] = hex0x(tx.nonce);
-    jtx["maxFeePerGas"] = hex0x(tx.max_gas_price);
-    jtx["maxPriorityFeePerGas"] = hex0x(tx.max_priority_gas_price);
+    if (rev < EVMC_LONDON)
+    {
+        assert(tx.max_gas_price == tx.max_priority_gas_price);
+        jtx["gasPrice"] = hex0x(tx.max_gas_price);
+    }
+    else
+    {
+        jtx["maxFeePerGas"] = hex0x(tx.max_gas_price);
+        jtx["maxPriorityFeePerGas"] = hex0x(tx.max_priority_gas_price);
+    }
 
     jtx["data"][0] = hex0x(tx.data);
     jtx["gasLimit"][0] = hex0x(tx.gas_limit);
