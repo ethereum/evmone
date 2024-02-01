@@ -211,6 +211,20 @@ void state_transition::export_state_test(
     jtx["gasLimit"][0] = hex0x(tx.gas_limit);
     jtx["value"][0] = hex0x(tx.value);
 
+    if (!tx.access_list.empty())
+    {
+        auto& ja = jtx["accessLists"][0];
+        for (const auto& [addr, storage_keys] : tx.access_list)
+        {
+            json::json je;
+            je["address"] = hex0x(addr);
+            auto& jstorage_keys = je["storageKeys"] = json::json::array();
+            for (const auto& k : storage_keys)
+                jstorage_keys.push_back(hex0x(k));
+            ja.push_back(je);
+        }
+    }
+
     auto& jpost = jt["post"][evmc::to_string(rev)][0];
     jpost["indexes"] = {{"data", 0}, {"gas", 0}, {"value", 0}};
     jpost["hash"] = hex0x(mpt_hash(post.get_accounts()));
