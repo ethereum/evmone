@@ -122,6 +122,47 @@ static constexpr DifficultyTest tests[] = {
         0x617ec9fb8,
         true,
     },
+    {
+        EVMC_FRONTIER,
+        "min_difficulty_frontier",
+        1,
+        0x20000,
+        1100,
+        0x20000,
+        1000,
+        false,
+    },
+    {
+        EVMC_HOMESTEAD,
+        "min_difficulty_homestead",
+        1,
+        0x20000,
+        2000,
+        0x21999,
+        1000,
+        false,
+    },
+    {
+        EVMC_BYZANTIUM,
+        "min_difficulty_byzantium",
+        3'000'001,
+        0x20000,
+        10060,
+        0x20139,
+        10000,
+        false,
+    },
+    {
+        // Calculated difficulty is exactly 0x20000 without min cap.
+        EVMC_BYZANTIUM,
+        "min_difficulty_byzantium2",
+        3'000'001,
+        0x20000,
+        10060,
+        0x20140,
+        10000,
+        false,
+    },
 };
 
 TEST(state_difficulty, tests)

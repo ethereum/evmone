@@ -51,23 +51,10 @@ int64_t calculate_difficulty_pre_byzantium(int64_t parent_difficulty, int64_t pa
     return diff;
 }
 
-}  // namespace
-
-int64_t calculate_difficulty(int64_t parent_difficulty, bool parent_has_ommers,
+int64_t calculate_difficulty_since_byzantium(int64_t parent_difficulty, bool parent_has_ommers,
     int64_t parent_timestamp, int64_t current_timestamp, int64_t block_number,
     evmc_revision rev) noexcept
 {
-    // The calculation follows Ethereum Yellow Paper section 4.3.4. "Block Header Validity".
-
-    if (rev >= EVMC_PARIS)
-        return 0;  // No difficulty after the Merge.
-
-    if (rev < EVMC_BYZANTIUM)
-        return calculate_difficulty_pre_byzantium(
-            parent_difficulty, parent_timestamp, current_timestamp, block_number, rev);
-
-    static constexpr auto min_difficulty = int64_t{1} << 17;
-
     const auto delay = get_bomb_delay(rev);
     const auto fake_block_number = std::max(int64_t{0}, block_number - delay);
     const auto p = (fake_block_number / 100'000) - 2;
@@ -79,7 +66,27 @@ int64_t calculate_difficulty(int64_t parent_difficulty, bool parent_has_ommers,
     assert(timestamp_diff > 0);
     const auto sigma_2 = std::max(y - timestamp_diff / 9, int64_t{-99});
     const auto x = parent_difficulty / 2048;
-    const auto difficulty = parent_difficulty + x * sigma_2 + epsilon;
-    return std::max(min_difficulty, difficulty);
+    return parent_difficulty + x * sigma_2 + epsilon;
+}
+}  // namespace
+
+int64_t calculate_difficulty(int64_t parent_difficulty, bool parent_has_ommers,
+    int64_t parent_timestamp, int64_t current_timestamp, int64_t block_number,
+    evmc_revision rev) noexcept
+{
+    // The calculation follows Ethereum Yellow Paper section 4.3.4. "Block Header Validity".
+    static constexpr int64_t MIN_DIFFICULTY = 0x20000;
+
+    if (rev >= EVMC_PARIS)
+        return 0;  // No difficulty after the Merge.
+
+    const auto difficulty =
+        (rev < EVMC_BYZANTIUM) ?
+            calculate_difficulty_pre_byzantium(
+                parent_difficulty, parent_timestamp, current_timestamp, block_number, rev) :
+            calculate_difficulty_since_byzantium(parent_difficulty, parent_has_ommers,
+                parent_timestamp, current_timestamp, block_number, rev);
+
+    return std::max(MIN_DIFFICULTY, difficulty);
 }
 }  // namespace evmone::state
