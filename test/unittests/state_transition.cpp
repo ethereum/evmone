@@ -37,6 +37,7 @@ void state_transition::TearDown()
 
     if (rev < EVMC_LONDON)
     {
+        ASSERT_EQ(block.base_fee, 0);
         ASSERT_EQ(tx.type, state::Transaction::Type::legacy);
     }
     if (tx.type == state::Transaction::Type::legacy)
@@ -148,6 +149,23 @@ void state_transition::TearDown()
         export_state_test(receipt, state);
 }
 
+namespace
+{
+/// Converts EVM revision to the fork name commonly used in tests.
+std::string_view to_test_fork_name(evmc_revision rev) noexcept
+{
+    switch (rev)
+    {
+    case EVMC_TANGERINE_WHISTLE:
+        return "EIP150";
+    case EVMC_SPURIOUS_DRAGON:
+        return "EIP158";
+    default:
+        return evmc::to_string(rev);
+    }
+}
+}  // namespace
+
 void state_transition::export_state_test(const TransactionReceipt& receipt, const State& post)
 {
     json::json j;
@@ -183,7 +201,7 @@ void state_transition::export_state_test(const TransactionReceipt& receipt, cons
     jtx["gasLimit"][0] = hex0x(tx.gas_limit);
     jtx["value"][0] = hex0x(tx.value);
 
-    auto& jpost = jt["post"][evmc::to_string(rev)][0];
+    auto& jpost = jt["post"][to_test_fork_name(rev)][0];
     jpost["indexes"] = {{"data", 0}, {"gas", 0}, {"value", 0}};
     jpost["hash"] = hex0x(mpt_hash(post.get_accounts()));
     jpost["logs"] = hex0x(logs_hash(receipt.logs));
