@@ -295,7 +295,7 @@ TEST_F(tracing, trace_eof)
 )");
 }
 
-TEST_F(tracing, trace_create_intrcution)
+TEST_F(tracing, trace_create_instruction)
 {
     using namespace intx;
     using evmc::operator""_address;
