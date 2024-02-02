@@ -60,6 +60,8 @@ protected:
         /// The expected post-execution state.
         std::unordered_map<address, ExpectedAccount> post;
 
+        std::optional<hash256> state_hash;
+
         /// The expected EVM execution trace. If not empty transaction execution will be performed
         /// with tracing enabled and the output compared.
         std::string_view trace;

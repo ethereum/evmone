@@ -135,6 +135,11 @@ void state_transition::TearDown()
         }
     }
 
+    if (expect.state_hash)
+    {
+        EXPECT_EQ(mpt_hash(state.get_accounts()), *expect.state_hash);
+    }
+
     for (const auto& [addr, _] : state.get_accounts())
     {
         EXPECT_TRUE(expect.post.contains(addr)) << "unexpected account " << addr;
