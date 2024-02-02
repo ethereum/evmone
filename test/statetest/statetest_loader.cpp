@@ -271,9 +271,9 @@ state::State from_json<state::State>(const json::json& j)
         {
             for (const auto& [j_key, j_value] : storage_it->items())
             {
-                const auto value = from_json<bytes32>(j_value);
-                acc.storage.insert(
-                    {from_json<bytes32>(j_key), {.current = value, .original = value}});
+                if (const auto value = from_json<bytes32>(j_value); !is_zero(value))
+                    acc.storage.insert(
+                        {from_json<bytes32>(j_key), {.current = value, .original = value}});
             }
         }
     }
@@ -434,10 +434,12 @@ StateTransitionTest load_state_test(std::istream& input)
     return json::json::parse(input).get<StateTransitionTest>();
 }
 
-void validate_deployed_code(const state::State& state, evmc_revision rev)
+void validate_state(const state::State& state, evmc_revision rev)
 {
     for (const auto& [addr, acc] : state.get_accounts())
     {
+        // TODO: Check for empty accounts after Paris.
+        //       https://github.com/ethereum/tests/issues/1331
         if (is_eof_container(acc.code))
         {
             if (rev >= EVMC_PRAGUE)
@@ -449,6 +451,16 @@ void validate_deployed_code(const state::State& state, evmc_revision rev)
                         "EOF container at " + hex0x(addr) +
                         " is invalid: " + std::string(get_error_message(result)));
                 }
+            }
+        }
+
+        for (const auto& [key, value] : acc.storage)
+        {
+            if (is_zero(value.original))
+            {
+                throw std::invalid_argument{"account " + hex0x(addr) +
+                                            " contains invalid zero-value storage entry " +
+                                            hex0x(key)};
             }
         }
     }

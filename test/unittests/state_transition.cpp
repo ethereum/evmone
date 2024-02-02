@@ -40,14 +40,7 @@ public:
 
 void state_transition::TearDown()
 {
-    for (const auto& [addr, acc] : pre.get_accounts())
-    {
-        if (is_eof_container(acc.code))
-        {
-            ASSERT_EQ(validate_eof(rev, acc.code), EOFValidationError::success)
-                << "invalid EOF in prestate at " << addr;
-        }
-    }
+    validate_state(pre, rev);
 
     auto state = pre;
     const auto trace = !expect.trace.empty();

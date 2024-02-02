@@ -95,9 +95,11 @@ json::json to_json(const std::unordered_map<address, state::Account>& accounts);
 
 StateTransitionTest load_state_test(std::istream& input);
 
-/// Validates deployed EOF containers before running state test.
-/// Throws exception on any invalid EOF in state.
-void validate_deployed_code(const state::State& state, evmc_revision rev);
+/// Validates an Ethereum state:
+/// - checks that there are no zero-value storage entries,
+/// - checks that there are no invalid EOF codes.
+/// Throws std::invalid_argument exception.
+void validate_state(const state::State& state, evmc_revision rev);
 
 /// Execute the state @p test using the @p vm.
 ///

@@ -112,19 +112,17 @@ int main(int argc, const char* argv[])
         std::vector<state::TransactionReceipt> receipts;
         int64_t block_gas_left = block.gas_limit;
 
-        // Validate eof code in pre-state
-        if (rev >= EVMC_PRAGUE)
-            validate_deployed_code(state, rev);
+        validate_state(state, rev);
 
         // Parse and execute transactions
         if (!txs_file.empty())
         {
             const auto j_txs = json::json::parse(std::ifstream{txs_file});
 
-            evmc::VM vm{evmc_create_evmone(), {{"O", "0"}}};
+            evmc::VM vm{evmc_create_evmone()};
 
             if (trace)
-                vm.set_option("trace", "0");
+                vm.set_option("trace", "1");
 
             std::vector<state::Log> txs_logs;
 
