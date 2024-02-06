@@ -74,7 +74,7 @@ inline evmc::Result caterpillar_execute(evmc::VM& c_vm, ExecutionState& exec_sta
     evmc::Host& host, bytes_view code)
 {
     const auto& vm = *static_cast<evmone::VM*>(c_vm.get_raw_pointer());
-    exec_state.reset(msg, rev, host.get_interface(), host.to_context(), code);
+    exec_state.reset(msg, rev, host.get_interface(), host.to_context(), code, {});
     return evmc::Result{caterpillar::execute(vm, msg.gas, exec_state, analysis)};
 }
 
