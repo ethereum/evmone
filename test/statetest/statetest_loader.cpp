@@ -257,9 +257,9 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
 }
 
 template <>
-state::State from_json<state::State>(const json::json& j)
+TestState from_json<TestState>(const json::json& j)
 {
-    state::State o;
+    TestState o;
     for (const auto& [j_addr, j_acc] : j.items())
     {
         auto& acc = o.insert(from_json<address>(j_addr),
@@ -272,8 +272,7 @@ state::State from_json<state::State>(const json::json& j)
             for (const auto& [j_key, j_value] : storage_it->items())
             {
                 if (const auto value = from_json<bytes32>(j_value); !is_zero(value))
-                    acc.storage.insert(
-                        {from_json<bytes32>(j_key), {.current = value, .original = value}});
+                    acc.storage.insert({from_json<bytes32>(j_key), value});
             }
         }
     }
@@ -406,7 +405,7 @@ static void from_json(const json::json& j, StateTransitionTest& o)
 
     const auto& j_t = *j.begin();  // Content is in a dict with the test name.
 
-    o.pre_state = from_json<state::State>(j_t.at("pre"));
+    o.pre_state = from_json<TestState>(j_t.at("pre"));
 
     o.multi_tx = j_t.at("transaction").get<TestMultiTransaction>();
 
@@ -434,7 +433,7 @@ StateTransitionTest load_state_test(std::istream& input)
     return json::json::parse(input).get<StateTransitionTest>();
 }
 
-void validate_state(const state::State& state, evmc_revision rev)
+void validate_state(const TestState& state, evmc_revision rev)
 {
     for (const auto& [addr, acc] : state.get_accounts())
     {
@@ -456,7 +455,7 @@ void validate_state(const state::State& state, evmc_revision rev)
 
         for (const auto& [key, value] : acc.storage)
         {
-            if (is_zero(value.original))
+            if (is_zero(value))
             {
                 throw std::invalid_argument{"account " + hex0x(addr) +
                                             " contains invalid zero-value storage entry " +

@@ -51,9 +51,11 @@ target_sources(
     state_transition.hpp
     state_transition.cpp
     state_transition_block_test.cpp
+    state_transition_call_test.cpp
     state_transition_create_test.cpp
     state_transition_eof_test.cpp
     state_transition_selfdestruct_test.cpp
+    state_transition_touch_test.cpp
     state_transition_trace_test.cpp
     state_transition_transient_storage_test.cpp
     state_transition_tx_test.cpp
@@ -67,6 +69,7 @@ target_sources(
 )
 target_link_libraries(evmone-unittests PRIVATE evmone evmone::evmmax evmone::state evmone::statetestutils testutils evmc::instructions GTest::gtest GTest::gtest_main)
 target_include_directories(evmone-unittests PRIVATE ${evmone_private_include_dir})
+target_precompile_headers(evmone-unittests PRIVATE "<gtest/gtest.h>" "<gmock/gmock.h>")
 
 gtest_discover_tests(evmone-unittests TEST_PREFIX ${PROJECT_NAME}/unittests/)
 

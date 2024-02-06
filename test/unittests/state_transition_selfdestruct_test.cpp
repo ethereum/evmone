@@ -69,6 +69,11 @@ TEST_F(state_transition, selfdestruct_double_revert)
     expect.post[BENEFICIARY].balance = 1;
 }
 
+TEST_F(state_transition, selfdestruct_initcode)
+{
+    tx.data = selfdestruct(0xbe_address);
+}
+
 TEST_F(state_transition, massdestruct_shanghai)
 {
     rev = EVMC_SHANGHAI;

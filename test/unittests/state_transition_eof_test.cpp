@@ -15,12 +15,11 @@ TEST_F(state_transition, eof_invalid_initcode)
 
     rev = EVMC_PRAGUE;
     tx.to = To;
-    pre.insert(*tx.to,
-        {
-            .nonce = 1,
-            .storage = {{0x01_bytes32, {.current = 0x01_bytes32, .original = 0x01_bytes32}}},
-            .code = eof_bytecode(create() + push(1) + OP_SSTORE + OP_STOP, 3),
-        });
+    pre.insert(*tx.to, {
+                           .nonce = 1,
+                           .storage = {{0x01_bytes32, 0x01_bytes32}},
+                           .code = eof_bytecode(create() + push(1) + OP_SSTORE + OP_STOP, 3),
+                       });
 
     EXPECT_EQ(pre.get(tx.sender).balance, 1'000'000'001);  // Fixture sanity check.
 
@@ -28,8 +27,7 @@ TEST_F(state_transition, eof_invalid_initcode)
 
     expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
     expect.post[tx.sender].balance =
-        pre.get(tx.sender).balance -
-        (block.base_fee + tx.max_priority_gas_price) * static_cast<uint64_t>(*expect.gas_used);
+        pre.get(tx.sender).balance - tx.max_gas_price * static_cast<uint64_t>(*expect.gas_used);
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;  // CREATE caller's nonce must be bumped
     expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;  // CREATE must fail
     expect.post[create_address].exists = false;

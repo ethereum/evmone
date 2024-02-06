@@ -6,7 +6,7 @@
 
 namespace evmone::test
 {
-json::json to_json(const std::unordered_map<address, state::Account>& accounts)
+json::json to_json(const std::unordered_map<address, state::AccountBase>& accounts)
 {
     json::json j;
     for (const auto& [addr, acc] : accounts)
@@ -19,8 +19,8 @@ json::json to_json(const std::unordered_map<address, state::Account>& accounts)
         auto& j_storage = j_acc["storage"] = json::json::object();
         for (const auto& [key, val] : acc.storage)
         {
-            if (!is_zero(val.current))
-                j_storage[hex0x(key)] = hex0x(val.current);
+            if (!is_zero(val))  // FIXME
+                j_storage[hex0x(key)] = hex0x(val);
         }
     }
     return j;

@@ -12,19 +12,19 @@ namespace evmone::state
 {
 namespace
 {
-hash256 mpt_hash(const std::unordered_map<hash256, StorageValue>& storage)
+hash256 mpt_hash(const std::unordered_map<hash256, bytes32>& storage)
 {
     MPT trie;
     for (const auto& [key, value] : storage)
     {
-        if (!is_zero(value.current))  // Skip "deleted" values.
-            trie.insert(keccak256(key), rlp::encode(rlp::trim(value.current)));
+        assert(value);  // There should be not zero values in the storage.
+        trie.insert(keccak256(key), rlp::encode(rlp::trim(value)));
     }
     return trie.hash();
 }
 }  // namespace
 
-hash256 mpt_hash(const std::unordered_map<address, Account>& accounts)
+hash256 mpt_hash(const std::unordered_map<address, AccountBase>& accounts)
 {
     MPT trie;
     for (const auto& [addr, acc] : accounts)

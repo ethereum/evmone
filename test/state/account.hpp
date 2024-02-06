@@ -13,6 +13,14 @@ using evmc::address;
 using evmc::bytes;
 using evmc::bytes32;
 
+struct AccountBase
+{
+    uint64_t nonce = 0;
+    intx::uint256 balance;
+    std::unordered_map<bytes32, bytes32> storage;
+    bytes code;
+};
+
 /// The representation of the account storage value.
 struct StorageValue
 {

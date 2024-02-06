@@ -26,11 +26,11 @@ void run_state_test(const StateTransitionTest& test, evmc::VM& vm, bool trace_su
             const auto tx = test.multi_tx.get(expected.indexes);
             auto state = test.pre_state;
 
-            const auto res = state::transition(state, test.block, tx, rev, vm, test.block.gas_limit,
+            const auto res = test::transition(state, test.block, tx, rev, vm, test.block.gas_limit,
                 state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK);
 
             // Finalize block with reward 0.
-            state::finalize(state, rev, test.block.coinbase, 0, {}, {});
+            test::finalize(state, rev, test.block.coinbase, 0, {}, {});
 
             const auto state_root = state::mpt_hash(state.get_accounts());
 

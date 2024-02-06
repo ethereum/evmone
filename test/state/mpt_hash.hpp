@@ -9,10 +9,10 @@
 
 namespace evmone::state
 {
-struct Account;
+struct AccountBase;
 
 /// Computes Merkle Patricia Trie root hash for the given collection of state accounts.
-hash256 mpt_hash(const std::unordered_map<address, Account>& accounts);
+hash256 mpt_hash(const std::unordered_map<address, AccountBase>& accounts);
 
 /// Computes Merkle Patricia Trie root hash for the given list of structures.
 template <typename T>

@@ -40,7 +40,17 @@ public:
 
 void state_transition::TearDown()
 {
+    // Validation:
+
+    if (rev < EVMC_LONDON)
+    {
+        ASSERT_EQ(tx.max_gas_price, tx.max_priority_gas_price)
+            << "no support for EIP-1559 transactions";
+    }
+
     validate_state(pre, rev);
+
+    // Execution:
 
     auto state = pre;
     const auto trace = !expect.trace.empty();
@@ -51,7 +61,7 @@ void state_transition::TearDown()
     if (trace)
         trace_capture.emplace();
 
-    const auto res = state::transition(state, block, tx, rev, selected_vm, block.gas_limit,
+    const auto res = test::transition(state, block, tx, rev, selected_vm, block.gas_limit,
         state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK);
 
     if (const auto expected_error = make_error_code(expect.tx_error))
@@ -76,7 +86,7 @@ void state_transition::TearDown()
     ASSERT_TRUE(holds_alternative<TransactionReceipt>(res))
         << std::get<std::error_code>(res).message();
     const auto& receipt = std::get<TransactionReceipt>(res);
-    state::finalize(state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
+    test::finalize(state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
 
     if (trace)
     {
@@ -117,13 +127,13 @@ void state_transition::TearDown()
             }
             for (const auto& [key, value] : expected_acc.storage)
             {
-                EXPECT_EQ(acc->storage[key].current, value) << "account " << addr << " key " << key;
+                EXPECT_EQ(acc->storage[key], value) << "account " << addr << " key " << key;
             }
             for (const auto& [key, value] : acc->storage)
             {
                 // Find unexpected storage keys. This will also report entries with value 0.
                 EXPECT_TRUE(expected_acc.storage.contains(key))
-                    << "unexpected storage key " << key << "=" << value.current << " in " << addr;
+                    << "unexpected storage key " << key << "=" << value << " in " << addr;
             }
         }
     }
@@ -164,7 +174,7 @@ fs::path get_export_test_path(const testing::TestInfo& test_info, std::string_vi
 }  // namespace
 
 void state_transition::export_state_test(
-    const TransactionReceipt& receipt, const State& post, std::string_view export_dir)
+    const TransactionReceipt& receipt, const TestState& post, std::string_view export_dir)
 {
     const auto& test_info = *testing::UnitTest::GetInstance()->current_test_info();
 
@@ -178,7 +188,7 @@ void state_transition::export_state_test(
     jenv["currentCoinbase"] = hex0x(block.coinbase);
     jenv["currentBaseFee"] = hex0x(block.base_fee);
 
-    jt["pre"] = to_json(pre.get_accounts());
+    // jt["pre"] = to_json(pre.get_accounts()); FIXME
 
     auto& jtx = jt["transaction"];
     if (tx.to.has_value())
@@ -186,12 +196,34 @@ void state_transition::export_state_test(
     jtx["sender"] = hex0x(tx.sender);
     jtx["secretKey"] = hex0x(SenderSecretKey);
     jtx["nonce"] = hex0x(tx.nonce);
-    jtx["maxFeePerGas"] = hex0x(tx.max_gas_price);
-    jtx["maxPriorityFeePerGas"] = hex0x(tx.max_priority_gas_price);
+    if (rev < EVMC_LONDON)
+    {
+        assert(tx.max_gas_price == tx.max_priority_gas_price);
+        jtx["gasPrice"] = hex0x(tx.max_gas_price);
+    }
+    else
+    {
+        jtx["maxFeePerGas"] = hex0x(tx.max_gas_price);
+        jtx["maxPriorityFeePerGas"] = hex0x(tx.max_priority_gas_price);
+    }
 
     jtx["data"][0] = hex0x(tx.data);
     jtx["gasLimit"][0] = hex0x(tx.gas_limit);
     jtx["value"][0] = hex0x(tx.value);
+
+    if (!tx.access_list.empty())
+    {
+        auto& ja = jtx["accessLists"][0];
+        for (const auto& [addr, storage_keys] : tx.access_list)
+        {
+            json::json je;
+            je["address"] = hex0x(addr);
+            auto& jstorage_keys = je["storageKeys"] = json::json::array();
+            for (const auto& k : storage_keys)
+                jstorage_keys.push_back(hex0x(k));
+            ja.push_back(je);
+        }
+    }
 
     auto& jpost = jt["post"][evmc::to_string(rev)][0];
     jpost["indexes"] = {{"data", 0}, {"gas", 0}, {"value", 0}};

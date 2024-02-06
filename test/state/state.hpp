@@ -9,16 +9,35 @@
 #include "hash_utils.hpp"
 #include <cassert>
 #include <optional>
+#include <unordered_set>
 #include <variant>
 #include <vector>
 
 namespace evmone::state
 {
+struct StateDiff;
+
+class StateView
+{
+public:
+    virtual ~StateView() = default;
+    [[nodiscard]] virtual std::optional<AccountBase> get_account(address addr) const noexcept = 0;
+};
+
+
 /// The Ethereum State: the collection of accounts mapped by their addresses.
 ///
 /// TODO: This class is copyable for testing. Consider making it non-copyable.
 class State
 {
+public:
+    explicit State(const StateView& view) noexcept : m_cold{&view} {}
+    State(const State&) = delete;
+    State& operator=(const State&) = delete;
+
+    State(State&&) = default;
+
+private:
     struct JournalBase
     {
         address addr;
@@ -63,6 +82,8 @@ class State
         std::variant<JournalBalanceChange, JournalTouched, JournalStorageChange, JournalNonceBump,
             JournalCreate, JournalTransientStorageChange, JournalDestruct, JournalAccessAccount>;
 
+    const StateView* m_cold = nullptr;
+
     std::unordered_map<address, Account> m_accounts;
 
     /// The state journal: the list of changes made in the state
@@ -94,11 +115,13 @@ public:
     /// Reverts state changes made after the checkpoint.
     void rollback(size_t checkpoint);
 
+    StateDiff build_diff();
+
     /// Methods performing changes to the state which can be reverted by rollback().
     /// @{
 
     /// Touches (as in EIP-161) an existing account or inserts new erasable account.
-    Account& touch(const address& addr);
+    Account& touch(evmc_revision rev, const address& addr);
 
     void journal_balance_change(const address& addr, const intx::uint256& prev_balance);
 
@@ -116,6 +139,20 @@ public:
     void journal_access_account(const address& addr);
 
     /// @}
+};
+
+struct StateDiff
+{
+    struct Account
+    {
+        std::optional<uint64_t> nonce;
+        std::optional<intx::uint256> balance;
+        std::optional<bytes> code;
+    };
+
+    std::unordered_map<address, Account> modified_accounts;
+    std::unordered_set<address> deleted_accounts;
+    std::unordered_map<address, std::unordered_map<bytes32, bytes32>> modified_storage;
 };
 
 struct Ommer
@@ -250,6 +287,8 @@ struct TransactionReceipt
 
     /// Root hash of the state after this transaction. Used only in old pre-Byzantium transactions.
     std::optional<bytes32> post_state;
+
+    StateDiff state_diff;
 };
 
 /// Computes the current blob gas price based on the excess blob gas.
@@ -259,11 +298,11 @@ intx::uint256 compute_blob_gas_price(uint64_t excess_blob_gas) noexcept;
 ///
 /// Applies block reward to coinbase, withdrawals (post Shanghai) and deletes empty touched accounts
 /// (post Spurious Dragon).
-void finalize(State& state, evmc_revision rev, const address& coinbase,
+[[nodiscard]] StateDiff finalize(const StateView& state, evmc_revision rev, const address& coinbase,
     std::optional<uint64_t> block_reward, std::span<const Ommer> ommers,
     std::span<const Withdrawal> withdrawals);
 
-[[nodiscard]] std::variant<TransactionReceipt, std::error_code> transition(State& state,
+[[nodiscard]] std::variant<TransactionReceipt, std::error_code> transition(const StateView& state,
     const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm,
     int64_t block_gas_left, int64_t blob_gas_left);
 
@@ -275,7 +314,8 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
 ///
 /// Executes code at pre-defined accounts from the system sender (0xff...fe).
 /// The sender's nonce is not increased.
-void system_call(State& state, const BlockInfo& block, evmc_revision rev, evmc::VM& vm);
+[[nodiscard]] StateDiff system_call(
+    const StateView& state, const BlockInfo& block, evmc_revision rev, evmc::VM& vm);
 
 /// Defines how to RLP-encode a Transaction.
 [[nodiscard]] bytes rlp_encode(const Transaction& tx);

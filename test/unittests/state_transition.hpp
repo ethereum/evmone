@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 #include <test/state/errors.hpp>
 #include <test/state/host.hpp>
+#include <test/statetest/statetest.hpp>
 
 namespace evmone::test
 {
@@ -79,11 +80,11 @@ protected:
     Transaction tx{
         .gas_limit = block.gas_limit,
         .max_gas_price = block.base_fee + 1,
-        .max_priority_gas_price = 1,
+        .max_priority_gas_price = block.base_fee + 1,
         .sender = Sender,
         .nonce = 1,
     };
-    State pre;
+    TestState pre;
     Expectation expect;
 
     void SetUp() override;
@@ -93,7 +94,7 @@ protected:
 
     /// Exports the test in the JSON State Test format in the given directory.
     void export_state_test(
-        const TransactionReceipt& receipt, const State& post, std::string_view export_dir);
+        const TransactionReceipt& receipt, const TestState& post, std::string_view export_dir);
 };
 
 }  // namespace evmone::test

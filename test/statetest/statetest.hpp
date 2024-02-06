@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
+#include "../state/account.hpp"
 #include "../state/state.hpp"
 #include <nlohmann/json.hpp>
 
@@ -10,6 +11,93 @@ namespace json = nlohmann;
 
 namespace evmone::test
 {
+class TestState : public state::StateView
+{
+    std::unordered_map<address, state::AccountBase> m_accounts;
+
+public:
+    const auto& get_accounts() const noexcept { return m_accounts; }
+
+    state::AccountBase& insert(address addr, state::AccountBase acc)
+    {
+        const auto [it, inserted] = m_accounts.insert({addr, std::move(acc)});
+        assert(inserted);
+        return it->second;
+    }
+
+    std::optional<state::AccountBase> get_account(address addr) const noexcept override
+    {
+        const auto it = m_accounts.find(addr);
+        if (it == m_accounts.end())
+            return std::nullopt;
+        else
+            return it->second;
+    }
+
+    /// For tests only.
+    state::AccountBase* find(const address& addr) noexcept
+    {
+        if (const auto it = m_accounts.find(addr); it != m_accounts.end())
+            return &it->second;
+        return nullptr;
+    }
+
+    /// For tests only.
+    state::AccountBase& get(const address& addr) noexcept { return *find(addr); }
+
+    /// For tests only.
+    void erase(const address& addr) noexcept { m_accounts.erase(addr); }
+
+    void apply_diff(const state::StateDiff& d)
+    {
+        for (const auto& [addr, e] : d.modified_storage)
+        {
+            auto& a = m_accounts[addr];
+            for (const auto& [k, v] : e)
+            {
+                if (v)
+                    a.storage.insert_or_assign(k, v);
+                else
+                    a.storage.erase(k);
+            }
+        }
+
+        for (const auto& [addr, m] : d.modified_accounts)
+        {
+            auto& a = m_accounts[addr];
+            if (m.balance)
+                a.balance = *m.balance;
+            if (m.nonce)
+                a.nonce = *m.nonce;
+            if (m.code)
+                a.code = *m.code;
+        }
+
+        for (const auto& addr : d.deleted_accounts)
+            m_accounts.erase(addr);
+    }
+};
+
+[[nodiscard]] inline std::variant<state::TransactionReceipt, std::error_code> transition(
+    TestState& state, const state::BlockInfo& block, const state::Transaction& tx,
+    evmc_revision rev, evmc::VM& vm, int64_t block_gas_left, int64_t blob_gas_left)
+{
+    const auto res = state::transition(state, block, tx, rev, vm, block_gas_left, blob_gas_left);
+    if (holds_alternative<state::TransactionReceipt>(res))
+    {
+        const auto& r = get<state::TransactionReceipt>(res);
+        state.apply_diff(r.state_diff);
+    }
+    return res;
+}
+
+inline void finalize(TestState& state, evmc_revision rev, const address& coinbase,
+    std::optional<uint64_t> block_reward, std::span<const state::Ommer> ommers,
+    std::span<const state::Withdrawal> withdrawals)
+{
+    const auto diff = state::finalize(state, rev, coinbase, block_reward, ommers, withdrawals);
+    state.apply_diff(diff);
+}
 
 struct TestMultiTransaction : state::Transaction
 {
@@ -53,7 +141,7 @@ struct StateTransitionTest
         std::vector<Expectation> expectations;
     };
 
-    state::State pre_state;
+    TestState pre_state;
     state::BlockInfo block;
     TestMultiTransaction multi_tx;
     std::vector<Case> cases;
@@ -85,13 +173,13 @@ template <>
 state::Withdrawal from_json<state::Withdrawal>(const json::json& j);
 
 template <>
-state::State from_json<state::State>(const json::json& j);
+TestState from_json<TestState>(const json::json& j);
 
 template <>
 state::Transaction from_json<state::Transaction>(const json::json& j);
 
 /// Exports the State (accounts) to JSON format (aka pre/post/alloc state).
-json::json to_json(const std::unordered_map<address, state::Account>& accounts);
+json::json to_json(const std::unordered_map<address, state::AccountBase>& accounts);
 
 StateTransitionTest load_state_test(std::istream& input);
 
@@ -99,7 +187,7 @@ StateTransitionTest load_state_test(std::istream& input);
 /// - checks that there are no zero-value storage entries,
 /// - checks that there are no invalid EOF codes.
 /// Throws std::invalid_argument exception.
-void validate_state(const state::State& state, evmc_revision rev);
+void validate_state(const TestState& state, evmc_revision rev);
 
 /// Execute the state @p test using the @p vm.
 ///

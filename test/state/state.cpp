@@ -9,6 +9,8 @@
 #include "rlp.hpp"
 #include <evmone/evmone.h>
 #include <evmone/execution_state.hpp>
+#include <format>
+#include <iostream>
 
 namespace evmone::state
 {
@@ -70,6 +72,50 @@ evmc_message build_message(const Transaction& tx, int64_t execution_gas_limit) n
         recipient,
     };
 }
+
+
+struct JournalStats
+{
+    enum JournalEntryKind : size_t
+    {
+        balance,
+        touched,
+        storage,
+        nonce,
+        create,
+        tstorage,
+        destruct,
+        access,
+
+        SIZE
+    };
+
+    static constexpr const char* names[] = {
+        "balance", "touched", "storage", "nonce", "create", "tstorage", "destruct", "access"};
+
+    struct Entry
+    {
+        uint32_t all = 0;
+        uint32_t reverted = 0;
+    };
+
+    ~JournalStats()
+    {
+        std::string out;
+        size_t i = 0;
+        for (const auto& c : counters)
+            out += std::format("{:8}: {:8} {:8}\n", names[i++], c.all, c.reverted);
+        std::cerr << "JOURNAL STATS  all reverted\n" + out;
+    }
+
+    static JournalStats& inst() noexcept
+    {
+        static JournalStats instance;
+        return instance;
+    }
+
+    Entry counters[JournalEntryKind::SIZE];
+};
 }  // namespace
 
 Account& State::insert(const address& addr, Account account)
@@ -81,9 +127,16 @@ Account& State::insert(const address& addr, Account account)
 
 Account* State::find(const address& addr) noexcept
 {
-    const auto it = m_accounts.find(addr);
-    if (it != m_accounts.end())
+    if (const auto it = m_accounts.find(addr); it != m_accounts.end())
         return &it->second;
+    if (const auto cacc = m_cold->get_account(addr); cacc)
+    {
+        auto& a =
+            insert(addr, {.nonce = cacc->nonce, .balance = cacc->balance, .code = cacc->code});
+        for (const auto& [k, v] : cacc->storage)
+            a.storage.insert({k, {.current = v, .original = v}});
+        return &a;
+    }
     return nullptr;
 }
 
@@ -101,58 +154,81 @@ Account& State::get_or_insert(const address& addr, Account account)
     return insert(addr, std::move(account));
 }
 
-Account& State::touch(const address& addr)
+Account& State::touch(evmc_revision rev, const address& addr)
 {
-    auto& acc = get_or_insert(addr, {.erase_if_empty = true});
-    if (!acc.erase_if_empty && acc.is_empty())
+    const auto acc = find(addr);
+    if (acc == nullptr)
     {
-        acc.erase_if_empty = true;
-        m_journal.emplace_back(JournalTouched{addr});
+        auto& a2 = insert(addr);
+        if (rev >= EVMC_SPURIOUS_DRAGON)
+            a2.erase_if_empty = true;
+        else
+            journal_create(addr, false);
+        return a2;
     }
-    return acc;
+    else if (!acc->erase_if_empty && acc->is_empty() && rev >= EVMC_SPURIOUS_DRAGON)
+    {
+        acc->erase_if_empty = true;
+        m_journal.emplace_back(JournalTouched{addr});
+        JournalStats::inst().counters[JournalStats::touched].all += 1;
+    }
+    else if (acc->erase_if_empty && rev < EVMC_SPURIOUS_DRAGON)
+    {
+        acc->erase_if_empty = false;
+        journal_create(addr, false);
+    }
+    return *acc;
 }
 
 void State::journal_balance_change(const address& addr, const intx::uint256& prev_balance)
 {
     m_journal.emplace_back(JournalBalanceChange{{addr}, prev_balance});
+    JournalStats::inst().counters[JournalStats::balance].all += 1;
 }
 
 void State::journal_storage_change(
     const address& addr, const bytes32& key, const StorageValue& value)
 {
     m_journal.emplace_back(JournalStorageChange{{addr}, key, value.current, value.access_status});
+    JournalStats::inst().counters[JournalStats::storage].all += 1;
 }
 
 void State::journal_transient_storage_change(
     const address& addr, const bytes32& key, const bytes32& value)
 {
     m_journal.emplace_back(JournalTransientStorageChange{{addr}, key, value});
+    JournalStats::inst().counters[JournalStats::tstorage].all += 1;
 }
 
 void State::journal_bump_nonce(const address& addr)
 {
     m_journal.emplace_back(JournalNonceBump{addr});
+    JournalStats::inst().counters[JournalStats::nonce].all += 1;
 }
 
 void State::journal_create(const address& addr, bool existed)
 {
     m_journal.emplace_back(JournalCreate{{addr}, existed});
+    JournalStats::inst().counters[JournalStats::create].all += 1;
 }
 
 void State::journal_destruct(const address& addr)
 {
     m_journal.emplace_back(JournalDestruct{addr});
+    JournalStats::inst().counters[JournalStats::destruct].all += 1;
 }
 
 void State::journal_access_account(const address& addr)
 {
     m_journal.emplace_back(JournalAccessAccount{addr});
+    JournalStats::inst().counters[JournalStats::access].all += 1;
 }
 
 void State::rollback(size_t checkpoint)
 {
     while (m_journal.size() != checkpoint)
     {
+        JournalStats::inst().counters[m_journal.back().index()].reverted += 1;
         std::visit(
             [this](const auto& e) {
                 using T = std::decay_t<decltype(e)>;
@@ -174,21 +250,11 @@ void State::rollback(size_t checkpoint)
                 }
                 else if constexpr (std::is_same_v<T, JournalCreate>)
                 {
-                    if (e.existed)
-                    {
-                        // This account is not always "touched". TODO: Why?
-                        auto& a = get(e.addr);
-                        a.nonce = 0;
-                        a.code.clear();
-                    }
-                    else
-                    {
-                        // TODO: Before Spurious Dragon we don't clear empty accounts ("erasable")
-                        //       so we need to delete them here explicitly.
-                        //       This should be changed by tuning "erasable" flag
-                        //       and clear in all revisions.
-                        m_accounts.erase(e.addr);
-                    }
+                    auto& a = get(e.addr);
+                    a.nonce = 0;
+                    a.code.clear();
+                    if (!e.existed)
+                        a.erase_if_empty = true;  // Before Dragon.
                 }
                 else if constexpr (std::is_same_v<T, JournalStorageChange>)
                 {
@@ -214,6 +280,65 @@ void State::rollback(size_t checkpoint)
             m_journal.back());
         m_journal.pop_back();
     }
+}
+
+StateDiff State::build_diff()
+{
+    StateDiff d;
+    for (const auto& ee : m_journal)
+    {
+        std::visit(
+            [&d, this](const auto& e) {
+                using T = std::decay_t<decltype(e)>;
+                if constexpr (std::is_same_v<T, JournalNonceBump>)
+                {
+                    d.modified_accounts[e.addr].nonce = m_accounts[e.addr].nonce;
+                }
+                else if constexpr (std::is_same_v<T, JournalTouched>)
+                {
+                    const auto& acc = get(e.addr);
+                    assert(acc.erase_if_empty);
+                    if (acc.is_empty())
+                        d.deleted_accounts.insert(e.addr);
+                }
+                else if constexpr (std::is_same_v<T, JournalDestruct>)
+                {
+                    d.deleted_accounts.insert(e.addr);
+                }
+                else if constexpr (std::is_same_v<T, JournalAccessAccount>)
+                {
+                }
+                else if constexpr (std::is_same_v<T, JournalCreate>)
+                {
+                    auto& m = d.modified_accounts[e.addr];
+                    const auto& acc = get(e.addr);
+                    m.nonce = acc.nonce;
+                    m.balance = acc.balance;
+                    m.code = acc.code;
+                }
+                else if constexpr (std::is_same_v<T, JournalStorageChange>)
+                {
+                    d.modified_storage[e.addr][e.key] = get(e.addr).storage[e.key].current;
+                }
+                else if constexpr (std::is_same_v<T, JournalTransientStorageChange>)
+                {
+                }
+                else if constexpr (std::is_same_v<T, JournalBalanceChange>)
+                {
+                    // FIXME: In SELFDESTRUCT only change balance if not 0.
+                    const auto& acc = get(e.addr);
+                    if (!(acc.erase_if_empty && acc.is_empty()))
+                        d.modified_accounts[e.addr].balance = acc.balance;
+                }
+                else
+                {
+                    // TODO(C++23): Change condition to `false` once CWG2518 is in.
+                    static_assert(std::is_void_v<T>, "unhandled journal entry type");
+                }
+            },
+            ee);
+    }
+    return d;
 }
 
 intx::uint256 compute_blob_gas_price(uint64_t excess_blob_gas) noexcept
@@ -326,26 +451,30 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
     return execution_gas_limit;
 }
 
-namespace
-{
-/// Deletes "touched" (marked as erasable) empty accounts in the state.
-void delete_empty_accounts(State& state)
-{
-    std::erase_if(state.get_accounts(), [](const std::pair<const address, Account>& p) noexcept {
-        const auto& acc = p.second;
-        return acc.erase_if_empty && acc.is_empty();
-    });
-}
-}  // namespace
+// namespace
+//{
+///// Deletes "touched" (marked as erasable) empty accounts in the state.
+// void delete_empty_accounts(State& state)
+//{
+//     (void)state;
+//     // std::erase_if(state.get_accounts(), [](const std::pair<const address, Account>& p)
+//     noexcept {
+//     //     const auto& acc = p.second;
+//     //     return acc.erase_if_empty && acc.is_empty();
+//     // });
+// }
+// }  // namespace
 
-void system_call(State& state, const BlockInfo& block, evmc_revision rev, evmc::VM& vm)
+StateDiff system_call(
+    const StateView& state, const BlockInfo& block, evmc_revision rev, evmc::VM& vm)
 {
     static constexpr auto SystemAddress = 0xfffffffffffffffffffffffffffffffffffffffe_address;
     static constexpr auto BeaconRootsAddress = 0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02_address;
 
+    State ss{state};
     if (rev >= EVMC_CANCUN)
     {
-        if (const auto acc = state.find(BeaconRootsAddress); acc != nullptr)
+        if (const auto acc = state.get_account(BeaconRootsAddress))
         {
             const evmc_message msg{
                 .kind = EVMC_CALL,
@@ -357,26 +486,28 @@ void system_call(State& state, const BlockInfo& block, evmc_revision rev, evmc::
             };
 
             const Transaction empty_tx{};
-            Host host{rev, vm, state, block, empty_tx};
+            Host host{rev, vm, ss, block, empty_tx};
             const auto& code = acc->code;
             [[maybe_unused]] const auto res = vm.execute(host, rev, msg, code.data(), code.size());
             assert(res.status_code == EVMC_SUCCESS);
-            assert(acc->access_status == EVMC_ACCESS_COLD);
 
             // Reset storage status.
-            for (auto& [_, val] : acc->storage)
-            {
-                val.access_status = EVMC_ACCESS_COLD;
-                val.original = val.current;
-            }
+            //            for (auto& [_, val] : acc->storage)
+            //            {
+            //                val.access_status = EVMC_ACCESS_COLD;
+            //                val.original = val.current;
+            //            }
         }
     }
+
+    return ss.build_diff();
 }
 
-void finalize(State& state, evmc_revision rev, const address& coinbase,
+StateDiff finalize(const StateView& sv, evmc_revision rev, const address& coinbase,
     std::optional<uint64_t> block_reward, std::span<const Ommer> ommers,
     std::span<const Withdrawal> withdrawals)
 {
+    State state{sv};
     // TODO: The block reward can be represented as a withdrawal.
     if (block_reward.has_value())
     {
@@ -385,26 +516,36 @@ void finalize(State& state, evmc_revision rev, const address& coinbase,
         const auto reward_by_32 = reward / 32;
         const auto reward_by_8 = reward / 8;
 
-        state.touch(coinbase).balance += reward + reward_by_32 * ommers.size();
+        auto& coinbase_acc = state.touch(rev, coinbase);
+        state.journal_balance_change(coinbase, coinbase_acc.balance);
+        coinbase_acc.balance += reward + reward_by_32 * ommers.size();
         for (const auto& ommer : ommers)
         {
             assert(ommer.delta > 0 && ommer.delta < 8);
-            state.touch(ommer.beneficiary).balance += reward_by_8 * (8 - ommer.delta);
+            auto& ommer_acc = state.touch(rev, ommer.beneficiary);
+            state.journal_balance_change(ommer.beneficiary, ommer_acc.balance);
+            ommer_acc.balance += reward_by_8 * (8 - ommer.delta);
         }
     }
 
     for (const auto& withdrawal : withdrawals)
-        state.touch(withdrawal.recipient).balance += withdrawal.get_amount();
+    {
+        auto& recipient_acc = state.touch(rev, withdrawal.recipient);
+        state.journal_balance_change(withdrawal.recipient, recipient_acc.balance);
+        recipient_acc.balance += withdrawal.get_amount();
+    }
+
+    return state.build_diff();
 
     // Delete potentially empty block reward recipients.
-    if (rev >= EVMC_SPURIOUS_DRAGON)
-        delete_empty_accounts(state);
+    // delete_empty_accounts(state);
 }
 
-std::variant<TransactionReceipt, std::error_code> transition(State& state, const BlockInfo& block,
-    const Transaction& tx, evmc_revision rev, evmc::VM& vm, int64_t block_gas_left,
-    int64_t blob_gas_left)
+std::variant<TransactionReceipt, std::error_code> transition(const StateView& state_view,
+    const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm,
+    int64_t block_gas_left, int64_t blob_gas_left)
 {
+    State state{state_view};
     auto* sender_ptr = state.find(tx.sender);
 
     // Validate transaction. The validation needs the sender account, so in case
@@ -420,6 +561,8 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
     // Once the transaction is valid, create new sender account.
     // The account won't be empty because its nonce will be bumped.
     auto& sender_acc = (sender_ptr != nullptr) ? *sender_ptr : state.insert(tx.sender);
+    state.journal_balance_change(tx.sender, sender_acc.balance);
+    state.journal_bump_nonce(tx.sender);  // Remember nonce modification.
 
     const auto execution_gas_limit = get<int64_t>(validation_result);
 
@@ -471,11 +614,13 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
     assert(gas_used > 0);
 
     sender_acc.balance += tx_max_cost - gas_used * effective_gas_price;
-    state.touch(block.coinbase).balance += gas_used * priority_gas_price;
+    auto& coinbase = state.touch(rev, block.coinbase);
+    state.journal_balance_change(block.coinbase, coinbase.balance);
+    coinbase.balance += gas_used * priority_gas_price;
 
     // Apply destructs.
-    std::erase_if(state.get_accounts(),
-        [](const std::pair<const address, Account>& p) noexcept { return p.second.destructed; });
+    // std::erase_if(state.get_accounts(),
+    //     [](const std::pair<const address, Account>& p) noexcept { return p.second.destructed; });
 
     // Cumulative gas used is unknown in this scope.
     TransactionReceipt receipt{tx.type, result.status_code, gas_used, {}, host.take_logs(), {}, {}};
@@ -483,26 +628,28 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
     // Cannot put it into constructor call because logs are std::moved from host instance.
     receipt.logs_bloom_filter = compute_bloom_filter(receipt.logs);
 
+    receipt.state_diff = state.build_diff();
+
+
     // Delete empty accounts after every transaction. This is strictly required until Byzantium
     // where intermediate state root hashes are part of the transaction receipt.
     // TODO: Consider limiting this only to Spurious Dragon.
-    if (rev >= EVMC_SPURIOUS_DRAGON)
-        delete_empty_accounts(state);
+    // delete_empty_accounts(state);
 
     // Post-transaction clean-up.
     // - Set accounts and their storage access status to cold.
     // - Clear the "just created" account flag.
-    for (auto& [addr, acc] : state.get_accounts())
-    {
-        acc.transient_storage.clear();
-        acc.access_status = EVMC_ACCESS_COLD;
-        acc.just_created = false;
-        for (auto& [key, val] : acc.storage)
-        {
-            val.access_status = EVMC_ACCESS_COLD;
-            val.original = val.current;
-        }
-    }
+    //    for (auto& [addr, acc] : state.get_accounts())
+    //    {
+    //        acc.transient_storage.clear();
+    //        acc.access_status = EVMC_ACCESS_COLD;
+    //        acc.just_created = false;
+    //        for (auto& [key, val] : acc.storage)
+    //        {
+    //            val.access_status = EVMC_ACCESS_COLD;
+    //            val.original = val.current;
+    //        }
+    //    }
 
     return receipt;
 }

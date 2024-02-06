@@ -103,11 +103,9 @@ size_t Host::copy_code(const address& addr, size_t code_offset, uint8_t* buffer_
 
 bool Host::selfdestruct(const address& addr, const address& beneficiary) noexcept
 {
-    if (m_state.find(beneficiary) == nullptr)
-        m_state.journal_create(beneficiary, false);
     auto& acc = m_state.get(addr);
     const auto balance = acc.balance;
-    auto& beneficiary_acc = m_state.touch(beneficiary);
+    auto& beneficiary_acc = m_state.touch(m_rev, beneficiary);
 
     m_state.journal_balance_change(beneficiary, beneficiary_acc.balance);
     m_state.journal_balance_change(addr, balance);
@@ -289,16 +287,9 @@ evmc::Result Host::execute_message(const evmc_message& msg) noexcept
     if (msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2)
         return create(msg);
 
-    if (msg.kind == EVMC_CALL)
-    {
-        const auto exists = m_state.find(msg.recipient) != nullptr;
-        if (!exists)
-            m_state.journal_create(msg.recipient, exists);
-    }
-
     assert(msg.kind != EVMC_CALL || evmc::address{msg.recipient} == msg.code_address);
-    auto* const dst_acc =
-        (msg.kind == EVMC_CALL) ? &m_state.touch(msg.recipient) : m_state.find(msg.code_address);
+    auto* const dst_acc = (msg.kind == EVMC_CALL) ? &m_state.touch(m_rev, msg.recipient) :
+                                                    m_state.find(msg.code_address);
 
     if (msg.kind == EVMC_CALL && !evmc::is_zero(msg.value))
     {
@@ -342,7 +333,7 @@ evmc::Result Host::call(const evmc_message& orig_msg) noexcept
 
         // The 0x03 quirk: the touch on this address is never reverted.
         if (is_03_touched && m_rev >= EVMC_SPURIOUS_DRAGON)
-            m_state.touch(addr_03);
+            m_state.touch(m_rev, addr_03);  // FIXME: Review in context of new touch().
     }
     return result;
 }
