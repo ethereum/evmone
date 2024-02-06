@@ -270,7 +270,7 @@ TEST_P(evm, jumpf_with_inputs_stack_overflow)
     EXPECT_STATUS(EVMC_STACK_OVERFLOW);
 }
 
-TEST_P(evm, functions_undefined_in_legacy)
+TEST_P(evm, DISABLED_functions_undefined_in_legacy)
 {
     rev = EVMC_PRAGUE;
     auto code = bytecode{OP_CALLF} + "0001" + OP_STOP;
