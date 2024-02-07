@@ -1076,13 +1076,13 @@ TEST_F(eof_validation, jumpf_to_returning)
         EOFValidationError::success);
 
     // Extra items on stack at JUMPF
-    add_test_case(eof_bytecode(bytecode{OP_STOP})
+    add_test_case(eof_bytecode(callf(1) + OP_STOP, 2)
                       .code(push0() + push0() + push0() + push0() + jumpf(2), 0, 2, 4)
                       .code(bytecode(OP_POP) + OP_RETF, 3, 2, 3),
         EOFValidationError::stack_higher_than_outputs_required);
 
     // Not enough inputs on stack at JUMPF
-    add_test_case(eof_bytecode(bytecode{OP_STOP})
+    add_test_case(eof_bytecode(callf(1) + OP_STOP, 2)
                       .code(push0() + push0() + jumpf(2), 0, 2, 2)
                       .code(bytecode(OP_POP) + OP_RETF, 3, 2, 3),
         EOFValidationError::stack_underflow);
@@ -1098,13 +1098,13 @@ TEST_F(eof_validation, jumpf_to_returning)
 
     // Extra items on stack at JUMPF
     add_test_case(
-        eof_bytecode(bytecode{OP_STOP})
-                      .code(push0() + push0() + push0() + push0() + push0() + jumpf(2), 0, 2, 5)
-                      .code(bytecode(OP_POP) + OP_POP + OP_RETF, 3, 1, 3),
+        eof_bytecode(callf(1) + OP_STOP, 2)
+            .code(push0() + push0() + push0() + push0() + push0() + jumpf(2), 0, 2, 5)
+            .code(bytecode(OP_POP) + OP_POP + OP_RETF, 3, 1, 3),
         EOFValidationError::stack_higher_than_outputs_required);
 
     // Not enough inputs on stack at JUMPF
-    add_test_case(eof_bytecode(bytecode{OP_STOP})
+    add_test_case(eof_bytecode(callf(1) + OP_STOP, 2)
                       .code(push0() + push0() + push0() + jumpf(2), 0, 2, 3)
                       .code(bytecode(OP_POP) + OP_POP + OP_RETF, 3, 1, 3),
         EOFValidationError::stack_underflow);
