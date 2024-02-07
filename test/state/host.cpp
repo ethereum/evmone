@@ -82,30 +82,30 @@ namespace
 /// For EXTCODE* instructions if the target is an EOF account, then only return EF00.
 /// While we only do this if the caller is legacy, it is not a problem doing this
 /// unconditionally, because EOF contracts dot no have EXTCODE* instructions.
-bytes_view extcode(bytes_view code) noexcept
+bytes_view extcode(bytes_view code, evmc_revision rev) noexcept
 {
-    return is_eof_container(code) ? code.substr(0, 2) : code;
+    return (rev >= EVMC_PRAGUE && is_eof_container(code)) ? code.substr(0, 2) : code;
 }
 }  // namespace
 
 size_t Host::get_code_size(const address& addr) const noexcept
 {
     const auto* const acc = m_state.find(addr);
-    return (acc != nullptr) ? extcode(acc->code).size() : 0;
+    return (acc != nullptr) ? extcode(acc->code, m_rev).size() : 0;
 }
 
 bytes32 Host::get_code_hash(const address& addr) const noexcept
 {
     // TODO: Cache code hash. It will be needed also to compute the MPT hash.
     const auto* const acc = m_state.find(addr);
-    return (acc != nullptr && !acc->is_empty()) ? keccak256(extcode(acc->code)) : bytes32{};
+    return (acc != nullptr && !acc->is_empty()) ? keccak256(extcode(acc->code, m_rev)) : bytes32{};
 }
 
 size_t Host::copy_code(const address& addr, size_t code_offset, uint8_t* buffer_data,
     size_t buffer_size) const noexcept
 {
     const auto* const acc = m_state.find(addr);
-    const auto code = (acc != nullptr) ? extcode(acc->code) : bytes_view{};
+    const auto code = (acc != nullptr) ? extcode(acc->code, m_rev) : bytes_view{};
     const auto code_slice = code.substr(std::min(code_offset, code.size()));
     const auto num_bytes = std::min(buffer_size, code_slice.size());
     std::copy_n(code_slice.begin(), num_bytes, buffer_data);
