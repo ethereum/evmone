@@ -66,7 +66,7 @@ TransitionResult apply_block(state::State& state, evmc::VM& vm, const state::Blo
             cumulative_gas_used += receipt.gas_used;
             receipt.cumulative_gas_used = cumulative_gas_used;
             if (rev < EVMC_BYZANTIUM)
-                receipt.post_state = state::mpt_hash(state.get_accounts());
+                receipt.post_state = state::mpt_hash(TestState{state});
 
             block_gas_left -= receipt.gas_used;
             blob_gas_left -= tx.blob_gas_used();
@@ -148,10 +148,9 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
             .known_block_hashes = {},
         };
 
-        const auto genesis_pre_state_hash = state::mpt_hash(state.get_accounts());
         const auto genesis_res = apply_block(state, vm, genesis, {}, c.rev.get_revision(0), {});
 
-        EXPECT_EQ(state::mpt_hash(state.get_accounts()), genesis_pre_state_hash);
+        EXPECT_EQ(state::mpt_hash(TestState{state}), state::mpt_hash(c.pre_state));
 
         if (c.rev.get_revision(0) >= EVMC_SHANGHAI)
         {
@@ -183,7 +182,7 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
                          '/' + c.name + '/' + std::to_string(test_block.block_info.number));
 
             EXPECT_EQ(
-                state::mpt_hash(state.get_accounts()), test_block.expected_block_header.state_root);
+                state::mpt_hash(TestState{state}), test_block.expected_block_header.state_root);
 
             if (rev >= EVMC_SHANGHAI)
             {
@@ -202,14 +201,14 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
             // TODO: Add difficulty calculation verification.
         }
 
-        const auto post_state_hash =
+        const TestState post{state};
+        const auto expected_post_hash =
             std::holds_alternative<TestState>(c.expectation.post_state) ?
-                state::mpt_hash(
-                    std::get<TestState>(c.expectation.post_state).to_intra_state().get_accounts()) :
+                state::mpt_hash(std::get<TestState>(c.expectation.post_state)) :
                 std::get<hash256>(c.expectation.post_state);
-        EXPECT_TRUE(state::mpt_hash(state.get_accounts()) == post_state_hash)
+        EXPECT_TRUE(state::mpt_hash(post) == expected_post_hash)
             << "Result state:\n"
-            << print_state(TestState{state})
+            << print_state(post)
             << (std::holds_alternative<TestState>(c.expectation.post_state) ?
                        "\n\nExpected state:\n" +
                            print_state(std::get<TestState>(c.expectation.post_state)) :

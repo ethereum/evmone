@@ -7,12 +7,15 @@
 #include <span>
 #include <unordered_map>
 
+namespace evmone::test
+{
+class TestState;
+}
+
 namespace evmone::state
 {
-struct Account;
-
 /// Computes Merkle Patricia Trie root hash for the given collection of state accounts.
-hash256 mpt_hash(const std::unordered_map<address, Account>& accounts);
+hash256 mpt_hash(const test::TestState& state);
 
 /// Computes Merkle Patricia Trie root hash for the given list of structures.
 template <typename T>

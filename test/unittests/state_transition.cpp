@@ -135,9 +135,11 @@ void state_transition::TearDown()
         }
     }
 
+    const TestState post{state};
+
     if (expect.state_hash)
     {
-        EXPECT_EQ(mpt_hash(state.get_accounts()), *expect.state_hash);
+        EXPECT_EQ(mpt_hash(post), *expect.state_hash);
     }
 
     for (const auto& [addr, _] : state.get_accounts())
@@ -146,7 +148,7 @@ void state_transition::TearDown()
     }
 
     if (!export_file_path.empty())
-        export_state_test(receipt, state);
+        export_state_test(receipt, post);
 }
 
 namespace
@@ -166,7 +168,7 @@ std::string_view to_test_fork_name(evmc_revision rev) noexcept
 }
 }  // namespace
 
-void state_transition::export_state_test(const TransactionReceipt& receipt, const State& post)
+void state_transition::export_state_test(const TransactionReceipt& receipt, const TestState& post)
 {
     json::json j;
     auto& jt = j[export_test_name];
@@ -217,7 +219,7 @@ void state_transition::export_state_test(const TransactionReceipt& receipt, cons
 
     auto& jpost = jt["post"][to_test_fork_name(rev)][0];
     jpost["indexes"] = {{"data", 0}, {"gas", 0}, {"value", 0}};
-    jpost["hash"] = hex0x(mpt_hash(post.get_accounts()));
+    jpost["hash"] = hex0x(mpt_hash(post));
     jpost["logs"] = hex0x(logs_hash(receipt.logs));
 
     std::ofstream{export_file_path} << std::setw(2) << j;
