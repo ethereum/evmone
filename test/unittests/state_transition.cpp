@@ -45,11 +45,11 @@ void state_transition::TearDown()
         ASSERT_EQ(tx.max_gas_price, tx.max_priority_gas_price);
     }
 
-    auto state = pre.to_intra_state();
-    validate_state(state, rev);
+    validate_state(pre, rev);
 
     // Execution:
 
+    auto state = pre.to_intra_state();
     const auto trace = !expect.trace.empty();
     auto& selected_vm = trace ? tracing_vm : vm;
 

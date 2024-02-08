@@ -100,7 +100,7 @@ StateTransitionTest load_state_test(std::istream& input);
 /// - checks that there are no zero-value storage entries,
 /// - checks that there are no invalid EOF codes.
 /// Throws std::invalid_argument exception.
-void validate_state(const state::State& state, evmc_revision rev);
+void validate_state(const TestState& state, evmc_revision rev);
 
 /// Execute the state @p test using the @p vm.
 ///

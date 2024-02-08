@@ -77,8 +77,9 @@ int main(int argc, const char* argv[])
         if (!alloc_file.empty())
         {
             const auto j = json::json::parse(std::ifstream{alloc_file}, nullptr, false);
-            state = test::from_json<TestState>(j).to_intra_state();
-            validate_state(state, rev);
+            const auto test_state = test::from_json<TestState>(j);
+            validate_state(test_state, rev);
+            state = test_state.to_intra_state();
         }
         if (!env_file.empty())
         {
