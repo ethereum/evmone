@@ -56,12 +56,12 @@ void state_transition::TearDown()
     if (trace)
         trace_capture.emplace();
 
-    auto intra_state = pre;
+    auto intra_state = pre.to_intra_state();
     const auto res = state::transition(intra_state, block, tx, rev, selected_vm, block.gas_limit,
         state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK);
     state::finalize(
         intra_state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
-    const auto& post = intra_state;
+    TestState post{intra_state};
 
     if (const auto expected_error = make_error_code(expect.tx_error))
     {
@@ -71,11 +71,7 @@ void state_transition::TearDown()
         EXPECT_EQ(tx_error, expected_error)
             << tx_error.message() << " vs " << expected_error.message();
 
-        EXPECT_EQ(post.get_accounts().size(), pre.get_accounts().size());
-        for (const auto& [addr, acc] : post.get_accounts())
-        {
-            EXPECT_TRUE(pre.get_accounts().contains(addr)) << "unexpected account " << addr;
-        }
+        EXPECT_EQ(post, pre) << "failed transaction has modified the state";
     }
     else
     {
@@ -103,8 +99,8 @@ void state_transition::TearDown()
 
     for (const auto& [addr, expected_acc] : expect.post)
     {
-        const auto ait = post.get_accounts().find(addr);
-        if (ait == post.get_accounts().end())
+        const auto ait = post.find(addr);
+        if (ait == post.end())
         {
             EXPECT_FALSE(expected_acc.exists) << addr << ": should not exist";
             continue;
@@ -130,25 +126,25 @@ void state_transition::TearDown()
         {
             // Lookup storage values. Map non-existing ones to 0.
             const auto sit = acc.storage.find(key);
-            const auto& value = sit != acc.storage.end() ? sit->second.current : bytes32{};
+            const auto& value = sit != acc.storage.end() ? sit->second : bytes32{};
             EXPECT_EQ(value, expected_value) << addr << ": wrong storage " << key;
         }
         for (const auto& [key, value] : acc.storage)
         {
             // Find unexpected storage keys. This will also report entries with value 0.
             EXPECT_TRUE(expected_acc.storage.contains(key))
-                << addr << ": unexpected storage " << key << "=" << value.current;
+                << addr << ": unexpected storage " << key << "=" << value;
         }
     }
 
-    for (const auto& [addr, _] : post.get_accounts())
+    for (const auto& [addr, _] : post)
     {
         EXPECT_TRUE(expect.post.contains(addr)) << addr << ": should not exist";
     }
 
     if (expect.state_hash)
     {
-        EXPECT_EQ(mpt_hash(post.get_accounts()), *expect.state_hash);
+        EXPECT_EQ(mpt_hash(post), *expect.state_hash);
     }
 
     if (!export_file_path.empty())
@@ -173,7 +169,7 @@ std::string_view to_test_fork_name(evmc_revision rev) noexcept
 }  // namespace
 
 void state_transition::export_state_test(
-    const std::variant<TransactionReceipt, std::error_code>& res, const State& post)
+    const std::variant<TransactionReceipt, std::error_code>& res, const TestState& post)
 {
     json::json j;
     auto& jt = j[export_test_name];
@@ -185,7 +181,7 @@ void state_transition::export_state_test(
     jenv["currentCoinbase"] = hex0x(block.coinbase);
     jenv["currentBaseFee"] = hex0x(block.base_fee);
 
-    jt["pre"] = to_json(pre.get_accounts());
+    jt["pre"] = to_json(pre);
 
     auto& jtx = jt["transaction"];
     if (tx.to.has_value())
@@ -231,7 +227,7 @@ void state_transition::export_state_test(
 
     auto& jpost = jt["post"][to_test_fork_name(rev)][0];
     jpost["indexes"] = {{"data", 0}, {"gas", 0}, {"value", 0}};
-    jpost["hash"] = hex0x(mpt_hash(post.get_accounts()));
+    jpost["hash"] = hex0x(mpt_hash(post));
 
     if (holds_alternative<std::error_code>(res))
     {

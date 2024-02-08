@@ -7,6 +7,7 @@
 #include <evmone/evmone.h>
 #include <test/state/errors.hpp>
 #include <test/state/host.hpp>
+#include <test/state/test_state.hpp>
 
 namespace evmone::test
 {
@@ -83,7 +84,7 @@ protected:
         .sender = Sender,
         .nonce = 1,
     };
-    State pre;
+    TestState pre;
     Expectation expect;
 
     void SetUp() override;
@@ -93,7 +94,7 @@ protected:
 
     /// Exports the test in the JSON State Test format to ExportableFixture::export_out.
     void export_state_test(
-        const std::variant<TransactionReceipt, std::error_code>& res, const State& post);
+        const std::variant<TransactionReceipt, std::error_code>& res, const TestState& post);
 };
 
 }  // namespace evmone::test

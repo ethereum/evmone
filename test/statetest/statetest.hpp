@@ -4,6 +4,7 @@
 #pragma once
 
 #include "../state/state.hpp"
+#include "../state/test_state.hpp"
 #include <nlohmann/json.hpp>
 
 namespace json = nlohmann;
@@ -54,7 +55,7 @@ struct StateTransitionTest
     };
 
     std::string name;
-    state::State pre_state;
+    TestState pre_state;
     state::BlockInfo block;
     TestMultiTransaction multi_tx;
     std::vector<Case> cases;
@@ -86,13 +87,13 @@ template <>
 state::Withdrawal from_json<state::Withdrawal>(const json::json& j);
 
 template <>
-state::State from_json<state::State>(const json::json& j);
+TestState from_json<TestState>(const json::json& j);
 
 template <>
 state::Transaction from_json<state::Transaction>(const json::json& j);
 
 /// Exports the State (accounts) to JSON format (aka pre/post/alloc state).
-json::json to_json(const std::unordered_map<address, state::Account>& accounts);
+json::json to_json(const TestState& state);
 
 std::vector<StateTransitionTest> load_state_tests(std::istream& input);
 
@@ -100,7 +101,7 @@ std::vector<StateTransitionTest> load_state_tests(std::istream& input);
 /// - checks that there are no zero-value storage entries,
 /// - checks that there are no invalid EOF codes.
 /// Throws std::invalid_argument exception.
-void validate_state(const state::State& state, evmc_revision rev);
+void validate_state(const TestState& state, evmc_revision rev);
 
 /// Execute the state @p test using the @p vm.
 ///

@@ -80,7 +80,9 @@ int main(int argc, const char* argv[])
         if (!alloc_file.empty())
         {
             const auto j = json::json::parse(std::ifstream{alloc_file}, nullptr, false);
-            state = test::from_json<state::State>(j);
+            const auto test_state = test::from_json<TestState>(j);
+            validate_state(test_state, rev);
+            state = test_state.to_intra_state();
         }
         if (!env_file.empty())
         {
@@ -114,8 +116,6 @@ int main(int argc, const char* argv[])
         std::vector<state::Transaction> transactions;
         std::vector<state::TransactionReceipt> receipts;
         int64_t block_gas_left = block.gas_limit;
-
-        validate_state(state, rev);
 
         // Parse and execute transactions
         if (!txs_file.empty())
@@ -195,7 +195,7 @@ int main(int argc, const char* argv[])
                         cumulative_gas_used += receipt.gas_used;
                         receipt.cumulative_gas_used = cumulative_gas_used;
                         if (rev < EVMC_BYZANTIUM)
-                            receipt.post_state = state::mpt_hash(state.get_accounts());
+                            receipt.post_state = state::mpt_hash(TestState{state});
                         j_receipt["cumulativeGasUsed"] = hex0x(cumulative_gas_used);
 
                         j_receipt["blockHash"] = hex0x(bytes32{});
@@ -221,7 +221,7 @@ int main(int argc, const char* argv[])
                 state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
 
             j_result["logsHash"] = hex0x(logs_hash(txs_logs));
-            j_result["stateRoot"] = hex0x(state::mpt_hash(state.get_accounts()));
+            j_result["stateRoot"] = hex0x(state::mpt_hash(TestState{state}));
         }
 
         j_result["logsBloom"] = hex0x(compute_bloom_filter(receipts));
@@ -241,8 +241,7 @@ int main(int argc, const char* argv[])
         std::ofstream{output_dir / output_result_file} << std::setw(2) << j_result;
 
         // Print out current state to outAlloc file
-        std::ofstream{output_dir / output_alloc_file} << std::setw(2)
-                                                      << to_json(state.get_accounts());
+        std::ofstream{output_dir / output_alloc_file} << std::setw(2) << to_json(TestState{state});
 
         if (!output_body_file.empty())
             std::ofstream{output_dir / output_body_file} << hex0x(rlp::encode(transactions));
