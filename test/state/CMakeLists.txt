@@ -30,6 +30,8 @@ target_sources(
     rlp.hpp
     state.hpp
     state.cpp
+    test_state.hpp
+    test_state.cpp
 )
 
 option(EVMONE_PRECOMPILES_SILKPRE "Enable precompiles support via silkpre library" OFF)

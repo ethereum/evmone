@@ -7,6 +7,7 @@
 #include <evmone/evmone.h>
 #include <test/state/errors.hpp>
 #include <test/state/host.hpp>
+#include <test/state/test_state.hpp>
 
 namespace evmone::test
 {
@@ -83,7 +84,7 @@ protected:
         .sender = Sender,
         .nonce = 1,
     };
-    State pre;
+    TestState pre;
     Expectation expect;
 
     void SetUp() override;
