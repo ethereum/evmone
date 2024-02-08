@@ -91,11 +91,11 @@ std::optional<int64_t> mining_reward(evmc_revision rev) noexcept
     return std::nullopt;
 }
 
-std::string print_state(const state::State& s)
+std::string print_state(const TestState& s)
 {
     std::stringstream out;
-    const std::map<address, state::Account> ordered(
-        s.get_accounts().begin(), s.get_accounts().end());
+    // FIXME: Use ordered map in TestState?
+    const std::map<address, TestAccount> ordered(s.begin(), s.end());
 
     for (const auto& [key, acc] : ordered)
     {
@@ -106,15 +106,14 @@ std::string print_state(const state::State& s)
 
         if (!acc.storage.empty())
         {
-            const std::map<bytes32, state::StorageValue> ordered_storage(
+            const std::map<bytes32, bytes32> ordered_storage(
                 acc.storage.begin(), acc.storage.end());
 
-            out << "\tstorage : "
-                << "\n";
+            out << "\tstorage : \n";
             for (const auto& [s_key, val] : ordered_storage)
             {
-                if (val.current)  // Skip 0 values.
-                    out << "\t\t" << s_key << " : " << hex0x(val.current) << "\n";
+                if (!is_zero(val))  // Skip 0 values.
+                    out << "\t\t" << s_key << " : " << hex0x(val) << "\n";
             }
         }
     }
@@ -210,11 +209,10 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
                 std::get<hash256>(c.expectation.post_state);
         EXPECT_TRUE(state::mpt_hash(state.get_accounts()) == post_state_hash)
             << "Result state:\n"
-            << print_state(state)
+            << print_state(TestState{state})
             << (std::holds_alternative<TestState>(c.expectation.post_state) ?
                        "\n\nExpected state:\n" +
-                           print_state(
-                               std::get<TestState>(c.expectation.post_state).to_intra_state()) :
+                           print_state(std::get<TestState>(c.expectation.post_state)) :
                        "");
     }
 }
