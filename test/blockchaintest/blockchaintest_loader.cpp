@@ -119,7 +119,7 @@ BlockchainTest load_blockchain_test_case(const std::string& name, const json::js
     BlockchainTest bt;
     bt.name = name;
     bt.genesis_block_header = from_json<BlockHeader>(j.at("genesisBlockHeader"));
-    bt.pre_state = from_json<State>(j.at("pre"));
+    bt.pre_state = from_json<TestState>(j.at("pre"));
     bt.rev = to_rev_schedule(j.at("network").get<std::string>());
 
     for (const auto& el : j.at("blocks"))
@@ -128,7 +128,7 @@ BlockchainTest load_blockchain_test_case(const std::string& name, const json::js
     bt.expectation.last_block_hash = from_json<hash256>(j.at("lastblockhash"));
 
     if (const auto it = j.find("postState"); it != j.end())
-        bt.expectation.post_state = from_json<State>(*it);
+        bt.expectation.post_state = from_json<TestState>(*it);
     else if (const auto it_hash = j.find("postStateHash"); it_hash != j.end())
         bt.expectation.post_state = from_json<hash256>(*it_hash);
 
