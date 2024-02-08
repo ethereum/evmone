@@ -102,7 +102,7 @@ TEST(statetest_loader, load_minimal_test)
     })"};
     const StateTransitionTest st = load_state_test(s);
     // TODO: should add some comparison operator to State, BlockInfo, AccessList
-    EXPECT_EQ(st.pre_state.get_accounts().size(), 0);
+    EXPECT_EQ(st.pre_state.size(), 0);
     EXPECT_EQ(st.block.number, 0);
     EXPECT_EQ(st.block.timestamp, 0);
     EXPECT_EQ(st.block.gas_limit, 0);

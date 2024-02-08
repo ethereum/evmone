@@ -54,7 +54,7 @@ struct StateTransitionTest
         std::vector<Expectation> expectations;
     };
 
-    state::State pre_state;
+    TestState pre_state;
     state::BlockInfo block;
     TestMultiTransaction multi_tx;
     std::vector<Case> cases;
@@ -86,7 +86,7 @@ template <>
 state::Withdrawal from_json<state::Withdrawal>(const json::json& j);
 
 template <>
-state::State from_json<state::State>(const json::json& j);
+TestState from_json<TestState>(const json::json& j);
 
 template <>
 state::Transaction from_json<state::Transaction>(const json::json& j);

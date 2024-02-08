@@ -77,7 +77,8 @@ int main(int argc, const char* argv[])
         if (!alloc_file.empty())
         {
             const auto j = json::json::parse(std::ifstream{alloc_file}, nullptr, false);
-            state = test::from_json<state::State>(j);
+            state = test::from_json<TestState>(j).to_intra_state();
+            validate_state(state, rev);
         }
         if (!env_file.empty())
         {
@@ -111,8 +112,6 @@ int main(int argc, const char* argv[])
         std::vector<state::Transaction> transactions;
         std::vector<state::TransactionReceipt> receipts;
         int64_t block_gas_left = block.gas_limit;
-
-        validate_state(state, rev);
 
         // Parse and execute transactions
         if (!txs_file.empty())

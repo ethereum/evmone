@@ -131,7 +131,7 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
         SCOPED_TRACE(std::string{evmc::to_string(c.rev.get_revision(0))} + '/' +
                      std::to_string(case_index) + '/' + c.name);
 
-        auto state = c.pre_state;
+        auto state = c.pre_state.to_intra_state();
 
         const state::BlockInfo genesis{
             .number = c.genesis_block_header.block_number,
@@ -149,10 +149,10 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
             .known_block_hashes = {},
         };
 
+        const auto genesis_pre_state_hash = state::mpt_hash(state.get_accounts());
         const auto genesis_res = apply_block(state, vm, genesis, {}, c.rev.get_revision(0), {});
 
-        EXPECT_EQ(
-            state::mpt_hash(state.get_accounts()), state::mpt_hash(c.pre_state.get_accounts()));
+        EXPECT_EQ(state::mpt_hash(state.get_accounts()), genesis_pre_state_hash);
 
         if (c.rev.get_revision(0) >= EVMC_SHANGHAI)
         {
@@ -204,15 +204,17 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
         }
 
         const auto post_state_hash =
-            std::holds_alternative<state::State>(c.expectation.post_state) ?
-                state::mpt_hash(std::get<state::State>(c.expectation.post_state).get_accounts()) :
+            std::holds_alternative<TestState>(c.expectation.post_state) ?
+                state::mpt_hash(
+                    std::get<TestState>(c.expectation.post_state).to_intra_state().get_accounts()) :
                 std::get<hash256>(c.expectation.post_state);
         EXPECT_TRUE(state::mpt_hash(state.get_accounts()) == post_state_hash)
             << "Result state:\n"
             << print_state(state)
-            << (std::holds_alternative<state::State>(c.expectation.post_state) ?
+            << (std::holds_alternative<TestState>(c.expectation.post_state) ?
                        "\n\nExpected state:\n" +
-                           print_state(std::get<state::State>(c.expectation.post_state)) :
+                           print_state(
+                               std::get<TestState>(c.expectation.post_state).to_intra_state()) :
                        "");
     }
 }
