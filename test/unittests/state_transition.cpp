@@ -138,9 +138,11 @@ void state_transition::TearDown()
         }
     }
 
+    const TestState post{state};
+
     if (expect.state_hash)
     {
-        EXPECT_EQ(mpt_hash(state.get_accounts()), *expect.state_hash);
+        EXPECT_EQ(mpt_hash(post), *expect.state_hash);
     }
 
     for (const auto& [addr, _] : state.get_accounts())
@@ -149,7 +151,7 @@ void state_transition::TearDown()
     }
 
     if (const auto export_dir = std::getenv("EVMONE_EXPORT_TESTS"); export_dir != nullptr)
-        export_state_test(receipt, state, export_dir);
+        export_state_test(receipt, post, export_dir);
 }
 
 namespace
@@ -174,7 +176,7 @@ fs::path get_export_test_path(const testing::TestInfo& test_info, std::string_vi
 }  // namespace
 
 void state_transition::export_state_test(
-    const TransactionReceipt& receipt, const State& post, std::string_view export_dir)
+    const TransactionReceipt& receipt, const TestState& post, std::string_view export_dir)
 {
     const auto& test_info = *testing::UnitTest::GetInstance()->current_test_info();
 
@@ -227,7 +229,7 @@ void state_transition::export_state_test(
 
     auto& jpost = jt["post"][evmc::to_string(rev)][0];
     jpost["indexes"] = {{"data", 0}, {"gas", 0}, {"value", 0}};
-    jpost["hash"] = hex0x(mpt_hash(post.get_accounts()));
+    jpost["hash"] = hex0x(mpt_hash(post));
     jpost["logs"] = hex0x(logs_hash(receipt.logs));
 
     std::ofstream{get_export_test_path(test_info, export_dir)} << std::setw(2) << j;

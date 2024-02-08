@@ -190,7 +190,7 @@ int main(int argc, const char* argv[])
                         cumulative_gas_used += receipt.gas_used;
                         receipt.cumulative_gas_used = cumulative_gas_used;
                         if (rev < EVMC_BYZANTIUM)
-                            receipt.post_state = state::mpt_hash(state.get_accounts());
+                            receipt.post_state = state::mpt_hash(TestState{state});
                         j_receipt["cumulativeGasUsed"] = hex0x(cumulative_gas_used);
 
                         j_receipt["blockHash"] = hex0x(bytes32{});
@@ -216,7 +216,7 @@ int main(int argc, const char* argv[])
                 state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
 
             j_result["logsHash"] = hex0x(logs_hash(txs_logs));
-            j_result["stateRoot"] = hex0x(state::mpt_hash(state.get_accounts()));
+            j_result["stateRoot"] = hex0x(state::mpt_hash(TestState{state}));
         }
 
         j_result["logsBloom"] = hex0x(compute_bloom_filter(receipts));

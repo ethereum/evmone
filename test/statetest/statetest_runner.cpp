@@ -32,7 +32,7 @@ void run_state_test(const StateTransitionTest& test, evmc::VM& vm, bool trace_su
             // Finalize block with reward 0.
             state::finalize(state, rev, test.block.coinbase, 0, {}, {});
 
-            const auto state_root = state::mpt_hash(state.get_accounts());
+            const auto state_root = state::mpt_hash(TestState{state});
 
             if (trace_summary)
             {
