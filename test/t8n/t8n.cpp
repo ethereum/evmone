@@ -236,8 +236,7 @@ int main(int argc, const char* argv[])
         std::ofstream{output_dir / output_result_file} << std::setw(2) << j_result;
 
         // Print out current state to outAlloc file
-        std::ofstream{output_dir / output_alloc_file} << std::setw(2)
-                                                      << to_json(state.get_accounts());
+        std::ofstream{output_dir / output_alloc_file} << std::setw(2) << to_json(TestState{state});
 
         if (!output_body_file.empty())
             std::ofstream{output_dir / output_body_file} << hex0x(rlp::encode(transactions));

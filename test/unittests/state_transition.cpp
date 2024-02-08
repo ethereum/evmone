@@ -48,11 +48,11 @@ void state_transition::TearDown()
             << "no support for EIP-1559 transactions";
     }
 
-    validate_state(pre, rev);
+    auto state = pre.to_intra_state();
+    validate_state(state, rev);
 
     // Execution:
 
-    auto state = pre;
     const auto trace = !expect.trace.empty();
     auto& selected_vm = trace ? tracing_vm : vm;
 
@@ -73,10 +73,10 @@ void state_transition::TearDown()
             << tx_error.message() << " vs " << expected_error.message();
 
         // TODO: Compare states carefully, they should be identical.
-        EXPECT_EQ(state.get_accounts().size(), pre.get_accounts().size());
+        EXPECT_EQ(state.get_accounts().size(), pre.size());
         for (const auto& [addr, acc] : state.get_accounts())
         {
-            EXPECT_TRUE(pre.get_accounts().contains(addr)) << "unexpected account " << addr;
+            EXPECT_TRUE(pre.contains(addr)) << "unexpected account " << addr;
         }
 
         // TODO: Export also tests with invalid transactions.
@@ -188,7 +188,7 @@ void state_transition::export_state_test(
     jenv["currentCoinbase"] = hex0x(block.coinbase);
     jenv["currentBaseFee"] = hex0x(block.base_fee);
 
-    jt["pre"] = to_json(pre.get_accounts());
+    jt["pre"] = to_json(pre);
 
     auto& jtx = jt["transaction"];
     if (tx.to.has_value())

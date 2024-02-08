@@ -15,12 +15,11 @@ TEST_F(state_transition, eof_invalid_initcode)
 
     rev = EVMC_PRAGUE;
     tx.to = To;
-    pre.insert(*tx.to,
-        {
-            .nonce = 1,
-            .storage = {{0x01_bytes32, {.current = 0x01_bytes32, .original = 0x01_bytes32}}},
-            .code = eof_bytecode(create() + push(1) + OP_SSTORE + OP_STOP, 3),
-        });
+    pre.insert(*tx.to, {
+                           .nonce = 1,
+                           .storage = {{0x01_bytes32, 0x01_bytes32}},
+                           .code = eof_bytecode(create() + push(1) + OP_SSTORE + OP_STOP, 3),
+                       });
 
     EXPECT_EQ(pre.get(tx.sender).balance, 1'000'000'001);  // Fixture sanity check.
 

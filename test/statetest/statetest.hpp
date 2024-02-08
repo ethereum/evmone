@@ -4,6 +4,7 @@
 #pragma once
 
 #include "../state/state.hpp"
+#include "../state/test_state.hpp"
 #include <nlohmann/json.hpp>
 
 namespace json = nlohmann;
@@ -91,7 +92,7 @@ template <>
 state::Transaction from_json<state::Transaction>(const json::json& j);
 
 /// Exports the State (accounts) to JSON format (aka pre/post/alloc state).
-json::json to_json(const std::unordered_map<address, state::Account>& accounts);
+json::json to_json(const TestState& state);
 
 StateTransitionTest load_state_test(std::istream& input);
 
