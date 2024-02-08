@@ -15,8 +15,6 @@
 namespace evmone::state
 {
 /// The Ethereum State: the collection of accounts mapped by their addresses.
-///
-/// TODO: This class is copyable for testing. Consider making it non-copyable.
 class State
 {
     struct JournalBase
@@ -70,6 +68,11 @@ class State
     std::vector<JournalEntry> m_journal;
 
 public:
+    State() = default;
+    State(const State&) = delete;
+    State(State&&) = default;
+    State& operator=(State&&) = default;
+
     /// Inserts the new account at the address.
     /// There must not exist any account under this address before.
     Account& insert(const address& addr, Account account = {});
