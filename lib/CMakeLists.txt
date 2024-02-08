@@ -5,6 +5,8 @@
 hunter_add_package(intx)
 find_package(intx CONFIG REQUIRED)
 
+add_compile_options(-mllvm -x86-use-vzeroupper)
+
 add_subdirectory(evmmax)
 add_subdirectory(evmone)
 add_subdirectory(evmone_precompiles)
