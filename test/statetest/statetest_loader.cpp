@@ -433,9 +433,9 @@ StateTransitionTest load_state_test(std::istream& input)
     return json::json::parse(input).get<StateTransitionTest>();
 }
 
-void validate_state(const state::State& state, evmc_revision rev)
+void validate_state(const TestState& state, evmc_revision rev)
 {
-    for (const auto& [addr, acc] : state.get_accounts())
+    for (const auto& [addr, acc] : state)
     {
         // TODO: Check for empty accounts after Paris.
         //       https://github.com/ethereum/tests/issues/1331
@@ -459,7 +459,7 @@ void validate_state(const state::State& state, evmc_revision rev)
 
         for (const auto& [key, value] : acc.storage)
         {
-            if (is_zero(value.original))
+            if (is_zero(value))
             {
                 throw std::invalid_argument{"account " + hex0x(addr) +
                                             " contains invalid zero-value storage entry " +

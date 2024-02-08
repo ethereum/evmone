@@ -48,11 +48,11 @@ void state_transition::TearDown()
             << "no support for EIP-1559 transactions";
     }
 
-    auto state = pre.to_intra_state();
-    validate_state(state, rev);
+    validate_state(pre, rev);
 
     // Execution:
 
+    auto state = pre.to_intra_state();
     const auto trace = !expect.trace.empty();
     auto& selected_vm = trace ? tracing_vm : vm;
 
