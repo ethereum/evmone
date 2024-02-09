@@ -7,27 +7,28 @@
 #include "mpt.hpp"
 #include "rlp.hpp"
 #include "state.hpp"
+#include "test_state.hpp"
 
 namespace evmone::state
 {
 namespace
 {
-hash256 mpt_hash(const std::unordered_map<hash256, StorageValue>& storage)
+hash256 mpt_hash(const std::unordered_map<bytes32, bytes32>& storage)
 {
     MPT trie;
     for (const auto& [key, value] : storage)
     {
-        if (!is_zero(value.current))  // Skip "deleted" values.
-            trie.insert(keccak256(key), rlp::encode(rlp::trim(value.current)));
+        if (!is_zero(value))  // Skip "deleted" values.
+            trie.insert(keccak256(key), rlp::encode(rlp::trim(value)));
     }
     return trie.hash();
 }
 }  // namespace
 
-hash256 mpt_hash(const std::unordered_map<address, Account>& accounts)
+hash256 mpt_hash(const test::TestState& state)
 {
     MPT trie;
-    for (const auto& [addr, acc] : accounts)
+    for (const auto& [addr, acc] : state)
     {
         trie.insert(keccak256(addr),
             rlp::encode_tuple(acc.nonce, acc.balance, mpt_hash(acc.storage), keccak256(acc.code)));

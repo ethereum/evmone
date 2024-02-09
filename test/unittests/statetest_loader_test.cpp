@@ -102,7 +102,7 @@ TEST(statetest_loader, load_minimal_test)
     })"};
     const StateTransitionTest st = load_state_test(s);
     // TODO: should add some comparison operator to State, BlockInfo, AccessList
-    EXPECT_EQ(st.pre_state.get_accounts().size(), 0);
+    EXPECT_EQ(st.pre_state.size(), 0);
     EXPECT_EQ(st.block.number, 0);
     EXPECT_EQ(st.block.timestamp, 0);
     EXPECT_EQ(st.block.gas_limit, 0);
@@ -135,25 +135,19 @@ TEST(statetest_loader, load_minimal_test)
 
 TEST(statetest_loader, validate_state_invalid_eof)
 {
-    {
-        state::State state;
-        state.insert(0xadd4_address, {.code = "EF0001010000020001000103000100FEDA"_hex});
-        EXPECT_THAT([&] { validate_state(state, EVMC_PRAGUE); },
-            ThrowsMessage<std::invalid_argument>(
-                "EOF container at 0x000000000000000000000000000000000000add4 is invalid: "
-                "zero_section_size"));
-    }
+    TestState state{{0xadd4_address, {.code = "EF0001010000020001000103000100FEDA"_hex}}};
+    EXPECT_THAT([&] { validate_state(state, EVMC_PRAGUE); },
+        ThrowsMessage<std::invalid_argument>(
+            "EOF container at 0x000000000000000000000000000000000000add4 is invalid: "
+            "zero_section_size"));
 }
 
 TEST(statetest_loader, validate_state_zero_storage_slot)
 {
-    {
-        state::State state;
-        state.insert(0xadd4_address, {.storage = {{0x01_bytes32, {0x00_bytes32}}}});
-        EXPECT_THAT([&] { validate_state(state, EVMC_PRAGUE); },
-            ThrowsMessage<std::invalid_argument>(
-                "account 0x000000000000000000000000000000000000add4 contains invalid zero-value "
-                "storage entry "
-                "0x0000000000000000000000000000000000000000000000000000000000000001"));
-    }
+    TestState state{{0xadd4_address, {.storage = {{0x01_bytes32, 0x00_bytes32}}}}};
+    EXPECT_THAT([&] { validate_state(state, EVMC_PRAGUE); },
+        ThrowsMessage<std::invalid_argument>(
+            "account 0x000000000000000000000000000000000000add4 contains invalid zero-value "
+            "storage entry "
+            "0x0000000000000000000000000000000000000000000000000000000000000001"));
 }

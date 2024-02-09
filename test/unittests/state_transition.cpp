@@ -41,8 +41,7 @@ public:
 void state_transition::TearDown()
 {
     validate_state(pre, rev);
-
-    auto state = pre;
+    auto state = pre.to_intra_state();
     const auto trace = !expect.trace.empty();
     auto& selected_vm = trace ? tracing_vm : vm;
 
@@ -62,12 +61,7 @@ void state_transition::TearDown()
         EXPECT_EQ(tx_error, expected_error)
             << tx_error.message() << " vs " << expected_error.message();
 
-        // TODO: Compare states carefully, they should be identical.
-        EXPECT_EQ(state.get_accounts().size(), pre.get_accounts().size());
-        for (const auto& [addr, acc] : state.get_accounts())
-        {
-            EXPECT_TRUE(pre.get_accounts().contains(addr)) << "unexpected account " << addr;
-        }
+        EXPECT_EQ(TestState{state}, pre) << "failed transaction has modified the state";
 
         // TODO: Export also tests with invalid transactions.
         return;  // Do not check anything else.
@@ -91,55 +85,58 @@ void state_transition::TearDown()
         EXPECT_EQ(receipt.gas_used, *expect.gas_used);
     }
 
+    const TestState post{state};
     for (const auto& [addr, expected_acc] : expect.post)
     {
-        const auto acc = state.find(addr);
-        if (!expected_acc.exists)
+        const auto ait = post.find(addr);
+        if (ait == post.end())
         {
-            EXPECT_EQ(acc, nullptr) << "account " << addr << " should not exist";
+            EXPECT_FALSE(expected_acc.exists) << addr << ": should exist";
+            continue;
         }
-        else
+
+        ASSERT_TRUE(expected_acc.exists) << addr << ": should not exist";
+        const auto& acc = ait->second;
+
+        if (expected_acc.nonce.has_value())
         {
-            ASSERT_NE(acc, nullptr) << "account " << addr << " should exist";
-            if (expected_acc.nonce.has_value())
-            {
-                EXPECT_EQ(acc->nonce, *expected_acc.nonce) << "account " << addr;
-            }
-            if (expected_acc.balance.has_value())
-            {
-                EXPECT_EQ(acc->balance, *expected_acc.balance)
-                    << to_string(acc->balance) << " vs " << to_string(*expected_acc.balance)
-                    << " account " << addr;
-            }
-            if (expected_acc.code.has_value())
-            {
-                EXPECT_EQ(acc->code, *expected_acc.code) << "account " << addr;
-            }
-            for (const auto& [key, value] : expected_acc.storage)
-            {
-                EXPECT_EQ(acc->storage[key].current, value) << "account " << addr << " key " << key;
-            }
-            for (const auto& [key, value] : acc->storage)
-            {
-                // Find unexpected storage keys. This will also report entries with value 0.
-                EXPECT_TRUE(expected_acc.storage.contains(key))
-                    << "unexpected storage key " << key << "=" << value.current << " in " << addr;
-            }
+            EXPECT_EQ(acc.nonce, *expected_acc.nonce) << addr;
         }
+        if (expected_acc.balance.has_value())
+        {
+            EXPECT_EQ(acc.balance, *expected_acc.balance)
+                << addr << ": balance " << to_string(acc.balance) << " vs "
+                << to_string(*expected_acc.balance);
+        }
+        if (expected_acc.code.has_value())
+        {
+            EXPECT_EQ(acc.code, *expected_acc.code) << addr << ": wrong code";
+        }
+        for (const auto& [key, value] : expected_acc.storage)
+        {
+            auto sit = acc.storage.find(key);
+            ASSERT_NE(sit, acc.storage.end()) << addr << ": missing key " << key;
+            EXPECT_EQ(sit->second, value) << addr << ": key " << key;
+        }
+        for (const auto& [key, value] : acc.storage)
+        {
+            EXPECT_TRUE(expected_acc.storage.contains(key))
+                << addr << ": unexpected key " << key << "=" << value;
+        }
+    }
+
+    for (const auto& [addr, _] : post)
+    {
+        EXPECT_TRUE(expect.post.contains(addr)) << addr << ": should not exist";
     }
 
     if (expect.state_hash)
     {
-        EXPECT_EQ(mpt_hash(state.get_accounts()), *expect.state_hash);
-    }
-
-    for (const auto& [addr, _] : state.get_accounts())
-    {
-        EXPECT_TRUE(expect.post.contains(addr)) << "unexpected account " << addr;
+        EXPECT_EQ(mpt_hash(post), *expect.state_hash);
     }
 
     if (const auto export_dir = std::getenv("EVMONE_EXPORT_TESTS"); export_dir != nullptr)
-        export_state_test(receipt, state, export_dir);
+        export_state_test(receipt, post, export_dir);
 }
 
 namespace
@@ -164,7 +161,7 @@ fs::path get_export_test_path(const testing::TestInfo& test_info, std::string_vi
 }  // namespace
 
 void state_transition::export_state_test(
-    const TransactionReceipt& receipt, const State& post, std::string_view export_dir)
+    const TransactionReceipt& receipt, const TestState& post, std::string_view export_dir)
 {
     const auto& test_info = *testing::UnitTest::GetInstance()->current_test_info();
 
@@ -178,7 +175,7 @@ void state_transition::export_state_test(
     jenv["currentCoinbase"] = hex0x(block.coinbase);
     jenv["currentBaseFee"] = hex0x(block.base_fee);
 
-    jt["pre"] = to_json(pre.get_accounts());
+    jt["pre"] = to_json(pre);
 
     auto& jtx = jt["transaction"];
     if (tx.to.has_value())
@@ -195,7 +192,7 @@ void state_transition::export_state_test(
 
     auto& jpost = jt["post"][evmc::to_string(rev)][0];
     jpost["indexes"] = {{"data", 0}, {"gas", 0}, {"value", 0}};
-    jpost["hash"] = hex0x(mpt_hash(post.get_accounts()));
+    jpost["hash"] = hex0x(mpt_hash(post));
     jpost["logs"] = hex0x(logs_hash(receipt.logs));
 
     std::ofstream{get_export_test_path(test_info, export_dir)} << std::setw(2) << j;

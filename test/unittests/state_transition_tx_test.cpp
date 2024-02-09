@@ -14,7 +14,7 @@ TEST_F(state_transition, tx_non_existing_sender)
     tx.max_priority_gas_price = 0;
     tx.nonce = 0;
     block.base_fee = 0;
-    pre.get_accounts().erase(Sender);
+    pre.erase(Sender);
 
     rev = EVMC_BERLIN;
 
@@ -30,7 +30,7 @@ TEST_F(state_transition, invalid_tx_non_existing_sender)
     tx.max_priority_gas_price = 1;
     tx.nonce = 0;
     block.base_fee = 1;
-    pre.get_accounts().erase(Sender);
+    pre.erase(Sender);
 
     rev = EVMC_BERLIN;
 
@@ -50,7 +50,7 @@ TEST_F(state_transition, blob_tx_insuficient_funds)
     tx.max_blob_gas_price = 1;
     block.base_fee = 1;
 
-    pre.get_accounts()[tx.sender].balance = 0x20000 + 25000;
+    pre[tx.sender].balance = 0x20000 + 25000;
 
     rev = EVMC_CANCUN;
 
