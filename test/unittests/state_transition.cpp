@@ -72,12 +72,7 @@ void state_transition::TearDown()
         EXPECT_EQ(tx_error, expected_error)
             << tx_error.message() << " vs " << expected_error.message();
 
-        // TODO: Compare states carefully, they should be identical.
-        EXPECT_EQ(state.get_accounts().size(), pre.size());
-        for (const auto& [addr, acc] : state.get_accounts())
-        {
-            EXPECT_TRUE(pre.contains(addr)) << "unexpected account " << addr;
-        }
+        EXPECT_EQ(TestState{state}, pre) << "failed transaction has modified the state";
 
         // TODO: Export also tests with invalid transactions.
         return;  // Do not check anything else.
@@ -101,53 +96,55 @@ void state_transition::TearDown()
         EXPECT_EQ(receipt.gas_used, *expect.gas_used);
     }
 
+    const TestState post{state};
     for (const auto& [addr, expected_acc] : expect.post)
     {
-        const auto acc = state.find(addr);
-        if (!expected_acc.exists)
+        const auto ait = post.find(addr);
+        if (ait == post.end())
         {
-            EXPECT_EQ(acc, nullptr) << "account " << addr << " should not exist";
+            EXPECT_FALSE(expected_acc.exists) << addr << ": should exist";
+            continue;
         }
-        else
+
+        ASSERT_TRUE(expected_acc.exists) << addr << ": should not exist";
+        const auto& acc = ait->second;
+
+        if (expected_acc.nonce.has_value())
         {
-            ASSERT_NE(acc, nullptr) << "account " << addr << " should exist";
-            if (expected_acc.nonce.has_value())
-            {
-                EXPECT_EQ(acc->nonce, *expected_acc.nonce) << "account " << addr;
-            }
-            if (expected_acc.balance.has_value())
-            {
-                EXPECT_EQ(acc->balance, *expected_acc.balance)
-                    << to_string(acc->balance) << " vs " << to_string(*expected_acc.balance)
-                    << " account " << addr;
-            }
-            if (expected_acc.code.has_value())
-            {
-                EXPECT_EQ(acc->code, *expected_acc.code) << "account " << addr;
-            }
-            for (const auto& [key, value] : expected_acc.storage)
-            {
-                EXPECT_EQ(acc->storage[key].current, value) << "account " << addr << " key " << key;
-            }
-            for (const auto& [key, value] : acc->storage)
-            {
-                // Find unexpected storage keys. This will also report entries with value 0.
-                EXPECT_TRUE(expected_acc.storage.contains(key))
-                    << "unexpected storage key " << key << "=" << value.current << " in " << addr;
-            }
+            EXPECT_EQ(acc.nonce, *expected_acc.nonce) << addr;
+        }
+        if (expected_acc.balance.has_value())
+        {
+            EXPECT_EQ(acc.balance, *expected_acc.balance)
+                << addr << ": balance " << to_string(acc.balance) << " vs "
+                << to_string(*expected_acc.balance);
+        }
+        if (expected_acc.code.has_value())
+        {
+            EXPECT_EQ(acc.code, *expected_acc.code) << addr << ": wrong code";
+        }
+        for (const auto& [key, expected_value] : expected_acc.storage)
+        {
+            // TODO: This does not distinguish 0 from non-existent values.
+            auto sit = acc.storage.find(key);
+            const auto value = sit != acc.storage.end() ? sit->second : 0x00_bytes32;
+            EXPECT_EQ(value, expected_value) << addr << ": key " << key;
+        }
+        for (const auto& [key, value] : acc.storage)
+        {
+            EXPECT_TRUE(expected_acc.storage.contains(key))
+                << addr << ": unexpected key " << key << "=" << value;
         }
     }
 
-    const TestState post{state};
+    for (const auto& [addr, _] : post)
+    {
+        EXPECT_TRUE(expect.post.contains(addr)) << addr << ": should not exist";
+    }
 
     if (expect.state_hash)
     {
         EXPECT_EQ(mpt_hash(post), *expect.state_hash);
-    }
-
-    for (const auto& [addr, _] : state.get_accounts())
-    {
-        EXPECT_TRUE(expect.post.contains(addr)) << "unexpected account " << addr;
     }
 
     if (const auto export_dir = std::getenv("EVMONE_EXPORT_TESTS"); export_dir != nullptr)
