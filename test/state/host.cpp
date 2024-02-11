@@ -140,10 +140,28 @@ bool Host::selfdestruct(const address& addr, const address& beneficiary) noexcep
     return false;
 }
 
+std::vector<uint8_t> rlp_encode_uint64(uint64_t input) {
+    if (input == 0) return {0x80};
+
+    std::vector<uint8_t> output;
+    while (input != 0) {
+        output.push_back(input & 0xFF);
+        input >>= 8;
+    }
+
+    if (output.back() >= 0x80) output.push_back(0x80);
+    std::reverse(output.begin(), output.end());
+
+    output.back() += 0x80 + output.size() - 1;
+    return output;
+}
+
 address compute_create_address(const address& sender, uint64_t sender_nonce) noexcept
 {
-    // TODO: Compute CREATE address without using RLP library.
-    const auto rlp_list = rlp::encode_tuple(sender, sender_nonce);
+    const auto rlp_sender = rlp_encode_uint64(sender);
+    const auto rlp_nonce = rlp_encode_uint64(sender_nonce);
+    const auto rlp_list = rlp_sender;
+    rlp_list.insert(rlp_list.end(), rlp_nonce.begin(), rlp_nonce.end());
     const auto base_hash = keccak256(rlp_list);
     address addr;
     std::copy_n(&base_hash.bytes[sizeof(base_hash) - sizeof(addr)], sizeof(addr), addr.bytes);
