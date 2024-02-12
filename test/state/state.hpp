@@ -89,10 +89,6 @@ public:
     /// Gets an existing account or inserts new account.
     Account& get_or_insert(const address& addr, Account account = {});
 
-    [[nodiscard]] auto& get_accounts() noexcept { return m_accounts; }
-
-    [[nodiscard]] const auto& get_accounts() const noexcept { return m_accounts; }
-
     /// Returns the state journal checkpoint. It can be later used to in rollback()
     /// to revert changes newer than the checkpoint.
     [[nodiscard]] size_t checkpoint() const noexcept { return m_journal.size(); }
