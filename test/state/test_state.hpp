@@ -46,6 +46,8 @@ public:
     std::optional<Account> get_account(address addr) const noexcept override;
     bytes get_account_code(address addr) const noexcept override;
 
+    bytes32 get_storage(address addr, bytes32 key) const noexcept override;
+
     /// Inserts new account to the state.
     ///
     /// This method is for compatibility with state::State::insert().

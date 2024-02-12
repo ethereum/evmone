@@ -7,8 +7,8 @@
 #include <evmc/evmc.hpp>
 #include <intx/intx.hpp>
 #include <optional>
-#include <unordered_set>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace evmone::state
 {
@@ -25,13 +25,12 @@ public:
         uint64_t nonce = 0;
         uint256 balance;
         bytes32 code_hash;
-
-        std::unordered_map<bytes32, bytes32> storage;
     };
 
     virtual ~StateView() = default;
     [[nodiscard]] virtual std::optional<Account> get_account(address addr) const noexcept = 0;
     [[nodiscard]] virtual bytes get_account_code(address addr) const noexcept = 0;
+    [[nodiscard]] virtual bytes32 get_storage(address addr, bytes32 key) const noexcept = 0;
 };
 
 struct StateDiff

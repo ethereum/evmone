@@ -18,10 +18,7 @@ bool Host::account_exists(const address& addr) const noexcept
 
 bytes32 Host::get_storage(const address& addr, const bytes32& key) const noexcept
 {
-    const auto& acc = m_state.get(addr);
-    if (const auto it = acc.storage.find(key); it != acc.storage.end())
-        return it->second.current;
-    return {};
+    return m_state.get_storage(addr, key).current;
 }
 
 evmc_storage_status Host::set_storage(
@@ -30,7 +27,7 @@ evmc_storage_status Host::set_storage(
     // Follow EVMC documentation https://evmc.ethereum.org/storagestatus.html#autotoc_md3
     // and EIP-2200 specification https://eips.ethereum.org/EIPS/eip-2200.
 
-    auto& storage_slot = m_state.get(addr).storage[key];
+    auto& storage_slot = m_state.get_storage(addr, key);
     const auto& [current, original, _] = storage_slot;
 
     const auto dirty = original != current;
@@ -97,9 +94,10 @@ bytes_view extcode(bytes_view code) noexcept
 
     // acc.storage may have entries from access list, even if account storage is empty.
     // Check for non-zero current values.
-    if (std::ranges::any_of(
-            acc.storage, [](auto& e) noexcept { return !is_zero(e.second.current); }))
-        return true;
+    // FIXME:
+    // if (std::ranges::any_of(
+    //         acc.storage, [](auto& e) noexcept { return !is_zero(e.second.current); }))
+    //     return true;
 
     return false;
 }
@@ -490,7 +488,7 @@ evmc_access_status Host::access_account(const address& addr) noexcept
 
 evmc_access_status Host::access_storage(const address& addr, const bytes32& key) noexcept
 {
-    auto& storage_slot = m_state.get(addr).storage[key];
+    auto& storage_slot = m_state.get_storage(addr, key);
     m_state.journal_storage_change(addr, key, storage_slot);
     return std::exchange(storage_slot.access_status, EVMC_ACCESS_WARM);
 }

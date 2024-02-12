@@ -44,7 +44,7 @@ struct Account
     bytes32 code_hash = EMPTY_CODE_HASH;
 
     /// The account storage map.
-    std::unordered_map<bytes32, StorageValue> storage;
+    std::unordered_map<bytes32, StorageValue> _storage;
 
     std::unordered_map<bytes32, bytes32> transient_storage;
 
