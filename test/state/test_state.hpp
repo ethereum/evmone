@@ -41,6 +41,8 @@ public:
     std::optional<Account> get_account(address addr) const noexcept override;
     bytes get_account_code(address addr) const noexcept override;
 
+    bytes32 get_storage(address addr, bytes32 key) const noexcept override;
+
     void insert(const address& addr, TestAccount&& acc) { (*this)[addr] = std::move(acc); }
     TestAccount& get(const address& addr) { return (*this)[addr]; }
 
