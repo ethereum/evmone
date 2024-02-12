@@ -85,13 +85,8 @@ Account* State::find(const address& addr) noexcept
     if (const auto it = m_accounts.find(addr); it != m_accounts.end())
         return &it->second;
     if (const auto cacc = m_cold->get_account(addr); cacc)
-    {
-        auto& a = insert(
+        return &insert(
             addr, {.nonce = cacc->nonce, .balance = cacc->balance, .code_hash = cacc->code_hash});
-        for (const auto& [k, v] : cacc->storage)
-            a.storage.insert({k, {.current = v, .original = v}});
-        return &a;
-    }
     return nullptr;
 }
 
@@ -130,6 +125,21 @@ Account& State::touch(const address& addr)
         m_journal.emplace_back(JournalTouched{addr});
     }
     return acc;
+}
+
+StorageValue& State::get_storage(const address& addr, const bytes32& key)
+{
+    auto& acc = get(addr);
+    const auto it = acc._storage.find(key);
+    if (it == acc._storage.end())
+    {
+        const auto cold_value = m_cold->get_storage(addr, key);
+        return acc._storage.insert(it, {key, {cold_value, cold_value}})->second;
+    }
+    else
+    {
+        return it->second;
+    }
 }
 
 void State::journal_balance_change(const address& addr, const intx::uint256& prev_balance)
@@ -213,7 +223,7 @@ void State::rollback(size_t checkpoint)
                 }
                 else if constexpr (std::is_same_v<T, JournalStorageChange>)
                 {
-                    auto& s = get(e.addr).storage.find(e.key)->second;
+                    auto& s = get(e.addr)._storage.find(e.key)->second;
                     s.current = e.prev_value;
                     s.access_status = e.prev_access_status;
                 }
@@ -240,7 +250,7 @@ void State::rollback(size_t checkpoint)
 StateDiff State::build_diff(evmc_revision rev)
 {
     StateDiff d;
-    for (const auto& e : m_journal)
+    for (const auto& ej : m_journal)
     {
         std::visit(
             [&d, this, rev](const auto& e) {
@@ -276,7 +286,7 @@ StateDiff State::build_diff(evmc_revision rev)
                 }
                 else if constexpr (std::is_same_v<T, JournalStorageChange>)
                 {
-                    d.modified_storage[e.addr][e.key] = get(e.addr).storage[e.key].current;
+                    d.modified_storage[e.addr][e.key] = get(e.addr)._storage[e.key].current;
                 }
                 else if constexpr (std::is_same_v<T, JournalTransientStorageChange>)
                 {
@@ -294,7 +304,7 @@ StateDiff State::build_diff(evmc_revision rev)
                     static_assert(std::is_void_v<T>, "unhandled journal entry type");
                 }
             },
-            e);
+            ej);
     }
     return d;
 }
@@ -552,10 +562,9 @@ std::variant<TransactionReceipt, std::error_code> transition(const StateView& st
         host.access_account(*tx.to);
     for (const auto& [a, storage_keys] : tx.access_list)
     {
-        host.access_account(a);  // TODO: Return account ref.
-        auto& storage = state.get(a).storage;
+        host.access_account(a);
         for (const auto& key : storage_keys)
-            storage[key].access_status = EVMC_ACCESS_WARM;
+            state.get_storage(a, key).access_status = EVMC_ACCESS_WARM;
     }
     // EIP-3651: Warm COINBASE.
     // This may create an empty coinbase account. The account cannot be created unconditionally

@@ -14,7 +14,7 @@ std::optional<state::StateView::Account> TestState::get_account(address addr) co
 
     const auto& acc = it->second;
     // TODO: Cache code hash for MTP root hash calculation?
-    return Account{acc.nonce, acc.balance, keccak256(acc.code), acc.storage};
+    return Account{acc.nonce, acc.balance, keccak256(acc.code)};
 }
 
 bytes TestState::get_account_code(evmc::address addr) const noexcept
@@ -53,5 +53,15 @@ void TestState::apply_diff(const state::StateDiff& diff)
 
     for (const auto& addr : diff.deleted_accounts)
         erase(addr);
+}
+
+bytes32 TestState::get_storage(address addr, bytes32 key) const noexcept
+{
+    const auto ait = find(addr);
+    if (ait == end())  // TODO: When?
+        return bytes32{};
+    const auto& storage = ait->second.storage;
+    const auto it = storage.find(key);
+    return (it != storage.end()) ? it->second : bytes32{};
 }
 }  // namespace evmone::test

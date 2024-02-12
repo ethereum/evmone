@@ -5,9 +5,9 @@
 #pragma once
 
 #include "account.hpp"
-#include "state_view.hpp"
 #include "bloom_filter.hpp"
 #include "hash_utils.hpp"
+#include "state_view.hpp"
 #include <cassert>
 #include <optional>
 #include <variant>
@@ -90,6 +90,8 @@ public:
     Account& get_or_insert(const address& addr, Account account = {});
 
     bytes_view get_code(const address& addr);
+
+    StorageValue& get_storage(const address& addr, const bytes32& key);
 
     /// Returns the state journal checkpoint. It can be later used to in rollback()
     /// to revert changes newer than the checkpoint.
