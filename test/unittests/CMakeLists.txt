@@ -10,6 +10,8 @@ target_sources(
     blockchaintest_loader_test.cpp
     bytecode_test.cpp
     eof_test.cpp
+    eof_validation.hpp
+    eof_validation.cpp
     eof_validation_test.cpp
     evm_fixture.cpp
     evm_fixture.hpp

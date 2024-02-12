@@ -70,3 +70,14 @@ TEST(eof, read_valid_eof1_header)
         EXPECT_EQ(header.types.size() * 4, test_case.types_size) << test_case.code;
     }
 }
+
+TEST(eof, get_error_message)
+{
+    EXPECT_EQ(evmone::get_error_message(EOFValidationError::success), "success");
+    EXPECT_EQ(evmone::get_error_message(EOFValidationError::invalid_prefix), "invalid_prefix");
+    EXPECT_EQ(evmone::get_error_message(EOFValidationError::stack_overflow), "stack_overflow");
+    EXPECT_EQ(evmone::get_error_message(EOFValidationError::impossible), "impossible");
+
+    // NOLINTNEXTLINE(*.EnumCastOutOfRange)
+    EXPECT_EQ(evmone::get_error_message(static_cast<EOFValidationError>(-1)), "<unknown>");
+}
