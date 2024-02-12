@@ -452,6 +452,10 @@ void validate_state(const state::State& state, evmc_revision rev)
                         " is invalid: " + std::string(get_error_message(result)));
                 }
             }
+            else
+            {
+                throw std::invalid_argument("unexpected code with EOF prefix at " + hex0x(addr));
+            }
         }
 
         for (const auto& [key, value] : acc.storage)
