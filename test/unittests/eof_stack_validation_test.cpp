@@ -18,6 +18,28 @@ namespace
 const auto varstack = push0() + rjumpi(2, 0) + push0() + push0();
 }  // namespace
 
+TEST_F(eof_validation, unreachable_instructions)
+{
+    add_test_case(
+        eof_bytecode(bytecode{OP_STOP} + OP_STOP), EOFValidationError::unreachable_instructions);
+
+    add_test_case(
+        eof_bytecode(rjump(1) + OP_STOP + OP_STOP), EOFValidationError::unreachable_instructions);
+
+    // STOP reachable only via backwards jump - invalid
+    add_test_case(
+        eof_bytecode(rjump(1) + OP_STOP + rjump(-4)), EOFValidationError::unreachable_instructions);
+}
+
+TEST_F(eof_validation, no_terminating_instruction)
+{
+    add_test_case(eof_bytecode(push0()), EOFValidationError::no_terminating_instruction);
+
+    add_test_case(eof_bytecode(add(1, 2)), EOFValidationError::no_terminating_instruction);
+
+    add_test_case(eof_bytecode(rjumpi(-5, 1)), EOFValidationError::no_terminating_instruction);
+}
+
 TEST_F(eof_validation, non_constant_stack_height)
 {
     // Final "OP_PUSH0 + OP_PUSH0 + OP_REVERT" can be reached with stack heights: 0, 2 or 1
