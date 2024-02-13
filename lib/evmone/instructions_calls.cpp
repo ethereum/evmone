@@ -141,7 +141,7 @@ Result newcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
     const auto dst = intx::be::trunc<evmc::address>(stack.pop());
     const auto input_offset_u256 = stack.pop();
     const auto input_size_u256 = stack.pop();
-    const auto value = (Op == OP_STATICCALL || Op == OP_DELEGATECALL) ? 0 : stack.pop();
+    const auto value = (Op == OP_STATICCALL2 || Op == OP_DELEGATECALL2) ? 0 : stack.pop();
     const auto has_value = value != 0;
 
     stack.push(0);  // Assume failure.
