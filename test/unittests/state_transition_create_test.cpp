@@ -201,3 +201,18 @@ TEST_F(state_transition, touch_create_collision_empty_revert_tw)
     expect.post[CREATED].exists = true;
     expect.post[REVERT_PROXY].exists = true;
 }
+
+TEST_F(state_transition, created_code_hash)
+{
+    const auto CREATED = compute_create_address(To, pre[To].nonce);
+    const auto runtime_code = bytes{0xc0};
+    ASSERT_EQ(runtime_code.size(), 1);
+    const auto initcode = mstore8(0, push(runtime_code)) + ret(0, runtime_code.size());
+    tx.to = To;
+    pre[To] = {.code = mstore(0, push(initcode)) +
+                       create().input(32 - initcode.size(), initcode.size()) +
+                       sstore(0, bytecode{OP_EXTCODEHASH})};
+
+    expect.post[CREATED].code = runtime_code;
+    expect.post[To].storage[0x00_bytes32] = keccak256(runtime_code);
+}
