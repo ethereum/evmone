@@ -12,6 +12,7 @@ namespace evmone::state
 using evmc::address;
 using evmc::bytes;
 using evmc::bytes32;
+using namespace evmc::literals;
 
 /// The representation of the account storage value.
 struct StorageValue
@@ -31,11 +32,16 @@ struct Account
     /// The maximum allowed nonce value.
     static constexpr auto NonceMax = std::numeric_limits<uint64_t>::max();
 
+    static constexpr auto EMPTY_CODE_HASH =
+        0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470_bytes32;
+
     /// The account nonce.
     uint64_t nonce = 0;
 
     /// The account balance.
     intx::uint256 balance;
+
+    bytes32 code_hash = EMPTY_CODE_HASH;
 
     /// The account storage map.
     std::unordered_map<bytes32, StorageValue> storage;

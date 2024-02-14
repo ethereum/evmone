@@ -13,7 +13,8 @@ std::optional<state::StateView::Account> TestState::get_account(address addr) co
         return std::nullopt;
 
     const auto& acc = it->second;
-    return Account{acc.nonce, acc.balance, acc.storage, acc.code};
+    // TODO: Cache code hash for MTP root hash calculation?
+    return Account{acc.nonce, acc.balance, keccak256(acc.code), acc.storage, acc.code};
 }
 
 void TestState::apply_diff(const state::StateDiff& diff)
