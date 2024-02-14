@@ -105,10 +105,8 @@ Account* State::find(const address& addr) noexcept
         return &it->second;
     if (const auto cacc = m_cold->get_account(addr); cacc)
     {
-        auto& a = insert(addr, {.nonce = cacc->nonce,
-                                   .balance = cacc->balance,
-                                   .code_hash = cacc->code_hash,
-                                   .code = cacc->code});
+        auto& a = insert(
+            addr, {.nonce = cacc->nonce, .balance = cacc->balance, .code_hash = cacc->code_hash});
         for (const auto& [k, v] : cacc->storage)
             a.storage.insert({k, {.current = v, .original = v}});
         return &a;
@@ -128,6 +126,18 @@ Account& State::get_or_insert(const address& addr, Account account)
     if (const auto acc = find(addr); acc != nullptr)
         return *acc;
     return insert(addr, std::move(account));
+}
+
+bytes_view State::get_code(const address& addr)
+{
+    auto* a = find(addr);
+    if (a == nullptr)
+        return {};
+    if (a->code_hash == Account::EMPTY_CODE_HASH)
+        return {};
+    if (a->_code.empty())
+        a->_code = m_cold->get_account_code(addr);
+    return a->_code;
 }
 
 Account& State::touch(const address& addr)
@@ -209,7 +219,7 @@ void State::rollback(size_t checkpoint)
                         auto& a = get(e.addr);
                         a.nonce = 0;
                         a.code_hash = Account::EMPTY_CODE_HASH;
-                        a.code.clear();
+                        a._code.clear();
                     }
                     else
                     {
@@ -281,7 +291,7 @@ StateDiff State::build_diff(evmc_revision rev)
                     auto& m = d.modified_accounts[e.addr];
                     m.nonce = acc.nonce;
                     m.balance = acc.balance;
-                    m.code = acc.code;
+                    m.code = acc._code;
                 }
                 else if constexpr (std::is_same_v<T, JournalStorageChange>)
                 {
@@ -402,7 +412,7 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
     if (tx.max_gas_price < block.base_fee)
         return make_error_code(FEE_CAP_LESS_THEN_BLOCKS);
 
-    if (!sender_acc.code.empty())
+    if (sender_acc.code_hash != Account::EMPTY_CODE_HASH)
         return make_error_code(SENDER_NOT_EOA);  // Origin must not be a contract (EIP-3607).
 
     if (sender_acc.nonce == Account::NonceMax)  // Nonce value limit (EIP-2681).
@@ -463,7 +473,7 @@ StateDiff system_call(
     State ss{state};
     if (rev >= EVMC_CANCUN)
     {
-        if (const auto acc = state.get_account(BeaconRootsAddress))
+        if (const auto code = state.get_account_code(BeaconRootsAddress); !code.empty())
         {
             const evmc_message msg{
                 .kind = EVMC_CALL,
@@ -476,7 +486,6 @@ StateDiff system_call(
 
             const Transaction empty_tx{};
             Host host{rev, vm, ss, block, empty_tx};
-            const auto& code = acc->code;
             [[maybe_unused]] const auto res = vm.execute(host, rev, msg, code.data(), code.size());
             assert(res.status_code == EVMC_SUCCESS);
 

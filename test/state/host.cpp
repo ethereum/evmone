@@ -92,7 +92,7 @@ bytes_view extcode(bytes_view code) noexcept
 /// as defined in the [EIP-7610](https://eips.ethereum.org/EIPS/eip-7610).
 [[nodiscard]] bool is_create_collision(const Account& acc) noexcept
 {
-    if (acc.nonce != 0 || !acc.code.empty())
+    if (acc.nonce != 0 || acc.code_hash != Account::EMPTY_CODE_HASH)
         return true;
 
     // acc.storage may have entries from access list, even if account storage is empty.
@@ -107,8 +107,8 @@ bytes_view extcode(bytes_view code) noexcept
 
 size_t Host::get_code_size(const address& addr) const noexcept
 {
-    const auto* const acc = m_state.find(addr);
-    return (acc != nullptr) ? extcode(acc->code).size() : 0;
+	const auto raw_code = m_state.get_code(addr);
+    return extcode(raw_code).size();
 }
 
 bytes32 Host::get_code_hash(const address& addr) const noexcept
@@ -121,8 +121,8 @@ bytes32 Host::get_code_hash(const address& addr) const noexcept
 size_t Host::copy_code(const address& addr, size_t code_offset, uint8_t* buffer_data,
     size_t buffer_size) const noexcept
 {
-    const auto* const acc = m_state.find(addr);
-    const auto code = (acc != nullptr) ? extcode(acc->code) : bytes_view{};
+    const auto raw_code = m_state.get_code(addr);
+    const auto code = extcode(raw_code);
     const auto code_slice = code.substr(std::min(code_offset, code.size()));
     const auto num_bytes = std::min(buffer_size, code_slice.size());
     std::copy_n(code_slice.begin(), num_bytes, buffer_data);
@@ -359,8 +359,8 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
         }
     }
 
-    new_acc.code_hash = keccak256(code);
-    new_acc.code = code;
+    new_acc->code_hash = keccak256(code);
+    new_acc->_code = code;
 
     return evmc::Result{result.status_code, gas_left, result.gas_refund, msg.recipient};
 }
@@ -396,7 +396,7 @@ evmc::Result Host::execute_message(const evmc_message& msg) noexcept
     if (is_precompile(m_rev, msg.code_address))
         return call_precompile(m_rev, msg);
 
-    const auto code = dst_acc != nullptr ? bytes_view{dst_acc->code} : bytes_view{};
+    const auto code = m_state.get_code(msg.code_address);
     return m_vm.execute(*this, m_rev, msg, code.data(), code.size());
 }
 

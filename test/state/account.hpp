@@ -49,7 +49,7 @@ struct Account
     std::unordered_map<bytes32, bytes32> transient_storage;
 
     /// The account code.
-    bytes code;
+    bytes _code;
 
     /// The account has been destructed and should be erased at the end of of a transaction.
     bool destructed = false;
@@ -69,7 +69,7 @@ struct Account
 
     [[nodiscard]] bool is_empty() const noexcept
     {
-        return code.empty() && nonce == 0 && balance == 0;
+        return code_hash == EMPTY_CODE_HASH && nonce == 0 && balance == 0;
     }
 };
 }  // namespace evmone::state

@@ -44,6 +44,7 @@ public:
     using map::map;
 
     std::optional<Account> get_account(address addr) const noexcept override;
+    bytes get_account_code(address addr) const noexcept override;
 
     /// Inserts new account to the state.
     ///

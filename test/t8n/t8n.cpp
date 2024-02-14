@@ -133,8 +133,7 @@ int main(int argc, const char* argv[])
                 j_result["receipts"] = json::json::array();
                 j_result["rejected"] = json::json::array();
 
-                state::State intra_state{state};
-                const auto diff = state::system_call(intra_state, block, rev, vm);
+                const auto diff = state::system_call(state, block, rev, vm);
                 state.apply_diff(diff);
 
                 for (size_t i = 0; i < j_txs.size(); ++i)

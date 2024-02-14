@@ -14,8 +14,16 @@ std::optional<state::StateView::Account> TestState::get_account(address addr) co
 
     const auto& acc = it->second;
     // TODO: Cache code hash for MTP root hash calculation?
-    return Account{acc.nonce, acc.balance,keccak256(acc.code)
-        std::unordered_map{acc.storage.begin(), acc.storage.end()}, acc.code};
+    return Account{acc.nonce, acc.balance, keccak256(acc.code), std::unordered_map{acc.storage.begin(), acc.storage.end()}};
+}
+
+bytes TestState::get_account_code(evmc::address addr) const noexcept
+{
+    const auto it = find(addr);
+    if (it == end())
+        return {};
+
+    return it->second.code;
 }
 
 void TestState::apply_diff(const state::StateDiff& diff)
