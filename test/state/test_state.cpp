@@ -13,7 +13,8 @@ std::optional<state::StateView::Account> TestState::get_account(address addr) co
         return std::nullopt;
 
     const auto& acc = it->second;
-    return Account{acc.nonce, acc.balance,
+    // TODO: Cache code hash for MTP root hash calculation?
+    return Account{acc.nonce, acc.balance,keccak256(acc.code)
         std::unordered_map{acc.storage.begin(), acc.storage.end()}, acc.code};
 }
 

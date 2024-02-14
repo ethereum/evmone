@@ -24,6 +24,8 @@ public:
     {
         uint64_t nonce = 0;
         uint256 balance;
+        bytes32 code_hash;
+
         std::unordered_map<bytes32, bytes32> storage;
         bytes code;
     };
