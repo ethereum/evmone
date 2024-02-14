@@ -41,6 +41,8 @@ target_sources(
     evmmax_secp256k1_test.cpp
     evmone_test.cpp
     execution_state_test.cpp
+    exportable_fixture.hpp
+    exportable_fixture.cpp
     instructions_test.cpp
     state_block_test.cpp
     state_bloom_filter_test.cpp
