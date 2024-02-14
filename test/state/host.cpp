@@ -87,7 +87,7 @@ bytes32 Host::get_code_hash(const address& addr) const noexcept
 {
     // TODO: Cache code hash. It will be needed also to compute the MPT hash.
     const auto* const acc = m_state.find(addr);
-    return (acc != nullptr && !acc->is_empty()) ? keccak256(acc->code) : bytes32{};
+    return (acc != nullptr && !acc->is_empty()) ? acc->code_hash : bytes32{};
 }
 
 size_t Host::copy_code(const address& addr, size_t code_offset, uint8_t* buffer_data,
@@ -279,6 +279,7 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
     else if (m_rev >= EVMC_LONDON && !code.empty() && code[0] == 0xEF)  // Reject EF code.
         return evmc::Result{EVMC_CONTRACT_VALIDATION_FAILURE};
 
+    new_acc.code_hash = keccak256(code);
     new_acc.code = code;
 
     return evmc::Result{result.status_code, gas_left, result.gas_refund, msg.recipient};

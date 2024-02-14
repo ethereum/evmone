@@ -86,8 +86,10 @@ Account* State::find(const address& addr) noexcept
         return &it->second;
     if (const auto cacc = m_cold->get_account(addr); cacc)
     {
-        auto& a =
-            insert(addr, {.nonce = cacc->nonce, .balance = cacc->balance, .code = cacc->code});
+        auto& a = insert(addr, {.nonce = cacc->nonce,
+                                   .balance = cacc->balance,
+                                   .code_hash = cacc->code_hash,
+                                   .code = cacc->code});
         for (const auto& [k, v] : cacc->storage)
             a.storage.insert({k, {.current = v, .original = v}});
         return &a;
@@ -187,6 +189,7 @@ void State::rollback(size_t checkpoint)
                         // This account is not always "touched". TODO: Why?
                         auto& a = get(e.addr);
                         a.nonce = 0;
+                        a.code_hash = Account::EMPTY_CODE_HASH;
                         a.code.clear();
                     }
                     else
@@ -485,7 +488,7 @@ StateDiff finalize(const StateView& sv, evmc_revision rev, const address& coinba
     return state.build_diff(rev);
 
     // Delete potentially empty block reward recipients.
-    //if (rev >= EVMC_SPURIOUS_DRAGON)
+    // if (rev >= EVMC_SPURIOUS_DRAGON)
     //    delete_empty_accounts(state);
 }
 
@@ -582,7 +585,7 @@ std::variant<TransactionReceipt, std::error_code> transition(const StateView& st
     // Delete empty accounts after every transaction. This is strictly required until Byzantium
     // where intermediate state root hashes are part of the transaction receipt.
     // TODO: Consider limiting this only to Spurious Dragon.
-    //if (rev >= EVMC_SPURIOUS_DRAGON)
+    // if (rev >= EVMC_SPURIOUS_DRAGON)
     //    delete_empty_accounts(state);
 
     // Post-transaction clean-up.
