@@ -368,9 +368,24 @@ evmc_result execute(
     return result;
 }
 
+struct MegaWrapper
+{
+    static constexpr uint64_t MAGIC = 0xcddddddddddddddc;
+
+    virtual ~MegaWrapper();
+    uint64_t magic;
+    void* mega_ctx;
+};
+
 evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_context* ctx,
     evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
 {
+    const auto& wrapper = *reinterpret_cast<MegaWrapper*>(ctx);
+    if (wrapper.magic == MegaWrapper::MAGIC)
+    {
+        assert(wrapper.mega_ctx == nullptr);
+    }
+
     auto vm = static_cast<VM*>(c_vm);
     const bytes_view container{code, code_size};
 
