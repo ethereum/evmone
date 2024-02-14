@@ -40,6 +40,8 @@ inline constexpr size_t max_initcode_size = 2 * max_code_size;
 
 class Host : public evmc::Host
 {
+    [[maybe_unused]] uint64_t magic = 0xcddddddddddddddc;
+    [[maybe_unused]] void* mega_ctx = nullptr;
     evmc_revision m_rev;
     evmc::VM& m_vm;
     State& m_state;
