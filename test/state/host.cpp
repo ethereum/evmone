@@ -79,8 +79,7 @@ uint256be Host::get_balance(const address& addr) const noexcept
 
 size_t Host::get_code_size(const address& addr) const noexcept
 {
-    const auto* const acc = m_state.find(addr);
-    return (acc != nullptr) ? acc->code.size() : 0;
+    return m_state.get_code(addr).size();
 }
 
 bytes32 Host::get_code_hash(const address& addr) const noexcept
@@ -93,8 +92,7 @@ bytes32 Host::get_code_hash(const address& addr) const noexcept
 size_t Host::copy_code(const address& addr, size_t code_offset, uint8_t* buffer_data,
     size_t buffer_size) const noexcept
 {
-    const auto* const acc = m_state.find(addr);
-    const auto code = (acc != nullptr) ? bytes_view{acc->code} : bytes_view{};
+    const auto code = m_state.get_code(addr);
     const auto code_slice = code.substr(std::min(code_offset, code.size()));
     const auto num_bytes = std::min(buffer_size, code_slice.size());
     std::copy_n(code_slice.begin(), num_bytes, buffer_data);
@@ -208,7 +206,8 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
     // All combinations of conditions (nonce, code, storage) are tested.
     // TODO(EVMC): Add specific error codes for creation failures.
     if (const auto collision_acc = m_state.find(msg.recipient);
-        collision_acc != nullptr && (collision_acc->nonce != 0 || !collision_acc->code.empty()))
+        collision_acc != nullptr &&
+        (collision_acc->nonce != 0 || collision_acc->code_hash != Account::EMPTY_CODE_HASH))
         return evmc::Result{EVMC_FAILURE};
 
     // TODO: msg.recipient lookup is done 3x here.
@@ -242,7 +241,8 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
     create_msg.input_data = nullptr;
     create_msg.input_size = 0;
 
-    if (m_rev >= EVMC_PRAGUE && (is_eof_container(initcode) || is_eof_container(sender_acc.code)))
+    if (m_rev >= EVMC_PRAGUE &&
+        (is_eof_container(initcode) || is_eof_container(m_state.get_code(msg.sender))))
     {
         if (validate_eof(m_rev, initcode) != EOFValidationError::success)
             return evmc::Result{EVMC_CONTRACT_VALIDATION_FAILURE};
@@ -280,7 +280,7 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
         return evmc::Result{EVMC_CONTRACT_VALIDATION_FAILURE};
 
     new_acc.code_hash = keccak256(code);
-    new_acc.code = code;
+    new_acc._code = code;
 
     return evmc::Result{result.status_code, gas_left, result.gas_refund, msg.recipient};
 }
@@ -316,7 +316,7 @@ evmc::Result Host::execute_message(const evmc_message& msg) noexcept
     if (is_precompile(m_rev, msg.code_address))
         return call_precompile(m_rev, msg);
 
-    const auto code = dst_acc != nullptr ? bytes_view{dst_acc->code} : bytes_view{};
+    const auto code = m_state.get_code(msg.code_address);
     return m_vm.execute(*this, m_rev, msg, code.data(), code.size());
 }
 

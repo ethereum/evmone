@@ -27,11 +27,11 @@ public:
         bytes32 code_hash;
 
         std::unordered_map<bytes32, bytes32> storage;
-        bytes code;
     };
 
     virtual ~StateView() = default;
     [[nodiscard]] virtual std::optional<Account> get_account(address addr) const noexcept = 0;
+    [[nodiscard]] virtual bytes get_account_code(address addr) const noexcept = 0;
 };
 
 struct StateDiff

@@ -89,6 +89,8 @@ public:
     /// Gets an existing account or inserts new account.
     Account& get_or_insert(const address& addr, Account account = {});
 
+    bytes_view get_code(const address& addr);
+
     /// Returns the state journal checkpoint. It can be later used to in rollback()
     /// to revert changes newer than the checkpoint.
     [[nodiscard]] size_t checkpoint() const noexcept { return m_journal.size(); }

@@ -39,6 +39,7 @@ public:
     using unordered_map::unordered_map;
 
     std::optional<Account> get_account(address addr) const noexcept override;
+    bytes get_account_code(address addr) const noexcept override;
 
     void insert(const address& addr, TestAccount&& acc) { (*this)[addr] = std::move(acc); }
     TestAccount& get(const address& addr) { return (*this)[addr]; }
