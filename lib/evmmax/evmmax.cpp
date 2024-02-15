@@ -104,9 +104,12 @@ UintT ModArith<UintT>::from_mont(const UintT& x) const noexcept
 template <typename UintT>
 UintT ModArith<UintT>::add(const UintT& x, const UintT& y) const noexcept
 {
-    const auto s = addc(x, y);  // TODO: cannot overflow if modulus is sparse (e.g. 255 bits).
-    const auto d = subc(s.value, mod);
-    return (!s.carry && d.carry) ? s.value : d.value;
+    auto s = addc(x, y);  // TODO: cannot overflow if modulus is sparse (e.g. 255 bits).
+    auto d = subc(s.value, mod);
+    auto r = d.value;
+    if (!s.carry && d.carry)
+        r = s.value;
+    return r;
 }
 
 template <typename UintT>
