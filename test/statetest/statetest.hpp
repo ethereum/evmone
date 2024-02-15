@@ -14,11 +14,10 @@ namespace evmone::test
 
 [[nodiscard]] inline std::variant<state::TransactionReceipt, std::error_code> transition(
     MegaContext& mega_ctx, TestState& state, const state::BlockInfo& block,
-    const state::Transaction& tx, evmc_revision rev, evmc::VM& vm, int64_t block_gas_left,
-    int64_t blob_gas_left)
+    const state::Transaction& tx, evmc_revision rev, int64_t block_gas_left, int64_t blob_gas_left)
 {
     const auto res =
-        state::transition(mega_ctx, state, block, tx, rev, vm, block_gas_left, blob_gas_left);
+        state::transition(mega_ctx, state, block, tx, rev, block_gas_left, blob_gas_left);
     if (holds_alternative<state::TransactionReceipt>(res))
     {
         const auto& r = get<state::TransactionReceipt>(res);
@@ -128,8 +127,7 @@ void validate_state(const TestState& state, evmc_revision rev);
 /// Execute the state @p test using the @p vm.
 ///
 /// @param trace_summary  Output execution summary to the default trace stream.
-void run_state_test(
-    MegaContext& mega_ctx, const StateTransitionTest& test, evmc::VM& vm, bool trace_summary);
+void run_state_test(MegaContext& mega_ctx, const StateTransitionTest& test, bool trace_summary);
 
 /// Computes the hash of the RLP-encoded list of transaction logs.
 /// This method is only used in tests.

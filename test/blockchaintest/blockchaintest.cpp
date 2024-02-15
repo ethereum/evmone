@@ -17,12 +17,10 @@ class BlockchainGTest : public testing::Test
 {
     fs::path m_json_test_file;
     evmone::MegaContext& m_mega_ctx;
-    evmc::VM& m_vm;
 
 public:
-    explicit BlockchainGTest(
-        fs::path json_test_file, evmone::MegaContext& mega_ctx, evmc::VM& vm) noexcept
-      : m_json_test_file{std::move(json_test_file)}, m_mega_ctx{mega_ctx}, m_vm{vm}
+    explicit BlockchainGTest(fs::path json_test_file, evmone::MegaContext& mega_ctx) noexcept
+      : m_json_test_file{std::move(json_test_file)}, m_mega_ctx{mega_ctx}
     {}
 
     void TestBody() final
@@ -31,8 +29,7 @@ public:
 
         try
         {
-            evmone::test::run_blockchain_tests(
-                evmone::test::load_blockchain_tests(f), m_mega_ctx, m_vm);
+            evmone::test::run_blockchain_tests(evmone::test::load_blockchain_tests(f), m_mega_ctx);
         }
         catch (const evmone::test::UnsupportedTestFeature& ex)
         {
@@ -41,16 +38,15 @@ public:
     }
 };
 
-void register_test(const std::string& suite_name, const fs::path& file,
-    evmone::MegaContext& mega_ctx, evmc::VM& vm)
+void register_test(
+    const std::string& suite_name, const fs::path& file, evmone::MegaContext& mega_ctx)
 {
     testing::RegisterTest(suite_name.c_str(), file.stem().string().c_str(), nullptr, nullptr,
-        file.string().c_str(), 0, [file, &mega_ctx, &vm]() -> testing::Test* {
-            return new BlockchainGTest(file, mega_ctx, vm);
-        });
+        file.string().c_str(), 0,
+        [file, &mega_ctx]() -> testing::Test* { return new BlockchainGTest(file, mega_ctx); });
 }
 
-void register_test_files(const fs::path& root, evmone::MegaContext& mega_ctx, evmc::VM& vm)
+void register_test_files(const fs::path& root, evmone::MegaContext& mega_ctx)
 {
     if (is_directory(root))
     {
@@ -62,11 +58,11 @@ void register_test_files(const fs::path& root, evmone::MegaContext& mega_ctx, ev
         std::sort(test_files.begin(), test_files.end());
 
         for (const auto& p : test_files)
-            register_test(fs::relative(p, root).parent_path().string(), p, mega_ctx, vm);
+            register_test(fs::relative(p, root).parent_path().string(), p, mega_ctx);
     }
     else  // Treat as a file.
     {
-        register_test(root.parent_path().string(), root, mega_ctx, vm);
+        register_test(root.parent_path().string(), root, mega_ctx);
     }
 }
 }  // namespace
@@ -90,14 +86,13 @@ int main(int argc, char* argv[])
 
         CLI11_PARSE(app, argc, argv);
 
-        evmone::MegaContext mega_ctx = {};
-        evmc::VM vm{evmc_create_evmone()};
+        evmone::MegaContext mega_ctx{.vm = evmc::VM{evmc_create_evmone()}};
 
         if (trace_flag)
-            vm.set_option("trace", "1");
+            mega_ctx.vm.set_option("trace", "1");
 
         for (const auto& p : paths)
-            register_test_files(p, mega_ctx, vm);
+            register_test_files(p, mega_ctx);
 
         return RUN_ALL_TESTS();
     }

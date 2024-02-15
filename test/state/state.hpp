@@ -276,7 +276,7 @@ intx::uint256 compute_blob_gas_price(uint64_t excess_blob_gas) noexcept;
 
 [[nodiscard]] std::variant<TransactionReceipt, std::error_code> transition(MegaContext& mega_ctx,
     const StateView& state, const BlockInfo& block, const Transaction& tx, evmc_revision rev,
-    evmc::VM& vm, int64_t block_gas_left, int64_t blob_gas_left);
+    int64_t block_gas_left, int64_t blob_gas_left);
 
 std::variant<int64_t, std::error_code> validate_transaction(const Account& sender_acc,
     const BlockInfo& block, const Transaction& tx, evmc_revision rev, int64_t block_gas_left,
@@ -286,8 +286,8 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
 ///
 /// Executes code at pre-defined accounts from the system sender (0xff...fe).
 /// The sender's nonce is not increased.
-[[nodiscard]] StateDiff system_call(MegaContext& mega_ctx, const StateView& state,
-    const BlockInfo& block, evmc_revision rev, evmc::VM& vm);
+[[nodiscard]] StateDiff system_call(
+    MegaContext& mega_ctx, const StateView& state, const BlockInfo& block, evmc_revision rev);
 
 /// Defines how to RLP-encode a Transaction.
 [[nodiscard]] bytes rlp_encode(const Transaction& tx);

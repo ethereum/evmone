@@ -118,11 +118,10 @@ int main(int argc, const char* argv[])
         {
             const auto j_txs = json::json::parse(std::ifstream{txs_file});
 
-            evmc::VM vm{evmc_create_evmone()};
-            MegaContext mega_ctx = {};
+            MegaContext mega_ctx{.vm = evmc::VM{evmc_create_evmone()}};
 
             if (trace)
-                vm.set_option("trace", "1");
+                mega_ctx.vm.set_option("trace", "1");
 
             std::vector<state::Log> txs_logs;
 
@@ -165,7 +164,7 @@ int main(int argc, const char* argv[])
                     }
 
                     auto res = test::transition(
-                        mega_ctx, state, block, tx, rev, vm, block_gas_left, blob_gas_left);
+                        mega_ctx, state, block, tx, rev, block_gas_left, blob_gas_left);
 
                     if (holds_alternative<std::error_code>(res))
                     {

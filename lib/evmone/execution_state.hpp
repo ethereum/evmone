@@ -203,5 +203,9 @@ public:
     }
 };
 
-using MegaContext = std::array<std::unique_ptr<ExecutionState>, 1025>;
+struct MegaContext
+{
+    evmc::VM vm;
+    std::array<std::unique_ptr<ExecutionState>, 1025> exec_contexts = {};
+};
 }  // namespace evmone

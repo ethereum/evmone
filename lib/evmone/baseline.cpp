@@ -395,7 +395,7 @@ evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_co
     if (wrapper.magic == MegaWrapper::MAGIC && wrapper.mega_ctx != nullptr)
     {
         auto& mega_ctx = *static_cast<MegaContext*>(wrapper.mega_ctx);
-        auto& slot = mega_ctx[static_cast<uint32_t>(msg->depth)];
+        auto& slot = mega_ctx.exec_contexts[static_cast<uint32_t>(msg->depth)];
         if (!slot)
             slot = std::make_unique<ExecutionState>();
         exec_state = slot.get();

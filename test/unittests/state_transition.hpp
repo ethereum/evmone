@@ -20,8 +20,6 @@ using namespace evmone::state;
 /// Then expectations declared in "except" are checked in the "post" state.
 class state_transition : public testing::Test
 {
-    static inline MegaContext mega_ctx = {};
-
 protected:
     /// The default sender address of the test transaction.
     /// Private key: 0x2b1263d2b.
@@ -36,7 +34,7 @@ protected:
 
     static constexpr auto Coinbase = 0xc014bace_address;
 
-    static inline evmc::VM vm{evmc_create_evmone()};
+    static inline MegaContext mega_ctx{.vm{evmc_create_evmone()}};
     static inline evmc::VM tracing_vm{evmc_create_evmone(), {{"trace", "1"}}};
 
     struct ExpectedAccount

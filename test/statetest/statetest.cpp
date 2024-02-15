@@ -14,32 +14,32 @@ namespace
 {
 class StateTest : public testing::Test
 {
-    static inline evmone::MegaContext mega_ctx;
-
     fs::path m_json_test_file;
-    evmc::VM& m_vm;
+    evmone::MegaContext& m_mega_ctx;
     bool m_trace = false;
 
 public:
-    explicit StateTest(fs::path json_test_file, evmc::VM& vm, bool trace) noexcept
-      : m_json_test_file{std::move(json_test_file)}, m_vm{vm}, m_trace{trace}
+    explicit StateTest(fs::path json_test_file, evmone::MegaContext& mega_ctx, bool trace) noexcept
+      : m_json_test_file{std::move(json_test_file)}, m_mega_ctx{mega_ctx}, m_trace{trace}
     {}
 
     void TestBody() final
     {
         std::ifstream f{m_json_test_file};
-        evmone::test::run_state_test(mega_ctx, evmone::test::load_state_test(f), m_vm, m_trace);
+        evmone::test::run_state_test(m_mega_ctx, evmone::test::load_state_test(f), m_trace);
     }
 };
 
-void register_test(const std::string& suite_name, const fs::path& file, evmc::VM& vm, bool trace)
+void register_test(
+    const std::string& suite_name, const fs::path& file, evmone::MegaContext& mega_ctx, bool trace)
 {
     testing::RegisterTest(suite_name.c_str(), file.stem().string().c_str(), nullptr, nullptr,
-        file.string().c_str(), 0,
-        [file, &vm, trace]() -> testing::Test* { return new StateTest(file, vm, trace); });
+        file.string().c_str(), 0, [file, &mega_ctx, trace]() -> testing::Test* {
+            return new StateTest(file, mega_ctx, trace);
+        });
 }
 
-void register_test_files(const fs::path& root, evmc::VM& vm, bool trace)
+void register_test_files(const fs::path& root, evmone::MegaContext& mega_ctx, bool trace)
 {
     if (is_directory(root))
     {
@@ -51,11 +51,11 @@ void register_test_files(const fs::path& root, evmc::VM& vm, bool trace)
         std::sort(test_files.begin(), test_files.end());
 
         for (const auto& p : test_files)
-            register_test(fs::relative(p, root).parent_path().string(), p, vm, trace);
+            register_test(fs::relative(p, root).parent_path().string(), p, mega_ctx, trace);
     }
     else  // Treat as a file.
     {
-        register_test(root.parent_path().string(), root, vm, trace);
+        register_test(root.parent_path().string(), root, mega_ctx, trace);
     }
 }
 }  // namespace
@@ -93,16 +93,16 @@ int main(int argc, char* argv[])
 
         CLI11_PARSE(app, argc, argv);
 
-        evmc::VM vm{evmc_create_evmone(), {{"O", "0"}}};
+        evmone::MegaContext mega_ctx{.vm = evmc::VM{evmc_create_evmone()}};
 
         if (trace)
         {
             std::ios::sync_with_stdio(false);
-            vm.set_option("trace", "1");
+            mega_ctx.vm.set_option("trace", "1");
         }
 
         for (const auto& p : paths)
-            register_test_files(p, vm, trace || trace_summary);
+            register_test_files(p, mega_ctx, trace || trace_summary);
 
         return RUN_ALL_TESTS();
     }
