@@ -112,9 +112,10 @@ UintT ModArith<UintT>::add(const UintT& x, const UintT& y) const noexcept
 template <typename UintT>
 UintT ModArith<UintT>::sub(const UintT& x, const UintT& y) const noexcept
 {
-    const auto d = subc(x, y);
-    const auto s = d.value + mod;
-    return (d.carry) ? s : d.value;
+    auto d = subc(x, y);
+    if (d.carry)
+        return d.value + mod;
+    return d.value;
 }
 
 template class ModArith<uint256>;
