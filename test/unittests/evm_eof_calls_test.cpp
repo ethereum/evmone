@@ -14,6 +14,10 @@ inline constexpr auto max_uint256 =
 
 TEST_P(evm, eof1_delegatecall2_eof1)
 {
+    // Not implemented in Advanced.
+    if (is_advanced())
+        return;
+
     rev = EVMC_PRAGUE;
     constexpr auto callee = 0xca11ee_address;
     host.accounts[callee].code = eof_bytecode(OP_STOP);
@@ -34,6 +38,10 @@ TEST_P(evm, eof1_delegatecall2_eof1)
 
 TEST_P(evm, eof1_delegatecall2_legacy)
 {
+    // Not implemented in Advanced.
+    if (is_advanced())
+        return;
+
     rev = EVMC_PRAGUE;
     constexpr auto callee = 0xca11ee_address;
     host.access_account(callee);
@@ -54,6 +62,10 @@ TEST_P(evm, eof1_delegatecall2_legacy)
 
 TEST_P(evm, delegatecall2)
 {
+    // Not implemented in Advanced.
+    if (is_advanced())
+        return;
+
     rev = EVMC_PRAGUE;
     constexpr auto callee = 0xca11ee_address;
     host.access_account(callee);
@@ -90,6 +102,10 @@ TEST_P(evm, delegatecall2)
 
 TEST_P(evm, delegatecall2_static)
 {
+    // Not implemented in Advanced.
+    if (is_advanced())
+        return;
+
     rev = EVMC_PRAGUE;
     constexpr auto callee = 0xca11ee_address;
     host.access_account(callee);
@@ -109,6 +125,10 @@ TEST_P(evm, delegatecall2_static)
 
 TEST_P(evm, delegatecall2_oog_depth_limit)
 {
+    // Not implemented in Advanced.
+    if (is_advanced())
+        return;
+
     rev = EVMC_PRAGUE;
     constexpr auto callee = 0xca11ee_address;
     host.access_account(callee);
@@ -130,6 +150,10 @@ TEST_P(evm, delegatecall2_oog_depth_limit)
 
 TEST_P(evm, call2_failing_with_value)
 {
+    // Not implemented in Advanced.
+    if (is_advanced())
+        return;
+
     rev = EVMC_PRAGUE;
     constexpr auto callee = 0xca11ee_address;
     host.access_account(callee);
@@ -155,6 +179,10 @@ TEST_P(evm, call2_failing_with_value)
 
 TEST_P(evm, call2_with_value)
 {
+    // Not implemented in Advanced.
+    if (is_advanced())
+        return;
+
     rev = EVMC_PRAGUE;
 
     constexpr auto call_sender = 0x5e4d00000000000000000000000000000000d4e5_address;
@@ -184,6 +212,10 @@ TEST_P(evm, call2_with_value)
 
 TEST_P(evm, call2_with_value_depth_limit)
 {
+    // Not implemented in Advanced.
+    if (is_advanced())
+        return;
+
     rev = EVMC_PRAGUE;
 
     constexpr auto call_dst = 0x00000000000000000000000000000000000000aa_address;
@@ -199,6 +231,10 @@ TEST_P(evm, call2_with_value_depth_limit)
 
 TEST_P(evm, call2_depth_limit)
 {
+    // Not implemented in Advanced.
+    if (is_advanced())
+        return;
+
     rev = EVMC_PRAGUE;
     constexpr auto callee = 0xca11ee_address;
     host.access_account(callee);
@@ -217,6 +253,10 @@ TEST_P(evm, call2_depth_limit)
 
 TEST_P(evm, call2_output)
 {
+    // Not implemented in Advanced.
+    if (is_advanced())
+        return;
+
     rev = EVMC_PRAGUE;
     constexpr auto callee = 0xca11ee_address;
     host.access_account(callee);
@@ -262,6 +302,10 @@ TEST_P(evm, call2_output)
 
 TEST_P(evm, call2_value_zero_to_nonexistent_account)
 {
+    // Not implemented in Advanced.
+    if (is_advanced())
+        return;
+
     constexpr auto call_gas = 6000;
     host.call_result.gas_left = 1000;
 
