@@ -498,6 +498,58 @@ inline call_instruction<OP_CALLCODE> callcode(bytecode address)
     return call_instruction<OP_CALLCODE>{std::move(address)};
 }
 
+template <Opcode kind>
+struct call2_instruction
+{
+private:
+    bytecode m_address = 0;
+    bytecode m_value = 0;
+    bytecode m_input = 0;
+    bytecode m_input_size = 0;
+
+public:
+    explicit call2_instruction(bytecode address) : m_address{std::move(address)} {}
+
+
+    template <Opcode k = kind>
+    typename std::enable_if<k == OP_CALL2, call2_instruction&>::type value(bytecode v)
+    {
+        m_value = std::move(v);
+        return *this;
+    }
+
+    auto& input(bytecode index, bytecode size)
+    {
+        m_input = std::move(index);
+        m_input_size = std::move(size);
+        return *this;
+    }
+
+    operator bytecode() const
+    {
+        auto code = bytecode{};
+        if constexpr (kind == OP_CALL2)
+            code += m_value;
+        code += m_input_size + m_input + m_address + kind;
+        return code;
+    }
+};
+
+inline call2_instruction<OP_DELEGATECALL2> delegatecall2(bytecode address)
+{
+    return call2_instruction<OP_DELEGATECALL2>{std::move(address)};
+}
+
+inline call2_instruction<OP_STATICCALL2> staticcall2(bytecode address)
+{
+    return call2_instruction<OP_STATICCALL2>{std::move(address)};
+}
+
+inline call2_instruction<OP_CALL2> call2(bytecode address)
+{
+    return call2_instruction<OP_CALL2>{std::move(address)};
+}
+
 
 template <Opcode kind>
 struct create_instruction

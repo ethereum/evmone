@@ -37,6 +37,9 @@ constexpr auto legacy_cost_tables = []() noexcept {
     tables[EVMC_PRAGUE][OP_DUPN] = instr::undefined;
     tables[EVMC_PRAGUE][OP_SWAPN] = instr::undefined;
     tables[EVMC_PRAGUE][OP_RETURNDATALOAD] = instr::undefined;
+    tables[EVMC_PRAGUE][OP_CALL2] = instr::undefined;
+    tables[EVMC_PRAGUE][OP_STATICCALL2] = instr::undefined;
+    tables[EVMC_PRAGUE][OP_DELEGATECALL2] = instr::undefined;
     return tables;
 }();
 
@@ -47,6 +50,9 @@ constexpr auto eof_cost_tables = []() noexcept {
     tables[EVMC_PRAGUE][OP_PC] = instr::undefined;
     tables[EVMC_PRAGUE][OP_CALLCODE] = instr::undefined;
     tables[EVMC_PRAGUE][OP_SELFDESTRUCT] = instr::undefined;
+    tables[EVMC_PRAGUE][OP_CALL] = instr::undefined;
+    tables[EVMC_PRAGUE][OP_STATICCALL] = instr::undefined;
+    tables[EVMC_PRAGUE][OP_DELEGATECALL] = instr::undefined;
     return tables;
 }();
 
