@@ -20,6 +20,8 @@ using namespace evmone::state;
 /// Then expectations declared in "except" are checked in the "post" state.
 class state_transition : public testing::Test
 {
+    static inline MegaContext mega_ctx = {};
+
 protected:
     /// The default sender address of the test transaction.
     /// Private key: 0x2b1263d2b.

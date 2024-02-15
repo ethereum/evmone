@@ -5,6 +5,7 @@
 #pragma once
 
 #include "state.hpp"
+#include <evmone/execution_state.hpp>
 #include <optional>
 #include <unordered_set>
 
@@ -41,7 +42,7 @@ inline constexpr size_t max_initcode_size = 2 * max_code_size;
 class Host : public evmc::Host
 {
     [[maybe_unused]] uint64_t magic = 0xcddddddddddddddc;
-    [[maybe_unused]] void* mega_ctx = nullptr;
+    [[maybe_unused]] MegaContext* m_mega_ctx = nullptr;
     evmc_revision m_rev;
     evmc::VM& m_vm;
     State& m_state;
@@ -50,9 +51,9 @@ class Host : public evmc::Host
     std::vector<Log> m_logs;
 
 public:
-    Host(evmc_revision rev, evmc::VM& vm, State& state, const BlockInfo& block,
-        const Transaction& tx) noexcept
-      : m_rev{rev}, m_vm{vm}, m_state{state}, m_block{block}, m_tx{tx}
+    Host(MegaContext& mega_ctx, evmc_revision rev, evmc::VM& vm, State& state,
+        const BlockInfo& block, const Transaction& tx) noexcept
+      : m_mega_ctx{&mega_ctx}, m_rev{rev}, m_vm{vm}, m_state{state}, m_block{block}, m_tx{tx}
     {}
 
     [[nodiscard]] std::vector<Log>&& take_logs() noexcept { return std::move(m_logs); }

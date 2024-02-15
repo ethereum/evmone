@@ -119,6 +119,7 @@ int main(int argc, const char* argv[])
             const auto j_txs = json::json::parse(std::ifstream{txs_file});
 
             evmc::VM vm{evmc_create_evmone()};
+            MegaContext mega_ctx = {};
 
             if (trace)
                 vm.set_option("trace", "1");
@@ -163,8 +164,8 @@ int main(int argc, const char* argv[])
                         std::clog.rdbuf(trace_file_output.rdbuf());
                     }
 
-                    auto res =
-                        test::transition(state, block, tx, rev, vm, block_gas_left, blob_gas_left);
+                    auto res = test::transition(
+                        mega_ctx, state, block, tx, rev, vm, block_gas_left, blob_gas_left);
 
                     if (holds_alternative<std::error_code>(res))
                     {

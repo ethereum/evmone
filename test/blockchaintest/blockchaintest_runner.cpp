@@ -29,11 +29,11 @@ struct TransitionResult
 
 namespace
 {
-TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockInfo& block,
-    const std::vector<state::Transaction>& txs, evmc_revision rev,
+TransitionResult apply_block(MegaContext& mega_ctx, TestState& state, evmc::VM& vm,
+    const state::BlockInfo& block, const std::vector<state::Transaction>& txs, evmc_revision rev,
     std::optional<int64_t> block_reward)
 {
-    const auto diff = state::system_call(state, block, rev, vm);
+    const auto diff = state::system_call(mega_ctx, state, block, rev, vm);
     state.apply_diff(diff);
 
     std::vector<state::Log> txs_logs;
@@ -50,7 +50,8 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
         const auto& tx = txs[i];
 
         const auto computed_tx_hash = keccak256(rlp::encode(tx));
-        auto res = test::transition(state, block, tx, rev, vm, block_gas_left, blob_gas_left);
+        auto res =
+            test::transition(mega_ctx, state, block, tx, rev, vm, block_gas_left, blob_gas_left);
 
         if (holds_alternative<std::error_code>(res))
         {
@@ -123,7 +124,8 @@ std::string print_state(const TestState& s)
 }
 }  // namespace
 
-void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
+void run_blockchain_tests(
+    std::span<const BlockchainTest> tests, MegaContext& mega_ctx, evmc::VM& vm)
 {
     for (size_t case_index = 0; case_index != tests.size(); ++case_index)
     {
@@ -149,7 +151,8 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
             .known_block_hashes = {},
         };
 
-        const auto genesis_res = apply_block(state, vm, genesis, {}, c.rev.get_revision(0), {});
+        const auto genesis_res =
+            apply_block(mega_ctx, state, vm, genesis, {}, c.rev.get_revision(0), {});
 
         EXPECT_EQ(state::mpt_hash(state), state::mpt_hash(c.pre_state));
 
@@ -173,8 +176,8 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
 
             const auto rev = c.rev.get_revision(bi.timestamp);
 
-            const auto res =
-                apply_block(state, vm, bi, test_block.transactions, rev, mining_reward(rev));
+            const auto res = apply_block(
+                mega_ctx, state, vm, bi, test_block.transactions, rev, mining_reward(rev));
 
             known_block_hashes[test_block.expected_block_header.block_number] =
                 test_block.expected_block_header.hash;

@@ -14,6 +14,8 @@ namespace
 {
 class StateTest : public testing::Test
 {
+    static inline evmone::MegaContext mega_ctx;
+
     fs::path m_json_test_file;
     evmc::VM& m_vm;
     bool m_trace = false;
@@ -26,7 +28,7 @@ public:
     void TestBody() final
     {
         std::ifstream f{m_json_test_file};
-        evmone::test::run_state_test(evmone::test::load_state_test(f), m_vm, m_trace);
+        evmone::test::run_state_test(mega_ctx, evmone::test::load_state_test(f), m_vm, m_trace);
     }
 };
 
