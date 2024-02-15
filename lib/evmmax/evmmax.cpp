@@ -60,7 +60,7 @@ UintT ModArith<UintT>::mul(const UintT& x, const UintT& y) const noexcept
     static constexpr auto S = UintT::num_words;
 
     intx::uint<UintT::num_bits> t;
-    uint64_t final_carry = 0;
+    bool final_carry = false;
     for (size_t i = 0; i != S; ++i)
     {
         uint64_t c = 0;
@@ -76,13 +76,13 @@ UintT ModArith<UintT>::mul(const UintT& x, const UintT& y) const noexcept
             std::tie(c, t[j - 1]) = addmul(t[j], m, mod[j], c);
         tmp = addc(tmp.value, c);
         t[S - 1] = tmp.value;
-        final_carry = d + tmp.carry;  // TODO: Carry is 0 for sparse modulus.
+        final_carry = d || tmp.carry;  // TODO: Carry is 0 for sparse modulus.
         // TODO: Is this d or tmp.carry? Seems tex is never 2.
     }
 
     const auto [diff, borrow] = subc(t, mod);
 
-    if (final_carry != 0 || !borrow)  // TODO: cannot overflow if modulus is sparse (e.g. 255 bits).
+    if (final_carry || !borrow)  // TODO: cannot overflow if modulus is sparse (e.g. 255 bits).
         t = diff;
 
     return static_cast<UintT>(t);
