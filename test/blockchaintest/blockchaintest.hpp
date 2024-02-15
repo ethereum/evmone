@@ -69,6 +69,7 @@ struct BlockchainTest
 
 std::vector<BlockchainTest> load_blockchain_tests(std::istream& input);
 
-void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm);
+void run_blockchain_tests(
+    std::span<const BlockchainTest> tests, MegaContext& mega_ctx, evmc::VM& vm);
 
 }  // namespace evmone::test

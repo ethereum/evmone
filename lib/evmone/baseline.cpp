@@ -380,12 +380,6 @@ struct MegaWrapper
 evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_context* ctx,
     evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept
 {
-    const auto& wrapper = *reinterpret_cast<MegaWrapper*>(ctx);
-    if (wrapper.magic == MegaWrapper::MAGIC)
-    {
-        assert(wrapper.mega_ctx == nullptr);
-    }
-
     auto vm = static_cast<VM*>(c_vm);
     const bytes_view container{code, code_size};
 
@@ -395,9 +389,26 @@ evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_co
             return evmc_make_result(EVMC_CONTRACT_VALIDATION_FAILURE, 0, 0, nullptr, 0);
     }
 
+    ExecutionState* exec_state = nullptr;
+    std::unique_ptr<ExecutionState> exec_state_owned;
+    const auto& wrapper = *reinterpret_cast<MegaWrapper*>(ctx);
+    if (wrapper.magic == MegaWrapper::MAGIC && wrapper.mega_ctx != nullptr)
+    {
+        auto& mega_ctx = *static_cast<MegaContext*>(wrapper.mega_ctx);
+        auto& slot = mega_ctx[static_cast<uint32_t>(msg->depth)];
+        if (!slot)
+            slot = std::make_unique<ExecutionState>();
+        exec_state = slot.get();
+    }
+    else
+    {
+        exec_state_owned = std::make_unique<ExecutionState>();
+        exec_state = exec_state_owned.get();
+    }
+
     const auto code_analysis = analyze(rev, container);
     const auto data = code_analysis.eof_header.get_data(container);
-    auto state = std::make_unique<ExecutionState>(*msg, rev, *host, ctx, container, data);
-    return execute(*vm, msg->gas, *state, code_analysis);
+    exec_state->reset(*msg, rev, *host, ctx, container, data);
+    return execute(*vm, msg->gas, *exec_state, code_analysis);
 }
 }  // namespace evmone::baseline

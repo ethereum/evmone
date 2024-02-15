@@ -433,8 +433,8 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
 // }
 // }  // namespace
 
-StateDiff system_call(
-    const StateView& state, const BlockInfo& block, evmc_revision rev, evmc::VM& vm)
+StateDiff system_call(MegaContext& mega_ctx, const StateView& state, const BlockInfo& block,
+    evmc_revision rev, evmc::VM& vm)
 {
     static constexpr auto SystemAddress = 0xfffffffffffffffffffffffffffffffffffffffe_address;
     static constexpr auto BeaconRootsAddress = 0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02_address;
@@ -454,7 +454,7 @@ StateDiff system_call(
             };
 
             const Transaction empty_tx{};
-            Host host{rev, vm, ss, block, empty_tx};
+            Host host{mega_ctx, rev, vm, ss, block, empty_tx};
             [[maybe_unused]] const auto res = vm.execute(host, rev, msg, code.data(), code.size());
             assert(res.status_code == EVMC_SUCCESS);
 
@@ -511,7 +511,8 @@ StateDiff finalize(const StateView& sv, evmc_revision rev, const address& coinba
     //    delete_empty_accounts(state);
 }
 
-std::variant<TransactionReceipt, std::error_code> transition(const StateView& state_view,
+std::variant<TransactionReceipt, std::error_code> transition(MegaContext& mega_ctx,
+    const StateView& state_view,
     const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm,
     int64_t block_gas_left, int64_t blob_gas_left)
 {
@@ -555,7 +556,7 @@ std::variant<TransactionReceipt, std::error_code> transition(const StateView& st
         sender_acc.balance -= blob_fee;
     }
 
-    Host host{rev, vm, state, block, tx};
+    Host host{mega_ctx, rev, vm, state, block, tx};
 
     sender_acc.access_status = EVMC_ACCESS_WARM;  // Tx sender is always warm.
     if (tx.to.has_value())

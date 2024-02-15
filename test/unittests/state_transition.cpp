@@ -61,7 +61,7 @@ void state_transition::TearDown()
     if (trace)
         trace_capture.emplace();
 
-    const auto res = test::transition(state, block, tx, rev, selected_vm, block.gas_limit,
+    const auto res = test::transition(mega_ctx, state, block, tx, rev, selected_vm, block.gas_limit,
         state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK);
 
     if (const auto expected_error = make_error_code(expect.tx_error))

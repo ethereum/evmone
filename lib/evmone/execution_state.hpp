@@ -5,6 +5,7 @@
 
 #include <evmc/evmc.hpp>
 #include <intx/intx.hpp>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -201,4 +202,6 @@ public:
         return m_tx;
     }
 };
+
+using MegaContext = std::array<std::unique_ptr<ExecutionState>, 1025>;
 }  // namespace evmone
