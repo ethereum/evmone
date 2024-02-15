@@ -81,8 +81,10 @@ UintT ModArith<UintT>::mul(const UintT& x, const UintT& y) const noexcept
         // TODO: Is this d or tmp.carry? Seems tex is never 2.
     }
 
-    if (tex != 0 || t >= mod)  // TODO: cannot overflow if modulus is sparse (e.g. 255 bits).
-        t -= mod;
+    const auto [diff, borrow] = subc(t, mod);
+
+    if (tex != 0 || !borrow)  // TODO: cannot overflow if modulus is sparse (e.g. 255 bits).
+        t = diff;
 
     return static_cast<UintT>(t);
 }
