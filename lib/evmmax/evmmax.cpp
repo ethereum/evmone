@@ -61,6 +61,7 @@ UintT ModArith<UintT>::mul(const UintT& x, const UintT& y) const noexcept
 
     intx::uint<UintT::num_bits> t;
     bool final_carry = false;
+#pragma unroll 4
     for (size_t i = 0; i != S; ++i)
     {
         uint64_t c = 0;
