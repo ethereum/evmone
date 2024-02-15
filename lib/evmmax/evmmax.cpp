@@ -60,14 +60,13 @@ UintT ModArith<UintT>::mul(const UintT& x, const UintT& y) const noexcept
     static constexpr auto S = UintT::num_words;
 
     intx::uint<UintT::num_bits> t;
-    uint64_t tex = 0;
+    uint64_t final_carry = 0;
     for (size_t i = 0; i != S; ++i)
     {
         uint64_t c = 0;
         for (size_t j = 0; j != S; ++j)
             std::tie(c, t[j]) = addmul(t[j], x[j], y[i], c);
-        auto tmp = addc(tex, c);
-        tex = tmp.value;
+        auto tmp = addc(final_carry, c);
         auto d = tmp.carry;
 
         c = 0;
@@ -75,15 +74,15 @@ UintT ModArith<UintT>::mul(const UintT& x, const UintT& y) const noexcept
         std::tie(c, t[0]) = addmul(t[0], m, mod[0], c);
         for (size_t j = 1; j != S; ++j)
             std::tie(c, t[j - 1]) = addmul(t[j], m, mod[j], c);
-        tmp = addc(tex, c);
+        tmp = addc(tmp.value, c);
         t[S - 1] = tmp.value;
-        tex = d + tmp.carry;  // TODO: Carry is 0 for sparse modulus.
+        final_carry = d + tmp.carry;  // TODO: Carry is 0 for sparse modulus.
         // TODO: Is this d or tmp.carry? Seems tex is never 2.
     }
 
     const auto [diff, borrow] = subc(t, mod);
 
-    if (tex != 0 || !borrow)  // TODO: cannot overflow if modulus is sparse (e.g. 255 bits).
+    if (final_carry != 0 || !borrow)  // TODO: cannot overflow if modulus is sparse (e.g. 255 bits).
         t = diff;
 
     return static_cast<UintT>(t);
