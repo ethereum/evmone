@@ -1069,6 +1069,18 @@ TEST_F(eof_validation, jumpf_to_returning)
 {
     // JUMPF into a function with the same number of outputs as current one
 
+    // 0 inputs target
+    add_test_case(eof_bytecode(callf(1) + OP_STOP, 2)
+                      .code(jumpf(2), 0, 2, 0)
+                      .code(push0() + push0() + OP_RETF, 0, 2, 2),
+        EOFValidationError::success);
+
+    // 0 inputs target - extra items on stack at JUMPF
+    add_test_case(eof_bytecode(callf(1) + OP_STOP, 2)
+                      .code(push0() + push0() + jumpf(2), 0, 2, 2)
+                      .code(push0() + push0() + OP_RETF, 0, 2, 2),
+        EOFValidationError::stack_higher_than_outputs_required);
+
     // Exactly required inputs on stack at JUMPF
     add_test_case(eof_bytecode(callf(1) + OP_STOP, 2)
                       .code(push0() + push0() + push0() + jumpf(2), 0, 2, 3)
@@ -1088,6 +1100,27 @@ TEST_F(eof_validation, jumpf_to_returning)
         EOFValidationError::stack_underflow);
 
     // JUMPF into a function with fewer outputs than current one
+
+    // (0, 2) --JUMPF--> (0, 1): 0 inputs + 1 output = 1 item required
+
+    // Exactly required inputs on stack at JUMPF
+    add_test_case(eof_bytecode(callf(1) + OP_STOP, 2)
+                      .code(push0() + jumpf(2), 0, 2, 1)
+                      .code(push0() + OP_RETF, 0, 1, 1),
+        EOFValidationError::success);
+
+    // Extra items on stack at JUMPF
+    add_test_case(eof_bytecode(callf(1) + OP_STOP, 2)
+                      .code(push0() + push0() + push0() + jumpf(2), 0, 2, 3)
+                      .code(push0() + OP_RETF, 0, 1, 1),
+        EOFValidationError::stack_higher_than_outputs_required);
+
+    // Not enough inputs on stack at JUMPF
+    add_test_case(eof_bytecode(callf(1) + OP_STOP, 2)
+                      .code(jumpf(2), 0, 2, 0)
+                      .code(push0() + OP_RETF, 0, 1, 1),
+        EOFValidationError::stack_underflow);
+
     // (0, 2) --JUMPF--> (3, 1): 3 inputs + 1 output = 4 items required
 
     // Exactly required inputs on stack at JUMPF
@@ -1115,6 +1148,8 @@ TEST_F(eof_validation, jumpf_to_returning_variable_stack)
     // JUMPF to returning function in variable stack segment is not allowed and always fails with
     // one of two errors
 
+    // JUMPF into a function with the same number of outputs as current one
+
     // JUMPF from [1, 3] stack to function with 5 inputs
     add_test_case(eof_bytecode(callf(1) + OP_STOP, 3)
                       .code(varstack + jumpf(2), 0, 3, 3)
@@ -1138,10 +1173,47 @@ TEST_F(eof_validation, jumpf_to_returning_variable_stack)
                       .code(varstack + jumpf(2), 0, 3, 3)
                       .code(push0() + push0() + push0() + OP_RETF, 0, 3, 3),
         EOFValidationError::stack_higher_than_outputs_required);
+
+    // JUMPF into a function with fewer outputs than current one
+
+    // JUMPF from [1, 3] stack to function with 5 inputs
+    add_test_case(eof_bytecode(callf(1) + OP_STOP, 2)
+                      .code(varstack + jumpf(2), 0, 2, 3)
+                      .code(4 * OP_POP + OP_RETF, 5, 1, 5),
+        EOFValidationError::stack_underflow);
+
+    // JUMPF from [1, 3] stack to function with 3 inputs
+    add_test_case(eof_bytecode(callf(1) + OP_STOP, 2)
+                      .code(varstack + jumpf(2), 0, 2, 3)
+                      .code(bytecode{OP_POP} + OP_POP + bytecode{OP_RETF}, 3, 1, 3),
+        EOFValidationError::stack_underflow);
+
+    // JUMPF from [1, 3] stack to function with 1 inputs
+    add_test_case(eof_bytecode(callf(1) + OP_STOP, 2)
+                      .code(varstack + jumpf(2), 0, 2, 3)
+                      .code(OP_RETF, 1, 1, 1),
+        EOFValidationError::stack_higher_than_outputs_required);
+
+    // JUMPF from [1, 3] stack to function with 0 inputs
+    add_test_case(eof_bytecode(callf(1) + OP_STOP, 2)
+                      .code(varstack + jumpf(2), 0, 2, 3)
+                      .code(push0() + OP_RETF, 0, 1, 1),
+        EOFValidationError::stack_higher_than_outputs_required);
 }
 
 TEST_F(eof_validation, jumpf_to_nonreturning)
 {
+    // Target has 0 inputs
+
+    // 0 inputs on stack at JUMPF
+    add_test_case(eof_bytecode(jumpf(1)).code(OP_STOP, 0, 0x80, 0), EOFValidationError::success);
+
+    // Extra items on stack at JUMPF
+    add_test_case(eof_bytecode(push0() + push0() + jumpf(1), 2).code(OP_STOP, 0, 0x80, 0),
+        EOFValidationError::success);
+
+    // Target has 3 inputs
+
     // Exactly required inputs on stack at JUMPF
     add_test_case("EF0001 010008 02000200060001 040000 00 0080000303800003 5F5F5FE50001 00",
         EOFValidationError::success);
