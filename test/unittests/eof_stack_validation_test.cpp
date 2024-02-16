@@ -1042,6 +1042,13 @@ TEST_F(eof_validation, retf_stack_validation)
     add_test_case(
         eof_bytecode(callf(1) + OP_STOP, 2).code(push0() + push0() + push0() + OP_RETF, 0, 2, 3),
         EOFValidationError::stack_higher_than_outputs_required);
+
+    // RETF in a helper (reached via different paths)
+    add_test_case(
+        eof_bytecode(push0() + callf(1) + OP_STOP, 2)
+            .code(rjumpi(7, {}) + push(1) + push(1) + rjump(2) + push0() + push0() + OP_RETF, 1, 2,
+                2),
+        EOFValidationError::success);
 }
 
 TEST_F(eof_validation, retf_variable_stack)
@@ -1130,10 +1137,9 @@ TEST_F(eof_validation, jumpf_to_returning)
         EOFValidationError::success);
 
     // Extra items on stack at JUMPF
-    add_test_case(
-        eof_bytecode(callf(1) + OP_STOP, 2)
-            .code(push0() + push0() + push0() + push0() + push0() + jumpf(2), 0, 2, 5)
-            .code(bytecode(OP_POP) + OP_POP + OP_RETF, 3, 1, 3),
+    add_test_case(eof_bytecode(callf(1) + OP_STOP, 2)
+                      .code(push0() + push0() + push0() + push0() + push0() + jumpf(2), 0, 2, 5)
+                      .code(bytecode(OP_POP) + OP_POP + OP_RETF, 3, 1, 3),
         EOFValidationError::stack_higher_than_outputs_required);
 
     // Not enough inputs on stack at JUMPF
