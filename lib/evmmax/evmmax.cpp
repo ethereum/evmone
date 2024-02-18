@@ -70,9 +70,8 @@ UintT ModArith<UintT>::mul(const UintT& x, const UintT& y) const noexcept
         auto tmp = addc(final_carry, c);
         auto d = tmp.carry;
 
-        c = 0;
         auto m = t[0] * m_mod_inv;
-        std::tie(c, t[0]) = addmul(t[0], m, mod[0], c);
+        c = addmul(t[0], m, mod[0], 0).first;
         for (size_t j = 1; j != S; ++j)
             std::tie(c, t[j - 1]) = addmul(t[j], m, mod[j], c);
         tmp = addc(tmp.value, c);
