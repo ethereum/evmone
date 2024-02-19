@@ -8,10 +8,11 @@ namespace evmone::test
 {
 void eof_validation::TearDown()
 {
-    for (const auto& test_case : test_cases)
+    for (size_t i = 0; i < test_cases.size(); ++i)
     {
+        const auto& test_case = test_cases[i];
         EXPECT_EQ(evmone::validate_eof(rev, test_case.container), test_case.error)
-            << test_case.name << "\n"
+            << "test case " << i << " " << test_case.name << "\n"
             << hex(test_case.container);
     }
 }
