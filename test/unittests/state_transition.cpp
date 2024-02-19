@@ -13,6 +13,7 @@
 #include <test/statetest/statetest.hpp>
 #include <filesystem>
 #include <fstream>
+#include <regex>
 
 namespace fs = std::filesystem;
 
@@ -147,16 +148,14 @@ namespace
 /// Creates the file path for the exported test based on its name.
 fs::path get_export_test_path(const testing::TestInfo& test_info, std::string_view export_dir)
 {
-    const std::string_view test_suite_name{test_info.test_suite_name()};
+    const std::string suite_name{test_info.test_suite_name()};
 
     const auto stem = fs::path{test_info.file()}.stem().string();
-    auto filename = std::string_view{stem};
-    if (filename.starts_with(test_suite_name))
-        filename.remove_prefix(test_suite_name.size() + 1);
-    if (filename.ends_with("_test"))
-        filename.remove_suffix(5);
+    const std::regex re{suite_name + "_(.*)_test"};
+    std::smatch m;
+    const auto sub_suite_name = std::regex_match(stem, m, re) ? m[1] : std::string{};
 
-    const auto dir = fs::path{export_dir} / test_suite_name / filename;
+    const auto dir = fs::path{export_dir} / suite_name / sub_suite_name;
 
     fs::create_directories(dir);
     return dir / (std::string{test_info.name()} + ".json");
