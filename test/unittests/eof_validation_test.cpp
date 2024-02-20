@@ -368,7 +368,7 @@ TEST_F(eof_validation, EOF1_valid_rjump)
         EOFValidationError::success, "offset_zero");
 
     // offset = 3
-    add_test_case("EF0001 010004 0200010009 040000 00 00800001 E00003600100E0FFFA",
+    add_test_case("EF0001 010004 020001000D 040000 00 00800002 5FE100055F5FE000035F600100",
         EOFValidationError::success, "offset_positive");
 
     // offset = -4

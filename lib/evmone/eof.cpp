@@ -360,21 +360,16 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
     std::vector<int32_t> stack_heights(code.size(), LOC_UNVISITED);
     stack_heights[0] = code_types[func_index].inputs;
 
-    std::stack<size_t> worklist;
-    worklist.push(0);
-
-    while (!worklist.empty())
+    for (size_t i = 0; i < code.size();)
     {
-        const auto i = worklist.top();
-        worklist.pop();
-
         const auto opcode = static_cast<Opcode>(code[i]);
 
         int stack_height_required = instr::traits[opcode].stack_height_required;
         auto stack_height_change = instr::traits[opcode].stack_height_change;
 
-        auto stack_height = stack_heights[i];
-        assert(stack_height != LOC_UNVISITED);
+        const auto stack_height = stack_heights[i];
+        if (stack_height == LOC_UNVISITED)
+            return EOFValidationError::unreachable_instructions;
 
         if (opcode == OP_CALLF)
         {
@@ -428,7 +423,7 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
         if (stack_height < stack_height_required)
             return EOFValidationError::stack_underflow;
 
-        stack_height += stack_height_change;
+        const auto next_stack_height = stack_height + stack_height_change;
 
         // Determine size of immediate, including the special case of RJUMPV.
         const size_t imm_size = (opcode == OP_RJUMPV) ?
@@ -439,13 +434,12 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
         std::fill_n(&stack_heights[i + 1], imm_size, LOC_IMMEDIATE);
 
         // Validates the successor instruction and updates its stack height.
-        const auto validate_successor = [&stack_heights, &worklist](size_t successor_offset,
-                                            int32_t expected_stack_height) {
+        const auto visit_successor = [&stack_heights](
+                                         size_t successor_offset, int32_t expected_stack_height) {
             auto& successor_stack_height = stack_heights[successor_offset];
             if (successor_stack_height == LOC_UNVISITED)
             {
                 successor_stack_height = expected_stack_height;
-                worklist.push(successor_offset);
                 return true;
             }
             else
@@ -459,7 +453,7 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
         {
             if (next >= code.size())
                 return EOFValidationError::no_terminating_instruction;
-            if (!validate_successor(next, stack_height))
+            if (!visit_successor(next, next_stack_height))
                 return EOFValidationError::stack_height_mismatch;
         }
 
@@ -468,7 +462,7 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
         {
             const auto target_rel_offset = read_int16_be(&code[i + 1]);
             const auto target = static_cast<int32_t>(i) + target_rel_offset + 3;
-            if (!validate_successor(static_cast<size_t>(target), stack_height))
+            if (!visit_successor(static_cast<size_t>(target), next_stack_height))
                 return EOFValidationError::stack_height_mismatch;
         }
         else if (opcode == OP_RJUMPV)
@@ -480,17 +474,15 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
             {
                 const auto target_rel_offset = read_int16_be(&code[i + k * REL_OFFSET_SIZE + 2]);
                 const auto target = static_cast<int32_t>(next) + target_rel_offset;
-                if (!validate_successor(static_cast<size_t>(target), stack_height))
+                if (!visit_successor(static_cast<size_t>(target), next_stack_height))
                     return EOFValidationError::stack_height_mismatch;
             }
         }
+
+        i = next;
     }
 
     const auto max_stack_height = *std::max_element(stack_heights.begin(), stack_heights.end());
-
-    if (std::find(stack_heights.begin(), stack_heights.end(), LOC_UNVISITED) != stack_heights.end())
-        return EOFValidationError::unreachable_instructions;
-
     return max_stack_height;
 }
 
