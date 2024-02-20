@@ -631,8 +631,7 @@ TEST_F(eof_validation, max_stack_height)
                       0x400 * OP_POP + OP_STOP + OP_RETF,
         EOFValidationError::invalid_max_stack_height);
 
-    add_test_case(
-        eof_bytecode(rjumpi(2, 0) + 1 + OP_STOP, 1), EOFValidationError::stack_height_mismatch);
+    add_test_case(eof_bytecode(rjumpi(2, 0) + 1 + OP_STOP, 1), EOFValidationError::success);
 
     add_test_case(
         eof_bytecode(rjumpi(-3, 0) + OP_STOP, 1), EOFValidationError::stack_height_mismatch);

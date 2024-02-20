@@ -349,16 +349,23 @@ bool validate_rjump_destinations(bytes_view code) noexcept
 std::variant<EOFValidationError, int32_t> validate_max_stack_height(
     bytes_view code, size_t func_index, const std::vector<EOFCodeType>& code_types)
 {
-    assert(!code.empty());
-
-    // Special values used for detecting errors.
+    // Special value used for detecting errors.
     static constexpr int32_t LOC_UNVISITED = -1;  // Unvisited byte.
-    static constexpr int32_t LOC_IMMEDIATE = -2;  // Immediate byte.
 
     // Stack height in the header is limited to uint16_t,
     // but keeping larger size for ease of calculation.
-    std::vector<int32_t> stack_heights(code.size(), LOC_UNVISITED);
-    stack_heights[0] = code_types[func_index].inputs;
+    struct StackHeightRange
+    {
+        int32_t min = LOC_UNVISITED;
+        int32_t max = LOC_UNVISITED;
+
+        [[nodiscard]] bool visited() const noexcept { return min != LOC_UNVISITED; }
+    };
+
+    assert(!code.empty());
+
+    std::vector<StackHeightRange> stack_heights(code.size());
+    stack_heights[0] = {code_types[func_index].inputs, code_types[func_index].inputs};
 
     for (size_t i = 0; i < code.size();)
     {
@@ -368,8 +375,12 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
         auto stack_height_change = instr::traits[opcode].stack_height_change;
 
         const auto stack_height = stack_heights[i];
-        if (stack_height == LOC_UNVISITED)
+        if (!stack_height.visited())
+        {
+            // We reached the code that was neither referenced by previous forward jump,
+            // nor is part of sequential instruction flow. This is not allowed.
             return EOFValidationError::unreachable_instructions;
+        }
 
         if (opcode == OP_CALLF)
         {
@@ -377,7 +388,7 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
 
             stack_height_required = code_types[fid].inputs;
 
-            if (stack_height + code_types[fid].max_stack_height - stack_height_required >
+            if (stack_height.max + code_types[fid].max_stack_height - stack_height_required >
                 STACK_SIZE_LIMIT)
                 return EOFValidationError::stack_overflow;
 
@@ -390,7 +401,7 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
         {
             const auto fid = read_uint16_be(&code[i + 1]);
 
-            if (stack_height + code_types[fid].max_stack_height - code_types[fid].inputs >
+            if (stack_height.max + code_types[fid].max_stack_height - code_types[fid].inputs >
                 STACK_SIZE_LIMIT)
                 return EOFValidationError::stack_overflow;
 
@@ -405,14 +416,18 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
 
                 stack_height_required = code_types[func_index].outputs + code_types[fid].inputs -
                                         code_types[fid].outputs;
-                if (stack_heights[i] > stack_height_required)
+
+                // JUMPF to returning function requires exact number of stack items
+                // and is allowed only in constant stack segment.
+                if (stack_height.max > stack_height_required)
                     return EOFValidationError::stack_higher_than_outputs_required;
             }
         }
         else if (opcode == OP_RETF)
         {
             stack_height_required = code_types[func_index].outputs;
-            if (stack_height > code_types[func_index].outputs)
+            // RETF allowed only in constant stack segment
+            if (stack_height.max > stack_height_required)
                 return EOFValidationError::stack_higher_than_outputs_required;
         }
         else if (opcode == OP_DUPN)
@@ -420,30 +435,44 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
         else if (opcode == OP_SWAPN)
             stack_height_required = code[i + 1] + 2;
 
-        if (stack_height < stack_height_required)
+        if (stack_height.min < stack_height_required)
             return EOFValidationError::stack_underflow;
 
-        const auto next_stack_height = stack_height + stack_height_change;
+        const StackHeightRange next_stack_height{
+            stack_height.min + stack_height_change, stack_height.max + stack_height_change};
 
         // Determine size of immediate, including the special case of RJUMPV.
         const size_t imm_size = (opcode == OP_RJUMPV) ?
                                     (1 + /*count*/ (size_t{code[i + 1]} + 1) * REL_OFFSET_SIZE) :
                                     instr::traits[opcode].immediate_size;
 
-        // Mark immediate locations.
-        std::fill_n(&stack_heights[i + 1], imm_size, LOC_IMMEDIATE);
-
         // Validates the successor instruction and updates its stack height.
-        const auto visit_successor = [&stack_heights](
-                                         size_t successor_offset, int32_t expected_stack_height) {
+        const auto visit_successor = [&stack_heights](size_t current_offset,
+                                         size_t successor_offset,
+                                         StackHeightRange required_stack_height) {
             auto& successor_stack_height = stack_heights[successor_offset];
-            if (successor_stack_height == LOC_UNVISITED)
+            if (successor_offset <= current_offset)  // backwards jump
             {
-                successor_stack_height = expected_stack_height;
-                return true;
+                // successor_offset == current_offset case is possible only with jump into the same
+                // jump instruction, e.g. RJUMP(-3), so it is technically a backwards jump, too.
+                assert(successor_stack_height.visited());
+                // The spec could have been relaxed to
+                // return successor_stack_height.min >= required_stack_height.min &&
+                //        successor_stack_height.max <= required_stack_height.max;
+                // but it was decided to have strict equality for simplicity.
+                return successor_stack_height.min == required_stack_height.min &&
+                       successor_stack_height.max == required_stack_height.max;
             }
-            else
-                return successor_stack_height == expected_stack_height;
+            else if (!successor_stack_height.visited())  // forwards jump, new target
+                successor_stack_height = required_stack_height;
+            else  // forwards jump, target known
+            {
+                successor_stack_height.min =
+                    std::min(required_stack_height.min, successor_stack_height.min);
+                successor_stack_height.max =
+                    std::max(required_stack_height.max, successor_stack_height.max);
+            }
+            return true;
         };
 
         const auto next = i + imm_size + 1;  // Offset of the next instruction (may be invalid).
@@ -453,7 +482,7 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
         {
             if (next >= code.size())
                 return EOFValidationError::no_terminating_instruction;
-            if (!visit_successor(next, next_stack_height))
+            if (!visit_successor(i, next, next_stack_height))
                 return EOFValidationError::stack_height_mismatch;
         }
 
@@ -462,7 +491,7 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
         {
             const auto target_rel_offset = read_int16_be(&code[i + 1]);
             const auto target = static_cast<int32_t>(i) + target_rel_offset + 3;
-            if (!visit_successor(static_cast<size_t>(target), next_stack_height))
+            if (!visit_successor(i, static_cast<size_t>(target), next_stack_height))
                 return EOFValidationError::stack_height_mismatch;
         }
         else if (opcode == OP_RJUMPV)
@@ -474,7 +503,7 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
             {
                 const auto target_rel_offset = read_int16_be(&code[i + k * REL_OFFSET_SIZE + 2]);
                 const auto target = static_cast<int32_t>(next) + target_rel_offset;
-                if (!visit_successor(static_cast<size_t>(target), next_stack_height))
+                if (!visit_successor(i, static_cast<size_t>(target), next_stack_height))
                     return EOFValidationError::stack_height_mismatch;
             }
         }
@@ -482,8 +511,9 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
         i = next;
     }
 
-    const auto max_stack_height = *std::max_element(stack_heights.begin(), stack_heights.end());
-    return max_stack_height;
+    const auto max_stack_height_it = std::max_element(stack_heights.begin(), stack_heights.end(),
+        [](StackHeightRange lhs, StackHeightRange rhs) noexcept { return lhs.max < rhs.max; });
+    return max_stack_height_it->max;
 }
 
 std::variant<EOF1Header, EOFValidationError> validate_eof1(
