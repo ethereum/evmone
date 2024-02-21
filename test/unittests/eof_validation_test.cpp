@@ -368,7 +368,7 @@ TEST_F(eof_validation, EOF1_valid_rjump)
         EOFValidationError::success, "offset_zero");
 
     // offset = 3
-    add_test_case("EF0001 010004 0200010009 040000 00 00800001 E00003600100E0FFFA",
+    add_test_case("EF0001 010004 020001000D 040000 00 00800002 5FE100055F5FE000035F600100",
         EOFValidationError::success, "offset_positive");
 
     // offset = -4
@@ -631,8 +631,7 @@ TEST_F(eof_validation, max_stack_height)
                       0x400 * OP_POP + OP_STOP + OP_RETF,
         EOFValidationError::invalid_max_stack_height);
 
-    add_test_case(
-        eof_bytecode(rjumpi(2, 0) + 1 + OP_STOP, 1), EOFValidationError::stack_height_mismatch);
+    add_test_case(eof_bytecode(rjumpi(2, 0) + 1 + OP_STOP, 1), EOFValidationError::success);
 
     add_test_case(
         eof_bytecode(rjumpi(-3, 0) + OP_STOP, 1), EOFValidationError::stack_height_mismatch);
