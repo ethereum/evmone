@@ -62,6 +62,25 @@ TEST_F(eof_validation, non_constant_stack_height)
         EOFValidationError::stack_underflow);
 }
 
+TEST_F(eof_validation, stack_range_maximally_broad)
+{
+    // Construct series of RJUMPIs all targeting final STOP.
+    // Stack range at STOP is [0, 1023]
+    bytecode code = OP_STOP;
+    int16_t offset = 1;
+    for (auto i = 0; i < 1023; ++i)
+    {
+        code = rjumpi(offset, OP_PUSH0) + OP_PUSH0 + code;
+        offset += 5;
+    }
+
+    add_test_case(eof_bytecode(code, 1023), EOFValidationError::success, "valid_1023_rjumpis");
+
+    code = rjumpi(offset, OP_PUSH0) + OP_PUSH0 + code;
+    add_test_case(eof_bytecode(code, 1023), EOFValidationError::invalid_max_stack_height,
+        "invalid_1024_rjumpis");
+}
+
 TEST_F(eof_validation, backwards_rjump)
 {
     add_test_case(eof_bytecode(rjump(-3)), EOFValidationError::success);
@@ -800,6 +819,34 @@ TEST_F(eof_validation, forwards_rjumpv_variable_stack)
                                    OP_STOP,          // [2, 5]
                       5),
         EOFValidationError::success);
+}
+
+TEST_F(eof_validation, self_referencing_jumps)
+{
+    // rjumpf from stack 0 to stack 0
+    add_test_case(eof_bytecode(rjump(-3)), EOFValidationError::success, "rjump");
+
+    // rjumpi from stack 0 to stack 1
+    add_test_case(
+        eof_bytecode(rjumpi(-3, 0) + OP_STOP), EOFValidationError::stack_height_mismatch, "rjumpi");
+
+    // rjumpv from stack 0 to stack 1
+    add_test_case(eof_bytecode(rjumpv({-4}, 0) + OP_STOP),
+        EOFValidationError::stack_height_mismatch, "rjumpv");
+}
+
+TEST_F(eof_validation, self_referencing_jumps_variable_stack)
+{
+    // rjumpf from stack [1, 3] to stack [1, 3]
+    add_test_case(eof_bytecode(varstack + rjump(-3), 3), EOFValidationError::success, "rjump");
+
+    // rjumpi from stack [1, 3] to stack [2, 4]
+    add_test_case(eof_bytecode(varstack + rjumpi(-3, 0) + OP_STOP, 4),
+        EOFValidationError::stack_height_mismatch, "rjumpi");
+
+    // rjumpv from stack [1, 3] to stack [2, 4]
+    add_test_case(eof_bytecode(varstack + rjumpv({-4}, 0) + OP_STOP, 4),
+        EOFValidationError::stack_height_mismatch, "rjumpv");
 }
 
 TEST_F(eof_validation, underflow)
