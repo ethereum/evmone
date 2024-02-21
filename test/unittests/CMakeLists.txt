@@ -9,7 +9,7 @@ target_sources(
     analysis_test.cpp
     blockchaintest_loader_test.cpp
     bytecode_test.cpp
-    eof_stack_validation_test.cpp
+    eof_validation_stack_test.cpp
     eof_test.cpp
     eof_validation.hpp
     eof_validation.cpp
@@ -41,6 +41,8 @@ target_sources(
     evmmax_secp256k1_test.cpp
     evmone_test.cpp
     execution_state_test.cpp
+    exportable_fixture.hpp
+    exportable_fixture.cpp
     instructions_test.cpp
     state_block_test.cpp
     state_bloom_filter_test.cpp

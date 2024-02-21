@@ -132,6 +132,15 @@ set_tests_properties(
 )
 
 add_test(
+    NAME ${PREFIX}/export_to_json_created_files
+    COMMAND ${CMAKE_COMMAND} -E sha256sum ${EXPORT_DIR}/state_transition/block/known_block_hash.json
+)
+set_tests_properties(
+    ${PREFIX}/export_to_json_created_files PROPERTIES
+    FIXTURES_REQUIRED EXPORT_JSON_TESTS
+)
+
+add_test(
     NAME ${PREFIX}/execute_exported_tests
     # TODO: Broken exported tests are filtered out.
     COMMAND evmone-statetest ${EXPORT_DIR} --gtest_filter=-*block.*:*tx.tx_non_existing_sender

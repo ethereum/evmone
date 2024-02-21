@@ -2,19 +2,12 @@
 // Copyright 2023 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-#ifdef _MSC_VER
-// Disable warning C4996: 'getenv': This function or variable may be unsafe.
-#define _CRT_SECURE_NO_WARNINGS
-#endif
-
 #include "state_transition.hpp"
 #include <evmone/eof.hpp>
 #include <test/state/mpt_hash.hpp>
 #include <test/statetest/statetest.hpp>
 #include <filesystem>
 #include <fstream>
-
-namespace fs = std::filesystem;
 
 namespace evmone::test
 {
@@ -138,38 +131,14 @@ void state_transition::TearDown()
         EXPECT_TRUE(expect.post.contains(addr)) << "unexpected account " << addr;
     }
 
-    if (const auto export_dir = std::getenv("EVMONE_EXPORT_TESTS"); export_dir != nullptr)
-        export_state_test(receipt, state, export_dir);
+    if (!export_file_path.empty())
+        export_state_test(receipt, state);
 }
 
-namespace
+void state_transition::export_state_test(const TransactionReceipt& receipt, const State& post)
 {
-/// Creates the file path for the exported test based on its name.
-fs::path get_export_test_path(const testing::TestInfo& test_info, std::string_view export_dir)
-{
-    const std::string_view test_suite_name{test_info.test_suite_name()};
-
-    const auto stem = fs::path{test_info.file()}.stem().string();
-    auto filename = std::string_view{stem};
-    if (filename.starts_with(test_suite_name))
-        filename.remove_prefix(test_suite_name.size() + 1);
-    if (filename.ends_with("_test"))
-        filename.remove_suffix(5);
-
-    const auto dir = fs::path{export_dir} / test_suite_name / filename;
-
-    fs::create_directories(dir);
-    return dir / (std::string{test_info.name()} + ".json");
-}
-}  // namespace
-
-void state_transition::export_state_test(
-    const TransactionReceipt& receipt, const State& post, std::string_view export_dir)
-{
-    const auto& test_info = *testing::UnitTest::GetInstance()->current_test_info();
-
     json::json j;
-    auto& jt = j[test_info.name()];
+    auto& jt = j[export_test_name];
 
     auto& jenv = jt["env"];
     jenv["currentNumber"] = hex0x(block.number);
@@ -198,6 +167,6 @@ void state_transition::export_state_test(
     jpost["hash"] = hex0x(mpt_hash(post.get_accounts()));
     jpost["logs"] = hex0x(logs_hash(receipt.logs));
 
-    std::ofstream{get_export_test_path(test_info, export_dir)} << std::setw(2) << j;
+    std::ofstream{export_file_path} << std::setw(2) << j;
 }
 }  // namespace evmone::test
