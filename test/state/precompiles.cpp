@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "precompiles.hpp"
-//#include "precompiles_cache.hpp"
+// #include "precompiles_cache.hpp"
 #include "precompiles_internal.hpp"
 #include <evmone_precompiles/bn254.hpp>
 #include <evmone_precompiles/secp256k1.hpp>
@@ -13,6 +13,8 @@
 #include <iostream>
 #include <limits>
 #include <unordered_map>
+
+#include <silkworm/core/execution/precompile.hpp>
 
 #ifdef EVMONE_PRECOMPILES_SILKPRE
 #include "precompiles_silkpre.hpp"
@@ -242,6 +244,62 @@ ExecutionResult identity_execute(const uint8_t* input, size_t input_size, uint8_
     return {EVMC_SUCCESS, input_size};
 }
 
+ExecutionResult silkworm_sha256_execute(const uint8_t* input, size_t input_size, uint8_t* output,
+    [[maybe_unused]] size_t output_size) noexcept
+{
+    auto res = silkworm::precompile::sha256_run({input, input_size});
+    std::memcpy(output, res->data(), res->size());
+    return {EVMC_SUCCESS, res->size()};
+}
+
+ExecutionResult silkworm_ripemd160_execute(const uint8_t* input, size_t input_size, uint8_t* output,
+    [[maybe_unused]] size_t output_size) noexcept
+{
+    auto res = silkworm::precompile::rip160_run({input, input_size});
+    std::memcpy(output, res->data(), res->size());
+    return {EVMC_SUCCESS, res->size()};
+}
+
+ExecutionResult silkworm_expmod_execute(const uint8_t* input, size_t input_size, uint8_t* output,
+    [[maybe_unused]] size_t output_size) noexcept
+{
+    auto res = silkworm::precompile::expmod_run({input, input_size});
+    if (!res)
+        return {EVMC_PRECOMPILE_FAILURE, 0};
+    std::memcpy(output, res->data(), res->size());
+    return {EVMC_SUCCESS, res->size()};
+}
+
+ExecutionResult silkworm_ecpairing_execute(const uint8_t* input, size_t input_size, uint8_t* output,
+    [[maybe_unused]] size_t output_size) noexcept
+{
+    auto res = silkworm::precompile::snarkv_run({input, input_size});
+    if (!res)
+        return {EVMC_PRECOMPILE_FAILURE, 0};
+    std::memcpy(output, res->data(), res->size());
+    return {EVMC_SUCCESS, res->size()};
+}
+
+ExecutionResult silkworm_blake2bf_execute(const uint8_t* input, size_t input_size, uint8_t* output,
+    [[maybe_unused]] size_t output_size) noexcept
+{
+    auto res = silkworm::precompile::blake2_f_run({input, input_size});
+    if (!res)
+        return {EVMC_PRECOMPILE_FAILURE, 0};
+    std::memcpy(output, res->data(), res->size());
+    return {EVMC_SUCCESS, res->size()};
+}
+
+ExecutionResult silkworm_point_evaluation_execute(const uint8_t* input, size_t input_size,
+    uint8_t* output, [[maybe_unused]] size_t output_size) noexcept
+{
+    auto res = silkworm::precompile::point_evaluation_run({input, input_size});
+    if (!res)
+        return {EVMC_PRECOMPILE_FAILURE, 0};
+    std::memcpy(output, res->data(), res->size());
+    return {EVMC_SUCCESS, res->size()};
+}
+
 namespace
 {
 struct PrecompileTraits
@@ -261,15 +319,15 @@ inline constexpr auto traits = []() noexcept {
     std::array<PrecompileTraits, NumPrecompiles> tbl{{
         {},  // undefined for 0
         {ecrecover_analyze, ecrecover_execute},
-        {sha256_analyze, dummy_execute<PrecompileId::sha256>},
-        {ripemd160_analyze, dummy_execute<PrecompileId::ripemd160>},
+        {sha256_analyze, silkworm_sha256_execute},
+        {ripemd160_analyze, silkworm_ripemd160_execute},
         {identity_analyze, identity_execute},
-        {expmod_analyze, dummy_execute<PrecompileId::expmod>},
+        {expmod_analyze, silkworm_expmod_execute},
         {ecadd_analyze, ecadd_execute},
         {ecmul_analyze, ecmul_execute},
-        {ecpairing_analyze, dummy_execute<PrecompileId::ecpairing>},
-        {blake2bf_analyze, dummy_execute<PrecompileId::blake2bf>},
-        {point_evaluation_analyze, dummy_execute<PrecompileId::point_evaluation>},
+        {ecpairing_analyze, silkworm_ecpairing_execute},
+        {blake2bf_analyze, silkworm_blake2bf_execute},
+        {point_evaluation_analyze, silkworm_point_evaluation_execute},
     }};
 #ifdef EVMONE_PRECOMPILES_SILKPRE
     // tbl[static_cast<size_t>(PrecompileId::ecrecover)].execute = silkpre_ecrecover_execute;
@@ -321,9 +379,9 @@ evmc::Result call_precompile(evmc_revision rev, const evmc_message& msg) noexcep
     if (gas_left < 0)
         return evmc::Result{EVMC_OUT_OF_GAS};
 
-//    static Cache cache;
-//    if (auto r = cache.find(static_cast<PrecompileId>(id), input, gas_left); r.has_value())
-//        return std::move(*r);
+    //    static Cache cache;
+    //    if (auto r = cache.find(static_cast<PrecompileId>(id), input, gas_left); r.has_value())
+    //        return std::move(*r);
 
     // Buffer for the precompile's output.
     // Big enough to handle all "expmod" tests, but in case does not match the size requirement
@@ -338,7 +396,7 @@ evmc::Result call_precompile(evmc_revision rev, const evmc_message& msg) noexcep
     evmc::Result result{
         status_code, status_code == EVMC_SUCCESS ? gas_left : 0, 0, output_buf, output_size};
 
-//    cache.insert(static_cast<PrecompileId>(id), input, result);
+    //    cache.insert(static_cast<PrecompileId>(id), input, result);
 
     return result;
 }
