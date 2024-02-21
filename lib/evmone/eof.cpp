@@ -34,7 +34,7 @@ constexpr auto MAX_STACK_HEIGHT = 0x03FF;
 constexpr auto OUTPUTS_INPUTS_NUMBER_LIMIT = 0x7F;
 constexpr auto REL_OFFSET_SIZE = sizeof(int16_t);
 constexpr auto STACK_SIZE_LIMIT = 1024;
-constexpr uint8_t NON_RETURNING_FUNCITON = 0x80;
+constexpr uint8_t NON_RETURNING_FUNCTION = 0x80;
 
 using EOFSectionHeaders = std::array<std::vector<uint16_t>, MAX_SECTION + 1>;
 
@@ -198,12 +198,12 @@ std::variant<std::vector<EOFCodeType>, EOFValidationError> validate_types(
     }
 
     // check 1st section is (0, 0x80)
-    if (types[0].inputs != 0 || types[0].outputs != NON_RETURNING_FUNCITON)
+    if (types[0].inputs != 0 || types[0].outputs != NON_RETURNING_FUNCTION)
         return EOFValidationError::invalid_first_section_type;
 
     for (const auto& t : types)
     {
-        if ((t.outputs > OUTPUTS_INPUTS_NUMBER_LIMIT && t.outputs != NON_RETURNING_FUNCITON) ||
+        if ((t.outputs > OUTPUTS_INPUTS_NUMBER_LIMIT && t.outputs != NON_RETURNING_FUNCTION) ||
             t.inputs > OUTPUTS_INPUTS_NUMBER_LIMIT)
             return EOFValidationError::inputs_outputs_num_above_limit;
 
@@ -246,7 +246,7 @@ EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& he
             const auto fid = read_uint16_be(&code[i + 1]);
             if (fid >= header.types.size())
                 return EOFValidationError::invalid_code_section_index;
-            if (header.types[fid].outputs == NON_RETURNING_FUNCITON)
+            if (header.types[fid].outputs == NON_RETURNING_FUNCTION)
                 return EOFValidationError::callf_to_non_returning_function;
             if (code_idx != fid)
                 accessed_code_sections.insert(fid);
@@ -263,7 +263,7 @@ EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& he
             if (fid >= header.types.size())
                 return EOFValidationError::invalid_code_section_index;
             // JUMPF into returning function means current function is returning.
-            if (header.types[fid].outputs != NON_RETURNING_FUNCITON)
+            if (header.types[fid].outputs != NON_RETURNING_FUNCTION)
                 is_returning = true;
             if (code_idx != fid)
                 accessed_code_sections.insert(fid);
@@ -280,7 +280,7 @@ EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& he
             i += instr::traits[op].immediate_size;
     }
 
-    const auto declared_returning = (header.types[code_idx].outputs != NON_RETURNING_FUNCITON);
+    const auto declared_returning = (header.types[code_idx].outputs != NON_RETURNING_FUNCTION);
     if (is_returning != declared_returning)
         return EOFValidationError::invalid_non_returning_flag;
 
@@ -393,7 +393,7 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
                 return EOFValidationError::stack_overflow;
 
             // Instruction validation ensures target function is returning
-            assert(code_types[fid].outputs != NON_RETURNING_FUNCITON);
+            assert(code_types[fid].outputs != NON_RETURNING_FUNCTION);
             stack_height_change =
                 static_cast<int8_t>(code_types[fid].outputs - stack_height_required);
         }
@@ -405,7 +405,7 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
                 STACK_SIZE_LIMIT)
                 return EOFValidationError::stack_overflow;
 
-            if (code_types[fid].outputs == NON_RETURNING_FUNCITON)
+            if (code_types[fid].outputs == NON_RETURNING_FUNCTION)
             {
                 stack_height_required = code_types[fid].inputs;
             }
