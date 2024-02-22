@@ -327,6 +327,17 @@ TEST_F(state_transition, created_code_hash)
     expect.post[To].storage[0x00_bytes32] = keccak256(runtime_code);
 }
 
+TEST_F(state_transition, create_tx_with_eof_initcode)
+{
+    rev = EVMC_PRAGUE;
+
+    const bytecode init_container = eof_bytecode(ret(0, 1));
+
+    tx.data = init_container;
+
+    expect.tx_error = EOF_CREATION_TRANSACTION;
+}
+
 TEST_F(state_transition, create_with_eof_initcode)
 {
     rev = EVMC_PRAGUE;
