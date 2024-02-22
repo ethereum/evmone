@@ -54,7 +54,9 @@ target_sources(
     state_transition.hpp
     state_transition.cpp
     state_transition_block_test.cpp
+    state_transition_calls_test.cpp
     state_transition_create_test.cpp
+    state_transition_eof_calls_test.cpp
     state_transition_eof_test.cpp
     state_transition_selfdestruct_test.cpp
     state_transition_trace_test.cpp
