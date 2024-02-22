@@ -667,12 +667,8 @@ std::string_view get_error_message(EOFValidationError err) noexcept
     {
     case EOFValidationError::success:
         return "success";
-    case EOFValidationError::starts_with_format:
-        return "starts_with_format";
     case EOFValidationError::invalid_prefix:
         return "invalid_prefix";
-    case EOFValidationError::eof_version_mismatch:
-        return "eof_version_mismatch";
     case EOFValidationError::eof_version_unknown:
         return "eof_version_unknown";
     case EOFValidationError::incomplete_section_size:

@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
+#include "exportable_fixture.hpp"
 #include <evmc/evmc.hpp>
 #include <evmone/eof.hpp>
 #include <evmone/evmone.h>
@@ -16,7 +17,7 @@ using evmc::bytes;
 /// Fixture for defining test cases for EOF validation.
 ///
 /// Each test contains multiple cases, which are validated during test teardown.
-class eof_validation : public testing::Test
+class eof_validation : public ExportableFixture
 {
 protected:
     /// EOF validation test case.
@@ -28,6 +29,7 @@ protected:
         /// or EOFValidationError::success if it is expected to be valid.
         EOFValidationError error = EOFValidationError::success;
         /// (Optional) Test case description.
+        /// In non-empty, exported test file will use it for test case name.
         std::string name;
     };
 
@@ -45,6 +47,9 @@ protected:
 
     /// The test runner.
     void TearDown() override;
+
+    /// Exports the test in the JSON EOF Test format in the given directory.
+    void export_eof_validation_test();
 };
 
 }  // namespace evmone::test
