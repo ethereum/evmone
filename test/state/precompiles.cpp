@@ -12,6 +12,7 @@
 #include <cassert>
 #include <iostream>
 #include <limits>
+#include <memory>
 #include <unordered_map>
 
 #include <silkworm/core/execution/precompile.hpp>
@@ -387,14 +388,14 @@ evmc::Result call_precompile(evmc_revision rev, const evmc_message& msg) noexcep
     // Big enough to handle all "expmod" tests, but in case does not match the size requirement
     // from analysis, the result will likely be incorrect.
     // TODO: Replace with std::pmr::monotonic_buffer_resource?
-    uint8_t output_buf[4096];
-    assert(std::size(output_buf) >= max_output_size);
+    auto output_buf = std::make_unique<uint8_t[]>(max_output_size);
 
     const auto [status_code, output_size] =
-        execute(msg.input_data, msg.input_size, output_buf, std::size(output_buf));
+        execute(msg.input_data, msg.input_size, output_buf.get(), max_output_size);
+    assert(output_size <= max_output_size);
 
     evmc::Result result{
-        status_code, status_code == EVMC_SUCCESS ? gas_left : 0, 0, output_buf, output_size};
+        status_code, status_code == EVMC_SUCCESS ? gas_left : 0, 0, output_buf.get(), output_size};
 
     //    cache.insert(static_cast<PrecompileId>(id), input, result);
 
