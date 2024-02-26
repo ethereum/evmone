@@ -267,8 +267,9 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
     gas_left -= cost;
     if (gas_left < 0)
     {
-        return (m_rev == EVMC_FRONTIER) ? evmc::Result{EVMC_SUCCESS, result.gas_left} :
-                                          evmc::Result{EVMC_FAILURE};
+        return (m_rev == EVMC_FRONTIER) ?
+                   evmc::Result{EVMC_SUCCESS, result.gas_left, result.gas_refund, msg.recipient} :
+                   evmc::Result{EVMC_FAILURE};
     }
 
     if (m_rev >= EVMC_PRAGUE && (is_eof_container(initcode) || is_eof_container(code)))
