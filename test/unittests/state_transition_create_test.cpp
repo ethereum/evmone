@@ -216,3 +216,35 @@ TEST_F(state_transition, created_code_hash)
     expect.post[CREATED].code = runtime_code;
     expect.post[To].storage[0x00_bytes32] = keccak256(runtime_code);
 }
+
+TEST_F(state_transition, code_deployment_out_of_gas_h)
+{
+    rev = EVMC_HOMESTEAD;
+    const auto initcode = ret(0, 1000);  // create contract will a lot of zeros.
+
+    tx.to = To;
+    tx.gas_limit = 100000;
+    pre[To] = {.code = mstore(0, push(initcode)) +
+                       sstore(0, create().input(32 - initcode.size(), initcode.size()))};
+
+    expect.post[To].exists = true;
+    expect.status = EVMC_OUT_OF_GAS;
+}
+
+TEST_F(state_transition, code_deployment_out_of_gas_f)
+{
+    rev = EVMC_FRONTIER;
+    const auto CREATED = compute_create_address(To, pre[To].nonce);
+    const auto initcode = ret(0, 100);  // create contract will a lot of zeros.
+
+    tx.to = To;
+    tx.gas_limit = 100000;
+    pre[To] = {.code = mstore(0, push(initcode)) +
+                       sstore(0, create().input(32 - initcode.size(), initcode.size()))};
+
+    expect.post[To].exists = true;
+    expect.post[CREATED].exists = true;
+    bytes32 ccc{};
+    std::copy(std::begin(CREATED.bytes), std::end(CREATED.bytes), &ccc.bytes[12]);
+    expect.post[To].storage[0x00_bytes32] = ccc;
+}
