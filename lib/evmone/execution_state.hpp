@@ -9,6 +9,8 @@
 #include <string>
 #include <vector>
 
+#include <silkworm/core/common/lru_cache.hpp>
+
 namespace evmone
 {
 namespace advanced
@@ -203,5 +205,9 @@ public:
     }
 };
 
-using MegaContext = std::array<std::unique_ptr<ExecutionState>, 1025>;
+struct MegaContext
+{
+    std::array<std::unique_ptr<ExecutionState>, 1025> es;
+    silkworm::lru_cache<evmc::bytes32, std::shared_ptr<evmone::baseline::CodeAnalysis>> ac{5000};
+};
 }  // namespace evmone
