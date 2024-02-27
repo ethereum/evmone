@@ -402,8 +402,10 @@ evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_co
             slot = std::make_unique<ExecutionState>();
         exec_state = slot.get();
 
-        // const auto ch = evmc::bytes32{host->get_code_hash(ctx, &msg->code_address)};
-        const auto ch = std::bit_cast<evmc::bytes32>(ethash_keccak256(code, code_size));
+        evmc::bytes32 ch{};
+        if (msg->kind != EVMC_CREATE && msg->kind != EVMC_CREATE2)
+            ch = evmc::bytes32{host->get_code_hash(ctx, &msg->code_address)};
+        // const auto ch = std::bit_cast<evmc::bytes32>(ethash_keccak256(code, code_size));
         if (ch)
         {
             if (auto ca = mega_ctx.ac.get_as_copy(ch))
