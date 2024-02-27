@@ -58,7 +58,6 @@ target_sources(
     state_transition_block_test.cpp
     state_transition_call_test.cpp
     state_transition_create_test.cpp
-    state_transition_eof_test.cpp
     state_transition_extcode_test.cpp
     state_transition_selfdestruct_test.cpp
     state_transition_touch_test.cpp

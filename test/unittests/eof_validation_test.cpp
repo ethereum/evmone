@@ -299,7 +299,7 @@ TEST_F(eof_validation, EOF1_undefined_opcodes)
         // These opcodes are deprecated since Prague.
         // gas_cost table current implementation does not allow to undef instructions.
         if (opcode == OP_JUMP || opcode == OP_JUMPI || opcode == OP_PC || opcode == OP_CALLCODE ||
-            opcode == OP_SELFDESTRUCT)
+            opcode == OP_SELFDESTRUCT || opcode == OP_CREATE || opcode == OP_CREATE2)
             continue;
 
         auto cont =
@@ -574,7 +574,7 @@ TEST_F(eof_validation, EOF1_section_order)
 
 TEST_F(eof_validation, deprecated_instructions)
 {
-    for (auto op : {OP_CALLCODE, OP_SELFDESTRUCT, OP_JUMP, OP_JUMPI, OP_PC})
+    for (auto op : {OP_CALLCODE, OP_SELFDESTRUCT, OP_JUMP, OP_JUMPI, OP_PC, OP_CREATE, OP_CREATE2})
         add_test_case(eof_bytecode(op), EOFValidationError::undefined_instruction);
 }
 
