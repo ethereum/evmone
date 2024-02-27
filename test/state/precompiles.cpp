@@ -245,6 +245,14 @@ ExecutionResult identity_execute(const uint8_t* input, size_t input_size, uint8_
     return {EVMC_SUCCESS, input_size};
 }
 
+ExecutionResult silkworm_ecrecover_execute(const uint8_t* input, size_t input_size, uint8_t* output,
+    [[maybe_unused]] size_t output_size) noexcept
+{
+    auto res = silkworm::precompile::ecrec_run({input, input_size});
+    std::memcpy(output, res->data(), res->size());
+    return {EVMC_SUCCESS, res->size()};
+}
+
 ExecutionResult silkworm_sha256_execute(const uint8_t* input, size_t input_size, uint8_t* output,
     [[maybe_unused]] size_t output_size) noexcept
 {
@@ -319,7 +327,7 @@ ExecutionResult dummy_execute(const uint8_t*, size_t, uint8_t*, size_t) noexcept
 inline constexpr auto traits = []() noexcept {
     std::array<PrecompileTraits, NumPrecompiles> tbl{{
         {},  // undefined for 0
-        {ecrecover_analyze, ecrecover_execute},
+        {ecrecover_analyze, silkworm_ecrecover_execute},
         {sha256_analyze, silkworm_sha256_execute},
         {ripemd160_analyze, silkworm_ripemd160_execute},
         {identity_analyze, identity_execute},
