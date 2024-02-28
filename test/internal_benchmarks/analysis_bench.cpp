@@ -801,6 +801,10 @@ BENCHMARK_TEMPLATE(
     build_jumpdest, evmone::experimental::bitset32, evmone::experimental::build_jumpdest_map_simd1);
 BENCHMARK_TEMPLATE(
     build_jumpdest, evmone::experimental::bitset32, evmone::experimental::build_jumpdest_map_simd2);
+BENCHMARK_TEMPLATE(
+    build_jumpdest, evmone::experimental::bitset32, evmone::experimental::build_jumpdest_map_simd3);
+BENCHMARK_TEMPLATE(
+    build_jumpdest, evmone::experimental::bitset32, evmone::experimental::build_jumpdest_map_simd4);
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, build_vec3);
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, build_vec4);
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, build_vec5);
