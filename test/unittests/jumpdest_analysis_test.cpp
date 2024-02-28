@@ -43,25 +43,29 @@ TEST(jumpdest_analysis, compare_implementations)
     for (const auto& t : bytecode_test_cases)
     {
         SCOPED_TRACE(hex(t));
-        const auto a0 = official_analyze_jumpdests(t.data(), t.size());
-        const auto a2 = build_jumpdest_map_vec1(t.data(), t.size());
-        const auto v2 = build_jumpdest_map_vec2(t.data(), t.size());
-        const auto x3 = build_jumpdest_map_vec3(t.data(), t.size());
-        const auto v3 = build_jumpdest_map_sttni(t.data(), t.size());
-        const auto v4 = build_jumpdest_map_str_avx2(t.data(), t.size());
-        const auto v5 = build_jumpdest_map_str_avx2_mask(t.data(), t.size());
-        const auto v6 = build_jumpdest_map_str_avx2_mask2(t.data(), t.size());
-        const auto a3 = build_jumpdest_map_bitset1(t.data(), t.size());
-        const auto a4 = build_internal_code_v1(t.data(), t.size());
-        const auto a5 = build_internal_code_v2(t.data(), t.size());
-        const auto a6 = build_internal_code_v3(t.data(), t.size());
-        const auto ic4 = build_internal_code_v4(t.data(), t.size());
-        const auto ic8 = build_internal_code_v8(t.data(), t.size());
-        const auto s1 = build_jumpdest_map_simd1(t.data(), t.size());
-        const auto s2 = build_jumpdest_map_simd2(t.data(), t.size());
-        const auto s3 = build_jumpdest_map_simd3(t.data(), t.size());
+        const auto data = t.data();
+        const auto data_size = t.size();
 
-        for (size_t i = 0; i < t.size() + tail_code_padding; ++i)
+        const auto a0 = official_analyze_jumpdests(data, data_size);
+        const auto a2 = build_jumpdest_map_vec1(data, data_size);
+        const auto v2 = build_jumpdest_map_vec2(data, data_size);
+        const auto x3 = build_jumpdest_map_vec3(data, data_size);
+        const auto v3 = build_jumpdest_map_sttni(data, data_size);
+        const auto v4 = build_jumpdest_map_str_avx2(data, data_size);
+        const auto v5 = build_jumpdest_map_str_avx2_mask(data, data_size);
+        const auto v6 = build_jumpdest_map_str_avx2_mask2(data, data_size);
+        const auto a3 = build_jumpdest_map_bitset1(data, data_size);
+        const auto a4 = build_internal_code_v1(data, data_size);
+        const auto a5 = build_internal_code_v2(data, data_size);
+        const auto a6 = build_internal_code_v3(data, data_size);
+        const auto ic4 = build_internal_code_v4(data, data_size);
+        const auto ic8 = build_internal_code_v8(data, data_size);
+        const auto s1 = build_jumpdest_map_simd1(data, data_size);
+        const auto s2 = build_jumpdest_map_simd2(data, data_size);
+        const auto s3 = build_jumpdest_map_simd3(data, data_size);
+        const auto s4 = build_jumpdest_map_simd4(data, data_size);
+
+        for (size_t i = 0; i < data_size + tail_code_padding; ++i)
         {
             SCOPED_TRACE(i);
             const bool expected = is_jumpdest(a0, i);
@@ -80,6 +84,8 @@ TEST(jumpdest_analysis, compare_implementations)
             EXPECT_EQ(is_jumpdest(ic8.get(), t.size(), i), expected);
             EXPECT_EQ(is_jumpdest(s1, i), expected);
             EXPECT_EQ(is_jumpdest(s2, i), expected);
+            EXPECT_EQ(is_jumpdest(s3, i), expected);
+            EXPECT_EQ(is_jumpdest(s4, i), expected);
         }
     }
 }
