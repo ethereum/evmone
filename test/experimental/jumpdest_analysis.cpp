@@ -520,6 +520,70 @@ bitset32 build_jumpdest_map_simd3(const uint8_t* code, size_t code_size)
     return jumpdest_map;
 }
 
+bitset32 build_jumpdest_map_simd4(const uint8_t* code, size_t code_size)
+{
+    static constexpr auto v_size = 32;
+
+    bitset32 jumpdest_map(code_size);
+
+    const auto v_code_size = code_size / v_size;
+    const auto v_tail_size = code_size % v_size;
+
+    const auto v_jumpdes_op = _mm256_set1_epi8(OP_JUMPDEST);
+    const auto v_push0_op = _mm256_set1_epi8(OP_PUSH0);
+    uint32_t clear_next = 0;
+
+    for (size_t v = 0; v < v_code_size; ++v)
+    {
+        const auto v_begin = v * v_size;
+        const auto* ptr = &code[v_begin];
+
+        const auto v_fragment = _mm256_loadu_si256((const __m256i*)ptr);
+        const auto v_is_push = _mm256_cmpgt_epi8(v_fragment, v_push0_op);
+        auto m_is_push = (unsigned)_mm256_movemask_epi8(v_is_push);
+
+        m_is_push &= ~clear_next;
+        uint64_t datamask = clear_next;
+
+#pragma unroll 1
+        while (m_is_push != 0)
+        {
+            const auto p = __builtin_ctz(m_is_push);
+            const auto op = code[p];
+            const auto dl = op - OP_PUSH0;
+            const auto dm = ((uint64_t{2} << dl) - 1) << p;
+            datamask |= dm;
+            m_is_push &= ~dm;
+        }
+
+        const auto v_is_jumpdest = _mm256_cmpeq_epi8(v_fragment, v_jumpdes_op);
+        auto m_is_jumpdest = (unsigned)_mm256_movemask_epi8(v_is_jumpdest);
+
+        m_is_jumpdest &= ~datamask;
+        jumpdest_map.words_[v] = m_is_jumpdest;
+        clear_next = static_cast<uint32_t>(datamask >> 32);
+    }
+
+    uint32_t j_mask = 0;
+    const auto skip = clear_next ? 32 - size_t(__builtin_clz(clear_next)) : 0;
+    for (size_t j = skip; j < v_tail_size; ++j)
+    {
+        const auto base = code_size - v_tail_size;
+        const auto c = code[base + j];
+        if (c == OP_JUMPDEST)
+            j_mask |= (1u << j);
+
+        if (is_push(c))
+        {
+            const auto p = get_push_data_size(c);
+            j += p;
+        }
+    }
+    jumpdest_map.words_[v_code_size] = j_mask;
+
+    return jumpdest_map;
+}
+
 static constexpr size_t padding = 33;
 
 std::unique_ptr<uint8_t[]> build_internal_code_v1(const uint8_t* code, size_t code_size)
