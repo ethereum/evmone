@@ -769,6 +769,11 @@ void build_jumpdest(benchmark::State& state)
         auto r = Fn(test_bytecode.data(), test_bytecode.size());
         benchmark::DoNotOptimize(r);
     }
+
+    using namespace benchmark;
+    state.counters["bytes"] = {
+        static_cast<double>(static_cast<IterationCount>(test_bytecode.size()) * state.iterations()),
+        Counter::kIsRate};
 }
 }  // namespace
 
