@@ -28,8 +28,7 @@ TEST_F(state_transition, eof_invalid_initcode)
 
     expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
     expect.post[tx.sender].balance =
-        pre.get(tx.sender).balance -
-        (block.base_fee + tx.max_priority_gas_price) * static_cast<uint64_t>(*expect.gas_used);
+        pre.get(tx.sender).balance - tx.max_gas_price * static_cast<uint64_t>(*expect.gas_used);
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;  // CREATE caller's nonce must be bumped
     expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;  // CREATE must fail
     expect.post[create_address].exists = false;

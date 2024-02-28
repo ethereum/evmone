@@ -33,7 +33,21 @@ public:
 
 void state_transition::TearDown()
 {
+    // Validation:
+
+    if (rev < EVMC_LONDON)
+    {
+        ASSERT_EQ(block.base_fee, 0);
+        ASSERT_EQ(tx.type, state::Transaction::Type::legacy);
+    }
+    if (tx.type == state::Transaction::Type::legacy)
+    {
+        ASSERT_EQ(tx.max_gas_price, tx.max_priority_gas_price);
+    }
+
     validate_state(pre, rev);
+
+    // Execution:
 
     auto state = pre;
     const auto trace = !expect.trace.empty();
@@ -135,6 +149,23 @@ void state_transition::TearDown()
         export_state_test(receipt, state);
 }
 
+namespace
+{
+/// Converts EVM revision to the fork name commonly used in tests.
+std::string_view to_test_fork_name(evmc_revision rev) noexcept
+{
+    switch (rev)
+    {
+    case EVMC_TANGERINE_WHISTLE:
+        return "EIP150";
+    case EVMC_SPURIOUS_DRAGON:
+        return "EIP158";
+    default:
+        return evmc::to_string(rev);
+    }
+}
+}  // namespace
+
 void state_transition::export_state_test(const TransactionReceipt& receipt, const State& post)
 {
     json::json j;
@@ -155,14 +186,36 @@ void state_transition::export_state_test(const TransactionReceipt& receipt, cons
     jtx["sender"] = hex0x(tx.sender);
     jtx["secretKey"] = hex0x(SenderSecretKey);
     jtx["nonce"] = hex0x(tx.nonce);
-    jtx["maxFeePerGas"] = hex0x(tx.max_gas_price);
-    jtx["maxPriorityFeePerGas"] = hex0x(tx.max_priority_gas_price);
+    if (rev < EVMC_LONDON)
+    {
+        assert(tx.max_gas_price == tx.max_priority_gas_price);
+        jtx["gasPrice"] = hex0x(tx.max_gas_price);
+    }
+    else
+    {
+        jtx["maxFeePerGas"] = hex0x(tx.max_gas_price);
+        jtx["maxPriorityFeePerGas"] = hex0x(tx.max_priority_gas_price);
+    }
 
     jtx["data"][0] = hex0x(tx.data);
     jtx["gasLimit"][0] = hex0x(tx.gas_limit);
     jtx["value"][0] = hex0x(tx.value);
 
-    auto& jpost = jt["post"][evmc::to_string(rev)][0];
+    if (!tx.access_list.empty())
+    {
+        auto& ja = jtx["accessLists"][0];
+        for (const auto& [addr, storage_keys] : tx.access_list)
+        {
+            json::json je;
+            je["address"] = hex0x(addr);
+            auto& jstorage_keys = je["storageKeys"] = json::json::array();
+            for (const auto& k : storage_keys)
+                jstorage_keys.emplace_back(hex0x(k));
+            ja.emplace_back(std::move(je));
+        }
+    }
+
+    auto& jpost = jt["post"][to_test_fork_name(rev)][0];
     jpost["indexes"] = {{"data", 0}, {"gas", 0}, {"value", 0}};
     jpost["hash"] = hex0x(mpt_hash(post.get_accounts()));
     jpost["logs"] = hex0x(logs_hash(receipt.logs));
