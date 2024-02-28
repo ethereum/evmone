@@ -8,6 +8,7 @@
 #include <evmone/baseline.hpp>
 
 #include <x86intrin.h>
+#include <cstring>
 
 namespace evmone::experimental
 {
@@ -291,7 +292,7 @@ JumpdestMap build_jumpdest_map_bitset1(const uint8_t* code, size_t code_size)
     {
         const auto op = code[i];
         if (__builtin_expect(op == OP_JUMPDEST, false))
-            m.set(i);
+            m[i] = true;
         else if (is_push(op))
             i += get_push_data_size(op);
     }
