@@ -8,13 +8,15 @@
 #include <benchmark/benchmark.h>
 #include <numeric>
 
+#include <evmc/hex.hpp>
+#include <cstring>
 #include <iostream>
 
 
 namespace
 {
 // blake2_shifts + weierstrudel + sha1_div.
-const auto test_bytecode = from_hex(
+const auto test_bytecode = *evmc::from_hex(
     "608060405234801561001057600080fd5b50600436106100365760003560e01c80631e0924231461003b578063d299"
     "dac0146102bb575b600080fd5b610282600480360360a081101561005157600080fd5b810190602081018135640100"
     "00000081111561006c57600080fd5b82018360208201111561007e57600080fd5b8035906020019184600183028401"
@@ -490,8 +492,6 @@ const auto test_bytecode = from_hex(
     "170294505050505091905056fea165627a7a7230582083396642a98f6018c81ca24dc0c2af8e842bd33a6b8d7f0863"
     "2dc1bc372e466a0029");
 
-using BuilderFn = decltype(&evmone::build_jumpdest_map);
-
 enum : uint8_t
 {
     OP_JUMPDEST = 0x5b,
@@ -501,12 +501,12 @@ enum : uint8_t
 
 [[gnu::noinline]] auto build_bitset2(const uint8_t* code, size_t code_size)
 {
-    evmone::bitset m(code_size);
+    evmone::experimental::JumpdestMap m(code_size);
     for (size_t i = 0; i < code_size; ++i)
     {
         const auto op = code[i];
         if (op == OP_JUMPDEST)
-            m.set(i);
+            m[i] = true;
 
         if ((op >> 5) == 0b11)
             i += static_cast<size_t>((op & 0b11111) + 1);
@@ -772,10 +772,11 @@ void build_jumpdest(benchmark::State& state)
 }
 }  // namespace
 
-BENCHMARK_TEMPLATE(build_jumpdest, evmone::bitset, evmone::build_jumpdest_map);
-BENCHMARK_TEMPLATE(
-    build_jumpdest, evmone::bitset, evmone::experimental::build_jumpdest_map_bitset1);
-BENCHMARK_TEMPLATE(build_jumpdest, evmone::bitset, build_bitset2);
+BENCHMARK_TEMPLATE(build_jumpdest, evmone::experimental::JumpdestMap,
+    evmone::experimental::official_analyze_jumpdests);
+BENCHMARK_TEMPLATE(build_jumpdest, evmone::experimental::JumpdestMap,
+    evmone::experimental::build_jumpdest_map_bitset1);
+BENCHMARK_TEMPLATE(build_jumpdest, evmone::experimental::JumpdestMap, build_bitset2);
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, build_vec);
 BENCHMARK_TEMPLATE(
     build_jumpdest, std::vector<bool>, evmone::experimental::build_jumpdest_map_vec1);

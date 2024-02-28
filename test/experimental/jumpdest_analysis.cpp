@@ -6,12 +6,33 @@
 #include "opcode_manip.hpp"
 #include <evmc/instructions.h>
 #include <evmone/baseline.hpp>
-
 #include <x86intrin.h>
 #include <cstring>
+#include <limits>
 
 namespace evmone::experimental
 {
+JumpdestMap official_analyze_jumpdests(const uint8_t* code, size_t code_size)
+{
+    // To find if op is any PUSH opcode (OP_PUSH1 <= op <= OP_PUSH32)
+    // it can be noticed that OP_PUSH32 is INT8_MAX (0x7f) therefore
+    // static_cast<int8_t>(op) <= OP_PUSH32 is always true and can be skipped.
+    static_assert(OP_PUSH32 == std::numeric_limits<int8_t>::max());
+
+    evmone::experimental::JumpdestMap map(code_size);  // Allocate and init bitmap with zeros.
+    for (size_t i = 0; i < code_size; ++i)
+    {
+        const auto op = code[i];
+        if (static_cast<int8_t>(op) >= OP_PUSH1)  // If any PUSH opcode (see explanation above).
+            i += op - size_t{OP_PUSH1 - 1};       // Skip PUSH data.
+        else if (__builtin_expect(op == OP_JUMPDEST, false))
+            map[i] = true;
+    }
+
+    return map;
+}
+
+
 inline constexpr size_t get_push_data_size(uint8_t op) noexcept
 {
     return op - size_t{OP_PUSH1 - 1};
