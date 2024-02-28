@@ -10,4 +10,4 @@ add_executable(
     memory_allocation.cpp
 )
 
-target_link_libraries(evmone-bench-internal PRIVATE evmone::evmmax evmone::experimental benchmark::benchmark)
+target_link_libraries(evmone-bench-internal PRIVATE evmone::evmmax evmone::experimental evmc::evmc_cpp benchmark::benchmark)
