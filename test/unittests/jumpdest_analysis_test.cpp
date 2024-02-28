@@ -4,8 +4,6 @@
 
 #include "test/experimental/jumpdest_analysis.hpp"
 #include "test/utils/bytecode.hpp"
-#include <evmone/analysis.hpp>
-#include <evmone/baseline.hpp>
 #include <gtest/gtest.h>
 
 using namespace evmone;
@@ -15,19 +13,9 @@ namespace
 {
 constexpr auto tail_code_padding = 100;
 
-inline bool is_jumpdest(const JumpdestMap& a, size_t index) noexcept
-{
-    return (index < a.size() && a[index]);
-}
-
 inline bool is_jumpdest(const bitset32& a, size_t index) noexcept
 {
     return (index < a.size() && a[index]);
-}
-
-inline bool is_jumpdest(const code_analysis& a, size_t index) noexcept
-{
-    return find_jumpdest(a, static_cast<int>(index)) >= 0;
 }
 
 const bytecode bytecode_test_cases[]{
@@ -55,8 +43,7 @@ TEST(jumpdest_analysis, compare_implementations)
     for (const auto& t : bytecode_test_cases)
     {
         SCOPED_TRACE(hex(t));
-        const auto a0 = build_jumpdest_map(t.data(), t.size());
-        const auto a1 = analyze(EVMC_FRONTIER, t.data(), t.size());
+        const auto a0 = official_analyze_jumpdests(t.data(), t.size());
         const auto a2 = build_jumpdest_map_vec1(t.data(), t.size());
         const auto v2 = build_jumpdest_map_vec2(t.data(), t.size());
         const auto x3 = build_jumpdest_map_vec3(t.data(), t.size());
@@ -78,7 +65,6 @@ TEST(jumpdest_analysis, compare_implementations)
         {
             SCOPED_TRACE(i);
             const bool expected = is_jumpdest(a0, i);
-            EXPECT_EQ(is_jumpdest(a1, i), expected);
             EXPECT_EQ(is_jumpdest(a2, i), expected);
             EXPECT_EQ(is_jumpdest(v2, i), expected);
             EXPECT_EQ(is_jumpdest(x3, i), expected);
