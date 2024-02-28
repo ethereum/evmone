@@ -11,7 +11,7 @@ namespace evmone::experimental
 {
 using JumpdestMap = std::vector<bool>;
 
-inline bool is_jumpdest(const std::vector<bool>& jumpdest_map, size_t index) noexcept
+inline bool is_jumpdest(const JumpdestMap& jumpdest_map, size_t index) noexcept
 {
     return (index < jumpdest_map.size() && jumpdest_map[index]);
 }

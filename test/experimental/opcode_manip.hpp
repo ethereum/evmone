@@ -2,7 +2,8 @@
 // Copyright 2020 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-#include <evmc/instructions.h>
+#include <evmone/instructions_opcodes.hpp>
+#include <cstdint>
 
 namespace evmone::experimental
 {
