@@ -35,6 +35,8 @@ const bytecode bytecode_test_cases[]{
     "00605b000000000000000000000000000000000000000000000000000000605b",
     "005b5b5b00000000000000000000000000000000000000000000000000000000",
     "5b5b000000000000000000000000000000000000000000000000000000000000",
+    "0000000000000000000000000000000000000000000000000000000000000000"  // vvv
+    "7000000000000000005b000000000000005b5b00000000000000000000000000",
 };
 }  // namespace
 
@@ -53,6 +55,7 @@ TEST(jumpdest_analysis, compare_implementations)
         const auto v3 = build_jumpdest_map_sttni(data, data_size);
         const auto v4 = build_jumpdest_map_str_avx2(data, data_size);
         const auto v5 = build_jumpdest_map_str_avx2_mask(data, data_size);
+        const auto v5a = build_jumpdest_map_str_avx2_mask_v2(data, data_size);
         const auto v6 = build_jumpdest_map_str_avx2_mask2(data, data_size);
         const auto a3 = build_jumpdest_map_bitset1(data, data_size);
         const auto a4 = build_internal_code_v1(data, data_size);
@@ -75,6 +78,7 @@ TEST(jumpdest_analysis, compare_implementations)
             EXPECT_EQ(is_jumpdest(v3, i), expected);
             EXPECT_EQ(is_jumpdest(v4, i), expected);
             EXPECT_EQ(is_jumpdest(v5, i), expected);
+            EXPECT_EQ(is_jumpdest(v5a, i), expected);
             EXPECT_EQ(is_jumpdest(v6, i), expected);
             EXPECT_EQ(is_jumpdest(a3, i), expected);
             EXPECT_EQ(is_jumpdest(a4.get(), t.size(), i), expected);
