@@ -43,7 +43,7 @@ struct pushdata_info
     uint32_t mask;
     size_t offset;
 };
-pushdata_info build_pushdata_mask(const uint8_t* code, uint32_t push_mask)
+static pushdata_info build_pushdata_mask(const uint8_t* code, uint32_t push_mask)
 {
     size_t pos = 0;
     uint32_t pushdata_mask = 0;
@@ -614,13 +614,13 @@ bitset32 build_jumpdest_map_simd4(const uint8_t* code, size_t code_size)
             const auto dl = op - OP_PUSH0;
             const auto dm = ((uint64_t{2} << dl) - 1) << p;
             datamask |= dm;
-            m_is_push &= ~dm;
+            m_is_push &= ~static_cast<unsigned>(dm);
         }
 
         const auto v_is_jumpdest = _mm256_cmpeq_epi8(v_fragment, v_jumpdes_op);
         auto m_is_jumpdest = (unsigned)_mm256_movemask_epi8(v_is_jumpdest);
 
-        m_is_jumpdest &= ~datamask;
+        m_is_jumpdest &= ~static_cast<unsigned>(datamask);
         jumpdest_map.words_[v] = m_is_jumpdest;
         clear_next = static_cast<uint32_t>(datamask >> 32);
     }
