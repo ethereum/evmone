@@ -257,6 +257,69 @@ std::vector<bool> build_jumpdest_map_str_avx2_mask(const uint8_t* code, size_t c
     return m;
 }
 
+std::vector<bool> build_jumpdest_map_str_avx2_mask_v2(const uint8_t* code, size_t code_size)
+{
+    std::vector<bool> m(code_size);
+
+    const auto all_jumpdest = _mm256_set1_epi8(OP_JUMPDEST);
+    const auto all_push1 = _mm256_set1_epi8(OP_PUSH1 - 1);
+
+    size_t v_code_size = code_size >= 32 ? code_size - 31 : 0;
+    size_t i = 0;
+    for (; i < v_code_size;)
+    {
+        const auto data = _mm256_loadu_si256((const __m256i*)&code[i]);
+        const auto is_push = _mm256_cmpgt_epi8(data, all_push1);
+        const auto is_jumpdest = _mm256_cmpeq_epi8(data, all_jumpdest);
+        const auto is_interesting = _mm256_or_si256(is_push, is_jumpdest);
+        auto mask = (unsigned)_mm256_movemask_epi8(is_interesting);
+
+        if (!mask)
+        {
+            i += 32;
+            continue;
+        }
+
+        const auto end = i + 32;
+        while (true)
+        {
+            auto progress = (unsigned)__builtin_ctz(mask);
+            const auto op = code[i + progress];
+            if (__builtin_expect(static_cast<int8_t>(op) >= OP_PUSH1, true))
+            {
+                progress += unsigned(get_push_data_size(op) + 1);
+            }
+            else
+            {
+                m[i + progress] = true;
+                progress += 1;
+            }
+
+            i += progress;
+            if (i >= end)
+                break;
+
+            mask >>= progress;
+            if (!mask)
+            {
+                i = end;
+                break;
+            }
+        }
+    }
+
+    for (; i < code_size; ++i)
+    {
+        const auto op = code[i];
+        const auto potential_push_data_len = get_push_data_size(op);
+        if (potential_push_data_len <= 32)
+            i += potential_push_data_len;
+        else if (__builtin_expect(op == OP_JUMPDEST, false))
+            m[i] = true;
+    }
+    return m;
+}
+
 std::vector<bool> build_jumpdest_map_str_avx2_mask2(const uint8_t* code, size_t code_size)
 {
     std::vector<bool> m(code_size);
@@ -462,8 +525,7 @@ bitset32 build_jumpdest_map_simd3(const uint8_t* code, size_t code_size)
     const auto v_tail_size = code_size % v_size;
 
     const auto v_jmpd = _mm256_set1_epi8(OP_JUMPDEST);
-    const auto v_push_mask = _mm256_set1_epi8(static_cast<char>(0xe0));
-    const auto v_push_pattern = _mm256_set1_epi8(0x60);
+    const auto v_push0 = _mm256_set1_epi8(OP_PUSH0);
     uint32_t clear_next = 0;
     for (size_t v = 0; v < v_code_size; ++v)
     {
@@ -474,8 +536,7 @@ bitset32 build_jumpdest_map_simd3(const uint8_t* code, size_t code_size)
         const auto v_eq = _mm256_cmpeq_epi8(v_code, v_jmpd);
         auto j_mask = static_cast<uint32_t>(_mm256_movemask_epi8(v_eq));
 
-        const auto v_push_locs =
-            _mm256_cmpeq_epi8(_mm256_and_si256(v_code, v_push_mask), v_push_pattern);
+        const auto v_push_locs = _mm256_cmpgt_epi8(v_code, v_push0);
         auto push_locs = static_cast<uint32_t>(_mm256_movemask_epi8(v_push_locs));
 
         push_locs &= ~clear_next;
