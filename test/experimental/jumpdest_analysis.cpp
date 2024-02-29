@@ -583,6 +583,8 @@ bitset32 build_jumpdest_map_simd3(const uint8_t* code, size_t code_size)
 
 bitset32 build_jumpdest_map_simd4(const uint8_t* code, size_t code_size)
 {
+    alignas(32) uint8_t tmp[32];
+
     static constexpr auto v_size = 32;
 
     bitset32 jumpdest_map(code_size);
@@ -603,6 +605,9 @@ bitset32 build_jumpdest_map_simd4(const uint8_t* code, size_t code_size)
         const auto v_is_push = _mm256_cmpgt_epi8(v_fragment, v_push0_op);
         auto m_is_push = (unsigned)_mm256_movemask_epi8(v_is_push);
 
+        const auto v_dl = _mm256_sub_epi8(v_fragment, v_push0_op);
+        _mm256_store_si256((__m256i*)tmp, v_dl);
+
         m_is_push &= ~clear_next;
         uint64_t datamask = clear_next;
 
@@ -610,8 +615,7 @@ bitset32 build_jumpdest_map_simd4(const uint8_t* code, size_t code_size)
         while (m_is_push != 0)
         {
             const auto p = __builtin_ctz(m_is_push);
-            const auto op = ptr[p];
-            const auto dl = op - OP_PUSH0;
+            const auto dl = tmp[p];
             const auto dm = ((uint64_t{2} << dl) - 1) << p;
             datamask |= dm;
             m_is_push &= ~static_cast<unsigned>(dm);
