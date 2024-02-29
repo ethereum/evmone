@@ -545,11 +545,11 @@ bitset32 build_jumpdest_map_simd4(const uint8_t* code, size_t code_size)
         m_is_push &= ~clear_next;
         uint64_t datamask = clear_next;
 
-#pragma unroll 1
+        // #pragma unroll 1
         while (m_is_push != 0)
         {
             const auto p = __builtin_ctz(m_is_push);
-            const auto op = code[p];
+            const auto op = ptr[p];
             const auto dl = op - OP_PUSH0;
             const auto dm = ((uint64_t{2} << dl) - 1) << p;
             datamask |= dm;
