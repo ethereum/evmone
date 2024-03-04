@@ -42,6 +42,7 @@ constexpr auto legacy_cost_tables = []() noexcept {
     tables[EVMC_PRAGUE][OP_EXTSTATICCALL] = instr::undefined;
     tables[EVMC_PRAGUE][OP_EXTDELEGATECALL] = instr::undefined;
     tables[EVMC_PRAGUE][OP_EOFCREATE] = instr::undefined;
+    tables[EVMC_PRAGUE][OP_TXCREATE] = instr::undefined;
     tables[EVMC_PRAGUE][OP_RETURNCONTRACT] = instr::undefined;
     return tables;
 }();
