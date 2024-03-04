@@ -5,6 +5,7 @@
 #include "evm_fixture.hpp"
 #include "evmone/eof.hpp"
 
+using namespace evmc::literals;
 using evmone::test::evm;
 
 TEST_P(evm, eof1_execution)
@@ -250,4 +251,99 @@ TEST_P(evm, datacopy_memory_cost)
 
     execute(17, code);
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
+}
+
+TEST_P(evm, eof_eofcreate)
+{
+    if (is_advanced())
+        return;
+
+    rev = EVMC_PRAGUE;
+    const auto deploy_data = "abcdef"_hex;
+    const auto aux_data = "aabbccddeeff"_hex;
+    const auto deploy_data_size = static_cast<uint16_t>(deploy_data.size() + aux_data.size());
+    const bytecode deploy_container =
+        eof_bytecode(bytecode(OP_INVALID)).data(deploy_data, deploy_data_size);
+
+    const auto init_code =
+        calldatacopy(0, 0, OP_CALLDATASIZE) + OP_CALLDATASIZE + 0 + OP_RETURNCONTRACT + Opcode{0};
+    const auto init_container = eof_bytecode(init_code, 3).container(deploy_container);
+
+    const auto create_code = calldatacopy(0, 0, OP_CALLDATASIZE) +
+                             eofcreate().input(0, OP_CALLDATASIZE).salt(0xff) + ret_top();
+    const auto container = eof_bytecode(create_code, 4).container(init_container);
+
+    // test executing create code mocking EOFCREATE call
+    host.call_result.output_data = deploy_container.data();
+    host.call_result.output_size = deploy_container.size();
+    host.call_result.create_address = 0xcc010203040506070809010203040506070809ce_address;
+
+    execute(container, aux_data);
+    EXPECT_STATUS(EVMC_SUCCESS);
+
+    ASSERT_EQ(host.recorded_calls.size(), 1);
+    const auto& call_msg = host.recorded_calls.back();
+
+    EXPECT_EQ(call_msg.input_size, aux_data.size());
+
+    ASSERT_EQ(result.output_size, 32);
+    EXPECT_EQ(output, "000000000000000000000000cc010203040506070809010203040506070809ce"_hex);
+
+    // test executing initcontainer
+    msg.kind = EVMC_EOFCREATE;
+    execute(init_container, aux_data);
+    EXPECT_STATUS(EVMC_SUCCESS);
+    const bytecode deployed_container =
+        eof_bytecode(bytecode(OP_INVALID)).data(deploy_data + aux_data);
+    ASSERT_EQ(result.output_size, deployed_container.size());
+    EXPECT_EQ(output, deployed_container);
+}
+
+TEST_P(evm, eofcreate_undefined_in_legacy)
+{
+    rev = EVMC_CANCUN;
+    const auto code = calldatacopy(0, 0, OP_CALLDATASIZE) +
+                      eofcreate().input(0, OP_CALLDATASIZE).salt(0xff) + ret_top();
+
+    execute(code);
+    EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
+}
+
+TEST_P(evm, returncontract_undefined_in_legacy)
+{
+    rev = EVMC_CANCUN;
+    const auto code =
+        calldatacopy(0, 0, OP_CALLDATASIZE) + OP_CALLDATASIZE + 0 + OP_RETURNCONTRACT + Opcode{0};
+
+    execute(code);
+    EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
+}
+
+TEST_P(evm, returncontract_not_in_initcode)
+{
+    if (is_advanced())
+        return;
+
+    rev = EVMC_PRAGUE;
+    const auto code = eof_bytecode(
+        calldatacopy(0, 0, OP_CALLDATASIZE) + OP_CALLDATASIZE + 0 + OP_RETURNCONTRACT + Opcode{0},
+        3)
+                          .container(eof_bytecode(OP_INVALID));
+
+    execute(code);
+    EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
+}
+
+TEST_P(evm, eofcreate_staticmode)
+{
+    if (is_advanced())
+        return;
+
+    rev = EVMC_PRAGUE;
+    msg.flags |= EVMC_STATIC;
+    const auto code = eof_bytecode(4 * push0() + OP_EOFCREATE + "00" + OP_STOP, 4)
+                          .container(eof_bytecode(push0() + push0() + OP_REVERT, 2));
+    execute(code);
+    EXPECT_EQ(result.status_code, EVMC_STATIC_MODE_VIOLATION);
+    EXPECT_EQ(result.gas_left, 0);
 }
