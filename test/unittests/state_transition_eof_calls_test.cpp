@@ -112,8 +112,6 @@ TEST_F(state_transition, call2_failing_with_value_balance_check)
             .storage = {{0x01_bytes32, {.current = 0xdd_bytes32, .original = 0xdd_bytes32}}},
             .code = eof_bytecode(sstore(1, call2(callee).input(0x0, 0xff).value(0x1)) + OP_STOP, 4),
         });
-    // Fails on balance check.
-    tx.gas_limit = 21000 + 12000 + 5000;
 
     expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;
     expect.post[callee].storage[0x01_bytes32] = 0xdd_bytes32;
@@ -239,9 +237,9 @@ TEST_F(state_transition, call2_value_zero_to_nonexistent_account)
     pre.insert(*tx.to,
         {
             .storage = {{0x01_bytes32, {.current = 0xdd_bytes32, .original = 0xdd_bytes32}}},
-            .code = eof_bytecode(sstore(1, call2(callee).input(0x0, 0xff).value(0x0)) + OP_STOP, 4),
+            .code = eof_bytecode(sstore(1, call2(callee).value(0x0)) + OP_STOP, 4),
         });
-    tx.gas_limit = 30000;
+    tx.gas_limit = 21000 + 4 * 3 + 5000 + 2300 + 2600 + 2;
     expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;
 }
 
@@ -262,8 +260,8 @@ TEST_F(state_transition, call2_then_oog)
             .storage = {{0x01_bytes32, {.current = 0xdd_bytes32, .original = 0xdd_bytes32}}},
             .code = eof_bytecode(sstore(1, 0xcc_bytes32) + call2(callee) + rjump(-3), 4),
         });
-    // Enough to complete CALL2, OOG in infinite loop.
-    tx.gas_limit = 35000;
+    // Enough to SSTORE and complete CALL2, OOG is sure to be in the infinite loop.
+    tx.gas_limit = 1'000'000;
 
     expect.gas_used = tx.gas_limit;
     expect.post[*tx.to].storage[0x01_bytes32] = 0xdd_bytes32;
@@ -396,10 +394,11 @@ TEST_F(state_transition, call2_with_value_enough_gas)
                            .code = eof_bytecode(call2(callee).value(1) + OP_POP + OP_STOP, 4),
                        });
 
-    // Just enough to ensure MIN_CALLEE_GAS.
-    // FIXME: should be too little when MIN_CALLEE_GAS is implemented
-    tx.gas_limit = 21000 + 4 * 3 + 9000 + 2600 + 2;
-    expect.gas_used = tx.gas_limit;
+    constexpr auto callee_and_retained = 5000 + 2300;
+    // Just enough to ensure callee and retained gas.
+    tx.gas_limit = 21000 + 4 * 3 + callee_and_retained + 9000 + 2600 + 2;
+    // Callee and retained gas aren't used
+    expect.gas_used = tx.gas_limit - callee_and_retained;
     expect.post[*tx.to].exists = true;
     expect.post[callee].exists = true;
 }
@@ -417,7 +416,6 @@ TEST_F(state_transition, call2_with_value_low_gas)
                        });
 
     // Not enough to ensure MIN_CALLEE_GAS.
-    // FIXME: should be too little when MIN_CALLEE_GAS is implemented
     tx.gas_limit = 21000 + 4 * 3 + 9000 + 2600 + 2 - 1;
     expect.gas_used = tx.gas_limit;
     expect.status = EVMC_OUT_OF_GAS;

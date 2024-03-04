@@ -12,6 +12,9 @@ using namespace evmc::literals;
 inline constexpr auto max_uint256 =
     0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff_bytes32;
 
+// Controlled amount of gas crossing the minimum callee/retained gas thresholds.
+inline constexpr auto safe_call_gas = 400000;
+
 TEST_P(evm, delegatecall2)
 {
     // Not implemented in Advanced.
@@ -35,10 +38,10 @@ TEST_P(evm, delegatecall2)
 
     msg.value.bytes[17] = 0xfe;
 
-    execute(1700, code);
+    execute(safe_call_gas, code);
 
     auto gas_before_call = 3 + 2 + 3 + 3 + 6 + 3 * 3 + 100;
-    auto gas_left = 1700 - gas_before_call;
+    auto gas_left = safe_call_gas - gas_before_call;
     ASSERT_EQ(host.recorded_calls.size(), 1);
     const auto& call_msg = host.recorded_calls.back();
     EXPECT_EQ(call_msg.gas, gas_left - gas_left / 64);
@@ -66,15 +69,14 @@ TEST_P(evm, delegatecall2_oog_depth_limit)
     msg.depth = 1024;
     const auto code = eof_bytecode(delegatecall2(callee) + ret_top(), 3);
 
-    execute(1000, code);
+    execute(safe_call_gas, code);
     EXPECT_EQ(host.recorded_calls.size(), 0);
     auto expected_gas_used = 3 * 3 + 100 + 3 + 3 + 3 + 3 + 3;
     EXPECT_GAS_USED(EVMC_SUCCESS, expected_gas_used);
     EXPECT_OUTPUT_INT(0);
 
     execute(expected_gas_used, code);
-    // Different from DELEGATECALL, we can't require a minimum gas for the call
-    EXPECT_STATUS(EVMC_SUCCESS);
+    EXPECT_STATUS(EVMC_OUT_OF_GAS);
 }
 
 TEST_P(evm, call2_failing_with_value)
@@ -91,7 +93,7 @@ TEST_P(evm, call2_failing_with_value)
     const auto code = eof_bytecode(call2(callee).input(0x0, 0xff).value(0x1) + OP_STOP, 4);
 
     // Fails on balance check.
-    execute(12000, code);
+    execute(safe_call_gas, code);
     EXPECT_GAS_USED(EVMC_SUCCESS, 4 * 3 + 100 + 8 * 3 + 9000);
     EXPECT_EQ(host.recorded_calls.size(), 0);  // There was no call().
 
@@ -158,9 +160,9 @@ TEST_P(evm, call2_value_zero_to_nonexistent_account)
 
     const auto code = eof_bytecode(call2(0xaa).input(0, 0x40) + OP_STOP, 4);
 
-    execute(9000, code);
+    execute(safe_call_gas, code);
     auto gas_before_call = 4 * 3 + 2 * 3 + 2600;
-    auto gas_left = 9000 - gas_before_call;
+    auto gas_left = safe_call_gas - gas_before_call;
     ASSERT_EQ(host.recorded_calls.size(), 1);
     const auto& call_msg = host.recorded_calls.back();
     EXPECT_EQ(call_msg.kind, EVMC_CALL);
@@ -179,7 +181,6 @@ TEST_P(evm, call2_new_account_creation_cost)
     if (is_advanced())
         return;
     constexpr auto call_dst = 0x00000000000000000000000000000000000000ad_address;
-    // host.accounts[call_dst].code = eof_bytecode(OP_STOP);
     constexpr auto msg_dst = 0x0000000000000000000000000000000000000003_address;
     const auto code =
         eof_bytecode(call2(call_dst).value(calldataload(0)).input(0, 0) + ret_top(), 4);
@@ -189,10 +190,10 @@ TEST_P(evm, call2_new_account_creation_cost)
     rev = EVMC_PRAGUE;
     {
         auto gas_before_call = 3 * 3 + 3 + 3 + 2600;
-        auto gas_left = 40000 - gas_before_call;
+        auto gas_left = safe_call_gas - gas_before_call;
 
         host.accounts[msg.recipient].set_balance(0);
-        execute(40000, code, "00"_hex);
+        execute(safe_call_gas, code, "00"_hex);
         EXPECT_OUTPUT_INT(0);
         ASSERT_EQ(host.recorded_calls.size(), 1);
         auto& call_msg = host.recorded_calls.back();
@@ -212,11 +213,11 @@ TEST_P(evm, call2_new_account_creation_cost)
     }
     {
         auto gas_before_call = 3 * 3 + 3 + 3 + 2600 + 25000 + 9000;
-        auto gas_left = 40000 - gas_before_call;
+        auto gas_left = safe_call_gas - gas_before_call;
 
         host.accounts[msg.recipient].set_balance(1);
-        execute(
-            40000, code, "0000000000000000000000000000000000000000000000000000000000000001"_hex);
+        execute(safe_call_gas, code,
+            "0000000000000000000000000000000000000000000000000000000000000001"_hex);
         EXPECT_OUTPUT_INT(0);
         ASSERT_EQ(host.recorded_calls.size(), 1);
         auto& call_msg = host.recorded_calls.back();
@@ -279,13 +280,10 @@ TEST_P(evm, returndataload)
         0x497f3c9f61479c1cfa53f0373d39d2bf4e5f73f71411da62f1d6b85c03a60735_bytes32;
     host.call_result.output_data = std::data(call_output.bytes);
     host.call_result.output_size = std::size(call_output.bytes);
-    const auto gas = 123123;
-    host.call_result.gas_left = (gas - 3 - 3 - 3 - 100) * 63 / 64;
 
     const auto code = eof_bytecode(staticcall2(0) + returndataload(0) + ret_top(), 3);
 
-    execute(gas, code);
-    EXPECT_GAS_USED(EVMC_SUCCESS, 131);
+    execute(code);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size), call_output);
 }
 
@@ -299,13 +297,38 @@ TEST_P(evm, returndataload_cost)
     const uint8_t call_output[32]{};
     host.call_result.output_data = std::data(call_output);
     host.call_result.output_size = std::size(call_output);
-    const auto gas = 123123;
-    host.call_result.gas_left = (gas - 3 - 3 - 3 - 100) * 63 / 64;
+    host.call_result.gas_left = 0;
 
-    const auto code = eof_bytecode(staticcall2(0) + returndataload(0) + OP_STOP, 3);
-    execute(109, code);
+    execute(eof_bytecode(staticcall2(0) + returndataload(0) + OP_STOP, 3));
+    const auto gas_with = gas_used;
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    execute(108, code);
+    execute(eof_bytecode(staticcall2(0) + push(0) + OP_STOP, 3));
+    EXPECT_GAS_USED(EVMC_SUCCESS, gas_with - 3);
+}
+
+TEST_P(evm, returndataload_oog)
+{
+    // Not implemented in Advanced.
+    if (is_advanced())
+        return;
+
+    rev = EVMC_PRAGUE;
+    const uint8_t call_output[32]{};
+    host.call_result.output_data = std::data(call_output);
+    host.call_result.output_size = std::size(call_output);
+    host.call_result.gas_left = 0;
+
+    constexpr auto retained_gas = 5000;
+    constexpr auto gas = 3 * 3 + 100 + retained_gas * 64;
+    // Uses OP_JUMPDEST to burn gas retained by the caller.
+    execute(gas, eof_bytecode(staticcall2(0) + (retained_gas - 3 - 3) * OP_JUMPDEST +
+                                  returndataload(0) + OP_STOP,
+                     3));
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+
+    execute(gas, eof_bytecode(staticcall2(0) + (retained_gas - 3 - 2) * OP_JUMPDEST +
+                                  returndataload(0) + OP_STOP,
+                     3));
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 

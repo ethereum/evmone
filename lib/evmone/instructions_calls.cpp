@@ -5,6 +5,9 @@
 #include "eof.hpp"
 #include "instructions.hpp"
 
+constexpr int64_t MIN_RETAINED_GAS = 5000;
+constexpr int64_t MIN_CALLEE_GAS = 2300;
+
 namespace evmone::instr::core
 {
 template <Opcode Op>
@@ -175,7 +178,10 @@ Result newcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
     if ((gas_left -= cost) < 0)
         return {EVMC_OUT_OF_GAS, gas_left};
 
-    msg.gas = gas_left - gas_left / 64;
+    msg.gas = std::max(int64_t{0}, gas_left - std::max(gas_left / 64, MIN_RETAINED_GAS));
+
+    if (msg.gas < MIN_CALLEE_GAS)
+        return {EVMC_OUT_OF_GAS, gas_left};
 
     if (state.msg->depth >= 1024)
         return {EVMC_SUCCESS, gas_left};  // "Light" failure.
