@@ -47,6 +47,14 @@ inline bytes to_bytes(std::string_view s)
     return {s.begin(), s.end()};
 }
 
+/// Convert address to 32-byte value left-padding with 0s.
+inline evmc::bytes32 to_bytes32(const evmc::address& addr)
+{
+    evmc::bytes32 addr32;
+    std::copy_n(addr.bytes, sizeof(addr), &addr32.bytes[sizeof(addr32) - sizeof(addr)]);
+    return addr32;
+}
+
 /// Produces bytes out of string literal.
 inline bytes operator""_b(const char* data, size_t size)
 {

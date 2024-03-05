@@ -535,7 +535,7 @@ jobs:
             ~/tests/EIPTests/BlockchainTests/
       - download_execution_tests:
           repo: ipsilon/tests
-          rev: eof-unreachable-cs-20240122
+          rev: eof-relaxed-stack-validation-20240221
           legacy: false
       - run:
           name: "State tests (EOF)"
