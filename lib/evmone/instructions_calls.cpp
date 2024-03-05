@@ -178,7 +178,7 @@ Result newcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
     if ((gas_left -= cost) < 0)
         return {EVMC_OUT_OF_GAS, gas_left};
 
-    msg.gas = std::max(int64_t{0}, gas_left - std::max(gas_left / 64, MIN_RETAINED_GAS));
+    msg.gas = gas_left - std::max(gas_left / 64, MIN_RETAINED_GAS);
 
     if (msg.gas < MIN_CALLEE_GAS)
         return {EVMC_OUT_OF_GAS, gas_left};
