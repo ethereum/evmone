@@ -80,6 +80,7 @@ class InstructionTracer : public Tracer
 
     std::stack<Context> m_contexts;
     std::ostream& m_out;  ///< Output stream.
+    long m_trace_gas_amount;
 
     void output_stack(const intx::uint256* stack_top, int stack_height)
     {
@@ -105,6 +106,9 @@ class InstructionTracer : public Tracer
         int64_t gas, const ExecutionState& state) noexcept override
     {
         const auto& ctx = m_contexts.top();
+        const auto used_gas = ctx.start_gas - gas;
+        if ((used_gas > m_trace_gas_amount) && (m_trace_gas_amount != -1))
+            return;
 
         const auto opcode = ctx.code[pc];
         m_out << "{";
@@ -130,7 +134,8 @@ class InstructionTracer : public Tracer
     void on_execution_end(const evmc_result& /*result*/) noexcept override { m_contexts.pop(); }
 
 public:
-    explicit InstructionTracer(std::ostream& out) noexcept : m_out{out}
+    explicit InstructionTracer(std::ostream& out, long trace_gas_amount) noexcept
+      : m_out{out}, m_trace_gas_amount{trace_gas_amount}
     {
         m_out << std::dec;  // Set number formatting to dec, JSON does not support other forms.
     }
@@ -144,6 +149,11 @@ std::unique_ptr<Tracer> create_histogram_tracer(std::ostream& out)
 
 std::unique_ptr<Tracer> create_instruction_tracer(std::ostream& out)
 {
-    return std::make_unique<InstructionTracer>(out);
+    return std::make_unique<InstructionTracer>(out, -1);
+}
+
+std::unique_ptr<Tracer> create_instruction_tracer(std::ostream& out, long trace_gas_amount)
+{
+    return std::make_unique<InstructionTracer>(out, trace_gas_amount);
 }
 }  // namespace evmone

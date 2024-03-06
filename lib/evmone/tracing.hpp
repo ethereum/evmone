@@ -64,5 +64,7 @@ private:
 EVMC_EXPORT std::unique_ptr<Tracer> create_histogram_tracer(std::ostream& out);
 
 EVMC_EXPORT std::unique_ptr<Tracer> create_instruction_tracer(std::ostream& out);
+EVMC_EXPORT std::unique_ptr<Tracer> create_instruction_tracer(
+    std::ostream& out, long trace_gas_amount);
 
 }  // namespace evmone
