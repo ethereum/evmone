@@ -33,7 +33,7 @@ std::string_view get_tests_error_message(EOFValidationError err) noexcept
     case EOFValidationError::data_section_missing:
         return "EOF_DataSectionMissing";
     case EOFValidationError::zero_section_size:
-        return "EOF_InvalidSectionSize";
+        return "EOF_ZeroSectionSize";
     case EOFValidationError::section_headers_not_terminated:
         return "EOF_SectionHeadersNotTerminated";
     case EOFValidationError::invalid_section_bodies_size:
@@ -43,7 +43,7 @@ std::string_view get_tests_error_message(EOFValidationError err) noexcept
     case EOFValidationError::undefined_instruction:
         return "EOF_UndefinedInstruction";
     case EOFValidationError::truncated_instruction:
-        return "EOF_TruncatedInstruction";
+        return "EOF_TruncatedImmediate";
     case EOFValidationError::invalid_rjump_destination:
         return "EOF_InvalidJumpDestination";
     case EOFValidationError::too_many_code_sections:
@@ -57,7 +57,7 @@ std::string_view get_tests_error_message(EOFValidationError err) noexcept
     case EOFValidationError::max_stack_height_above_limit:
         return "EOF_MaxStackHeightExceeded";
     case EOFValidationError::inputs_outputs_num_above_limit:
-        return "EOF_InputsOutputsAboveLimit";
+        return "EOF_InputsOutputsNumAboveLimit";
     case EOFValidationError::no_terminating_instruction:
         return "EOF_InvalidCodeTermination";
     case EOFValidationError::stack_height_mismatch:
@@ -79,7 +79,7 @@ std::string_view get_tests_error_message(EOFValidationError err) noexcept
     case EOFValidationError::invalid_non_returning_flag:
         return "EOF_InvalidNonReturningFlag";
     case EOFValidationError::callf_to_non_returning_function:
-        return "EOF_CallfToNonReturning";
+        return "EOF_CallfToNonReturningFunction";
     case EOFValidationError::impossible:
         return "impossible";
     }
