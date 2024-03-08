@@ -94,6 +94,8 @@ public:
 
     StorageValue& get_storage(const address& addr, const bytes32& key);
 
+    auto get_block_hash(int64_t n) { return m_cold->get_block_hash(n); }
+
     /// Returns the state journal checkpoint. It can be later used to in rollback()
     /// to revert changes newer than the checkpoint.
     [[nodiscard]] size_t checkpoint() const noexcept { return m_journal.size(); }
@@ -174,7 +176,6 @@ struct BlockInfo
 
     std::vector<Ommer> ommers;
     std::vector<Withdrawal> withdrawals;
-    std::unordered_map<int64_t, hash256> known_block_hashes;
 };
 
 using AccessList = std::vector<std::pair<address, std::vector<bytes32>>>;
