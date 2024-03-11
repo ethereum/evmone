@@ -511,22 +511,11 @@ StateDiff finalize(const StateView& sv, evmc_revision rev, const address& coinba
     //    delete_empty_accounts(state);
 }
 
-std::variant<TransactionReceipt, std::error_code> transition(MegaContext& mega_ctx,
-    const StateView& state_view, const BlockInfo& block, const Transaction& tx, evmc_revision rev,
-    evmc::VM& vm, int64_t block_gas_left, int64_t blob_gas_left)
+TransactionReceipt transition(MegaContext& mega_ctx, const StateView& state_view,
+    const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm)
 {
     State state{state_view};
     auto* sender_ptr = state.find(tx.sender);
-
-    // Validate transaction. The validation needs the sender account, so in case
-    // it doesn't exist provide an empty one. The account isn't created in the state
-    // to prevent the state modification in case the transaction is invalid.
-    const auto validation_result =
-        validate_transaction((sender_ptr != nullptr) ? *sender_ptr : Account{}, block, tx, rev,
-            block_gas_left, blob_gas_left);
-
-    if (holds_alternative<std::error_code>(validation_result))
-        return get<std::error_code>(validation_result);
 
     // Once the transaction is valid, create new sender account.
     // The account won't be empty because its nonce will be bumped.
@@ -534,7 +523,7 @@ std::variant<TransactionReceipt, std::error_code> transition(MegaContext& mega_c
     state.journal_balance_change(tx.sender, sender_acc.balance);
     state.journal_bump_nonce(tx.sender);  // Remember nonce modification.
 
-    const auto execution_gas_limit = get<int64_t>(validation_result);
+    const auto execution_gas_limit = tx.gas_limit - compute_tx_intrinsic_cost(rev, tx);
 
     const auto base_fee = (rev >= EVMC_LONDON) ? block.base_fee : 0;
     assert(tx.max_gas_price >= base_fee);                   // Checked at the front.

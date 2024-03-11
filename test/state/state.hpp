@@ -275,9 +275,8 @@ intx::uint256 compute_blob_gas_price(uint64_t excess_blob_gas) noexcept;
     std::optional<uint64_t> block_reward, std::span<const Ommer> ommers,
     std::span<const Withdrawal> withdrawals);
 
-[[nodiscard]] std::variant<TransactionReceipt, std::error_code> transition(MegaContext& mega_ctx,
-    const StateView& state, const BlockInfo& block, const Transaction& tx, evmc_revision rev,
-    evmc::VM& vm, int64_t block_gas_left, int64_t blob_gas_left);
+[[nodiscard]] TransactionReceipt transition(MegaContext& mega_ctx, const StateView& state,
+    const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm);
 
 std::variant<int64_t, std::error_code> validate_transaction(const Account& sender_acc,
     const BlockInfo& block, const Transaction& tx, evmc_revision rev, int64_t block_gas_left,
