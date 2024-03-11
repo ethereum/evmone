@@ -104,7 +104,7 @@ public:
     /// Reverts state changes made after the checkpoint.
     void rollback(size_t checkpoint);
 
-    StateDiff build_diff(evmc_revision rev);
+    void build_diff(StateDiff& sd, evmc_revision rev);
 
     /// Methods performing changes to the state which can be reverted by rollback().
     /// @{
@@ -260,8 +260,6 @@ struct TransactionReceipt
 
     /// Root hash of the state after this transaction. Used only in old pre-Byzantium transactions.
     std::optional<bytes32> post_state;
-
-    StateDiff state_diff;
 };
 
 /// Computes the current blob gas price based on the excess blob gas.
@@ -275,8 +273,9 @@ intx::uint256 compute_blob_gas_price(uint64_t excess_blob_gas) noexcept;
     std::optional<uint64_t> block_reward, std::span<const Ommer> ommers,
     std::span<const Withdrawal> withdrawals);
 
-[[nodiscard]] TransactionReceipt transition(MegaContext& mega_ctx, const StateView& state,
-    const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm);
+[[nodiscard]] TransactionReceipt transition(StateDiff& d, MegaContext& mega_ctx,
+    const StateView& state, const BlockInfo& block, const Transaction& tx, evmc_revision rev,
+    evmc::VM& vm);
 
 std::variant<int64_t, std::error_code> validate_transaction(const Account& sender_acc,
     const BlockInfo& block, const Transaction& tx, evmc_revision rev, int64_t block_gas_left,

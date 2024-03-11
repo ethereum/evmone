@@ -247,9 +247,11 @@ void State::rollback(size_t checkpoint)
     }
 }
 
-StateDiff State::build_diff(evmc_revision rev)
+void State::build_diff(StateDiff& d, evmc_revision rev)
 {
-    StateDiff d;
+    d.modified_accounts.clear();
+    d.deleted_accounts.clear();
+    d.modified_storage.clear();
     for (const auto& ej : m_journal)
     {
         std::visit(
@@ -306,7 +308,6 @@ StateDiff State::build_diff(evmc_revision rev)
             },
             ej);
     }
-    return d;
 }
 
 intx::uint256 compute_blob_gas_price(uint64_t excess_blob_gas) noexcept
@@ -467,7 +468,9 @@ StateDiff system_call(MegaContext& mega_ctx, const StateView& state, const Block
         }
     }
 
-    return ss.build_diff(rev);
+    StateDiff d;
+    ss.build_diff(d, rev);
+    return d;
 }
 
 StateDiff finalize(const StateView& sv, evmc_revision rev, const address& coinbase,
@@ -504,14 +507,16 @@ StateDiff finalize(const StateView& sv, evmc_revision rev, const address& coinba
         recipient_acc.balance += withdrawal.get_amount();
     }
 
-    return state.build_diff(rev);
+    StateDiff d;
+    state.build_diff(d, rev);
+    return d;
 
     // Delete potentially empty block reward recipients.
     // if (rev >= EVMC_SPURIOUS_DRAGON)
     //    delete_empty_accounts(state);
 }
 
-TransactionReceipt transition(MegaContext& mega_ctx, const StateView& state_view,
+TransactionReceipt transition(StateDiff& sd, MegaContext& mega_ctx, const StateView& state_view,
     const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm)
 {
     State state{state_view};
@@ -581,12 +586,12 @@ TransactionReceipt transition(MegaContext& mega_ctx, const StateView& state_view
     //     [](const std::pair<const address, Account>& p) noexcept { return p.second.destructed; });
 
     // Cumulative gas used is unknown in this scope.
-    TransactionReceipt receipt{tx.type, result.status_code, gas_used, {}, host.take_logs(), {}, {}};
+    TransactionReceipt receipt{tx.type, result.status_code, gas_used, {}, host.take_logs(), {}};
 
     // Cannot put it into constructor call because logs are std::moved from host instance.
     // receipt.logs_bloom_filter = compute_bloom_filter(receipt.logs);
 
-    receipt.state_diff = state.build_diff(rev);
+    state.build_diff(sd, rev);
 
 
     // Delete empty accounts after every transaction. This is strictly required until Byzantium
