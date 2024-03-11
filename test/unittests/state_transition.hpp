@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
+#include "exportable_fixture.hpp"
 #include <evmone/evmone.h>
-#include <gtest/gtest.h>
 #include <test/state/errors.hpp>
 #include <test/state/host.hpp>
 
@@ -17,7 +17,7 @@ using namespace evmone::state;
 ///
 /// It takes the "pre" state and produces "post" state by applying the defined "tx" transaction.
 /// Then expectations declared in "except" are checked in the "post" state.
-class state_transition : public testing::Test
+class state_transition : public ExportableFixture
 {
 protected:
     /// The default sender address of the test transaction.
@@ -79,7 +79,7 @@ protected:
     Transaction tx{
         .gas_limit = block.gas_limit,
         .max_gas_price = block.base_fee + 1,
-        .max_priority_gas_price = 1,
+        .max_priority_gas_price = block.base_fee + 1,
         .sender = Sender,
         .nonce = 1,
     };
@@ -91,9 +91,8 @@ protected:
     /// The test runner.
     void TearDown() override;
 
-    /// Exports the test in the JSON State Test format in the given directory.
-    void export_state_test(
-        const TransactionReceipt& receipt, const State& post, std::string_view export_dir);
+    /// Exports the test in the JSON State Test format to ExportableFixture::export_out.
+    void export_state_test(const TransactionReceipt& receipt, const State& post);
 };
 
 }  // namespace evmone::test

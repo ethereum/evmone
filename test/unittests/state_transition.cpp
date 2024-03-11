@@ -2,19 +2,12 @@
 // Copyright 2023 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-#ifdef _MSC_VER
-// Disable warning C4996: 'getenv': This function or variable may be unsafe.
-#define _CRT_SECURE_NO_WARNINGS
-#endif
-
 #include "state_transition.hpp"
 #include <evmone/eof.hpp>
 #include <test/state/mpt_hash.hpp>
 #include <test/statetest/statetest.hpp>
 #include <filesystem>
 #include <fstream>
-
-namespace fs = std::filesystem;
 
 namespace evmone::test
 {
@@ -40,7 +33,21 @@ public:
 
 void state_transition::TearDown()
 {
+    // Validation:
+
+    if (rev < EVMC_LONDON)
+    {
+        ASSERT_EQ(block.base_fee, 0);
+        ASSERT_EQ(tx.type, state::Transaction::Type::legacy);
+    }
+    if (tx.type == state::Transaction::Type::legacy)
+    {
+        ASSERT_EQ(tx.max_gas_price, tx.max_priority_gas_price);
+    }
+
     validate_state(pre, rev);
+
+    // Execution:
 
     auto state = pre;
     const auto trace = !expect.trace.empty();
@@ -138,38 +145,31 @@ void state_transition::TearDown()
         EXPECT_TRUE(expect.post.contains(addr)) << "unexpected account " << addr;
     }
 
-    if (const auto export_dir = std::getenv("EVMONE_EXPORT_TESTS"); export_dir != nullptr)
-        export_state_test(receipt, state, export_dir);
+    if (!export_file_path.empty())
+        export_state_test(receipt, state);
 }
 
 namespace
 {
-/// Creates the file path for the exported test based on its name.
-fs::path get_export_test_path(const testing::TestInfo& test_info, std::string_view export_dir)
+/// Converts EVM revision to the fork name commonly used in tests.
+std::string_view to_test_fork_name(evmc_revision rev) noexcept
 {
-    const std::string_view test_suite_name{test_info.test_suite_name()};
-
-    const auto stem = fs::path{test_info.file()}.stem().string();
-    auto filename = std::string_view{stem};
-    if (filename.starts_with(test_suite_name))
-        filename.remove_prefix(test_suite_name.size() + 1);
-    if (filename.ends_with("_test"))
-        filename.remove_suffix(5);
-
-    const auto dir = fs::path{export_dir} / test_suite_name / filename;
-
-    fs::create_directories(dir);
-    return dir / (std::string{test_info.name()} + ".json");
+    switch (rev)
+    {
+    case EVMC_TANGERINE_WHISTLE:
+        return "EIP150";
+    case EVMC_SPURIOUS_DRAGON:
+        return "EIP158";
+    default:
+        return evmc::to_string(rev);
+    }
 }
 }  // namespace
 
-void state_transition::export_state_test(
-    const TransactionReceipt& receipt, const State& post, std::string_view export_dir)
+void state_transition::export_state_test(const TransactionReceipt& receipt, const State& post)
 {
-    const auto& test_info = *testing::UnitTest::GetInstance()->current_test_info();
-
     json::json j;
-    auto& jt = j[test_info.name()];
+    auto& jt = j[export_test_name];
 
     auto& jenv = jt["env"];
     jenv["currentNumber"] = hex0x(block.number);
@@ -186,18 +186,40 @@ void state_transition::export_state_test(
     jtx["sender"] = hex0x(tx.sender);
     jtx["secretKey"] = hex0x(SenderSecretKey);
     jtx["nonce"] = hex0x(tx.nonce);
-    jtx["maxFeePerGas"] = hex0x(tx.max_gas_price);
-    jtx["maxPriorityFeePerGas"] = hex0x(tx.max_priority_gas_price);
+    if (rev < EVMC_LONDON)
+    {
+        assert(tx.max_gas_price == tx.max_priority_gas_price);
+        jtx["gasPrice"] = hex0x(tx.max_gas_price);
+    }
+    else
+    {
+        jtx["maxFeePerGas"] = hex0x(tx.max_gas_price);
+        jtx["maxPriorityFeePerGas"] = hex0x(tx.max_priority_gas_price);
+    }
 
     jtx["data"][0] = hex0x(tx.data);
     jtx["gasLimit"][0] = hex0x(tx.gas_limit);
     jtx["value"][0] = hex0x(tx.value);
 
-    auto& jpost = jt["post"][evmc::to_string(rev)][0];
+    if (!tx.access_list.empty())
+    {
+        auto& ja = jtx["accessLists"][0];
+        for (const auto& [addr, storage_keys] : tx.access_list)
+        {
+            json::json je;
+            je["address"] = hex0x(addr);
+            auto& jstorage_keys = je["storageKeys"] = json::json::array();
+            for (const auto& k : storage_keys)
+                jstorage_keys.emplace_back(hex0x(k));
+            ja.emplace_back(std::move(je));
+        }
+    }
+
+    auto& jpost = jt["post"][to_test_fork_name(rev)][0];
     jpost["indexes"] = {{"data", 0}, {"gas", 0}, {"value", 0}};
     jpost["hash"] = hex0x(mpt_hash(post.get_accounts()));
     jpost["logs"] = hex0x(logs_hash(receipt.logs));
 
-    std::ofstream{get_export_test_path(test_info, export_dir)} << std::setw(2) << j;
+    std::ofstream{export_file_path} << std::setw(2) << j;
 }
 }  // namespace evmone::test
