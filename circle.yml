@@ -536,7 +536,7 @@ jobs:
             ~/tests/EIPTests/BlockchainTests/
       - download_execution_tests:
           repo: ipsilon/tests
-          rev: eof-relaxed-stack-validation-20240221
+          rev: update-extcode
           legacy: false
       - run:
           name: "State tests (EOF)"
