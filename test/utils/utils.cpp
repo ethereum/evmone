@@ -21,7 +21,7 @@ evmc_revision to_rev(std::string_view s)
         return EVMC_BYZANTIUM;
     if (s == "Constantinople")
         return EVMC_CONSTANTINOPLE;
-    if (s == "ConstantinopleFix")
+    if (s == "Petersburg" || s == "ConstantinopleFix")
         return EVMC_PETERSBURG;
     if (s == "Istanbul")
         return EVMC_ISTANBUL;
@@ -29,10 +29,8 @@ evmc_revision to_rev(std::string_view s)
         return EVMC_BERLIN;
     if (s == "London" || s == "ArrowGlacier")
         return EVMC_LONDON;
-    if (s == "Merge" || s == "Paris")
+    if (s == "Paris" || s == "Merge")
         return EVMC_PARIS;
-    if (s == "Merge+3855")  // PUSH0
-        return EVMC_SHANGHAI;
     if (s == "Shanghai")
         return EVMC_SHANGHAI;
     if (s == "Cancun")

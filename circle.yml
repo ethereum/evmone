@@ -463,6 +463,7 @@ jobs:
           branch: evmc-v11.0.0-alpha.1
           commit: evmc-v11.0.0-alpha.1
       - download_execution_tests:
+          # TODO: Fix failures and upgrade to v13.1
           rev: v13
       - run:
           name: "Silkworm-driven blockchain tests (Advanced)"
@@ -500,7 +501,7 @@ jobs:
             bin/evmone-statetest ~/spec-tests/fixtures/state_tests
 
       - download_execution_tests:
-          rev: v13
+          rev: v13.1
       - run:
           name: "State tests"
           working_directory: ~/build
