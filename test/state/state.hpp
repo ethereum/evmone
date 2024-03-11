@@ -8,6 +8,7 @@
 #include "bloom_filter.hpp"
 #include "hash_utils.hpp"
 #include "state_view.hpp"
+#include <absl/container/node_hash_map.h>
 #include <evmone/execution_state.hpp>
 #include <silkworm/core/types/log.hpp>
 #include <cassert>
@@ -66,17 +67,25 @@ class State
 
     const StateView* m_cold = nullptr;
 
-    std::unordered_map<address, Account> m_accounts;
+    absl::node_hash_map<address, Account> m_accounts;
 
     /// The state journal: the list of changes made in the state
     /// with information how to revert them.
     std::vector<JournalEntry> m_journal;
 
 public:
-    explicit State(const StateView& view) noexcept : m_cold{&view} {}
+    // explicit State(const StateView& view) noexcept : m_cold{&view} {}
+    State() noexcept = default;
     State(const State&) = delete;
     State(State&&) = default;
     State& operator=(State&&) = default;
+
+    void clear(const StateView& view) noexcept
+    {
+        m_cold = &view;
+        m_accounts.clear();
+        m_journal.clear();
+    }
 
     /// Inserts the new account at the address.
     /// There must not exist any account under this address before.

@@ -440,7 +440,8 @@ StateDiff system_call(MegaContext& mega_ctx, const StateView& state, const Block
     static constexpr auto SystemAddress = 0xfffffffffffffffffffffffffffffffffffffffe_address;
     static constexpr auto BeaconRootsAddress = 0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02_address;
 
-    State ss{state};
+    State ss;
+    ss.clear(state);
     if (rev >= EVMC_CANCUN)
     {
         if (const auto code = state.get_account_code(BeaconRootsAddress); !code.empty())
@@ -477,7 +478,8 @@ StateDiff finalize(const StateView& sv, evmc_revision rev, const address& coinba
     std::optional<uint64_t> block_reward, std::span<const Ommer> ommers,
     std::span<const Withdrawal> withdrawals)
 {
-    State state{sv};
+    State state;
+    state.clear(sv);
     // TODO: The block reward can be represented as a withdrawal.
     if (block_reward.has_value())
     {
@@ -519,7 +521,9 @@ StateDiff finalize(const StateView& sv, evmc_revision rev, const address& coinba
 TransactionReceipt transition(StateDiff& sd, MegaContext& mega_ctx, const StateView& state_view,
     const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm)
 {
-    State state{state_view};
+    thread_local State state;
+    state.clear(state_view);
+
     auto* sender_ptr = state.find(tx.sender);
 
     // Once the transaction is valid, create new sender account.
