@@ -210,7 +210,7 @@ void State::rollback(size_t checkpoint)
                         auto& a = get(e.addr);
                         a.nonce = 0;
                         a.code_hash = Account::EMPTY_CODE_HASH;
-                        a._code.clear();
+                        a._code = {};
                     }
                     else
                     {

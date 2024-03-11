@@ -29,7 +29,7 @@ public:
 
     virtual ~StateView() = default;
     [[nodiscard]] virtual std::optional<Account> get_account(address addr) const noexcept = 0;
-    [[nodiscard]] virtual bytes get_account_code(address addr) const noexcept = 0;
+    [[nodiscard]] virtual bytes_view get_account_code(address addr) const noexcept = 0;
     [[nodiscard]] virtual bytes32 get_storage(address addr, bytes32 key) const noexcept = 0;
     [[nodiscard]] virtual bytes32 get_block_hash(int64_t n) const = 0;
 };

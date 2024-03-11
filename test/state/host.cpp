@@ -289,7 +289,8 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
         return evmc::Result{EVMC_CONTRACT_VALIDATION_FAILURE};
 
     new_acc.code_hash = keccak256(code);
-    new_acc._code = code;
+    new_acc._new_code = code;
+    new_acc._code = new_acc._new_code;
 
     return evmc::Result{result.status_code, gas_left, result.gas_refund, msg.recipient};
 }

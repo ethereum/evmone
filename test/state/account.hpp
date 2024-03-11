@@ -12,6 +12,7 @@ namespace evmone::state
 using evmc::address;
 using evmc::bytes;
 using evmc::bytes32;
+using evmc::bytes_view;
 using namespace evmc::literals;
 
 /// The representation of the account storage value.
@@ -49,7 +50,9 @@ struct Account
     silkworm::FlatHashMap<bytes32, bytes32> transient_storage;
 
     /// The account code.
-    bytes _code;
+    bytes_view _code;
+
+    bytes _new_code;
 
     /// The account has been destructed and should be erased at the end of of a transaction.
     bool destructed = false;
