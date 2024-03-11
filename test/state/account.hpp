@@ -5,7 +5,7 @@
 
 #include <evmc/evmc.hpp>
 #include <intx/intx.hpp>
-#include <unordered_map>
+#include <silkworm/core/common/hash_maps.hpp>
 
 namespace evmone::state
 {
@@ -44,9 +44,9 @@ struct Account
     bytes32 code_hash = EMPTY_CODE_HASH;
 
     /// The account storage map.
-    std::unordered_map<bytes32, StorageValue> _storage;
+    silkworm::FlatHashMap<bytes32, StorageValue> _storage;
 
-    std::unordered_map<bytes32, bytes32> transient_storage;
+    silkworm::FlatHashMap<bytes32, bytes32> transient_storage;
 
     /// The account code.
     bytes _code;
