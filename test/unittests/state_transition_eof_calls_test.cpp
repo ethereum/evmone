@@ -50,9 +50,9 @@ TEST_F(state_transition, eof1_delegatecall2_legacy)
                 sstore(1, delegatecall2(callee)) + sstore(2, returndatasize()) + OP_STOP, 3),
         });
 
-    expect.gas_used = 26894;  // Low gas usage because DELEGATECALL2 fails lightly
+    expect.gas_used = 28817;  // Low gas usage because DELEGATECALL2 fails lightly
     // Call - light failure.
-    expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;
+    expect.post[*tx.to].storage[0x01_bytes32] = 0x01_bytes32;
     // Returndata empty.
     expect.post[*tx.to].storage[0x02_bytes32] = 0x00_bytes32;
     // SSTORE not executed.
@@ -113,7 +113,7 @@ TEST_F(state_transition, call2_failing_with_value_balance_check)
             .code = eof_bytecode(sstore(1, call2(callee).input(0x0, 0xff).value(0x1)) + OP_STOP, 4),
         });
 
-    expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;
+    expect.post[*tx.to].storage[0x01_bytes32] = 0x01_bytes32;
     expect.post[callee].storage[0x01_bytes32] = 0xdd_bytes32;
 }
 
@@ -317,6 +317,126 @@ TEST_F(state_transition, staticcall2_then_oog)
     expect.post[*tx.to].storage[0x01_bytes32] = 0xdd_bytes32;
     expect.post[callee].exists = true;
     expect.status = EVMC_OUT_OF_GAS;
+}
+
+TEST_F(state_transition, call2_callee_revert)
+{
+    rev = EVMC_PRAGUE;
+    constexpr auto callee = 0xca11ee_address;
+
+    pre.insert(callee, {
+                           .code = eof_bytecode(revert(0, 0), 2),
+                       });
+
+    tx.to = To;
+    pre.insert(*tx.to,
+        {
+            .storage = {{0x01_bytes32, {.current = 0xdd_bytes32, .original = 0xdd_bytes32}}},
+            .code = eof_bytecode(sstore(1, call2(callee)) + OP_STOP, 4),
+        });
+    expect.post[*tx.to].storage[0x01_bytes32] = 0x01_bytes32;
+    expect.post[callee].exists = true;
+    expect.status = EVMC_SUCCESS;
+}
+
+TEST_F(state_transition, delegatecall2_callee_revert)
+{
+    rev = EVMC_PRAGUE;
+    constexpr auto callee = 0xca11ee_address;
+
+    pre.insert(callee, {
+                           .code = eof_bytecode(revert(0, 0), 2),
+                       });
+
+    tx.to = To;
+    pre.insert(*tx.to,
+        {
+            .storage = {{0x01_bytes32, {.current = 0xdd_bytes32, .original = 0xdd_bytes32}}},
+            .code = eof_bytecode(sstore(1, delegatecall2(callee)) + OP_STOP, 3),
+        });
+    expect.post[*tx.to].storage[0x01_bytes32] = 0x01_bytes32;
+    expect.post[callee].exists = true;
+    expect.status = EVMC_SUCCESS;
+}
+
+TEST_F(state_transition, staticcall2_callee_revert)
+{
+    rev = EVMC_PRAGUE;
+    constexpr auto callee = 0xca11ee_address;
+
+    pre.insert(callee, {
+                           .code = eof_bytecode(revert(0, 0), 2),
+                       });
+
+    tx.to = To;
+    pre.insert(*tx.to,
+        {
+            .storage = {{0x01_bytes32, {.current = 0xdd_bytes32, .original = 0xdd_bytes32}}},
+            .code = eof_bytecode(sstore(1, staticcall2(callee)) + OP_STOP, 3),
+        });
+    expect.post[*tx.to].storage[0x01_bytes32] = 0x01_bytes32;
+    expect.post[callee].exists = true;
+    expect.status = EVMC_SUCCESS;
+}
+
+TEST_F(state_transition, call2_callee_abort)
+{
+    rev = EVMC_PRAGUE;
+    constexpr auto callee = 0xca11ee_address;
+
+    pre.insert(callee, {
+                           .code = eof_bytecode(OP_INVALID),
+                       });
+
+    tx.to = To;
+    pre.insert(*tx.to,
+        {
+            .storage = {{0x01_bytes32, {.current = 0xdd_bytes32, .original = 0xdd_bytes32}}},
+            .code = eof_bytecode(sstore(1, call2(callee)) + OP_STOP, 4),
+        });
+    expect.post[*tx.to].storage[0x01_bytes32] = 0x02_bytes32;
+    expect.post[callee].exists = true;
+    expect.status = EVMC_SUCCESS;
+}
+
+TEST_F(state_transition, delegatecall2_callee_abort)
+{
+    rev = EVMC_PRAGUE;
+    constexpr auto callee = 0xca11ee_address;
+
+    pre.insert(callee, {
+                           .code = eof_bytecode(OP_INVALID),
+                       });
+
+    tx.to = To;
+    pre.insert(*tx.to,
+        {
+            .storage = {{0x01_bytes32, {.current = 0xdd_bytes32, .original = 0xdd_bytes32}}},
+            .code = eof_bytecode(sstore(1, delegatecall2(callee)) + OP_STOP, 3),
+        });
+    expect.post[*tx.to].storage[0x01_bytes32] = 0x02_bytes32;
+    expect.post[callee].exists = true;
+    expect.status = EVMC_SUCCESS;
+}
+
+TEST_F(state_transition, staticcall2_callee_abort)
+{
+    rev = EVMC_PRAGUE;
+    constexpr auto callee = 0xca11ee_address;
+
+    pre.insert(callee, {
+                           .code = eof_bytecode(OP_INVALID),
+                       });
+
+    tx.to = To;
+    pre.insert(*tx.to,
+        {
+            .storage = {{0x01_bytes32, {.current = 0xdd_bytes32, .original = 0xdd_bytes32}}},
+            .code = eof_bytecode(sstore(1, staticcall2(callee)) + OP_STOP, 3),
+        });
+    expect.post[*tx.to].storage[0x01_bytes32] = 0x02_bytes32;
+    expect.post[callee].exists = true;
+    expect.status = EVMC_SUCCESS;
 }
 
 TEST_F(state_transition, call2_input)

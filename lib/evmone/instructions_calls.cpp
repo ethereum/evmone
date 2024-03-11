@@ -132,7 +132,7 @@ Result newcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
     const auto value = (Op == OP_STATICCALL2 || Op == OP_DELEGATECALL2) ? 0 : stack.pop();
     const auto has_value = value != 0;
 
-    stack.push(0);  // Assume failure.
+    stack.push(2);  // Assume (hard) failure.
     state.return_data.clear();
 
     if (state.host.access_account(dst) == EVMC_ACCESS_COLD)
@@ -184,23 +184,29 @@ Result newcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
         return {EVMC_OUT_OF_GAS, gas_left};
 
     if (state.msg->depth >= 1024)
+    {
+        stack.top() = 1;
         return {EVMC_SUCCESS, gas_left};  // "Light" failure.
+    }
 
     if (has_value && intx::be::load<uint256>(state.host.get_balance(state.msg->recipient)) < value)
+    {
+        stack.top() = 1;
         return {EVMC_SUCCESS, gas_left};  // "Light" failure.
+    }
 
     if constexpr (Op == OP_DELEGATECALL2)
     {
-        if (state.rev >= EVMC_PRAGUE && is_eof_container(state.original_code))
+        // The code targeted by DELEGATECALL2 must also be an EOF.
+        // This restriction has been added to EIP-3540 in
+        // https://github.com/ethereum/EIPs/pull/7131
+        uint8_t target_code_prefix[2];
+        const auto s = state.host.copy_code(
+            msg.code_address, 0, target_code_prefix, std::size(target_code_prefix));
+        if (!is_eof_container({target_code_prefix, s}))
         {
-            // The code targeted by DELEGATECALL2 must also be an EOF.
-            // This restriction has been added to EIP-3540 in
-            // https://github.com/ethereum/EIPs/pull/7131
-            uint8_t target_code_prefix[2];
-            const auto s = state.host.copy_code(
-                msg.code_address, 0, target_code_prefix, std::size(target_code_prefix));
-            if (!is_eof_container({target_code_prefix, s}))
-                return {EVMC_SUCCESS, gas_left};
+            stack.top() = 1;
+            return {EVMC_SUCCESS, gas_left};  // "Light" failure.
         }
     }
 

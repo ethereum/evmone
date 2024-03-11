@@ -73,7 +73,7 @@ TEST_P(evm, delegatecall2_oog_depth_limit)
     EXPECT_EQ(host.recorded_calls.size(), 0);
     auto expected_gas_used = 3 * 3 + 100 + 3 + 3 + 3 + 3 + 3;
     EXPECT_GAS_USED(EVMC_SUCCESS, expected_gas_used);
-    EXPECT_OUTPUT_INT(0);
+    EXPECT_OUTPUT_INT(1);
 
     execute(expected_gas_used, code);
     EXPECT_STATUS(EVMC_OUT_OF_GAS);
@@ -145,7 +145,7 @@ TEST_P(evm, call2_depth_limit)
         execute(code);
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
         EXPECT_EQ(host.recorded_calls.size(), 0);
-        EXPECT_OUTPUT_INT(0);
+        EXPECT_OUTPUT_INT(1);
     }
 }
 
