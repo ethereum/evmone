@@ -391,7 +391,7 @@ bytes32 Host::get_block_hash(int64_t block_number) const noexcept
 void Host::emit_log(const address& addr, const uint8_t* data, size_t data_size,
     const bytes32 topics[], size_t topics_count) noexcept
 {
-    m_logs.push_back({addr, {data, data_size}, {topics, topics + topics_count}});
+    m_logs.push_back({addr, {topics, topics + topics_count}, {data, data_size}});
 }
 
 evmc_access_status Host::access_account(const address& addr) noexcept

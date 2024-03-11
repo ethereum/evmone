@@ -6,9 +6,13 @@
 #include "hash_utils.hpp"
 #include <span>
 
-namespace evmone::state
+namespace silkworm
 {
 struct Log;
+}
+
+namespace evmone::state
+{
 struct TransactionReceipt;
 
 /// The 2048-bit hash suitable for keeping an Ethereum bloom filter of transactions logs.
@@ -23,7 +27,7 @@ struct BloomFilter
 
 /// Computes combined bloom fitter for set of logs.
 /// It's used to compute bloom filter for single transaction.
-[[nodiscard]] BloomFilter compute_bloom_filter(std::span<const Log> logs) noexcept;
+[[nodiscard]] BloomFilter compute_bloom_filter(std::span<const silkworm::Log> logs) noexcept;
 
 /// Computes combined bloom fitter for set of TransactionReceipts
 /// It's used to compute bloom filter for a block.

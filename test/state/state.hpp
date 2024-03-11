@@ -9,6 +9,7 @@
 #include "hash_utils.hpp"
 #include "state_view.hpp"
 #include <evmone/execution_state.hpp>
+#include <silkworm/core/types/log.hpp>
 #include <cassert>
 #include <optional>
 #include <variant>
@@ -255,8 +256,7 @@ struct TransactionReceipt
 
     /// Amount of gas used by this and previous transactions in the block.
     int64_t cumulative_gas_used = 0;
-    std::vector<Log> logs;
-    BloomFilter logs_bloom_filter;
+    std::vector<silkworm::Log> logs;
 
     /// Root hash of the state after this transaction. Used only in old pre-Byzantium transactions.
     std::optional<bytes32> post_state;

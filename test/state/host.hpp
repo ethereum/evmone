@@ -48,7 +48,7 @@ class Host : public evmc::Host
     State& m_state;
     const BlockInfo& m_block;
     const Transaction& m_tx;
-    std::vector<Log> m_logs;
+    std::vector<silkworm::Log> m_logs;
 
 public:
     Host(MegaContext& mega_ctx, evmc_revision rev, evmc::VM& vm, State& state,
@@ -56,7 +56,7 @@ public:
       : m_mega_ctx{&mega_ctx}, m_rev{rev}, m_vm{vm}, m_state{state}, m_block{block}, m_tx{tx}
     {}
 
-    [[nodiscard]] std::vector<Log>&& take_logs() noexcept { return std::move(m_logs); }
+    [[nodiscard]] std::vector<silkworm::Log>&& take_logs() noexcept { return std::move(m_logs); }
 
     evmc::Result call(const evmc_message& msg) noexcept override;
 

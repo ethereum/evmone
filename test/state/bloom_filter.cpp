@@ -30,12 +30,12 @@ inline void add_to(BloomFilter& bf, const bytes_view& entry)
 
 }  // namespace
 
-BloomFilter compute_bloom_filter(std::span<const Log> logs) noexcept
+BloomFilter compute_bloom_filter(std::span<const silkworm::Log> logs) noexcept
 {
     BloomFilter res;
     for (const auto& log : logs)
     {
-        add_to(res, log.addr);
+        add_to(res, log.address);
         for (const auto& topic : log.topics)
             add_to(res, topic);
     }
@@ -45,13 +45,14 @@ BloomFilter compute_bloom_filter(std::span<const Log> logs) noexcept
 
 BloomFilter compute_bloom_filter(std::span<const TransactionReceipt> receipts) noexcept
 {
-    BloomFilter res;
+    // BloomFilter res;
+    //
+    // for (const auto& r : receipts)
+    //     std::transform(
+    //         res.bytes, std::end(res.bytes), r.logs_bloom_filter.bytes, res.bytes,
+    //         std::bit_or<>());
 
-    for (const auto& r : receipts)
-        std::transform(
-            res.bytes, std::end(res.bytes), r.logs_bloom_filter.bytes, res.bytes, std::bit_or<>());
-
-    return res;
+    return {};
 }
 
 BloomFilter bloom_filter_from_bytes(const bytes_view& data) noexcept
