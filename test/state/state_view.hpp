@@ -43,8 +43,8 @@ struct StateDiff
         std::optional<bytes> code;
     };
 
-    std::unordered_map<address, Account> modified_accounts;
-    std::unordered_set<address> deleted_accounts;
-    std::unordered_map<address, std::unordered_map<bytes32, bytes32>> modified_storage;
+    silkworm::FlatHashMap<address, Account> modified_accounts;
+    silkworm::FlatHashSet<address> deleted_accounts;
+    silkworm::FlatHashMap<address, silkworm::FlatHashMap<bytes32, bytes32>> modified_storage;
 };
 }  // namespace evmone::state
