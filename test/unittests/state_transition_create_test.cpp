@@ -2232,3 +2232,59 @@ TEST_F(state_transition, create2_nested_in_txcreate)
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;
     expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;
 }
+
+TEST_F(state_transition, txcreate_from_legacy_tx)
+{
+    rev = EVMC_PRAGUE;
+    tx.type = Transaction::Type::legacy;
+
+    const auto factory_code = sstore(0, txcreate().initcode(keccak256({})).input(0, 0).salt(Salt)) +
+                              sstore(1, 1) + OP_STOP;
+    const auto factory_container = eof_bytecode(factory_code, 5);
+
+    tx.to = To;
+    pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
+
+    expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
+    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
+    expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;  // CREATE must fail
+    expect.post[*tx.to].storage[0x01_bytes32] = 0x01_bytes32;
+}
+
+TEST_F(state_transition, txcreate_from_1559_tx)
+{
+    rev = EVMC_PRAGUE;
+    tx.type = Transaction::Type::eip1559;
+
+    const auto factory_code = sstore(0, txcreate().initcode(keccak256({})).input(0, 0).salt(Salt)) +
+                              sstore(1, 1) + OP_STOP;
+    const auto factory_container = eof_bytecode(factory_code, 5);
+
+    tx.to = To;
+    pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
+
+    expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
+    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
+    expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;  // CREATE must fail
+    expect.post[*tx.to].storage[0x01_bytes32] = 0x01_bytes32;
+}
+
+TEST_F(state_transition, txcreate_from_blob_tx)
+{
+    rev = EVMC_PRAGUE;
+    tx.type = Transaction::Type::blob;
+    tx.blob_hashes.push_back(
+        0x0100000000000000000000000000000000000000000000000000000000000007_bytes32);
+
+    const auto factory_code = sstore(0, txcreate().initcode(keccak256({})).input(0, 0).salt(Salt)) +
+                              sstore(1, 1) + OP_STOP;
+    const auto factory_container = eof_bytecode(factory_code, 5);
+
+    tx.to = To;
+    pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
+
+    expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
+    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
+    expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;  // CREATE must fail
+    expect.post[*tx.to].storage[0x01_bytes32] = 0x01_bytes32;
+}
