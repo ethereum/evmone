@@ -764,24 +764,24 @@ TEST_P(evm, returndataload_undefined_in_legacy)
     EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
 }
 
-TEST_P(evm, call2_undefined_in_legacy)
+TEST_P(evm, extcall_undefined_in_legacy)
 {
     rev = EVMC_PRAGUE;
-    execute(call2(0));
+    execute(extcall(0));
     EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
 }
 
-TEST_P(evm, delegatecall2_undefined_in_legacy)
+TEST_P(evm, extdelegatecall_undefined_in_legacy)
 {
     rev = EVMC_PRAGUE;
-    execute(delegatecall2(0));
+    execute(extdelegatecall(0));
     EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
 }
 
-TEST_P(evm, staticcall2_undefined_in_legacy)
+TEST_P(evm, extstaticcall_undefined_in_legacy)
 {
     rev = EVMC_PRAGUE;
-    execute(staticcall2(0));
+    execute(extstaticcall(0));
     EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
 }
 

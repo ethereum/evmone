@@ -1059,9 +1059,9 @@ inline constexpr auto staticcall = call_impl<OP_STATICCALL>;
 
 template <Opcode Op>
 Result newcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;
-inline constexpr auto call2 = newcall_impl<OP_CALL2>;
-inline constexpr auto delegatecall2 = newcall_impl<OP_DELEGATECALL2>;
-inline constexpr auto staticcall2 = newcall_impl<OP_STATICCALL2>;
+inline constexpr auto extcall = newcall_impl<OP_EXTCALL>;
+inline constexpr auto extdelegatecall = newcall_impl<OP_EXTDELEGATECALL>;
+inline constexpr auto extstaticcall = newcall_impl<OP_EXTSTATICCALL>;
 
 template <Opcode Op>
 Result create_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;

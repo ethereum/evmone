@@ -15,7 +15,7 @@ inline constexpr auto max_uint256 =
 // Controlled amount of gas crossing the minimum callee/retained gas thresholds.
 inline constexpr auto safe_call_gas = 400000;
 
-TEST_P(evm, delegatecall2)
+TEST_P(evm, extdelegatecall)
 {
     // Not implemented in Advanced.
     if (is_advanced())
@@ -26,10 +26,10 @@ TEST_P(evm, delegatecall2)
     host.access_account(callee);
     host.accounts[callee].code = "EF00"_hex;
 
-    auto code =
-        eof_bytecode(mstore(0, push(1) + push0() + OP_SUB) + delegatecall2(callee).input(0x2, 0x3) +
-                         returndatacopy(0x4, 0x0, 0x5) + ret(0, 8),
-            4);
+    auto code = eof_bytecode(mstore(0, push(1) + push0() + OP_SUB) +
+                                 extdelegatecall(callee).input(0x2, 0x3) +
+                                 returndatacopy(0x4, 0x0, 0x5) + ret(0, 8),
+        4);
 
     auto call_output = bytes{0xa, 0xb, 0xc, 0xd, 0xe};
     host.call_result.output_data = call_output.data();
@@ -55,7 +55,7 @@ TEST_P(evm, delegatecall2)
         gas_before_call + call_msg.gas - host.call_result.gas_left + 3 + 3 + 3 + 3 + 3 + 3 + 3);
 }
 
-TEST_P(evm, delegatecall2_oog_depth_limit)
+TEST_P(evm, extdelegatecall_oog_depth_limit)
 {
     // Not implemented in Advanced.
     if (is_advanced())
@@ -67,7 +67,7 @@ TEST_P(evm, delegatecall2_oog_depth_limit)
     host.accounts[callee].code = "EF00"_hex;
 
     msg.depth = 1024;
-    const auto code = eof_bytecode(delegatecall2(callee) + ret_top(), 3);
+    const auto code = eof_bytecode(extdelegatecall(callee) + ret_top(), 3);
 
     execute(safe_call_gas, code);
     EXPECT_EQ(host.recorded_calls.size(), 0);
@@ -79,7 +79,7 @@ TEST_P(evm, delegatecall2_oog_depth_limit)
     EXPECT_STATUS(EVMC_OUT_OF_GAS);
 }
 
-TEST_P(evm, call2_failing_with_value)
+TEST_P(evm, extcall_failing_with_value)
 {
     // Not implemented in Advanced.
     if (is_advanced())
@@ -90,7 +90,7 @@ TEST_P(evm, call2_failing_with_value)
     host.access_account(callee);
     host.accounts[callee] = {};
 
-    const auto code = eof_bytecode(call2(callee).input(0x0, 0xff).value(0x1) + OP_STOP, 4);
+    const auto code = eof_bytecode(extcall(callee).input(0x0, 0xff).value(0x1) + OP_STOP, 4);
 
     // Fails on balance check.
     execute(safe_call_gas, code);
@@ -108,7 +108,7 @@ TEST_P(evm, call2_failing_with_value)
     EXPECT_EQ(host.recorded_calls.size(), 0);  // There was no call().
 }
 
-TEST_P(evm, call2_with_value_depth_limit)
+TEST_P(evm, extcall_with_value_depth_limit)
 {
     // Not implemented in Advanced.
     if (is_advanced())
@@ -120,14 +120,14 @@ TEST_P(evm, call2_with_value_depth_limit)
     host.accounts[call_dst] = {};
 
     msg.depth = 1024;
-    execute(eof_bytecode(call2(call_dst).input(0x0, 0xff).value(0x1) + OP_STOP, 4));
+    execute(eof_bytecode(extcall(call_dst).input(0x0, 0xff).value(0x1) + OP_STOP, 4));
 
     EXPECT_EQ(gas_used, 4 * 3 + 2600 + 8 * 3 + 9000);
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(host.recorded_calls.size(), 0);
 }
 
-TEST_P(evm, call2_depth_limit)
+TEST_P(evm, extcall_depth_limit)
 {
     // Not implemented in Advanced.
     if (is_advanced())
@@ -139,7 +139,7 @@ TEST_P(evm, call2_depth_limit)
     host.accounts[callee].code = "EF00"_hex;
     msg.depth = 1024;
 
-    for (auto op : {OP_CALL2, OP_DELEGATECALL2, OP_STATICCALL2})
+    for (auto op : {OP_EXTCALL, OP_EXTDELEGATECALL, OP_EXTSTATICCALL})
     {
         const auto code = eof_bytecode(push(callee) + 3 * push0() + op + ret_top(), 4);
         execute(code);
@@ -149,7 +149,7 @@ TEST_P(evm, call2_depth_limit)
     }
 }
 
-TEST_P(evm, call2_value_zero_to_nonexistent_account)
+TEST_P(evm, extcall_value_zero_to_nonexistent_account)
 {
     // Not implemented in Advanced.
     if (is_advanced())
@@ -158,7 +158,7 @@ TEST_P(evm, call2_value_zero_to_nonexistent_account)
     rev = EVMC_PRAGUE;
     host.call_result.gas_left = 1000;
 
-    const auto code = eof_bytecode(call2(0xaa).input(0, 0x40) + OP_STOP, 4);
+    const auto code = eof_bytecode(extcall(0xaa).input(0, 0x40) + OP_STOP, 4);
 
     execute(safe_call_gas, code);
     auto gas_before_call = 4 * 3 + 2 * 3 + 2600;
@@ -175,7 +175,7 @@ TEST_P(evm, call2_value_zero_to_nonexistent_account)
     EXPECT_GAS_USED(EVMC_SUCCESS, gas_before_call + call_msg.gas - host.call_result.gas_left);
 }
 
-TEST_P(evm, call2_new_account_creation_cost)
+TEST_P(evm, extcall_new_account_creation_cost)
 {
     // Not implemented in Advanced.
     if (is_advanced())
@@ -183,7 +183,7 @@ TEST_P(evm, call2_new_account_creation_cost)
     constexpr auto call_dst = 0x00000000000000000000000000000000000000ad_address;
     constexpr auto msg_dst = 0x0000000000000000000000000000000000000003_address;
     const auto code =
-        eof_bytecode(call2(call_dst).value(calldataload(0)).input(0, 0) + ret_top(), 4);
+        eof_bytecode(extcall(call_dst).value(calldataload(0)).input(0, 0) + ret_top(), 4);
 
     msg.recipient = msg_dst;
 
@@ -239,7 +239,7 @@ TEST_P(evm, call2_new_account_creation_cost)
     }
 }
 
-TEST_P(evm, call2_oog_after_balance_check)
+TEST_P(evm, extcall_oog_after_balance_check)
 {
     // Not implemented in Advanced.
     if (is_advanced())
@@ -248,12 +248,12 @@ TEST_P(evm, call2_oog_after_balance_check)
     rev = EVMC_PRAGUE;
     // Create the call destination account.
     host.accounts[0x0000000000000000000000000000000000000000_address] = {};
-    auto code = eof_bytecode(call2(0).value(1) + OP_POP + OP_STOP, 4);
+    auto code = eof_bytecode(extcall(0).value(1) + OP_POP + OP_STOP, 4);
     execute(9112, code);
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
 
-TEST_P(evm, call2_oog_after_depth_check)
+TEST_P(evm, extcall_oog_after_depth_check)
 {
     // Not implemented in Advanced.
     if (is_advanced())
@@ -264,7 +264,7 @@ TEST_P(evm, call2_oog_after_depth_check)
     host.accounts[0x0000000000000000000000000000000000000000_address] = {};
     msg.depth = 1024;
 
-    auto code = eof_bytecode(call2(0).value(1) + OP_POP + OP_STOP, 4);
+    auto code = eof_bytecode(extcall(0).value(1) + OP_POP + OP_STOP, 4);
     execute(9112, code);
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
 }
@@ -281,7 +281,7 @@ TEST_P(evm, returndataload)
     host.call_result.output_data = std::data(call_output.bytes);
     host.call_result.output_size = std::size(call_output.bytes);
 
-    const auto code = eof_bytecode(staticcall2(0) + returndataload(0) + ret_top(), 3);
+    const auto code = eof_bytecode(extstaticcall(0) + returndataload(0) + ret_top(), 3);
 
     execute(code);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size), call_output);
@@ -299,10 +299,10 @@ TEST_P(evm, returndataload_cost)
     host.call_result.output_size = std::size(call_output);
     host.call_result.gas_left = 0;
 
-    execute(eof_bytecode(staticcall2(0) + returndataload(0) + OP_STOP, 3));
+    execute(eof_bytecode(extstaticcall(0) + returndataload(0) + OP_STOP, 3));
     const auto gas_with = gas_used;
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-    execute(eof_bytecode(staticcall2(0) + push(0) + OP_STOP, 3));
+    execute(eof_bytecode(extstaticcall(0) + push(0) + OP_STOP, 3));
     EXPECT_GAS_USED(EVMC_SUCCESS, gas_with - 3);
 }
 
@@ -321,12 +321,12 @@ TEST_P(evm, returndataload_oog)
     constexpr auto retained_gas = 5000;
     constexpr auto gas = 3 * 3 + 100 + retained_gas * 64;
     // Uses OP_JUMPDEST to burn gas retained by the caller.
-    execute(gas, eof_bytecode(staticcall2(0) + (retained_gas - 3 - 3) * OP_JUMPDEST +
+    execute(gas, eof_bytecode(extstaticcall(0) + (retained_gas - 3 - 3) * OP_JUMPDEST +
                                   returndataload(0) + OP_STOP,
                      3));
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
 
-    execute(gas, eof_bytecode(staticcall2(0) + (retained_gas - 3 - 2) * OP_JUMPDEST +
+    execute(gas, eof_bytecode(extstaticcall(0) + (retained_gas - 3 - 2) * OP_JUMPDEST +
                                   returndataload(0) + OP_STOP,
                      3));
     EXPECT_EQ(result.status_code, EVMC_OUT_OF_GAS);
@@ -344,7 +344,7 @@ TEST_P(evm, returndataload_outofrange)
         host.call_result.output_data = std::data(call_output);
         host.call_result.output_size = std::size(call_output);
 
-        execute(eof_bytecode(staticcall2(0) + returndataload(0) + OP_STOP, 3));
+        execute(eof_bytecode(extstaticcall(0) + returndataload(0) + OP_STOP, 3));
         EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
     }
     {
@@ -352,19 +352,19 @@ TEST_P(evm, returndataload_outofrange)
         host.call_result.output_data = std::data(call_output);
         host.call_result.output_size = std::size(call_output);
 
-        execute(eof_bytecode(staticcall2(0) + returndataload(1) + OP_STOP, 3));
+        execute(eof_bytecode(extstaticcall(0) + returndataload(1) + OP_STOP, 3));
         EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
 
-        execute(eof_bytecode(staticcall2(0) + returndataload(31) + OP_STOP, 3));
+        execute(eof_bytecode(extstaticcall(0) + returndataload(31) + OP_STOP, 3));
         EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
 
-        execute(eof_bytecode(staticcall2(0) + returndataload(32) + OP_STOP, 3));
+        execute(eof_bytecode(extstaticcall(0) + returndataload(32) + OP_STOP, 3));
         EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
 
-        execute(eof_bytecode(staticcall2(0) + returndataload(max_uint256) + OP_STOP, 3));
+        execute(eof_bytecode(extstaticcall(0) + returndataload(max_uint256) + OP_STOP, 3));
         EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
 
-        execute(eof_bytecode(staticcall2(0) + returndataload(0) + OP_STOP, 3));
+        execute(eof_bytecode(extstaticcall(0) + returndataload(0) + OP_STOP, 3));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     }
     {
@@ -372,16 +372,16 @@ TEST_P(evm, returndataload_outofrange)
         host.call_result.output_data = std::data(call_output);
         host.call_result.output_size = std::size(call_output);
 
-        execute(eof_bytecode(staticcall2(0) + returndataload(3) + OP_STOP, 3));
+        execute(eof_bytecode(extstaticcall(0) + returndataload(3) + OP_STOP, 3));
         EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
 
-        execute(eof_bytecode(staticcall2(0) + returndataload(max_uint256) + OP_STOP, 3));
+        execute(eof_bytecode(extstaticcall(0) + returndataload(max_uint256) + OP_STOP, 3));
         EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
 
-        execute(eof_bytecode(staticcall2(0) + returndataload(1) + OP_STOP, 3));
+        execute(eof_bytecode(extstaticcall(0) + returndataload(1) + OP_STOP, 3));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
 
-        execute(eof_bytecode(staticcall2(0) + returndataload(2) + OP_STOP, 3));
+        execute(eof_bytecode(extstaticcall(0) + returndataload(2) + OP_STOP, 3));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     }
     {
@@ -389,22 +389,22 @@ TEST_P(evm, returndataload_outofrange)
         host.call_result.output_data = std::data(call_output);
         host.call_result.output_size = std::size(call_output);
 
-        execute(eof_bytecode(staticcall2(0) + returndataload(33) + OP_STOP, 3));
+        execute(eof_bytecode(extstaticcall(0) + returndataload(33) + OP_STOP, 3));
         EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
 
-        execute(eof_bytecode(staticcall2(0) + returndataload(max_uint256) + OP_STOP, 3));
+        execute(eof_bytecode(extstaticcall(0) + returndataload(max_uint256) + OP_STOP, 3));
         EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
 
 
-        execute(eof_bytecode(staticcall2(0) + returndataload(1) + OP_STOP, 3));
+        execute(eof_bytecode(extstaticcall(0) + returndataload(1) + OP_STOP, 3));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
 
-        execute(eof_bytecode(staticcall2(0) + returndataload(31) + OP_STOP, 3));
+        execute(eof_bytecode(extstaticcall(0) + returndataload(31) + OP_STOP, 3));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
 
-        execute(eof_bytecode(staticcall2(0) + returndataload(32) + OP_STOP, 3));
+        execute(eof_bytecode(extstaticcall(0) + returndataload(32) + OP_STOP, 3));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-        execute(eof_bytecode(staticcall2(0) + returndataload(0) + OP_STOP, 3));
+        execute(eof_bytecode(extstaticcall(0) + returndataload(0) + OP_STOP, 3));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     }
 }
@@ -416,13 +416,13 @@ TEST_P(evm, returndataload_empty)
         return;
 
     rev = EVMC_PRAGUE;
-    execute(eof_bytecode(staticcall2(0) + returndataload(0) + OP_STOP, 3));
+    execute(eof_bytecode(extstaticcall(0) + returndataload(0) + OP_STOP, 3));
     EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
 
-    execute(eof_bytecode(staticcall2(0) + returndataload(1) + OP_STOP, 3));
+    execute(eof_bytecode(extstaticcall(0) + returndataload(1) + OP_STOP, 3));
     EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
 
-    execute(eof_bytecode(staticcall2(0) + returndataload(max_uint256) + OP_STOP, 3));
+    execute(eof_bytecode(extstaticcall(0) + returndataload(max_uint256) + OP_STOP, 3));
     EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
 }
 
@@ -440,11 +440,11 @@ TEST_P(evm, returndataload_outofrange_highbits)
     // Covers an incorrect cast of RETURNDATALOAD arg to `size_t` ignoring the high bits.
     const auto highbits =
         0x1000000000000000000000000000000000000000000000000000000000000000_bytes32;
-    execute(eof_bytecode(staticcall2(0) + returndataload(highbits) + OP_STOP, 3));
+    execute(eof_bytecode(extstaticcall(0) + returndataload(highbits) + OP_STOP, 3));
     EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
 }
 
-TEST_P(evm, call2_gas_refund_aggregation_different_calls)
+TEST_P(evm, extcall_gas_refund_aggregation_different_calls)
 {
     // Not implemented in Advanced.
     if (is_advanced())
@@ -458,14 +458,14 @@ TEST_P(evm, call2_gas_refund_aggregation_different_calls)
     host.call_result.status_code = EVMC_SUCCESS;
     host.call_result.gas_refund = 1;
 
-    const auto code =
-        eof_bytecode(call2(callee) + delegatecall2(callee) + staticcall2(callee) + OP_STOP, 5);
+    const auto code = eof_bytecode(
+        extcall(callee) + extdelegatecall(callee) + extstaticcall(callee) + OP_STOP, 5);
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(result.gas_refund, 3);
 }
 
-TEST_P(evm, call2_gas_refund_aggregation_same_calls)
+TEST_P(evm, extcall_gas_refund_aggregation_same_calls)
 {
     // Not implemented in Advanced.
     if (is_advanced())
@@ -479,15 +479,15 @@ TEST_P(evm, call2_gas_refund_aggregation_same_calls)
     host.call_result.status_code = EVMC_SUCCESS;
     host.call_result.gas_refund = 1;
 
-    execute(eof_bytecode(2 * call2(callee).value(1).input(1, 1) + OP_STOP, 5));
+    execute(eof_bytecode(2 * extcall(callee).value(1).input(1, 1) + OP_STOP, 5));
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(result.gas_refund, 2);
 
-    execute(eof_bytecode(2 * delegatecall2(callee).input(1, 1) + OP_STOP, 4));
+    execute(eof_bytecode(2 * extdelegatecall(callee).input(1, 1) + OP_STOP, 4));
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(result.gas_refund, 2);
 
-    execute(eof_bytecode(2 * staticcall2(callee).input(1, 1) + OP_STOP, 4));
+    execute(eof_bytecode(2 * extstaticcall(callee).input(1, 1) + OP_STOP, 4));
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(result.gas_refund, 2);
 }

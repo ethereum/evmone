@@ -124,12 +124,12 @@ template Result call_impl<OP_CALLCODE>(
 template <Opcode Op>
 Result newcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
-    static_assert(Op == OP_CALL2 || Op == OP_DELEGATECALL2 || Op == OP_STATICCALL2);
+    static_assert(Op == OP_EXTCALL || Op == OP_EXTDELEGATECALL || Op == OP_EXTSTATICCALL);
 
     const auto dst = intx::be::trunc<evmc::address>(stack.pop());
     const auto input_offset_u256 = stack.pop();
     const auto input_size_u256 = stack.pop();
-    const auto value = (Op == OP_STATICCALL2 || Op == OP_DELEGATECALL2) ? 0 : stack.pop();
+    const auto value = (Op == OP_EXTSTATICCALL || Op == OP_EXTDELEGATECALL) ? 0 : stack.pop();
     const auto has_value = value != 0;
 
     stack.push(2);  // Assume (hard) failure.
@@ -148,14 +148,14 @@ Result newcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
     const auto input_size = static_cast<size_t>(input_size_u256);
 
     auto msg = evmc_message{};
-    msg.kind = (Op == OP_DELEGATECALL2) ? EVMC_DELEGATECALL : EVMC_CALL;
-    msg.flags = (Op == OP_STATICCALL2) ? uint32_t{EVMC_STATIC} : state.msg->flags;
+    msg.kind = (Op == OP_EXTDELEGATECALL) ? EVMC_DELEGATECALL : EVMC_CALL;
+    msg.flags = (Op == OP_EXTSTATICCALL) ? uint32_t{EVMC_STATIC} : state.msg->flags;
     msg.depth = state.msg->depth + 1;
-    msg.recipient = (Op != OP_DELEGATECALL2) ? dst : state.msg->recipient;
+    msg.recipient = (Op != OP_EXTDELEGATECALL) ? dst : state.msg->recipient;
     msg.code_address = dst;
-    msg.sender = (Op == OP_DELEGATECALL2) ? state.msg->sender : state.msg->recipient;
+    msg.sender = (Op == OP_EXTDELEGATECALL) ? state.msg->sender : state.msg->recipient;
     msg.value =
-        (Op == OP_DELEGATECALL2) ? state.msg->value : intx::be::store<evmc::uint256be>(value);
+        (Op == OP_EXTDELEGATECALL) ? state.msg->value : intx::be::store<evmc::uint256be>(value);
 
     if (input_size > 0)
     {
@@ -166,7 +166,7 @@ Result newcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
 
     auto cost = has_value ? 9000 : 0;
 
-    if constexpr (Op == OP_CALL2)
+    if constexpr (Op == OP_EXTCALL)
     {
         if (has_value && state.in_static_mode())
             return {EVMC_STATIC_MODE_VIOLATION, gas_left};
@@ -195,9 +195,9 @@ Result newcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
         return {EVMC_SUCCESS, gas_left};  // "Light" failure.
     }
 
-    if constexpr (Op == OP_DELEGATECALL2)
+    if constexpr (Op == OP_EXTDELEGATECALL)
     {
-        // The code targeted by DELEGATECALL2 must also be an EOF.
+        // The code targeted by EXTDELEGATECALL must also be an EOF.
         // This restriction has been added to EIP-3540 in
         // https://github.com/ethereum/EIPs/pull/7131
         uint8_t target_code_prefix[2];
@@ -231,11 +231,11 @@ Result newcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
     return {EVMC_SUCCESS, gas_left};
 }
 
-template Result newcall_impl<OP_CALL2>(
+template Result newcall_impl<OP_EXTCALL>(
     StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;
-template Result newcall_impl<OP_STATICCALL2>(
+template Result newcall_impl<OP_EXTSTATICCALL>(
     StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;
-template Result newcall_impl<OP_DELEGATECALL2>(
+template Result newcall_impl<OP_EXTDELEGATECALL>(
     StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;
 
 template <Opcode Op>
