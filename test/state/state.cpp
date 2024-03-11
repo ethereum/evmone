@@ -512,9 +512,8 @@ StateDiff finalize(const StateView& sv, evmc_revision rev, const address& coinba
 }
 
 std::variant<TransactionReceipt, std::error_code> transition(MegaContext& mega_ctx,
-    const StateView& state_view,
-    const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm,
-    int64_t block_gas_left, int64_t blob_gas_left)
+    const StateView& state_view, const BlockInfo& block, const Transaction& tx, evmc_revision rev,
+    evmc::VM& vm, int64_t block_gas_left, int64_t blob_gas_left)
 {
     State state{state_view};
     auto* sender_ptr = state.find(tx.sender);
