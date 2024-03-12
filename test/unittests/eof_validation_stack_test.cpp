@@ -1422,3 +1422,67 @@ TEST_F(eof_validation, swapn_stack_validation)
     add_test_case(
         eof_bytecode(pushes + OP_SWAPN + "ff" + OP_STOP, 20), EOFValidationError::stack_underflow);
 }
+
+TEST_F(eof_validation, exchange_stack_validation)
+{
+    const auto pushes = 10 * push(1);
+    add_test_case(
+        eof_bytecode(pushes + OP_EXCHANGE + "00" + OP_STOP, 10), EOFValidationError::success);
+    add_test_case(
+        eof_bytecode(pushes + OP_EXCHANGE + "10" + OP_STOP, 10), EOFValidationError::success);
+    add_test_case(
+        eof_bytecode(pushes + OP_EXCHANGE + "01" + OP_STOP, 10), EOFValidationError::success);
+    add_test_case(
+        eof_bytecode(pushes + OP_EXCHANGE + "20" + OP_STOP, 10), EOFValidationError::success);
+    add_test_case(
+        eof_bytecode(pushes + OP_EXCHANGE + "02" + OP_STOP, 10), EOFValidationError::success);
+    add_test_case(
+        eof_bytecode(pushes + OP_EXCHANGE + "70" + OP_STOP, 10), EOFValidationError::success);
+    add_test_case(
+        eof_bytecode(pushes + OP_EXCHANGE + "07" + OP_STOP, 10), EOFValidationError::success);
+    add_test_case(
+        eof_bytecode(pushes + OP_EXCHANGE + "11" + OP_STOP, 10), EOFValidationError::success);
+    add_test_case(
+        eof_bytecode(pushes + OP_EXCHANGE + "34" + OP_STOP, 10), EOFValidationError::success);
+    add_test_case(
+        eof_bytecode(pushes + OP_EXCHANGE + "43" + OP_STOP, 10), EOFValidationError::success);
+    add_test_case(
+        eof_bytecode(pushes + OP_EXCHANGE + "16" + OP_STOP, 10), EOFValidationError::success);
+    add_test_case(
+        eof_bytecode(pushes + OP_EXCHANGE + "61" + OP_STOP, 10), EOFValidationError::success);
+    add_test_case(eof_bytecode(pushes + OP_EXCHANGE + "80" + OP_STOP, 10),
+        EOFValidationError::stack_underflow);
+    add_test_case(eof_bytecode(pushes + OP_EXCHANGE + "08" + OP_STOP, 10),
+        EOFValidationError::stack_underflow);
+    add_test_case(eof_bytecode(pushes + OP_EXCHANGE + "71" + OP_STOP, 10),
+        EOFValidationError::stack_underflow);
+    add_test_case(eof_bytecode(pushes + OP_EXCHANGE + "17" + OP_STOP, 10),
+        EOFValidationError::stack_underflow);
+    add_test_case(eof_bytecode(pushes + OP_EXCHANGE + "44" + OP_STOP, 10),
+        EOFValidationError::stack_underflow);
+    add_test_case(eof_bytecode(pushes + OP_EXCHANGE + "53" + OP_STOP, 10),
+        EOFValidationError::stack_underflow);
+    add_test_case(eof_bytecode(pushes + OP_EXCHANGE + "35" + OP_STOP, 10),
+        EOFValidationError::stack_underflow);
+    add_test_case(eof_bytecode(pushes + OP_EXCHANGE + "ee" + OP_STOP, 10),
+        EOFValidationError::stack_underflow);
+    add_test_case(eof_bytecode(pushes + OP_EXCHANGE + "ef" + OP_STOP, 10),
+        EOFValidationError::stack_underflow);
+    add_test_case(eof_bytecode(pushes + OP_EXCHANGE + "fe" + OP_STOP, 10),
+        EOFValidationError::stack_underflow);
+    add_test_case(eof_bytecode(pushes + OP_EXCHANGE + "ff" + OP_STOP, 10),
+        EOFValidationError::stack_underflow);
+}
+
+TEST_F(eof_validation, exchange_deep_stack_validation)
+{
+    const auto pushes = 33 * push(1);
+    add_test_case(
+        eof_bytecode(pushes + OP_EXCHANGE + "ff" + OP_STOP, 33), EOFValidationError::success);
+}
+
+TEST_F(eof_validation, exchange_empty_stack_validation)
+{
+    add_test_case(eof_bytecode(bytecode(OP_EXCHANGE) + "00" + OP_STOP, 0),
+        EOFValidationError::stack_underflow);
+}
