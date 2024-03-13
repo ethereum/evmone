@@ -27,6 +27,7 @@ enum ErrorCode : int
     EMPTY_BLOB_HASHES_LIST,
     INVALID_BLOB_HASH_VERSION,
     BLOB_GAS_LIMIT_EXCEEDED,
+    EOF_CREATION_TRANSACTION,
     UNKNOWN_ERROR,
 };
 
@@ -73,6 +74,8 @@ inline const std::error_category& evmone_category() noexcept
                 return "invalid blob hash version";
             case BLOB_GAS_LIMIT_EXCEEDED:
                 return "blob gas limit exceeded";
+            case EOF_CREATION_TRANSACTION:
+                return "EOF initcode in creation transaction";
             case UNKNOWN_ERROR:
                 return "Unknown error";
             default:

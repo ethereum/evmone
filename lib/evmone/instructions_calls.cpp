@@ -182,6 +182,10 @@ Result create_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noex
         // init_code_offset may be garbage if init_code_size == 0.
         msg.input_data = &state.memory[init_code_offset];
         msg.input_size = init_code_size;
+
+        // EOF initcode is not allowed for legacy creation
+        if (is_eof_container({msg.input_data, msg.input_size}))
+            return {EVMC_SUCCESS, gas_left};  // "Light" failure.
     }
     msg.sender = state.msg->recipient;
     msg.depth = state.msg->depth + 1;
