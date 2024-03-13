@@ -321,8 +321,10 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
         if (m_rev >= EVMC_PRAGUE)
         {
             // Only EOFCREATE/TXCREATE is allowed to deploy code starting with EF.
-            assert(msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2);
-            return evmc::Result{EVMC_CONTRACT_VALIDATION_FAILURE};
+            // It must be valid EOF, which was validated before execution.
+            if (msg.kind != EVMC_EOFCREATE)
+                return evmc::Result{EVMC_CONTRACT_VALIDATION_FAILURE};
+            assert(validate_eof(m_rev, code) == EOFValidationError::success);
         }
         else if (m_rev >= EVMC_LONDON)
         {
