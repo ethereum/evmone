@@ -536,7 +536,7 @@ jobs:
             ~/tests/EIPTests/BlockchainTests/
       - download_execution_tests:
           repo: ipsilon/tests
-          rev: update-extcode
+          rev: eof-extcode-20240313
           legacy: false
       - run:
           name: "State tests (EOF)"
