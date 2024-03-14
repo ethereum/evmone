@@ -792,6 +792,8 @@ TEST_F(eof_validation, non_returning_status)
     // Invalid with RETF
     add_test_case("EF0001 010008 02000200010001 040000 00 0080000000800000 00 E4",
         EOFValidationError::invalid_non_returning_flag);
+    add_test_case("EF0001 010004 0200010001 040000 00 00800000 E4",
+        EOFValidationError::invalid_non_returning_flag);
     // Invalid with JUMPF to returning
     add_test_case(
         "EF0001 01000c 020003000100030001 040000 00 008000000080000000000000 00 E50002 E4",
