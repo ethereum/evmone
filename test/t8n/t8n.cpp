@@ -134,6 +134,8 @@ int main(int argc, const char* argv[])
                 j_result["receipts"] = json::json::array();
                 j_result["rejected"] = json::json::array();
 
+                state::system_call(state, block, rev, vm);
+
                 for (size_t i = 0; i < j_txs.size(); ++i)
                 {
                     auto tx = test::from_json<state::Transaction>(j_txs[i]);
