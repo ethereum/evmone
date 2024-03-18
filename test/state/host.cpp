@@ -410,20 +410,22 @@ evmc_tx_context Host::get_tx_context() const noexcept
         std::min(m_tx.max_priority_gas_price, m_tx.max_gas_price - m_block.base_fee);
     const auto effective_gas_price = m_block.base_fee + priority_gas_price;
 
-    return evmc_tx_context{
-        intx::be::store<uint256be>(effective_gas_price),  // By EIP-1559.
-        m_tx.sender,
-        m_block.coinbase,
-        m_block.number,
-        m_block.timestamp,
-        m_block.gas_limit,
+    return evmc_tx_context{intx::be::store<uint256be>(effective_gas_price),  // By EIP-1559.
+        m_tx.sender, m_block.coinbase, m_block.number, m_block.timestamp, m_block.gas_limit,
         m_block.prev_randao,
         0x01_bytes32,  // Chain ID is expected to be 1.
-        uint256be{m_block.base_fee},
-        intx::be::store<uint256be>(m_block.blob_base_fee),
-        m_tx.blob_hashes.data(),
-        m_tx.blob_hashes.size(),
-    };
+        uint256be{m_block.base_fee}, intx::be::store<uint256be>(m_block.blob_base_fee),
+        m_tx.blob_hashes.data(), m_tx.blob_hashes.size()};
+}
+
+evmc_tx_initcode Host::get_tx_initcode_by_hash(const evmc_bytes32& hash) const noexcept
+{
+    if (const auto& it = m_initcodes.find(hash); it != m_initcodes.end())
+    {
+        return evmc_tx_initcode{it->second.data(), it->second.size()};
+    }
+
+    return evmc_tx_initcode{nullptr, 0};
 }
 
 bytes32 Host::get_block_hash(int64_t block_number) const noexcept

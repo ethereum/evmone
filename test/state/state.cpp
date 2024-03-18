@@ -10,6 +10,7 @@
 #include <evmone/eof.hpp>
 #include <evmone/evmone.h>
 #include <evmone/execution_state.hpp>
+#include <algorithm>
 
 namespace evmone::state
 {
@@ -41,6 +42,14 @@ int64_t compute_access_list_cost(const AccessList& access_list) noexcept
     return cost;
 }
 
+int64_t compute_initcode_list_cost(evmc_revision rev, std::span<const bytes> initcodes) noexcept
+{
+    int64_t cost = 0;
+    for (const auto& initcode : initcodes)
+        cost += compute_tx_data_cost(rev, initcode);
+    return cost;
+}
+
 int64_t compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& tx) noexcept
 {
     static constexpr auto call_tx_cost = 21000;
@@ -51,7 +60,7 @@ int64_t compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& tx) noex
         is_create && rev >= EVMC_SHANGHAI ? initcode_word_cost * num_words(tx.data.size()) : 0;
     const auto tx_cost = is_create && rev >= EVMC_HOMESTEAD ? create_tx_cost : call_tx_cost;
     return tx_cost + compute_tx_data_cost(rev, tx.data) + compute_access_list_cost(tx.access_list) +
-           initcode_cost;
+           compute_initcode_list_cost(rev, tx.initcodes) + initcode_cost;
 }
 
 evmc_message build_message(const Transaction& tx, int64_t execution_gas_limit) noexcept
@@ -253,8 +262,25 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
             return make_error_code(INVALID_BLOB_HASH_VERSION);
         if (std::cmp_greater(tx.blob_gas_used(), blob_gas_left))
             return make_error_code(BLOB_GAS_LIMIT_EXCEEDED);
-        [[fallthrough]];
+        break;
 
+    case Transaction::Type::initcodes:
+        if (rev < EVMC_PRAGUE)
+            return make_error_code(TX_TYPE_NOT_SUPPORTED);
+        if (tx.initcodes.size() > max_initcode_count)
+            return make_error_code(INIT_CODE_COUNT_LIMIT_EXCEEDED);
+        if (std::any_of(tx.initcodes.begin(), tx.initcodes.end(),
+                [](const bytes& v) { return v.size() > max_initcode_size; }))
+            return make_error_code(INIT_CODE_SIZE_LIMIT_EXCEEDED);
+        break;
+
+    default:;
+    }
+
+    switch (tx.type)
+    {
+    case Transaction::Type::blob:
+    case Transaction::Type::initcodes:
     case Transaction::Type::eip1559:
         if (rev < EVMC_LONDON)
             return make_error_code(TX_TYPE_NOT_SUPPORTED);

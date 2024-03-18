@@ -203,19 +203,16 @@ Result create_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noex
     return {EVMC_SUCCESS, gas_left};
 }
 
-Result eofcreate(
+template <Opcode Op>
+Result create_eof_impl(
     StackTop stack, int64_t gas_left, ExecutionState& state, code_iterator& pos) noexcept
 {
+    static_assert(Op == OP_EOFCREATE || Op == OP_TXCREATE);
+
     if (state.in_static_mode())
         return {EVMC_STATIC_MODE_VIOLATION, gas_left};
 
-    const auto initcontainer_index = uint8_t{pos[1]};
-    pos += 2;
-
-    const auto& container = state.original_code;
-    const auto eof_header = read_valid_eof1_header(state.original_code);
-    const auto initcontainer = eof_header.get_container(container, initcontainer_index);
-
+    const auto initcode_hash = (Op == OP_TXCREATE) ? stack.pop() : uint256{};
     const auto endowment = stack.pop();
     const auto salt = stack.pop();
     const auto input_offset_u256 = stack.pop();
@@ -226,6 +223,34 @@ Result eofcreate(
 
     if (!check_memory(gas_left, state.memory, input_offset_u256, input_size_u256))
         return {EVMC_OUT_OF_GAS, gas_left};
+
+    bytes_view initcontainer;
+    if constexpr (Op == OP_EOFCREATE)
+    {
+        const auto initcontainer_index = uint8_t{pos[1]};
+        pos += 2;
+        const auto& container = state.original_code;
+        const auto eof_header = read_valid_eof1_header(state.original_code);
+        initcontainer = eof_header.get_container(container, initcontainer_index);
+    }
+    else
+    {
+        pos += 1;
+
+        const auto initcode =
+            state.get_tx_initcode_by_hash(intx::be::store<evmc::bytes32>(initcode_hash));
+        if (initcode.data == nullptr)
+            return {EVMC_SUCCESS, gas_left};  // "Light" failure
+
+        initcontainer = {initcode.data, initcode.size};
+
+        // Charge for initcode validation.
+        constexpr auto initcode_word_cost_validation = 2;
+        const auto initcode_cost_validation =
+            num_words(initcontainer.size()) * initcode_word_cost_validation;
+        if ((gas_left -= initcode_cost_validation) < 0)
+            return {EVMC_OUT_OF_GAS, gas_left};
+    }
 
     // Charge for initcode hashing.
     constexpr auto initcode_word_cost_hashing = 6;
@@ -242,6 +267,17 @@ Result eofcreate(
     if (endowment != 0 &&
         intx::be::load<uint256>(state.host.get_balance(state.msg->recipient)) < endowment)
         return {EVMC_SUCCESS, gas_left};  // "Light" failure.
+
+    if constexpr (Op == OP_TXCREATE)
+    {
+        const auto error_subcont = validate_eof(state.rev, initcontainer);
+        if (error_subcont != EOFValidationError::success)
+            return {EVMC_SUCCESS, gas_left};  // "Light" failure.
+
+        const auto initcontainer_header = read_valid_eof1_header(initcontainer);
+        if (!initcontainer_header.can_init(initcontainer.size()))
+            return {EVMC_SUCCESS, gas_left};  // "Light" failure.
+    }
 
     auto msg = evmc_message{};
     msg.gas = gas_left - gas_left / 64;
@@ -276,4 +312,8 @@ template Result create_impl<OP_CREATE>(
     StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;
 template Result create_impl<OP_CREATE2>(
     StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;
+template Result create_eof_impl<OP_EOFCREATE>(
+    StackTop stack, int64_t gas_left, ExecutionState& state, code_iterator& pos) noexcept;
+template Result create_eof_impl<OP_TXCREATE>(
+    StackTop stack, int64_t gas_left, ExecutionState& state, code_iterator& pos) noexcept;
 }  // namespace evmone::instr::core
