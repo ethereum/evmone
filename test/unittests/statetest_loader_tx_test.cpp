@@ -232,6 +232,45 @@ TEST(statetest_loader, tx_type_3)
         0x0111111111111111111111111111111111111111111111111111111111111111_bytes32);
 }
 
+TEST(statetest_loader, tx_invalid_blob_versioned_hash)
+{
+    constexpr std::string_view input = R"({
+        "input" : "0x00",
+        "gas" : "0x3d0900",
+        "nonce" : "0x0",
+        "to" : "0x095e7baea6a6c7c4c2dfeb977efac326af552d87",
+        "value" : "0x186a0",
+        "v" : "0x0",
+        "r" : "0xbf751ed5c37bd65d3ace5b73a1c62f7388b203a82ce366392e7b76fd2de12cb1",
+        "s" : "0x6f2b5344e5b997d35b3a0768006196a65c4eff8ed3acad5201a105c2b59b4e8c",
+        "secretKey" : "0x45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8",
+        "chainId" : "0x1",
+        "type" : "0x3",
+        "maxFeePerGas" : "0x12a05f200",
+        "maxPriorityFeePerGas" : "0x2",
+        "accessList" : [
+            {
+                "address" : "0x095e7baea6a6c7c4c2dfeb977efac326af552d87",
+                "storageKeys" : [
+                    "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    "0x0000000000000000000000000000000000000000000000000000000000000001"
+                ]
+            }
+        ],
+        "maxFeePerBlobGas" : "0xa",
+        "blobVersionedHashes" : [
+            "0x1a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8",
+            "0x1a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8"
+        ],
+        "hash" : "0x6f26856255f46b27b31d06e00750d8d75067fd8a28e15e8f5557a33fba288cb5",
+        "sender" : "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"
+    })";
+
+    EXPECT_THAT([&] { test::from_json<state::Transaction>(json::json::parse(input)); },
+        ThrowsMessage<std::invalid_argument>(
+            "invalid hash: 0x1a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8"));
+}
+
 TEST(statetest_loader, invalid_tx_type)
 {
     {
