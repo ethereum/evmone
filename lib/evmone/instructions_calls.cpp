@@ -334,12 +334,10 @@ Result create_eof_impl(
     {
         pos += 1;
 
-        const auto initcode =
+        initcontainer =
             state.get_tx_initcode_by_hash(intx::be::store<evmc::bytes32>(initcode_hash));
-        if (initcode.data == nullptr)
+        if (initcontainer.empty())
             return {EVMC_SUCCESS, gas_left};  // "Light" failure
-
-        initcontainer = {initcode.data, initcode.size};
 
         // Charge for initcode validation.
         constexpr auto initcode_word_cost_validation = 2;
