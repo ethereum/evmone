@@ -58,7 +58,7 @@ class Host : public evmc::Host
     const BlockInfo& m_block;
     const Transaction& m_tx;
     std::vector<Log> m_logs;
-    std::unordered_map<hash256, bytes_view> m_initcodes;
+    std::vector<evmc_tx_initcode> m_tx_initcodes;
 
 public:
     Host(evmc_revision rev, evmc::VM& vm, State& state, const BlockInfo& block,
@@ -70,7 +70,7 @@ public:
             for (const auto& initcode : tx.initcodes)
             {
                 const auto hash = keccak256({initcode.data(), initcode.size()});
-                m_initcodes.insert({hash, initcode});
+                m_tx_initcodes.push_back({hash, initcode.data(), initcode.size()});
             }
         }
     }
@@ -108,9 +108,6 @@ private:
     evmc::Result create(const evmc_message& msg) noexcept;
 
     [[nodiscard]] evmc_tx_context get_tx_context() const noexcept override;
-
-    [[nodiscard]] evmc_tx_initcode get_tx_initcode_by_hash(
-        const evmc_bytes32& hash) const noexcept override;
 
     [[nodiscard]] bytes32 get_block_hash(int64_t block_number) const noexcept override;
 
