@@ -300,7 +300,9 @@ TEST_F(eof_validation, EOF1_undefined_opcodes)
         // gas_cost table current implementation does not allow to undef instructions.
         if (opcode == OP_JUMP || opcode == OP_JUMPI || opcode == OP_PC || opcode == OP_CALLCODE ||
             opcode == OP_SELFDESTRUCT || opcode == OP_CALL || opcode == OP_STATICCALL ||
-            opcode == OP_DELEGATECALL || opcode == OP_CREATE || opcode == OP_CREATE2)
+            opcode == OP_DELEGATECALL || opcode == OP_CREATE || opcode == OP_CREATE2 ||
+            opcode == OP_CODESIZE || opcode == OP_CODECOPY || opcode == OP_EXTCODESIZE ||
+            opcode == OP_EXTCODECOPY || opcode == OP_EXTCODEHASH || opcode == OP_GAS)
             continue;
 
         auto cont =
@@ -576,7 +578,8 @@ TEST_F(eof_validation, EOF1_section_order)
 TEST_F(eof_validation, deprecated_instructions)
 {
     for (auto op : {OP_CALLCODE, OP_SELFDESTRUCT, OP_JUMP, OP_JUMPI, OP_PC, OP_CALL, OP_STATICCALL,
-             OP_DELEGATECALL, OP_CREATE, OP_CREATE2})
+             OP_DELEGATECALL, OP_CREATE, OP_CREATE2, OP_CODESIZE, OP_CODECOPY, OP_EXTCODESIZE,
+             OP_EXTCODECOPY, OP_EXTCODEHASH, OP_GAS})
         add_test_case(eof_bytecode(op), EOFValidationError::undefined_instruction);
 }
 
@@ -793,6 +796,8 @@ TEST_F(eof_validation, non_returning_status)
 
     // Invalid with RETF
     add_test_case("EF0001 010008 02000200010001 040000 00 0080000000800000 00 E4",
+        EOFValidationError::invalid_non_returning_flag);
+    add_test_case("EF0001 010004 0200010001 040000 00 00800000 E4",
         EOFValidationError::invalid_non_returning_flag);
     // Invalid with JUMPF to returning
     add_test_case(

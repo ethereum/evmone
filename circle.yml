@@ -460,11 +460,10 @@ jobs:
     steps:
       - build
       - build_silkworm:
-          branch: evmc-v11.0.0-alpha.1
-          commit: evmc-v11.0.0-alpha.1
+          branch: master
+          commit: 985013585c358bbfda399c668bdf9992815b806f
       - download_execution_tests:
-          # TODO: Fix failures and upgrade to v13.1
-          rev: v13
+          rev: v13.1
       - run:
           name: "Silkworm-driven blockchain tests (Advanced)"
           working_directory: ~/build
@@ -536,7 +535,7 @@ jobs:
             ~/tests/EIPTests/BlockchainTests/
       - download_execution_tests:
           repo: ipsilon/tests
-          rev: eof-calls-20240314
+          rev: eip-7069
           legacy: false
       - run:
           name: "State tests (EOF)"
