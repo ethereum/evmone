@@ -56,7 +56,10 @@ int main(int argc, const char* argv[])
             else if (arg == "--input.txs" && ++i < argc)
                 txs_file = argv[i];
             else if (arg == "--output.basedir" && ++i < argc)
+            {
                 output_dir = argv[i];
+                fs::create_directories(output_dir);
+            }
             else if (arg == "--output.result" && ++i < argc)
                 output_result_file = argv[i];
             else if (arg == "--output.alloc" && ++i < argc)
