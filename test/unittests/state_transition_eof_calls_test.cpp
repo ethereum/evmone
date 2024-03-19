@@ -171,6 +171,30 @@ TEST_F(state_transition, extcall_with_value)
     expect.post[callee].storage[0x01_bytes32] = 0xcc_bytes32;
 }
 
+TEST_F(state_transition, extcall_min_callee_gas_failure_mode)
+{
+    rev = EVMC_PRAGUE;
+    constexpr auto callee = 0xca11ee_address;
+
+    pre.insert(callee, {
+                           .code = eof_bytecode(OP_STOP, 0),
+                       });
+
+    tx.to = To;
+    pre.insert(*tx.to,
+        {
+            .storage = {{0x01_bytes32, {.current = 0xdd_bytes32, .original = 0xdd_bytes32}}},
+            .code = eof_bytecode(sstore(1, extcall(callee)) + OP_STOP, 4),
+        });
+    // Just short of what the caller needs + MIN_RETAINED_GAS + MIN_CALLEE_GAS
+    tx.gas_limit = 21000 + 4 * 3 + 2600 + 5000 + 2300 - 1;
+
+    // Hard, OOG failure
+    expect.status = EVMC_OUT_OF_GAS;
+    expect.post[*tx.to].storage[0x01_bytes32] = 0xdd_bytes32;
+    expect.post[callee].exists = true;
+}
+
 TEST_F(state_transition, extcall_output)
 {
     rev = EVMC_PRAGUE;
