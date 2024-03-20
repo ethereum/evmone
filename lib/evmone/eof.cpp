@@ -434,6 +434,12 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
             stack_height_required = code[i + 1] + 1;
         else if (opcode == OP_SWAPN)
             stack_height_required = code[i + 1] + 2;
+        else if (opcode == OP_EXCHANGE)
+        {
+            const auto n = (code[i + 1] >> 4) + 1;
+            const auto m = (code[i + 1] & 0x0F) + 1;
+            stack_height_required = n + m + 1;
+        }
 
         if (stack_height.min < stack_height_required)
             return EOFValidationError::stack_underflow;

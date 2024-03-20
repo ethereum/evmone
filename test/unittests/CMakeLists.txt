@@ -20,6 +20,7 @@ target_sources(
     evm_calls_test.cpp
     evm_control_flow_test.cpp
     evm_eip663_dupn_swapn_test.cpp
+    evm_eip663_exchange_test.cpp
     evm_eip2929_test.cpp
     evm_eip3198_basefee_test.cpp
     evm_eip3855_push0_test.cpp
@@ -58,6 +59,7 @@ target_sources(
     state_transition_block_test.cpp
     state_transition_call_test.cpp
     state_transition_create_test.cpp
+    state_transition_eip663_test.cpp
     state_transition_extcode_test.cpp
     state_transition_selfdestruct_test.cpp
     state_transition_touch_test.cpp
