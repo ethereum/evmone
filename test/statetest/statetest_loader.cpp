@@ -349,11 +349,11 @@ state::Transaction from_json<state::Transaction>(const json::json& j)
 
     if (const auto type_it = j.find("type"); type_it != j.end())
     {
-        const auto infered_type = stdx::to_underlying(o.type);
+        const auto inferred_type = stdx::to_underlying(o.type);
         const auto type = from_json<uint8_t>(*type_it);
-        if (type != infered_type)
+        if (type != inferred_type)
             throw std::invalid_argument("wrong transaction type: " + std::to_string(type) +
-                                        ", expected: " + std::to_string(infered_type));
+                                        ", expected: " + std::to_string(inferred_type));
     }
 
     o.nonce = from_json<uint64_t>(j.at("nonce"));
