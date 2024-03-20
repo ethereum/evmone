@@ -76,7 +76,8 @@ TEST_P(evm, extdelegatecall_oog_depth_limit)
     EXPECT_OUTPUT_INT(1);
 
     execute(expected_gas_used, code);
-    EXPECT_STATUS(EVMC_OUT_OF_GAS);
+    EXPECT_STATUS(EVMC_SUCCESS);  // MIN_CALLEE_GAS failure is light failure as well.
+    EXPECT_OUTPUT_INT(1);
 }
 
 TEST_P(evm, extcall_failing_with_value)

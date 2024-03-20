@@ -180,16 +180,9 @@ Result newcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
 
     msg.gas = gas_left - std::max(gas_left / 64, MIN_RETAINED_GAS);
 
-    if (msg.gas < MIN_CALLEE_GAS)
-        return {EVMC_OUT_OF_GAS, gas_left};
-
-    if (state.msg->depth >= 1024)
-    {
-        stack.top() = 1;
-        return {EVMC_SUCCESS, gas_left};  // "Light" failure.
-    }
-
-    if (has_value && intx::be::load<uint256>(state.host.get_balance(state.msg->recipient)) < value)
+    if (msg.gas < MIN_CALLEE_GAS || state.msg->depth >= 1024 ||
+        (has_value &&
+            intx::be::load<uint256>(state.host.get_balance(state.msg->recipient)) < value))
     {
         stack.top() = 1;
         return {EVMC_SUCCESS, gas_left};  // "Light" failure.

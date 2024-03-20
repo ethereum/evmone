@@ -189,9 +189,8 @@ TEST_F(state_transition, extcall_min_callee_gas_failure_mode)
     // Just short of what the caller needs + MIN_RETAINED_GAS + MIN_CALLEE_GAS
     tx.gas_limit = 21000 + 4 * 3 + 2600 + 5000 + 2300 - 1;
 
-    // Hard, OOG failure
-    expect.status = EVMC_OUT_OF_GAS;
-    expect.post[*tx.to].storage[0x01_bytes32] = 0xdd_bytes32;
+    // Light failure
+    expect.post[*tx.to].storage[0x01_bytes32] = 0x01_bytes32;
     expect.post[callee].exists = true;
 }
 
