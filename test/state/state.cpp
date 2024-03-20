@@ -529,20 +529,16 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
     }
     else if (tx.type == Transaction::Type::access_list)
     {
-        if (tx.v > 1)
-            throw std::invalid_argument("`v` value for eip2930 transaction must be 0 or 1");
         // tx_type +
-        // rlp [nonce, gas_price, gas_limit, to, value, data, access_list, v, r, s];
+        // rlp [chain_id, nonce, gas_price, gas_limit, to, value, data, access_list, v, r, s];
         return bytes{0x01} +  // Transaction type (eip2930 type == 1)
                rlp::encode_tuple(tx.chain_id, tx.nonce, tx.max_gas_price,
                    static_cast<uint64_t>(tx.gas_limit),
                    tx.to.has_value() ? tx.to.value() : bytes_view(), tx.value, tx.data,
-                   tx.access_list, static_cast<bool>(tx.v), tx.r, tx.s);
+                   tx.access_list, tx.v, tx.r, tx.s);
     }
     else if (tx.type == Transaction::Type::eip1559)
     {
-        if (tx.v > 1)
-            throw std::invalid_argument("`v` value for eip1559 transaction must be 0 or 1");
         // tx_type +
         // rlp [chain_id, nonce, max_priority_fee_per_gas, max_fee_per_gas, gas_limit, to, value,
         // data, access_list, sig_parity, r, s];
@@ -550,22 +546,18 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
                rlp::encode_tuple(tx.chain_id, tx.nonce, tx.max_priority_gas_price, tx.max_gas_price,
                    static_cast<uint64_t>(tx.gas_limit),
                    tx.to.has_value() ? tx.to.value() : bytes_view(), tx.value, tx.data,
-                   tx.access_list, static_cast<bool>(tx.v), tx.r, tx.s);
+                   tx.access_list, tx.v, tx.r, tx.s);
     }
     else  // Transaction::Type::blob
     {
-        if (tx.v > 1)
-            throw std::invalid_argument("`v` value for blob transaction must be 0 or 1");
-        if (!tx.to.has_value())  // Blob tx has to have `to` address
-            throw std::invalid_argument("`to` value for blob transaction must not be null");
         // tx_type +
         // rlp [chain_id, nonce, max_priority_fee_per_gas, max_fee_per_gas, gas_limit, to, value,
         // data, access_list, max_fee_per_blob_gas, blob_versioned_hashes, sig_parity, r, s];
         return bytes{stdx::to_underlying(Transaction::Type::blob)} +
                rlp::encode_tuple(tx.chain_id, tx.nonce, tx.max_priority_gas_price, tx.max_gas_price,
-                   static_cast<uint64_t>(tx.gas_limit), tx.to.value(), tx.value, tx.data,
-                   tx.access_list, tx.max_blob_gas_price, tx.blob_hashes, static_cast<bool>(tx.v),
-                   tx.r, tx.s);
+                   static_cast<uint64_t>(tx.gas_limit),
+                   tx.to.has_value() ? tx.to.value() : bytes_view(), tx.value, tx.data,
+                   tx.access_list, tx.max_blob_gas_price, tx.blob_hashes, tx.v, tx.r, tx.s);
     }
 }
 
