@@ -77,12 +77,14 @@ address from_json<address>(const json::json& j)
 template <>
 hash256 from_json<hash256>(const json::json& j)
 {
-    // Special case to handle "0". Required by exec-spec-tests.
-    // TODO: Get rid of it.
-    if (j.is_string() && (j == "0" || j == "0x0"))
-        return 0x00_bytes32;
-    else
-        return evmc::from_hex<hash256>(j.get<std::string>()).value();
+    const auto s = j.get<std::string>();
+    if (s == "0" || s == "0x0")  // Special case to handle "0". Required by exec-spec-tests.
+        return 0x00_bytes32;     // TODO: Get rid of it.
+
+    const auto opt_hash = evmc::from_hex<hash256>(s);
+    if (!opt_hash)
+        throw std::invalid_argument("invalid hash: " + s);
+    return *opt_hash;
 }
 
 template <>
@@ -347,11 +349,11 @@ state::Transaction from_json<state::Transaction>(const json::json& j)
 
     if (const auto type_it = j.find("type"); type_it != j.end())
     {
-        const auto infered_type = stdx::to_underlying(o.type);
+        const auto inferred_type = stdx::to_underlying(o.type);
         const auto type = from_json<uint8_t>(*type_it);
-        if (type != infered_type)
+        if (type != inferred_type)
             throw std::invalid_argument("wrong transaction type: " + std::to_string(type) +
-                                        ", expected: " + std::to_string(infered_type));
+                                        ", expected: " + std::to_string(inferred_type));
     }
 
     o.nonce = from_json<uint64_t>(j.at("nonce"));

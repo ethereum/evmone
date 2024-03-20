@@ -937,6 +937,15 @@ inline code_iterator swapn(StackTop stack, code_iterator pos) noexcept
     return pos + 2;
 }
 
+inline code_iterator exchange(StackTop stack, code_iterator pos) noexcept
+{
+    const auto n = (pos[1] >> 4) + 1;
+    const auto m = (pos[1] & 0x0f) + 1;
+    // TODO: This may not be optimal, see instr::core::swap().
+    std::swap(stack[n], stack[n + m]);
+    return pos + 2;
+}
+
 inline Result mcopy(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     const auto& dst_u256 = stack.pop();

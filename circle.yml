@@ -703,7 +703,7 @@ jobs:
     executor: linux-base
     steps:
       - install_cmake:
-          version: 3.16.9
+          version: 3.18.4
       - build
       - test
 

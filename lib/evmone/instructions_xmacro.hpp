@@ -278,7 +278,7 @@
     ON_OPCODE_IDENTIFIER(OP_JUMPF, jumpf)                     \
     ON_OPCODE_IDENTIFIER(OP_DUPN, dupn)                       \
     ON_OPCODE_IDENTIFIER(OP_SWAPN, swapn)                     \
-    ON_OPCODE_UNDEFINED(0xe8)                                 \
+    ON_OPCODE_IDENTIFIER(OP_EXCHANGE, exchange)               \
     ON_OPCODE_UNDEFINED(0xe9)                                 \
     ON_OPCODE_UNDEFINED(0xea)                                 \
     ON_OPCODE_UNDEFINED(0xeb)                                 \

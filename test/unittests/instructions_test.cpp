@@ -61,7 +61,7 @@ constexpr void validate_traits_of() noexcept
         static_assert(tr.immediate_size == 2);
     else if constexpr (Op == OP_RJUMPV)
         static_assert(tr.immediate_size == 1);
-    else if constexpr (Op == OP_DUPN || Op == OP_SWAPN)
+    else if constexpr (Op == OP_DUPN || Op == OP_SWAPN || Op == OP_EXCHANGE)
         static_assert(tr.immediate_size == 1);
     else if constexpr (Op == OP_DATALOADN)
         static_assert(tr.immediate_size == 2);
@@ -118,6 +118,7 @@ constexpr bool instruction_only_in_evmone(evmc_revision rev, Opcode op) noexcept
     case OP_JUMPF:
     case OP_DUPN:
     case OP_SWAPN:
+    case OP_EXCHANGE:
     case OP_MCOPY:
     case OP_DATALOAD:
     case OP_DATALOADN:
