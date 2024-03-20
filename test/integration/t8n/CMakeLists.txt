@@ -27,7 +27,22 @@ add_test(
 set_tests_properties(${PREFIX}/${TEST_CASE} PROPERTIES FIXTURES_REQUIRED ${TEST_CASE})
 
 add_test(
-    NAME ${PREFIX}/${TEST_CASE}/out_alloc
+    NAME ${PREFIX}/${TEST_CASE}/out.json
+    COMMAND ${CMAKE_COMMAND} -E cat ${CMAKE_CURRENT_BINARY_DIR}/${TEST_CASE}/out.json
+)
+string(
+    JOIN ".*" EXPECTED_OUT
+    # Create blob transaction should be rejected:
+    [=["error": "blob transaction must not be a create transaction"]=]
+)
+set_tests_properties(
+    ${PREFIX}/${TEST_CASE}/out.json PROPERTIES
+    FIXTURES_CLEANUP ${TEST_CASE}
+    PASS_REGULAR_EXPRESSION ${EXPECTED_OUT}
+)
+
+add_test(
+    NAME ${PREFIX}/${TEST_CASE}/outAlloc.json
     COMMAND ${CMAKE_COMMAND} -E cat ${CMAKE_CURRENT_BINARY_DIR}/${TEST_CASE}/outAlloc.json
 )
 string(
@@ -38,7 +53,7 @@ string(
     [=["0x6295ee1b4f6dd65047762f924ecd367c17eabf8f": \{[^}]*"code": "0x00",]=]
 )
 set_tests_properties(
-    ${PREFIX}/${TEST_CASE}/out_alloc PROPERTIES
+    ${PREFIX}/${TEST_CASE}/outAlloc.json PROPERTIES
     FIXTURES_CLEANUP ${TEST_CASE}
     PASS_REGULAR_EXPRESSION ${EXPECTED_OUT_ALLOC}
 )
