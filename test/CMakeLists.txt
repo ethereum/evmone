@@ -20,6 +20,7 @@ add_subdirectory(utils)
 add_subdirectory(bench)
 add_subdirectory(blockchaintest)
 add_subdirectory(eofparse)
+add_subdirectory(experimental)
 add_subdirectory(integration)
 add_subdirectory(internal_benchmarks)
 add_subdirectory(precompiles_bench)
@@ -34,7 +35,7 @@ set(targets evmone-bench evmone-bench-internal evmone-eofparse evmone-blockchain
 if(EVMONE_FUZZING)
     add_subdirectory(eofparsefuzz)
     add_subdirectory(fuzzer)
-    list(APPEND targets evmone-eofparsefuzz evmone-fuzzer)
+    list(APPEND targets evmone-eofparsefuzz evmone-fuzzer jumpdest-fuzzer)
 endif()
 
 set_target_properties(
