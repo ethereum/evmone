@@ -122,7 +122,7 @@ template Result call_impl<OP_CALLCODE>(
     StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;
 
 template <Opcode Op>
-Result newcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
+Result extcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     static_assert(Op == OP_EXTCALL || Op == OP_EXTDELEGATECALL || Op == OP_EXTSTATICCALL);
 
@@ -224,11 +224,11 @@ Result newcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
     return {EVMC_SUCCESS, gas_left};
 }
 
-template Result newcall_impl<OP_EXTCALL>(
+template Result extcall_impl<OP_EXTCALL>(
     StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;
-template Result newcall_impl<OP_EXTSTATICCALL>(
+template Result extcall_impl<OP_EXTSTATICCALL>(
     StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;
-template Result newcall_impl<OP_EXTDELEGATECALL>(
+template Result extcall_impl<OP_EXTDELEGATECALL>(
     StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;
 
 template <Opcode Op>

@@ -517,7 +517,8 @@ public:
 
 
     template <Opcode k = kind>
-    typename std::enable_if<k == OP_EXTCALL, extcall_instruction&>::type value(bytecode v)
+        requires requires { k == OP_EXTCALL; }
+    extcall_instruction& value(bytecode v)
     {
         m_value = std::move(v);
         return *this;
