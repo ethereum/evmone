@@ -219,7 +219,8 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
     // All combinations of conditions (nonce, code, storage) are tested.
     // TODO(EVMC): Add specific error codes for creation failures.
     if (const auto collision_acc = m_state.find(msg.recipient);
-        collision_acc != nullptr && (collision_acc->nonce != 0 || !collision_acc->code.empty()))
+        collision_acc != nullptr && (collision_acc->nonce != 0 || !collision_acc->code.empty() ||
+                                        !collision_acc->storage.empty()))
         return evmc::Result{EVMC_FAILURE};
 
     // TODO: msg.recipient lookup is done 3x here.
@@ -231,14 +232,6 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
         new_acc.nonce = 1;  // No need to journal: create revert will 0 the nonce.
 
     new_acc.just_created = true;
-
-    // Clear the new account storage, but keep the access status (from tx access list).
-    // This is only needed for tests and cannot happen in real networks.
-    for (auto& [k, v] : new_acc.storage) [[unlikely]]
-    {
-        m_state.journal_storage_change(msg.recipient, k, v);
-        v = StorageValue{.access_status = v.access_status};
-    }
 
     auto& sender_acc = m_state.get(msg.sender);  // TODO: Duplicated account lookup.
     const auto value = intx::be::load<intx::uint256>(msg.value);
