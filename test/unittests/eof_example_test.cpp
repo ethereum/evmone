@@ -20,15 +20,19 @@ TEST_F(state_transition, eof_examples_minimal)
     rev = EVMC_PRAGUE;
 
     const auto eof_code = bytecode(
-        "EF00 01"       // EOF prefix and version 1
-        "01 0004"       // Header - types section 4 bytes long
-        "02 0001 0001"  //          1 code section 1 byte long
-        "04 0000"       //          data section 0 bytes long
-        "00"            // Header terminator
-        "00"            // Types section - first code section 0 inputs
-        "80"            //                 first code section non-returning
-        "0000"          //                 first code section has max stack height 0
-        "00"            // Code section - STOP
+        //                                                  Code section: STOP
+        //               Header: 1 code section 1 byte long |
+        //               |                                  |
+        //    version    |                    Header terminator
+        //    |          |___________         |             |
+        "EF00 01 01 0004 02 0001 0001 04 0000 00 00 80 0000 00"
+        //       |‾‾‾‾‾‾              |‾‾‾‾‾‾    |‾‾‾‾‾‾‾‾‾
+        //       |                    Header: data section 0 bytes long
+        //       |                               |
+        //       Header: types section 4 bytes long
+        //                                       |
+        //                                       Types section: first code section 0 inputs,
+        //                                       non-returning, max stack height 0
     );
 
     // Tests the code is valid EOF and does nothing.
@@ -49,15 +53,21 @@ TEST_F(state_transition, eof_examples_static_relative_jump_loop)
     rev = EVMC_PRAGUE;
 
     const auto eof_code = bytecode(
-        "EF00 01"       // EOF prefix and version 1
-        "01 0004"       // Header - types section 4 bytes long
-        "02 0001 0003"  //          1 code section 3 bytes long
-        "04 0000"       //          data section 0 bytes long
-        "00"            // Header terminator
-        "00"            // Types section - first code section 0 inputs
-        "80"            //                 first code section non-returning
-        "0000"          //                 first code section has max stack height 0
-        "E0FFFD"        // Code section - RJUMP back to start (-3) - infinite loop
+        //                                                  Code section: RJUMP back to start (-3)
+        //                                                  - infinite loop
+        //                                                  |
+        //               Header: 1 code section 3 bytes long
+        //               |                                  |
+        //    version    |                    Header terminator
+        //    |          |___________         |             |
+        "EF00 01 01 0004 02 0001 0003 04 0000 00 00 80 0000 E0FFFD"
+        //       |‾‾‾‾‾‾              |‾‾‾‾‾‾    |‾‾‾‾‾‾‾‾‾
+        //       |                    Header: data section 0 bytes long
+        //       |                               |
+        //       Header: types section 4 bytes long
+        //                                       |
+        //                                       Types section: first code section 0 inputs,
+        //                                       non-returning, max stack height 0
     );
 
     // Tests the code is valid EOF and the infinite loop runs out of gas.
@@ -80,21 +90,24 @@ TEST_F(state_transition, eof_examples_callf)
     rev = EVMC_PRAGUE;
 
     const auto eof_code = bytecode(
-        "EF00 01"         // EOF prefix and version 1
-        "01 0008"         // Header - types section 8 bytes long
-        "02 0002"         //          2 code sections:
-        "0006"            //            - first code section 6 bytes long
-        "0001"            //            - second code section 1 byte long
-        "04 0000"         //          data section 0 bytes long
-        "00"              // Header terminator
-        "00"              // Types section - first code section 0 inputs
-        "80"              //                 first code section non-returning
-        "0001"            //                 first code section has max stack height 1
-        "01"              //                 second code section 1 input
-        "01"              //                 second code section 1 output
-        "0001"            //                 second code section has max stack height 1
-        "602A E30001 00"  // First code section - PUSH1(42), CALLF second section and STOP
-        "E4"              // Second code section - just return (RETF) the input
+        //                                                   First code section: PUSH1(42),
+        //                                                   CALLF second section and STOP
+        //               Header: 2 code sections:                           |
+        //               |       - first code section 6 bytes long          | Second code section:
+        //               |       - second code section 1 byte long          | return the input
+        //               |                                                  |              |
+        //    version    |                         Header terminator        |              |
+        //    |          |________________         |                        |_____________ |
+        "EF00 01 01 0008 02 0002 0006 0001 04 0000 00 00 80 0001 01 01 0001 602A E30001 00 E4"
+        //       |‾‾‾‾‾‾                   |‾‾‾‾‾‾    |‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+        //       |                         Header: data section 0 bytes long
+        //       |                                    |
+        //       Header: types section 8 bytes long   |
+        //                                            |
+        //                                            Types section: first code section 0 inputs,
+        //                                            non-returning, max stack height 1;
+        //                                            second code section 1 input,
+        //                                            1 output, max stack height 1
     );
 
     // Tests the code is valid EOF.
@@ -118,47 +131,47 @@ TEST_F(state_transition, eof_examples_txcreate)
     const auto initcontainer = bytecode(
         //////////////////
         // Initcontainer
-        "EF00 01"       // EOF prefix and version 1
-        "01 0004"       // Header - types section 4 bytes long
-        "02 0001 0004"  //          1 code section 4 bytes long
-        "03 0001 0014"  //          1 subcontainer 20 bytes long
-        "04 0000"       //          data section 0 bytes long
-        "00"            // Header terminator
-        "00"            // Types section - first code section 0 inputs
-        "80"            //                 first code section non-returning
-        "0002"          //                 first code section has max stack height 2
-        "5F5F"          // Code section - PUSH0 [aux data size] + PUSH0 [aux data offset]
-        "EE00"          //                RETURNCONTRACT first subcontainer
+        //                        Code section: PUSH0 [aux data size], PUSH0 [aux data offset] and
+        //                                      RETURNCONTRACT first subcontainer
+        //                                                               |
+        //               Header: 1 code section 4 bytes long             |
+        //               |                                               |
+        //    version    |                                 Header terminator
+        //    |          |___________                      |             |________
+        "EF00 01 01 0004 02 0001 0004 03 0001 0014 04 0000 00 00 80 0002 5F5F EE00"
+        //       |‾‾‾‾‾‾              |‾‾‾‾‾‾‾‾‾‾‾ |‾‾‾‾‾‾    |‾‾‾‾‾‾‾‾‾
+        //       |                    |            Header: data section 0 bytes long
+        //       |                    |                       |
+        //       Header: types section 4 bytes long           Types section: first code section
+        //                            |                       0 inputs, non-returning,
+        //                            |                       max stack height 2
+        //       Header: 1 subcontainer 20 bytes long
+        //
         //////////////////
-        // Deployed container (contract doing nothing)
-        "EF00 01"       // EOF prefix and version 1
-        "01 0004"       // Header - types section 4 bytes long
-        "02 0001 0001"  //          1 code section 1 byte long
-        "04 0000"       //          data section 0 bytes long
-        "00"            // Header terminator
-        "00"            // Types section - first code section 0 inputs
-        "80"            //                 first code section non-returning
-        "0000"          //                 first code section has max stack height 0
-        "00"            // Code section - STOP
-    );
+        // Deployed container (contract doing nothing, see Example 1)
+        "EF00 01 01 0004 02 0001 0001 04 0000 00 00 80 0000 00");
 
-    const auto initcontainer_hash = keccak256(initcontainer);
+    const auto hash = hex(keccak256(initcontainer));
 
     const auto deployer = bytecode(
         //////////////////
         // Deployer container
-        "EF00 01"       // EOF prefix and version 1
-        "01 0004"       // Header - types section 4 bytes long
-        "02 0001 0028"  //          1 code section 40 bytes long
-        "04 0000"       //          data section 0 bytes long
-        "00"            // Header terminator
-        "00"            // Types section - first code section 0 inputs
-        "80"            //                 first code section non-returning
-        "0005"          //                 first code section has max stack height 5
-        "5F 5F 60FF"    // Code section - PUSH0 [input size] + PUSH0 [input offset] + PUSH1 [salt] +
-        "5F 7F" +       // PUSH0 [endowment value] + PUSH32 [initcode hash]
-        hex(initcontainer_hash) +
-        "ED 00"  // TXCREATE and STOP
+        //                  Code section: PUSH0 [input size], PUSH0 [input offset], PUSH1 [salt],
+        //                                PUSH0 [endowment value], PUSH32 [initcode hash],
+        //                                TXCREATE and STOP |
+        //                                                  |
+        //               Header: 1 code section 40 bytes long
+        //               |                                  |
+        //    version    |                    Header terminator
+        //    |          |___________         |             |________________________________
+        "EF00 01 01 0004 02 0001 0028 04 0000 00 00 80 0005 5F 5F 60FF 5F 7F" + hash + "ED 00"
+        //       |‾‾‾‾‾‾              |‾‾‾‾‾‾    |‾‾‾‾‾‾‾‾‾
+        //       |                    Header: data section 0 bytes long
+        //       |                               |
+        //       Header: types section 4 bytes long
+        //                                       |
+        //                                       Types section: first code section 0 inputs,
+        //                                       non-returning, max stack height 5
     );
 
     // Put the initcontainer in the `initcodes` field of an InitcodeTransaction.
@@ -189,44 +202,44 @@ TEST_F(state_transition, eof_examples_eofcreate)
     const auto factory = bytecode(
         //////////////////
         // Factory container
-        "EF00 01"       // EOF prefix and version 1
-        "01 0004"       // Header - types section 4 bytes long
-        "02 0001 0008"  //          1 code section 8 bytes long
-        "03 0001 0030"  //          1 subcontainer 20+28=48 bytes long
-        "04 0000"       //          data section 0 bytes long
-        "00"            // Header terminator
-        "00"            // Types section - first code section 0 inputs
-        "80"            //                 first code section non-returning
-        "0004"          //                 first code section has max stack height 4
-        "5F 5F 60FF"    // Code section - PUSH0 [input size] + PUSH0 [input offset] + PUSH1 [salt] +
-        "5F"            // PUSH0 [endowment value]
-        "EC00"          // EOFCREATE from first subcontainer
-        "00"            // STOP
+        //                    Code section: PUSH0 [input size], PUSH0 [input offset], PUSH1 [salt],
+        //                                  PUSH0 [endowment value],
+        //                                  EOFCREATE from first subcontainer and STOP
+        //                                                               |
+        //               Header: 1 code section 8 bytes long             |
+        //               |                                               |
+        //    version    |                                 Header terminator
+        //    |          |___________                      |             |____________________
+        "EF00 01 01 0004 02 0001 0008 03 0001 0030 04 0000 00 00 80 0004 5F 5F 60FF 5F EC00 00"
+        //       |‾‾‾‾‾‾              |‾‾‾‾‾‾‾‾‾‾‾ |‾‾‾‾‾‾    |‾‾‾‾‾‾‾‾‾
+        //       |                    |            Header: data section 0 bytes long
+        //       |                    |                       |
+        //       Header: types section 4 bytes long           Types section: first code section
+        //                            |                       0 inputs, non-returning,
+        //                            |                       max stack height 4
+        //       Header: 1 subcontainer 48 bytes long
+        //
         //////////////////
         // Initcontainer
-        "EF00 01"       // EOF prefix and version 1
-        "01 0004"       // Header - types section 4 bytes long
-        "02 0001 0004"  //          1 code section 4 bytes long
-        "03 0001 0014"  //          1 subcontainer 20 bytes long
-        "04 0000"       //          data section 0 bytes long
-        "00"            // Header terminator
-        "00"            // Types section - first code section 0 inputs
-        "80"            //                 first code section non-returning
-        "0002"          //                 first code section has max stack height 2
-        "5F 5F"         // Code section - PUSH0 [aux data size] + PUSH0 [aux data offset]
-        "EE00"          //                RETURNCONTRACT first subcontainer
+        //                    Code section: PUSH0 [aux data size], PUSH0 [aux data offset],
+        //                                  RETURNCONTRACT first subcontainer
+        //                                                               |
+        //               Header: 1 code section 8 bytes long             |
+        //               |                                               |
+        //    version    |                                 Header terminator
+        //    |          |___________                      |             |_________
+        "EF00 01 01 0004 02 0001 0004 03 0001 0014 04 0000 00 00 80 0002 5F 5F EE00"
+        //       |‾‾‾‾‾‾              |‾‾‾‾‾‾‾‾‾‾‾ |‾‾‾‾‾‾    |‾‾‾‾‾‾‾‾‾
+        //       |                    |            Header: data section 0 bytes long
+        //       |                    |                       |
+        //       Header: types section 4 bytes long           Types section: first code section
+        //                            |                       0 inputs, non-returning,
+        //                            |                       max stack height 2
+        //       Header: 1 subcontainer 20 bytes long
+        //
         //////////////////
-        // Deployed container (contract doing nothing)
-        "EF00 01"       // EOF prefix and version 1
-        "01 0004"       // Header - types section 4 bytes long
-        "02 0001 0001"  //          1 code section 1 byte long
-        "04 0000"       //          data section 0 bytes long
-        "00"            // Header terminator
-        "00"            // Types section - first code section 0 inputs
-        "80"            //                 first code section non-returning
-        "0000"          //                 first code section has max stack height 0
-        "00"            // Code section - STOP
-    );
+        // Deployed container (contract doing nothing, see Example 1)
+        "EF00 01 01 0004 02 0001 0001 04 0000 00 00 80 0000 00");
 
     // Tests the code is valid EOF and when called with initcodes creates a new contract.
     tx.to = To;
@@ -248,18 +261,24 @@ TEST_F(state_transition, eof_examples_data)
 
     rev = EVMC_PRAGUE;
 
+    // clang-format off
     const auto eof_code = bytecode(
-        "EF00 01"       // EOF prefix and version 1
-        "01 0004"       // Header - types section 4 bytes long
-        "02 0001 0004"  //          1 code section 4 bytes long
-        "04 0021"       //          data section 33 bytes long
-        "00"            // Header terminator
-        "00"            // Types section - first code section 0 inputs
-        "80"            //                 first code section non-returning
-        "0001"          //                 first code section has max stack height 1
-        "D10000 00"     // Code section - DATALOADN onto the stack the first byte of data, then STOP
-        "454F462068617320736F6D65206772656174206578616D706C6573206865726521"  // Data section
+        //                   Code section: DATALOADN onto the stack the first word of data, STOP
+        //                                                  |
+        //               Header: 1 code section 4 bytes long 
+        //               |                                  |
+        //    version    |                    Header terminator       Data section
+        //    |          |___________         |             |________ |_________________________________________________________________
+        "EF00 01 01 0004 02 0001 0004 04 0021 00 00 80 0001 D10000 00 454F462068617320736F6D65206772656174206578616D706C6573206865726521"
+        //       |‾‾‾‾‾‾              |‾‾‾‾‾‾    |‾‾‾‾‾‾‾‾‾
+        //       |                    Header: data section 33 bytes long
+        //       |                               |
+        //       Header: types section 4 bytes long
+        //                                       |
+        //                                       Types section: first code section 0 inputs,
+        //                                       non-returning, max stack height 1
     );
+    // clang-format on
 
     // Tests the code is valid EOF and does nothing.
     tx.to = To;
