@@ -14,6 +14,7 @@ using evmc::uint256be;
 
 inline constexpr size_t max_code_size = 0x6000;
 inline constexpr size_t max_initcode_size = 2 * max_code_size;
+inline constexpr size_t max_initcode_count = 256;
 
 /// Computes the address of to-be-created contract with the CREATE scheme.
 ///
@@ -57,12 +58,22 @@ class Host : public evmc::Host
     const BlockInfo& m_block;
     const Transaction& m_tx;
     std::vector<Log> m_logs;
+    std::unordered_map<hash256, bytes_view> m_initcodes;
 
 public:
     Host(evmc_revision rev, evmc::VM& vm, State& state, const BlockInfo& block,
         const Transaction& tx) noexcept
       : m_rev{rev}, m_vm{vm}, m_state{state}, m_block{block}, m_tx{tx}
-    {}
+    {
+        if (tx.type == Transaction::Type::initcodes)
+        {
+            for (const auto& initcode : tx.initcodes)
+            {
+                const auto hash = keccak256({initcode.data(), initcode.size()});
+                m_initcodes.insert({hash, initcode});
+            }
+        }
+    }
 
     [[nodiscard]] std::vector<Log>&& take_logs() noexcept { return std::move(m_logs); }
 
@@ -97,6 +108,9 @@ private:
     evmc::Result create(const evmc_message& msg) noexcept;
 
     [[nodiscard]] evmc_tx_context get_tx_context() const noexcept override;
+
+    [[nodiscard]] evmc_tx_initcode get_tx_initcode_by_hash(
+        const evmc_bytes32& hash) const noexcept override;
 
     [[nodiscard]] bytes32 get_block_hash(int64_t block_number) const noexcept override;
 
