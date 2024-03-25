@@ -23,6 +23,9 @@ enum ErrorCode : int
     GAS_LIMIT_REACHED,
     SENDER_NOT_EOA,
     INIT_CODE_SIZE_LIMIT_EXCEEDED,
+    INIT_CODE_EMPTY,
+    INIT_CODE_COUNT_LIMIT_EXCEEDED,
+    INIT_CODE_COUNT_ZERO,
     CREATE_BLOB_TX,
     EMPTY_BLOB_HASHES_LIST,
     INVALID_BLOB_HASH_VERSION,
@@ -66,6 +69,12 @@ inline const std::error_category& evmone_category() noexcept
                 return "sender not an eoa:";
             case INIT_CODE_SIZE_LIMIT_EXCEEDED:
                 return "max initcode size exceeded";
+            case INIT_CODE_EMPTY:
+                return "initcode empty";
+            case INIT_CODE_COUNT_LIMIT_EXCEEDED:
+                return "max initcode count exceeded";
+            case INIT_CODE_COUNT_ZERO:
+                return "initcode list empty";
             case CREATE_BLOB_TX:
                 return "blob transaction must not be a create transaction";
             case EMPTY_BLOB_HASHES_LIST:
