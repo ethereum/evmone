@@ -32,13 +32,18 @@ std::optional<evmc::Result> Cache::find(PrecompileId id, bytes_view input, int64
 
 void Cache::insert(PrecompileId id, bytes_view input, const evmc::Result& result)
 {
-    if (id == PrecompileId::identity)  // Do not cache "identity".
-        return;
-    const auto input_hash = keccak256(input);
-    std::optional<bytes> cached_output;
-    if (result.status_code == EVMC_SUCCESS)
-        cached_output = bytes{result.output_data, result.output_size};
-    m_cache.at(stdx::to_underlying(id)).insert({input_hash, std::move(cached_output)});
+    switch (id)
+    {
+    case PrecompileId::ripemd160:
+    case PrecompileId::identity:
+        return;  // Do not cache.
+    default:
+        const auto input_hash = keccak256(input);
+        std::optional<bytes> cached_output;
+        if (result.status_code == EVMC_SUCCESS)
+            cached_output = bytes{result.output_data, result.output_size};
+        m_cache.at(stdx::to_underlying(id)).insert({input_hash, std::move(cached_output)});
+    }
 }
 
 Cache::Cache() noexcept
