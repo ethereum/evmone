@@ -7,6 +7,12 @@
 
 constexpr int64_t MIN_RETAINED_GAS = 5000;
 constexpr int64_t MIN_CALLEE_GAS = 2300;
+constexpr int64_t CALL_VALUE_COST = 9000;
+constexpr int64_t ACCOUNT_CREATION_COST = 25000;
+
+constexpr auto EXTCALL_SUCCESS = 0;
+constexpr auto EXTCALL_REVERT = 1;
+constexpr auto EXTCALL_ABORT = 2;
 
 namespace evmone::instr::core
 {
@@ -64,7 +70,7 @@ Result call_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noexce
         msg.input_size = input_size;
     }
 
-    auto cost = has_value ? 9000 : 0;
+    auto cost = has_value ? CALL_VALUE_COST : 0;
 
     if constexpr (Op == OP_CALL)
     {
@@ -72,7 +78,7 @@ Result call_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noexce
             return {EVMC_STATIC_MODE_VIOLATION, gas_left};
 
         if ((has_value || state.rev < EVMC_SPURIOUS_DRAGON) && !state.host.account_exists(dst))
-            cost += 25000;
+            cost += ACCOUNT_CREATION_COST;
     }
 
     if ((gas_left -= cost) < 0)
@@ -132,7 +138,7 @@ Result extcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
     const auto value = (Op == OP_EXTSTATICCALL || Op == OP_EXTDELEGATECALL) ? 0 : stack.pop();
     const auto has_value = value != 0;
 
-    stack.push(2);  // Assume (hard) failure.
+    stack.push(EXTCALL_ABORT);  // Assume (hard) failure.
     state.return_data.clear();
 
     if (state.host.access_account(dst) == EVMC_ACCESS_COLD)
@@ -164,7 +170,7 @@ Result extcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
         msg.input_size = input_size;
     }
 
-    auto cost = has_value ? 9000 : 0;
+    auto cost = has_value ? CALL_VALUE_COST : 0;
 
     if constexpr (Op == OP_EXTCALL)
     {
@@ -172,7 +178,7 @@ Result extcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
             return {EVMC_STATIC_MODE_VIOLATION, gas_left};
 
         if (has_value && !state.host.account_exists(dst))
-            cost += 25000;
+            cost += ACCOUNT_CREATION_COST;
     }
 
     if ((gas_left -= cost) < 0)
@@ -184,7 +190,7 @@ Result extcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
         (has_value &&
             intx::be::load<uint256>(state.host.get_balance(state.msg->recipient)) < value))
     {
-        stack.top() = 1;
+        stack.top() = EXTCALL_REVERT;
         return {EVMC_SUCCESS, gas_left};  // "Light" failure.
     }
 
@@ -198,7 +204,7 @@ Result extcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
             msg.code_address, 0, target_code_prefix, std::size(target_code_prefix));
         if (!is_eof_container({target_code_prefix, s}))
         {
-            stack.top() = 1;
+            stack.top() = EXTCALL_REVERT;
             return {EVMC_SUCCESS, gas_left};  // "Light" failure.
         }
     }
@@ -206,17 +212,11 @@ Result extcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
     const auto result = state.host.call(msg);
     state.return_data.assign(result.output_data, result.output_size);
     if (result.status_code == EVMC_SUCCESS)
-    {
-        stack.top() = 0;
-    }
+        stack.top() = EXTCALL_SUCCESS;
     else if (result.status_code == EVMC_REVERT)
-    {
-        stack.top() = 1;
-    }
+        stack.top() = EXTCALL_REVERT;
     else
-    {
-        stack.top() = 2;
-    }
+        stack.top() = EXTCALL_ABORT;
 
     const auto gas_used = msg.gas - result.gas_left;
     gas_left -= gas_used;
