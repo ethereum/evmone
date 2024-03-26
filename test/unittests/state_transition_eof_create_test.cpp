@@ -794,3 +794,57 @@ TEST_F(state_transition, eofcreate_failure_after_eofcreate_success)
     expect.post[create_address].code = deploy_container;
     expect.post[create_address].nonce = 1;
 }
+
+TEST_F(state_transition, eofcreate_call_created_contract)
+{
+    rev = EVMC_PRAGUE;
+    const auto deploy_data = "abcdef"_hex;  // 3 bytes
+    const auto static_aux_data =
+        "aabbccdd00000000000000000000000000000000000000000000000000000000"_hex;  // 32 bytes
+    const auto dynamic_aux_data = "eeff"_hex;                                    // 2 bytes
+    const auto deploy_data_size =
+        static_cast<uint16_t>(deploy_data.size() + static_aux_data.size());
+    const auto deploy_code = rjumpv({6, 12}, calldataload(0)) +  // jump to one of 3 cases
+                             35 + OP_DATALOAD + rjump(9) +       // read dynamic aux data
+                             OP_DATALOADN + "0000" + rjump(3) +  // read pre_deploy_data_section
+                             OP_DATALOADN + "0003" +             // read static aux data
+                             ret_top();
+    const auto deploy_container = eof_bytecode(deploy_code, 2).data(deploy_data, deploy_data_size);
+
+    const auto init_code =
+        calldatacopy(0, 0, OP_CALLDATASIZE) + returncontract(0, 0, OP_CALLDATASIZE);
+    const bytecode init_container = eof_bytecode(init_code, 3).container(deploy_container);
+
+    const auto create_address = compute_eofcreate_address(To, Salt, init_container);
+
+    const auto factory_code =
+        calldatacopy(0, 0, OP_CALLDATASIZE) +
+        sstore(0, eofcreate().container(0).input(0, OP_CALLDATASIZE).salt(Salt)) +
+        mcopy(0, OP_CALLDATASIZE, 32) +                 // zero out first 32-byte word of memory
+        extcall(create_address).input(0, 1) + OP_POP +  // calldata 0
+        sstore(1, returndataload(0)) + mstore8(31, 1) +
+        extcall(create_address).input(0, 32) +  // calldata 1
+        OP_POP + sstore(2, returndataload(0)) + mstore8(31, 2) +
+        extcall(create_address).input(0, 32) +  // calldata 2
+        OP_POP + sstore(3, returndataload(0)) + sstore(4, 1) + OP_STOP;
+    const auto factory_container = eof_bytecode(factory_code, 4).container(init_container);
+
+    tx.to = To;
+
+    tx.data = static_aux_data + dynamic_aux_data;
+
+    pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
+
+    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
+    expect.post[*tx.to].storage[0x00_bytes32] = to_bytes32(create_address);
+    expect.post[*tx.to].storage[0x01_bytes32] =
+        0xabcdefaabbccdd00000000000000000000000000000000000000000000000000_bytes32;
+    evmc::bytes32 static_aux_data_32;
+    std::copy_n(static_aux_data.data(), static_aux_data.size(), &static_aux_data_32.bytes[0]);
+    expect.post[*tx.to].storage[0x02_bytes32] = static_aux_data_32;
+    evmc::bytes32 dynamic_aux_data_32;
+    std::copy_n(dynamic_aux_data.data(), dynamic_aux_data.size(), &dynamic_aux_data_32.bytes[0]);
+    expect.post[*tx.to].storage[0x03_bytes32] = dynamic_aux_data_32;
+    expect.post[*tx.to].storage[0x04_bytes32] = 0x01_bytes32;
+    expect.post[create_address].nonce = 1;
+}
