@@ -58,19 +58,19 @@ executors:
   macos:
     resource_class: macos.x86.medium.gen2
     macos:
-      xcode: 15.0.0
+      xcode: 15.3.0
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 4
   macos-m1:
     resource_class: macos.m1.large.gen1
     macos:
-      xcode: 15.0.0
+      xcode: 15.3.0
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 8
   macos-xcode-min:
     resource_class: macos.x86.medium.gen2
     macos:
-      xcode: 14.3.1
+      xcode: 15.0.0
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 4
 
