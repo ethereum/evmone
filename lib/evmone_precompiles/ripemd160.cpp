@@ -23,17 +23,23 @@ constexpr T byteswap(T value) noexcept
     return std::bit_cast<T>(value_representation);
 }
 
-constexpr size_t L = 2;                                       ///< Number of lines.
-constexpr size_t N = 80;                                      ///< Number of steps.
-constexpr size_t M = RIPEMD160_HASH_SIZE / sizeof(uint32_t);  ///< Number of state elements.
+/// @file
+/// The implementation of the RIPEMD-160 hash function
+/// based on the "RIPEMD-160: A Strengthened Version of RIPEMD"
+/// https://homes.esat.kuleuven.be/~bosselae/ripemd160/pdf/AB-9601/AB-9601.pdf
 
-using State = std::array<uint32_t, M>;
+constexpr size_t L = 2;      ///< Number of lines.
+constexpr size_t R = 5;      ///< Number of rounds.
+constexpr size_t B = 16;     ///< Number of steps per round and words in a block.
+constexpr size_t N = R * B;  ///< Number of steps.
+
+using State = std::array<uint32_t, RIPEMD160_HASH_SIZE / sizeof(uint32_t)>;
 
 using BinaryFunction = uint32_t (*)(uint32_t, uint32_t, uint32_t) noexcept;
 
 // TODO: These lambdas are not inlined in GCC. Investigate.
-// TODO(C++26): Mark these as [[always_inline]]
-constexpr BinaryFunction binary_functions[M] = {
+// TODO(C++23): Mark these as [[always_inline]]
+constexpr BinaryFunction binary_functions[R] = {
     // f₁(x, y, z) = x ⊕ y ⊕ z
     [](uint32_t x, uint32_t y, uint32_t z) noexcept { return x ^ y ^ z; },
 
@@ -51,7 +57,7 @@ constexpr BinaryFunction binary_functions[M] = {
 };
 
 /// Added constants.
-constexpr uint32_t constants[L][M] = {
+constexpr uint32_t constants[L][R] = {
     {
         0,
         0x5a827999,
@@ -129,8 +135,8 @@ inline std::byte* store_le(std::byte* out, std::integral auto x) noexcept
 template <size_t J>
 inline void step(State z[L], const std::byte* block) noexcept
 {
-    static constexpr auto I = J / 16;
-    static constexpr BinaryFunction fs[]{binary_functions[I], binary_functions[M - 1 - I]};
+    static constexpr auto I = J / B;  // round index
+    static constexpr BinaryFunction fs[]{binary_functions[I], binary_functions[R - 1 - I]};
 
     for (size_t i = 0; i < L; ++i)
     {
@@ -156,11 +162,11 @@ inline void step(State z[L], const std::byte* block) noexcept
 
 // TODO(C++23): This could be a lambda, but [[always_inline]] does not work.
 // TODO: Try arguments instead of capture.
-template <std::size_t... I>
+template <std::size_t... J>
 [[gnu::always_inline]] inline void steps(
-    State z[L], const std::byte* block, std::integer_sequence<std::size_t, I...>) noexcept
+    State z[L], const std::byte* block, std::integer_sequence<std::size_t, J...>) noexcept
 {
-    (step<I>(z, block), ...);
+    (step<J>(z, block), ...);
 }
 
 void compress(State& h, const std::byte* block) noexcept
@@ -168,23 +174,21 @@ void compress(State& h, const std::byte* block) noexcept
     State z[L]{h, h};
     steps(z, block, std::make_index_sequence<N>{});
 
-    const auto t = h[1] + z[0][2] + z[1][3];
-    h[1] = h[2] + z[0][3] + z[1][4];
-    h[2] = h[3] + z[0][4] + z[1][0];
-    h[3] = h[4] + z[0][0] + z[1][1];
-    h[4] = h[0] + z[0][1] + z[1][2];
-    h[0] = t;
+    State t;
+    for (size_t i = 0, M = t.size(); i < M; ++i)
+        t[i] = h[(i + 1) % M] + z[0][(i + 2) % M] + z[1][(i + 3) % M];
+    h = t;
 }
 }  // namespace
 
-void ripemd160(std::byte out[20], const std::byte* data, size_t size) noexcept
+void ripemd160(std::byte hash[RIPEMD160_HASH_SIZE], const std::byte* data, size_t size) noexcept
 {
-    static constexpr size_t BLOCK_SIZE = 16 * sizeof(uint32_t);
-    State state{0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0};
+    static constexpr size_t BLOCK_SIZE = B * sizeof(uint32_t);
+    State h{0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0};
 
     const auto tail_size = size % BLOCK_SIZE;
     for (const auto tail_begin = &data[size - tail_size]; data != tail_begin; data += BLOCK_SIZE)
-        compress(state, data);
+        compress(h, data);
 
     {
         std::array<std::byte, BLOCK_SIZE> padding_block{};
@@ -196,14 +200,14 @@ void ripemd160(std::byte out[20], const std::byte* data, size_t size) noexcept
         const auto length_begin = &padding_block[BLOCK_SIZE - sizeof(length_in_bits)];
         if (padded_tail_end >= length_begin)  // If not enough space, create one more block.
         {
-            compress(state, padding_block.data());
+            compress(h, padding_block.data());
             padding_block = {};
         }
         store_le(length_begin, length_in_bits);
-        compress(state, padding_block.data());
+        compress(h, padding_block.data());
     }
 
-    for (const auto e : state)
-        out = store_le(out, e);
+    for (const auto e : h)
+        hash = store_le(hash, e);
 }
 }  // namespace evmone::crypto
