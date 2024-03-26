@@ -278,6 +278,9 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
     table[OP_DATASIZE] = op_undefined;
     table[OP_DATACOPY] = op_undefined;
     table[OP_RETURNDATALOAD] = op_undefined;
+    table[OP_EXTCALL] = op_undefined;
+    table[OP_EXTSTATICCALL] = op_undefined;
+    table[OP_EXTDELEGATECALL] = op_undefined;
     table[OP_JUMPF] = op_undefined;
 
     table[OP_DUPN] = op_undefined;

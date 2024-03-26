@@ -503,6 +503,59 @@ inline call_instruction<OP_CALLCODE> callcode(bytecode address)
     return call_instruction<OP_CALLCODE>{std::move(address)};
 }
 
+template <Opcode kind>
+struct extcall_instruction
+{
+private:
+    bytecode m_address = 0;
+    bytecode m_value = 0;
+    bytecode m_input = 0;
+    bytecode m_input_size = 0;
+
+public:
+    explicit extcall_instruction(bytecode address) : m_address{std::move(address)} {}
+
+
+    template <Opcode k = kind>
+        requires requires { k == OP_EXTCALL; }
+    extcall_instruction& value(bytecode v)
+    {
+        m_value = std::move(v);
+        return *this;
+    }
+
+    auto& input(bytecode index, bytecode size)
+    {
+        m_input = std::move(index);
+        m_input_size = std::move(size);
+        return *this;
+    }
+
+    operator bytecode() const
+    {
+        auto code = bytecode{};
+        if constexpr (kind == OP_EXTCALL)
+            code += m_value;
+        code += m_input_size + m_input + m_address + kind;
+        return code;
+    }
+};
+
+inline extcall_instruction<OP_EXTDELEGATECALL> extdelegatecall(bytecode address)
+{
+    return extcall_instruction<OP_EXTDELEGATECALL>{std::move(address)};
+}
+
+inline extcall_instruction<OP_EXTSTATICCALL> extstaticcall(bytecode address)
+{
+    return extcall_instruction<OP_EXTSTATICCALL>{std::move(address)};
+}
+
+inline extcall_instruction<OP_EXTCALL> extcall(bytecode address)
+{
+    return extcall_instruction<OP_EXTCALL>{std::move(address)};
+}
+
 
 template <Opcode kind>
 struct create_instruction

@@ -182,7 +182,10 @@ enum Opcode : uint8_t
     OP_CREATE2 = 0xf5,
     OP_RETURNDATALOAD = 0xf7,
 
+    OP_EXTCALL = 0xf8,
+    OP_EXTDELEGATECALL = 0xf9,
     OP_STATICCALL = 0xfa,
+    OP_EXTSTATICCALL = 0xfb,
 
     OP_REVERT = 0xfd,
     OP_INVALID = 0xfe,
