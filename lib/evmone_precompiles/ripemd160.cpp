@@ -9,6 +9,12 @@
 #include <cstdint>
 #include <utility>
 
+#if defined(_LIBCPP_VERSION) && _LIBCPP_VERSION < 180000
+// libc++ before version 18 has incorrect std::rotl signature
+// https://github.com/llvm/llvm-project/commit/45500fa08acdf3849de9de470cdee5f4c8ee2f32
+#pragma clang diagnostic ignored "-Wsign-conversion"
+#endif
+
 namespace evmone::crypto
 {
 namespace
