@@ -13,6 +13,17 @@ namespace evmone::test
 namespace json = nlohmann;
 using evmc::from_hex;
 
+namespace
+{
+template <typename T>
+T load_if_exists(const json::json& j, std::string_view key)
+{
+    if (const auto it = j.find(key); it != j.end())
+        return from_json<T>(*it);
+    return {};
+}
+}  // namespace
+
 template <>
 uint8_t from_json<uint8_t>(const json::json& j)
 {
@@ -248,7 +259,7 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
         .parent_difficulty = parent_difficulty,
         .parent_ommers_hash = parent_uncle_hash,
         .prev_randao = prev_randao,
-        .parent_beacon_block_root = {},
+        .parent_beacon_block_root = load_if_exists<hash256>(j, "parentBeaconBlockRoot"),
         .base_fee = base_fee,
         .excess_blob_gas = excess_blob_gas,
         .blob_base_fee = state::compute_blob_gas_price(excess_blob_gas),
