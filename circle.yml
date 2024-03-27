@@ -100,60 +100,6 @@ commands:
           name: "Update submodules"
           command: git submodule update --init --recursive
 
-  build_silkworm:
-    parameters:
-      branch:
-        type: string
-        default: master
-      commit:
-        type: string
-    steps:
-      - run:
-          # Fixes the cache restore step in case the silkworm dir does not exist
-          name: "Make Silkworm dir"
-          command: mkdir -p ~/silkworm
-      - restore_cache:
-          name: "Restore Silkworm cache (<<parameters.branch>>-<<parameters.commit>>)"
-          key: &silkworm-cache-key silkworm-v2-<<parameters.branch>>-<<parameters.commit>>
-      - run:
-          name: "Check Silkworm cache"
-          command: |
-            if [ -f ~/silkworm/ethereum ]; then
-              echo 'Cached Silkworm binary available - skip build.'
-            else
-              echo 'export SILKWORM_BUILD=true' >> $BASH_ENV
-            fi
-      - run:
-          name: "Checkout Silkworm"
-          working_directory: ~/silkworm/src
-          command: |
-            [ "$SILKWORM_BUILD" = true ] || exit 0
-            git clone --no-checkout --single-branch https://github.com/torquem-ch/silkworm.git . --branch <<parameters.branch>>
-            git checkout <<parameters.commit>>
-            git submodule update --init --recursive --progress
-      - run:
-          name: "Install conan"
-          # Use conan version from the Silkworm documentation.
-          # https://github.com/erigontech/silkworm#building-on-linux--macos
-          command: sudo pip install --break-system-packages conan==1.60.2
-      - run:
-          name: "Configure Silkworm"
-          working_directory: ~/silkworm
-          command: |
-            [ "$SILKWORM_BUILD" = true ] || exit 0
-            cmake -S src -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=$(pwd)
-      - run:
-          name: "Build Silkworm cmd/test/ethereum"
-          working_directory: ~/silkworm
-          command: |
-            [ "$SILKWORM_BUILD" = true ] || exit 0
-            cmake --build build --target ethereum
-      - save_cache:
-          name: "Save Silkworm cache"
-          key: *silkworm-cache-key
-          paths:
-            - ~/silkworm/ethereum
-
   download_execution_tests:
     parameters:
       repo:
@@ -452,34 +398,6 @@ jobs:
             echo $name
             ghr -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME -n "$name" $prerelease_flag $CIRCLE_TAG ~/package
 
-  blockchain-tests:
-    executor: blockchain-tests
-    environment:
-      BUILD_TYPE: Coverage
-      CMAKE_OPTIONS: -DEVMONE_TESTING=OFF -DCMAKE_CXX_FLAGS=-Og
-    steps:
-      - build
-      - build_silkworm:
-          branch: master
-          commit: 985013585c358bbfda399c668bdf9992815b806f
-      - download_execution_tests:
-          # v13.2 + fix
-          rev: develop
-          commit: 52ddcbcef0d58ec7de6b768b564725391a30b934
-      - run:
-          name: "Silkworm-driven blockchain tests (Advanced)"
-          working_directory: ~/build
-          no_output_timeout: 20m
-          command: ~/silkworm/ethereum --evm lib/libevmone.so,advanced --tests ~/tests --threads $CMAKE_BUILD_PARALLEL_LEVEL
-      - run:
-          name: "Silkworm-driven blockchain tests (Baseline)"
-          working_directory: ~/build
-          no_output_timeout: 20m
-          command: ~/silkworm/ethereum --evm lib/libevmone.so --tests ~/tests --threads $CMAKE_BUILD_PARALLEL_LEVEL
-      - collect_coverage_gcc
-      - upload_coverage:
-          flags: blockchaintests
-
   state-tests:
     executor: blockchain-tests
     environment:
@@ -770,7 +688,6 @@ workflows:
               only: /^v[0-9].*/
       - state-tests
       - precompiles-silkpre
-      - blockchain-tests
       - cmake-min
       - gcc-min
       - clang-min
