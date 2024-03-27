@@ -322,3 +322,17 @@ TEST(statetest_loader, block_info_current_blob_gas)
         0xb5eee60b45801179cbde3781b9a5dee9b3111554618c9cda3d6f7e351fd41e0b_bytes32);
     EXPECT_EQ(bi.excess_blob_gas, 2);
 }
+
+TEST(statetest_loader, block_info_parent_beacon_block_root)
+{
+    constexpr std::string_view input = R"({
+        "currentNumber": "0",
+        "currentTimestamp": "0",
+        "currentGasLimit": "0",
+        "currentCoinbase": "",
+        "parentBeaconBlockRoot": "0xbeac045007"
+    })";
+
+    const auto bi = test::from_json<state::BlockInfo>(json::json::parse(input));
+    EXPECT_EQ(bi.parent_beacon_block_root, 0xbeac045007_bytes32);
+}
