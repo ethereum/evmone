@@ -80,6 +80,12 @@ std::string_view get_tests_error_message(EOFValidationError err) noexcept
         return "EOF_InvalidNonReturningFlag";
     case EOFValidationError::callf_to_non_returning_function:
         return "EOF_CallfToNonReturningFunction";
+    case EOFValidationError::too_many_container_sections:
+        return "EOF_TooManyContainerSections";
+    case EOFValidationError::invalid_container_section_index:
+        return "EOF_InvalidContainerSectionIndex";
+    case EOFValidationError::eofcreate_with_truncated_container:
+        return "EOF_EofCreateWithTruncatedContainer";
     case EOFValidationError::impossible:
         return "impossible";
     }
