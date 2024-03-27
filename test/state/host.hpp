@@ -38,6 +38,17 @@ inline constexpr size_t max_initcode_size = 2 * max_code_size;
 [[nodiscard]] address compute_create2_address(
     const address& sender, const bytes32& salt, bytes_view init_code) noexcept;
 
+/// Computes the address of to-be-created contract with the EOFCREATE scheme.
+///
+/// Computes the new account address for the contract creation context of the EOFCREATE instruction.
+///
+/// @param sender        The address of the message sender.
+/// @param salt          The salt.
+/// @param initcontainer The contract creation init container.
+/// @return              The address computed with the EOFCREATE scheme.
+[[nodiscard]] address compute_eofcreate_address(
+    const address& sender, const bytes32& salt, bytes_view initcontainer) noexcept;
+
 class Host : public evmc::Host
 {
     evmc_revision m_rev;
