@@ -57,19 +57,9 @@ int64_t compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& tx) noex
 evmc_message build_message(const Transaction& tx, int64_t execution_gas_limit) noexcept
 {
     const auto recipient = tx.to.has_value() ? *tx.to : evmc::address{};
-    return {
-        tx.to.has_value() ? EVMC_CALL : EVMC_CREATE,
-        0,
-        0,
-        execution_gas_limit,
-        recipient,
-        tx.sender,
-        tx.data.data(),
-        tx.data.size(),
-        intx::be::store<evmc::uint256be>(tx.value),
-        {},
-        recipient,
-    };
+    return {tx.to.has_value() ? EVMC_CALL : EVMC_CREATE, 0, 0, execution_gas_limit, recipient,
+        tx.sender, tx.data.data(), tx.data.size(), intx::be::store<evmc::uint256be>(tx.value), {},
+        recipient, nullptr, 0};
 }
 }  // namespace
 

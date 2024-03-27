@@ -174,6 +174,9 @@ enum Opcode : uint8_t
     OP_SWAPN = 0xe7,
     OP_EXCHANGE = 0xe8,
 
+    OP_EOFCREATE = 0xec,
+    OP_RETURNCONTRACT = 0xee,
+
     OP_CREATE = 0xf0,
     OP_CALL = 0xf1,
     OP_CALLCODE = 0xf2,
