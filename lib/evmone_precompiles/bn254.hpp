@@ -36,4 +36,13 @@ Point add(const Point& pt1, const Point& pt2) noexcept;
 /// Computes [c]P for a point in affine coordinate on the bn254 curve,
 Point mul(const Point& pt, const uint256& c) noexcept;
 
+/// ate paring implementation for bn254 curve according to https://eips.ethereum.org/EIPS/eip-197
+///
+/// \param vG2 vector of 4 element arrays containing points from twisted curve G2 group
+/// \param vG1 vector of points from the bn254 curve G1 group
+/// These vectors must be same size n.
+/// \return `true` when  ∏e(vG2[i], vG1[i]) == 1 for i in [0, n] else `false`. std::nullopt on error
+std::optional<bool> pairing(
+    const std::vector<std::array<uint256, 4>>& vG2, const std::vector<Point>& vG1) noexcept;
+
 }  // namespace evmmax::bn254
