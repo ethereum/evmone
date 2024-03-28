@@ -6,6 +6,7 @@
 #include "precompiles_cache.hpp"
 #include "precompiles_internal.hpp"
 #include <evmone_precompiles/bn254.hpp>
+#include <evmone_precompiles/ripemd160.hpp>
 #include <evmone_precompiles/secp256k1.hpp>
 #include <intx/intx.hpp>
 #include <bit>
@@ -177,6 +178,16 @@ ExecutionResult ecrecover_execute(const uint8_t* input, size_t input_size, uint8
         return {EVMC_SUCCESS, 0};
 }
 
+ExecutionResult ripemd160_execute(const uint8_t* input, size_t input_size, uint8_t* output,
+    [[maybe_unused]] size_t output_size) noexcept
+{
+    assert(output_size >= 32);
+    output = std::fill_n(output, 12, std::uint8_t{0});
+    crypto::ripemd160(reinterpret_cast<std::byte*>(output),
+        reinterpret_cast<const std::byte*>(input), input_size);
+    return {EVMC_SUCCESS, 32};
+}
+
 ExecutionResult ecadd_execute(const uint8_t* input, size_t input_size, uint8_t* output,
     [[maybe_unused]] size_t output_size) noexcept
 {
@@ -260,7 +271,7 @@ inline constexpr auto traits = []() noexcept {
         {},  // undefined for 0
         {ecrecover_analyze, ecrecover_execute},
         {sha256_analyze, dummy_execute<PrecompileId::sha256>},
-        {ripemd160_analyze, dummy_execute<PrecompileId::ripemd160>},
+        {ripemd160_analyze, ripemd160_execute},
         {identity_analyze, identity_execute},
         {expmod_analyze, dummy_execute<PrecompileId::expmod>},
         {ecadd_analyze, ecadd_execute},
@@ -272,7 +283,7 @@ inline constexpr auto traits = []() noexcept {
 #ifdef EVMONE_PRECOMPILES_SILKPRE
     // tbl[static_cast<size_t>(PrecompileId::ecrecover)].execute = silkpre_ecrecover_execute;
     tbl[static_cast<size_t>(PrecompileId::sha256)].execute = silkpre_sha256_execute;
-    tbl[static_cast<size_t>(PrecompileId::ripemd160)].execute = silkpre_ripemd160_execute;
+    // tbl[static_cast<size_t>(PrecompileId::ripemd160)].execute = silkpre_ripemd160_execute;
     tbl[static_cast<size_t>(PrecompileId::expmod)].execute = silkpre_expmod_execute;
     // tbl[static_cast<size_t>(PrecompileId::ecadd)].execute = silkpre_ecadd_execute;
     // tbl[static_cast<size_t>(PrecompileId::ecmul)].execute = silkpre_ecmul_execute;

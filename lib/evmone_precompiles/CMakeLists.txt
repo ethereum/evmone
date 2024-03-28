@@ -10,6 +10,8 @@ target_sources(
     bn254.hpp
     bn254.cpp
     ecc.hpp
-    secp256k1.cpp
+    ripemd160.hpp
+    ripemd160.cpp
     secp256k1.hpp
+    secp256k1.cpp
 )
