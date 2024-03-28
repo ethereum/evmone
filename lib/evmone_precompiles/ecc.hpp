@@ -40,6 +40,33 @@ struct ProjPoint
 
 static_assert(ProjPoint<unsigned>{}.is_inf());
 
+// Jacobian (three) coordinates point implementation.
+template <typename ValueT>
+struct JacPoint
+{
+    ValueT x = 1;
+    ValueT y = 1;
+    ValueT z = 0;
+
+    // Compares two Jacobian coordinates points
+    friend constexpr bool operator==(const JacPoint& a, const JacPoint& b) noexcept
+    {
+        const auto bz2 = b.z * b.z;
+        const auto az2 = a.z * a.z;
+
+        const auto bz3 = bz2 * b.z;
+        const auto az3 = az2 * a.z;
+
+        return a.x * bz2 == b.x * az2 && a.y * bz3 == b.y * az3;
+    }
+
+    // Creates Jacobian coordinates point from affine point
+    static JacPoint from(const ecc::Point<ValueT>& ap) noexcept
+    {
+        return {ap.x, ap.y, ValueT::one()};
+    }
+};
+
 template <typename IntT>
 using InvFn = IntT (*)(const ModArith<IntT>&, const IntT& x) noexcept;
 
