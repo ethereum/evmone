@@ -14,6 +14,28 @@ const auto B3 = Fp.to_mont(7 * 3);
 
 constexpr Point G{0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798_u256,
     0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8_u256};
+
+struct Config
+{
+    // Linearly independent short vectors (𝑣₁=(𝑥₁, 𝑦₁), 𝑣₂=(x₂, 𝑦₂)) such that f(𝑣₁) = f(𝑣₂) = 0,
+    // where f : ℤ×ℤ → ℤₙ is defined as (𝑖,𝑗) → (𝑖+𝑗λ), where λ² + λ ≡ -1 mod n. n is secp256k1
+    // curve order. Here λ = 0x5363ad4cc05c30e0a5261c028812645a122e22ea20816678df02967c1b23bd72. DET
+    // is (𝑣₁, 𝑣₂) matrix determinant. For more details see
+    // https://www.iacr.org/archive/crypto2001/21390189.pdf
+    static constexpr auto X1 = 64502973549206556628585045361533709077_u512;
+    // Y1 should be negative, hence we calculate the determinant below adding operands instead of
+    // subtracting.
+    static constexpr auto Y1 = 303414439467246543595250775667605759171_u512;
+    static constexpr auto X2 = 367917413016453100223835821029139468248_u512;
+    static constexpr auto Y2 = 64502973549206556628585045361533709077_u512;
+    // For secp256k1 the determinant equals curve order.
+    static constexpr auto DET = uint512(Order);
+};
+// For secp256k1 curve and β ∈ 𝔽ₚ endomorphism ϕ : E₂ → E₂ defined as (𝑥,𝑦) → (β𝑥,𝑦) calculates
+// [λ](𝑥,𝑦) with only one multiplication in 𝔽ₚ. BETA value in Montgomery form;
+inline constexpr auto BETA =
+    55313291615161283318657529331139468956476901535073802794763309073431015819598_u256;
+
 }  // namespace
 
 // FIXME: Change to "uncompress_point".
@@ -117,9 +139,22 @@ std::optional<Point> secp256k1_ecdsa_recover(
     // 6. Calculate public key point Q.
     const auto R = ecc::to_proj(Fp, {r, y});
     const auto pG = ecc::to_proj(Fp, G);
-    const auto T1 = ecc::mul(Fp, pG, u1, B3);
-    const auto T2 = ecc::mul(Fp, R, u2, B3);
-    const auto pQ = ecc::add(Fp, T1, T2, B3);
+
+    const auto [u1k1, u1k2] = ecc::decompose<Config>(u1);
+    const auto [u2k1, u2k2] = ecc::decompose<Config>(u2);
+
+    const ecc::ProjPoint<uint256> pLG = {
+        Fp.mul(BETA, pG.x), !u1k2.first ? pG.y : Fp.sub(0, pG.y), pG.z};
+    const ecc::ProjPoint<uint256> pLR = {
+        Fp.mul(BETA, R.x), !u2k2.first ? R.y : Fp.sub(0, R.y), R.z};
+
+    const auto pQ = ecc::add(Fp,
+        shamir_multiply(Fp, B3, u1k1.second,
+            !u1k1.first ? pG : ecc::ProjPoint<uint256>{pG.x, Fp.sub(0, pG.y), pG.z}, u1k2.second,
+            pLG),
+        shamir_multiply(Fp, B3, u2k1.second,
+            !u2k1.first ? R : ecc::ProjPoint<uint256>{R.x, Fp.sub(0, R.y), R.z}, u2k2.second, pLR),
+        B3);
 
     const auto Q = ecc::to_affine(Fp, field_inv, pQ);
 
