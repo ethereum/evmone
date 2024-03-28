@@ -5,6 +5,7 @@
 #include "precompiles.hpp"
 #include "precompiles_cache.hpp"
 #include "precompiles_internal.hpp"
+#include "precompiles_stubs.hpp"
 #include <evmone_precompiles/blake2b.hpp>
 #include <evmone_precompiles/bn254.hpp>
 #include <evmone_precompiles/ripemd160.hpp>
@@ -292,26 +293,19 @@ struct PrecompileTraits
     decltype(identity_execute)* execute = nullptr;
 };
 
-template <PrecompileId Id>
-ExecutionResult dummy_execute(const uint8_t*, size_t, uint8_t*, size_t) noexcept
-{
-    std::cerr << "Precompile " << static_cast<int>(Id) << " not implemented!\n";
-    return ExecutionResult{EVMC_INTERNAL_ERROR, 0};
-}
-
 inline constexpr auto traits = []() noexcept {
     std::array<PrecompileTraits, NumPrecompiles> tbl{{
         {},  // undefined for 0
         {ecrecover_analyze, ecrecover_execute},
-        {sha256_analyze, dummy_execute<PrecompileId::sha256>},
+        {sha256_analyze, sha256_stub},
         {ripemd160_analyze, ripemd160_execute},
         {identity_analyze, identity_execute},
-        {expmod_analyze, dummy_execute<PrecompileId::expmod>},
+        {expmod_analyze, expmod_stub},
         {ecadd_analyze, ecadd_execute},
         {ecmul_analyze, ecmul_execute},
-        {ecpairing_analyze, dummy_execute<PrecompileId::ecpairing>},
+        {ecpairing_analyze, ecpairing_stub},
         {blake2bf_analyze, blake2bf_execute},
-        {point_evaluation_analyze, dummy_execute<PrecompileId::point_evaluation>},
+        {point_evaluation_analyze, point_evaluation_stub},
     }};
 #ifdef EVMONE_PRECOMPILES_SILKPRE
     // tbl[static_cast<size_t>(PrecompileId::ecrecover)].execute = silkpre_ecrecover_execute;
