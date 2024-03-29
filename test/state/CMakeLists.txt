@@ -24,8 +24,6 @@ target_sources(
     mpt_hash.cpp
     precompiles.hpp
     precompiles.cpp
-    precompiles_cache.hpp
-    precompiles_cache.cpp
     precompiles_internal.hpp
     precompiles_stubs.hpp
     precompiles_stubs.cpp

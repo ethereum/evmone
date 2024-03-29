@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "precompiles.hpp"
-#include "precompiles_cache.hpp"
 #include "precompiles_internal.hpp"
 #include "precompiles_stubs.hpp"
 #include <evmone_precompiles/blake2b.hpp>
@@ -11,11 +10,10 @@
 #include <evmone_precompiles/ripemd160.hpp>
 #include <evmone_precompiles/secp256k1.hpp>
 #include <intx/intx.hpp>
+#include <array>
 #include <bit>
 #include <cassert>
-#include <iostream>
 #include <limits>
-#include <unordered_map>
 
 #ifdef EVMONE_PRECOMPILES_SILKPRE
 #include "precompiles_silkpre.hpp"
@@ -23,6 +21,8 @@
 
 namespace evmone::state
 {
+using evmc::bytes;
+using evmc::bytes_view;
 using namespace evmc::literals;
 
 namespace
@@ -357,10 +357,6 @@ evmc::Result call_precompile(evmc_revision rev, const evmc_message& msg) noexcep
     if (gas_left < 0)
         return evmc::Result{EVMC_OUT_OF_GAS};
 
-    static Cache cache;
-    if (auto r = cache.find(static_cast<PrecompileId>(id), input, gas_left); r.has_value())
-        return std::move(*r);
-
     // Buffer for the precompile's output.
     // Big enough to handle all "expmod" tests, but in case does not match the size requirement
     // from analysis, the result will likely be incorrect.
@@ -373,8 +369,6 @@ evmc::Result call_precompile(evmc_revision rev, const evmc_message& msg) noexcep
 
     evmc::Result result{
         status_code, status_code == EVMC_SUCCESS ? gas_left : 0, 0, output_buf, output_size};
-
-    cache.insert(static_cast<PrecompileId>(id), input, result);
 
     return result;
 }

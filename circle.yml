@@ -410,13 +410,11 @@ jobs:
           name: "Execution spec tests (blockchain_tests)"
           working_directory: ~/build
           command: >
-            EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json 
             bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests
       - run:
           name: "Execution spec tests (state_tests)"
           working_directory: ~/build
           command: >
-            EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json 
             bin/evmone-statetest ~/spec-tests/fixtures/state_tests
 
       - download_execution_tests:
@@ -427,7 +425,6 @@ jobs:
           name: "State tests"
           working_directory: ~/build
           command: >
-            EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json 
             bin/evmone-statetest 
             ~/tests/GeneralStateTests 
             ~/tests/LegacyTests/Constantinople/GeneralStateTests
@@ -435,7 +432,6 @@ jobs:
           name: "Blockchain tests (GeneralStateTests)"
           working_directory: ~/build
           command: >
-            EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json 
             bin/evmone-blockchaintest
             --gtest_filter='*:-VMTests/vmPerformance.*:*.*Call50000_sha256:*.CALLBlake2f_MaxRounds'
             ~/tests/BlockchainTests/GeneralStateTests
@@ -443,7 +439,6 @@ jobs:
           name: "Blockchain tests (ValidBlocks)"
           working_directory: ~/build
           command: >
-            EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json 
             bin/evmone-blockchaintest
             --gtest_filter='*:-bcMultiChainTest.*:bcTotalDifficultyTest.*:bcForkStressTest.ForkStressTest:bcGasPricerTest.RPC_API_Test:bcValidBlockTest.SimpleTx3LowS'
             ~/tests/BlockchainTests/ValidBlocks
@@ -451,7 +446,6 @@ jobs:
           name: "Blockchain tests (EIPs)"
           working_directory: ~/build
           command: >
-            EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json 
             bin/evmone-blockchaintest
             --gtest_filter='-*StateTests/stEOF/*.*'
             ~/tests/EIPTests/BlockchainTests/
