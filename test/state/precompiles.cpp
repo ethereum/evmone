@@ -292,6 +292,63 @@ ExecutionResult blake2bf_execute(const uint8_t* input, [[maybe_unused]] size_t i
     return {EVMC_SUCCESS, sizeof(h)};
 }
 
+ExecutionResult ecpairing_execute(const uint8_t* input, size_t input_size, uint8_t* output,
+    [[maybe_unused]] size_t output_size) noexcept
+{
+    assert(output_size >= 32);
+
+    const auto pair_size = 192;
+
+    if (input_size % pair_size != 0)
+        return {EVMC_PRECOMPILE_FAILURE, 0};
+
+    const auto pair_count = input_size / pair_size;
+
+    if (pair_count > 0)
+    {
+        auto input_idx = input;
+
+        std::vector<evmmax::bn254::Point> vG1(pair_count);
+        std::vector<evmmax::bn254::ExtPoint> vG2(pair_count);
+
+        for (size_t i = 0; i < pair_count; ++i)
+        {
+            const evmmax::bn254::Point p = {
+                intx::be::unsafe::load<intx::uint256>(input_idx),
+                intx::be::unsafe::load<intx::uint256>(input_idx + 32),
+            };
+
+            const evmmax::bn254::ExtPoint q = {
+                {intx::be::unsafe::load<intx::uint256>(input_idx + 96),
+                    intx::be::unsafe::load<intx::uint256>(input_idx + 64)},
+                {intx::be::unsafe::load<intx::uint256>(input_idx + 160),
+                    intx::be::unsafe::load<intx::uint256>(input_idx + 128)},
+            };
+
+            vG1[i] = p;
+            vG2[i] = q;
+
+            input_idx += pair_size;
+        }
+
+        const auto res = evmmax::bn254::pairing(vG2, vG1);
+
+        if (res.has_value())
+        {
+            intx::be::unsafe::store(output, res.value() ? intx::uint256{1} : intx::uint256{0});
+            return {EVMC_SUCCESS, 64};
+        }
+        else
+            return {EVMC_PRECOMPILE_FAILURE, 0};
+    }
+    else
+    {
+        intx::be::unsafe::store(output, intx::uint256{1});
+        return {EVMC_SUCCESS, 32};
+    }
+}
+
+
 namespace
 {
 struct PrecompileTraits
