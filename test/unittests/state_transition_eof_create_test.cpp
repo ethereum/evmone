@@ -905,6 +905,39 @@ TEST_F(state_transition, txcreate_empty_auxdata)
     expect.post[create_address].nonce = 1;
 }
 
+TEST_F(state_transition, txcreate_extcall_returncontract)
+{
+    rev = EVMC_PRAGUE;
+    constexpr auto callee = 0xca11ee_address;
+    const auto deploy_container = eof_bytecode(bytecode(OP_INVALID));
+
+    pre.insert(
+        callee, {
+                    .code = eof_bytecode(returncontract(0, 0, 0), 2).container(deploy_container),
+                });
+
+    const auto init_code = mstore(0, extcall(callee)) + revert(0, 32);
+    const bytecode init_container = eof_bytecode(init_code, 4);
+
+    tx.type = Transaction::Type::initcodes;
+    tx.initcodes.push_back(init_container);
+
+    const auto factory_code = sstore(0, txcreate().initcode(keccak256(init_container)).salt(Salt)) +
+                              sstore(1, returndataload(0)) + OP_STOP;
+    const auto factory_container = eof_bytecode(factory_code, 5);
+
+    tx.to = To;
+
+    pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
+
+    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
+    // No new address returned from TXCREATE.
+    expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
+    // Internal EXTCALL returned 2 (abort).
+    expect.post[*tx.to].storage[0x01_bytes32] = 0x02_bytes32;
+    expect.post[callee].exists = true;
+}
+
 TEST_F(state_transition, txcreate_auxdata_equal_to_declared)
 {
     rev = EVMC_PRAGUE;
