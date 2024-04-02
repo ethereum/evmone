@@ -206,6 +206,8 @@ BENCHMARK_TEMPLATE(precompile, PrecompileId::ecmul, libff);
 
 namespace bench_ecpairing
 {
+constexpr auto evmmax_cpp = ecpairing_execute;
+BENCHMARK_TEMPLATE(precompile, PrecompileId::ecpairing, evmmax_cpp);
 #ifdef EVMONE_PRECOMPILES_SILKPRE
 constexpr auto libff = silkpre_ecpairing_execute;
 BENCHMARK_TEMPLATE(precompile, PrecompileId::ecpairing, libff);
