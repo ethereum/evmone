@@ -1142,3 +1142,27 @@ TEST_F(eof_validation, EOF1_returncontract_invalid)
                       .container(embedded),
         EOFValidationError::unreachable_instructions);
 }
+
+TEST_F(eof_validation, EOF1_eofcreate_returncontract_return_mix_valid)
+{
+    // This test ensures that we _do not_ have a validation rule preventing EOFCREATE,
+    // RETURNCONTRACT and RETURN mixing.
+    const auto embedded = eof_bytecode(bytecode{OP_INVALID});
+
+    // This contains both RETURNCONTRACT and RETURN, as well as references same
+    // container from both EOFCREATE and RETURNCONTRACT
+    const auto mixing_initcode =
+        eofcreate().container(0) + rjumpi(6, 1) + returncontract(0, 0, 0) + ret_top();
+
+    const auto mixing_initcontainer = eof_bytecode(mixing_initcode, 4).container(embedded);
+
+    // This top level container mixes all combinations of EOFCREATE/RETURNCONTRACT/RETURN.
+    add_test_case(eof_bytecode(mixing_initcode, 4).container(mixing_initcontainer),
+        EOFValidationError::success);
+}
+
+TEST_F(eof_validation, EOF1_unreferenced_subcontainer_valid)
+{
+    const auto embedded = eof_bytecode(bytecode{OP_INVALID});
+    add_test_case(eof_bytecode(OP_STOP).container(embedded), EOFValidationError::success);
+}
