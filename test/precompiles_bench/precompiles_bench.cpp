@@ -2,8 +2,12 @@
 // Copyright 2024 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+#include "../utils/utils.hpp"
 #include <benchmark/benchmark.h>
+#include <state/precompiles.hpp>
 #include <state/precompiles_internal.hpp>
+#include <array>
+#include <memory>
 
 #ifdef EVMONE_PRECOMPILES_SILKPRE
 #include <state/precompiles_silkpre.hpp>
@@ -11,135 +15,181 @@
 
 namespace
 {
-using ExecuteFn = evmone::state::ExecutionResult(
+using evmc::bytes;
+using namespace evmone::state;
+
+using ExecuteFn = ExecutionResult(
     const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
 
-template <ExecuteFn Fn>
-void identity(benchmark::State& state)
-{
-    const uint8_t input[4096]{};
-    uint8_t output[sizeof(input)];
+template <PrecompileId>
+constexpr auto analyze = 0;
+template <>
+constexpr auto analyze<PrecompileId::identity> = identity_analyze;
+template <>
+constexpr auto analyze<PrecompileId::ecrecover> = ecrecover_analyze;
+template <>
+constexpr auto analyze<PrecompileId::ecadd> = ecadd_analyze;
+template <>
+constexpr auto analyze<PrecompileId::ecmul> = ecmul_analyze;
+template <>
+[[maybe_unused]] constexpr auto analyze<PrecompileId::ecpairing> = ecpairing_analyze;
 
-    const auto [gas_cost, max_output_size] =
-        evmone::state::identity_analyze({input, std::size(input)}, EVMC_LATEST_STABLE_REVISION);
-    if (max_output_size > std::size(output))
-        return state.SkipWithError("too small output");
+template <PrecompileId>
+const inline std::array inputs{0};
+
+template <>
+const inline std::array inputs<PrecompileId::identity>{
+    bytes(4096, 0),
+    bytes(4096, 1),
+};
+
+template <>
+const inline std::array inputs<PrecompileId::ecrecover>{
+    "18c547e4f7b0f325ad1e56f57e26c745b09a3e503d86e00e5255ff7f715d3d1c"
+    "000000000000000000000000000000000000000000000000000000000000001c"
+    "73b1693892219d736caba55bdb67216e485557ea6b6af75f37096c9aa6a5a75f"
+    "eeb940b1d03b21e36b0e47e79769f095fe2ab855bd91e3a38756b7d75a9c4549"_hex,
+
+    // Inputs from https://etherscan.io/block/19570693
+    "e6a825e35ed9be084a71892d40a03353bcc64daf121816aebb219e3a1adadee3000000000000000000000000000000000000000000000000000000000000001c16799fd127010cc658053f838ba1dbcf49274fe97d14da1c08456c917d303ad4495b97615ae683e5677714e1aa5470d2d5e95f50781cee24d12e5972b853a4be"_hex,
+    "e37c09431f6725ecb8de43e77fa48a598d6dcaee19dbdd0782a56bb5d8d76f1b000000000000000000000000000000000000000000000000000000000000001cd1507bb892a41f02648e61ab306c7acc7efc50669bab3bbb179e4f21386cab5a72c3f4b47f12b7a42dec6e220792b8b7f7c2aefa9e57869d165be54061d38d37"_hex,
+    "06cfd18cbba471f873110ce951f8709243ad4ee3963c0f37ca748fd8f4cb277d000000000000000000000000000000000000000000000000000000000000001c5e4a4eafc75a38761f986807a7c3c3ce3dc6d8d1b54e77e0d8f61550cb145f5609d82baa98f5affc6c1fa92da7df6bfd957c23dbaa80c43069ddd31de4b06b50"_hex,
+    "ad11ccc6f37519a248f72617eb6895db5227816ecc02ffb04d7f3ead7c68c9c5000000000000000000000000000000000000000000000000000000000000001cbec7fc01246483c331848dca2435ef566c405f49c80773ed1e37c7d8e5f9763c014f06796c5f2eb28799a7d1b933e420e0a8179a7f041f7b177bb749887e3fdb"_hex,
+    "845f0b1cab4c6780c61f88cd8018646af7d92f513b8478290ad607ec2c81699b000000000000000000000000000000000000000000000000000000000000001c190b2d1d6152613f92fa9406825206ea21290e4cf61e5729098d35fdf5779d4d4e008b79b927f35879c4a05444113857b0073bf336dfa0ed647809599e6f682d"_hex,
+    "09b985f366a070978c1871df5d78cf890c8a51417c5a4aeaf6019a25bc6478be000000000000000000000000000000000000000000000000000000000000001bb6d464798c025aacffd1a56e0643a1ac29f6ed62f282c2e5b13bc0bbec08647c299cfa2e7c295fa7387856eedb34a94a30728fe96f6caf3c5e02c6ce0467ec3f"_hex,
+    "9d160608ad1a2d3c0f9ee91b566a0f63cdd6297b255b7860485dc80915b6edd1000000000000000000000000000000000000000000000000000000000000001cab06c8d09cc508cd173b7c1943fe76b307dfd1472eac56455ad820a17b7748f87874cb1337d734eb8497f7c5b2ae78289a8806f636382140872ba414ba7b2cef"_hex,
+    "c866f7d081b5ed51c07478c05950c6d49b57f9dc7e9517f2a49235dffad87ff9000000000000000000000000000000000000000000000000000000000000001b8ac1b5ea65ca74923e5d55a36649775fd4a6383a43625ebe72e80cffab2e73cc71fe84fa6b92785ccf0cb47703f6978d02199027c893e2e578d4a3b756f8a60b"_hex,
+    "c866f7d081b5ed51c07478c05950c6d49b57f9dc7e9517f2a49235dffad87ff9000000000000000000000000000000000000000000000000000000000000001cf584733b44d6a4997ffb9cd2c55ad194fa105f99fb9a02265c4b02a1ab987ea93c83271a5023cda2d536fcb57676a4029c62fab694d6defd997939d0eb738ca8"_hex,
+
+};
+
+template <>
+const inline std::array inputs<PrecompileId::ecadd>{
+    "0f25929bcb43d5a57391564615c9e70a992b10eafa4db109709649cf48c50dd2"
+    "16da2f5cb6be7a0aa72c440c53c9bbdfec6c36c7d515536431b3a865468acbba"
+    "1de49a4b0233273bba8146af82042d004f2085ec982397db0d97da17204cc286"
+    "0217327ffc463919bef80cc166d09c6172639d8589799928761bcd9f22c903d4"_hex,
+
+    // Inputs from
+    // https://etherscan.io/tx/0xf1d290f8a30e84953e40f32b442f4af4d947ddc88cb9e66f1e551f82d8479e2d
+    "2aee4c4a210fe1d6dd0c58e82fa8a8ebb8d6ccd57925d6c719240e7a61aff514232667094a59014c57bf0ad6a220bf66ca1e6ab8b4135fa932bffaba7dc9ac212a2652ced6e8fbaa735ba18f3851e8ef8ece83b2c7f685516eb1eb66860c82eb02840447bfa6500e7cb5532a37b89dfea32159a2769b1ab23d56a95ccfa76174"_hex,
+    "0bd35c81c7113a12eabec37f18750aa99294710f22e57da632212a063f59d27a03cb8a97e16ee905fcb2e8c5a9ae9b97b6a3c20d76ebc46b7949673e1c8f40b507524717221895c6f8c667f0b0f9bba8808c1f5e2b19860619921b5ccd70e4e5032a0a201c3e477d68cddf5e26d95ba03fb6dc7cac53e17e2e8fa39267507e48"_hex,
+    "0c359809f64010752fe9cde56bee5c6e98d3b362dad9c6e27983a289d7fdec6a10980910c6c33e2b3558464b76f7ce0626f951382ec370c9d92d2828d856731c1d37ba3d0f2cea2251f41a83abf667100a32c090fb5067d42b447f4559398aef07cf5d8560237e4dd19da27b3b49e5e669823375654845561f2108ef4103a574"_hex,
+    "1af3c46848da0a5fbeae786b72e49f604ccd2c119d17cd46e516f6534b6075a906c3525efa7be813d47fd339faf5ff0e99adcc71c56a545681820441a3f4a1b922754034f74195e95a897f3570e0fda11e21a39081683528aab029bbdd6c5e230e0ea7e78b3ffaf0d45b3e6169515109292541acf2db63deecd198231f7819b2"_hex,
+    "2d518024c07730b00e5f0252e479062b235759fca26e0460a40cfa4816be56af13a98be139f51ea9c6f1a93877056a7efcf89310f33022922c71263791fc107d16f6c6cd86354c8b06edca713969b8c30c7a93f1215e2c99bd28bc59f8b8186b230807cb63532426c0c2d1e13b0c8bef1da721eabc333888d4c6d6ff1a2e513e"_hex,
+    "135b515087f247e764f5ee5af75aa52568e34a5738594175bddd43b6f332beea0d70aa546b5f89b5a626f2c97a616f83e0f29722678afed431f3a4abd589c0b42be33cd0bd8ba0e523bd7dd03706154a9709162024a776ee39cacfbcdcf264b523d77a67e344cde7785449d3350ec89e4fd5eb8aad7178f38d824d6113c594c0"_hex,
+    "02548a1e93c0c6f79894c37384b9aa26770f31a675920542b5974b400c88f5dc20b5de975ed6c5d749d3555e490b7f8d2d8465b0f322a2b6a9e0679fde711cc80091961eb0f7f63b9357cfed46c61eddbc9a88fc58958461d911e1c5cb9750940506e465f95fde47460eb8fdd060e8ae89c06f665264657266c8543d7de4d3df"_hex,
+    "1b1c30a53bce3f8304f27e460305daa9ee811f9de9ab7aa7f1e69a260d64c0c52e9add32cc1f0266381fe46712fac4f2052f0348d2ff202085540111fd2cd1dd209227f4a682645e784055c717d3f1dfa203f2b26096ac700cfc55082519a999064db2c23bdffe9356ba02520baef6fb898333c5c61cdcf7efc2212ed7cb070a"_hex,
+    "15fe6f9e26be9c6851f4dceb593c3c3eddccf67abd05e3cba7e816c184c1650a262e4d9cee7dc9c35dcef7ef71d754179d2d2c8a9870b22201a27fed4c137d9b24ce9cd464b722e82eb266cce2be72a00e9f72eb9ea1936e9094b1ba6848a3792ff2346d6546026fe1be4f94416008247512cae8b110c2e06b58db4cb4355117"_hex,
+};
+
+template <>
+const inline std::array inputs<PrecompileId::ecmul>{
+    "0f25929bcb43d5a57391564615c9e70a992b10eafa4db109709649cf48c50dd2"
+    "16da2f5cb6be7a0aa72c440c53c9bbdfec6c36c7d515536431b3a865468acbba"
+    "183227397098d014dc2822db40c0ac2ecbc0b548b438e5469e10460b6c3e7ea3"_hex,
+
+    // Inputs from
+    // https://etherscan.io/tx/0xc51e63b391ffddeddf6a797dec9329d2319cff4358989a0e8c41d58968ed8c3d
+    "028f9d01bc0cb29ed29374f2e1317da679c7aafdec345db14fa3cc7b7aef3bfe1e7f063cfe3939fe829c6305471a7ecee3a1d414fd1564da6a2435fe7a40dd1f102e3dc989d704b6e15d937f543b5f434326f676ba42dc38cab2a6b531e63c86"_hex,
+    "27c865075b86f234c03f92aca6cdea284c5f74db3631795351602c32ffe35e052ca0622cb684b6d03ad8ce2b33e4b607be11dacdd231d3ab068365782988dfe5102e3dc989d704b6e15d937f543b5f434326f676ba42dc38cab2a6b531e63c86"_hex,
+    "115ff91c1ff2ec322468e4b55631506f15e0c911c8cbec4fd60e72245836f44b0db5de38601f262bded24fc593c1d15412eec6c3f7fdd1c691befc70fd89c9d916a872d9b0faa63cfacef41a7b0968954386bf94a3b86794a781b4aaa0d296d9"_hex,
+    "00b8b470c37deeeab63eed4d8374c4bf000a0be91319a4bb144a87a80732bda904ea9ca099d607fcb70678ac3243175c455abe00ac40a2a2c0cd7ee67b2d946315816eec3322d435e2924f2e87c4a68aa13b79aab0fde90a91bbfb736459f896"_hex,
+    "000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000020fc9202d44e2bf33f6b4a67e111504852a3a7bf361194f69afa319f8423d703f"_hex,
+    "0e4fdac80cf8f87fe27488e0a398e94aaafb93f41d3623c66e10dc306f9ff3a60135a67a4dfb05a35b766b3bbca81b3afe06e823859d52c29f7203615b565c5b17d6661525677e78137f0e34bdbbeec136c1d64642493e6e2825f4d8970e98a2"_hex,
+    "00c8a00b8ce94341d4ebf9abe08b5c87ea4d84dc04138a24ceefe0b9c78c4d95067172bf6abf504bbfd5652d643725e79306075513bf5161c3d64b9465964598286e7ccbf31089e0df224914b92a9a0792e323b1f55684c1aa9f7646a62fb3f2"_hex,
+    "2d56bbb88255cf631060fa06f154fde7bae56510d6caaec5a0bbc22f252d7aca21e9f7e4584b24a4f105b81de76887052deed89fdce114e161d7e7178213ca0b1d102fb0fde27c3d513d530d25a84ec81d410f89c54c3d66ba4689940ce91dea"_hex,
+    "30543adffffd27f2c512df127e6bbf0463986e439ba55bbd668ca5ae649c3de71525e19d26d342eaa4201d3311cbea20aea70c6293823d58f69bc154a672dd7a18089d4e577b2312bc6b0fdf414b55a27f85eda857c40ccbf6aee4eda308b6ee"_hex,
+};
+
+template <>
+const inline std::array inputs<PrecompileId::ecpairing>{
+    "07ef2650307493a16aca9e26a19d6743fff6625c3d8e54d72066927275b5f1eb0e1c313e3efebda72ff799f0290c8da3ddde69186bd55847394e2aad3c0116410055091d6ff0c5409deb107db7771636f49a4f35b8fd67b521529cf750bfd30d25bbf84313e421938a91a38cc2a6ec95231804b8bf4beee4fe918dcff2c62cfb2e7ef6b31b4bed556d3ae77b6bbc156b145d1a8c3589c3d62e3fa3aecb968bb5260c78f7e4f3da71284d1d94afb6f4baed9a897e3713952cd4f94870a43d8ea8"_hex
+    "2dbfc3ec62a3eee5a3b4b464bcf1f8527bbca12adea0f1f12033cd4f61b0e09119e55bd0b72c126da18665039556776642ff82e2f347f24fcea2475f4db087df1ae724ab134e5a7c6bd8a116fa5505b259522c0f164a5e8126e3ec7d34465f6e009f1bcdc853f8e3531756bb625b0d1dc014f4ab57c3f79f4f4e2e7ef7e0ead623a8ca5760457e726365b92fd0ceb486665797cd68c35dcffd8e4ae8066691e913ec7182c9fd68331a10f8be0fe885d730de5c7f89aa7d0b7bafaa009bbc9e3e"_hex
+    "275d967e24153c39567c2275b998a744042c17fd3c8060df5e32dede307fe6891cafe268593a1b223feb7b3a21f3619ff265e24150adadf917c121b196fce1e1198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c21800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa"_hex
+    "00f5b874a25a5045aa662c0a73309f53fd80cf68c7d6016b330fea535b3b96e42b454797d9c29e4262de0219926fbee1740553f8282c8c94b3f730d805228d5a2f0c63d0c53b3dfbca27b6b43ae7fbf55a38d78a21470996485b03128accc20800556502356e37ed150db2e36531b0f275fd6835c0fc1945922e270b48c48a8602644c27b5dbd793592a70b735e22c798a5e309fa17a992a7dc2a050e01b298f194776b6a53439d7336f389d2a8f6651e40885f5ca2538b0dc9cb534fb23f7fa"_hex,
+
+    "26466d52f79fd83452765af06723b8261d84292750c79260282c8fbebd32beaf1651abcd90107f0c8f610aac5ad733b6c5e1f726f4de82fdb9320446ec24ed76198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c21800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed275dc4a288d1afb3cbb1ac09187524c7db36395df7be3b99e673b13a075a65ec1d9befcd05a5323e6da4d435f3b617cdb3af83285c2df711ef39c01571827f9d214a3eaef9e104107226efdf0daa209bbe498dc11dd69a532b84d7d96e519f7e2a5ca5391aef6020d334577a46a7b95b650b048352ee1ffa0e780c4a4b6fe91b21c1193ec74d74e40a1cfa846c34eb49a80a85d000fd4a32910d7e683de704742cc717d69a0a0144d55251b862eb0eb8a208e511ac189673f9774f29d20b5ecd0f1e11d24390d4337b9183c1b5168c086f1bdcc1ab340a3685a7d77a0e7e733608fdd631bb135b5287142da57ec7a6e63adde9ab9750804622fce0af05729e34"_hex,
+    "21f61f88c5a038ceb500aa97ef781055a2d54972cdbf57d517096c1abc61bee200668426d1716b4545c1b0c62fc86c963f0cec21e0cd9581f456e63760c68d89198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c21800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa260f33258798435df28cf0d2dfbe5f4f4818c58891bdca78d9072319f01aa1cd032d5dea12336387561dd2dd08fb2a2f7c907a43ab53b971002b0ee7d6cba49c186282957db913abd99f91db59fe69922e95040603ef44c0bd7aa3adeef8f5ac17944351223333f260ddc3b4af45191b856689eda9eab5cbcddbbe570ce860d206d971ff4a7467c3ec596ed6efc674572e32fd6f52b721f97e35b0b3d354675306ecdb9f9567f59ed2eee36e1e1d58797fd13cc97fafc2910f5e8a12f202fa9a"_hex,
+    "07e7551e3100bff4528b81aac659ca5e4e7170b5e12b8d3e30b9935d3767f48e2ced6ce9c41b8c1acaa3406de772673c367fc348b4b82c7b30da63f10255d3d5198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c21800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa0b6512359b04db934f686fbcb6c928f354d1a81ae2252ca5d4aae3896ed8b563288f9675e1e95abf899b49fd15fd0989aa1b690e6d91c29309f55cd78caeffe1260e01b251f6f1c7e7ff4e580791dee8ea51d87a358e038b4efe30fac09383c10118c4d5b837bcc2bc89b5b398b5974e9f5944073b32078b7e231fec938883b004fc6369f7110fe3d25156c1bb9a72859cf2a04641f99ba4ee413c80da6a5fe422febda3c0c0632a56475b4214e5615e11e6dd3f96e6cea2854a87d4dacc5e55"_hex,
+    "0dde47c97939443b8ad501c1f9c5f300c8c38b1df716bfcb1710a274950928cb2ef81b076bfe99bf22b96be86ce80533e6888408f8bcc4f80c4a5a4269e745cd0cd0ec776fcd7c8e09c7870d862d38e24a558caf29addc0ddd75b1cf7467b4822e2c6b91e4c6214282f540b93f9a34f4efa6beb19b12ffe3ecc4180ace6d71ed1760fdf5eba14deb33e8388d49ada8b79244bfc6e7955d1eca9034600a5f87572bb0ea13cd218cb83ad685aad55c7044d3dabbff132ba998b8c7b8d33ee31ad001ebed5ab04cf6a52c91c5eeb8115f16d17f65e332972aae330b7f336a12ed5e28cade7e9fe17f6e3b37c95306c0e95601502c5b92c8eaa4b833ca8cb371829c2129813bd7247065ac58eac42c81e874044e199f48c12aa749a9fe6bb6e4bddc1b72b9ab4579283e62445555d5b2921424213d09a776152361c46988b82be8a7111bc8198f932e379b8f9825f01af0f5e5cacbf8bfe274bf674f6eaa6e338e04259f58d438fd6391e158c991e155966218e6a432703a84068a325439657498572d13bbd21d26b18fc8675a11aab05a2db4cc5e67cf6b613e6cca5605b7dbcdc5021fa68be4bf10f345c6d5cfca0d9a7d31d3ed34b6313189e71ebb6eaf78242e198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c21800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa2ee53e6ae6469ac25f8a9077a70dc7b2de87b177f37bcaa250bfe0bf1a27c0f41a08736142026f8818c788ed8ab7d3b9095a023ec263885af13c3e9f8f0ee74f0106b9acd3190d55559d315663fd7c9328e349ed9e65609ed04965faa585cc431c440555fec15da4b137a22b124d13d089ed9fbb6255759b86abf9de6e1c761802a73357f1acee0de463c4d3f7535fb23b1317bf6f2ebd078cb7a2e06f882284226254d43204a6add64a6ba65c34c0e6dd13a10888686512efe422afa9608bc6"_hex,
+    "22c1231e502334e41aca24dee7d962bd7deb7bf45beefd24baebdc181662032529793c3f9e578f731da72ff7e77c3e4aa596bc70f2f18efe861e09d80063055708a802562853078a00073b1a56bdce6974d49999ffe8e57b090fcf50470ee3241867b1193c349d4178fd38349e5dcacbf7fa5169d207d9dc359b2e099047dfd0250d4a0c29531021d3108e1a4851c42ead8697fd2d964db2896afd65039a5a59059fdbd52731e25f6f035686022edc867603dc01503bbcf3e44ffd0263666d552d4d9aa7e302d9df41749d5507949d05dbea33fbb16c643b22f599a2be6df2e214bedd503c37ceb061d8ec60209fe345ce89830a19230301f076caff004d19260967032fcbf776d1afc985f88877f182d38480a653f2decaa9794cbc3bf3060c0e187847ad4c798374d0d6732bf501847dd68bc0e071241e0213bc7fc13db7ab304cfbd1e08a704a99f5e847d93f8c3caafddec46b7a0d379da69a4d112346a71739c1b1a457a8c7313123d24d2f9192f896b7c63eea05a9d57f06547ad0cec8099c1293f4a7d755cc5895151912cfd89a6114493298ad4559295ac2c0219bc801505f18b3779a8cf3b4cbd4b3c0dbd99ab2c6e3e825e6e3e3bd56ff6961f117198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c21800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa0d39a10a81e9e8cd251f6c18b9d8c7a2b4ba3f9506c8001638b1bd4c663ca82b172e3638278ba81d883a0e486d597b3a50f9d9e026cf8bd5e940bf031f1bbbda2c4e22719c67bf7bddedcc98face8265be63ccdcef8139c221f21326aa48d1bd0700cbe071c394f095926c90427fe8a412216739e7633acb7c02cd719c12ecb92b34f9525b49f109aed50c68544acf38750b4c7334709d328de3973744953fcb0923b1a411590566dc946db78f12e46e568b91150d4b929ff7b4b5aba0fbab7b"_hex,
+    "2b8246fa78c0cdbc5a9b6e3ae245229769e3727bede3510aa5391e222c1a16782463d5b720d0b501b1cb00a30faa508b220acdde498c03838897bf98f1348457198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c21800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa1613ee9c617b7e7858928a236adc00a4200a7695a010e142d00966651587f516262f5022362a6547c3a991c74ad56caea45b80d5796eb0668fcf72983d170af0260e01b251f6f1c7e7ff4e580791dee8ea51d87a358e038b4efe30fac09383c10118c4d5b837bcc2bc89b5b398b5974e9f5944073b32078b7e231fec938883b004fc6369f7110fe3d25156c1bb9a72859cf2a04641f99ba4ee413c80da6a5fe422febda3c0c0632a56475b4214e5615e11e6dd3f96e6cea2854a87d4dacc5e55"_hex,
+    "000aa497c1b40b6f07989a7cca77c3e53dee08632433a90955d0c82f3a445937191c2f6a70d2cdd33e65907a67ebd0520e8394506e64cc43d805a3fd483e56990c0e8dc0367bcba1ec70160c11c981cd60432322c946a0a141cf7955e445e95506c1bcaeed380b606a7c05b696be5264dcb4da87342e6788c7adc536c121720d0bb73da5d6e75c353e3273c9a4196240d83f255f18af276c1ab2f5bff77f0ebb0f7cb99dc5db1aec72f855fc4fc1c6e9c0620405c8ff1343ff958a36cd2c05b301ebed5ab04cf6a52c91c5eeb8115f16d17f65e332972aae330b7f336a12ed5e28cade7e9fe17f6e3b37c95306c0e95601502c5b92c8eaa4b833ca8cb371829c2129813bd7247065ac58eac42c81e874044e199f48c12aa749a9fe6bb6e4bddc1b72b9ab4579283e62445555d5b2921424213d09a776152361c46988b82be8a7111bc8198f932e379b8f9825f01af0f5e5cacbf8bfe274bf674f6eaa6e338e04259f58d438fd6391e158c991e155966218e6a432703a84068a325439657498570ca8a4e8513506772cd613017c98f5d22bef7e6f0f11b020c69a11c42402ae1f0ea63a9620ea5f23af6814584b4839f4b5bc9bc444d6e3a45fdd314f33b5e47d198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c21800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa0228e296bbd09b1ab50534a35e2572c874ed6bc2d743d964c35d1ee6e07c5e91119dbba8ead4ff7f04b9824016551efaa4eafdd2d599ab029149d80bb28eb2b50106b9acd3190d55559d315663fd7c9328e349ed9e65609ed04965faa585cc431c440555fec15da4b137a22b124d13d089ed9fbb6255759b86abf9de6e1c761802a73357f1acee0de463c4d3f7535fb23b1317bf6f2ebd078cb7a2e06f882284226254d43204a6add64a6ba65c34c0e6dd13a10888686512efe422afa9608bc6"_hex,
+    "08b36935645d3cf03da1a44e1c500220e192bc25d7c2258b0e0162daa4cb51ce12fa21e6b7c12050ae82728acf6ffc0d223bee2cd2fed72a8e666531ccd1ed7e01ef8a2f7b663d2929b81e5fddded62747fdb102360f83e268eaf61524bb9e6f0870d564fb18fadd334959b16b916f9cac89685972d38b991147913daa2ff4d609cb2d1f22a263b144f56f84b5ca7fc3b0cad00246e0fb824f8f4d364e4501c423758d28bc118dd4899d126d7eeb041bf255cdccd7052a7af68f6ce2911a22ca01ebed5ab04cf6a52c91c5eeb8115f16d17f65e332972aae330b7f336a12ed5e28cade7e9fe17f6e3b37c95306c0e95601502c5b92c8eaa4b833ca8cb371829c2129813bd7247065ac58eac42c81e874044e199f48c12aa749a9fe6bb6e4bddc1b72b9ab4579283e62445555d5b2921424213d09a776152361c46988b82be8a7111bc8198f932e379b8f9825f01af0f5e5cacbf8bfe274bf674f6eaa6e338e04259f58d438fd6391e158c991e155966218e6a432703a84068a3254396574985718895f9bae6485ebc32b6eb32f2606164d70c22eb69295caa770dc4df161c12202fc51b5f6b67577223fcb9443b66a5443f1229380ada014b89412c210851241198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c21800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa2b451f25ea40ef8a6bbf6685bdeb5c517d892b7df354afc9b115112402fdbcc6110e32080d1871020cacc07adbf2bd1f18335375798e7c65728d81fcad2a3110233f3ddcd7a051aa58d45f1cb43db3e34a73f4e8186f1ec0f683045e23c14fdb2eaa95d1fec9deced40c5be4803c6e81b565eb02efb180d5060981640116af4b2c2460c2348677dc303426ce941fd7370aa9af05e0b6edfd7bcd74615e3a894c0231a91b920126bf0547ac461f04a4d351db35c21d9936a11d53eb53ce4a13d2"_hex,
+    "1bce8fa5482d9e50dfea4fb1dd94522e9b716f44d9918d6708fac0f0881938632a4338da2f280b176ab6924abb4775b55b508a8e36fff191023fdc5e99ba928b13bb5bd8d9a2b2822aacf155d7b22beebd4fe1910bd0dbb2834f2dc949f65cf60fc09cf79df13a761e90268de37a3595a7e9dc971fcaf7b26b784559036dfbb00c4f7aaa0d95a7cdeb1854ddef2a87b9393b6ce296e3c0ec20af93a0fde37abb2b8903140adc77bc3ed134c34571e16e949eb7d4a827da48859a9614aba82f722d4d9aa7e302d9df41749d5507949d05dbea33fbb16c643b22f599a2be6df2e214bedd503c37ceb061d8ec60209fe345ce89830a19230301f076caff004d19260967032fcbf776d1afc985f88877f182d38480a653f2decaa9794cbc3bf3060c0e187847ad4c798374d0d6732bf501847dd68bc0e071241e0213bc7fc13db7ab304cfbd1e08a704a99f5e847d93f8c3caafddec46b7a0d379da69a4d112346a71739c1b1a457a8c7313123d24d2f9192f896b7c63eea05a9d57f06547ad0cec829ad8a4a19c8558b7586b3748ef5315ba4520e87bf714177ded2b8b0dee8a03e067cb77535c18066291a1f20a16b7fb8f5d609ad5be42d1598bca446703d74c6198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c21800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa2d1b4674ee05363271f65f69fb5aa3d24145eb76f76bf49477e7950b8b4a050c18a6763f1cbe6d2334efcd94661dd802125011c7aba93167d8e25320640621882c4e22719c67bf7bddedcc98face8265be63ccdcef8139c221f21326aa48d1bd0700cbe071c394f095926c90427fe8a412216739e7633acb7c02cd719c12ecb92b34f9525b49f109aed50c68544acf38750b4c7334709d328de3973744953fcb0923b1a411590566dc946db78f12e46e568b91150d4b929ff7b4b5aba0fbab7b"_hex,
+};
+
+template <PrecompileId Id, ExecuteFn Fn>
+void precompile(benchmark::State& state)
+{
+    int64_t batch_gas_cost = 0;
+    size_t max_output_size = 0;
+    for (const auto& input : inputs<Id>)
+    {
+        const auto r = analyze<Id>(input, EVMC_LATEST_STABLE_REVISION);
+        batch_gas_cost += r.gas_cost;
+        max_output_size = std::max(max_output_size, r.max_output_size);
+    }
+    const auto output = std::make_unique_for_overwrite<uint8_t[]>(max_output_size);
+
 
     int64_t total_gas_used = 0;
-    for ([[maybe_unused]] auto _ : state)
+    while (state.KeepRunningBatch(inputs<Id>.size()))
     {
-        const auto [status, _2] = Fn(input, std::size(input), output, std::size(output));
-        if (status != EVMC_SUCCESS) [[unlikely]]
-            return state.SkipWithError("invalid result");
-        total_gas_used += gas_cost;
+        for (const auto& input : inputs<Id>)
+        {
+            const auto [status, _] = Fn(input.data(), input.size(), output.get(), max_output_size);
+            if (status != EVMC_SUCCESS) [[unlikely]]
+                return state.SkipWithError("invalid result");
+        }
+        total_gas_used += batch_gas_cost;
     }
 
     using benchmark::Counter;
-    state.counters["gas_used"] = Counter(static_cast<double>(gas_cost));
+    state.counters["gas_used"] = Counter(static_cast<double>(batch_gas_cost));
     state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
 }
-BENCHMARK_TEMPLATE(identity, evmone::state::identity_execute);
 
-template <ExecuteFn Fn>
-void ecrecover(benchmark::State& state)
+BENCHMARK_TEMPLATE(precompile, PrecompileId::identity, identity_execute);
+
+namespace bench_ecrecovery
 {
-    const auto input = evmc::from_hex(
-        "18c547e4f7b0f325ad1e56f57e26c745b09a3e503d86e00e5255ff7f715d3d1c"
-        "000000000000000000000000000000000000000000000000000000000000001c"
-        "73b1693892219d736caba55bdb67216e485557ea6b6af75f37096c9aa6a5a75f"
-        "eeb940b1d03b21e36b0e47e79769f095fe2ab855bd91e3a38756b7d75a9c4549")
-                           .value();
-    uint8_t output[32];
-
-    const auto [gas_cost, max_output_size] =
-        evmone::state::ecrecover_analyze(input, EVMC_LATEST_STABLE_REVISION);
-    if (max_output_size > std::size(output))
-        return state.SkipWithError("too small output");
-
-    int64_t total_gas_used = 0;
-    for ([[maybe_unused]] auto _ : state)
-    {
-        const auto [_2, output_size] = Fn(input.data(), input.size(), output, std::size(output));
-        if (output_size != std::size(output)) [[unlikely]]
-            return state.SkipWithError("invalid result");
-        total_gas_used += gas_cost;
-    }
-
-    using benchmark::Counter;
-    state.counters["gas_used"] = Counter(static_cast<double>(gas_cost));
-    state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
-}
-BENCHMARK_TEMPLATE(ecrecover, evmone::state::ecrecover_execute);
+constexpr auto evmmax_cpp = ecrecover_execute;
+BENCHMARK_TEMPLATE(precompile, PrecompileId::ecrecover, evmmax_cpp);
 #ifdef EVMONE_PRECOMPILES_SILKPRE
-BENCHMARK_TEMPLATE(ecrecover, evmone::state::silkpre_ecrecover_execute);
+constexpr auto libsecp256k1 = silkpre_ecrecover_execute;
+BENCHMARK_TEMPLATE(precompile, PrecompileId::ecrecover, libsecp256k1);
 #endif
+}  // namespace bench_ecrecovery
 
-template <ExecuteFn Fn>
-void ecadd(benchmark::State& state)
+namespace bench_ecadd
 {
-    const auto input = evmc::from_hex(
-        "0f25929bcb43d5a57391564615c9e70a992b10eafa4db109709649cf48c50dd2"
-        "16da2f5cb6be7a0aa72c440c53c9bbdfec6c36c7d515536431b3a865468acbba"
-        "1de49a4b0233273bba8146af82042d004f2085ec982397db0d97da17204cc286"
-        "0217327ffc463919bef80cc166d09c6172639d8589799928761bcd9f22c903d4")
-                           .value();
-    uint8_t output[64];
-
-    const auto [gas_cost, max_output_size] =
-        evmone::state::ecadd_analyze(input, EVMC_LATEST_STABLE_REVISION);
-    if (max_output_size > std::size(output))
-        return state.SkipWithError("too small output");
-
-    int64_t total_gas_used = 0;
-    for ([[maybe_unused]] auto _ : state)
-    {
-        const auto [status, _2] = Fn(input.data(), input.size(), output, std::size(output));
-        if (status != EVMC_SUCCESS) [[unlikely]]
-            return state.SkipWithError("invalid result");
-        total_gas_used += gas_cost;
-    }
-
-    using benchmark::Counter;
-    state.counters["gas_used"] = Counter(static_cast<double>(gas_cost));
-    state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
-}
-BENCHMARK_TEMPLATE(ecadd, evmone::state::ecadd_execute);
+constexpr auto evmmax_cpp = ecadd_execute;
+BENCHMARK_TEMPLATE(precompile, PrecompileId::ecadd, evmmax_cpp);
 #ifdef EVMONE_PRECOMPILES_SILKPRE
-BENCHMARK_TEMPLATE(ecadd, evmone::state::silkpre_ecadd_execute);
+constexpr auto libff = silkpre_ecadd_execute;
+BENCHMARK_TEMPLATE(precompile, PrecompileId::ecadd, libff);
 #endif
+}  // namespace bench_ecadd
 
-template <ExecuteFn Fn>
-void ecmul(benchmark::State& state)
+namespace bench_ecmul
 {
-    const auto input = evmc::from_hex(
-        "0f25929bcb43d5a57391564615c9e70a992b10eafa4db109709649cf48c50dd2"
-        "16da2f5cb6be7a0aa72c440c53c9bbdfec6c36c7d515536431b3a865468acbba"
-        "183227397098d014dc2822db40c0ac2ecbc0b548b438e5469e10460b6c3e7ea3")
-                           .value();
-    uint8_t output[64];
-
-    const auto [gas_cost, max_output_size] =
-        evmone::state::ecmul_analyze(input, EVMC_LATEST_STABLE_REVISION);
-    if (max_output_size > std::size(output))
-        return state.SkipWithError("too small output");
-
-    int64_t total_gas_used = 0;
-    for ([[maybe_unused]] auto _ : state)
-    {
-        const auto [status, _2] = Fn(input.data(), input.size(), output, std::size(output));
-        if (status != EVMC_SUCCESS) [[unlikely]]
-            return state.SkipWithError("invalid result");
-        total_gas_used += gas_cost;
-    }
-
-    using benchmark::Counter;
-    state.counters["gas_used"] = Counter(static_cast<double>(gas_cost));
-    state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
-}
-BENCHMARK_TEMPLATE(ecmul, evmone::state::ecmul_execute);
+constexpr auto evmmax_cpp = ecmul_execute;
+BENCHMARK_TEMPLATE(precompile, PrecompileId::ecmul, evmmax_cpp);
 #ifdef EVMONE_PRECOMPILES_SILKPRE
-BENCHMARK_TEMPLATE(ecmul, evmone::state::silkpre_ecmul_execute);
+constexpr auto libff = silkpre_ecmul_execute;
+BENCHMARK_TEMPLATE(precompile, PrecompileId::ecmul, libff);
 #endif
+}  // namespace bench_ecmul
+
+namespace bench_ecpairing
+{
+#ifdef EVMONE_PRECOMPILES_SILKPRE
+constexpr auto libff = silkpre_ecpairing_execute;
+BENCHMARK_TEMPLATE(precompile, PrecompileId::ecpairing, libff);
+#endif
+}  // namespace bench_ecpairing
 
 }  // namespace
 
