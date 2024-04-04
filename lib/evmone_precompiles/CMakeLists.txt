@@ -7,6 +7,8 @@ add_library(evmone::precompiles ALIAS evmone_precompiles)
 target_link_libraries(evmone_precompiles PUBLIC evmc::evmc_cpp PRIVATE evmone::evmmax)
 target_sources(
     evmone_precompiles PRIVATE
+    blake2b.hpp
+    blake2b.cpp
     bn254.hpp
     bn254.cpp
     ecc.hpp
