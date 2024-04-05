@@ -40,4 +40,6 @@ ExecutionResult ecadd_execute(
     const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
 ExecutionResult ecmul_execute(
     const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
+ExecutionResult blake2bf_execute(
+    const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
 }  // namespace evmone::state
