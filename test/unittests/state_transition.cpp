@@ -15,8 +15,7 @@ void state_transition::SetUp()
 {
     pre.insert(tx.sender, {.nonce = 1, .balance = tx.gas_limit * tx.max_gas_price + tx.value + 1});
 
-    // Default expectations.
-    expect.post[Coinbase].exists = true;
+    // Default expectation (coinbase is added later for valid txs only).
     expect.post[tx.sender].exists = true;
 }
 
@@ -69,20 +68,28 @@ void state_transition::TearDown()
         EXPECT_EQ(tx_error, expected_error)
             << tx_error.message() << " vs " << expected_error.message();
 
-        // TODO: Compare states carefully, they should be identical.
         EXPECT_EQ(state.get_accounts().size(), pre.get_accounts().size());
         for (const auto& [addr, acc] : state.get_accounts())
         {
             EXPECT_TRUE(pre.get_accounts().contains(addr)) << "unexpected account " << addr;
         }
-
-        // TODO: Export also tests with invalid transactions.
-        return;  // Do not check anything else.
     }
+    else
+    {
+        ASSERT_TRUE(holds_alternative<TransactionReceipt>(res))
+            << std::get<std::error_code>(res).message();
+        const auto& receipt = std::get<TransactionReceipt>(res);
 
-    ASSERT_TRUE(holds_alternative<TransactionReceipt>(res))
-        << std::get<std::error_code>(res).message();
-    const auto& receipt = std::get<TransactionReceipt>(res);
+        EXPECT_EQ(receipt.status, expect.status);
+        if (expect.gas_used.has_value())
+        {
+            EXPECT_EQ(receipt.gas_used, *expect.gas_used);
+        }
+        // Update default expectations - valid transaction means coinbase exists unless explicitly
+        // requested otherwise
+        if (expect.post.find(Coinbase) == expect.post.end())
+            expect.post[Coinbase].exists = true;
+    }
     state::finalize(state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
 
     if (trace)
@@ -90,12 +97,6 @@ void state_transition::TearDown()
         if (expect.trace.starts_with('\n'))  // It's easier to define expected trace with \n.
             expect.trace.remove_prefix(1);
         EXPECT_EQ(trace_capture->get_capture(), expect.trace);
-    }
-
-    EXPECT_EQ(receipt.status, expect.status);
-    if (expect.gas_used.has_value())
-    {
-        EXPECT_EQ(receipt.gas_used, *expect.gas_used);
     }
 
     for (const auto& [addr, expected_acc] : expect.post)
@@ -146,7 +147,7 @@ void state_transition::TearDown()
     }
 
     if (!export_file_path.empty())
-        export_state_test(receipt, state);
+        export_state_test(res, state);
 }
 
 namespace
@@ -166,7 +167,8 @@ std::string_view to_test_fork_name(evmc_revision rev) noexcept
 }
 }  // namespace
 
-void state_transition::export_state_test(const TransactionReceipt& receipt, const State& post)
+void state_transition::export_state_test(
+    const std::variant<TransactionReceipt, std::error_code>& res, const State& post)
 {
     json::json j;
     auto& jt = j[export_test_name];
@@ -225,7 +227,16 @@ void state_transition::export_state_test(const TransactionReceipt& receipt, cons
     auto& jpost = jt["post"][to_test_fork_name(rev)][0];
     jpost["indexes"] = {{"data", 0}, {"gas", 0}, {"value", 0}};
     jpost["hash"] = hex0x(mpt_hash(post.get_accounts()));
-    jpost["logs"] = hex0x(logs_hash(receipt.logs));
+
+    if (holds_alternative<std::error_code>(res))
+    {
+        jpost["expectException"] = std::get<std::error_code>(res).message();
+        jpost["logs"] = hex0x(logs_hash(std::vector<Log>()));
+    }
+    else
+    {
+        jpost["logs"] = hex0x(logs_hash(std::get<TransactionReceipt>(res).logs));
+    }
 
     std::ofstream{export_file_path} << std::setw(2) << j;
 }

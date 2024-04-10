@@ -50,11 +50,18 @@ void run_state_test(const StateTransitionTest& test, evmc::VM& vm, bool trace_su
                 std::clog << R"("stateRoot":"0x)" << hex(state_root) << "\"}\n";
             }
 
-            if (holds_alternative<state::TransactionReceipt>(res))
-                EXPECT_EQ(logs_hash(get<state::TransactionReceipt>(res).logs), expected.logs_hash);
+            if (expected.exception)
+            {
+                ASSERT_FALSE(holds_alternative<state::TransactionReceipt>(res))
+                    << "unexpected valid transaction";
+                EXPECT_EQ(logs_hash(std::vector<state::Log>()), expected.logs_hash);
+            }
             else
-                EXPECT_TRUE(expected.exception)
+            {
+                ASSERT_TRUE(holds_alternative<state::TransactionReceipt>(res))
                     << "unexpected invalid transaction: " << get<std::error_code>(res).message();
+                EXPECT_EQ(logs_hash(get<state::TransactionReceipt>(res).logs), expected.logs_hash);
+            }
 
             EXPECT_EQ(state_root, expected.state_hash);
         }
