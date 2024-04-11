@@ -3,14 +3,3 @@ codecov:
 
 comment:
   layout: "diff, flags, files"
-
-flags:
-  statetests:
-    paths:
-      - lib/evmone
-      - test/state
-      - test/statetest
-  blockchaintests:
-    joined: false
-    paths:
-      - lib/evmone
