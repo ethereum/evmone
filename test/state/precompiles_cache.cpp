@@ -36,6 +36,7 @@ void Cache::insert(PrecompileId id, bytes_view input, const evmc::Result& result
     {
     case PrecompileId::ripemd160:
     case PrecompileId::identity:
+    case PrecompileId::blake2bf:
         return;  // Do not cache.
     default:
         const auto input_hash = keccak256(input);

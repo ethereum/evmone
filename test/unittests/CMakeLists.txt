@@ -45,6 +45,7 @@ target_sources(
     exportable_fixture.hpp
     exportable_fixture.cpp
     instructions_test.cpp
+    precompiles_blake2b_test.cpp
     precompiles_ripemd160_test.cpp
     state_block_test.cpp
     state_bloom_filter_test.cpp

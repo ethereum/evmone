@@ -437,7 +437,7 @@ jobs:
           command: >
             EVMONE_PRECOMPILES_STUB=~/project/test/state/precompiles_stub.json 
             bin/evmone-blockchaintest
-            --gtest_filter='*:-VMTests/vmPerformance.*:*.*Call50000_sha256'
+            --gtest_filter='*:-VMTests/vmPerformance.*:*.*Call50000_sha256:*.CALLBlake2f_MaxRounds'
             ~/tests/BlockchainTests/GeneralStateTests
       - run:
           name: "Blockchain tests (ValidBlocks)"

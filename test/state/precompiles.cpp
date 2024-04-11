@@ -5,6 +5,7 @@
 #include "precompiles.hpp"
 #include "precompiles_cache.hpp"
 #include "precompiles_internal.hpp"
+#include <evmone_precompiles/blake2b.hpp>
 #include <evmone_precompiles/bn254.hpp>
 #include <evmone_precompiles/ripemd160.hpp>
 #include <evmone_precompiles/secp256k1.hpp>
@@ -251,6 +252,38 @@ ExecutionResult identity_execute(const uint8_t* input, size_t input_size, uint8_
     return {EVMC_SUCCESS, input_size};
 }
 
+ExecutionResult blake2bf_execute(const uint8_t* input, [[maybe_unused]] size_t input_size,
+    uint8_t* output, [[maybe_unused]] size_t output_size) noexcept
+{
+    static_assert(std::endian::native == std::endian::little,
+        "blake2bf only works correctly on little-endian architectures");
+    assert(input_size >= 213);
+    assert(output_size >= 64);
+
+    const auto rounds = intx::be::unsafe::load<uint32_t>(input);
+    input += sizeof(rounds);
+
+    uint64_t h[8];
+    std::memcpy(h, input, sizeof(h));
+    input += sizeof(h);
+
+    uint64_t m[16];
+    std::memcpy(m, input, sizeof(m));
+    input += sizeof(m);
+
+    uint64_t t[2];
+    std::memcpy(t, input, sizeof(t));
+    input += sizeof(t);
+
+    const auto f = *input;
+    if (f != 0 && f != 1) [[unlikely]]
+        return {EVMC_PRECOMPILE_FAILURE, 0};
+
+    crypto::blake2b_compress(rounds, h, m, t, f != 0);
+    std::memcpy(output, h, sizeof(h));
+    return {EVMC_SUCCESS, sizeof(h)};
+}
+
 namespace
 {
 struct PrecompileTraits
@@ -277,7 +310,7 @@ inline constexpr auto traits = []() noexcept {
         {ecadd_analyze, ecadd_execute},
         {ecmul_analyze, ecmul_execute},
         {ecpairing_analyze, dummy_execute<PrecompileId::ecpairing>},
-        {blake2bf_analyze, dummy_execute<PrecompileId::blake2bf>},
+        {blake2bf_analyze, blake2bf_execute},
         {point_evaluation_analyze, dummy_execute<PrecompileId::point_evaluation>},
     }};
 #ifdef EVMONE_PRECOMPILES_SILKPRE
@@ -288,7 +321,7 @@ inline constexpr auto traits = []() noexcept {
     // tbl[static_cast<size_t>(PrecompileId::ecadd)].execute = silkpre_ecadd_execute;
     // tbl[static_cast<size_t>(PrecompileId::ecmul)].execute = silkpre_ecmul_execute;
     tbl[static_cast<size_t>(PrecompileId::ecpairing)].execute = silkpre_ecpairing_execute;
-    tbl[static_cast<size_t>(PrecompileId::blake2bf)].execute = silkpre_blake2bf_execute;
+    // tbl[static_cast<size_t>(PrecompileId::blake2bf)].execute = silkpre_blake2bf_execute;
 #endif
     return tbl;
 }();
