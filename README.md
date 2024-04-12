@@ -91,14 +91,12 @@ To build the evmone EVMC module (shared library), test, and benchmark:
 
 ### Precompiles
 
-Ethereum Precompiled Contracts (_precompiles_ for short) are not directly supported by evmone.
+Ethereum Precompiled Contracts (_precompiles_ for short) are only partly supported by evmone.
 
 However, there are options to enable limited precompiles support for testing.
 
-1. The [test/state/precompiles_stub.json](./test/state/precompiles_stub.json) contains
-   precompiles execution results for inputs commonly used in tests.
-   You can use the precompiles STUB by setting the environment variable
-   `EVMONE_PRECOMPILES_STUB=./test/state/precompiles_stub.json`.
+1. For precompiles with missing implementation stubs are enabled by default.
+   They will correctly respond to known inputs.
 2. The CMake option `EVMONE_PRECOMPILES_SILKPRE=1` enables building of
    the [silkpre] third party library with the implementation of the precompiles.
    This library also requires [GMP] (e.g. libgmp-dev) library for building and execution.
