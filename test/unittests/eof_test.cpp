@@ -8,6 +8,7 @@
 #include <test/utils/utils.hpp>
 
 using namespace evmone;
+using namespace evmone::test;
 
 TEST(eof, is_eof_container)
 {

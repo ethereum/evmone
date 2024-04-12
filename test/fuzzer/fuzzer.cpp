@@ -6,10 +6,11 @@
 #include <evmone/evmone.h>
 #include <test/utils/bytecode.hpp>
 #include <test/utils/utils.hpp>
-
 #include <cstring>
 #include <iostream>
 #include <limits>
+
+using namespace evmone::test;
 
 inline std::ostream& operator<<(std::ostream& os, const evmc_address& addr)
 {

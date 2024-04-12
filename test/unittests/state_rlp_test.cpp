@@ -9,9 +9,10 @@
 #include <test/utils/utils.hpp>
 #include <bit>
 
-using namespace evmone;
 using namespace evmc::literals;
 using namespace intx;
+using namespace evmone;
+using namespace evmone::test;
 using namespace testing;
 
 static constexpr auto emptyBytesHash =

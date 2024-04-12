@@ -12,6 +12,7 @@
 #include <gmock/gmock.h>
 
 using namespace testing;
+using namespace evmone::test;
 
 class tracing : public Test
 {

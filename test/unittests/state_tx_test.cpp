@@ -7,8 +7,9 @@
 #include <test/state/state.hpp>
 #include <test/utils/utils.hpp>
 
-using namespace evmone::state;
 using namespace evmc::literals;
+using namespace evmone::state;
+using namespace evmone::test;
 
 TEST(state_tx, validate_nonce)
 {

@@ -9,7 +9,7 @@
 
 using namespace evmc::literals;
 using namespace intx;
-using evmone::test::evm;
+using namespace evmone::test;
 
 TEST_P(evm, blobbasefee_pre_cancun)
 {

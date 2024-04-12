@@ -4,13 +4,12 @@
 
 #include "evm_fixture.hpp"
 #include <evmone/instructions_traits.hpp>
-#include <intx/intx.hpp>
 #include <algorithm>
 
 using namespace evmone;
 using namespace evmc::literals;
 using namespace intx;
-using evmone::test::evm;
+using namespace evmone::test;
 
 TEST_P(evm, memory_and_not)
 {

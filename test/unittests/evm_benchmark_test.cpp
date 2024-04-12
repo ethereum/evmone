@@ -10,7 +10,7 @@
 #include <random>
 
 using namespace evmc::literals;
-using evmone::test::evm;
+using namespace evmone::test;
 
 TEST_P(evm, grow_memory_with_mload)
 {

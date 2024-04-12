@@ -10,9 +10,10 @@
 #include <random>
 #include <ranges>
 
+using namespace intx;
 using namespace evmone;
 using namespace evmone::state;
-using namespace intx;
+using namespace evmone::test;
 
 TEST(state_mpt, empty_trie)
 {

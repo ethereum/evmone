@@ -6,9 +6,9 @@
 #include <evmone/eof.hpp>
 #include <gtest/gtest.h>
 #include <test/utils/bytecode.hpp>
-#include <test/utils/utils.hpp>
 
 using namespace evmone::advanced;
+using namespace evmone::test;
 
 constexpr auto rev = EVMC_BYZANTIUM;
 const auto& op_tbl = get_op_table(rev);

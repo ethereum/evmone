@@ -3,12 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "evm_fixture.hpp"
-#include <numeric>
 
-using namespace evmc::literals;
-using namespace evmone;
-using namespace intx;
-using evmone::test::evm;
+using namespace evmone::test;
 
 TEST_P(evm, dupn)
 {

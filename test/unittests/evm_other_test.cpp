@@ -9,7 +9,7 @@
 
 #include "evm_fixture.hpp"
 
-using evmone::test::evm;
+using namespace evmone::test;
 
 TEST_P(evm, evmone_loaded_program_relocation)
 {

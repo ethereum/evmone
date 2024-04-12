@@ -8,7 +8,7 @@
 #include "evm_fixture.hpp"
 
 using namespace evmc::literals;
-using evmone::test::evm;
+using namespace evmone::test;
 
 inline constexpr size_t initcode_size_limit = 0xc000;
 

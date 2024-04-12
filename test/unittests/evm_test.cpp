@@ -6,9 +6,8 @@
 #include <numeric>
 
 using namespace evmc::literals;
-using namespace evmone;
 using namespace intx;
-using evmone::test::evm;
+using namespace evmone::test;
 
 TEST_P(evm, empty)
 {

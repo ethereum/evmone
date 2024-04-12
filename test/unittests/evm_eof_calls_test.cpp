@@ -3,11 +3,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "evm_fixture.hpp"
-#include "evmone/eof.hpp"
-#include "test/utils/bytecode.hpp"
+#include <evmone/eof.hpp>
 
-using evmone::test::evm;
 using namespace evmc::literals;
+using namespace evmone::test;
 
 inline constexpr auto max_uint256 =
     0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff_bytes32;
