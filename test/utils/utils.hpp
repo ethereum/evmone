@@ -6,14 +6,14 @@
 #include <evmc/evmc.hpp>
 #include <evmc/hex.hpp>
 
+namespace evmone::test
+{
 using evmc::bytes;
 using evmc::bytes_view;
 using evmc::from_hex;
 using evmc::from_spaced_hex;
 using evmc::hex;
 
-namespace evmone::test
-{
 /// The EVM revision schedule based on timestamps.
 struct RevisionSchedule
 {
@@ -39,8 +39,6 @@ evmc_revision to_rev(std::string_view s);
 /// Translates tests fork name to the EVM revision schedule.
 RevisionSchedule to_rev_schedule(std::string_view s);
 
-}  // namespace evmone::test
-
 /// Converts a string to bytes by casting individual characters.
 inline bytes to_bytes(std::string_view s)
 {
@@ -65,3 +63,5 @@ inline bytes operator""_hex(const char* s, size_t size)
 {
     return from_spaced_hex({s, size}).value();
 }
+
+}  // namespace evmone::test

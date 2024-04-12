@@ -4,6 +4,7 @@
 
 #include "eof_validation.hpp"
 #include <test/statetest/statetest.hpp>
+#include <test/utils/utils.hpp>
 #include <fstream>
 
 namespace evmone::test

@@ -2,7 +2,6 @@
 // Copyright 2022 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-#include "../utils/utils.hpp"
 #include <gtest/gtest.h>
 #include <test/state/account.hpp>
 #include <test/state/bloom_filter.hpp>
@@ -10,11 +9,14 @@
 #include <test/state/mpt_hash.hpp>
 #include <test/state/rlp.hpp>
 #include <test/state/state.hpp>
+#include <test/utils/utils.hpp>
 #include <array>
 
+using namespace intx;
 using namespace evmone;
 using namespace evmone::state;
-using namespace intx;
+using namespace evmone::test;
+
 
 TEST(state_mpt_hash, empty)
 {

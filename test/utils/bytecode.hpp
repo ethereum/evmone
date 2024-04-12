@@ -12,6 +12,8 @@
 #include <ostream>
 #include <stdexcept>
 
+namespace evmone::test
+{
 struct bytecode;
 
 inline bytecode push(uint64_t n);
@@ -610,7 +612,7 @@ inline auto create2()
 
 inline std::string hex(Opcode opcode) noexcept
 {
-    return hex(static_cast<uint8_t>(opcode));
+    return evmc::hex(static_cast<uint8_t>(opcode));
 }
 
 inline std::string decode(bytes_view bytecode)
@@ -630,14 +632,16 @@ inline std::string decode(bytes_view bytecode)
 
                 if (imm_size != 0)
                 {
-                    s += " + \"" + hex({&*imm_start, imm_size}) + '"';
+                    s += " + \"" + evmc::hex({&*imm_start, imm_size}) + '"';
                     it += imm_size;
                 }
             }
         }
         else
-            s += " + \"" + hex(opcode) + '"';
+            s += " + \"" + evmc::hex(opcode) + '"';
     }
 
     return s;
 }
+
+}  // namespace evmone::test

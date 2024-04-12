@@ -15,8 +15,8 @@
 
 namespace
 {
-using evmc::bytes;
 using namespace evmone::state;
+using namespace evmone::test;
 
 using ExecuteFn = ExecutionResult(
     const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;

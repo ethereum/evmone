@@ -8,7 +8,7 @@
 #include "evm_fixture.hpp"
 
 using namespace evmc::literals;
-using evmone::test::evm;
+using namespace evmone::test;
 
 TEST_P(evm, eip2929_case1)
 {

@@ -2,12 +2,13 @@
 // Copyright 2023 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-#include "../utils/utils.hpp"
 #include "evmone_precompiles/bn254.hpp"
 #include <gtest/gtest.h>
+#include <test/utils/utils.hpp>
 
 using namespace evmmax::bn254;
 using namespace intx;
+using namespace evmone::test;
 
 namespace
 {
@@ -111,7 +112,6 @@ const TestCase
                     "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"_hex},
                 {"17c139df0efee0f766bc0204762b774362e4ded88953a39ce849a8a7fa163fa901e0559bacb160664764a357af8a9fe70baa9258e0b959273ffc5718c6d4cc7c039730ea8dff1254c0fee9c0ea777d29a9c710b7e616683f194f18c43b43b869073a5ffcc6fc7a28c30723d6e58ce577356982d65b833a5a5c15bf9024b43d98"_hex,
                     "15bf2bb17880144b5d1cd2b1f46eff9d617bffd1ca57c37fb5a49bd84e53cf66049c797f9ce0d17083deb32b5e36f2ea2a212ee036598dd7624c168993d1355f"_hex},
-
 };
 }  // namespace
 

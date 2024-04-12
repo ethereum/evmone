@@ -5,6 +5,8 @@
 #include <gtest/gtest.h>
 #include <test/utils/bytecode.hpp>
 
+using namespace evmone::test;
+
 TEST(bytecode, push)
 {
     auto code = push("0102") + OP_POP + push("010203040506070809") + "50";

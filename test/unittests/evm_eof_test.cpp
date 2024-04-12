@@ -3,9 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "evm_fixture.hpp"
-#include "evmone/eof.hpp"
+#include <evmone/eof.hpp>
 
-using evmone::test::evm;
+using namespace evmone::test;
 
 TEST_P(evm, eof1_execution)
 {

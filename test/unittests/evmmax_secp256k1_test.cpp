@@ -2,12 +2,13 @@
 // Copyright 2023 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-#include "../utils/utils.hpp"
 #include <evmone_precompiles/secp256k1.hpp>
 #include <gtest/gtest.h>
+#include <test/utils/utils.hpp>
 
 using namespace evmmax::secp256k1;
 using namespace evmc::literals;
+using namespace evmone::test;
 
 TEST(secp256k1, field_inv)
 {

@@ -7,7 +7,7 @@
 #include "evm_fixture.hpp"
 
 using namespace evmc::literals;
-using evmone::test::evm;
+using namespace evmone::test;
 
 inline constexpr auto max_uint256 =
     0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff_bytes32;

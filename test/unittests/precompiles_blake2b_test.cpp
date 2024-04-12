@@ -2,10 +2,9 @@
 // Copyright 2024 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-#include "../utils/utils.hpp"
-#include <evmc/hex.hpp>
 #include <evmone_precompiles/blake2b.hpp>
 #include <gtest/gtest.h>
+#include <test/utils/utils.hpp>
 #include <array>
 #include <cstring>
 
@@ -29,6 +28,8 @@ TEST(blake2b_compress, reference_test)
     // The reference test from the RFC.
     // https://datatracker.ietf.org/doc/html/rfc7693#appendix-A
     // with some extensions by modifying the "rounds" and "last" values.
+
+    using evmone::test::hex;
 
     auto h_init = blake2b_iv;
     h_init[0] ^= 0x01010000 ^ /*outlen = */ 64;

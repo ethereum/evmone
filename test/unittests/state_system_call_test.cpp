@@ -7,8 +7,9 @@
 #include <test/state/state.hpp>
 #include <test/utils/bytecode.hpp>
 
-using namespace evmc;
+using namespace evmc::literals;
 using namespace evmone::state;
+using namespace evmone::test;
 
 TEST(state_system_call, non_existient)
 {
@@ -25,7 +26,7 @@ TEST(state_system_call, sstore_timestamp)
     static constexpr auto BeaconRootsAddress = 0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02_address;
 
     evmc::VM vm{evmc_create_evmone()};
-    const BlockInfo block{.number = 1, .timestamp = 404};
+    const BlockInfo block{.number = 1, .timestamp = 0x0404};
     State state;
     state.insert(BeaconRootsAddress, {.code = sstore(OP_NUMBER, OP_TIMESTAMP)});
 
@@ -36,5 +37,5 @@ TEST(state_system_call, sstore_timestamp)
     EXPECT_EQ(state.get(BeaconRootsAddress).balance, 0);
     const auto& storage = state.get(BeaconRootsAddress).storage;
     ASSERT_EQ(storage.size(), 1);
-    EXPECT_EQ(storage.at(0x01_bytes32).current, 404);
+    EXPECT_EQ(storage.at(0x01_bytes32).current, 0x0404_bytes32);
 }
