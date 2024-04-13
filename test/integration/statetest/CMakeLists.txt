@@ -30,7 +30,7 @@ B\.
   T
 SuiteA\.
   test1
-  test2
+  test2_multi
 ]]
 )
 
@@ -57,13 +57,13 @@ B\.
   T
 SuiteA\.
   test1
-  test2
+  test2_multi
   test1
 .*test/integration/statetest/tests1/B\.
   T
 \.
   test1
-  test2
+  test2_multi
 ]]
 )
 
@@ -74,6 +74,16 @@ add_test(
 set_tests_properties(
     ${PREFIX}/invalid_path PROPERTIES
     PASS_REGULAR_EXPRESSION "path: Path does not exist: invalid\\.json"
+)
+
+add_test(
+    NAME ${PREFIX}/multi_test
+    COMMAND evmone-statetest ${TESTS1}/SuiteA/test2_multi.json
+)
+set_tests_properties(
+    ${PREFIX}/multi_test PROPERTIES
+    # Make sure both tests in the file are executed (both should fail).
+    PASS_REGULAR_EXPRESSION "test_case_1.*test_case_2"
 )
 
 add_test(

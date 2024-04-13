@@ -11,6 +11,7 @@ namespace evmone::test
 {
 void run_state_test(const StateTransitionTest& test, evmc::VM& vm, bool trace_summary)
 {
+    SCOPED_TRACE(test.name);
     for (const auto& [rev, cases] : test.cases)
     {
         validate_state(test.pre_state, rev);

@@ -74,7 +74,33 @@ TEST(json_loader, int64_t)
 TEST(statetest_loader, load_empty_test)
 {
     std::istringstream s{"{}"};
-    EXPECT_THROW(load_state_test(s), std::invalid_argument);
+    EXPECT_EQ(load_state_tests(s).size(), 0);
+}
+
+TEST(statetest_loader, load_multi_test)
+{
+    std::istringstream s{R"({
+      "T1": {
+        "pre": {},
+        "transaction": {"gasPrice": "","sender": "","to": "","data": null,
+          "gasLimit": "0","value": null,"nonce" : "0"},
+        "post": {},
+        "env": {"currentNumber": "0","currentTimestamp": "0",
+          "currentGasLimit": "0","currentCoinbase": ""}
+      },
+      "T2": {
+        "pre": {},
+        "transaction": {"gasPrice": "","sender": "","to": "","data": null,
+          "gasLimit": "0","value": null,"nonce" : "0"},
+        "post": {},
+        "env": {"currentNumber": "0","currentTimestamp": "0",
+          "currentGasLimit": "0","currentCoinbase": ""}
+      }
+    })"};
+    const auto tests = load_state_tests(s);
+    ASSERT_EQ(tests.size(), 2);
+    EXPECT_EQ(tests[0].name, "T1");
+    EXPECT_EQ(tests[1].name, "T2");
 }
 
 TEST(statetest_loader, load_minimal_test)
@@ -100,7 +126,7 @@ TEST(statetest_loader, load_minimal_test)
             }
         }
     })"};
-    const StateTransitionTest st = load_state_test(s);
+    const auto st = std::move(load_state_tests(s).at(0));
     // TODO: should add some comparison operator to State, BlockInfo, AccessList
     EXPECT_EQ(st.pre_state.get_accounts().size(), 0);
     EXPECT_EQ(st.block.number, 0);

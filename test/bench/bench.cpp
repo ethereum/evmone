@@ -58,7 +58,7 @@ std::vector<BenchmarkCase::Input> load_inputs(const StateTransitionTest& state_t
 BenchmarkCase load_benchmark(const fs::path& path, const std::string& name_prefix)
 {
     std::ifstream f{path};
-    auto state_test = evmone::test::load_state_test(f);
+    auto state_test = std::move(evmone::test::load_state_tests(f).at(0));
 
     const auto name = name_prefix + path.stem().string();
     const auto code = state_test.pre_state.get(state_test.multi_tx.to.value()).code;

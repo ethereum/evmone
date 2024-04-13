@@ -412,13 +412,8 @@ static void from_json(const json::json& j, StateTransitionTest::Case::Expectatio
     o.exception = j.contains("expectException");
 }
 
-static void from_json(const json::json& j, StateTransitionTest& o)
+static void from_json(const json::json& j_t, StateTransitionTest& o)
 {
-    if (!j.is_object() || j.empty())
-        throw std::invalid_argument{"JSON test must be an object with single key of the test name"};
-
-    const auto& j_t = *j.begin();  // Content is in a dict with the test name.
-
     o.pre_state = from_json<state::State>(j_t.at("pre"));
 
     o.multi_tx = j_t.at("transaction").get<TestMultiTransaction>();
@@ -442,9 +437,19 @@ static void from_json(const json::json& j, StateTransitionTest& o)
     }
 }
 
-StateTransitionTest load_state_test(std::istream& input)
+static void from_json(const json::json& j, std::vector<StateTransitionTest>& o)
 {
-    return json::json::parse(input).get<StateTransitionTest>();
+    for (const auto& elem_it : j.items())
+    {
+        auto test = elem_it.value().get<StateTransitionTest>();
+        test.name = elem_it.key();
+        o.emplace_back(std::move(test));
+    }
+}
+
+std::vector<StateTransitionTest> load_state_tests(std::istream& input)
+{
+    return json::json::parse(input).get<std::vector<StateTransitionTest>>();
 }
 
 void validate_state(const state::State& state, evmc_revision rev)
