@@ -68,7 +68,7 @@ UintT ModArith<UintT>::mul(const UintT& x, const UintT& y) const noexcept
         for (size_t j = 0; j != S; ++j)
             std::tie(c, t[j]) = addmul(t[j], x[j], y[i], c);
         auto tmp = addc(final_carry, c);
-        auto d = tmp.carry;
+        final_carry = tmp.carry;
 
         auto m = t[0] * m_mod_inv;
         c = addmul(t[0], m, mod[0], 0).first;
@@ -76,7 +76,7 @@ UintT ModArith<UintT>::mul(const UintT& x, const UintT& y) const noexcept
             std::tie(c, t[j - 1]) = addmul(t[j], m, mod[j], c);
         tmp = addc(tmp.value, c);
         t[S - 1] = tmp.value;
-        final_carry = d || tmp.carry;  // TODO: Carry is 0 for sparse modulus.
+        final_carry |= tmp.carry;  // TODO: Carry is 0 for sparse modulus.
         // TODO: Is this d or tmp.carry? Seems tex is never 2.
     }
 
