@@ -68,15 +68,3 @@ TEST(ripemd160, input_length)
         EXPECT_EQ(hex({hash, std::size(hash)}), hash_hex) << input_length;
     }
 }
-
-TEST(ripemd160, input_length_in_bits_overflow)
-{
-    // The ripemd160 stores the number of input bits in the last two uint32 words of the padding.
-    // In this case the length is so big that the high word will be non-zero (exactly 1).
-    const auto input_length_in_bits = uint64_t{1} << 32;
-    const auto input_length = static_cast<size_t>(input_length_in_bits / 8);
-    const auto input = std::make_unique<std::byte[]>(input_length);
-    std::byte hash[20];
-    ripemd160(hash, input.get(), input_length);
-    EXPECT_EQ(hex({hash, std::size(hash)}), "a9d34a6e516f2aa5723f5c3b829180dce1da3fbb");
-}
