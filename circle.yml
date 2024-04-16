@@ -451,7 +451,7 @@ jobs:
             ~/tests/EIPTests/BlockchainTests/
       - download_execution_tests:
           repo: ipsilon/tests
-          rev: eof-calls-20240321
+          rev: eof-eofcreate-20240416
           legacy: false
       - run:
           name: "State tests (EOF)"
