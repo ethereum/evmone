@@ -282,9 +282,9 @@
     ON_OPCODE_UNDEFINED(0xe9)                                 \
     ON_OPCODE_UNDEFINED(0xea)                                 \
     ON_OPCODE_UNDEFINED(0xeb)                                 \
-    ON_OPCODE_UNDEFINED(0xec)                                 \
+    ON_OPCODE_IDENTIFIER(OP_EOFCREATE, eofcreate)             \
     ON_OPCODE_UNDEFINED(0xed)                                 \
-    ON_OPCODE_UNDEFINED(0xee)                                 \
+    ON_OPCODE_IDENTIFIER(OP_RETURNCONTRACT, returncontract)   \
     ON_OPCODE_UNDEFINED(0xef)                                 \
                                                               \
     ON_OPCODE_IDENTIFIER(OP_CREATE, create)                   \

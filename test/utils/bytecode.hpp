@@ -99,6 +99,8 @@ private:
     std::vector<bytecode> m_codes;
     std::vector<evmone::EOFCodeType> m_types;
     bytecode m_data;
+    uint16_t m_data_size = 0;
+    std::vector<bytecode> m_containers;
 
     /// Constructs EOF header bytes
     bytecode header() const
@@ -107,6 +109,7 @@ private:
         assert(m_codes[0].size() <= std::numeric_limits<uint16_t>::max());
         assert(m_data.size() <= std::numeric_limits<uint16_t>::max());
         assert(m_codes.size() == m_types.size());
+        assert(m_containers.size() <= std::numeric_limits<uint16_t>::max());
 
         constexpr uint8_t version = 0x01;
 
@@ -125,8 +128,22 @@ private:
             out += big_endian(code_size);
         }
 
+        // containers header
+        if (!m_containers.empty())
+        {
+            const auto container_count = static_cast<uint16_t>(m_containers.size());
+            out += "03"_hex + big_endian(container_count);
+            for (const auto& container : m_containers)
+            {
+                assert(container.size() <= std::numeric_limits<uint16_t>::max());
+                const auto container_size = static_cast<uint16_t>(container.size());
+                out += big_endian(container_size);
+            }
+        }
+
         // data header
-        const auto data_size = static_cast<uint16_t>(m_data.size());
+        const auto data_size =
+            (m_data_size == 0 ? static_cast<uint16_t>(m_data.size()) : m_data_size);
         out += "04" + big_endian(data_size);
         out += "00";  // terminator
 
@@ -148,9 +165,16 @@ public:
         return *this;
     }
 
-    auto& data(bytecode d)
+    auto& data(bytecode d, uint16_t size = 0)
     {
         m_data = std::move(d);
+        m_data_size = size;
+        return *this;
+    }
+
+    auto& container(bytecode c)
+    {
+        m_containers.emplace_back(std::move(c));
         return *this;
     }
 
@@ -159,6 +183,8 @@ public:
         bytecode out{header()};
         for (const auto& code : m_codes)
             out += code;
+        for (const auto& container : m_containers)
+            out += container;
         out += m_data;
         return out;
     }
@@ -349,6 +375,12 @@ inline bytecode ret_top()
 inline bytecode ret(bytecode c)
 {
     return c + ret_top();
+}
+
+inline bytecode returncontract(
+    uint8_t container_index, bytecode aux_data_offset, bytecode aux_data_size)
+{
+    return aux_data_size + aux_data_offset + OP_RETURNCONTRACT + bytecode{bytes{container_index}};
 }
 
 inline bytecode revert(bytecode index, bytecode size)
@@ -567,6 +599,7 @@ private:
     bytecode m_input = 0;
     bytecode m_input_size = 0;
     bytecode m_salt = 0;
+    uint8_t m_container_index = 0;
 
 public:
     auto& value(bytecode v)
@@ -583,9 +616,17 @@ public:
     }
 
     template <Opcode k = kind>
-    typename std::enable_if<k == OP_CREATE2, create_instruction&>::type salt(bytecode salt)
+    typename std::enable_if<k == OP_CREATE2 || k == OP_EOFCREATE, create_instruction&>::type salt(
+        bytecode salt)
     {
         m_salt = std::move(salt);
+        return *this;
+    }
+
+    template <Opcode k = kind>
+    typename std::enable_if<k == OP_EOFCREATE, create_instruction&>::type container(uint8_t index)
+    {
+        m_container_index = index;
         return *this;
     }
 
@@ -594,7 +635,15 @@ public:
         bytecode code;
         if constexpr (kind == OP_CREATE2)
             code += m_salt;
-        code += m_input_size + m_input + m_value + kind;
+        else if constexpr (kind == OP_EOFCREATE)
+            code += m_input_size + m_input + m_salt;
+
+        if constexpr (kind != OP_EOFCREATE)
+            code += m_input_size + m_input;
+
+        code += m_value + kind;
+        if constexpr (kind == OP_EOFCREATE)
+            code += bytecode{bytes{m_container_index}};  // immediate argument
         return code;
     }
 };
@@ -609,6 +658,10 @@ inline auto create2()
     return create_instruction<OP_CREATE2>{};
 }
 
+inline auto eofcreate()
+{
+    return create_instruction<OP_EOFCREATE>{};
+}
 
 inline std::string hex(Opcode opcode) noexcept
 {
