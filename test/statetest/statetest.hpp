@@ -53,6 +53,7 @@ struct StateTransitionTest
         std::vector<Expectation> expectations;
     };
 
+    std::string name;
     state::State pre_state;
     state::BlockInfo block;
     TestMultiTransaction multi_tx;
@@ -93,7 +94,7 @@ state::Transaction from_json<state::Transaction>(const json::json& j);
 /// Exports the State (accounts) to JSON format (aka pre/post/alloc state).
 json::json to_json(const std::unordered_map<address, state::Account>& accounts);
 
-StateTransitionTest load_state_test(std::istream& input);
+std::vector<StateTransitionTest> load_state_tests(std::istream& input);
 
 /// Validates an Ethereum state:
 /// - checks that there are no zero-value storage entries,

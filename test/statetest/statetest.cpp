@@ -26,7 +26,9 @@ public:
     void TestBody() final
     {
         std::ifstream f{m_json_test_file};
-        evmone::test::run_state_test(evmone::test::load_state_test(f), m_vm, m_trace);
+        const auto tests = evmone::test::load_state_tests(f);
+        for (const auto& test : tests)
+            evmone::test::run_state_test(test, m_vm, m_trace);
     }
 };
 
