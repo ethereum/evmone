@@ -67,11 +67,10 @@ UintT ModArith<UintT>::mul(const UintT& x, const UintT& y) const noexcept
             std::tie(c, t[j]) = addmul(t[j], x[j], y[i], c);
         auto tmp = addc(t[S], c);
         t[S] = tmp.value;
-        auto d = tmp.carry;
+        const auto d = tmp.carry;  // TODO: Carry is 0 for sparse modulus.
 
-        c = 0;
-        auto m = t[0] * m_mod_inv;
-        std::tie(c, t[0]) = addmul(t[0], m, mod[0], c);
+        const auto m = t[0] * m_mod_inv;
+        std::tie(c, std::ignore) = addmul(t[0], m, mod[0], 0);
         for (size_t j = 1; j != S; ++j)
             std::tie(c, t[j - 1]) = addmul(t[j], m, mod[j], c);
         tmp = addc(t[S], c);
@@ -79,7 +78,7 @@ UintT ModArith<UintT>::mul(const UintT& x, const UintT& y) const noexcept
         t[S] = d + tmp.carry;  // TODO: Carry is 0 for sparse modulus.
     }
 
-    if (t >= mod)  // TODO: cannot overflow if modulus is sparse (e.g. 255 bits).
+    if (t >= mod)
         t -= mod;
 
     return static_cast<UintT>(t);
