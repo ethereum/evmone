@@ -192,6 +192,9 @@ struct Transaction
         /// The typed blob transaction (with array of blob hashes).
         /// Introduced by EIP-4844 https://eips.ethereum.org/EIPS/eip-4844.
         blob = 3,
+
+        /// The typed transaction with initcode list.
+        initcodes = 4,
     };
 
     /// Returns amount of blob gas used by this transaction
@@ -217,6 +220,7 @@ struct Transaction
     intx::uint256 r;
     intx::uint256 s;
     uint8_t v = 0;
+    std::vector<bytes> initcodes;
 };
 
 struct Log
