@@ -34,8 +34,8 @@ struct bytecode : bytes
 
     bytecode(Opcode opcode) : bytes{uint8_t(opcode)} {}
 
-    template <typename T,
-        typename = typename std::enable_if_t<std::is_convertible_v<T, std::string_view>>>
+    template <typename T>
+        requires(std::is_convertible_v<T, std::string_view>)
     bytecode(T hex) : bytes{from_spaced_hex(hex).value()}
     {}
 
@@ -87,8 +87,8 @@ inline bytecode operator*(int n, Opcode op)
 }
 
 template <typename T>
-inline typename std::enable_if_t<std::is_same_v<T, uint16_t> || std::is_same_v<T, int16_t>, bytes>
-big_endian(T value)
+    requires(std::is_same_v<T, uint16_t> || std::is_same_v<T, int16_t>)
+inline bytes big_endian(T value)
 {
     return {static_cast<uint8_t>(value >> 8), static_cast<uint8_t>(value)};
 }
@@ -486,8 +486,8 @@ public:
 
 
     template <Opcode k = kind>
-    typename std::enable_if<k == OP_CALL || k == OP_CALLCODE, call_instruction&>::type value(
-        bytecode v)
+        requires(k == OP_CALL || k == OP_CALLCODE)
+    call_instruction value(bytecode v)
     {
         m_value = std::move(v);
         return *this;
@@ -551,7 +551,7 @@ public:
 
 
     template <Opcode k = kind>
-        requires requires { k == OP_EXTCALL; }
+        requires(k == OP_EXTCALL)
     extcall_instruction& value(bytecode v)
     {
         m_value = std::move(v);
@@ -616,15 +616,16 @@ public:
     }
 
     template <Opcode k = kind>
-    typename std::enable_if<k == OP_CREATE2 || k == OP_EOFCREATE, create_instruction&>::type salt(
-        bytecode salt)
+        requires(k == OP_CREATE2 || k == OP_EOFCREATE)
+    create_instruction& salt(bytecode salt)
     {
         m_salt = std::move(salt);
         return *this;
     }
 
     template <Opcode k = kind>
-    typename std::enable_if<k == OP_EOFCREATE, create_instruction&>::type container(uint8_t index)
+        requires(k == OP_EOFCREATE)
+    create_instruction& container(uint8_t index)
     {
         m_container_index = index;
         return *this;
