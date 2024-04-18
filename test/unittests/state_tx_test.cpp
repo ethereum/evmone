@@ -31,6 +31,7 @@ TEST(state_tx, validate_nonce)
         .nonce = 1,
         .r = 0,
         .s = 0,
+        .initcodes = {},
     };
 
     ASSERT_FALSE(holds_alternative<std::error_code>(
@@ -67,6 +68,7 @@ TEST(state_tx, validate_sender)
         .nonce = 0,
         .r = 0,
         .s = 0,
+        .initcodes = {},
     };
 
     ASSERT_FALSE(holds_alternative<std::error_code>(
@@ -176,6 +178,7 @@ TEST(state_tx, validate_data)
         .nonce = 1,
         .r = 0,
         .s = 0,
+        .initcodes = {},
     };
 
     ASSERT_FALSE(holds_alternative<std::error_code>(

@@ -423,6 +423,8 @@ evmc_tx_context Host::get_tx_context() const noexcept
         intx::be::store<uint256be>(m_block.blob_base_fee),
         m_tx.blob_hashes.data(),
         m_tx.blob_hashes.size(),
+        m_tx_initcodes.data(),
+        m_tx_initcodes.size(),
     };
 }
 
