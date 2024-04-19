@@ -623,8 +623,7 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
     return max_stack_height_it->max;
 }
 
-std::variant<EOF1Header, EOFValidationError> validate_eof1(
-    evmc_revision rev, bytes_view main_container) noexcept
+EOFValidationError validate_eof1(evmc_revision rev, bytes_view main_container) noexcept
 {
     const auto error_or_header = validate_header(rev, main_container);
     if (const auto* error = std::get_if<EOFValidationError>(&error_or_header))
@@ -699,7 +698,7 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(
         container_queue.pop();
     }
 
-    return main_container_header;
+    return EOFValidationError::success;
 }
 }  // namespace
 
@@ -816,11 +815,7 @@ uint8_t get_eof_version(bytes_view container) noexcept
 
 EOFValidationError validate_eof(evmc_revision rev, bytes_view container) noexcept
 {
-    const auto header_or_error = validate_eof1(rev, container);
-    if (const auto* error = std::get_if<EOFValidationError>(&header_or_error))
-        return *error;
-    else
-        return EOFValidationError::success;
+    return validate_eof1(rev, container);
 }
 
 std::string_view get_error_message(EOFValidationError err) noexcept
