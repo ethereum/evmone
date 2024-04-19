@@ -29,7 +29,7 @@ TEST_F(state_transition, tx_non_existing_sender)
 
     expect.status = EVMC_SUCCESS;
     expect.post.at(Sender).nonce = 1;
-    expect.post.at(Coinbase).exists = false;
+    expect.post[Coinbase].exists = false;
 }
 
 TEST_F(state_transition, invalid_tx_non_existing_sender)
@@ -43,6 +43,7 @@ TEST_F(state_transition, invalid_tx_non_existing_sender)
     pre.get_accounts().erase(Sender);
 
     expect.tx_error = INSUFFICIENT_FUNDS;
+    expect.post[Sender].exists = false;
 }
 
 TEST_F(state_transition, tx_blob_gas_price)
@@ -60,7 +61,7 @@ TEST_F(state_transition, tx_blob_gas_price)
 
     pre.get(tx.sender).balance = 0x20000 + tx.gas_limit * tx.max_gas_price;
 
-    expect.post.at(Coinbase).exists = false;  // all gas is burned, Coinbase gets nothing
+    expect.post[Coinbase].exists = false;  // all gas is burned, Coinbase gets nothing
     expect.status = EVMC_SUCCESS;
 }
 

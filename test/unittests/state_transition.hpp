@@ -92,7 +92,8 @@ protected:
     void TearDown() override;
 
     /// Exports the test in the JSON State Test format to ExportableFixture::export_out.
-    void export_state_test(const TransactionReceipt& receipt, const State& post);
+    void export_state_test(
+        const std::variant<TransactionReceipt, std::error_code>& res, const State& post);
 };
 
 }  // namespace evmone::test

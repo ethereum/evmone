@@ -1243,6 +1243,7 @@ TEST_F(state_transition, txcreate_initcontainer_empty)
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
     expect.tx_error = INIT_CODE_EMPTY;
+    expect.post[*tx.to].exists = true;
 }
 
 TEST_F(state_transition, txcreate_no_initcontainer)
@@ -1258,6 +1259,7 @@ TEST_F(state_transition, txcreate_no_initcontainer)
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
     expect.tx_error = INIT_CODE_COUNT_ZERO;
+    expect.post[*tx.to].exists = true;
 }
 
 TEST_F(state_transition, txcreate_initcontainer_too_large)
@@ -1287,6 +1289,7 @@ TEST_F(state_transition, txcreate_initcontainer_too_large)
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
     expect.tx_error = INIT_CODE_SIZE_LIMIT_EXCEEDED;
+    expect.post[*tx.to].exists = true;
 }
 
 TEST_F(state_transition, txcreate_too_many_initcontainers)
@@ -1312,6 +1315,7 @@ TEST_F(state_transition, txcreate_too_many_initcontainers)
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
     expect.tx_error = INIT_CODE_COUNT_LIMIT_EXCEEDED;
+    expect.post[*tx.to].exists = true;
 }
 
 TEST_F(state_transition, initcode_transaction_before_prague)
