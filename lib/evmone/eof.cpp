@@ -249,8 +249,19 @@ std::variant<std::vector<EOFCodeType>, EOFValidationError> validate_types(
     return types;
 }
 
-std::variant<EOF1Header, EOFValidationError> validate_header(bytes_view container) noexcept
+std::variant<EOF1Header, EOFValidationError> validate_header(
+    evmc_revision rev, bytes_view container) noexcept
 {
+    if (!is_eof_container(container))
+        return EOFValidationError::invalid_prefix;
+
+    const auto version = get_eof_version(container);
+    if (version != 1)
+        return EOFValidationError::eof_version_unknown;
+
+    if (rev < EVMC_PRAGUE)
+        return EOFValidationError::eof_version_unknown;
+
     const auto section_headers_or_error = validate_section_headers(container);
     if (const auto* error = std::get_if<EOFValidationError>(&section_headers_or_error))
         return *error;
@@ -611,13 +622,10 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
     return max_stack_height_it->max;
 }
 
-std::variant<EOF1Header, EOFValidationError> validate_eof_container(
-    evmc_revision rev, bytes_view container) noexcept;
-
 std::variant<EOF1Header, EOFValidationError> validate_eof1(  // NOLINT(misc-no-recursion)
     evmc_revision rev, bytes_view container) noexcept
 {
-    const auto error_or_header = validate_header(container);
+    const auto error_or_header = validate_header(rev, container);
     if (const auto* error = std::get_if<EOFValidationError>(&error_or_header))
         return *error;
     const auto& header = std::get<EOF1Header>(error_or_header);
@@ -627,7 +635,7 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(  // NOLINT(misc-no-r
     {
         const bytes_view subcontainer{header.get_container(container, subcont_idx)};
 
-        auto error_subcont_or_header = validate_eof_container(rev, subcontainer);
+        auto error_subcont_or_header = validate_eof1(rev, subcontainer);
         if (const auto* error_subcont = std::get_if<EOFValidationError>(&error_subcont_or_header))
             return *error_subcont;
 
@@ -670,26 +678,6 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(  // NOLINT(misc-no-r
         return EOFValidationError::unreachable_code_sections;
 
     return header;
-}
-
-// NOLINTNEXTLINE(misc-no-recursion)
-std::variant<EOF1Header, EOFValidationError> validate_eof_container(
-    evmc_revision rev, bytes_view container) noexcept
-{
-    if (!is_eof_container(container))
-        return EOFValidationError::invalid_prefix;
-
-    const auto version = get_eof_version(container);
-
-    if (version == 1)
-    {
-        if (rev < EVMC_PRAGUE)
-            return EOFValidationError::eof_version_unknown;
-
-        return validate_eof1(rev, container);
-    }
-    else
-        return EOFValidationError::eof_version_unknown;
 }
 }  // namespace
 
@@ -806,7 +794,7 @@ uint8_t get_eof_version(bytes_view container) noexcept
 
 EOFValidationError validate_eof(evmc_revision rev, bytes_view container) noexcept
 {
-    const auto header_or_error = validate_eof_container(rev, container);
+    const auto header_or_error = validate_eof1(rev, container);
     if (const auto* error = std::get_if<EOFValidationError>(&header_or_error))
         return *error;
     else
