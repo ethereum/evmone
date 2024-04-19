@@ -79,7 +79,7 @@ EOFValidationError get_section_missing_error(uint8_t section_id) noexcept
     }
 }
 
-std::variant<EOFSectionHeaders, EOFValidationError> validate_eof_headers(bytes_view container)
+std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(bytes_view container)
 {
     enum class State
     {
@@ -247,6 +247,47 @@ std::variant<std::vector<EOFCodeType>, EOFValidationError> validate_types(
     }
 
     return types;
+}
+
+std::variant<EOF1Header, EOFValidationError> validate_header(bytes_view container) noexcept
+{
+    const auto section_headers_or_error = validate_section_headers(container);
+    if (const auto* error = std::get_if<EOFValidationError>(&section_headers_or_error))
+        return *error;
+
+    const auto& section_headers = std::get<EOFSectionHeaders>(section_headers_or_error);
+    const auto& code_sizes = section_headers[CODE_SECTION];
+    const auto data_size = section_headers[DATA_SECTION][0];
+
+    const auto header_size = eof_header_size(section_headers);
+
+    const auto types_or_error =
+        validate_types(container, header_size, section_headers[TYPE_SECTION].front());
+    if (const auto* error = std::get_if<EOFValidationError>(&types_or_error))
+        return *error;
+    const auto& types = std::get<std::vector<EOFCodeType>>(types_or_error);
+
+    std::vector<uint16_t> code_offsets;
+    const auto type_section_size = section_headers[TYPE_SECTION][0];
+    auto offset = header_size + type_section_size;
+    for (const auto code_size : code_sizes)
+    {
+        assert(offset <= std::numeric_limits<uint16_t>::max());
+        code_offsets.emplace_back(static_cast<uint16_t>(offset));
+        offset += code_size;
+    }
+
+    const auto& container_sizes = section_headers[CONTAINER_SECTION];
+    std::vector<uint16_t> container_offsets;
+    for (const auto container_size : container_sizes)
+    {
+        container_offsets.emplace_back(static_cast<uint16_t>(offset));
+        offset += container_size;
+    }
+    const auto data_offset = static_cast<uint16_t>(offset);
+
+    return EOF1Header{container[2], code_sizes, code_offsets, data_size, data_offset,
+        container_sizes, container_offsets, types};
 }
 
 EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& header,
@@ -576,45 +617,10 @@ std::variant<EOF1Header, EOFValidationError> validate_eof_container(
 std::variant<EOF1Header, EOFValidationError> validate_eof1(  // NOLINT(misc-no-recursion)
     evmc_revision rev, bytes_view container) noexcept
 {
-    const auto section_headers_or_error = validate_eof_headers(container);
-    if (const auto* error = std::get_if<EOFValidationError>(&section_headers_or_error))
+    const auto error_or_header = validate_header(container);
+    if (const auto* error = std::get_if<EOFValidationError>(&error_or_header))
         return *error;
-
-    const auto& section_headers = std::get<EOFSectionHeaders>(section_headers_or_error);
-    const auto& code_sizes = section_headers[CODE_SECTION];
-    const auto data_size = section_headers[DATA_SECTION][0];
-
-    const auto header_size = eof_header_size(section_headers);
-
-    const auto types_or_error =
-        validate_types(container, header_size, section_headers[TYPE_SECTION].front());
-    if (const auto* error = std::get_if<EOFValidationError>(&types_or_error))
-        return *error;
-    const auto& types = std::get<std::vector<EOFCodeType>>(types_or_error);
-
-    std::vector<uint16_t> code_offsets;
-    const auto type_section_size = section_headers[TYPE_SECTION][0];
-    auto offset = header_size + type_section_size;
-    for (const auto code_size : code_sizes)
-    {
-        assert(offset <= std::numeric_limits<uint16_t>::max());
-        code_offsets.emplace_back(static_cast<uint16_t>(offset));
-        offset += code_size;
-    }
-
-    const auto& container_sizes = section_headers[CONTAINER_SECTION];
-    std::vector<uint16_t> container_offsets;
-    for (const auto container_size : container_sizes)
-    {
-        container_offsets.emplace_back(static_cast<uint16_t>(offset));
-        offset += container_size;
-    }
-    const auto data_offset = static_cast<uint16_t>(offset);
-
-    std::vector<bool> visited_code_sections(code_sizes.size());
-    std::queue<uint16_t> code_sections_worklist({0});
-    EOF1Header header{container[2], code_sizes, code_offsets, data_size, data_offset,
-        container_sizes, container_offsets, types};
+    const auto& header = std::get<EOF1Header>(error_or_header);
 
     std::vector<EOF1Header> subcontainer_headers;
     for (size_t subcont_idx = 0; subcont_idx < header.container_sizes.size(); ++subcont_idx)
@@ -628,6 +634,9 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(  // NOLINT(misc-no-r
         auto& subcont_header = std::get<EOF1Header>(error_subcont_or_header);
         subcontainer_headers.emplace_back(std::move(subcont_header));
     }
+
+    std::vector<bool> visited_code_sections(header.code_sizes.size());
+    std::queue<uint16_t> code_sections_worklist({0});
 
     while (!code_sections_worklist.empty())
     {
