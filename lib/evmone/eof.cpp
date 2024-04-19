@@ -302,7 +302,8 @@ std::variant<EOF1Header, EOFValidationError> validate_header(
 }
 
 EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& header,
-    std::span<const EOF1Header> subcontainer_headers, size_t code_idx, bytes_view container,
+    std::span<const uint16_t> subcontainer_data_offsets,
+    std::span<const uint16_t> subcontainer_data_sizes, size_t code_idx, bytes_view container,
     std::queue<uint16_t>& code_sections_worklist) noexcept
 {
     const bytes_view code{header.get_code(container, code_idx)};
@@ -369,9 +370,9 @@ EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& he
             if (container_idx >= header.container_sizes.size())
                 return EOFValidationError::invalid_container_section_index;
 
-            if (op == OP_EOFCREATE && subcontainer_headers[container_idx].data_offset +
-                                              subcontainer_headers[container_idx].data_size !=
-                                          header.container_sizes[container_idx])
+            const auto subcontainer_end =
+                subcontainer_data_offsets[container_idx] + subcontainer_data_sizes[container_idx];
+            if (op == OP_EOFCREATE && subcontainer_end != header.container_sizes[container_idx])
                 return EOFValidationError::eofcreate_with_truncated_container;
 
             ++i;
@@ -630,7 +631,8 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(  // NOLINT(misc-no-r
         return *error;
     const auto& header = std::get<EOF1Header>(error_or_header);
 
-    std::vector<EOF1Header> subcontainer_headers;
+    std::vector<uint16_t> subcontainer_data_offsets;
+    std::vector<uint16_t> subcontainer_data_sizes;
     for (size_t subcont_idx = 0; subcont_idx < header.container_sizes.size(); ++subcont_idx)
     {
         const bytes_view subcontainer{header.get_container(container, subcont_idx)};
@@ -640,7 +642,8 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(  // NOLINT(misc-no-r
             return *error_subcont;
 
         auto& subcont_header = std::get<EOF1Header>(error_subcont_or_header);
-        subcontainer_headers.emplace_back(std::move(subcont_header));
+        subcontainer_data_offsets.push_back(subcont_header.data_offset);
+        subcontainer_data_sizes.push_back(subcont_header.data_size);
     }
 
     std::vector<bool> visited_code_sections(header.code_sizes.size());
@@ -656,8 +659,8 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(  // NOLINT(misc-no-r
 
         visited_code_sections[code_idx] = true;
 
-        const auto error_instr = validate_instructions(
-            rev, header, subcontainer_headers, code_idx, container, code_sections_worklist);
+        const auto error_instr = validate_instructions(rev, header, subcontainer_data_offsets,
+            subcontainer_data_sizes, code_idx, container, code_sections_worklist);
 
         if (error_instr != EOFValidationError::success)
             return error_instr;
