@@ -12,6 +12,12 @@
 using namespace evmone;
 using namespace evmone::test;
 
+TEST_F(eof_validation, before_activation)
+{
+    ASSERT_EQ(evmone::validate_eof(EVMC_CANCUN, bytes(eof_bytecode(OP_STOP))),
+        EOFValidationError::eof_version_unknown);
+}
+
 TEST_F(eof_validation, validate_empty_code)
 {
     add_test_case("", EOFValidationError::invalid_prefix);
