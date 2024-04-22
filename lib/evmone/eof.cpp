@@ -297,8 +297,16 @@ std::variant<EOF1Header, EOFValidationError> validate_header(
     }
     const auto data_offset = static_cast<uint16_t>(offset);
 
-    return EOF1Header{container[2], code_sizes, code_offsets, data_size, data_offset,
-        container_sizes, container_offsets, types};
+    return EOF1Header{
+        .version = container[2],
+        .code_sizes = code_sizes,
+        .code_offsets = code_offsets,
+        .data_size = data_size,
+        .data_offset = data_offset,
+        .container_sizes = container_sizes,
+        .container_offsets = container_offsets,
+        .types = types,
+    };
 }
 
 EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& header,
