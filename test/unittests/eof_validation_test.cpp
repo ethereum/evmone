@@ -1196,3 +1196,12 @@ TEST_F(eof_validation, EOF1_subcontainer_containing_unreachable_code_sections)
     add_test_case(eof_bytecode(OP_INVALID).container(embedded_2),
         EOFValidationError::unreachable_code_sections);
 }
+
+TEST_F(eof_validation, max_nested_containers)
+{
+    bytecode code = eof_bytecode(OP_INVALID);
+    while (code.size() <= std::numeric_limits<uint16_t>::max())
+        code = eof_bytecode(OP_INVALID).container(code);
+
+    add_test_case(code, EOFValidationError::success);
+}
