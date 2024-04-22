@@ -132,7 +132,13 @@ Result extcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
 {
     static_assert(Op == OP_EXTCALL || Op == OP_EXTDELEGATECALL || Op == OP_EXTSTATICCALL);
 
-    const auto dst = intx::be::trunc<evmc::address>(stack.pop());
+    const auto x = stack.pop();
+
+    if ((x >> sizeof(evmc::address) * 8) != 0)
+        return {EVMC_FAILURE, 0};
+
+    const auto dst = intx::be::trunc<evmc::address>(x);
+
     const auto input_offset_u256 = stack.pop();
     const auto input_size_u256 = stack.pop();
     const auto value = (Op == OP_EXTSTATICCALL || Op == OP_EXTDELEGATECALL) ? 0 : stack.pop();

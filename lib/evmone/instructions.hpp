@@ -382,6 +382,13 @@ inline void address(StackTop stack, ExecutionState& state) noexcept
 inline Result balance(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     auto& x = stack.top();
+
+    if (is_eof_container(state.original_code))
+    {
+        if ((x >> sizeof(evmc::address) * 8) != 0)
+            return {EVMC_FAILURE, 0};
+    }
+
     const auto addr = intx::be::trunc<evmc::address>(x);
 
     if (state.rev >= EVMC_BERLIN && state.host.access_account(addr) == EVMC_ACCESS_COLD)
