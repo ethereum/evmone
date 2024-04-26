@@ -12,6 +12,12 @@
 using namespace evmone;
 using namespace evmone::test;
 
+TEST_F(eof_validation, before_activation)
+{
+    ASSERT_EQ(evmone::validate_eof(EVMC_CANCUN, bytes(eof_bytecode(OP_STOP))),
+        EOFValidationError::eof_version_unknown);
+}
+
 TEST_F(eof_validation, validate_empty_code)
 {
     add_test_case("", EOFValidationError::invalid_prefix);
@@ -1195,4 +1201,13 @@ TEST_F(eof_validation, EOF1_subcontainer_containing_unreachable_code_sections)
                                 .code(jumpf(3), 0, 0x80, 0);
     add_test_case(eof_bytecode(OP_INVALID).container(embedded_2),
         EOFValidationError::unreachable_code_sections);
+}
+
+TEST_F(eof_validation, max_nested_containers)
+{
+    bytecode code = eof_bytecode(OP_INVALID);
+    while (code.size() <= std::numeric_limits<uint16_t>::max())
+        code = eof_bytecode(OP_INVALID).container(code);
+
+    add_test_case(code, EOFValidationError::success);
 }
