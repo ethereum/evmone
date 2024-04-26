@@ -14,9 +14,9 @@
 #include <limits>
 #include <numeric>
 #include <ostream>
+#include <queue>
 #include <span>
 #include <stack>
-#include <unordered_set>
 #include <variant>
 #include <vector>
 
@@ -251,7 +251,7 @@ std::variant<std::vector<EOFCodeType>, EOFValidationError> validate_types(
 
 EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& header,
     std::span<const EOF1Header> subcontainer_headers, size_t code_idx, bytes_view container,
-    std::unordered_set<uint16_t>& accessed_code_sections) noexcept
+    std::queue<uint16_t>& code_sections_worklist) noexcept
 {
     const bytes_view code{header.get_code(container, code_idx)};
     assert(!code.empty());  // guaranteed by EOF headers validation
@@ -284,7 +284,7 @@ EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& he
             if (header.types[fid].outputs == NON_RETURNING_FUNCTION)
                 return EOFValidationError::callf_to_non_returning_function;
             if (code_idx != fid)
-                accessed_code_sections.insert(fid);
+                code_sections_worklist.push(fid);
             i += 2;
         }
         else if (op == OP_RETF)
@@ -301,7 +301,7 @@ EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& he
             if (header.types[fid].outputs != NON_RETURNING_FUNCTION)
                 is_returning = true;
             if (code_idx != fid)
-                accessed_code_sections.insert(fid);
+                code_sections_worklist.push(fid);
             i += 2;
         }
         else if (op == OP_DATALOADN)
@@ -611,7 +611,8 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(  // NOLINT(misc-no-r
     }
     const auto data_offset = static_cast<uint16_t>(offset);
 
-    std::unordered_set<uint16_t> accessed_code_sections = {0};
+    std::vector<bool> visited_code_sections(code_sizes.size());
+    std::queue<uint16_t> code_sections_worklist({0});
     EOF1Header header{container[2], code_sizes, code_offsets, data_size, data_offset,
         container_sizes, container_offsets, types};
 
@@ -628,10 +629,19 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(  // NOLINT(misc-no-r
         subcontainer_headers.emplace_back(std::move(subcont_header));
     }
 
-    for (size_t code_idx = 0; code_idx < header.code_sizes.size(); ++code_idx)
+    while (!code_sections_worklist.empty())
     {
+        const auto code_idx = code_sections_worklist.front();
+        code_sections_worklist.pop();
+
+        if (visited_code_sections[code_idx])
+            continue;
+
+        visited_code_sections[code_idx] = true;
+
         const auto error_instr = validate_instructions(
-            rev, header, subcontainer_headers, code_idx, container, accessed_code_sections);
+            rev, header, subcontainer_headers, code_idx, container, code_sections_worklist);
+
         if (error_instr != EOFValidationError::success)
             return error_instr;
 
@@ -646,7 +656,8 @@ std::variant<EOF1Header, EOFValidationError> validate_eof1(  // NOLINT(misc-no-r
             return EOFValidationError::invalid_max_stack_height;
     }
 
-    if (accessed_code_sections.size() != header.code_sizes.size())
+    if (std::find(visited_code_sections.begin(), visited_code_sections.end(), false) !=
+        visited_code_sections.end())
         return EOFValidationError::unreachable_code_sections;
 
     return header;
