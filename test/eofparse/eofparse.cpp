@@ -39,6 +39,7 @@ int main()
 {
     try
     {
+        int num_errors = 0;
         for (std::string line; std::getline(std::cin, line);)
         {
             if (line.empty() || line.starts_with('#'))
@@ -48,6 +49,7 @@ int main()
             if (!o)
             {
                 std::cout << "err: invalid hex\n";
+                ++num_errors;
                 continue;
             }
 
@@ -56,6 +58,7 @@ int main()
             if (err != evmone::EOFValidationError::success)
             {
                 std::cout << "err: " << evmone::get_error_message(err) << "\n";
+                ++num_errors;
                 continue;
             }
 
@@ -69,11 +72,11 @@ int main()
             }
             std::cout << "\n";
         }
-        return 0;
+        return num_errors;
     }
     catch (const std::exception& ex)
     {
         std::cerr << ex.what() << "\n";
-        return 1;
+        return -1;
     }
 }
