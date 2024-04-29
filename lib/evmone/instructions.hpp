@@ -144,15 +144,9 @@ inline constexpr auto pop = noop;
 inline constexpr auto jumpdest = noop;
 
 template <evmc_status_code Status>
-inline TermResult stop_impl(StackTop /*stack*/, int64_t gas_left, ExecutionState& state) noexcept
+inline TermResult stop_impl(
+    StackTop /*stack*/, int64_t gas_left, ExecutionState& /*state*/) noexcept
 {
-    // STOP is forbidden inside EOFCREATE context
-    if constexpr (Status == EVMC_SUCCESS)
-    {
-        if (state.msg->kind == EVMC_EOFCREATE)
-            return {EVMC_UNDEFINED_INSTRUCTION, gas_left};
-    }
-
     return {Status, gas_left};
 }
 inline constexpr auto stop = stop_impl<EVMC_SUCCESS>;
@@ -1160,13 +1154,6 @@ inline code_iterator jumpf(StackTop stack, ExecutionState& state, code_iterator 
 template <evmc_status_code StatusCode>
 inline TermResult return_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
-    // RETURN is forbidden inside EOFCREATE context
-    if constexpr (StatusCode == EVMC_SUCCESS)
-    {
-        if (state.msg->kind == EVMC_EOFCREATE)
-            return {EVMC_UNDEFINED_INSTRUCTION, gas_left};
-    }
-
     const auto& offset = stack[0];
     const auto& size = stack[1];
 
@@ -1186,9 +1173,6 @@ inline TermResult returncontract(
 {
     const auto& offset = stack[0];
     const auto& size = stack[1];
-
-    if (state.msg->kind != EVMC_EOFCREATE)
-        return {EVMC_UNDEFINED_INSTRUCTION, gas_left};
 
     if (!check_memory(gas_left, state.memory, offset, size))
         return {EVMC_OUT_OF_GAS, gas_left};

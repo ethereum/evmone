@@ -315,21 +315,6 @@ TEST_P(evm, returncontract_undefined_in_legacy)
     EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
 }
 
-TEST_P(evm, returncontract_not_in_initcode)
-{
-    if (is_advanced())
-        return;
-
-    rev = EVMC_PRAGUE;
-    const auto code = eof_bytecode(
-        calldatacopy(0, 0, OP_CALLDATASIZE) + OP_CALLDATASIZE + 0 + OP_RETURNCONTRACT + Opcode{0},
-        3)
-                          .container(eof_bytecode(OP_INVALID));
-
-    execute(code);
-    EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
-}
-
 TEST_P(evm, eofcreate_staticmode)
 {
     if (is_advanced())
