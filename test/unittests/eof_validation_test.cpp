@@ -1182,12 +1182,12 @@ TEST_F(eof_validation, EOF1_returncontract_invalid)
         EOFValidationError::invalid_container_section_index);
 
     // Unreachable code after RETURNCONTRACT
-    add_test_case(eof_bytecode(bytecode(0) + 0 + OP_RETURNCONTRACT + Opcode{0} + OP_STOP, 2)
+    add_test_case(eof_bytecode(bytecode(0) + 0 + OP_RETURNCONTRACT + Opcode{0} + revert(0, 0), 2)
                       .container(embedded),
         EOFValidationError::unreachable_instructions);
 }
 
-TEST_F(eof_validation, EOF1_eofcreate_returncontract_return_mix_valid)
+TEST_F(eof_validation, EOF1_eofcreate_returncontract_return_mix)
 {
     // This test ensures that we _do not_ have a validation rule preventing EOFCREATE,
     // RETURNCONTRACT and RETURN mixing.
@@ -1202,7 +1202,7 @@ TEST_F(eof_validation, EOF1_eofcreate_returncontract_return_mix_valid)
 
     // This top level container mixes all combinations of EOFCREATE/RETURNCONTRACT/RETURN.
     add_test_case(eof_bytecode(mixing_initcode, 4).container(mixing_initcontainer),
-        EOFValidationError::success);
+        EOFValidationError::ambiguous_container_kind);
 }
 
 TEST_F(eof_validation, EOF1_unreferenced_subcontainer_valid)
