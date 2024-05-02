@@ -30,7 +30,7 @@ fs::path get_export_test_path(const testing::TestInfo& test_info, std::string_vi
     const auto dir = fs::path{export_dir} / suite_name / sub_suite_name;
 
     fs::create_directories(dir);
-    return dir / (std::string{test_info.name()} + ".json");
+    return dir / (std::string{test_info.name()} + "_Copier.json");
 }
 }  // namespace
 
