@@ -245,11 +245,12 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
 {
     assert(msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2 || msg.kind == EVMC_EOFCREATE);
 
-    // Check collision as defined in pseudo-EIP https://github.com/ethereum/EIPs/issues/684.
+    // Check collision as defined in [EIP-7610](https://eips.ethereum.org/EIPS/eip-7610).
     // All combinations of conditions (nonce, code, storage) are tested.
     // TODO(EVMC): Add specific error codes for creation failures.
     if (const auto collision_acc = m_state.find(msg.recipient);
-        collision_acc != nullptr && (collision_acc->nonce != 0 || !collision_acc->code.empty()))
+        collision_acc != nullptr && (collision_acc->nonce != 0 || !collision_acc->code.empty() ||
+                                        !collision_acc->storage.empty()))
         return evmc::Result{EVMC_FAILURE};
 
     // TODO: msg.recipient lookup is done 3x here.
