@@ -252,7 +252,7 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
 {
     assert(msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2 || msg.kind == EVMC_EOFCREATE);
 
-    auto new_acc = m_state.find(msg.recipient);
+    auto* new_acc = m_state.find(msg.recipient);
     const bool new_acc_exists = new_acc != nullptr;
     if (!new_acc_exists)
         new_acc = &m_state.insert(msg.recipient);
