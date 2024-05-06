@@ -17,6 +17,7 @@
 #include <queue>
 #include <span>
 #include <stack>
+#include <unordered_set>
 #include <variant>
 #include <vector>
 
@@ -309,10 +310,19 @@ std::variant<EOF1Header, EOFValidationError> validate_header(
     };
 }
 
-EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& header,
+/// Result of validating instructions in a code section.
+struct InstructionValidationResult
+{
+    /// Set of accessed code section indices.
+    // TODO: Vector can be used here in case unordered_set causes performance issues.
+    std::unordered_set<uint16_t> accessed_code_sections;
+};
+
+std::variant<InstructionValidationResult, EOFValidationError> validate_instructions(
+    evmc_revision rev, const EOF1Header& header,
     std::span<const uint16_t> subcontainer_data_offsets,
-    std::span<const uint16_t> subcontainer_data_sizes, size_t code_idx, bytes_view container,
-    std::queue<uint16_t>& code_sections_worklist) noexcept
+    std::span<const uint16_t> subcontainer_data_sizes, size_t code_idx,
+    bytes_view container) noexcept
 {
     const bytes_view code{header.get_code(container, code_idx)};
     assert(!code.empty());  // guaranteed by EOF headers validation
@@ -320,6 +330,7 @@ EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& he
     const auto& cost_table = baseline::get_baseline_cost_table(rev, 1);
 
     bool is_returning = false;
+    std::unordered_set<uint16_t> accessed_code_sections;
 
     for (size_t i = 0; i < code.size(); ++i)
     {
@@ -345,7 +356,7 @@ EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& he
             if (header.types[fid].outputs == NON_RETURNING_FUNCTION)
                 return EOFValidationError::callf_to_non_returning_function;
             if (code_idx != fid)
-                code_sections_worklist.push(fid);
+                accessed_code_sections.insert(fid);
             i += 2;
         }
         else if (op == OP_RETF)
@@ -362,7 +373,7 @@ EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& he
             if (header.types[fid].outputs != NON_RETURNING_FUNCTION)
                 is_returning = true;
             if (code_idx != fid)
-                code_sections_worklist.push(fid);
+                accessed_code_sections.insert(fid);
             i += 2;
         }
         else if (op == OP_DATALOADN)
@@ -393,7 +404,7 @@ EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& he
     if (is_returning != declared_returning)
         return EOFValidationError::invalid_non_returning_flag;
 
-    return EOFValidationError::success;
+    return InstructionValidationResult{accessed_code_sections};
 }
 
 /// Validates that that we don't rjump inside an instruction's immediate.
@@ -680,11 +691,17 @@ EOFValidationError validate_eof1(evmc_revision rev, bytes_view main_container) n
             visited_code_sections[code_idx] = true;
 
             // Validate instructions
-            const auto error_instr = validate_instructions(rev, header, subcontainer_data_offsets,
-                subcontainer_data_sizes, code_idx, container, code_sections_queue);
+            const auto instr_validation_result_or_error = validate_instructions(rev, header,
+                subcontainer_data_offsets, subcontainer_data_sizes, code_idx, container);
+            if (const auto* error =
+                    std::get_if<EOFValidationError>(&instr_validation_result_or_error))
+                return *error;
 
-            if (error_instr != EOFValidationError::success)
-                return error_instr;
+            const auto& [accessed_code_sections] =
+                std::get<InstructionValidationResult>(instr_validation_result_or_error);
+            // TODO(C++23): can use push_range()
+            for (const auto section_id : accessed_code_sections)
+                code_sections_queue.push(section_id);
 
             // Validate jump destinations
             if (!validate_rjump_destinations(header.get_code(container, code_idx)))
