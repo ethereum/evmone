@@ -86,6 +86,13 @@ bytes_view extcode(bytes_view code) noexcept
 {
     return is_eof_container(code) ? code.substr(0, 2) : code;
 }
+
+/// Check if an existing account is the "create collision"
+/// as defined in the [EIP-684](https://eips.ethereum.org/EIPS/eip-684).
+[[nodiscard]] bool is_create_collision(const Account& acc) noexcept
+{
+    return acc.nonce != 0 || !acc.code.empty();
+}
 }  // namespace
 
 size_t Host::get_code_size(const address& addr) const noexcept
@@ -245,26 +252,25 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
 {
     assert(msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2 || msg.kind == EVMC_EOFCREATE);
 
-    // Check collision as defined in pseudo-EIP https://github.com/ethereum/EIPs/issues/684.
-    // All combinations of conditions (nonce, code, storage) are tested.
-    // TODO(EVMC): Add specific error codes for creation failures.
-    if (const auto collision_acc = m_state.find(msg.recipient);
-        collision_acc != nullptr && (collision_acc->nonce != 0 || !collision_acc->code.empty()))
-        return evmc::Result{EVMC_FAILURE};
+    auto* new_acc = m_state.find(msg.recipient);
+    const bool new_acc_exists = new_acc != nullptr;
+    if (!new_acc_exists)
+        new_acc = &m_state.insert(msg.recipient);
+    else if (is_create_collision(*new_acc))
+        return evmc::Result{EVMC_FAILURE};  // TODO: Add EVMC errors for creation failures.
+    m_state.journal_create(msg.recipient, new_acc_exists);
 
-    // TODO: msg.recipient lookup is done 3x here.
-    const bool exists = m_state.find(msg.recipient) != nullptr;
-    auto& new_acc = m_state.get_or_insert(msg.recipient);
-    m_state.journal_create(msg.recipient, exists);
-    assert(new_acc.nonce == 0);
+    assert(new_acc != nullptr);
+    assert(new_acc->nonce == 0);
+
     if (m_rev >= EVMC_SPURIOUS_DRAGON)
-        new_acc.nonce = 1;  // No need to journal: create revert will 0 the nonce.
+        new_acc->nonce = 1;  // No need to journal: create revert will 0 the nonce.
 
-    new_acc.just_created = true;
+    new_acc->just_created = true;
 
     // Clear the new account storage, but keep the access status (from tx access list).
     // This is only needed for tests and cannot happen in real networks.
-    for (auto& [k, v] : new_acc.storage) [[unlikely]]
+    for (auto& [k, v] : new_acc->storage) [[unlikely]]
     {
         m_state.journal_storage_change(msg.recipient, k, v);
         v = StorageValue{.access_status = v.access_status};
@@ -274,9 +280,9 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
     const auto value = intx::be::load<intx::uint256>(msg.value);
     assert(sender_acc.balance >= value && "EVM must guarantee balance");
     m_state.journal_balance_change(msg.sender, sender_acc.balance);
-    m_state.journal_balance_change(msg.recipient, new_acc.balance);
+    m_state.journal_balance_change(msg.recipient, new_acc->balance);
     sender_acc.balance -= value;
-    new_acc.balance += value;  // The new account may be prefunded.
+    new_acc->balance += value;  // The new account may be prefunded.
 
     auto create_msg = msg;
     const auto initcode = (msg.kind == EVMC_EOFCREATE ? bytes_view{msg.code, msg.code_size} :
@@ -333,7 +339,7 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
         }
     }
 
-    new_acc.code = code;
+    new_acc->code = code;
 
     return evmc::Result{result.status_code, gas_left, result.gas_refund, msg.recipient};
 }
