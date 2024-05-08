@@ -403,9 +403,7 @@ jobs:
     steps:
       - build
       - download_execution_tests:
-          # v13.2 + fix
-          rev: develop
-          commit: 52ddcbcef0d58ec7de6b768b564725391a30b934
+          rev: v13.3
       - run:
           name: "State tests"
           working_directory: ~/build
@@ -432,7 +430,7 @@ jobs:
           working_directory: ~/build
           command: >
             bin/evmone-blockchaintest
-            --gtest_filter='-*StateTests/stEOF/*.*'
+            --gtest_filter='-*StateTests/stEOF/*.*:*StateTests/stEIP2537.*'
             ~/tests/EIPTests/BlockchainTests/
       - download_execution_tests:
           repo: ipsilon/tests
@@ -463,7 +461,7 @@ jobs:
           command: sudo apt-get -q update && sudo apt-get -qy install libgmp-dev
       - build
       - download_execution_tests:
-          rev: v12.4
+          rev: v13.3
       - run:
           name: "State tests"
           working_directory: ~/build

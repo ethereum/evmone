@@ -88,10 +88,19 @@ bytes_view extcode(bytes_view code) noexcept
 }
 
 /// Check if an existing account is the "create collision"
-/// as defined in the [EIP-684](https://eips.ethereum.org/EIPS/eip-684).
+/// as defined in the [EIP-7610](https://eips.ethereum.org/EIPS/eip-7610).
 [[nodiscard]] bool is_create_collision(const Account& acc) noexcept
 {
-    return acc.nonce != 0 || !acc.code.empty();
+    if (acc.nonce != 0 || !acc.code.empty())
+        return true;
+
+    // acc.storage may have entries from access list, even if account storage is empty.
+    // Check for non-zero current values.
+    if (std::ranges::any_of(
+            acc.storage, [](auto& e) noexcept { return !is_zero(e.second.current); }))
+        return true;
+
+    return false;
 }
 }  // namespace
 
@@ -267,14 +276,6 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
         new_acc->nonce = 1;  // No need to journal: create revert will 0 the nonce.
 
     new_acc->just_created = true;
-
-    // Clear the new account storage, but keep the access status (from tx access list).
-    // This is only needed for tests and cannot happen in real networks.
-    for (auto& [k, v] : new_acc->storage) [[unlikely]]
-    {
-        m_state.journal_storage_change(msg.recipient, k, v);
-        v = StorageValue{.access_status = v.access_status};
-    }
 
     auto& sender_acc = m_state.get(msg.sender);  // TODO: Duplicated account lookup.
     const auto value = intx::be::load<intx::uint256>(msg.value);
