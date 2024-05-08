@@ -641,7 +641,7 @@ EOFValidationError validate_eof1(evmc_revision rev, bytes_view main_container) n
 
     while (!container_queue.empty())
     {
-        // Validate subcontainer headers and get their data sections
+        // Validate subcontainer headers and record whether they can be used as initcontainers
         const auto& [container, header] = container_queue.front();
         std::vector<bool> subcontainer_can_init;
         for (size_t subcont_idx = 0; subcont_idx < header.container_sizes.size(); ++subcont_idx)
