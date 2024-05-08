@@ -6,6 +6,7 @@
 
 #include "account.hpp"
 #include "bloom_filter.hpp"
+#include "errors.hpp"
 #include "hash_utils.hpp"
 #include <cassert>
 #include <optional>
@@ -292,5 +293,7 @@ void system_call(State& state, const BlockInfo& block, evmc_revision rev, evmc::
 
 /// Defines how to RLP-encode a Withdrawal.
 [[nodiscard]] bytes rlp_encode(const Withdrawal& withdrawal);
+
+[[nodiscard]] std::string get_tests_invalid_tx_message(ErrorCode errc) noexcept;
 
 }  // namespace evmone::state
