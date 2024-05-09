@@ -11,6 +11,7 @@ using namespace evmone::test;
 TEST_F(state_transition, call_value_to_empty)
 {
     rev = EVMC_LONDON;
+    block.timestamp = 1;
     static constexpr auto BENEFICIARY = 0xbe_address;
     tx.to = To;
     pre.insert(*tx.to, {.balance = 1, .code = call(BENEFICIARY).value(1)});

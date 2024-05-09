@@ -20,7 +20,10 @@ json::json to_json(const std::unordered_map<address, state::Account>& accounts)
         for (const auto& [key, val] : acc.storage)
         {
             if (!is_zero(val.current))
-                j_storage[hex0x(key)] = hex0x(val.current);
+            {
+                auto storage_key = is_zero(key) ? "0x00" : hex0x(key, false);
+                j_storage[storage_key] = hex0x(val.current, false);
+            }
         }
     }
     return j;
