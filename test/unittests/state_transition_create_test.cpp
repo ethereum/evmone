@@ -14,6 +14,8 @@ TEST_F(state_transition, create2_factory)
         calldatacopy(0, 0, calldatasize()) + create2().input(0, calldatasize());
     const auto initcode = mstore8(0, push(0xFE)) + ret(0, 1);
 
+    block.timestamp = 1;
+
     tx.to = To;
     tx.data = initcode;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_code});
@@ -31,7 +33,7 @@ TEST_F(state_transition, create_tx_empty)
         .nonce = 1, .code = bytes{}};
 
     // Example of checking the expected the post state MPT root hash.
-    expect.state_hash = 0x8ae438f7a4a14dbc25410dfaa12e95e7b36f311ab904b4358c3b544e06df4c50_bytes32;
+    expect.state_hash = 0x9a3992c3bb10aeb28a760e041f42fc3bb76d9bb585be8efc9f29561eec327161_bytes32;
 }
 
 TEST_F(state_transition, create_tx)
@@ -54,6 +56,7 @@ TEST_F(state_transition, create_tx_failure)
 
 TEST_F(state_transition, create2_max_nonce)
 {
+    block.timestamp = 1;
     tx.to = To;
     pre.insert(*tx.to, {.nonce = ~uint64_t{0}, .code = create2()});
 
@@ -64,6 +67,7 @@ TEST_F(state_transition, code_deployment_out_of_gas_tw)
 {
     rev = EVMC_TANGERINE_WHISTLE;  // 63/64 gas rule enabled
     block.base_fee = 0;
+    block.timestamp = 1;
     const auto initcode = ret(0, 5000);  // create contract with a lot of zeros, deploy cost 1M
 
     tx.to = To;
@@ -78,6 +82,7 @@ TEST_F(state_transition, code_deployment_out_of_gas_f)
 {
     rev = EVMC_FRONTIER;
     block.base_fee = 0;
+    block.timestamp = 1;
     const auto initcode = ret(0, 1000);  // create contract with a lot of zeros
 
     tx.to = To;
@@ -95,6 +100,7 @@ TEST_F(state_transition, code_deployment_out_of_gas_storage_tw)
 {
     rev = EVMC_TANGERINE_WHISTLE;  // 63/64 gas rule enabled
     block.base_fee = 0;
+    block.timestamp = 1;
     const auto initcode = sstore(0, 1)     // set storage
                           + ret(0, 5000);  // create contract with a lot of zeros
 
@@ -110,6 +116,7 @@ TEST_F(state_transition, code_deployment_out_of_gas_storage_f)
 {
     rev = EVMC_FRONTIER;
     block.base_fee = 0;
+    block.timestamp = 1;
     const auto initcode = sstore(0, 1)     // set storage
                           + ret(0, 1000);  // create contract with a lot of zeros
 
@@ -131,6 +138,7 @@ TEST_F(state_transition, code_deployment_out_of_gas_refund_tw)
 {
     rev = EVMC_TANGERINE_WHISTLE;  // 63/64 gas rule enabled
     block.base_fee = 0;
+    block.timestamp = 1;
     const auto initcode = sstore(0, 1)     // set storage
                           + sstore(0, 0)   // gas refund
                           + ret(0, 5000);  // create contract with a lot of zeros
@@ -148,6 +156,7 @@ TEST_F(state_transition, code_deployment_out_of_gas_refund_f)
 {
     rev = EVMC_FRONTIER;
     block.base_fee = 0;
+    block.timestamp = 1;
     const auto initcode = sstore(0, 1)     // set storage
                           + sstore(0, 0)   // gas refund
                           + ret(0, 1000);  // create contract with a lot of zeros
@@ -168,7 +177,7 @@ TEST_F(state_transition, code_deployment_out_of_gas_refund_f)
 
 TEST_F(state_transition, create_tx_collision)
 {
-    static constexpr auto CREATED = 0x3442a1dec1e72f337007125aa67221498cdd759d_address;
+    static constexpr auto CREATED = 0xeC0e71Ad0a90FFe1909d27DAc207F7680AbbA42D_address;
 
     pre.insert(CREATED, {.nonce = 2});
 
@@ -180,6 +189,7 @@ TEST_F(state_transition, create_collision)
 {
     static constexpr auto CREATED = 0x8bbc3514477d75ec797bbe4e19d7961660bb849c_address;
 
+    block.timestamp = 1;
     tx.to = To;
     pre.insert(*tx.to, {.code = create()});
     pre.insert(CREATED, {.nonce = 2});
@@ -192,6 +202,7 @@ TEST_F(state_transition, create_collision_revert)
 {
     static constexpr auto CREATED = 0x8bbc3514477d75ec797bbe4e19d7961660bb849c_address;
 
+    block.timestamp = 1;
     tx.to = To;
     pre.insert(*tx.to, {.code = create() + OP_INVALID});
     pre.insert(CREATED, {.nonce = 2});
@@ -205,6 +216,7 @@ TEST_F(state_transition, create_prefunded_revert)
 {
     static constexpr auto CREATED = 0x8bbc3514477d75ec797bbe4e19d7961660bb849c_address;
 
+    block.timestamp = 1;
     tx.to = To;
     pre.insert(*tx.to, {.code = create() + OP_INVALID});
     pre.insert(CREATED, {.balance = 2});
@@ -218,6 +230,7 @@ TEST_F(state_transition, create_revert)
 {
     static constexpr auto CREATED = 0x8bbc3514477d75ec797bbe4e19d7961660bb849c_address;
 
+    block.timestamp = 1;
     tx.to = To;
     pre.insert(*tx.to, {.code = create() + OP_INVALID});
 
@@ -230,6 +243,7 @@ TEST_F(state_transition, create_revert_sd)
 {
     rev = EVMC_SPURIOUS_DRAGON;
     block.base_fee = 0;
+    block.timestamp = 1;
     static constexpr auto CREATED = 0x8bbc3514477d75ec797bbe4e19d7961660bb849c_address;
 
     tx.to = To;
@@ -244,6 +258,7 @@ TEST_F(state_transition, create_revert_tw)
 {
     rev = EVMC_TANGERINE_WHISTLE;
     block.base_fee = 0;
+    block.timestamp = 1;
     static constexpr auto CREATED = 0x8bbc3514477d75ec797bbe4e19d7961660bb849c_address;
 
     tx.to = To;
@@ -258,6 +273,7 @@ TEST_F(state_transition, create_collision_empty_revert)
 {
     static constexpr auto CREATED = 0x8bbc3514477d75ec797bbe4e19d7961660bb849c_address;
 
+    block.timestamp = 1;
     tx.to = To;
     pre.insert(*tx.to, {.code = create() + OP_INVALID});
     pre.insert(CREATED, {});
@@ -273,6 +289,7 @@ TEST_F(state_transition, create_collision_empty_revert_tw)
     block.base_fee = 0;
     static constexpr auto CREATED = 0x8bbc3514477d75ec797bbe4e19d7961660bb849c_address;
 
+    block.timestamp = 1;
     tx.to = To;
     pre.insert(*tx.to, {.code = create() + OP_INVALID});
     pre.insert(CREATED, {});
@@ -287,6 +304,7 @@ TEST_F(state_transition, touch_create_collision_empty_revert)
     static constexpr auto CREATED = 0x11f72042f0f1c9d8a1aeffc3680d0b41dd7769a7_address;
     static constexpr auto REVERT_PROXY = 0x94_address;
 
+    block.timestamp = 1;
     tx.to = To;
     pre.insert(*tx.to, {.code = call(CREATED) + call(REVERT_PROXY).gas(0xffff)});
     pre.insert(REVERT_PROXY, {.code = create() + OP_INVALID});
@@ -300,6 +318,7 @@ TEST_F(state_transition, touch_create_collision_empty_revert_tw)
 {
     rev = EVMC_TANGERINE_WHISTLE;
     block.base_fee = 0;
+    block.timestamp = 1;
     static constexpr auto CREATED = 0x11f72042f0f1c9d8a1aeffc3680d0b41dd7769a7_address;
     static constexpr auto REVERT_PROXY = 0x94_address;
 
@@ -317,6 +336,7 @@ TEST_F(state_transition, created_code_hash)
     const auto runtime_code = bytes{0xc0};
     ASSERT_EQ(runtime_code.size(), 1);
     const auto initcode = mstore8(0, push(runtime_code)) + ret(0, runtime_code.size());
+    block.timestamp = 1;
     tx.to = To;
     pre.insert(To,
         {.code = mstore(0, push(initcode)) + create().input(32 - initcode.size(), initcode.size()) +

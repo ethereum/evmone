@@ -13,6 +13,7 @@ TEST_F(state_transition, transient_storage)
     rev = EVMC_CANCUN;
     const auto tbump = 0xb0_address;
 
+    block.timestamp = 1;
     tx.to = To;
     pre.insert(tbump, {.code = tstore(0, add(tload(0), 1)) + sstore(0, tload(0))});
     pre.insert(*tx.to, {.code = call(tbump).gas(0xffff) + call(tbump).gas(0xffff)});
@@ -26,6 +27,7 @@ TEST_F(state_transition, transient_storage_revert)
     rev = EVMC_CANCUN;
     const auto tbump = 0xb0_address;
 
+    block.timestamp = 1;
     tx.to = To;
     pre.insert(tbump, {.code = tstore(0, add(tload(0), 1)) + sstore(0, tload(0))});
     pre.insert(*tx.to,
@@ -40,6 +42,7 @@ TEST_F(state_transition, transient_storage_static)
     rev = EVMC_CANCUN;
     const auto db = 0xdb_address;
 
+    block.timestamp = 1;
     tx.to = To;
     pre.insert(db, {.code = tload(1) + jumpi(17, calldataload(0)) + ret_top() + OP_JUMPDEST +
                             tstore(1, add(7))});

@@ -12,6 +12,7 @@ TEST_F(state_transition, tx_legacy)
 {
     rev = EVMC_ISTANBUL;
     block.base_fee = 0;  // should be 0 before London
+    block.timestamp = 1;
     tx.to = To;
 
     expect.post.at(Sender).nonce = pre.get(Sender).nonce + 1;
@@ -49,6 +50,7 @@ TEST_F(state_transition, invalid_tx_non_existing_sender)
 TEST_F(state_transition, tx_blob_gas_price)
 {
     rev = EVMC_CANCUN;
+    block.timestamp = 1;
     tx.to = To;
     tx.gas_limit = 25000;
     tx.max_gas_price = block.base_fee;  // minimal gas price to make it
@@ -70,6 +72,7 @@ TEST_F(state_transition, empty_coinbase_fee_0_sd)
     rev = EVMC_SPURIOUS_DRAGON;
     block_reward = 0;
     block.base_fee = 0;  // should be 0 before London
+    block.timestamp = 1;
     tx.max_gas_price = 0;
     tx.max_priority_gas_price = 0;
     tx.to = To;
@@ -83,6 +86,7 @@ TEST_F(state_transition, empty_coinbase_fee_0_tw)
     rev = EVMC_TANGERINE_WHISTLE;
     block_reward = 0;
     block.base_fee = 0;  // should be 0 before London
+    block.timestamp = 1;
     tx.max_gas_price = 0;
     tx.max_priority_gas_price = 0;
     tx.to = To;
@@ -93,6 +97,7 @@ TEST_F(state_transition, empty_coinbase_fee_0_tw)
 
 TEST_F(state_transition, access_list_storage)
 {
+    block.timestamp = 1;
     tx.to = To;
     tx.access_list = {{To, {0x01_bytes32}}};
 

@@ -21,12 +21,11 @@ class state_transition : public ExportableFixture
 {
 protected:
     /// The default sender address of the test transaction.
-    /// Private key: 0x2b1263d2b.
-    static constexpr auto Sender = 0xe100713FC15400D1e94096a545879E7c6407001e_address;
+    static constexpr auto Sender = 0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b_address;
 
     /// The secret (private) key of the Sender address.
     static constexpr auto SenderSecretKey =
-        0x00000000000000000000000000000000000000000000000000000002b1263d2b_bytes32;
+        0x45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8_bytes32;
 
     /// The default destination address of the test transaction.
     static constexpr auto To = 0xc0de_address;

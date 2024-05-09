@@ -11,6 +11,7 @@ using namespace evmone::test;
 TEST_F(state_transition, selfdestruct_shanghai)
 {
     rev = EVMC_SHANGHAI;
+    block.timestamp = 1;
     tx.to = To;
     pre.insert(*tx.to, {.balance = 0x4e, .code = selfdestruct(0xbe_address)});
 
@@ -21,6 +22,7 @@ TEST_F(state_transition, selfdestruct_shanghai)
 TEST_F(state_transition, selfdestruct_cancun)
 {
     rev = EVMC_CANCUN;
+    block.timestamp = 1;
     tx.to = To;
     pre.insert(*tx.to, {.balance = 0x4e, .code = selfdestruct(0xbe_address)});
 
@@ -31,6 +33,7 @@ TEST_F(state_transition, selfdestruct_cancun)
 TEST_F(state_transition, selfdestruct_to_self_cancun)
 {
     rev = EVMC_CANCUN;
+    block.timestamp = 1;
     tx.to = To;
     pre.insert(*tx.to, {.balance = 0x4e, .code = selfdestruct(To)});
 
@@ -50,6 +53,7 @@ TEST_F(state_transition, selfdestruct_same_tx_cancun)
 TEST_F(state_transition, selfdestruct_double_revert)
 {
     rev = EVMC_SHANGHAI;
+    block.timestamp = 1;
 
     static constexpr auto CALL_PROXY = 0xc0_address;
     static constexpr auto REVERT_PROXY = 0xd0_address;
@@ -77,6 +81,7 @@ TEST_F(state_transition, selfdestruct_initcode)
 TEST_F(state_transition, massdestruct_shanghai)
 {
     rev = EVMC_SHANGHAI;
+    block.timestamp = 1;
 
     static constexpr auto BASE = 0xdead0000_address;
     static constexpr auto SINK = 0xbeef_address;
@@ -106,6 +111,7 @@ TEST_F(state_transition, massdestruct_shanghai)
 TEST_F(state_transition, massdestruct_cancun)
 {
     rev = EVMC_CANCUN;
+    block.timestamp = 1;
 
     static constexpr auto BASE = 0xdead0000_address;
     static constexpr auto SINK = 0xbeef_address;

@@ -12,6 +12,7 @@ TEST_F(state_transition, touch_empty_sd)
 {
     rev = EVMC_SPURIOUS_DRAGON;  // touching enabled
     block.base_fee = 0;
+    block.timestamp = 1;
     static constexpr auto EMPTY = 0xee_address;
 
     tx.to = To;
@@ -26,6 +27,7 @@ TEST_F(state_transition, touch_empty_tw)
 {
     rev = EVMC_TANGERINE_WHISTLE;  // no touching
     block.base_fee = 0;
+    block.timestamp = 1;
     static constexpr auto EMPTY = 0xee_address;
 
     tx.to = To;
@@ -40,6 +42,7 @@ TEST_F(state_transition, touch_nonexistent_tw)
 {
     rev = EVMC_TANGERINE_WHISTLE;  // no touching
     block.base_fee = 0;
+    block.timestamp = 1;
     static constexpr auto NONEXISTENT = 0x4e_address;
 
     tx.to = To;
@@ -53,6 +56,7 @@ TEST_F(state_transition, touch_nonexistent_sd)
 {
     rev = EVMC_SPURIOUS_DRAGON;
     block.base_fee = 0;
+    block.timestamp = 1;
     static constexpr auto NONEXISTENT = 0x4e_address;
 
     tx.to = To;
@@ -65,6 +69,7 @@ TEST_F(state_transition, touch_nonempty_tw)
 {
     rev = EVMC_TANGERINE_WHISTLE;  // no touching
     block.base_fee = 0;
+    block.timestamp = 1;
     static constexpr auto WITH_BALANCE = 0xba_address;
 
     tx.to = To;
@@ -79,6 +84,7 @@ TEST_F(state_transition, touch_revert_empty)
 {
     rev = EVMC_ISTANBUL;  // avoid handling account access (Berlin)
     block.base_fee = 0;
+    block.timestamp = 1;
     static constexpr auto EMPTY = 0xee_address;
 
     tx.to = To;
@@ -94,6 +100,7 @@ TEST_F(state_transition, touch_revert_nonexistent_istanbul)
 {
     rev = EVMC_ISTANBUL;  // avoid handling account access (Berlin)
     block.base_fee = 0;
+    block.timestamp = 1;
     static constexpr auto EMPTY = 0xee_address;
 
     tx.to = To;
@@ -108,6 +115,7 @@ TEST_F(state_transition, touch_revert_nonexistent_tw)
 {
     rev = EVMC_TANGERINE_WHISTLE;  // no touching
     block.base_fee = 0;
+    block.timestamp = 1;
     static constexpr auto EMPTY = 0xee_address;
 
     tx.to = To;
@@ -122,6 +130,7 @@ TEST_F(state_transition, touch_revert_nonempty_tw)
 {
     rev = EVMC_TANGERINE_WHISTLE;  // no touching
     block.base_fee = 0;
+    block.timestamp = 1;
     static constexpr auto WITH_BALANCE = 0xba_address;
 
     tx.to = To;
@@ -137,6 +146,7 @@ TEST_F(state_transition, touch_revert_nonexistent_touch_again_tw)
 {
     rev = EVMC_TANGERINE_WHISTLE;  // no touching
     block.base_fee = 0;
+    block.timestamp = 1;
     static constexpr auto EMPTY = 0xee_address;
     static constexpr auto REVERT_PROXY = 0x94_address;
 
@@ -153,6 +163,7 @@ TEST_F(state_transition, touch_touch_revert_nonexistent_tw)
 {
     rev = EVMC_TANGERINE_WHISTLE;  // no touching
     block.base_fee = 0;
+    block.timestamp = 1;
     static constexpr auto EMPTY = 0xee_address;
     static constexpr auto REVERT_PROXY = 0x94_address;
 
@@ -169,6 +180,7 @@ TEST_F(state_transition, touch_revert_touch_revert_nonexistent_tw)
 {
     rev = EVMC_TANGERINE_WHISTLE;  // no touching
     block.base_fee = 0;
+    block.timestamp = 1;
     static constexpr auto EMPTY = 0xee_address;
     static constexpr auto REVERT_PROXY = 0x94_address;
 
@@ -185,6 +197,7 @@ TEST_F(state_transition, touch_touch_revert_nonexistent_tw_2)
 {
     rev = EVMC_TANGERINE_WHISTLE;  // no touching
     block.base_fee = 0;
+    block.timestamp = 1;
     static constexpr auto EMPTY = 0xee_address;
 
     tx.to = To;
@@ -199,6 +212,7 @@ TEST_F(state_transition, touch_revert_selfdestruct_to_nonexistient_tw)
 {
     rev = EVMC_TANGERINE_WHISTLE;  // no touching
     block.base_fee = 0;
+    block.timestamp = 1;
     static constexpr auto DESTRUCTOR = 0xde_address;
     static constexpr auto BENEFICIARY = 0xbe_address;
 
