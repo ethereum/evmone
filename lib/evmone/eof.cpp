@@ -313,6 +313,8 @@ std::variant<EOF1Header, EOFValidationError> validate_header(
 /// Result of validating instructions in a code section.
 struct InstructionValidationResult
 {
+    /// Pairs of (container_index, opcode) of all opcodes referencing subcontainers in this section.
+    std::vector<std::pair<uint8_t, Opcode>> subcontainer_references;
     /// Set of accessed code section indices.
     // TODO: Vector can be used here in case unordered_set causes performance issues.
     std::unordered_set<uint16_t> accessed_code_sections;
@@ -331,6 +333,7 @@ std::variant<InstructionValidationResult, EOFValidationError> validate_instructi
 
     bool is_returning = false;
     std::unordered_set<uint16_t> accessed_code_sections;
+    std::vector<std::pair<uint8_t, Opcode>> subcontainer_references;
 
     for (size_t i = 0; i < code.size(); ++i)
     {
@@ -394,6 +397,7 @@ std::variant<InstructionValidationResult, EOFValidationError> validate_instructi
             if (op == OP_EOFCREATE && subcontainer_end != header.container_sizes[container_idx])
                 return EOFValidationError::eofcreate_with_truncated_container;
 
+            subcontainer_references.emplace_back(container_idx, Opcode{op});
             ++i;
         }
         else
@@ -404,7 +408,7 @@ std::variant<InstructionValidationResult, EOFValidationError> validate_instructi
     if (is_returning != declared_returning)
         return EOFValidationError::invalid_non_returning_flag;
 
-    return InstructionValidationResult{accessed_code_sections};
+    return InstructionValidationResult{subcontainer_references, accessed_code_sections};
 }
 
 /// Validates that that we don't rjump inside an instruction's immediate.
@@ -649,16 +653,24 @@ EOFValidationError validate_eof1(evmc_revision rev, bytes_view main_container) n
         return *error;
     const auto& main_container_header = std::get<EOF1Header>(error_or_header);
 
-    // Queue of (container, header) pairs left to process
-    std::queue<std::pair<bytes_view, EOF1Header>> container_queue;
-    container_queue.emplace(main_container, main_container_header);
+    struct ContainerValidation
+    {
+        bytes_view bytes;
+        EOF1Header header;
+        bool referenced_by_eofcreate = false;
+    };
+    // Queue of containers left to process
+    std::queue<ContainerValidation> container_queue;
+    container_queue.emplace(main_container, main_container_header, false);
 
     while (!container_queue.empty())
     {
-        // Validate subcontainer headers and get their data sections
-        const auto& [container, header] = container_queue.front();
+        const auto& [container, header, referenced_by_eofcreate] = container_queue.front();
+
+        // Validate subcontainer headers
         std::vector<uint16_t> subcontainer_data_offsets;
         std::vector<uint16_t> subcontainer_data_sizes;
+        std::vector<ContainerValidation> subcontainers;
         for (size_t subcont_idx = 0; subcont_idx < header.container_sizes.size(); ++subcont_idx)
         {
             const bytes_view subcontainer{header.get_container(container, subcont_idx)};
@@ -673,7 +685,7 @@ EOFValidationError validate_eof1(evmc_revision rev, bytes_view main_container) n
             subcontainer_data_offsets.push_back(subcont_header.data_offset);
             subcontainer_data_sizes.push_back(subcont_header.data_size);
 
-            container_queue.emplace(subcontainer, std::move(subcont_header));
+            subcontainers.emplace_back(subcontainer, std::move(subcont_header), false);
         }
 
         // Validate code sections
@@ -697,8 +709,16 @@ EOFValidationError validate_eof1(evmc_revision rev, bytes_view main_container) n
                     std::get_if<EOFValidationError>(&instr_validation_result_or_error))
                 return *error;
 
-            const auto& [accessed_code_sections] =
+            const auto& [subcontainer_references, accessed_code_sections] =
                 std::get<InstructionValidationResult>(instr_validation_result_or_error);
+
+            // Mark what instructions referenced which subcontainers.
+            for (const auto& [index, opcode] : subcontainer_references)
+            {
+                if (opcode == OP_EOFCREATE)
+                    subcontainers[index].referenced_by_eofcreate = true;
+            }
+
             // TODO(C++23): can use push_range()
             for (const auto section_id : accessed_code_sections)
                 code_sections_queue.push(section_id);
@@ -721,6 +741,10 @@ EOFValidationError validate_eof1(evmc_revision rev, bytes_view main_container) n
             return EOFValidationError::unreachable_code_sections;
 
         container_queue.pop();
+
+        // enqueue subcontainers
+        for (auto& subcontainer : subcontainers)
+            container_queue.emplace(std::move(subcontainer));
     }
 
     return EOFValidationError::success;
