@@ -640,24 +640,25 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
 
 EOFValidationError validate_eof1(evmc_revision rev, bytes_view main_container) noexcept
 {
-    const auto error_or_header = validate_header(rev, main_container);
-    if (const auto* error = std::get_if<EOFValidationError>(&error_or_header))
-        return *error;
-    const auto& main_container_header = std::get<EOF1Header>(error_or_header);
-
     struct ContainerValidation
     {
         bytes_view bytes;
-        EOF1Header header;
         bool referenced_by_eofcreate = false;
     };
     // Queue of containers left to process
     std::queue<ContainerValidation> container_queue;
-    container_queue.emplace(main_container, main_container_header, false);
+    container_queue.push({main_container, false});
 
     while (!container_queue.empty())
     {
-        const auto& [container, header, referenced_by_eofcreate] = container_queue.front();
+        const auto& [container, referenced_by_eofcreate] = container_queue.front();
+
+        // Validate header
+        auto error_or_header = validate_header(rev, container);
+        if (const auto* error = std::get_if<EOFValidationError>(&error_or_header))
+            return *error;
+
+        auto& header = std::get<EOF1Header>(error_or_header);
 
         // Validate code sections
         std::vector<bool> visited_code_sections(header.code_sizes.size());
@@ -722,15 +723,7 @@ EOFValidationError validate_eof1(evmc_revision rev, bytes_view main_container) n
         {
             const bytes_view subcontainer{header.get_container(container, subcont_idx)};
 
-            auto error_subcont_or_header = validate_header(rev, subcontainer);
-            if (const auto* error_subcont =
-                    std::get_if<EOFValidationError>(&error_subcont_or_header))
-                return *error_subcont;
-
-            auto& subcont_header = std::get<EOF1Header>(error_subcont_or_header);
-
-            container_queue.emplace(subcontainer, std::move(subcont_header),
-                subcontainer_referenced_by_eofcreate[subcont_idx]);
+            container_queue.push({subcontainer, subcontainer_referenced_by_eofcreate[subcont_idx]});
         }
 
         container_queue.pop();
