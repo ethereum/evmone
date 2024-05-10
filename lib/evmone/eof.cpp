@@ -659,24 +659,12 @@ EOFValidationError validate_eof1(evmc_revision rev, bytes_view main_container) n
     {
         const auto& [container, header, referenced_by_eofcreate] = container_queue.front();
 
-        // Validate subcontainer headers
-        std::vector<ContainerValidation> subcontainers;
-        for (size_t subcont_idx = 0; subcont_idx < header.container_sizes.size(); ++subcont_idx)
-        {
-            const bytes_view subcontainer{header.get_container(container, subcont_idx)};
-
-            auto error_subcont_or_header = validate_header(rev, subcontainer);
-            if (const auto* error_subcont =
-                    std::get_if<EOFValidationError>(&error_subcont_or_header))
-                return *error_subcont;
-
-            auto& subcont_header = std::get<EOF1Header>(error_subcont_or_header);
-            subcontainers.push_back({subcontainer, std::move(subcont_header), false});
-        }
-
         // Validate code sections
         std::vector<bool> visited_code_sections(header.code_sizes.size());
         std::queue<uint16_t> code_sections_queue({0});
+
+        const auto subcontainer_count = header.container_sizes.size();
+        std::vector<bool> subcontainer_referenced_by_eofcreate(subcontainer_count, false);
 
         while (!code_sections_queue.empty())
         {
@@ -702,7 +690,7 @@ EOFValidationError validate_eof1(evmc_revision rev, bytes_view main_container) n
             for (const auto& [index, opcode] : subcontainer_references)
             {
                 if (opcode == OP_EOFCREATE)
-                    subcontainers[index].referenced_by_eofcreate = true;
+                    subcontainer_referenced_by_eofcreate[index] = true;
             }
 
             // TODO(C++23): can use push_range()
@@ -729,11 +717,23 @@ EOFValidationError validate_eof1(evmc_revision rev, bytes_view main_container) n
         if (referenced_by_eofcreate && !header.can_init(container.size()))
             return EOFValidationError::eofcreate_with_truncated_container;
 
-        container_queue.pop();
+        // Enqueue subcontainers
+        for (size_t subcont_idx = 0; subcont_idx < subcontainer_count; ++subcont_idx)
+        {
+            const bytes_view subcontainer{header.get_container(container, subcont_idx)};
 
-        // enqueue subcontainers
-        for (auto& subcontainer : subcontainers)
-            container_queue.emplace(std::move(subcontainer));
+            auto error_subcont_or_header = validate_header(rev, subcontainer);
+            if (const auto* error_subcont =
+                    std::get_if<EOFValidationError>(&error_subcont_or_header))
+                return *error_subcont;
+
+            auto& subcont_header = std::get<EOF1Header>(error_subcont_or_header);
+
+            container_queue.emplace(subcontainer, std::move(subcont_header),
+                subcontainer_referenced_by_eofcreate[subcont_idx]);
+        }
+
+        container_queue.pop();
     }
 
     return EOFValidationError::success;
