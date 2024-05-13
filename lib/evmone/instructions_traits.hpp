@@ -192,6 +192,8 @@ constexpr inline GasCostTable gas_costs = []() noexcept {
     table[EVMC_PRAGUE][OP_TXCREATE] = 32000;
     table[EVMC_PRAGUE][OP_RETURNCONTRACT] = 0;
 
+    table[EVMC_OSAKA] = table[EVMC_PRAGUE];
+
     return table;
 }();
 

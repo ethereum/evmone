@@ -37,6 +37,8 @@ evmc_revision to_rev(std::string_view s)
         return EVMC_CANCUN;
     if (s == "Prague")
         return EVMC_PRAGUE;
+    if (s == "Osaka")
+        return EVMC_OSAKA;
     throw std::invalid_argument{"unknown revision: " + std::string{s}};
 }
 
