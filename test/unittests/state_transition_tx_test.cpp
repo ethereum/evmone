@@ -13,6 +13,7 @@ TEST_F(state_transition, tx_legacy)
     rev = EVMC_ISTANBUL;
     block.base_fee = 0;  // should be 0 before London
     block.timestamp = 1;
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
 
     expect.post.at(Sender).nonce = pre.get(Sender).nonce + 1;
@@ -22,6 +23,7 @@ TEST_F(state_transition, tx_non_existing_sender)
 {
     rev = EVMC_BERLIN;
     block.base_fee = 0;  // should be 0 before London
+    block.timestamp = 1;
     tx.to = To;
     tx.max_gas_price = 0;
     tx.max_priority_gas_price = 0;

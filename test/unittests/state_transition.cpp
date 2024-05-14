@@ -182,9 +182,11 @@ void state_transition::export_state_test(
 
     jt["pre"] = to_json(pre.get_accounts());
 
+    if (jt["pre"].empty())
+        jt["pre"] = json::json::object();
+
     auto& jtx = jt["transaction"];
-    if (tx.to.has_value())
-        jtx["to"] = hex0x(*tx.to);
+    jtx["to"] = tx.to.has_value() ? hex0x(*tx.to) : "";
     jtx["sender"] = hex0x(tx.sender);
     jtx["secretKey"] = hex0x(SenderSecretKey);
     jtx["nonce"] = hex0x(tx.nonce);
@@ -223,7 +225,8 @@ void state_transition::export_state_test(
             ja.emplace_back(std::move(je));
         }
     } else {
-      jtx["accessLists"][0] = json::json::array();
+      if (rev >= EVMC_BERLIN)
+          jtx["accessLists"][0] = json::json::array();
     }
 
     auto& jpost = jt["post"][to_test_fork_name(rev)][0];

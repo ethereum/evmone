@@ -43,6 +43,7 @@ TEST_F(state_transition, selfdestruct_to_self_cancun)
 TEST_F(state_transition, selfdestruct_same_tx_cancun)
 {
     rev = EVMC_CANCUN;
+    block.timestamp = 1;
     tx.value = 0x4e;
     tx.data = selfdestruct(0xbe_address);
     pre.get(Sender).balance += 0x4e;
@@ -75,6 +76,7 @@ TEST_F(state_transition, selfdestruct_double_revert)
 
 TEST_F(state_transition, selfdestruct_initcode)
 {
+    block.timestamp = 1;
     tx.data = selfdestruct(0xbe_address);
 }
 

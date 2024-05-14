@@ -27,6 +27,7 @@ TEST_F(state_transition, create2_factory)
 
 TEST_F(state_transition, create_tx_empty)
 {
+    block.timestamp = 1;
     // The default transaction without "to" address is a create transaction.
 
     expect.post[compute_create_address(Sender, pre.get(Sender).nonce)] = {
@@ -38,6 +39,7 @@ TEST_F(state_transition, create_tx_empty)
 
 TEST_F(state_transition, create_tx)
 {
+    block.timestamp = 1;
     tx.data = mstore8(0, push(0xFE)) + ret(0, 1);
 
     const auto create_address = compute_create_address(Sender, pre.get(Sender).nonce);
@@ -46,8 +48,9 @@ TEST_F(state_transition, create_tx)
 
 TEST_F(state_transition, create_tx_failure)
 {
-    static constexpr auto create_address = 0x3442a1dec1e72f337007125aa67221498cdd759d_address;
+    static constexpr auto create_address = 0xeC0e71Ad0a90FFe1909d27DAc207F7680AbbA42D_address;
 
+    block.timestamp = 1;
     tx.data = bytecode{} + OP_INVALID;
 
     expect.status = EVMC_INVALID_INSTRUCTION;
@@ -178,6 +181,8 @@ TEST_F(state_transition, code_deployment_out_of_gas_refund_f)
 TEST_F(state_transition, create_tx_collision)
 {
     static constexpr auto CREATED = 0xeC0e71Ad0a90FFe1909d27DAc207F7680AbbA42D_address;
+
+    block.timestamp = 1;
 
     pre.insert(CREATED, {.nonce = 2});
 
