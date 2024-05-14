@@ -17,6 +17,7 @@
 #include <queue>
 #include <span>
 #include <stack>
+#include <unordered_set>
 #include <variant>
 #include <vector>
 
@@ -309,10 +310,18 @@ std::variant<EOF1Header, EOFValidationError> validate_header(
     };
 }
 
-EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& header,
-    std::span<const uint16_t> subcontainer_data_offsets,
-    std::span<const uint16_t> subcontainer_data_sizes, size_t code_idx, bytes_view container,
-    std::queue<uint16_t>& code_sections_worklist) noexcept
+/// Result of validating instructions in a code section.
+struct InstructionValidationResult
+{
+    /// Pairs of (container_index, opcode) of all opcodes referencing subcontainers in this section.
+    std::vector<std::pair<uint8_t, Opcode>> subcontainer_references;
+    /// Set of accessed code section indices.
+    // TODO: Vector can be used here in case unordered_set causes performance issues.
+    std::unordered_set<uint16_t> accessed_code_sections;
+};
+
+std::variant<InstructionValidationResult, EOFValidationError> validate_instructions(
+    evmc_revision rev, const EOF1Header& header, size_t code_idx, bytes_view container) noexcept
 {
     const bytes_view code{header.get_code(container, code_idx)};
     assert(!code.empty());  // guaranteed by EOF headers validation
@@ -320,6 +329,8 @@ EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& he
     const auto& cost_table = baseline::get_baseline_cost_table(rev, 1);
 
     bool is_returning = false;
+    std::unordered_set<uint16_t> accessed_code_sections;
+    std::vector<std::pair<uint8_t, Opcode>> subcontainer_references;
 
     for (size_t i = 0; i < code.size(); ++i)
     {
@@ -345,7 +356,7 @@ EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& he
             if (header.types[fid].outputs == NON_RETURNING_FUNCTION)
                 return EOFValidationError::callf_to_non_returning_function;
             if (code_idx != fid)
-                code_sections_worklist.push(fid);
+                accessed_code_sections.insert(fid);
             i += 2;
         }
         else if (op == OP_RETF)
@@ -362,7 +373,7 @@ EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& he
             if (header.types[fid].outputs != NON_RETURNING_FUNCTION)
                 is_returning = true;
             if (code_idx != fid)
-                code_sections_worklist.push(fid);
+                accessed_code_sections.insert(fid);
             i += 2;
         }
         else if (op == OP_DATALOADN)
@@ -378,11 +389,7 @@ EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& he
             if (container_idx >= header.container_sizes.size())
                 return EOFValidationError::invalid_container_section_index;
 
-            const auto subcontainer_end =
-                subcontainer_data_offsets[container_idx] + subcontainer_data_sizes[container_idx];
-            if (op == OP_EOFCREATE && subcontainer_end != header.container_sizes[container_idx])
-                return EOFValidationError::eofcreate_with_truncated_container;
-
+            subcontainer_references.emplace_back(container_idx, Opcode{op});
             ++i;
         }
         else
@@ -393,7 +400,7 @@ EOFValidationError validate_instructions(evmc_revision rev, const EOF1Header& he
     if (is_returning != declared_returning)
         return EOFValidationError::invalid_non_returning_flag;
 
-    return EOFValidationError::success;
+    return InstructionValidationResult{subcontainer_references, accessed_code_sections};
 }
 
 /// Validates that that we don't rjump inside an instruction's immediate.
@@ -633,41 +640,32 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
 
 EOFValidationError validate_eof1(evmc_revision rev, bytes_view main_container) noexcept
 {
-    const auto error_or_header = validate_header(rev, main_container);
-    if (const auto* error = std::get_if<EOFValidationError>(&error_or_header))
-        return *error;
-    const auto& main_container_header = std::get<EOF1Header>(error_or_header);
-
-    // Queue of (container, header) pairs left to process
-    std::queue<std::pair<bytes_view, EOF1Header>> container_queue;
-    container_queue.emplace(main_container, main_container_header);
+    struct ContainerValidation
+    {
+        bytes_view bytes;
+        bool referenced_by_eofcreate = false;
+    };
+    // Queue of containers left to process
+    std::queue<ContainerValidation> container_queue;
+    container_queue.push({main_container, false});
 
     while (!container_queue.empty())
     {
-        // Validate subcontainer headers and get their data sections
-        const auto& [container, header] = container_queue.front();
-        std::vector<uint16_t> subcontainer_data_offsets;
-        std::vector<uint16_t> subcontainer_data_sizes;
-        for (size_t subcont_idx = 0; subcont_idx < header.container_sizes.size(); ++subcont_idx)
-        {
-            const bytes_view subcontainer{header.get_container(container, subcont_idx)};
+        const auto& [container, referenced_by_eofcreate] = container_queue.front();
 
-            auto error_subcont_or_header = validate_header(rev, subcontainer);
-            if (const auto* error_subcont =
-                    std::get_if<EOFValidationError>(&error_subcont_or_header))
-                return *error_subcont;
+        // Validate header
+        auto error_or_header = validate_header(rev, container);
+        if (const auto* error = std::get_if<EOFValidationError>(&error_or_header))
+            return *error;
 
-            auto& subcont_header = std::get<EOF1Header>(error_subcont_or_header);
-
-            subcontainer_data_offsets.push_back(subcont_header.data_offset);
-            subcontainer_data_sizes.push_back(subcont_header.data_size);
-
-            container_queue.emplace(subcontainer, std::move(subcont_header));
-        }
+        auto& header = std::get<EOF1Header>(error_or_header);
 
         // Validate code sections
         std::vector<bool> visited_code_sections(header.code_sizes.size());
         std::queue<uint16_t> code_sections_queue({0});
+
+        const auto subcontainer_count = header.container_sizes.size();
+        std::vector<bool> subcontainer_referenced_by_eofcreate(subcontainer_count, false);
 
         while (!code_sections_queue.empty())
         {
@@ -680,11 +678,25 @@ EOFValidationError validate_eof1(evmc_revision rev, bytes_view main_container) n
             visited_code_sections[code_idx] = true;
 
             // Validate instructions
-            const auto error_instr = validate_instructions(rev, header, subcontainer_data_offsets,
-                subcontainer_data_sizes, code_idx, container, code_sections_queue);
+            const auto instr_validation_result_or_error =
+                validate_instructions(rev, header, code_idx, container);
+            if (const auto* error =
+                    std::get_if<EOFValidationError>(&instr_validation_result_or_error))
+                return *error;
 
-            if (error_instr != EOFValidationError::success)
-                return error_instr;
+            const auto& [subcontainer_references, accessed_code_sections] =
+                std::get<InstructionValidationResult>(instr_validation_result_or_error);
+
+            // Mark what instructions referenced which subcontainers.
+            for (const auto& [index, opcode] : subcontainer_references)
+            {
+                if (opcode == OP_EOFCREATE)
+                    subcontainer_referenced_by_eofcreate[index] = true;
+            }
+
+            // TODO(C++23): can use push_range()
+            for (const auto section_id : accessed_code_sections)
+                code_sections_queue.push(section_id);
 
             // Validate jump destinations
             if (!validate_rjump_destinations(header.get_code(container, code_idx)))
@@ -702,6 +714,17 @@ EOFValidationError validate_eof1(evmc_revision rev, bytes_view main_container) n
         if (std::find(visited_code_sections.begin(), visited_code_sections.end(), false) !=
             visited_code_sections.end())
             return EOFValidationError::unreachable_code_sections;
+
+        if (referenced_by_eofcreate && !header.can_init(container.size()))
+            return EOFValidationError::eofcreate_with_truncated_container;
+
+        // Enqueue subcontainers
+        for (size_t subcont_idx = 0; subcont_idx < subcontainer_count; ++subcont_idx)
+        {
+            const bytes_view subcontainer{header.get_container(container, subcont_idx)};
+
+            container_queue.push({subcontainer, subcontainer_referenced_by_eofcreate[subcont_idx]});
+        }
 
         container_queue.pop();
     }
