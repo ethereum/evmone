@@ -252,11 +252,11 @@ std::optional<evmc_message> Host::prepare_message(evmc_message msg)
                     // Assert this is a legacy EOF creation tx.
                     assert(is_eof_container(input));
 
-                    const auto section_headers_or_error = validate_section_headers(input);
-                    if (holds_alternative<EOFValidationError>(section_headers_or_error))
+                    const auto header_or_error = validate_header(m_rev, input);
+                    if (holds_alternative<EOFValidationError>(header_or_error))
                         return {};  // Light early exception.
 
-                    const auto header = read_valid_eof1_header(input);
+                    const auto header = std::get<EOF1Header>(header_or_error);
 
                     if (!header.can_init(msg.input_size))
                         return {};  // Light early exception.
