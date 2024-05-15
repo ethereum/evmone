@@ -659,18 +659,18 @@ TEST_F(state_transition, eofcreate_not_enough_gas_for_initcode_charge)
 
     const auto init_code = returncontract(0, 0, 0);
     auto init_container = eof_bytecode(init_code, 2).container(deploy_container);
-    // add max size data
-    const auto init_data =
-        bytes(std::numeric_limits<uint16_t>::max() - bytecode(init_container).size(), 0);
-    init_container.data(init_data);
-    EXPECT_EQ(bytecode(init_container).size(), std::numeric_limits<uint16_t>::max());
+    const uint16_t init_data_size = std::numeric_limits<uint16_t>::max() / 2 -
+                                    static_cast<uint16_t>(bytecode(init_container).size());
+    const auto init_data = bytes(init_data_size, 0);
+    init_container.data(init_data, init_data_size);
+    EXPECT_EQ(bytecode(init_container).size(), std::numeric_limits<uint16_t>::max() / 2);
 
     const auto factory_code = sstore(0, eofcreate().container(0).salt(Salt)) + OP_STOP;
     const auto factory_container = eof_bytecode(factory_code, 4).container(init_container);
 
     tx.to = To;
     // tx intrinsic cost + EOFCREATE cost + initcode charge - not enough for pushes before EOFCREATE
-    tx.gas_limit = 21'000 + 32'000 + (std::numeric_limits<uint16_t>::max() + 31) / 32 * 6;
+    tx.gas_limit = 21'000 + 32'000 + (std::numeric_limits<uint16_t>::max() / 2 + 31) / 32 * 6;
 
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
