@@ -5,16 +5,27 @@
 
 #include <evmc/evmc.h>
 #include <evmc/utils.h>
+#include <array>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace evmone
 {
+constexpr uint8_t TERMINATOR = 0x00;
+constexpr uint8_t TYPE_SECTION = 0x01;
+constexpr uint8_t CODE_SECTION = 0x02;
+constexpr uint8_t CONTAINER_SECTION = 0x03;
+constexpr uint8_t DATA_SECTION = 0x04;
+constexpr uint8_t MAX_SECTION = DATA_SECTION;
+
 using bytes = std::basic_string<uint8_t>;
 using bytes_view = std::basic_string_view<uint8_t>;
+
+using EOFSectionHeaders = std::array<std::vector<uint16_t>, MAX_SECTION + 1>;
 
 struct EOFCodeType
 {
@@ -70,7 +81,7 @@ struct EOF1Header
     [[nodiscard]] bool can_init(size_t container_size) const noexcept
     {
         // Containers with truncated data section cannot be initcontainers.
-        const auto truncated_data = static_cast<size_t>(data_offset + data_size) != container_size;
+        const auto truncated_data = static_cast<size_t>(data_offset + data_size) > container_size;
         return !truncated_data;
     }
 
@@ -143,6 +154,10 @@ enum class EOFValidationError
 /// Determines the EOF version of the container by inspecting container's EOF prefix.
 /// If the prefix is missing or invalid, 0 is returned meaning legacy code.
 [[nodiscard]] uint8_t get_eof_version(bytes_view container) noexcept;
+
+/// Validates only the section headers and returns their contents if successful.
+[[nodiscard]] EVMC_EXPORT std::variant<EOFSectionHeaders, EOFValidationError>
+validate_section_headers(bytes_view container) noexcept;
 
 /// Validates whether given container is a valid EOF according to the rules of given revision.
 [[nodiscard]] EVMC_EXPORT EOFValidationError validate_eof(
