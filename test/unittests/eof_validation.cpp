@@ -134,6 +134,9 @@ void eof_validation::export_eof_validation_test()
         }
     }
 
+    if (jvectors.empty())
+        return;
+
     std::ofstream{export_file_path} << std::setw(2) << j;
 }
 }  // namespace evmone::test

@@ -41,10 +41,12 @@ TEST_F(state_transition, invalid_tx_non_existing_sender)
     tx.max_gas_price = 1;
     tx.max_priority_gas_price = 1;
     tx.nonce = 0;
+    pre.insert(Coinbase, { .balance = 1 });
     pre.get_accounts().erase(Sender);
 
     expect.tx_error = INSUFFICIENT_FUNDS;
     expect.post[Sender].exists = false;
+    expect.post[Coinbase].exists = true;
 }
 
 TEST_F(state_transition, tx_blob_gas_price)
