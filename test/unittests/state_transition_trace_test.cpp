@@ -10,7 +10,6 @@ using namespace evmone::test;
 
 TEST_F(state_transition, trace_example)
 {
-    block.timestamp = 1;
     tx.to = To;
     pre.insert(To, {.code = revert(0, 1)});
 

@@ -13,7 +13,6 @@ TEST_F(state_transition, block_apply_withdrawal)
     static constexpr auto withdrawal_address = 0x8888_address;
 
     block.withdrawals = {{0, 0, withdrawal_address, 3}};
-    block.timestamp = 1;
     tx.to = To;
     expect.post[withdrawal_address].balance = intx::uint256{3} * 1'000'000'000;
 }
@@ -24,7 +23,6 @@ TEST_F(state_transition, known_block_hash)
         {1, 0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421_bytes32},
         {2, 0x0000000000000000000000000000000000000000000000000000000000000111_bytes32}};
     block.number = 5;
-    block.timestamp = 1;
 
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = sstore(0, blockhash(1)) + sstore(1, blockhash(2))});
@@ -37,7 +35,6 @@ TEST_F(state_transition, known_block_hash)
 TEST_F(state_transition, known_block_hash_fake)
 {
     block.number = 2;
-    block.timestamp = 1;
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = sstore(0, blockhash(0)) + sstore(1, blockhash(1))});
     expect.post[To].storage[0x00_bytes32] =
@@ -56,7 +53,6 @@ TEST_F(state_transition, block_apply_ommers_reward)
     // Use high value 5 ETH to catch potential uint64 overflows.
     block_reward = 5'000'000'000'000'000'000;
     block.ommers = {o1, o2};
-    block.timestamp = 1;
     tx.to = To;
     expect.post[o1.beneficiary].balance = intx::uint256{block_reward} * (8 - o1.delta) / 8;
     expect.post[o2.beneficiary].balance = intx::uint256{block_reward} * (8 - o2.delta) / 8;
@@ -70,8 +66,6 @@ TEST_F(state_transition, eip7516_blob_base_fee)
     rev = EVMC_CANCUN;
 
     block.blob_base_fee = 0xabcd;
-    block.timestamp = 1;
-
     tx.to = To;
     pre.insert(*tx.to, {.code = sstore(0x4a, OP_BLOBBASEFEE)});
 
