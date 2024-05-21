@@ -17,22 +17,22 @@ using namespace evmone::instr;
 template <Opcode Op, void CoreFn(StackTop) noexcept = core::impl<Op>>
 inline void impl(AdvancedExecutionState& state) noexcept
 {
-    CoreFn(state.stack.top_item);
-    state.stack.top_item += instr::traits[Op].stack_height_change;
+    CoreFn(state.stack);
+    state.adjust_stack_size(instr::traits[Op].stack_height_change);
 }
 
 template <Opcode Op, void CoreFn(StackTop, ExecutionState&) noexcept = core::impl<Op>>
 inline void impl(AdvancedExecutionState& state) noexcept
 {
-    CoreFn(state.stack.top_item, state);
-    state.stack.top_item += instr::traits[Op].stack_height_change;
+    CoreFn(state.stack, state);
+    state.adjust_stack_size(instr::traits[Op].stack_height_change);
 }
 
 template <Opcode Op, evmc_status_code CoreFn(StackTop, ExecutionState&) noexcept = core::impl<Op>>
 inline evmc_status_code impl(AdvancedExecutionState& state) noexcept
 {
-    const auto status = CoreFn(state.stack.top_item, state);
-    state.stack.top_item += instr::traits[Op].stack_height_change;
+    const auto status = CoreFn(state.stack, state);
+    state.adjust_stack_size(instr::traits[Op].stack_height_change);
     return status;
 }
 
@@ -40,17 +40,17 @@ template <Opcode Op,
     evmc_status_code CoreFn(StackTop, int64_t&, ExecutionState&) noexcept = core::impl<Op>>
 inline evmc_status_code impl(AdvancedExecutionState& state) noexcept
 {
-    const auto status = CoreFn(state.stack.top_item, state.gas_left, state);
-    state.stack.top_item += instr::traits[Op].stack_height_change;
+    const auto status = CoreFn(state.stack, state.gas_left, state);
+    state.adjust_stack_size(instr::traits[Op].stack_height_change);
     return status;
 }
 
 template <Opcode Op, Result CoreFn(StackTop, int64_t, ExecutionState&) noexcept = core::impl<Op>>
 inline evmc_status_code impl(AdvancedExecutionState& state) noexcept
 {
-    const auto status = CoreFn(state.stack.top_item, state.gas_left, state);
+    const auto status = CoreFn(state.stack, state.gas_left, state);
     state.gas_left = status.gas_left;
-    state.stack.top_item += instr::traits[Op].stack_height_change;
+    state.adjust_stack_size(instr::traits[Op].stack_height_change);
     return status.status;
 }
 
@@ -59,7 +59,7 @@ template <Opcode Op,
 inline TermResult impl(AdvancedExecutionState& state) noexcept
 {
     // Stack height adjustment may be omitted.
-    return CoreFn(state.stack.top_item, state.gas_left, state);
+    return CoreFn(state.stack, state.gas_left, state);
 }
 
 template <Opcode Op,
@@ -67,7 +67,7 @@ template <Opcode Op,
 inline Result impl(AdvancedExecutionState& state, code_iterator pos) noexcept
 {
     // Stack height adjustment may be omitted.
-    return CoreFn(state.stack.top_item, state.gas_left, state, pos);
+    return CoreFn(state.stack, state.gas_left, state, pos);
 }
 
 template <Opcode Op,
@@ -75,23 +75,23 @@ template <Opcode Op,
 inline TermResult impl(AdvancedExecutionState& state, code_iterator pos) noexcept
 {
     // Stack height adjustment may be omitted.
-    return CoreFn(state.stack.top_item, state.gas_left, state, pos);
+    return CoreFn(state.stack, state.gas_left, state, pos);
 }
 
 template <Opcode Op,
     code_iterator CoreFn(StackTop, ExecutionState&, code_iterator) noexcept = core::impl<Op>>
 inline code_iterator impl(AdvancedExecutionState& state, code_iterator pos) noexcept
 {
-    const auto new_pos = CoreFn(state.stack.top_item, state, pos);
-    state.stack.top_item += instr::traits[Op].stack_height_change;
+    const auto new_pos = CoreFn(state.stack, state, pos);
+    state.adjust_stack_size(instr::traits[Op].stack_height_change);
     return new_pos;
 }
 
 template <Opcode Op, code_iterator CoreFn(StackTop, code_iterator) noexcept = core::impl<Op>>
 inline code_iterator impl(AdvancedExecutionState& state, code_iterator pos) noexcept
 {
-    const auto new_pos = CoreFn(state.stack.top_item, pos);
-    state.stack.top_item += instr::traits[Op].stack_height_change;
+    const auto new_pos = CoreFn(state.stack, pos);
+    state.adjust_stack_size(instr::traits[Op].stack_height_change);
     return new_pos;
 }
 /// @}
@@ -163,10 +163,9 @@ const Instruction* opx_beginblock(const Instruction* instr, AdvancedExecutionSta
     if ((state.gas_left -= block.gas_cost) < 0)
         return state.exit(EVMC_OUT_OF_GAS);
 
-    if (static_cast<int>(state.stack.size()) < block.stack_req)
+    if (const auto stack_size = state.stack_size(); stack_size < block.stack_req)
         return state.exit(EVMC_STACK_UNDERFLOW);
-
-    if (static_cast<int>(state.stack.size()) + block.stack_max_growth > StackSpace::limit)
+    else if (stack_size + block.stack_max_growth > StackSpace::limit)
         return state.exit(EVMC_STACK_OVERFLOW);
 
     state.current_block_cost = block.gas_cost;
@@ -189,12 +188,12 @@ const Instruction* op_jumpi(const Instruction* instr, AdvancedExecutionState& st
     if (state.stack[1] != 0)
     {
         instr = op_jump(instr, state);  // target
-        state.stack.pop();              // condition
+        (void)state.stack.pop();        // condition
     }
     else
     {
-        state.stack.pop();                     // target
-        state.stack.pop();                     // condition
+        (void)state.stack.pop();               // target
+        (void)state.stack.pop();               // condition
         instr = opx_beginblock(instr, state);  // follow-by block
     }
     return instr;
