@@ -118,7 +118,7 @@ inline std::string hex0x(const intx::uint256& v, const bool padding_zeros = true
 {
     std::string hexStr = intx::hex(v);
     if (!padding_zeros)
-      hexStr.replace(0, hexStr.find_first_not_of('0'), "");
+        hexStr.replace(0, hexStr.find_first_not_of('0'), "");
 
     return "0x" + hexStr;
 }
@@ -126,10 +126,9 @@ inline std::string hex0x(const intx::uint256& v, const bool padding_zeros = true
 /// Encodes bytes as hex with 0x prefix.
 inline std::string hex0x(const bytes_view& v, const bool padding_zeros = true)
 {
-
     std::string hexStr = evmc::hex(v);
     if (!padding_zeros)
-      hexStr.replace(0, hexStr.find_first_not_of('0'), "");
+        hexStr.replace(0, hexStr.find_first_not_of('0'), "");
 
     return "0x" + hexStr;
 }

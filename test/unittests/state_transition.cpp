@@ -225,9 +225,11 @@ void state_transition::export_state_test(
                 jstorage_keys.emplace_back(hex0x(k));
             ja.emplace_back(std::move(je));
         }
-    } else {
-      if (rev >= EVMC_BERLIN)
-          jtx["accessLists"][0] = json::json::array();
+    }
+    else
+    {
+        if (rev >= EVMC_BERLIN)
+            jtx["accessLists"][0] = json::json::array();
     }
 
     auto& jpost = jt["post"][to_test_fork_name(rev)][0];
