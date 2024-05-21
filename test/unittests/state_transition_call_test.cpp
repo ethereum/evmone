@@ -53,4 +53,6 @@ TEST_F(state_transition, delegatecall_static_legacy)
     // SSTORE failed.
     expect.post[callee1].storage[0x01_bytes32] = 0xdd_bytes32;
     expect.post[callee2].storage[0x01_bytes32] = 0xdd_bytes32;
+
+    skip_generate_copier = true;
 }

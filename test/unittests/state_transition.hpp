@@ -66,6 +66,7 @@ protected:
         std::string_view trace;
     };
 
+    bool skip_generate_copier = false;
 
     evmc_revision rev = EVMC_SHANGHAI;
     uint64_t block_reward = 0;

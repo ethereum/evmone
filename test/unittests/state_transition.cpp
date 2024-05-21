@@ -147,7 +147,7 @@ void state_transition::TearDown()
         EXPECT_TRUE(expect.post.contains(addr)) << "unexpected account " << addr;
     }
 
-    if (!export_file_path.empty())
+    if (!export_file_path.empty() && !skip_generate_copier)
         export_state_test(res, state);
 }
 
