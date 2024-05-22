@@ -52,10 +52,10 @@ TEST(execution_state, default_construct)
 
 TEST(execution_state, default_construct_advanced)
 {
-    const evmone::advanced::AdvancedExecutionState st;
+    evmone::advanced::AdvancedExecutionState st;
 
     EXPECT_EQ(st.gas_left, 0);
-    EXPECT_EQ(st.stack.size(), 0);
+    EXPECT_EQ(st.stack_size(), 0);
     EXPECT_EQ(st.memory.size(), 0);
     EXPECT_EQ(st.msg, nullptr);
     EXPECT_EQ(st.rev, EVMC_FRONTIER);
@@ -76,7 +76,7 @@ TEST(execution_state, reset_advanced)
     evmone::advanced::AdvancedExecutionState st;
     st.gas_left = 1;
     st.gas_refund = 2;
-    st.stack.push({});
+    st.stack.push(6u);
     st.memory.grow(64);
     st.msg = &msg;
     st.rev = EVMC_BYZANTIUM;
@@ -89,7 +89,8 @@ TEST(execution_state, reset_advanced)
 
     EXPECT_EQ(st.gas_left, 1);
     EXPECT_EQ(st.gas_refund, 2);
-    EXPECT_EQ(st.stack.size(), 1);
+    EXPECT_EQ(st.stack_size(), 1);
+    EXPECT_EQ(st.stack.top(), 6u);
     EXPECT_EQ(st.memory.size(), 64);
     EXPECT_EQ(st.msg, &msg);
     EXPECT_EQ(st.rev, EVMC_BYZANTIUM);
@@ -112,7 +113,7 @@ TEST(execution_state, reset_advanced)
         //       test.
         EXPECT_EQ(st.gas_left, 13);
         EXPECT_EQ(st.gas_refund, 0);
-        EXPECT_EQ(st.stack.size(), 0);
+        EXPECT_EQ(st.stack_size(), 0);
         EXPECT_EQ(st.memory.size(), 0);
         EXPECT_EQ(st.msg, &msg2);
         EXPECT_EQ(st.rev, EVMC_HOMESTEAD);
@@ -123,35 +124,6 @@ TEST(execution_state, reset_advanced)
         EXPECT_EQ(st.current_block_cost, 0u);
         EXPECT_EQ(st.analysis.advanced, nullptr);
     }
-}
-
-TEST(execution_state, stack_reset)
-{
-    evmone::StackSpace stack_space;
-    evmone::advanced::Stack stack{stack_space.bottom()};
-    EXPECT_EQ(stack.size(), 0);
-
-    stack.push({});
-    EXPECT_EQ(stack.size(), 1);
-
-    stack.reset(stack_space.bottom());
-    EXPECT_EQ(stack.size(), 0);
-
-    stack.reset(stack_space.bottom());
-    EXPECT_EQ(stack.size(), 0);
-}
-
-TEST(execution_state, const_stack)
-{
-    evmone::StackSpace stack_space;
-    evmone::advanced::Stack stack{stack_space.bottom()};
-    stack.push(1);
-    stack.push(2);
-
-    const auto& cstack = stack;
-
-    EXPECT_EQ(cstack[0], 2);
-    EXPECT_EQ(cstack[1], 1);
 }
 
 TEST(execution_state, memory_view)
