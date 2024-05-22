@@ -56,11 +56,11 @@ struct AdvancedExecutionState : ExecutionState
     /// Computes the current EVM stack height.
     [[nodiscard]] int stack_size() noexcept
     {
-        return static_cast<int>((&stack.top() - stack_space.bottom()));
+        return static_cast<int>(stack.end() - stack_space.bottom());
     }
 
     /// Adjust the EVM stack height by given change.
-    void adjust_stack_size(int change) noexcept { stack = &stack.top() + change; }
+    void adjust_stack_size(int change) noexcept { stack = stack.end() + change; }
 
     /// Terminates the execution with the given status code.
     const Instruction* exit(evmc_status_code status_code) noexcept

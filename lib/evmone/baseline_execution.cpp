@@ -88,7 +88,7 @@ inline evmc_status_code check_requirements(const CostTable& cost_table, int64_t&
 struct Position
 {
     code_iterator code_it;  ///< The position in the code.
-    uint256* stack_top;     ///< The pointer to the stack top.
+    uint256* stack_end;     ///< The pointer to the stack end.
 };
 
 /// Helpers for invoking instruction implementations of different signatures.
@@ -96,7 +96,7 @@ struct Position
 [[release_inline]] inline code_iterator invoke(void (*instr_fn)(StackTop) noexcept, Position pos,
     int64_t& /*gas*/, ExecutionState& /*state*/) noexcept
 {
-    instr_fn(pos.stack_top);
+    instr_fn(pos.stack_end);
     return pos.code_it + 1;
 }
 
@@ -104,7 +104,7 @@ struct Position
     Result (*instr_fn)(StackTop, int64_t, ExecutionState&) noexcept, Position pos, int64_t& gas,
     ExecutionState& state) noexcept
 {
-    const auto o = instr_fn(pos.stack_top, gas, state);
+    const auto o = instr_fn(pos.stack_end, gas, state);
     gas = o.gas_left;
     if (o.status != EVMC_SUCCESS)
     {
@@ -117,7 +117,7 @@ struct Position
 [[release_inline]] inline code_iterator invoke(void (*instr_fn)(StackTop, ExecutionState&) noexcept,
     Position pos, int64_t& /*gas*/, ExecutionState& state) noexcept
 {
-    instr_fn(pos.stack_top, state);
+    instr_fn(pos.stack_end, state);
     return pos.code_it + 1;
 }
 
@@ -125,21 +125,21 @@ struct Position
     code_iterator (*instr_fn)(StackTop, ExecutionState&, code_iterator) noexcept, Position pos,
     int64_t& /*gas*/, ExecutionState& state) noexcept
 {
-    return instr_fn(pos.stack_top, state, pos.code_it);
+    return instr_fn(pos.stack_end, state, pos.code_it);
 }
 
 [[release_inline]] inline code_iterator invoke(
     code_iterator (*instr_fn)(StackTop, code_iterator) noexcept, Position pos, int64_t& /*gas*/,
     ExecutionState& /*state*/) noexcept
 {
-    return instr_fn(pos.stack_top, pos.code_it);
+    return instr_fn(pos.stack_end, pos.code_it);
 }
 
 [[release_inline]] inline code_iterator invoke(
     TermResult (*instr_fn)(StackTop, int64_t, ExecutionState&) noexcept, Position pos, int64_t& gas,
     ExecutionState& state) noexcept
 {
-    const auto result = instr_fn(pos.stack_top, gas, state);
+    const auto result = instr_fn(pos.stack_end, gas, state);
     gas = result.gas_left;
     state.status = result.status;
     return nullptr;
@@ -149,7 +149,7 @@ struct Position
     Result (*instr_fn)(StackTop, int64_t, ExecutionState&, code_iterator&) noexcept, Position pos,
     int64_t& gas, ExecutionState& state) noexcept
 {
-    const auto result = instr_fn(pos.stack_top, gas, state, pos.code_it);
+    const auto result = instr_fn(pos.stack_end, gas, state, pos.code_it);
     gas = result.gas_left;
     if (result.status != EVMC_SUCCESS)
     {
@@ -163,7 +163,7 @@ struct Position
     TermResult (*instr_fn)(StackTop, int64_t, ExecutionState&, code_iterator) noexcept,
     Position pos, int64_t& gas, ExecutionState& state) noexcept
 {
-    const auto result = instr_fn(pos.stack_top, gas, state, pos.code_it);
+    const auto result = instr_fn(pos.stack_end, gas, state, pos.code_it);
     gas = result.gas_left;
     state.status = result.status;
     return nullptr;
@@ -174,14 +174,14 @@ template <Opcode Op>
 [[release_inline]] inline Position invoke(const CostTable& cost_table, const uint256* stack_bottom,
     Position pos, int64_t& gas, ExecutionState& state) noexcept
 {
-    if (const auto status = check_requirements<Op>(cost_table, gas, pos.stack_top, stack_bottom);
+    if (const auto status = check_requirements<Op>(cost_table, gas, pos.stack_end, stack_bottom);
         status != EVMC_SUCCESS)
     {
         state.status = status;
-        return {nullptr, pos.stack_top};
+        return {nullptr, pos.stack_end};
     }
     const auto new_pos = invoke(instr::core::impl<Op>, pos, gas, state);
-    const auto new_stack_top = pos.stack_top + instr::traits[Op].stack_height_change;
+    const auto new_stack_top = pos.stack_end + instr::traits[Op].stack_height_change;
     return {new_pos, new_stack_top};
 }
 
@@ -200,11 +200,11 @@ int64_t dispatch(const CostTable& cost_table, ExecutionState& state, int64_t gas
         if constexpr (TracingEnabled)
         {
             const auto offset = static_cast<uint32_t>(position.code_it - code);
-            const auto stack_height = static_cast<int>(position.stack_top - stack_bottom);
+            const auto stack_height = static_cast<int>(position.stack_end - stack_bottom);
             if (offset < state.original_code.size())  // Skip STOP from code padding.
             {
                 tracer->notify_instruction_start(
-                    offset, position.stack_top, stack_height, gas, state);
+                    offset, position.stack_end - 1, stack_height, gas, state);
             }
         }
 

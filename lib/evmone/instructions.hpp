@@ -18,25 +18,28 @@ using code_iterator = const uint8_t*;
 /// and allows retrieving stack items and manipulating the pointer.
 class StackTop
 {
-    uint256* m_top;
+    uint256* m_end;  ///< Pointer to the stack end (1 slot above the stack top item).
 
 public:
-    StackTop(uint256* top) noexcept : m_top{top} {}
+    explicit(false) StackTop(uint256* end) noexcept : m_end{end} {}
+
+    /// Returns the pointer to the stack end (the stack slot above the top item).
+    [[nodiscard]] uint256* end() noexcept { return m_end; }
 
     /// Returns the reference to the stack item by index, where 0 means the top item
     /// and positive index values the items further down the stack.
     /// Using [-1] is also valid, but .push() should be used instead.
-    [[nodiscard]] uint256& operator[](int index) noexcept { return m_top[-index]; }
+    [[nodiscard]] uint256& operator[](int index) noexcept { return m_end[-1 - index]; }
 
     /// Returns the reference to the stack top item.
-    [[nodiscard]] uint256& top() noexcept { return *m_top; }
+    [[nodiscard]] uint256& top() noexcept { return m_end[-1]; }
 
     /// Returns the current top item and move the stack top pointer down.
     /// The value is returned by reference because the stack slot remains valid.
-    [[nodiscard]] uint256& pop() noexcept { return *m_top--; }
+    [[nodiscard]] uint256& pop() noexcept { return *--m_end; }
 
     /// Assigns the value to the stack top and moves the stack top pointer up.
-    void push(const uint256& value) noexcept { *++m_top = value; }
+    void push(const uint256& value) noexcept { *m_end++ = value; }
 };
 
 
@@ -1103,7 +1106,7 @@ inline code_iterator callf(StackTop stack, ExecutionState& state, code_iterator 
 {
     const auto index = read_uint16_be(&pos[1]);
     const auto& header = state.analysis.baseline->eof_header();
-    const auto stack_size = &stack.top() - state.stack_space.bottom();
+    const auto stack_size = stack.end() - state.stack_space.bottom();
     const auto callee_type = header.get_type(state.original_code, index);
     if (stack_size + callee_type.max_stack_increase > StackSpace::limit)
     {
@@ -1134,7 +1137,7 @@ inline code_iterator jumpf(StackTop stack, ExecutionState& state, code_iterator 
 {
     const auto index = read_uint16_be(&pos[1]);
     const auto& header = state.analysis.baseline->eof_header();
-    const auto stack_size = &stack.top() - state.stack_space.bottom();
+    const auto stack_size = stack.end() - state.stack_space.bottom();
     const auto callee_type = header.get_type(state.original_code, index);
     if (stack_size + callee_type.max_stack_increase > StackSpace::limit)
     {

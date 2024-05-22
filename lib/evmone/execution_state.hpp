@@ -67,10 +67,7 @@ public:
     StackSpace() noexcept : m_stack_space{allocate()} {}
 
     /// Returns the pointer to the "bottom", i.e. below the stack space.
-    [[nodiscard, clang::no_sanitize("bounds")]] uint256* bottom() noexcept
-    {
-        return m_stack_space.get() - 1;
-    }
+    [[nodiscard]] uint256* bottom() noexcept { return m_stack_space.get(); }
 };
 
 
