@@ -42,8 +42,29 @@ constexpr auto legacy_cost_tables = []() noexcept {
     tables[EVMC_PRAGUE][OP_EXTSTATICCALL] = instr::undefined;
     tables[EVMC_PRAGUE][OP_EXTDELEGATECALL] = instr::undefined;
     tables[EVMC_PRAGUE][OP_EOFCREATE] = instr::undefined;
-    tables[EVMC_PRAGUE][OP_TXCREATE] = instr::undefined;
     tables[EVMC_PRAGUE][OP_RETURNCONTRACT] = instr::undefined;
+
+    tables[EVMC_OSAKA][OP_RJUMP] = instr::undefined;
+    tables[EVMC_OSAKA][OP_RJUMPI] = instr::undefined;
+    tables[EVMC_OSAKA][OP_RJUMPV] = instr::undefined;
+    tables[EVMC_OSAKA][OP_CALLF] = instr::undefined;
+    tables[EVMC_OSAKA][OP_RETF] = instr::undefined;
+    tables[EVMC_OSAKA][OP_JUMPF] = instr::undefined;
+    tables[EVMC_OSAKA][OP_DATALOAD] = instr::undefined;
+    tables[EVMC_OSAKA][OP_DATALOADN] = instr::undefined;
+    tables[EVMC_OSAKA][OP_DATASIZE] = instr::undefined;
+    tables[EVMC_OSAKA][OP_DATACOPY] = instr::undefined;
+    tables[EVMC_OSAKA][OP_DUPN] = instr::undefined;
+    tables[EVMC_OSAKA][OP_SWAPN] = instr::undefined;
+    tables[EVMC_OSAKA][OP_EXCHANGE] = instr::undefined;
+    tables[EVMC_OSAKA][OP_RETURNDATALOAD] = instr::undefined;
+    tables[EVMC_OSAKA][OP_EXTCALL] = instr::undefined;
+    tables[EVMC_OSAKA][OP_EXTSTATICCALL] = instr::undefined;
+    tables[EVMC_OSAKA][OP_EXTDELEGATECALL] = instr::undefined;
+    tables[EVMC_OSAKA][OP_EOFCREATE] = instr::undefined;
+    tables[EVMC_OSAKA][OP_RETURNCONTRACT] = instr::undefined;
+    tables[EVMC_OSAKA][OP_TXCREATE] = instr::undefined;
+
     return tables;
 }();
 
@@ -65,6 +86,23 @@ constexpr auto eof_cost_tables = []() noexcept {
     tables[EVMC_PRAGUE][OP_EXTCODECOPY] = instr::undefined;
     tables[EVMC_PRAGUE][OP_EXTCODEHASH] = instr::undefined;
     tables[EVMC_PRAGUE][OP_GAS] = instr::undefined;
+
+    tables[EVMC_OSAKA][OP_JUMP] = instr::undefined;
+    tables[EVMC_OSAKA][OP_JUMPI] = instr::undefined;
+    tables[EVMC_OSAKA][OP_PC] = instr::undefined;
+    tables[EVMC_OSAKA][OP_CALLCODE] = instr::undefined;
+    tables[EVMC_OSAKA][OP_SELFDESTRUCT] = instr::undefined;
+    tables[EVMC_OSAKA][OP_CALL] = instr::undefined;
+    tables[EVMC_OSAKA][OP_STATICCALL] = instr::undefined;
+    tables[EVMC_OSAKA][OP_DELEGATECALL] = instr::undefined;
+    tables[EVMC_OSAKA][OP_CREATE] = instr::undefined;
+    tables[EVMC_OSAKA][OP_CREATE2] = instr::undefined;
+    tables[EVMC_OSAKA][OP_CODESIZE] = instr::undefined;
+    tables[EVMC_OSAKA][OP_CODECOPY] = instr::undefined;
+    tables[EVMC_OSAKA][OP_EXTCODESIZE] = instr::undefined;
+    tables[EVMC_OSAKA][OP_EXTCODECOPY] = instr::undefined;
+    tables[EVMC_OSAKA][OP_EXTCODEHASH] = instr::undefined;
+    tables[EVMC_OSAKA][OP_GAS] = instr::undefined;
     return tables;
 }();
 
