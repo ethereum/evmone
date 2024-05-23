@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <evmc/bytes.hpp>
 #include <intx/intx.hpp>
 #include <cassert>
 #include <string>
@@ -13,8 +14,8 @@
 
 namespace evmone::rlp
 {
-using bytes = std::basic_string<uint8_t>;
-using bytes_view = std::basic_string_view<uint8_t>;
+using evmc::bytes;
+using evmc::bytes_view;
 
 namespace internal
 {
