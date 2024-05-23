@@ -17,10 +17,10 @@ using evmc::bytes32;
 struct StorageValue
 {
     /// The current value.
-    bytes32 current = {};
+    bytes32 current;
 
     /// The original value.
-    bytes32 original = {};
+    bytes32 original;
 
     evmc_access_status access_status = EVMC_ACCESS_COLD;
 };
