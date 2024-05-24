@@ -265,7 +265,7 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
         break;
 
     case Transaction::Type::initcodes:
-        if (rev < EVMC_PRAGUE)
+        if (rev < EVMC_OSAKA)
             return make_error_code(TX_TYPE_NOT_SUPPORTED);
         if (tx.initcodes.size() > max_initcode_count)
             return make_error_code(INIT_CODE_COUNT_LIMIT_EXCEEDED);

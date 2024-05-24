@@ -189,10 +189,10 @@ constexpr inline GasCostTable gas_costs = []() noexcept {
     table[EVMC_PRAGUE][OP_EXTDELEGATECALL] = warm_storage_read_cost;
     table[EVMC_PRAGUE][OP_EXTSTATICCALL] = warm_storage_read_cost;
     table[EVMC_PRAGUE][OP_EOFCREATE] = 32000;
-    table[EVMC_PRAGUE][OP_TXCREATE] = 32000;
     table[EVMC_PRAGUE][OP_RETURNCONTRACT] = 0;
 
     table[EVMC_OSAKA] = table[EVMC_PRAGUE];
+    table[EVMC_OSAKA][OP_TXCREATE] = 32000;
 
     return table;
 }();
@@ -414,7 +414,7 @@ constexpr inline std::array<Traits, 256> traits = []() noexcept {
     table[OP_CREATE2] = {"CREATE2", 0, false, 4, -3, EVMC_CONSTANTINOPLE};
     table[OP_RETURNDATALOAD] = {"RETURNDATALOAD", 0, false, 1, 0, EVMC_PRAGUE};
     table[OP_EOFCREATE] = {"EOFCREATE", 1, false, 4, -3, EVMC_PRAGUE};
-    table[OP_TXCREATE] = {"TXCREATE", 0, false, 5, -4, EVMC_PRAGUE};
+    table[OP_TXCREATE] = {"TXCREATE", 0, false, 5, -4, EVMC_OSAKA};
     table[OP_RETURNCONTRACT] = {"RETURNCONTRACT", 1, true, 2, -2, EVMC_PRAGUE};
     table[OP_EXTCALL] = {"EXTCALL", 0, false, 4, -3, EVMC_PRAGUE};
     table[OP_EXTDELEGATECALL] = {"EXTDELEGATECALL", 0, false, 3, -2, EVMC_PRAGUE};
