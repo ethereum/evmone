@@ -16,6 +16,33 @@ constexpr auto EXTCALL_ABORT = 2;
 
 namespace evmone::instr::core
 {
+/// Converts an opcode to matching EVMC call kind.
+consteval evmc_call_kind to_call_kind(Opcode op) noexcept
+{
+    switch (op)
+    {
+    case OP_CALL:
+    case OP_EXTCALL:
+    case OP_STATICCALL:
+    case OP_EXTSTATICCALL:
+        return EVMC_CALL;
+    case OP_CALLCODE:
+        return EVMC_CALLCODE;
+    case OP_DELEGATECALL:
+    case OP_EXTDELEGATECALL:
+        return EVMC_DELEGATECALL;
+    case OP_CREATE:
+        return EVMC_CREATE;
+    case OP_CREATE2:
+        return EVMC_CREATE2;
+    case OP_EOFCREATE:
+    case OP_TXCREATE:
+        return EVMC_EOFCREATE;
+    default:
+        intx::unreachable();
+    }
+}
+
 template <Opcode Op>
 Result call_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
@@ -51,10 +78,7 @@ Result call_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noexce
     const auto output_offset = static_cast<size_t>(output_offset_u256);
     const auto output_size = static_cast<size_t>(output_size_u256);
 
-    auto msg = evmc_message{};
-    msg.kind = (Op == OP_DELEGATECALL) ? EVMC_DELEGATECALL :
-               (Op == OP_CALLCODE)     ? EVMC_CALLCODE :
-                                         EVMC_CALL;
+    evmc_message msg{.kind = to_call_kind(Op)};
     msg.flags = (Op == OP_STATICCALL) ? uint32_t{EVMC_STATIC} : state.msg->flags;
     msg.depth = state.msg->depth + 1;
     msg.recipient = (Op == OP_CALL || Op == OP_STATICCALL) ? dst : state.msg->recipient;
@@ -153,8 +177,7 @@ Result extcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
     const auto input_offset = static_cast<size_t>(input_offset_u256);
     const auto input_size = static_cast<size_t>(input_size_u256);
 
-    auto msg = evmc_message{};
-    msg.kind = (Op == OP_EXTDELEGATECALL) ? EVMC_DELEGATECALL : EVMC_CALL;
+    evmc_message msg{.kind = to_call_kind(Op)};
     msg.flags = (Op == OP_EXTSTATICCALL) ? uint32_t{EVMC_STATIC} : state.msg->flags;
     msg.depth = state.msg->depth + 1;
     msg.recipient = (Op != OP_EXTDELEGATECALL) ? dst : state.msg->recipient;
@@ -268,12 +291,11 @@ Result create_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noex
         intx::be::load<uint256>(state.host.get_balance(state.msg->recipient)) < endowment)
         return {EVMC_SUCCESS, gas_left};  // "Light" failure.
 
-    auto msg = evmc_message{};
+    evmc_message msg{.kind = to_call_kind(Op)};
     msg.gas = gas_left;
     if (state.rev >= EVMC_TANGERINE_WHISTLE)
         msg.gas = msg.gas - msg.gas / 64;
 
-    msg.kind = (Op == OP_CREATE) ? EVMC_CREATE : EVMC_CREATE2;
     if (init_code_size > 0)
     {
         // init_code_offset may be garbage if init_code_size == 0.
@@ -379,9 +401,8 @@ Result create_eof_impl(
             return {EVMC_SUCCESS, gas_left};  // "Light" failure.
     }
 
-    auto msg = evmc_message{};
+    evmc_message msg{.kind = to_call_kind(Op)};
     msg.gas = gas_left - gas_left / 64;
-    msg.kind = EVMC_EOFCREATE;
     if (input_size > 0)
     {
         // input_data may be garbage if init_code_size == 0.
