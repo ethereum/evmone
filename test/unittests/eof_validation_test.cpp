@@ -1213,4 +1213,6 @@ TEST_F(eof_validation, max_nested_containers)
         nextcode = eof_bytecode(OP_INVALID).container(nextcode);
     }
     add_test_case(code, EOFValidationError::success);
+    skip_generate_copier = true; // Generated code is too large to be sent as
+                                 // argument by retesteth to internal tool
 }

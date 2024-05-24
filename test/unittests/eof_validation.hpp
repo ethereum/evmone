@@ -35,6 +35,7 @@ protected:
 
     evmc_revision rev = EVMC_PRAGUE;
     std::vector<TestCase> test_cases;
+    bool skip_generate_copier = false;
 
     /// Adds the case to test cases.
     ///
