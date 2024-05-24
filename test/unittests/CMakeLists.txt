@@ -80,6 +80,11 @@ target_sources(
 )
 target_link_libraries(evmone-unittests PRIVATE evmone evmone::evmmax evmone::state evmone::statetestutils testutils evmc::instructions GTest::gtest GTest::gtest_main)
 target_include_directories(evmone-unittests PRIVATE ${evmone_private_include_dir})
+target_compile_options(evmone-unittests PRIVATE
+    # Disable false positive C4789
+    # https://developercommunity.visualstudio.com/t/False-positive-buffer-overrun-warning-C/10666762
+    $<$<CXX_COMPILER_ID:MSVC>:-wd4789>
+)
 
 gtest_discover_tests(evmone-unittests TEST_PREFIX ${PROJECT_NAME}/unittests/)
 

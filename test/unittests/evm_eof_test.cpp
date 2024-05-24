@@ -148,29 +148,25 @@ TEST_P(evm, eof1_datasize)
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
         "0000000000000000000000000000000000000000000000000000000000000000"_hex);
 
-    bytes data = {0x0};
-    code = eof_bytecode(bytecode(OP_DATASIZE) + ret_top(), 2).data(data);
+    code = eof_bytecode(bytecode(OP_DATASIZE) + ret_top(), 2).data(bytes{0x0});
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
         "0000000000000000000000000000000000000000000000000000000000000001"_hex);
 
-    data = bytes(32, 0x0);
-    code = eof_bytecode(bytecode(OP_DATASIZE) + ret_top(), 2).data(data);
+    code = eof_bytecode(bytecode(OP_DATASIZE) + ret_top(), 2).data(bytes(32, 0x0));
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
         "0000000000000000000000000000000000000000000000000000000000000020"_hex);
 
-    data = bytes(64, 0x0);
-    code = eof_bytecode(bytecode(OP_DATASIZE) + ret_top(), 2).data(data);
+    code = eof_bytecode(bytecode(OP_DATASIZE) + ret_top(), 2).data(bytes(64, 0x0));
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
         "0000000000000000000000000000000000000000000000000000000000000040"_hex);
 
-    data = bytes(80, 0x0);
-    code = eof_bytecode(bytecode(OP_DATASIZE) + ret_top(), 2).data(data);
+    code = eof_bytecode(bytecode(OP_DATASIZE) + ret_top(), 2).data(bytes(80, 0x0));
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size),
