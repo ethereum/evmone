@@ -5,6 +5,7 @@
 #include "blockchaintest.hpp"
 #include <CLI/CLI.hpp>
 #include <evmone/evmone.h>
+#include <evmone/version.h>
 #include <gtest/gtest.h>
 #include <iostream>
 
@@ -73,6 +74,8 @@ int main(int argc, char* argv[])
         testing::InitGoogleTest(&argc, argv);  // Process GoogleTest flags.
 
         CLI::App app{"evmone blockchain test runner"};
+
+        app.set_version_flag("--version", "evmone-blockchaintest " EVMONE_VERSION);
 
         std::vector<std::string> paths;
         app.add_option("path", paths, "Path to test file or directory")
