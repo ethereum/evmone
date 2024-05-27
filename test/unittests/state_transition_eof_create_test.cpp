@@ -1394,7 +1394,7 @@ TEST_F(state_transition, txcreate_auxdata_shorter_than_declared)
 
 TEST_F(state_transition, txcreate_stray_data_initcontainer)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     const auto deploy_container = eof_bytecode(bytecode(OP_INVALID));
 
     const auto init_code = returncontract(0, 0, 0);

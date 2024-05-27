@@ -119,6 +119,46 @@ TEST_F(state_transition, eof_examples_callf)
     expect.post[*tx.to].exists = true;
 }
 
+TEST_F(state_transition, eof_examples_creation_tx)
+{
+    // # Example 4
+    //
+    // A creation transaction used to create a new EOF contract.
+
+    rev = EVMC_PRAGUE;
+
+    const auto initcontainer = bytecode(
+        //////////////////
+        // Initcontainer
+        //                        Code section: PUSH0 [aux data size], PUSH0 [aux data offset] and
+        //                                      RETURNCONTRACT first subcontainer
+        //                                                               |
+        //               Header: 1 code section 4 bytes long             |
+        //               |                                               |
+        //    version    |                                 Header terminator
+        //    |          |___________                      |             |________
+        "EF00 01 01 0004 02 0001 0004 03 0001 0014 04 0000 00 00 80 0002 5F5F EE00"
+        //       |‾‾‾‾‾‾              |‾‾‾‾‾‾‾‾‾‾‾ |‾‾‾‾‾‾    |‾‾‾‾‾‾‾‾‾
+        //       |                    |            Header: data section 0 bytes long
+        //       |                    |                       |
+        //       Header: types section 4 bytes long           Types section: first code section
+        //                            |                       0 inputs, non-returning,
+        //                            |                       max stack height 2
+        //       Header: 1 subcontainer 20 bytes long
+        //
+        //////////////////
+        // Deployed container (contract doing nothing, see Example 1)
+        "EF00 01 01 0004 02 0001 0001 04 0000 00 00 80 0000 00");
+
+    // Put the initcontainer in the `data` field of the transaction, appending some calldata.
+    tx.data = initcontainer + "ABCDEF";
+    // Empty `to` field.
+    tx.to = std::nullopt;
+
+    // Address of the newly created contract is calculated using the deployer's address and nonce.
+    expect.post[0x3442a1dec1e72f337007125aa67221498cdd759d_address].exists = true;
+}
+
 TEST_F(state_transition, eof_examples_eofcreate)
 {
     // # Example 5
