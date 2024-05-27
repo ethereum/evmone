@@ -5,6 +5,7 @@
 #include "statetest.hpp"
 #include <CLI/CLI.hpp>
 #include <evmone/evmone.h>
+#include <evmone/version.h>
 #include <gtest/gtest.h>
 #include <iostream>
 
@@ -79,6 +80,8 @@ int main(int argc, char* argv[])
         testing::InitGoogleTest(&argc, argv);  // Process GoogleTest flags.
 
         CLI::App app{"evmone state test runner"};
+
+        app.set_version_flag("--version", "evmone-statetest " EVMONE_VERSION);
 
         std::vector<std::string> paths;
         app.add_option("path", paths, "Path to test file or directory")

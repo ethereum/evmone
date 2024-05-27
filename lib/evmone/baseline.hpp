@@ -7,13 +7,11 @@
 #include <evmc/evmc.h>
 #include <evmc/utils.h>
 #include <memory>
-#include <string_view>
 #include <vector>
 
 namespace evmone
 {
-using bytes_view = std::basic_string_view<uint8_t>;
-
+using evmc::bytes_view;
 class ExecutionState;
 class VM;
 

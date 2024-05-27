@@ -19,9 +19,9 @@ namespace baseline
 class CodeAnalysis;
 }
 
-using uint256 = intx::uint256;
-using bytes = std::basic_string<uint8_t>;
-using bytes_view = std::basic_string_view<uint8_t>;
+using evmc::bytes;
+using evmc::bytes_view;
+using intx::uint256;
 
 
 /// Provides memory for EVM stack.

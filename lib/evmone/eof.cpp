@@ -737,7 +737,7 @@ std::variant<EOF1Header, EOFValidationError> validate_header(
         offset += container_size;
     }
     // NOTE: assertion always satisfied only as long as initcode limits apply (48K).
-    assert(offset <= static_cast<size_t>(std::numeric_limits<uint16_t>::max()));
+    assert(offset <= std::numeric_limits<uint16_t>::max());
     const auto data_offset = static_cast<uint16_t>(offset);
 
     return EOF1Header{

@@ -42,7 +42,7 @@ int main(int argc, const char* argv[])
         {
             const std::string_view arg{argv[i]};
 
-            if (arg == "-v")
+            if (arg == "-v" || arg == "--version")
             {
                 std::cout << "evmone-t8n " EVMONE_VERSION "\n";
                 return 0;

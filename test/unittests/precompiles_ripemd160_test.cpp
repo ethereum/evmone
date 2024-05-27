@@ -5,10 +5,11 @@
 #include <evmc/hex.hpp>
 #include <evmone_precompiles/ripemd160.hpp>
 #include <gtest/gtest.h>
+#include <span>
 
 using evmone::crypto::ripemd160;
 
-inline std::string hex(std::basic_string_view<std::byte> x)
+inline std::string hex(std::span<const std::byte> x)
 {
     return evmc::hex({reinterpret_cast<const unsigned char*>(x.data()), x.size()});
 }

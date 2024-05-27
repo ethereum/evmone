@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
+#include <evmc/bytes.hpp>
 #include <evmc/evmc.h>
 #include <evmc/utils.h>
 #include <cassert>
@@ -14,8 +15,8 @@
 
 namespace evmone
 {
-using bytes = std::basic_string<uint8_t>;
-using bytes_view = std::basic_string_view<uint8_t>;
+using evmc::bytes;
+using evmc::bytes_view;
 
 struct EOFCodeType
 {
