@@ -10,6 +10,7 @@ target_sources(
     blockchaintest_loader_test.cpp
     bytecode_test.cpp
     eof_validation_stack_test.cpp
+    eof_example_test.cpp
     eof_test.cpp
     eof_validation.hpp
     eof_validation.cpp
