@@ -90,7 +90,7 @@ TEST_F(state_transition, eof_examples_callf)
     rev = EVMC_PRAGUE;
 
     const auto eof_code = bytecode(
-        //                                                   First code section: PUSH1(42),
+        //                                                   First code section: PUSH1(0x2A),
         //                                                   CALLF second section and STOP
         //               Header: 2 code sections:                           |
         //               |       - first code section 6 bytes long          | Second code section:
