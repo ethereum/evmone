@@ -496,9 +496,10 @@ TEST_P(evm, extcodecopy_big_index)
 
 TEST_P(evm, extcodehash)
 {
-    auto& hash = host.accounts[{}].codehash;
-    std::fill(std::begin(hash.bytes), std::end(hash.bytes), uint8_t{0xee});
+    static constexpr auto HASH =
+        0xe10000a00000000b0000000000c00000000d00000e0000f0000000000000001e_bytes32;
 
+    host.accounts[{}].codehash = HASH;
     const auto code = push(0) + OP_EXTCODEHASH + ret_top();
 
     rev = EVMC_BYZANTIUM;
@@ -509,9 +510,7 @@ TEST_P(evm, extcodehash)
     execute(code);
     EXPECT_EQ(gas_used, 418);
     ASSERT_EQ(result.output_size, 32);
-    auto expected_hash = bytes(32, 0xee);
-    EXPECT_EQ(bytes_view(result.output_data, result.output_size),
-        bytes_view(std::begin(hash.bytes), std::size(hash.bytes)));
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size), HASH);
 }
 
 TEST_P(evm, codecopy_empty)
