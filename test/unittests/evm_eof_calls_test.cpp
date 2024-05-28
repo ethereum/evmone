@@ -340,72 +340,111 @@ TEST_P(evm, returndataload_outofrange)
 
     rev = EVMC_PRAGUE;
     {
-        const uint8_t call_output[31]{};
+        const auto call_output =
+            "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"_hex;  // 31 bytes
         host.call_result.output_data = std::data(call_output);
         host.call_result.output_size = std::size(call_output);
 
-        execute(eof_bytecode(extstaticcall(0) + returndataload(0) + OP_STOP, 3));
-        EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
+        execute(eof_bytecode(extstaticcall(0) + returndataload(0) + ret_top(), 3));
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+            "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa00"_hex);
     }
     {
-        const uint8_t call_output[32]{};
+        const auto call_output =
+            "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"_hex;  // 32 bytes
         host.call_result.output_data = std::data(call_output);
         host.call_result.output_size = std::size(call_output);
 
-        execute(eof_bytecode(extstaticcall(0) + returndataload(1) + OP_STOP, 3));
-        EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
-
-        execute(eof_bytecode(extstaticcall(0) + returndataload(31) + OP_STOP, 3));
-        EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
-
-        execute(eof_bytecode(extstaticcall(0) + returndataload(32) + OP_STOP, 3));
-        EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
-
-        execute(eof_bytecode(extstaticcall(0) + returndataload(max_uint256) + OP_STOP, 3));
-        EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
-
-        execute(eof_bytecode(extstaticcall(0) + returndataload(0) + OP_STOP, 3));
+        execute(eof_bytecode(extstaticcall(0) + returndataload(1) + ret_top(), 3));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+            "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa00"_hex);
+
+        execute(eof_bytecode(extstaticcall(0) + returndataload(31) + ret_top(), 3));
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+            "0xaa00000000000000000000000000000000000000000000000000000000000000"_hex);
+
+        execute(eof_bytecode(extstaticcall(0) + returndataload(32) + ret_top(), 3));
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+            "0x0000000000000000000000000000000000000000000000000000000000000000"_hex);
+
+        execute(eof_bytecode(extstaticcall(0) + returndataload(max_uint256) + ret_top(), 3));
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+            "0x0000000000000000000000000000000000000000000000000000000000000000"_hex);
+
+        execute(eof_bytecode(extstaticcall(0) + returndataload(0) + ret_top(), 3));
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+            "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"_hex);
     }
     {
-        const uint8_t call_output[34]{};
+        // 34 bytes
+        const auto call_output =
+            "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"_hex;
         host.call_result.output_data = std::data(call_output);
         host.call_result.output_size = std::size(call_output);
 
-        execute(eof_bytecode(extstaticcall(0) + returndataload(3) + OP_STOP, 3));
-        EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
-
-        execute(eof_bytecode(extstaticcall(0) + returndataload(max_uint256) + OP_STOP, 3));
-        EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
-
-        execute(eof_bytecode(extstaticcall(0) + returndataload(1) + OP_STOP, 3));
+        execute(eof_bytecode(extstaticcall(0) + returndataload(3) + ret_top(), 3));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+            "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa00"_hex);
 
-        execute(eof_bytecode(extstaticcall(0) + returndataload(2) + OP_STOP, 3));
+        execute(eof_bytecode(extstaticcall(0) + returndataload(max_uint256) + ret_top(), 3));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+            "0x0000000000000000000000000000000000000000000000000000000000000000"_hex);
+
+        execute(eof_bytecode(extstaticcall(0) + returndataload(1) + ret_top(), 3));
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+            "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"_hex);
+
+        execute(eof_bytecode(extstaticcall(0) + returndataload(2) + ret_top(), 3));
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+            "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"_hex);
     }
     {
-        const uint8_t call_output[64]{};
+        const auto call_output =
+            "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"_hex;  // 64 bytes
         host.call_result.output_data = std::data(call_output);
         host.call_result.output_size = std::size(call_output);
 
-        execute(eof_bytecode(extstaticcall(0) + returndataload(33) + OP_STOP, 3));
-        EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
-
-        execute(eof_bytecode(extstaticcall(0) + returndataload(max_uint256) + OP_STOP, 3));
-        EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
-
-
-        execute(eof_bytecode(extstaticcall(0) + returndataload(1) + OP_STOP, 3));
+        execute(eof_bytecode(extstaticcall(0) + returndataload(33) + ret_top(), 3));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+            "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa00"_hex);
 
-        execute(eof_bytecode(extstaticcall(0) + returndataload(31) + OP_STOP, 3));
+        execute(eof_bytecode(extstaticcall(0) + returndataload(max_uint256) + ret_top(), 3));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+            "0x0000000000000000000000000000000000000000000000000000000000000000"_hex);
 
-        execute(eof_bytecode(extstaticcall(0) + returndataload(32) + OP_STOP, 3));
+
+        execute(eof_bytecode(extstaticcall(0) + returndataload(1) + ret_top(), 3));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
-        execute(eof_bytecode(extstaticcall(0) + returndataload(0) + OP_STOP, 3));
+        EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+            "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"_hex);
+
+        execute(eof_bytecode(extstaticcall(0) + returndataload(31) + ret_top(), 3));
         EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+            "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"_hex);
+
+        execute(eof_bytecode(extstaticcall(0) + returndataload(32) + ret_top(), 3));
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+            "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"_hex);
+
+        execute(eof_bytecode(extstaticcall(0) + returndataload(0) + ret_top(), 3));
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        EXPECT_EQ(bytes_view(result.output_data, result.output_size),
+            "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"_hex);
     }
 }
 
@@ -416,14 +455,17 @@ TEST_P(evm, returndataload_empty)
         return;
 
     rev = EVMC_PRAGUE;
-    execute(eof_bytecode(extstaticcall(0) + returndataload(0) + OP_STOP, 3));
-    EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
+    execute(eof_bytecode(extstaticcall(0) + returndataload(0) + ret_top(), 3));
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size), evmc::bytes32(0));
 
-    execute(eof_bytecode(extstaticcall(0) + returndataload(1) + OP_STOP, 3));
-    EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
+    execute(eof_bytecode(extstaticcall(0) + returndataload(1) + ret_top(), 3));
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size), evmc::bytes32(0));
 
-    execute(eof_bytecode(extstaticcall(0) + returndataload(max_uint256) + OP_STOP, 3));
-    EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
+    execute(eof_bytecode(extstaticcall(0) + returndataload(max_uint256) + ret_top(), 3));
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size), evmc::bytes32(0));
 }
 
 TEST_P(evm, returndataload_outofrange_highbits)
@@ -440,8 +482,9 @@ TEST_P(evm, returndataload_outofrange_highbits)
     // Covers an incorrect cast of RETURNDATALOAD arg to `size_t` ignoring the high bits.
     const auto highbits =
         0x1000000000000000000000000000000000000000000000000000000000000000_bytes32;
-    execute(eof_bytecode(extstaticcall(0) + returndataload(highbits) + OP_STOP, 3));
-    EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
+    execute(eof_bytecode(extstaticcall(0) + returndataload(highbits) + ret_top(), 3));
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size), evmc::bytes32(0));
 }
 
 TEST_P(evm, extcall_gas_refund_aggregation_different_calls)
