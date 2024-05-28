@@ -5,6 +5,7 @@
 
 #include <evmc/evmc.hpp>
 #include <intx/intx.hpp>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -27,20 +28,48 @@ using intx::uint256;
 /// Provides memory for EVM stack.
 class StackSpace
 {
+    static uint256* allocate() noexcept
+    {
+        static constexpr auto alignment = sizeof(uint256);
+        static constexpr auto size = limit * sizeof(uint256);
+#ifdef _MSC_VER
+        // MSVC doesn't support aligned_alloc() but _aligned_malloc() can be used instead.
+        const auto p = _aligned_malloc(size, alignment);
+#else
+        const auto p = std::aligned_alloc(alignment, size);
+#endif
+        return static_cast<uint256*>(p);
+    }
+
+    struct Deleter
+    {
+        // TODO(C++23): static
+        void operator()(void* p) noexcept
+        {
+#ifdef _MSC_VER
+            // For MSVC the _aligned_malloc() must be paired with _aligned_free().
+            _aligned_free(p);
+#else
+            std::free(p);
+#endif
+        }
+    };
+
+    /// The storage allocated for maximum possible number of items.
+    /// Items are aligned to 256 bits for better packing in cache lines.
+    std::unique_ptr<uint256, Deleter> m_stack_space;
+
 public:
     /// The maximum number of EVM stack items.
     static constexpr auto limit = 1024;
 
+    StackSpace() noexcept : m_stack_space{allocate()} {}
+
     /// Returns the pointer to the "bottom", i.e. below the stack space.
     [[nodiscard, clang::no_sanitize("bounds")]] uint256* bottom() noexcept
     {
-        return m_stack_space - 1;
+        return m_stack_space.get() - 1;
     }
-
-private:
-    /// The storage allocated for maximum possible number of items.
-    /// Items are aligned to 256 bits for better packing in cache lines.
-    alignas(sizeof(uint256)) uint256 m_stack_space[limit];
 };
 
 
