@@ -26,6 +26,12 @@ executors:
     resource_class: xlarge
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 8
+  linux-clang-2xlarge:
+    docker:
+      - image: ethereum/cpp-build-env:21-clang-17
+    resource_class: 2xlarge
+    environment:
+      CMAKE_BUILD_PARALLEL_LEVEL: 16
   linux-gcc-min:
     docker:
       - image: ethereum/cpp-build-env:17-gcc-11
@@ -522,11 +528,19 @@ jobs:
   clang-latest-sanitizers:
     executor: linux-clang-xlarge
     environment:
-      CMAKE_OPTIONS: -DBUILD_SHARED_LIBS=NO -DSANITIZE=address,undefined,shift-exponent,implicit-conversion,nullability -DCMAKE_CXX_CLANG_TIDY=clang-tidy
+      CMAKE_OPTIONS: -DBUILD_SHARED_LIBS=NO -DSANITIZE=address,undefined,shift-exponent,implicit-conversion,nullability
       UBSAN_OPTIONS: halt_on_error=1
     steps:
       - build
       - test
+
+  clang-tidy:
+    executor: linux-clang-2xlarge
+    environment:
+      CMAKE_OPTIONS: -DCMAKE_CXX_CLANG_TIDY=clang-tidy -DCMAKE_CXX_FLAGS=-g0
+      BUILD_TYPE: Debug
+    steps:
+      - build
 
   clang-latest-coverage:
     executor: linux-clang-latest
@@ -639,6 +653,7 @@ workflows:
   evmone:
     jobs:
       - lint
+      - clang-tidy
       - release-linux:
           filters:
             tags:
