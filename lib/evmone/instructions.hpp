@@ -608,18 +608,36 @@ inline Result returndatacopy(StackTop stack, int64_t gas_left, ExecutionState& s
     auto dst = static_cast<size_t>(mem_index);
     auto s = static_cast<size_t>(size);
 
-    if (state.return_data.size() < input_index)
-        return {EVMC_INVALID_MEMORY_ACCESS, gas_left};
-    auto src = static_cast<size_t>(input_index);
+    if (is_eof_container(state.original_code))
+    {
+        auto src = state.return_data.size() < input_index ? state.return_data.size() :
+                                                            static_cast<size_t>(input_index);
+        auto copy_size = std::min(s, state.return_data.size() - src);
 
-    if (src + s > state.return_data.size())
-        return {EVMC_INVALID_MEMORY_ACCESS, gas_left};
+        if (const auto cost = copy_cost(s); (gas_left -= cost) < 0)
+            return {EVMC_OUT_OF_GAS, gas_left};
 
-    if (const auto cost = copy_cost(s); (gas_left -= cost) < 0)
-        return {EVMC_OUT_OF_GAS, gas_left};
+        if (copy_size > 0)
+            std::memcpy(&state.memory[dst], &state.return_data[src], copy_size);
 
-    if (s > 0)
-        std::memcpy(&state.memory[dst], &state.return_data[src], s);
+        if (s - copy_size > 0)
+            std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
+    }
+    else
+    {
+        if (state.return_data.size() < input_index)
+            return {EVMC_INVALID_MEMORY_ACCESS, gas_left};
+        auto src = static_cast<size_t>(input_index);
+
+        if (src + s > state.return_data.size())
+            return {EVMC_INVALID_MEMORY_ACCESS, gas_left};
+
+        if (const auto cost = copy_cost(s); (gas_left -= cost) < 0)
+            return {EVMC_OUT_OF_GAS, gas_left};
+
+        if (s > 0)
+            std::memcpy(&state.memory[dst], &state.return_data[src], s);
+    }
 
     return {EVMC_SUCCESS, gas_left};
 }

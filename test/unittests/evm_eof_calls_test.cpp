@@ -577,27 +577,30 @@ TEST_P(evm, eof_returndatacopy_outofrange)
         return;
 
     rev = EVMC_PRAGUE;
-    const uint8_t call_output[2]{};
+    const uint8_t call_output[2]{0xab, 0xcd};
     host.call_result.output_data = std::data(call_output);
     host.call_result.output_size = std::size(call_output);
 
-    execute(safe_call_gas, eof_bytecode(extstaticcall(0) + returndatacopy(0, 0, 3) + OP_STOP, 4));
-    EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
-
-    execute(safe_call_gas, eof_bytecode(extstaticcall(0) + returndatacopy(0, 1, 2) + OP_STOP, 4));
-    EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
-
-    execute(safe_call_gas, eof_bytecode(extstaticcall(0) + returndatacopy(0, 2, 1) + OP_STOP, 4));
-    EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
-
-    execute(safe_call_gas, eof_bytecode(extstaticcall(0) + returndatacopy(0, 3, 0) + OP_STOP, 4));
-    EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
-
-    execute(safe_call_gas, eof_bytecode(extstaticcall(0) + returndatacopy(0, 1, 0) + OP_STOP, 4));
+    execute(safe_call_gas, eof_bytecode(extstaticcall(0) + returndatacopy(0, 0, 3) + ret(0, 3), 4));
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size), "0xabcd00"_hex);
 
-    execute(safe_call_gas, eof_bytecode(extstaticcall(0) + returndatacopy(0, 2, 0) + OP_STOP, 4));
+    execute(safe_call_gas, eof_bytecode(extstaticcall(0) + returndatacopy(0, 1, 2) + ret(0, 2), 4));
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size), "0xcd00"_hex);
+
+    execute(safe_call_gas, eof_bytecode(extstaticcall(0) + returndatacopy(0, 2, 1) + ret(0, 1), 4));
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size), "0x00"_hex);
+
+    execute(safe_call_gas, eof_bytecode(extstaticcall(0) + returndatacopy(0, 3, 1) + ret(0, 1), 4));
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size), "0x00"_hex);
+
+    execute(safe_call_gas,
+        eof_bytecode(extstaticcall(0) + returndatacopy(0, 3, 0) + ret(0, OP_MSIZE), 4));
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size), "0x"_hex);
 }
 
 TEST_P(evm, eof_returndatacopy_outofrange_highbits)
@@ -607,13 +610,19 @@ TEST_P(evm, eof_returndatacopy_outofrange_highbits)
         return;
 
     rev = EVMC_PRAGUE;
-    const uint8_t call_output[2]{};
+    const uint8_t call_output[2]{0xab, 0xcd};
     host.call_result.output_data = std::data(call_output);
     host.call_result.output_size = std::size(call_output);
 
-    // Covers an incorrect cast of RETURNDATACOPY arg to `size_t` ignoring the high bits.
     const auto highbits =
         0x1000000000000000000000000000000000000000000000000000000000000000_bytes32;
-    execute(safe_call_gas, eof_bytecode(extstaticcall(0) + returndatacopy(0, highbits, 0) + OP_STOP, 4));
-    EXPECT_EQ(result.status_code, EVMC_INVALID_MEMORY_ACCESS);
+    execute(safe_call_gas,
+        eof_bytecode(extstaticcall(0) + returndatacopy(0, highbits, 0) + ret(0, OP_MSIZE), 4));
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size), "0x"_hex);
+
+    execute(safe_call_gas,
+        eof_bytecode(extstaticcall(0) + returndatacopy(0, highbits, 1) + ret(0, 1), 4));
+    EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+    EXPECT_EQ(bytes_view(result.output_data, result.output_size), "0x00"_hex);
 }
