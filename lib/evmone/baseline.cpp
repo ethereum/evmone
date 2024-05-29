@@ -240,7 +240,7 @@ template <Opcode Op>
     Position pos, int64_t& gas, ExecutionState& state) noexcept
 {
     if (const auto status = check_requirements<Op>(cost_table, gas, pos.stack_top, stack_bottom);
-        status != EVMC_SUCCESS)
+        status != EVMC_SUCCESS) [[unlikely]]
     {
         state.status = status;
         return {nullptr, pos.stack_top};
