@@ -22,6 +22,14 @@
 #define ASM_COMMENT(COMMENT)
 #endif
 
+#if __has_builtin(__builtin_assume)
+#define ASSUME(EXPR) __builtin_assume(EXPR);
+#else
+#define ASSUME(EXPR) \
+    if (!(EXPR))     \
+        __builtin_unreachable();
+#endif
+
 namespace evmone::baseline
 {
 namespace
@@ -77,6 +85,7 @@ inline evmc_status_code check_requirements(const CostTable& cost_table, int64_t&
             return EVMC_STACK_UNDERFLOW;
     }
 
+    ASSUME(gas_left >= 0);
     if (INTX_UNLIKELY((gas_left -= gas_cost) < 0))
         return EVMC_OUT_OF_GAS;
 
