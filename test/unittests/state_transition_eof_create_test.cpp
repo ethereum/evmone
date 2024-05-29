@@ -22,6 +22,8 @@ TEST_F(state_transition, create_tx_with_eof_initcode)
     tx.data = init_container;
 
     expect.tx_error = EOF_CREATION_TRANSACTION;
+    skip_generate_copier = true;  // Retesteth does not support initcode txs
+                                  // yet.
 }
 
 TEST_F(state_transition, create_with_eof_initcode)
@@ -948,6 +950,7 @@ TEST_F(state_transition, txcreate_empty_auxdata)
     const auto create_address = compute_eofcreate_address(*tx.to, Salt, init_container);
     expect.post[create_address].code = deploy_container;
     expect.post[create_address].nonce = 1;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_extcall_returncontract)
@@ -981,6 +984,7 @@ TEST_F(state_transition, txcreate_extcall_returncontract)
     // Internal EXTCALL returned 2 (abort).
     expect.post[*tx.to].storage[0x01_bytes32] = 0x02_bytes32;
     expect.post[callee].exists = true;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_auxdata_equal_to_declared)
@@ -1015,6 +1019,7 @@ TEST_F(state_transition, txcreate_auxdata_equal_to_declared)
     const auto create_address = compute_eofcreate_address(*tx.to, Salt, init_container);
     expect.post[create_address].code = expected_container;
     expect.post[create_address].nonce = 1;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_auxdata_longer_than_declared)
@@ -1051,6 +1056,7 @@ TEST_F(state_transition, txcreate_auxdata_longer_than_declared)
     const auto create_address = compute_eofcreate_address(*tx.to, Salt, init_container);
     expect.post[create_address].code = expected_container;
     expect.post[create_address].nonce = 1;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_auxdata_shorter_than_declared)
@@ -1081,6 +1087,7 @@ TEST_F(state_transition, txcreate_auxdata_shorter_than_declared)
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
     expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_dataloadn_referring_to_auxdata)
@@ -1115,6 +1122,7 @@ TEST_F(state_transition, txcreate_dataloadn_referring_to_auxdata)
     expect.post[*tx.to].storage[0x01_bytes32] = 0x01_bytes32;
     expect.post[create_address].code = expected_container;
     expect.post[create_address].nonce = 1;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_revert_empty_returndata)
@@ -1139,6 +1147,7 @@ TEST_F(state_transition, txcreate_revert_empty_returndata)
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
     expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
     expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_revert_non_empty_returndata)
@@ -1163,6 +1172,7 @@ TEST_F(state_transition, txcreate_revert_non_empty_returndata)
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
     expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
     expect.post[*tx.to].storage[0x01_bytes32] = 0x01_bytes32;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_initcontainer_aborts)
@@ -1186,6 +1196,7 @@ TEST_F(state_transition, txcreate_initcontainer_aborts)
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
     expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_initcontainer_return)
@@ -1209,6 +1220,7 @@ TEST_F(state_transition, txcreate_initcontainer_return)
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
     expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_initcontainer_stop)
@@ -1232,6 +1244,7 @@ TEST_F(state_transition, txcreate_initcontainer_stop)
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
     expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_initcontainer_max_size)
@@ -1264,6 +1277,7 @@ TEST_F(state_transition, txcreate_initcontainer_max_size)
     const auto create_address = compute_eofcreate_address(*tx.to, Salt, init_container);
     expect.post[create_address].code = deploy_container;
     expect.post[create_address].nonce = 1;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_initcontainer_empty)
@@ -1289,6 +1303,7 @@ TEST_F(state_transition, txcreate_initcontainer_empty)
 
     expect.tx_error = INIT_CODE_EMPTY;
     expect.post[*tx.to].exists = true;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_no_initcontainer)
@@ -1305,6 +1320,7 @@ TEST_F(state_transition, txcreate_no_initcontainer)
 
     expect.tx_error = INIT_CODE_COUNT_ZERO;
     expect.post[*tx.to].exists = true;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_initcontainer_too_large)
@@ -1335,6 +1351,7 @@ TEST_F(state_transition, txcreate_initcontainer_too_large)
 
     expect.tx_error = INIT_CODE_SIZE_LIMIT_EXCEEDED;
     expect.post[*tx.to].exists = true;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_too_many_initcontainers)
@@ -1361,6 +1378,7 @@ TEST_F(state_transition, txcreate_too_many_initcontainers)
 
     expect.tx_error = INIT_CODE_COUNT_LIMIT_EXCEEDED;
     expect.post[*tx.to].exists = true;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, initcode_transaction_before_prague)
@@ -1378,6 +1396,8 @@ TEST_F(state_transition, initcode_transaction_before_prague)
     tx.to = To;
 
     expect.tx_error = TX_TYPE_NOT_SUPPORTED;
+    skip_generate_copier = true;  // Initcode txs not supported by retesteth
+                                  // yet.
 }
 
 TEST_F(state_transition, txcreate_deploy_container_max_size)
@@ -1414,6 +1434,7 @@ TEST_F(state_transition, txcreate_deploy_container_max_size)
     const auto create_address = compute_eofcreate_address(*tx.to, Salt, init_container);
     expect.post[*tx.to].storage[0x00_bytes32] = to_bytes32(create_address);
     expect.post[create_address].code = deploy_container;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_deploy_container_too_large)
@@ -1448,6 +1469,7 @@ TEST_F(state_transition, txcreate_deploy_container_too_large)
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
     expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_appended_data_size_larger_than_64K)
@@ -1488,6 +1510,7 @@ TEST_F(state_transition, txcreate_appended_data_size_larger_than_64K)
     expect.post[*tx.to].storage[0x01_bytes32] = to_bytes32(create_address);
     expect.post[create_address].code = deploy_container;
     expect.post[create_address].nonce = 1;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_deploy_container_with_aux_data_too_large)
@@ -1522,6 +1545,7 @@ TEST_F(state_transition, txcreate_deploy_container_with_aux_data_too_large)
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
     expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_nested_txcreate)
@@ -1564,6 +1588,7 @@ TEST_F(state_transition, txcreate_nested_txcreate)
     expect.post[create_address].storage[0x00_bytes32] = to_bytes32(create_address_nested);
     expect.post[create_address_nested].code = deploy_container_nested;
     expect.post[create_address_nested].nonce = 1;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_nested_txcreate_revert)
@@ -1594,6 +1619,7 @@ TEST_F(state_transition, txcreate_nested_txcreate_revert)
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
     expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_nested_eofcreate)
@@ -1634,6 +1660,7 @@ TEST_F(state_transition, txcreate_nested_eofcreate)
     expect.post[create_address].storage[0x00_bytes32] = to_bytes32(create_address_nested);
     expect.post[create_address_nested].code = deploy_container_nested;
     expect.post[create_address_nested].nonce = 1;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_called_balance_too_low)
@@ -1664,6 +1691,7 @@ TEST_F(state_transition, txcreate_called_balance_too_low)
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;
     expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
     expect.post[*tx.to].storage[0x01_bytes32] = 0x01_bytes32;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_clears_returndata)
@@ -1701,6 +1729,7 @@ TEST_F(state_transition, txcreate_clears_returndata)
     expect.post[create_address].code = deploy_container;
     expect.post[create_address].nonce = 1;
     expect.post[returning_address].nonce = 1;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_failure_after_txcreate_success)
@@ -1736,6 +1765,7 @@ TEST_F(state_transition, txcreate_failure_after_txcreate_success)
     expect.post[*tx.to].storage[0x03_bytes32] = 0x01_bytes32;
     expect.post[create_address].code = deploy_container;
     expect.post[create_address].nonce = 1;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_invalid_initcode)
@@ -1764,6 +1794,7 @@ TEST_F(state_transition, txcreate_invalid_initcode)
     expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
     expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;  // CREATE must fail
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_truncated_data_initcode)
@@ -1792,6 +1823,7 @@ TEST_F(state_transition, txcreate_truncated_data_initcode)
     expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
     expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;  // CREATE must fail
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_invalid_deploycode)
@@ -1818,6 +1850,7 @@ TEST_F(state_transition, txcreate_invalid_deploycode)
     expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
     expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;  // CREATE must fail
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_missing_initcontainer)
@@ -1843,6 +1876,7 @@ TEST_F(state_transition, txcreate_missing_initcontainer)
     expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
     expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;  // CREATE must fail
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_light_failure_stack)
@@ -1868,7 +1902,8 @@ TEST_F(state_transition, txcreate_light_failure_stack)
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
     expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;  // TXCREATE has pushed 0x0 on stack
     expect.post[*tx.to].storage[0x02_bytes32] =
-        0x0123_bytes32;  // TXCREATE fails but has cleared its args first
+        0x0123_bytes32;           // TXCREATE fails but has cleared its args first
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_missing_deploycontainer)
@@ -1893,6 +1928,7 @@ TEST_F(state_transition, txcreate_missing_deploycontainer)
     expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
     expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;  // CREATE must fail
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_deploy_code_with_dataloadn_invalid)
@@ -1924,6 +1960,7 @@ TEST_F(state_transition, txcreate_deploy_code_with_dataloadn_invalid)
     expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
     expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;  // CREATE must fail
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_call_created_contract)
@@ -1982,6 +2019,7 @@ TEST_F(state_transition, txcreate_call_created_contract)
     expect.post[*tx.to].storage[0x03_bytes32] = dynamic_aux_data_32;
     expect.post[*tx.to].storage[0x04_bytes32] = 0x01_bytes32;
     expect.post[create_address].nonce = 1;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 
@@ -2008,6 +2046,7 @@ TEST_F(state_transition, create_nested_in_txcreate)
     expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;
     expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, create2_nested_in_txcreate)
@@ -2034,6 +2073,7 @@ TEST_F(state_transition, create2_nested_in_txcreate)
     expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;
     expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_from_legacy_tx)
@@ -2052,6 +2092,7 @@ TEST_F(state_transition, txcreate_from_legacy_tx)
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
     expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;  // CREATE must fail
     expect.post[*tx.to].storage[0x01_bytes32] = 0x01_bytes32;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_from_1559_tx)
@@ -2070,6 +2111,7 @@ TEST_F(state_transition, txcreate_from_1559_tx)
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
     expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;  // CREATE must fail
     expect.post[*tx.to].storage[0x01_bytes32] = 0x01_bytes32;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }
 
 TEST_F(state_transition, txcreate_from_blob_tx)
@@ -2090,4 +2132,5 @@ TEST_F(state_transition, txcreate_from_blob_tx)
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
     expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;  // CREATE must fail
     expect.post[*tx.to].storage[0x01_bytes32] = 0x01_bytes32;
+    skip_generate_copier = true;  // Osaka tests currently not accepted by retesteth
 }

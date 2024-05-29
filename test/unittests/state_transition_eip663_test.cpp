@@ -19,7 +19,6 @@ TEST_F(state_transition, dupn)
         });
     expect.post[*tx.to].storage[0x00_bytes32] = 0x01_bytes32;
     expect.post[*tx.to].storage[0x01_bytes32] = 0x02_bytes32;
-    skip_generate_copier = true;
 }
 
 TEST_F(state_transition, swapn)
@@ -33,8 +32,6 @@ TEST_F(state_transition, swapn)
         });
     expect.post[*tx.to].storage[0x00_bytes32] = 0x01_bytes32;
     expect.post[*tx.to].storage[0x01_bytes32] = 0x02_bytes32;
-
-    skip_generate_copier = true;
 }
 
 TEST_F(state_transition, exchange)
@@ -49,6 +46,4 @@ TEST_F(state_transition, exchange)
     expect.post[*tx.to].storage[0x00_bytes32] = 0x03_bytes32;
     expect.post[*tx.to].storage[0x01_bytes32] = 0x01_bytes32;
     expect.post[*tx.to].storage[0x02_bytes32] = 0x02_bytes32;
-
-    skip_generate_copier = true;
 }

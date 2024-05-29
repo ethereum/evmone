@@ -16,8 +16,7 @@ TEST_F(state_transition, block_apply_withdrawal)
     tx.to = To;
     expect.post[withdrawal_address].balance = intx::uint256{3} * 1'000'000'000;
 
-    skip_generate_copier = true;  // Skip ethereum test generation because the withdrawals are not
-                                  // available in retesteth.
+    skip_generate_copier = true;  // withdrawals are not available in state tests.
 }
 
 TEST_F(state_transition, known_block_hash)
@@ -34,8 +33,7 @@ TEST_F(state_transition, known_block_hash)
     expect.post[To].storage[0x01_bytes32] =
         0x0000000000000000000000000000000000000000000000000000000000000111_bytes32;
 
-    skip_generate_copier = true;  // Skip generating test because the block hash is not available in
-                                  // retesteth.
+    skip_generate_copier = true;  // Block hash is not available in state tests.
 }
 
 TEST_F(state_transition, known_block_hash_fake)
@@ -48,8 +46,7 @@ TEST_F(state_transition, known_block_hash_fake)
     expect.post[To].storage[0x01_bytes32] =
         0xc89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6_bytes32;
 
-    skip_generate_copier = true;  // Skip generating test because evmone-t8n does not return the
-                                  // fake block hash
+    skip_generate_copier = true;  // Block hash is not available in state tests.
 }
 
 TEST_F(state_transition, block_apply_ommers_reward)
@@ -69,8 +66,7 @@ TEST_F(state_transition, block_apply_ommers_reward)
     // Two ommers +1/32 * block_reward for each. +21000 cost of the tx goes to coinbase.
     expect.post[Coinbase].balance = 21000 + intx::uint256{block_reward} + block_reward / 16;
 
-    skip_generate_copier = true;  // Skip ethereum test generation because the ommers are not
-                                  // available in ethereum state tests.
+    skip_generate_copier = true;  // ommers are not available in state tests.
 }
 
 TEST_F(state_transition, eip7516_blob_base_fee)
@@ -83,6 +79,6 @@ TEST_F(state_transition, eip7516_blob_base_fee)
 
     expect.post[To].storage[0x4a_bytes32] = 0xabcd_bytes32;
 
-    skip_generate_copier = true;  // Skip ethereum test generation because the blob base fee is not
-                                  // available in retesteth.
+    skip_generate_copier = true;  // blob base fee is not available in state
+                                  // tests.
 }

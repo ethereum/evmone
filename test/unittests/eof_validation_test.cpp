@@ -16,6 +16,7 @@ TEST_F(eof_validation, before_activation)
 {
     ASSERT_EQ(evmone::validate_eof(EVMC_CANCUN, bytes(eof_bytecode(OP_STOP))),
         EOFValidationError::eof_version_unknown);
+    skip_generate_copier = true;  // Avoid generating copier with no vectors
 }
 
 TEST_F(eof_validation, validate_empty_code)
@@ -1213,6 +1214,6 @@ TEST_F(eof_validation, max_nested_containers)
         nextcode = eof_bytecode(OP_INVALID).container(nextcode);
     }
     add_test_case(code, EOFValidationError::success);
-    skip_generate_copier = true; // Generated code is too large to be sent as
-                                 // argument by retesteth to internal tool
+    skip_generate_copier = true;  // Generated code is too large to be sent as
+                                  // argument by retesteth to internal tool
 }
