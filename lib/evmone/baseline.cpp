@@ -132,18 +132,18 @@ inline evmc_status_code check_requirements(const CostTable& cost_table, int64_t&
         static_assert(instr::traits[Op].stack_height_change == 1,
             "unexpected instruction with multiple results");
         if (INTX_UNLIKELY(stack_top == stack_bottom + StackSpace::limit))
-            return EVMC_STACK_OVERFLOW;
+            return EVMC_FAILURE;
     }
     if constexpr (instr::traits[Op].stack_height_required > 0)
     {
         // Check stack underflow using pointer comparison <= (better optimization).
         static constexpr auto min_offset = instr::traits[Op].stack_height_required - 1;
         if (INTX_UNLIKELY(stack_top <= stack_bottom + min_offset))
-            return EVMC_STACK_UNDERFLOW;
+            return EVMC_FAILURE;
     }
 
     if (INTX_UNLIKELY((gas_left -= gas_cost) < 0))
-        return EVMC_OUT_OF_GAS;
+        return EVMC_FAILURE;
 
     return EVMC_SUCCESS;
 }
@@ -350,7 +350,6 @@ TARGET_OP_UNDEFINED:
 
 EXIT:
     state.last_stack_top = position.stack_top;
-    state.last_pos = position.code_it;
     return gas;
 }
 #endif
@@ -379,6 +378,16 @@ evmc_result execute(
         else
 #endif
             gas = dispatch<false>(cost_table, state, gas, code.data());
+    }
+
+    if (state.status == EVMC_FAILURE)
+    {
+        if (gas < 0)
+            state.status = EVMC_OUT_OF_GAS;
+        else if (state.last_stack_top == state.stack_space.bottom() + StackSpace::limit)
+            state.status = EVMC_STACK_OVERFLOW;
+        else
+            state.status = EVMC_STACK_UNDERFLOW;
     }
 
     const auto gas_left = (state.status == EVMC_SUCCESS || state.status == EVMC_REVERT) ? gas : 0;
