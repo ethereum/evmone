@@ -330,9 +330,9 @@ int64_t dispatch_cgoto(
 #define ON_OPCODE(OPCODE)                                                                 \
     TARGET_##OPCODE : ASM_COMMENT(OPCODE);                                                \
     if (const auto next = invoke<OPCODE>(cost_table, stack_bottom, position, gas, state); \
-        next.code_it == nullptr)                                                          \
+        next.code_it == nullptr) [[unlikely]]                                             \
     {                                                                                     \
-        return gas;                                                                       \
+        goto EXIT;                                                                        \
     }                                                                                     \
     else                                                                                  \
     {                                                                                     \
@@ -347,6 +347,8 @@ int64_t dispatch_cgoto(
 
 TARGET_OP_UNDEFINED:
     state.status = EVMC_UNDEFINED_INSTRUCTION;
+
+EXIT:
     return gas;
 }
 #endif
