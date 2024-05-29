@@ -947,12 +947,43 @@ TEST_F(state_transition, creation_tx_deploy_data)
     expect.post[create_address].nonce = 1;
 }
 
-TEST_F(state_transition, creation_tx_auxdata_in_calldata)
+TEST_F(state_transition, creation_tx_static_auxdata_in_calldata)
 {
     rev = EVMC_PRAGUE;
     const auto deploy_data = "abcdef"_hex;
+    // aux_data will be appended as calldata to the creation tx input, and later appended to the
+    // deployed contract's data section on RETURNCONTRACT.
     const auto aux_data = "aabbccddeeff"_hex;
     const auto deploy_data_size = static_cast<uint16_t>(deploy_data.size());
+    const auto aux_data_size = static_cast<uint16_t>(aux_data.size());
+
+    // aux_data_size included in the declared data section size - static data.
+    const auto deploy_container =
+        eof_bytecode(bytecode(OP_INVALID)).data(deploy_data, deploy_data_size + aux_data_size);
+
+    const auto init_code =
+        calldatacopy(0, 0, OP_CALLDATASIZE) + returncontract(0, 0, OP_CALLDATASIZE);
+    const bytecode init_container = eof_bytecode(init_code, 3).container(deploy_container);
+
+    tx.data = init_container + bytecode(aux_data);
+    const auto expected_container = eof_bytecode(bytecode(OP_INVALID)).data(deploy_data + aux_data);
+
+    expect.post[Sender].nonce = pre.get(Sender).nonce + 1;
+    const auto create_address = compute_create_address(Sender, pre.get(Sender).nonce);
+    expect.post[create_address].code = expected_container;
+    expect.post[create_address].nonce = 1;
+}
+
+TEST_F(state_transition, creation_tx_dynamic_auxdata_in_calldata)
+{
+    rev = EVMC_PRAGUE;
+    const auto deploy_data = "abcdef"_hex;
+    // aux_data will be appended as calldata to the creation tx input, and later appended the
+    // deployed contract's data section on RETURNCONTRACT.
+    const auto aux_data = "aabbccddeeff"_hex;
+    const auto deploy_data_size = static_cast<uint16_t>(deploy_data.size());
+
+    // aux_data_size not included in the declared data section size - dynamic data.
     const auto deploy_container =
         eof_bytecode(bytecode(OP_INVALID)).data(deploy_data, deploy_data_size);
 

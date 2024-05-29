@@ -71,11 +71,21 @@ evmc_message build_message(
     const auto is_legacy_eof_create =
         rev >= EVMC_PRAGUE && !tx.to.has_value() && is_eof_container(tx.data);
 
-    return {is_legacy_eof_create ? EVMC_EOFCREATE :
-            tx.to.has_value()    ? EVMC_CALL :
-                                   EVMC_CREATE,
-        0, 0, execution_gas_limit, recipient, tx.sender, tx.data.data(), tx.data.size(),
-        intx::be::store<evmc::uint256be>(tx.value), {}, recipient, nullptr, 0};
+    return {.kind = is_legacy_eof_create ? EVMC_EOFCREATE :
+                    tx.to.has_value()    ? EVMC_CALL :
+                                           EVMC_CREATE,
+        .flags = 0,
+        .depth = 0,
+        .gas = execution_gas_limit,
+        .recipient = recipient,
+        .sender = tx.sender,
+        .input_data = tx.data.data(),
+        .input_size = tx.data.size(),
+        .value = intx::be::store<evmc::uint256be>(tx.value),
+        .create2_salt = {},
+        .code_address = recipient,
+        .code = nullptr,
+        .code_size = 0};
 }
 }  // namespace
 

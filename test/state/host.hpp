@@ -126,7 +126,7 @@ private:
     /// which may finally be moved to EVM.
     /// Any state modification is not reverted.
     /// @return Modified message or std::nullopt in case of EVM exception.
-    std::optional<evmc_message> prepare_message(evmc_message msg);
+    std::optional<evmc_message> prepare_message(evmc_message msg) noexcept;
 
     evmc::Result execute_message(const evmc_message& msg) noexcept;
 };

@@ -213,7 +213,7 @@ address compute_eofcreate_address(
     return new_addr;
 }
 
-std::optional<evmc_message> Host::prepare_message(evmc_message msg)
+std::optional<evmc_message> Host::prepare_message(evmc_message msg) noexcept
 {
     if (msg.depth == 0 || msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2 ||
         msg.kind == EVMC_EOFCREATE)
@@ -251,19 +251,18 @@ std::optional<evmc_message> Host::prepare_message(evmc_message msg)
                 {
                     // Assert this is a legacy EOF creation tx.
                     assert(is_eof_container(input));
-
                     const auto header_or_error = validate_header(m_rev, input);
-                    if (holds_alternative<EOFValidationError>(header_or_error))
+
+                    const auto* header = std::get_if<EOF1Header>(&header_or_error);
+                    if (header == nullptr)
                         return {};  // Light early exception.
 
-                    const auto header = std::get<EOF1Header>(header_or_error);
-
-                    if (!header.can_init(msg.input_size))
+                    if (!header->can_init(msg.input_size))
                         return {};  // Light early exception.
 
                     const auto container_size =
-                        static_cast<size_t>(header.data_offset + header.data_size);
-                    // Follows from the header.can_init condition above.
+                        static_cast<size_t>(header->data_offset + header->data_size);
+                    // Follows from the header->can_init condition above.
                     assert(container_size <= msg.input_size);
 
                     msg.code = msg.input_data;
