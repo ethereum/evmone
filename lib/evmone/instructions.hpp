@@ -27,9 +27,9 @@ inline constexpr bool subtract_gas_cost(int64_t& gas_left, int64_t gas_cost) noe
     uint64_t d = 0;
     const auto o = __builtin_usubl_overflow(
         static_cast<uint64_t>(gas_left), static_cast<uint64_t>(gas_cost), &d);
+    gas_left = static_cast<int64_t>(d);
     if (INTX_UNLIKELY(o))
         return false;
-    gas_left = static_cast<int64_t>(d);
     return true;
 #else
     const auto d = gas_left - gas_cost;
