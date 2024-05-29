@@ -251,8 +251,15 @@ template <Opcode Op>
 }
 
 
+struct DispatchResult
+{
+    int64_t gas_left;
+    uint256* stack_top;
+};
+
+
 template <bool TracingEnabled>
-int64_t dispatch(const CostTable& cost_table, ExecutionState& state, int64_t gas,
+DispatchResult dispatch(const CostTable& cost_table, ExecutionState& state, int64_t gas,
     const uint8_t* code, Tracer* tracer = nullptr) noexcept
 {
     const auto stack_bottom = state.stack_space.bottom();
@@ -282,7 +289,7 @@ int64_t dispatch(const CostTable& cost_table, ExecutionState& state, int64_t gas
         if (const auto next = invoke<OPCODE>(cost_table, stack_bottom, position, gas, state); \
             next.code_it == nullptr)                                                          \
         {                                                                                     \
-            return gas;                                                                       \
+            return {gas, position.stack_top};                                                 \
         }                                                                                     \
         else                                                                                  \
         {                                                                                     \
@@ -297,14 +304,14 @@ int64_t dispatch(const CostTable& cost_table, ExecutionState& state, int64_t gas
 
         default:
             state.status = EVMC_UNDEFINED_INSTRUCTION;
-            return gas;
+            return {gas, position.stack_top};
         }
     }
     intx::unreachable();
 }
 
 #if EVMONE_CGOTO_SUPPORTED
-int64_t dispatch_cgoto(
+DispatchResult dispatch_cgoto(
     const CostTable& cost_table, ExecutionState& state, int64_t gas, const uint8_t* code) noexcept
 {
 #pragma GCC diagnostic ignored "-Wpedantic"
@@ -349,8 +356,7 @@ TARGET_OP_UNDEFINED:
     state.status = EVMC_UNDEFINED_INSTRUCTION;
 
 EXIT:
-    state.last_stack_top = position.stack_top;
-    return gas;
+    return {gas, position.stack_top};
 }
 #endif
 }  // namespace
@@ -365,32 +371,34 @@ evmc_result execute(
     const auto& cost_table = get_baseline_cost_table(state.rev, analysis.eof_header.version);
 
     auto* tracer = vm.get_tracer();
+    DispatchResult r;
     if (INTX_UNLIKELY(tracer != nullptr))
     {
         tracer->notify_execution_start(state.rev, *state.msg, analysis.executable_code);
-        gas = dispatch<true>(cost_table, state, gas, code.data(), tracer);
+        r = dispatch<true>(cost_table, state, gas, code.data(), tracer);
     }
     else
     {
 #if EVMONE_CGOTO_SUPPORTED
         if (vm.cgoto)
-            gas = dispatch_cgoto(cost_table, state, gas, code.data());
+            r = dispatch_cgoto(cost_table, state, gas, code.data());
         else
 #endif
-            gas = dispatch<false>(cost_table, state, gas, code.data());
+            r = dispatch<false>(cost_table, state, gas, code.data());
     }
 
     if (state.status == EVMC_FAILURE)
     {
-        if (gas < 0)
+        if (r.gas_left < 0)
             state.status = EVMC_OUT_OF_GAS;
-        else if (state.last_stack_top == state.stack_space.bottom() + StackSpace::limit)
+        else if (r.stack_top == state.stack_space.bottom() + StackSpace::limit)
             state.status = EVMC_STACK_OVERFLOW;
         else
             state.status = EVMC_STACK_UNDERFLOW;
     }
 
-    const auto gas_left = (state.status == EVMC_SUCCESS || state.status == EVMC_REVERT) ? gas : 0;
+    const auto gas_left =
+        (state.status == EVMC_SUCCESS || state.status == EVMC_REVERT) ? r.gas_left : 0;
     const auto gas_refund = (state.status == EVMC_SUCCESS) ? state.gas_refund : 0;
 
     assert(state.output_size != 0 || state.output_offset == 0);
