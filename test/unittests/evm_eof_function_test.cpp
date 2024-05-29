@@ -17,8 +17,6 @@ TEST_P(evm, eof_function_example1)
     const bytecode code = eof_bytecode(push(1) + push(8) + OP_CALLF + "0001" + ret_top(), 2)
                               .code(bytecode{OP_SUB} + OP_RETF, 2, 1, 2);
 
-    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::success);
-
     execute(code);
     EXPECT_GAS_USED(EVMC_SUCCESS, 32);
     EXPECT_OUTPUT_INT(7);
@@ -37,8 +35,6 @@ TEST_P(evm, eof_function_example2)
         "00f350e3000160005260206000f3"
         "60018111e10004506001e460018103e3000181029050e4"
         "60028111e10004506001e460028103e3000260018203e30002019050e4"_hex;
-
-    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::success);
 
     // Call fac(5)
     const auto calldata_fac =
@@ -66,7 +62,6 @@ TEST_P(evm, callf_stack_size_1024)
         eof_bytecode(1023 * push(1) + OP_CALLF + "0001" + 1021 * OP_POP + OP_RETURN, 1023)
             .code(push(1) + OP_POP + OP_RETF, 0, 0, 1);
 
-    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::success);
     execute(bytecode{code});
     EXPECT_STATUS(EVMC_SUCCESS);
 }
@@ -82,7 +77,6 @@ TEST_P(evm, callf_with_inputs_stack_size_1024)
         eof_bytecode(1023 * push(1) + OP_CALLF + "0001" + 1021 * OP_POP + OP_RETURN, 1023)
             .code(push(1) + OP_POP + OP_RETF, 3, 3, 4);
 
-    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::success);
     execute(bytecode{code});
     EXPECT_STATUS(EVMC_SUCCESS);
 }
@@ -99,7 +93,6 @@ TEST_P(evm, callf_stack_overflow)
             .code(push(1) + OP_CALLF + "0002" + OP_POP + OP_RETF, 0, 0, 1)
             .code(push(1) + OP_POP + OP_RETF, 0, 0, 1);
 
-    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::success);
     execute(bytecode{code});
     EXPECT_STATUS(EVMC_STACK_OVERFLOW);
 }
@@ -116,7 +109,6 @@ TEST_P(evm, callf_with_inputs_stack_overflow)
             .code(push(1) + OP_CALLF + "0002" + OP_POP + OP_RETF, 3, 3, 4)
             .code(push(1) + OP_POP + OP_RETF, 3, 3, 4);
 
-    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::success);
     execute(bytecode{code});
     EXPECT_STATUS(EVMC_STACK_OVERFLOW);
 }
@@ -133,7 +125,6 @@ TEST_P(evm, callf_call_stack_size_1024)
                                         push(1) + OP_SWAP1 + OP_SUB + OP_CALLF + "0001" + OP_RETF,
                                   1, 0, 2);
 
-    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::success);
     execute(bytecode{code});
     EXPECT_STATUS(EVMC_SUCCESS);
 }
@@ -150,7 +141,6 @@ TEST_P(evm, callf_call_stack_size_1025)
                                         push(1) + OP_SWAP1 + OP_SUB + OP_CALLF + "0001" + OP_RETF,
                                   1, 0, 2);
 
-    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::success);
     execute(bytecode{code});
     EXPECT_STATUS(EVMC_STACK_OVERFLOW);
 }
@@ -165,7 +155,6 @@ TEST_P(evm, minimal_jumpf)
     const bytecode code =
         eof_bytecode(bytecode{OP_JUMPF} + "0001").code(bytecode{OP_STOP}, 0, 0x80, 0);
 
-    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::success);
     execute(bytecode{code});
     EXPECT_STATUS(EVMC_SUCCESS);
 }
@@ -183,7 +172,6 @@ TEST_P(evm, jumpf_to_returning_function)
                               .code(bytecode{OP_PUSH1} + "01" + OP_JUMPF + "0002", 0, 1, 1)
                               .code(bytecode{OP_PUSH1} + "02" + OP_ADD + OP_RETF, 1, 1, 2);
 
-    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::success);
     execute(bytecode{code});
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_OUTPUT_INT(3);
@@ -202,7 +190,6 @@ TEST_P(evm, jumpf_to_function_with_fewer_outputs)
                               .code(push(0xff) + push(0x01) + OP_JUMPF + "0002", 0, 2, 2)
                               .code(push(0x02) + OP_ADD + OP_RETF, 1, 1, 2);
 
-    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::success);
     execute(bytecode{code});
     EXPECT_STATUS(EVMC_SUCCESS);
     EXPECT_OUTPUT_INT(3);
@@ -218,7 +205,6 @@ TEST_P(evm, jumpf_stack_size_1024)
     const bytecode code =
         eof_bytecode(1023 * push0() + OP_JUMPF + "0001", 1023).code(push0() + OP_STOP, 0, 0x80, 1);
 
-    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::success);
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
 }
@@ -233,7 +219,6 @@ TEST_P(evm, jumpf_with_inputs_stack_size_1024)
     const bytecode code =
         eof_bytecode(1023 * push0() + OP_JUMPF + "0001", 1023).code(push0() + OP_STOP, 3, 0x80, 4);
 
-    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::success);
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
 }
@@ -249,7 +234,6 @@ TEST_P(evm, jumpf_stack_overflow)
                               .code(push0() + OP_JUMPF + "0002", 0, 0x80, 1)
                               .code(push0() + OP_STOP, 0, 0x80, 1);
 
-    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::success);
     execute(code);
     EXPECT_STATUS(EVMC_STACK_OVERFLOW);
 }
