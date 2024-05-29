@@ -125,6 +125,8 @@ inline evmc_status_code check_requirements(const CostTable& cost_table, int64_t&
             return EVMC_UNDEFINED_INSTRUCTION;
     }
 
+    bool so = false;
+
     // Check stack requirements first. This is order is not required,
     // but it is nicer because complete gas check may need to inspect operands.
     if constexpr (instr::traits[Op].stack_height_change > 0)
@@ -132,17 +134,19 @@ inline evmc_status_code check_requirements(const CostTable& cost_table, int64_t&
         static_assert(instr::traits[Op].stack_height_change == 1,
             "unexpected instruction with multiple results");
         if (INTX_UNLIKELY(stack_top == stack_bottom + StackSpace::limit))
-            return EVMC_STACK_OVERFLOW;
+            so = true;
     }
     if constexpr (instr::traits[Op].stack_height_required > 0)
     {
         // Check stack underflow using pointer comparison <= (better optimization).
         static constexpr auto min_offset = instr::traits[Op].stack_height_required - 1;
         if (INTX_UNLIKELY(stack_top <= stack_bottom + min_offset))
-            return EVMC_STACK_UNDERFLOW;
+            so = true;
     }
-
     if (INTX_UNLIKELY((gas_left -= gas_cost) < 0))
+        so = true;
+
+    if (INTX_UNLIKELY(so))
         return EVMC_OUT_OF_GAS;
 
     return EVMC_SUCCESS;
@@ -242,7 +246,16 @@ template <Opcode Op>
     if (const auto status = check_requirements<Op>(cost_table, gas, pos.stack_top, stack_bottom);
         status != EVMC_SUCCESS) [[unlikely]]
     {
-        state.status = status;
+        if (status == EVMC_OUT_OF_GAS && gas >= 0)
+        {
+            if (pos.stack_top != stack_bottom + StackSpace::limit)
+                state.status = EVMC_STACK_UNDERFLOW;
+            else
+                state.status = EVMC_STACK_OVERFLOW;
+        }
+        else
+            state.status = status;
+
         return {nullptr, pos.stack_top};
     }
     const auto new_pos = invoke(instr::core::impl<Op>, pos, gas, state);
