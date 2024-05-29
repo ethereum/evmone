@@ -170,6 +170,9 @@ public:
     evmc_status_code status = EVMC_SUCCESS;
     size_t output_offset = 0;
     size_t output_size = 0;
+    uint256* last_stack_top = nullptr;
+    const uint8_t* last_pos = nullptr;
+
 
     /// Container to be deployed returned from RETURNCONTRACT, used only inside EOFCREATE execution.
     std::optional<bytes> deploy_container;

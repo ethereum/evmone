@@ -349,6 +349,8 @@ TARGET_OP_UNDEFINED:
     state.status = EVMC_UNDEFINED_INSTRUCTION;
 
 EXIT:
+    state.last_stack_top = position.stack_top;
+    state.last_pos = position.code_it;
     return gas;
 }
 #endif
