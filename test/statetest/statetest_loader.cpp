@@ -89,8 +89,15 @@ template <>
 hash256 from_json<hash256>(const json::json& j)
 {
     const auto s = j.get<std::string>();
-    if (s == "0" || s == "0x0")  // Special case to handle "0". Required by exec-spec-tests.
-        return 0x00_bytes32;     // TODO: Get rid of it.
+    if (s.size() < 66)  // Special case to handle non-zero padded values
+    {
+        const auto s_ = s.substr(0, 2) == "0x" ? s : "0x" + s;
+        const auto opt_hash =
+            evmc::from_hex<hash256>("0x" + std::string(64 - s_.size(), '0') + s_.substr(2));
+        if (!opt_hash)
+            throw std::invalid_argument("invalid hash: " + s);
+        return *opt_hash;
+    }
 
     const auto opt_hash = evmc::from_hex<hash256>(s);
     if (!opt_hash)

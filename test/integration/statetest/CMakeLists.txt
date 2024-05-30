@@ -153,7 +153,7 @@ set_tests_properties(
 add_test(
     NAME ${PREFIX}/execute_exported_tests
     # TODO: Broken exported tests are filtered out.
-    COMMAND evmone-statetest ${EXPORT_DIR}/state_transition --gtest_filter=-*block.*
+    COMMAND evmone-statetest ${EXPORT_DIR}/state_transition --gtest_filter=-*call.*
 )
 set_tests_properties(
     ${PREFIX}/execute_exported_tests PROPERTIES
