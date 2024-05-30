@@ -104,7 +104,7 @@ void eof_validation::TearDown()
             << hex(test_case.container);
     }
 
-    if (!export_file_path.empty())
+    if (!export_file_path.empty() && !skip_generate_copier)
         export_eof_validation_test();
 }
 

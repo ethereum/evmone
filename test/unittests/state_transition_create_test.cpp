@@ -31,7 +31,7 @@ TEST_F(state_transition, create_tx_empty)
         .nonce = 1, .code = bytes{}};
 
     // Example of checking the expected the post state MPT root hash.
-    expect.state_hash = 0x8ae438f7a4a14dbc25410dfaa12e95e7b36f311ab904b4358c3b544e06df4c50_bytes32;
+    expect.state_hash = 0x9a3992c3bb10aeb28a760e041f42fc3bb76d9bb585be8efc9f29561eec327161_bytes32;
 }
 
 TEST_F(state_transition, create_tx)
@@ -44,7 +44,7 @@ TEST_F(state_transition, create_tx)
 
 TEST_F(state_transition, create_tx_failure)
 {
-    static constexpr auto create_address = 0x3442a1dec1e72f337007125aa67221498cdd759d_address;
+    static constexpr auto create_address = 0xeC0e71Ad0a90FFe1909d27DAc207F7680AbbA42D_address;
 
     tx.data = bytecode{} + OP_INVALID;
 
@@ -168,7 +168,7 @@ TEST_F(state_transition, code_deployment_out_of_gas_refund_f)
 
 TEST_F(state_transition, create_tx_collision)
 {
-    static constexpr auto CREATED = 0x3442a1dec1e72f337007125aa67221498cdd759d_address;
+    static constexpr auto CREATED = 0xeC0e71Ad0a90FFe1909d27DAc207F7680AbbA42D_address;
 
     pre.insert(CREATED, {.nonce = 2});
 
