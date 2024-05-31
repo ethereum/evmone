@@ -55,7 +55,7 @@ int64_t compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& tx) noex
     static constexpr auto call_tx_cost = 21000;
     static constexpr auto create_tx_cost = 53000;
     static constexpr auto initcode_word_cost = 2;
-    const auto is_create = !tx.to.has_value();
+    const auto is_create = !tx.to.has_value();  // Covers also EOF creation txs.
     const auto initcode_cost =
         is_create && rev >= EVMC_SHANGHAI ? initcode_word_cost * num_words(tx.data.size()) : 0;
     const auto tx_cost = is_create && rev >= EVMC_HOMESTEAD ? create_tx_cost : call_tx_cost;
@@ -63,12 +63,29 @@ int64_t compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& tx) noex
            compute_initcode_list_cost(rev, tx.initcodes) + initcode_cost;
 }
 
-evmc_message build_message(const Transaction& tx, int64_t execution_gas_limit) noexcept
+evmc_message build_message(
+    const Transaction& tx, int64_t execution_gas_limit, evmc_revision rev) noexcept
 {
     const auto recipient = tx.to.has_value() ? *tx.to : evmc::address{};
-    return {tx.to.has_value() ? EVMC_CALL : EVMC_CREATE, 0, 0, execution_gas_limit, recipient,
-        tx.sender, tx.data.data(), tx.data.size(), intx::be::store<evmc::uint256be>(tx.value), {},
-        recipient, nullptr, 0};
+
+    const auto is_legacy_eof_create =
+        rev >= EVMC_PRAGUE && !tx.to.has_value() && is_eof_container(tx.data);
+
+    return {.kind = is_legacy_eof_create ? EVMC_EOFCREATE :
+                    tx.to.has_value()    ? EVMC_CALL :
+                                           EVMC_CREATE,
+        .flags = 0,
+        .depth = 0,
+        .gas = execution_gas_limit,
+        .recipient = recipient,
+        .sender = tx.sender,
+        .input_data = tx.data.data(),
+        .input_size = tx.data.size(),
+        .value = intx::be::store<evmc::uint256be>(tx.value),
+        .create2_salt = {},
+        .code_address = recipient,
+        .code = nullptr,
+        .code_size = 0};
 }
 }  // namespace
 
@@ -326,9 +343,6 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
     if (rev >= EVMC_SHANGHAI && !tx.to.has_value() && tx.data.size() > max_initcode_size)
         return make_error_code(INIT_CODE_SIZE_LIMIT_EXCEEDED);
 
-    if (rev >= EVMC_PRAGUE && !tx.to.has_value() && is_eof_container(tx.data))
-        return make_error_code(EOF_CREATION_TRANSACTION);
-
     // Compute and check if sender has enough balance for the theoretical maximum transaction cost.
     // Note this is different from tx_max_cost computed with effective gas price later.
     // The computation cannot overflow if done with 512-bit precision.
@@ -485,7 +499,7 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
     if (rev >= EVMC_SHANGHAI)
         host.access_account(block.coinbase);
 
-    const auto result = host.call(build_message(tx, execution_gas_limit));
+    const auto result = host.call(build_message(tx, execution_gas_limit, rev));
 
     auto gas_used = tx.gas_limit - result.gas_left;
 
@@ -652,8 +666,6 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
         return "TR_BLOBVERSION_INVALID";
     case BLOB_GAS_LIMIT_EXCEEDED:
         return "TR_BLOBLIST_OVERSIZE";
-    case EOF_CREATION_TRANSACTION:
-        return "TR_EOFCreationTransaction";
     case UNKNOWN_ERROR:
         return "Unknown error";
     default:

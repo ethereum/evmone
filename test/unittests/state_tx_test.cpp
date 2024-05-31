@@ -166,7 +166,7 @@ TEST(state_tx, validate_data)
         .base_fee = 0x0a,
         .withdrawals = {}};
     const Account acc{.nonce = 1, .balance = 0xe8d4a51000};
-    Transaction tx{
+    const Transaction tx{
         .data = "EF00 01 010004 0200010001 030004 00 00000000 00 AABBCCDD"_hex,
         .gas_limit = 60000,
         .max_gas_price = bi.base_fee,
@@ -183,14 +183,6 @@ TEST(state_tx, validate_data)
 
     ASSERT_FALSE(holds_alternative<std::error_code>(
         validate_transaction(acc, bi, tx, EVMC_CANCUN, 60000, BlockInfo::MAX_BLOB_GAS_PER_BLOCK)));
-
-    EXPECT_EQ(std::get<std::error_code>(validate_transaction(acc, bi, tx, EVMC_PRAGUE, 60000,
-                                            BlockInfo::MAX_BLOB_GAS_PER_BLOCK))
-                  .message(),
-        "EOF initcode in creation transaction");
-
-    tx.data = "00"_hex;
-
     ASSERT_FALSE(holds_alternative<std::error_code>(
         validate_transaction(acc, bi, tx, EVMC_PRAGUE, 60000, BlockInfo::MAX_BLOB_GAS_PER_BLOCK)));
 }

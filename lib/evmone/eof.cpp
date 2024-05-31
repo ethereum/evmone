@@ -18,7 +18,6 @@
 #include <span>
 #include <stack>
 #include <unordered_set>
-#include <variant>
 #include <vector>
 
 namespace evmone
@@ -203,12 +202,9 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
         std::accumulate(section_headers[CONTAINER_SECTION].begin(),
             section_headers[CONTAINER_SECTION].end(), 0);
     const auto remaining_container_size = container_end - it;
-    // Only data section may be truncated, so remaining_container size must be in
-    // [declared_size_without_data, declared_size_without_data + declared_data_size]
+    // Only data section may be truncated, so remaining_container size must be at least
+    // declared_size_without_data
     if (remaining_container_size < section_bodies_without_data)
-        return EOFValidationError::invalid_section_bodies_size;
-    if (remaining_container_size >
-        section_bodies_without_data + section_headers[DATA_SECTION].front())
         return EOFValidationError::invalid_section_bodies_size;
 
     if (section_headers[TYPE_SECTION][0] != section_headers[CODE_SECTION].size() * 4)
@@ -248,68 +244,6 @@ std::variant<std::vector<EOFCodeType>, EOFValidationError> validate_types(
     }
 
     return types;
-}
-
-std::variant<EOF1Header, EOFValidationError> validate_header(
-    evmc_revision rev, bytes_view container) noexcept
-{
-    if (!is_eof_container(container))
-        return EOFValidationError::invalid_prefix;
-
-    const auto version = get_eof_version(container);
-    if (version != 1)
-        return EOFValidationError::eof_version_unknown;
-
-    if (rev < EVMC_PRAGUE)
-        return EOFValidationError::eof_version_unknown;
-
-    const auto section_headers_or_error = validate_section_headers(container);
-    if (const auto* error = std::get_if<EOFValidationError>(&section_headers_or_error))
-        return *error;
-
-    const auto& section_headers = std::get<EOFSectionHeaders>(section_headers_or_error);
-    const auto& code_sizes = section_headers[CODE_SECTION];
-    const auto data_size = section_headers[DATA_SECTION][0];
-
-    const auto header_size = eof_header_size(section_headers);
-
-    const auto types_or_error =
-        validate_types(container, header_size, section_headers[TYPE_SECTION].front());
-    if (const auto* error = std::get_if<EOFValidationError>(&types_or_error))
-        return *error;
-    const auto& types = std::get<std::vector<EOFCodeType>>(types_or_error);
-
-    std::vector<uint16_t> code_offsets;
-    const auto type_section_size = section_headers[TYPE_SECTION][0];
-    auto offset = header_size + type_section_size;
-    for (const auto code_size : code_sizes)
-    {
-        assert(offset <= std::numeric_limits<uint16_t>::max());
-        code_offsets.emplace_back(static_cast<uint16_t>(offset));
-        offset += code_size;
-    }
-
-    const auto& container_sizes = section_headers[CONTAINER_SECTION];
-    std::vector<uint16_t> container_offsets;
-    for (const auto container_size : container_sizes)
-    {
-        container_offsets.emplace_back(static_cast<uint16_t>(offset));
-        offset += container_size;
-    }
-    // NOTE: assertion always satisfied only as long as initcode limits apply (48K).
-    assert(offset <= std::numeric_limits<uint16_t>::max());
-    const auto data_offset = static_cast<uint16_t>(offset);
-
-    return EOF1Header{
-        .version = container[2],
-        .code_sizes = code_sizes,
-        .code_offsets = code_offsets,
-        .data_size = data_size,
-        .data_offset = data_offset,
-        .container_sizes = container_sizes,
-        .container_offsets = container_offsets,
-        .types = types,
-    };
 }
 
 /// Result of validating instructions in a code section.
@@ -662,6 +596,9 @@ EOFValidationError validate_eof1(evmc_revision rev, bytes_view main_container) n
 
         auto& header = std::get<EOF1Header>(error_or_header);
 
+        if (container.size() > static_cast<size_t>(header.data_offset) + header.data_size)
+            return EOFValidationError::invalid_section_bodies_size;
+
         // Validate code sections
         std::vector<bool> visited_code_sections(header.code_sizes.size());
         std::queue<uint16_t> code_sections_queue({0});
@@ -753,6 +690,68 @@ bool is_eof_container(bytes_view container) noexcept
     return container.size() > 1 && container[0] == MAGIC[0] && container[1] == MAGIC[1];
 }
 
+std::variant<EOF1Header, EOFValidationError> validate_header(
+    evmc_revision rev, bytes_view container) noexcept
+{
+    if (!is_eof_container(container))
+        return EOFValidationError::invalid_prefix;
+
+    const auto version = get_eof_version(container);
+    if (version != 1)
+        return EOFValidationError::eof_version_unknown;
+
+    if (rev < EVMC_PRAGUE)
+        return EOFValidationError::eof_version_unknown;
+
+    const auto section_headers_or_error = validate_section_headers(container);
+    if (const auto* error = std::get_if<EOFValidationError>(&section_headers_or_error))
+        return *error;
+
+    const auto& section_headers = std::get<EOFSectionHeaders>(section_headers_or_error);
+    const auto& code_sizes = section_headers[CODE_SECTION];
+    const auto data_size = section_headers[DATA_SECTION][0];
+
+    const auto header_size = eof_header_size(section_headers);
+
+    const auto types_or_error =
+        validate_types(container, header_size, section_headers[TYPE_SECTION].front());
+    if (const auto* error = std::get_if<EOFValidationError>(&types_or_error))
+        return *error;
+    const auto& types = std::get<std::vector<EOFCodeType>>(types_or_error);
+
+    std::vector<uint16_t> code_offsets;
+    const auto type_section_size = section_headers[TYPE_SECTION][0];
+    auto offset = header_size + type_section_size;
+    for (const auto code_size : code_sizes)
+    {
+        assert(offset <= std::numeric_limits<uint16_t>::max());
+        code_offsets.emplace_back(static_cast<uint16_t>(offset));
+        offset += code_size;
+    }
+
+    const auto& container_sizes = section_headers[CONTAINER_SECTION];
+    std::vector<uint16_t> container_offsets;
+    for (const auto container_size : container_sizes)
+    {
+        container_offsets.emplace_back(static_cast<uint16_t>(offset));
+        offset += container_size;
+    }
+    // NOTE: assertion always satisfied only as long as initcode limits apply (48K).
+    assert(offset <= std::numeric_limits<uint16_t>::max());
+    const auto data_offset = static_cast<uint16_t>(offset);
+
+    return EOF1Header{
+        .version = container[2],
+        .code_sizes = code_sizes,
+        .code_offsets = code_offsets,
+        .data_size = data_size,
+        .data_offset = data_offset,
+        .container_sizes = container_sizes,
+        .container_offsets = container_offsets,
+        .types = types,
+    };
+}
+
 /// This function expects the prefix and version to be valid, as it ignores it.
 EOF1Header read_valid_eof1_header(bytes_view container)
 {
@@ -819,6 +818,9 @@ EOF1Header read_valid_eof1_header(bytes_view container)
 bool append_data_section(bytes& container, bytes_view aux_data)
 {
     const auto header = read_valid_eof1_header(container);
+
+    // Assert we don't need to trim off the bytes beyond the declared data section first.
+    assert(container.size() <= header.data_offset + header.data_size);
 
     const auto new_data_size = container.size() - header.data_offset + aux_data.size();
     if (new_data_size > std::numeric_limits<uint16_t>::max())

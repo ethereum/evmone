@@ -204,7 +204,19 @@ TEST_F(eof_validation, EOF1_code_section_offset)
     EXPECT_EQ(header.code_offsets[1], 28);
 }
 
-TEST_F(eof_validation, EOF1_trailing_bytes)
+TEST_F(eof_validation, EOF1_trailing_bytes_in_subcontainer)
+{
+    add_test_case(
+        "EF0001 010004 0200010001 0300010018 040000 00 00800000 FE EF0001 010004 0200010001 040000 "
+        "00 00800000 FE DEADBEEF",
+        EOFValidationError::invalid_section_bodies_size);
+    add_test_case(
+        "EF0001 010004 0200010001 030001001a 040000 00 00800000 FE EF0001 010004 0200010001 040002 "
+        "00 00800000 FE AABB DEADBEEF",
+        EOFValidationError::invalid_section_bodies_size);
+}
+
+TEST_F(eof_validation, EOF1_trailing_bytes_top_level)
 {
     add_test_case("EF0001 010004 0200010001 040000 00 00800000 FE DEADBEEF",
         EOFValidationError::invalid_section_bodies_size);
