@@ -1,5 +1,6 @@
 version: 2.1
 orbs:
+  codecov: codecov/codecov@4.1.0
   win: circleci/windows@5.0
 
 executors:
@@ -214,27 +215,10 @@ commands:
       flags:
         type: string
     steps:
-      - run:
-          name: "Install codecov"
-          command: |
-            export CODECOV_VERSION=v0.7.1
-            curl -Os https://uploader.codecov.io/$CODECOV_VERSION/linux/codecov
-            curl -Os https://uploader.codecov.io/$CODECOV_VERSION/linux/codecov.SHA256SUM
-            curl -Os https://uploader.codecov.io/$CODECOV_VERSION/linux/codecov.SHA256SUM.sig
-            
-            gpg --no-default-keyring --keyring trustedkeys.gpg --keyserver keyserver.ubuntu.com --receive-keys 27034E7FDB850E0BBC2C62FF806BB28AED779869
-            gpgv codecov.SHA256SUM.sig codecov.SHA256SUM
-            shasum -c codecov.SHA256SUM
-            
-            chmod +x codecov
-            sudo mv codecov /usr/local/bin
-
-      - run:
-          name: "Upload to Codecov"
-          command: |
-            # Convert to relative paths
-            sed -i 's|$(pwd)/||' ~/build/coverage.lcov
-            codecov --flags <<parameters.flags>> --required --file ~/build/coverage.lcov -X gcov
+      - codecov/upload:
+          upload_args: --plugin ''
+          file: ../build/coverage.lcov
+          flags: <<parameters.flags>>
 
   package:
     description: "Make package"
@@ -399,7 +383,7 @@ jobs:
             bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests
       - collect_coverage_gcc
       - upload_coverage:
-          flags: execution-spec-tests
+          flags: execution_spec_tests
 
   ethereum-tests:
     executor: linux-gcc-latest
@@ -454,7 +438,7 @@ jobs:
             bin/evmone-eoftest ~/tests/EOFTests
       - collect_coverage_gcc
       - upload_coverage:
-          flags: ethereum-tests
+          flags: ethereum_tests
 
   precompiles-silkpre:
     executor: linux-gcc-latest
@@ -475,7 +459,7 @@ jobs:
             bin/evmone-statetest ~/tests/GeneralStateTests ~/tests/LegacyTests/Constantinople/GeneralStateTests
       - collect_coverage_gcc
       - upload_coverage:
-          flags: ethereum-tests-silkpre
+          flags: ethereum_tests_silkpre
 
   gcc-min:
     executor: linux-gcc-min
