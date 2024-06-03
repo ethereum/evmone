@@ -22,15 +22,28 @@ struct EOFValidationTest
     {
         struct Expectation
         {
-            evmc_revision rev;
-            bool result;
+            evmc_revision rev = EVMC_PRAGUE;
+            bool result = false;
         };
         std::string name;
         evmc::bytes code;
+        ContainerKind kind = ContainerKind::runtime;
         std::vector<Expectation> expectations;
     };
     std::unordered_map<std::string, Case> cases;
 };
+
+ContainerKind container_kind_from_string(std::string_view s)
+{
+    if (s == "runtime")
+        return ContainerKind::runtime;
+    else if (s == "initcode")
+        return ContainerKind::initcode;
+    else if (s == "initcode_runtime")
+        return ContainerKind::initcode_runtime;
+    else
+        throw std::invalid_argument{"unknown container kind"};
+}
 
 void from_json(const json::json& j, EOFValidationTest::Case& o)
 {
@@ -38,6 +51,9 @@ void from_json(const json::json& j, EOFValidationTest::Case& o)
     if (!op_code)
         throw std::invalid_argument{"code is invalid hex string"};
     o.code = *op_code;
+
+    if (const auto it_kind = j.find("kind"); it_kind != j.end())
+        o.kind = container_kind_from_string(it_kind->get<std::string>());
 
     for (const auto& [rev, result] : j.at("results").items())
     {
@@ -67,9 +83,7 @@ void run_eof_test(std::istream& input)
     {
         for (const auto& expectation : cases.expectations)
         {
-            // TODO read requested container kind from the test
-            const auto result =
-                evmone::validate_eof(expectation.rev, ContainerKind::runtime, cases.code);
+            const auto result = evmone::validate_eof(expectation.rev, cases.kind, cases.code);
             const bool b_result = (result == EOFValidationError::success);
             EXPECT_EQ(b_result, expectation.result)
                 << name << " " << expectation.rev << " " << hex(cases.code);

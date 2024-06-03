@@ -98,6 +98,21 @@ std::string_view get_tests_error_message(EOFValidationError err) noexcept
     }
     return "<unknown>";
 }
+
+std::string_view to_string(ContainerKind container_kind) noexcept
+{
+    switch (container_kind)
+    {
+    case (ContainerKind::runtime):
+        return "runtime";
+    case (ContainerKind::initcode):
+        return "initcode";
+    case (ContainerKind::initcode_runtime):
+        return "initcode_runtime";
+    }
+    return "<unknown>";
+}
+
 }  // namespace
 
 void eof_validation::TearDown()
@@ -129,6 +144,7 @@ void eof_validation::export_eof_validation_test()
 
         auto& jcase = jvectors[case_name];
         jcase["code"] = hex0x(test_case.container);
+        jcase["kind"] = to_string(test_case.kind);
 
         auto& jresults = jcase["results"][evmc::to_string(rev)];
         if (test_case.error == EOFValidationError::success)
