@@ -202,9 +202,6 @@ ExecutionResult ecadd_execute(const uint8_t* input, size_t input_size, uint8_t* 
     if (input_size != 0)
         std::memcpy(input_buffer, input, std::min(input_size, std::size(input_buffer)));
 
-    ethash::hash256 h{};
-    std::memcpy(h.bytes, input_buffer, sizeof(h));
-
     const evmmax::bn254::Point p = {intx::be::unsafe::load<intx::uint256>(input_buffer),
         intx::be::unsafe::load<intx::uint256>(input_buffer + 32)};
     const evmmax::bn254::Point q = {intx::be::unsafe::load<intx::uint256>(input_buffer + 64),
@@ -229,9 +226,6 @@ ExecutionResult ecmul_execute(const uint8_t* input, size_t input_size, uint8_t* 
     uint8_t input_buffer[96]{};
     if (input_size != 0)
         std::memcpy(input_buffer, input, std::min(input_size, std::size(input_buffer)));
-
-    ethash::hash256 h{};
-    std::memcpy(h.bytes, input_buffer, sizeof(h));
 
     const evmmax::bn254::Point p = {intx::be::unsafe::load<intx::uint256>(input_buffer),
         intx::be::unsafe::load<intx::uint256>(input_buffer + 32)};
