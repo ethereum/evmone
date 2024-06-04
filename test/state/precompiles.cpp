@@ -128,9 +128,12 @@ PrecompileAnalysis expmod_analyze(bytes_view input, evmc_revision rev) noexcept
     };
     static constexpr auto mult_complexity_eip198 = [](const uint256& x) noexcept {
         const auto x2 = x * x;
-        return (x <= 64)   ? x2 :
-               (x <= 1024) ? (x2 >> 2) + 96 * x - 3072 :
-                             (x2 >> 4) + 480 * x - 199680;
+        if (x <= 64)
+            return x2;
+        else if (x <= 1024)
+            return (x2 >> 2) + 96 * x - 3072;
+        else
+            return (x2 >> 4) + 480 * x - 199680;
     };
 
     const auto max_len = std::max(mod_len, base_len);

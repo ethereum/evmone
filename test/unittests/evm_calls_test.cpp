@@ -627,9 +627,14 @@ TEST_P(evm, call_value)
     {
         const auto has_value_arg = (op == OP_CALL || op == OP_CALLCODE);
         const auto value_cost = has_value_arg ? 9000 : 0;
-        const auto expected_value = has_value_arg           ? passed_value :
-                                    (op == OP_DELEGATECALL) ? origin_value :
-                                                              0;
+        const auto expected_value = [=] {
+            if (has_value_arg)
+                return passed_value;
+            else if (op == OP_DELEGATECALL)
+                return origin_value;
+            else
+                return 0;
+        }();
 
         const auto code =
             4 * push(0) + push(has_value_arg ? passed_value : 0) + push(recipient) + push(0) + op;
