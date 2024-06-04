@@ -5,6 +5,7 @@
 
 #include <evmc/evmc.hpp>
 #include <evmc/hex.hpp>
+#include <algorithm>
 
 namespace evmone::test
 {
