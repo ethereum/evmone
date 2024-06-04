@@ -141,7 +141,10 @@ void precompile(benchmark::State& state)
         {
             const auto [status, _] = Fn(input.data(), input.size(), output.get(), max_output_size);
             if (status != EVMC_SUCCESS) [[unlikely]]
-                return state.SkipWithError("invalid result");
+            {
+                state.SkipWithError("invalid result");
+                return;
+            }
         }
         total_gas_used += batch_gas_cost;
     }
