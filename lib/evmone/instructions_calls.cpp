@@ -156,7 +156,7 @@ Result extcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
 {
     static_assert(Op == OP_EXTCALL || Op == OP_EXTDELEGATECALL || Op == OP_EXTSTATICCALL);
 
-    const auto dst = intx::be::trunc<evmc::address>(stack.pop());
+    const auto dst_u256 = stack.pop();
     const auto input_offset_u256 = stack.pop();
     const auto input_size_u256 = stack.pop();
     const auto value = (Op == OP_EXTSTATICCALL || Op == OP_EXTDELEGATECALL) ? 0 : stack.pop();
@@ -164,6 +164,13 @@ Result extcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
 
     stack.push(EXTCALL_ABORT);  // Assume (hard) failure.
     state.return_data.clear();
+
+    // Address space expansion ready check.
+    static constexpr auto ADDRESS_MAX = (uint256{1} << 160) - 1;
+    if (dst_u256 > ADDRESS_MAX)
+        return {EVMC_ARGUMENT_OUT_OF_RANGE, gas_left};
+
+    const auto dst = intx::be::trunc<evmc::address>(dst_u256);
 
     if (state.host.access_account(dst) == EVMC_ACCESS_COLD)
     {
