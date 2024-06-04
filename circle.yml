@@ -198,13 +198,15 @@ commands:
     description: "Collect coverage data (GCC)"
     steps:
       - run:
+          name: "Install gcovr"
+          command: sudo apt update && sudo apt install -y gcovr
+      - run:
           name: "Collect coverage data (GCC)"
           working_directory: ~/build
+          # Use coveralls to eliminate branch stats (they need more work)
           command: |
-            lcov --capture --directory . --output-file coverage.lcov -j $CMAKE_BUILD_PARALLEL_LEVEL --ignore-errors mismatch,unused --exclude='/usr/*' --exclude="$HOME/.hunter/*" --exclude="$PWD/_deps/*"
-            lcov --zerocounters --directory .
-            rm -rf ~/coverage
-            genhtml coverage.lcov --output-directory ~/coverage --title $CIRCLE_PROJECT_REPONAME
+            mkdir -p ~/coverage
+            gcovr --filter ~/project --coveralls coverage.json --html ~/coverage/coverage.html --html-nested ~/coverage/coverage.html
       - store_artifacts:
           path: ~/coverage
           destination: coverage
@@ -217,7 +219,7 @@ commands:
     steps:
       - codecov/upload:
           upload_args: --plugin ''
-          file: ../build/coverage.lcov
+          file: ../build/coverage.json
           flags: <<parameters.flags>>
 
   package:
