@@ -173,7 +173,10 @@ void MPTNode::insert(const Path& path, bytes&& value)  // NOLINT(misc-no-recursi
     {
         assert(!m_path.empty());       // Ext must have non-empty path.
         if (this_idx == m_path.end())  // Paths match: go into the child.
-            return m_children[0]->insert({insert_idx, path.end()}, std::move(value));
+        {
+            m_children[0]->insert({insert_idx, path.end()}, std::move(value));
+            return;
+        }
 
         // The original branch node must be pushed down, possible extended with
         // the adjusted extended node if the path split point is not directly at the branch node.
