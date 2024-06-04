@@ -244,17 +244,6 @@ std::variant<std::vector<EOFCodeType>, EOFValidationError> validate_types(
     return types;
 }
 
-enum class ContainerKind : uint8_t
-{
-    /// Container that uses RETURNCONTRACT. Can be used by EOFCREATE/TXCREATE/Creation transaction.
-    initcode,
-    /// Container that uses STOP/RETURN. Can be returned by RETURNCONTRACT.
-    runtime,
-    /// Container that uses only REVERT/INVALID or does not terminate execution.
-    /// Can be used in any context.
-    initcode_runtime,
-};
-
 /// Result of validating instructions in a code section.
 struct InstructionValidationResult
 {
@@ -341,7 +330,7 @@ std::variant<InstructionValidationResult, EOFValidationError> validate_instructi
                     return EOFValidationError::incompatible_container_kind;
             }
 
-            subcontainer_references.push_back({container_idx, Opcode{op}});
+            subcontainer_references.emplace_back(container_idx, Opcode{op});
             ++i;
         }
         else if (op == OP_RETURN || op == OP_STOP)
@@ -595,7 +584,8 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
     return max_stack_height_it->max;
 }
 
-EOFValidationError validate_eof1(evmc_revision rev, bytes_view main_container) noexcept
+EOFValidationError validate_eof1(
+    evmc_revision rev, ContainerKind main_container_kind, bytes_view main_container) noexcept
 {
     struct ContainerValidation
     {
@@ -605,7 +595,7 @@ EOFValidationError validate_eof1(evmc_revision rev, bytes_view main_container) n
     // Queue of containers left to process
     std::queue<ContainerValidation> container_queue;
 
-    container_queue.push({main_container, ContainerKind::initcode_runtime});
+    container_queue.push({main_container, main_container_kind});
 
     while (!container_queue.empty())
     {
@@ -893,9 +883,10 @@ uint8_t get_eof_version(bytes_view container) noexcept
                0;
 }
 
-EOFValidationError validate_eof(evmc_revision rev, bytes_view container) noexcept
+EOFValidationError validate_eof(
+    evmc_revision rev, ContainerKind kind, bytes_view container) noexcept
 {
-    return validate_eof1(rev, container);
+    return validate_eof1(rev, kind, container);
 }
 
 std::string_view get_error_message(EOFValidationError err) noexcept

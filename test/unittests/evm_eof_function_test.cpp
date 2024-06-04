@@ -249,7 +249,8 @@ TEST_P(evm, jumpf_with_inputs_stack_overflow)
                               .code(push0() + OP_JUMPF + "0002", 3, 0x80, 4)
                               .code(push0() + OP_STOP, 3, 0x80, 4);
 
-    ASSERT_EQ(evmone::validate_eof(rev, code), evmone::EOFValidationError::success);
+    ASSERT_EQ(evmone::validate_eof(rev, evmone::ContainerKind::runtime, code),
+        evmone::EOFValidationError::success);
     execute(code);
     EXPECT_STATUS(EVMC_STACK_OVERFLOW);
 }

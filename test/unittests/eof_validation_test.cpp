@@ -14,7 +14,8 @@ using namespace evmone::test;
 
 TEST_F(eof_validation, before_activation)
 {
-    ASSERT_EQ(evmone::validate_eof(EVMC_CANCUN, bytes(eof_bytecode(OP_STOP))),
+    ASSERT_EQ(
+        evmone::validate_eof(EVMC_CANCUN, ContainerKind::runtime, bytes(eof_bytecode(OP_STOP))),
         EOFValidationError::eof_version_unknown);
 }
 

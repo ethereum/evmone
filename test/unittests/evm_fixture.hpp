@@ -82,7 +82,7 @@ protected:
 
         if (rev >= EVMC_PRAGUE && is_eof_container(code))
         {
-            ASSERT_EQ(get_error_message(validate_eof(rev, code)),
+            ASSERT_EQ(get_error_message(validate_eof(rev, ContainerKind::runtime, code)),
                 get_error_message(EOFValidationError::success));
         }
 

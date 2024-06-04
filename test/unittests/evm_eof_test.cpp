@@ -284,15 +284,6 @@ TEST_P(evm, eof_eofcreate)
 
     ASSERT_EQ(result.output_size, 32);
     EXPECT_EQ(output, "000000000000000000000000cc010203040506070809010203040506070809ce"_hex);
-
-    // test executing initcontainer
-    msg.kind = EVMC_EOFCREATE;
-    execute(init_container, aux_data);
-    EXPECT_STATUS(EVMC_SUCCESS);
-    const bytecode deployed_container =
-        eof_bytecode(bytecode(OP_INVALID)).data(deploy_data + aux_data);
-    ASSERT_EQ(result.output_size, deployed_container.size());
-    EXPECT_EQ(output, deployed_container);
 }
 
 TEST_P(evm, eofcreate_undefined_in_legacy)

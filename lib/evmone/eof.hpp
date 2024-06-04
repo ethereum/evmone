@@ -145,6 +145,17 @@ enum class EOFValidationError
     impossible,
 };
 
+enum class ContainerKind : uint8_t
+{
+    /// Container that uses RETURNCONTRACT. Can be used by EOFCREATE/TXCREATE/Creation transaction.
+    initcode,
+    /// Container that uses STOP/RETURN. Can be returned by RETURNCONTRACT.
+    runtime,
+    /// Container that uses only REVERT/INVALID or does not terminate execution.
+    /// Can be used in any context.
+    initcode_runtime,
+};
+
 /// Determines the EOF version of the container by inspecting container's EOF prefix.
 /// If the prefix is missing or invalid, 0 is returned meaning legacy code.
 [[nodiscard]] uint8_t get_eof_version(bytes_view container) noexcept;
@@ -155,7 +166,7 @@ enum class EOFValidationError
 
 /// Validates whether given container is a valid EOF according to the rules of given revision.
 [[nodiscard]] EVMC_EXPORT EOFValidationError validate_eof(
-    evmc_revision rev, bytes_view container) noexcept;
+    evmc_revision rev, ContainerKind kind, bytes_view container) noexcept;
 
 /// Returns the error message corresponding to an error code.
 [[nodiscard]] EVMC_EXPORT std::string_view get_error_message(EOFValidationError err) noexcept;

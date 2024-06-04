@@ -67,7 +67,9 @@ void run_eof_test(std::istream& input)
     {
         for (const auto& expectation : cases.expectations)
         {
-            const auto result = evmone::validate_eof(expectation.rev, cases.code);
+            // TODO read requested container kind from the test
+            const auto result =
+                evmone::validate_eof(expectation.rev, ContainerKind::runtime, cases.code);
             const bool b_result = (result == EOFValidationError::success);
             EXPECT_EQ(b_result, expectation.result)
                 << name << " " << expectation.rev << " " << hex(cases.code);

@@ -399,7 +399,7 @@ Result create_eof_impl(
 
     if constexpr (Op == OP_TXCREATE)
     {
-        const auto error_subcont = validate_eof(state.rev, initcontainer);
+        const auto error_subcont = validate_eof(state.rev, ContainerKind::initcode, initcontainer);
         if (error_subcont != EOFValidationError::success)
             return {EVMC_SUCCESS, gas_left};  // "Light" failure.
     }

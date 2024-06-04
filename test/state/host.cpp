@@ -270,7 +270,7 @@ std::optional<evmc_message> Host::prepare_message(evmc_message msg) noexcept
                     msg.input_data = msg.input_data + container_size;
                     msg.input_size = msg.input_size - container_size;
 
-                    if (validate_eof(m_rev, {msg.code, msg.code_size}) !=
+                    if (validate_eof(m_rev, ContainerKind::initcode, {msg.code, msg.code_size}) !=
                         EOFValidationError::success)
                         return {};  // Light early exception.
 
@@ -367,7 +367,8 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
             // It must be valid EOF, which was validated before execution.
             if (msg.kind != EVMC_EOFCREATE)
                 return evmc::Result{EVMC_CONTRACT_VALIDATION_FAILURE};
-            assert(validate_eof(m_rev, code) == EOFValidationError::success);
+            assert(
+                validate_eof(m_rev, ContainerKind::runtime, code) == EOFValidationError::success);
         }
         else if (m_rev >= EVMC_LONDON)
         {

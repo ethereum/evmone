@@ -403,7 +403,9 @@ evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_co
 
     if (vm->validate_eof && rev >= EVMC_PRAGUE && is_eof_container(container))
     {
-        if (validate_eof(rev, container) != EOFValidationError::success)
+        const auto container_kind =
+            (msg->depth == 0 ? ContainerKind::initcode : ContainerKind::runtime);
+        if (validate_eof(rev, container_kind, container) != EOFValidationError::success)
             return evmc_make_result(EVMC_CONTRACT_VALIDATION_FAILURE, 0, 0, nullptr, 0);
     }
 
