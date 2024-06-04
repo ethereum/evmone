@@ -325,6 +325,51 @@ TEST_F(state_transition, extstaticcall_memory)
     expect.status = EVMC_OUT_OF_GAS;
 }
 
+TEST_F(state_transition, extcall_ase_ready_violation)
+{
+    rev = EVMC_PRAGUE;
+    constexpr auto callee =
+        0x0000000000000000000000010000000000000000000000000000000000000000_bytes32;
+
+    tx.to = To;
+    pre.insert(*tx.to, {
+                           .code = eof_bytecode(extcall(callee) + OP_STOP, 4),
+                       });
+    expect.gas_used = tx.gas_limit;
+    expect.post[*tx.to].exists = true;
+    expect.status = EVMC_ARGUMENT_OUT_OF_RANGE;
+}
+
+TEST_F(state_transition, extdelegatecall_ase_ready_violation)
+{
+    rev = EVMC_PRAGUE;
+    constexpr auto callee =
+        0x0000000000000000000000010000000000000000000000000000000000000000_bytes32;
+
+    tx.to = To;
+    pre.insert(*tx.to, {
+                           .code = eof_bytecode(extdelegatecall(callee) + OP_STOP, 3),
+                       });
+    expect.gas_used = tx.gas_limit;
+    expect.post[*tx.to].exists = true;
+    expect.status = EVMC_ARGUMENT_OUT_OF_RANGE;
+}
+
+TEST_F(state_transition, extstaticcall_ase_ready_violation)
+{
+    rev = EVMC_PRAGUE;
+    constexpr auto callee =
+        0x0000000000000000000000010000000000000000000000000000000000000000_bytes32;
+
+    tx.to = To;
+    pre.insert(*tx.to, {
+                           .code = eof_bytecode(extstaticcall(callee) + OP_STOP, 3),
+                       });
+    expect.gas_used = tx.gas_limit;
+    expect.post[*tx.to].exists = true;
+    expect.status = EVMC_ARGUMENT_OUT_OF_RANGE;
+}
+
 TEST_F(state_transition, extcall_cold_oog)
 {
     rev = EVMC_PRAGUE;
