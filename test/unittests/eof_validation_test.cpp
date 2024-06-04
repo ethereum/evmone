@@ -1220,3 +1220,239 @@ TEST_F(eof_validation, max_nested_containers)
     }
     add_test_case(code, EOFValidationError::success);
 }
+
+// Summary of validity of combinations of referencing instructions with instructions inside
+// referenced containers.
+// Rows are instructions referencing subcontainers or rules for top-level container.
+// Columns are instructions inside referenced subcontainer.
+//
+// |                              | STOP   | RETURN | REVERT | RETURNCONTRACT |
+// | ---------------------------- | ------ | ------ | ------ | -------------- |
+// | top-level initcode           | -      | -      | +      | +              |
+// | EOFCREATE                    | -      | -      | +      | +              |
+// | TXCREATE                     | -      | -      | +      | +              |
+// | top-level runtime            | +      | +      | +      | -              |
+// | RETURNCONTRACT               | +      | +      | +      | -              |
+// | EOFCREATE and RETURNCONTRACT | -      | -      | +      | -              |
+
+TEST_F(eof_validation, initcode_container_stop)
+{
+    const auto initcode = bytecode{OP_STOP};
+    const auto initcontainer = eof_bytecode(initcode, 0);
+
+    add_test_case(
+        initcontainer, ContainerKind::initcode, EOFValidationError::incompatible_container_kind);
+
+    const auto factory_code = eofcreate() + OP_STOP;
+    const bytecode factory_container = eof_bytecode(factory_code, 4).container(initcontainer);
+
+    add_test_case(factory_container, EOFValidationError::incompatible_container_kind);
+}
+
+TEST_F(eof_validation, initcode_container_return)
+{
+    const auto initcode = ret(0, 0);
+    const bytecode initcontainer = eof_bytecode(initcode, 2);
+
+    add_test_case(
+        initcontainer, ContainerKind::initcode, EOFValidationError::incompatible_container_kind);
+
+    const auto factory_code = eofcreate() + OP_STOP;
+    const bytecode factory_container = eof_bytecode(factory_code, 4).container(initcontainer);
+
+    add_test_case(factory_container, EOFValidationError::incompatible_container_kind);
+}
+
+TEST_F(eof_validation, initcode_container_revert)
+{
+    const auto initcode = revert(0, 0);
+    const auto initcontainer = eof_bytecode(initcode, 2);
+
+    add_test_case(initcontainer, ContainerKind::initcode, EOFValidationError::success);
+
+    const auto factory_code = eofcreate() + OP_STOP;
+    const bytecode factory_container = eof_bytecode(factory_code, 4).container(initcontainer);
+
+    add_test_case(factory_container, EOFValidationError::success);
+}
+
+TEST_F(eof_validation, initcode_container_returncontract)
+{
+    const auto initcode = returncontract(0, 0, 0);
+    const auto initcontainer = eof_bytecode(initcode, 2).container(eof_bytecode(OP_INVALID));
+
+    add_test_case(initcontainer, ContainerKind::initcode, EOFValidationError::success);
+
+    const auto factory_code = eofcreate() + OP_STOP;
+    const bytecode factory_container = eof_bytecode(factory_code, 4).container(initcontainer);
+
+    add_test_case(factory_container, EOFValidationError::success);
+}
+
+TEST_F(eof_validation, runtime_container_stop)
+{
+    const auto runtime_container = eof_bytecode(OP_STOP);
+
+    add_test_case(runtime_container, ContainerKind::runtime, EOFValidationError::success);
+
+    const auto initcontainer =
+        eof_bytecode(returncontract(0, 0, 0), 2).container(runtime_container);
+
+    add_test_case(initcontainer, ContainerKind::initcode, EOFValidationError::success);
+
+    const auto factory_code = eofcreate() + OP_STOP;
+    const bytecode factory_container = eof_bytecode(factory_code, 4).container(initcontainer);
+
+    add_test_case(factory_container, EOFValidationError::success);
+}
+
+TEST_F(eof_validation, runtime_container_return)
+{
+    const auto runtime_container = eof_bytecode(ret(0, 0), 2);
+
+    add_test_case(runtime_container, ContainerKind::runtime, EOFValidationError::success);
+
+    const auto initcontainer =
+        eof_bytecode(returncontract(0, 0, 0), 2).container(runtime_container);
+
+    add_test_case(initcontainer, ContainerKind::initcode, EOFValidationError::success);
+
+    const auto factory_code = eofcreate() + OP_STOP;
+    const bytecode factory_container = eof_bytecode(factory_code, 4).container(initcontainer);
+
+    add_test_case(factory_container, EOFValidationError::success);
+}
+
+TEST_F(eof_validation, runtime_container_revert)
+{
+    const auto runtime_container = eof_bytecode(revert(0, 0), 2);
+
+    add_test_case(runtime_container, ContainerKind::runtime, EOFValidationError::success);
+
+    const auto initcontainer =
+        eof_bytecode(returncontract(0, 0, 0), 2).container(runtime_container);
+
+    add_test_case(initcontainer, ContainerKind::initcode, EOFValidationError::success);
+
+    const auto factory_code = eofcreate() + OP_STOP;
+    const bytecode factory_container = eof_bytecode(factory_code, 4).container(initcontainer);
+
+    add_test_case(factory_container, EOFValidationError::success);
+}
+
+TEST_F(eof_validation, runtime_container_returncontract)
+{
+    const auto runtime_container =
+        eof_bytecode(returncontract(0, 0, 0), 2).container(eof_bytecode(OP_INVALID));
+
+    add_test_case(
+        runtime_container, ContainerKind::runtime, EOFValidationError::incompatible_container_kind);
+
+    const auto initcontainer =
+        eof_bytecode(returncontract(0, 0, 0), 2).container(runtime_container);
+
+    add_test_case(
+        initcontainer, ContainerKind::initcode, EOFValidationError::incompatible_container_kind);
+
+    const auto factory_code = eofcreate() + OP_STOP;
+    const bytecode factory_container = eof_bytecode(factory_code, 4).container(initcontainer);
+
+    add_test_case(factory_container, EOFValidationError::incompatible_container_kind);
+}
+
+TEST_F(eof_validation, initcode_runtime_container_stop)
+{
+    const auto runtime_container = eof_bytecode(OP_STOP);
+
+    add_test_case(runtime_container, ContainerKind::initcode_runtime,
+        EOFValidationError::incompatible_container_kind);
+
+    const auto initcontainer =
+        eof_bytecode(eofcreate() + returncontract(0, 0, 0), 4).container(runtime_container);
+
+    add_test_case(
+        initcontainer, ContainerKind::initcode, EOFValidationError::incompatible_container_kind);
+
+    const auto factory_code = eofcreate() + OP_STOP;
+    const bytecode factory_container = eof_bytecode(factory_code, 4).container(initcontainer);
+
+    add_test_case(factory_container, EOFValidationError::incompatible_container_kind);
+}
+
+TEST_F(eof_validation, initcode_runtime_container_return)
+{
+    const auto runtime_container = eof_bytecode(ret(0, 0), 2);
+
+    add_test_case(runtime_container, ContainerKind::initcode_runtime,
+        EOFValidationError::incompatible_container_kind);
+
+    const auto initcontainer =
+        eof_bytecode(eofcreate() + returncontract(0, 0, 0), 4).container(runtime_container);
+
+    add_test_case(
+        initcontainer, ContainerKind::initcode, EOFValidationError::incompatible_container_kind);
+
+    const auto factory_code = eofcreate() + OP_STOP;
+    const bytecode factory_container = eof_bytecode(factory_code, 4).container(initcontainer);
+
+    add_test_case(factory_container, EOFValidationError::incompatible_container_kind);
+}
+
+TEST_F(eof_validation, initcode_runtime_container_revert)
+{
+    const auto runtime_container =
+        eof_bytecode(returncontract(0, 0, 0), 2).container(eof_bytecode(OP_INVALID));
+
+    add_test_case(runtime_container, ContainerKind::initcode_runtime,
+        EOFValidationError::incompatible_container_kind);
+
+    const auto initcontainer =
+        eof_bytecode(eofcreate() + returncontract(0, 0, 0), 4).container(runtime_container);
+
+    add_test_case(
+        initcontainer, ContainerKind::initcode, EOFValidationError::incompatible_container_kind);
+
+    const auto factory_code = eofcreate() + OP_STOP;
+    const bytecode factory_container = eof_bytecode(factory_code, 4).container(initcontainer);
+
+    add_test_case(factory_container, EOFValidationError::incompatible_container_kind);
+}
+
+TEST_F(eof_validation, initcode_runtime_container_returncontract)
+{
+    const auto runtime_container = eof_bytecode(revert(0, 0), 2);
+
+    add_test_case(runtime_container, ContainerKind::initcode_runtime, EOFValidationError::success);
+
+    const auto initcontainer =
+        eof_bytecode(eofcreate() + returncontract(0, 0, 0), 4).container(runtime_container);
+
+    add_test_case(initcontainer, ContainerKind::initcode, EOFValidationError::success);
+
+    const auto factory_code = eofcreate() + OP_STOP;
+    const bytecode factory_container = eof_bytecode(factory_code, 4).container(initcontainer);
+
+    add_test_case(factory_container, EOFValidationError::success);
+}
+
+TEST_F(eof_validation, eofcreate_stop_and_returncontract)
+{
+    const auto runtime_container = eof_bytecode(OP_INVALID);
+    const auto initcode = rjumpi(1, 0) + OP_STOP + returncontract(0, 0, 0);
+    const auto initcontainer = eof_bytecode(initcode, 2).container(runtime_container);
+    const auto factory_code = eofcreate() + OP_STOP;
+    const bytecode factory_container = eof_bytecode(factory_code, 4).container(initcontainer);
+
+    add_test_case(factory_container, EOFValidationError::incompatible_container_kind);
+}
+
+TEST_F(eof_validation, eofcreate_return_and_returncontract)
+{
+    const auto runtime_container = eof_bytecode(OP_INVALID);
+    const auto initcode = rjumpi(5, 0) + ret(0, 0) + returncontract(0, 0, 0);
+    const auto initcontainer = eof_bytecode(initcode, 2).container(runtime_container);
+    const auto factory_code = eofcreate() + OP_STOP;
+    const bytecode factory_container = eof_bytecode(factory_code, 4).container(initcontainer);
+
+    add_test_case(factory_container, EOFValidationError::incompatible_container_kind);
+}
