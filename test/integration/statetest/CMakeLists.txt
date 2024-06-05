@@ -143,7 +143,7 @@ set_tests_properties(
 
 add_test(
     NAME ${PREFIX}/export_to_json_created_files
-    COMMAND ${CMAKE_COMMAND} -E sha256sum ${EXPORT_DIR}/state_transition/block/known_block_hash.json
+    COMMAND ${CMAKE_COMMAND} -E sha256sum ${EXPORT_DIR}/state_transition/call/call_value_to_empty_Copier.json
 )
 set_tests_properties(
     ${PREFIX}/export_to_json_created_files PROPERTIES
