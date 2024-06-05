@@ -402,10 +402,6 @@ Result create_eof_impl(
         const auto error_subcont = validate_eof(state.rev, initcontainer);
         if (error_subcont != EOFValidationError::success)
             return {EVMC_SUCCESS, gas_left};  // "Light" failure.
-
-        const auto initcontainer_header = read_valid_eof1_header(initcontainer);
-        if (!initcontainer_header.has_full_data(initcontainer.size()))
-            return {EVMC_SUCCESS, gas_left};  // "Light" failure.
     }
 
     evmc_message msg{.kind = to_call_kind(Op)};
