@@ -652,7 +652,7 @@ EOFValidationError validate_eof1(evmc_revision rev, bytes_view main_container) n
             visited_code_sections.end())
             return EOFValidationError::unreachable_code_sections;
 
-        if (referenced_by_eofcreate && !header.can_init(container.size()))
+        if (referenced_by_eofcreate && !header.has_full_data(container.size()))
             return EOFValidationError::eofcreate_with_truncated_container;
 
         // Enqueue subcontainers

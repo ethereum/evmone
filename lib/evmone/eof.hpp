@@ -68,8 +68,8 @@ struct EOF1Header
         return container.substr(data_offset);
     }
 
-    /// A helper to check whether the container can be an initcontainer.
-    [[nodiscard]] bool can_init(size_t container_size) const noexcept
+    /// A helper to check whether the container has data section body size equal to declare size.
+    [[nodiscard]] bool has_full_data(size_t container_size) const noexcept
     {
         // Containers with truncated data section cannot be initcontainers.
         const auto truncated_data = static_cast<size_t>(data_offset + data_size) > container_size;
