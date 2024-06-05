@@ -114,13 +114,9 @@ hash256 logs_hash(const std::vector<state::Log>& logs);
 /// Converts an integer to hex string representation with 0x prefix.
 ///
 /// This handles also builtin types like uint64_t. Not optimal but works for now.
-inline std::string hex0x(const intx::uint256& v, const bool padding_zeros = true)
+inline std::string hex0x(const intx::uint256& v)
 {
-    std::string hexStr = intx::hex(v);
-    if (!padding_zeros)
-        hexStr.replace(0, hexStr.find_first_not_of('0'), "");
-
-    return "0x" + hexStr;
+    return "0x" + intx::hex(v);
 }
 
 /// Encodes bytes as hex with 0x prefix.
