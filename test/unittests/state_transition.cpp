@@ -48,7 +48,6 @@ void state_transition::TearDown()
 
     // Execution:
 
-    auto state = pre;
     const auto trace = !expect.trace.empty();
     auto& selected_vm = trace ? tracing_vm : vm;
 
@@ -57,8 +56,12 @@ void state_transition::TearDown()
     if (trace)
         trace_capture.emplace();
 
-    const auto res = state::transition(state, block, tx, rev, selected_vm, block.gas_limit,
+    auto intra_state = pre;
+    const auto res = state::transition(intra_state, block, tx, rev, selected_vm, block.gas_limit,
         state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK);
+    state::finalize(
+        intra_state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
+    const auto& post = intra_state;
 
     if (const auto expected_error = make_error_code(expect.tx_error))
     {
@@ -68,8 +71,8 @@ void state_transition::TearDown()
         EXPECT_EQ(tx_error, expected_error)
             << tx_error.message() << " vs " << expected_error.message();
 
-        EXPECT_EQ(state.get_accounts().size(), pre.get_accounts().size());
-        for (const auto& [addr, acc] : state.get_accounts())
+        EXPECT_EQ(post.get_accounts().size(), pre.get_accounts().size());
+        for (const auto& [addr, acc] : post.get_accounts())
         {
             EXPECT_TRUE(pre.get_accounts().contains(addr)) << "unexpected account " << addr;
         }
@@ -90,7 +93,6 @@ void state_transition::TearDown()
         if (expect.post.find(Coinbase) == expect.post.end())
             expect.post[Coinbase].exists = true;
     }
-    state::finalize(state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
 
     if (trace)
     {
@@ -101,53 +103,56 @@ void state_transition::TearDown()
 
     for (const auto& [addr, expected_acc] : expect.post)
     {
-        const auto acc = state.find(addr);
-        if (!expected_acc.exists)
+        const auto ait = post.get_accounts().find(addr);
+        if (ait == post.get_accounts().end())
         {
-            EXPECT_EQ(acc, nullptr) << "account " << addr << " should not exist";
+            EXPECT_FALSE(expected_acc.exists) << addr << ": should not exist";
+            continue;
         }
-        else
+        EXPECT_TRUE(expected_acc.exists) << addr << ": should exist";
+
+        const auto& acc = ait->second;
+        if (expected_acc.nonce.has_value())
         {
-            ASSERT_NE(acc, nullptr) << "account " << addr << " should exist";
-            if (expected_acc.nonce.has_value())
-            {
-                EXPECT_EQ(acc->nonce, *expected_acc.nonce) << "account " << addr;
-            }
-            if (expected_acc.balance.has_value())
-            {
-                EXPECT_EQ(acc->balance, *expected_acc.balance)
-                    << to_string(acc->balance) << " vs " << to_string(*expected_acc.balance)
-                    << " account " << addr;
-            }
-            if (expected_acc.code.has_value())
-            {
-                EXPECT_EQ(acc->code, *expected_acc.code) << "account " << addr;
-            }
-            for (const auto& [key, value] : expected_acc.storage)
-            {
-                EXPECT_EQ(acc->storage[key].current, value) << "account " << addr << " key " << key;
-            }
-            for (const auto& [key, value] : acc->storage)
-            {
-                // Find unexpected storage keys. This will also report entries with value 0.
-                EXPECT_TRUE(expected_acc.storage.contains(key))
-                    << "unexpected storage key " << key << "=" << value.current << " in " << addr;
-            }
+            EXPECT_EQ(acc.nonce, *expected_acc.nonce) << addr << ": wrong nonce";
         }
+        if (expected_acc.balance.has_value())
+        {
+            EXPECT_EQ(acc.balance, *expected_acc.balance)
+                << addr << ": balance " << to_string(acc.balance) << " vs "
+                << to_string(*expected_acc.balance);
+        }
+        if (expected_acc.code.has_value())
+        {
+            EXPECT_EQ(acc.code, *expected_acc.code) << addr << ": wrong code";
+        }
+        for (const auto& [key, expected_value] : expected_acc.storage)
+        {
+            // Lookup storage values. Map non-existing ones to 0.
+            const auto sit = acc.storage.find(key);
+            const auto& value = sit != acc.storage.end() ? sit->second.current : bytes32{};
+            EXPECT_EQ(value, expected_value) << addr << ": wrong storage " << key;
+        }
+        for (const auto& [key, value] : acc.storage)
+        {
+            // Find unexpected storage keys. This will also report entries with value 0.
+            EXPECT_TRUE(expected_acc.storage.contains(key))
+                << addr << ": unexpected storage " << key << "=" << value.current;
+        }
+    }
+
+    for (const auto& [addr, _] : post.get_accounts())
+    {
+        EXPECT_TRUE(expect.post.contains(addr)) << addr << ": should not exist";
     }
 
     if (expect.state_hash)
     {
-        EXPECT_EQ(mpt_hash(state.get_accounts()), *expect.state_hash);
-    }
-
-    for (const auto& [addr, _] : state.get_accounts())
-    {
-        EXPECT_TRUE(expect.post.contains(addr)) << "unexpected account " << addr;
+        EXPECT_EQ(mpt_hash(post.get_accounts()), *expect.state_hash);
     }
 
     if (!export_file_path.empty())
-        export_state_test(res, state);
+        export_state_test(res, post);
 }
 
 namespace
