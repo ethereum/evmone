@@ -652,8 +652,14 @@ EOFValidationError validate_eof1(evmc_revision rev, bytes_view main_container) n
             visited_code_sections.end())
             return EOFValidationError::unreachable_code_sections;
 
-        if (referenced_by_eofcreate && !header.has_full_data(container.size()))
-            return EOFValidationError::eofcreate_with_truncated_container;
+        // Check if truncated data section is allowed.
+        if (!header.has_full_data(container.size()))
+        {
+            if (main_container == container)
+                return EOFValidationError::toplevel_container_truncated;
+            if (referenced_by_eofcreate)
+                return EOFValidationError::eofcreate_with_truncated_container;
+        }
 
         // Enqueue subcontainers
         for (size_t subcont_idx = 0; subcont_idx < subcontainer_count; ++subcont_idx)
@@ -927,6 +933,8 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "invalid_container_section_index";
     case EOFValidationError::eofcreate_with_truncated_container:
         return "eofcreate_with_truncated_container";
+    case EOFValidationError::toplevel_container_truncated:
+        return "toplevel_container_truncated";
     case EOFValidationError::impossible:
         return "impossible";
     }

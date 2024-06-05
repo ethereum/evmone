@@ -184,9 +184,20 @@ TEST_F(eof_validation, EOF1_truncated_section)
         EOFValidationError::invalid_section_bodies_size);
     add_test_case("EF0001 010004 0200010002 040000 00 00800000 FE",
         EOFValidationError::invalid_section_bodies_size);
-    // Data section may be truncated
-    add_test_case("EF0001 010004 0200010001 040002 00 00800000 FE", EOFValidationError::success);
-    add_test_case("EF0001 010004 0200010001 040002 00 00800000 FE AA", EOFValidationError::success);
+
+    // Data section may be truncated in runtime subcontainer
+    add_test_case(
+        eof_bytecode(returncontract(0, 0, 2), 2).container(eof_bytecode(OP_INVALID).data("", 2)),
+        EOFValidationError::success);
+    add_test_case(
+        eof_bytecode(returncontract(0, 0, 1), 2).container(eof_bytecode(OP_INVALID).data("aa", 2)),
+        EOFValidationError::success);
+
+    // Data section may not be truncated in toplevel container
+    add_test_case(
+        eof_bytecode(OP_INVALID).data("", 2), EOFValidationError::toplevel_container_truncated);
+    add_test_case(
+        eof_bytecode(OP_INVALID).data("aa", 2), EOFValidationError::toplevel_container_truncated);
 }
 
 TEST_F(eof_validation, EOF1_code_section_offset)
@@ -1016,9 +1027,9 @@ TEST_F(eof_validation, EOF1_embedded_container)
         EOFValidationError::success);
 
     // no data section in container, but anticipated aux_data
+    // data section is allowed to be truncated in runtime subcontainer
     add_test_case(
-        "EF0001 010004 0200010006 0300010014 040002 00 00800001 6000E0000000 "
-        "EF000101000402000100010400000000800000FE",
+        eof_bytecode(returncontract(0, 0, 2), 2).container(eof_bytecode(OP_INVALID).data("", 2)),
         EOFValidationError::success);
 
     // with data section

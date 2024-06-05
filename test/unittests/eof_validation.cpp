@@ -87,6 +87,8 @@ std::string_view get_tests_error_message(EOFValidationError err) noexcept
         return "EOF_InvalidContainerSectionIndex";
     case EOFValidationError::eofcreate_with_truncated_container:
         return "EOF_EofCreateWithTruncatedContainer";
+    case EOFValidationError::toplevel_container_truncated:
+        return "EOF_ToplevelContainerTruncated";
     case EOFValidationError::impossible:
         return "impossible";
     }

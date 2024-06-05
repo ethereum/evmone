@@ -423,7 +423,7 @@ jobs:
             ~/tests/EIPTests/BlockchainTests/
       - download_execution_tests:
           repo: ipsilon/tests
-          rev: eof-notxcreate
+          rev: eof-toplevel
           legacy: false
       - run:
           name: "State tests (EOF)"

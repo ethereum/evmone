@@ -138,6 +138,7 @@ enum class EOFValidationError
     too_many_container_sections,
     invalid_container_section_index,
     eofcreate_with_truncated_container,
+    toplevel_container_truncated,
 
     impossible,
 };
