@@ -5,7 +5,6 @@
 
 #include "eoftest.hpp"
 #include <CLI/CLI.hpp>
-#include <evmone/evmone.h>
 #include <gtest/gtest.h>
 #include <filesystem>
 
