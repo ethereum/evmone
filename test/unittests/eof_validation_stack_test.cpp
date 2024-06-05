@@ -7,7 +7,6 @@
 #include <evmone/instructions_traits.hpp>
 #include <gtest/gtest.h>
 #include <test/utils/bytecode.hpp>
-#include <test/utils/utils.hpp>
 
 using namespace evmone;
 using namespace evmone::test;
