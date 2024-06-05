@@ -93,7 +93,7 @@ hash256 from_json<hash256>(const json::json& j)
     {
         const auto s_ = s.substr(0, 2) == "0x" ? s : "0x" + s;
         const auto opt_hash =
-            evmc::from_hex<hash256>("0x" + std::string(64 - s_.size(), '0') + s_.substr(2));
+            evmc::from_hex<hash256>("0x" + std::string(66 - s_.size(), '0') + s_.substr(2));
         if (!opt_hash)
             throw std::invalid_argument("invalid hash: " + s);
         return *opt_hash;

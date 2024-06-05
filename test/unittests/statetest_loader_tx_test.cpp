@@ -232,7 +232,7 @@ TEST(statetest_loader, tx_type_3)
         0x0111111111111111111111111111111111111111111111111111111111111111_bytes32);
 }
 
-TEST(statetest_loader, tx_invalid_blob_versioned_hash)
+TEST(statetest_loader, tx_valid_blob_versioned_hash)
 {
     constexpr std::string_view input = R"({
         "input" : "0x00",
@@ -266,9 +266,8 @@ TEST(statetest_loader, tx_invalid_blob_versioned_hash)
         "sender" : "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"
     })";
 
-    EXPECT_THAT([&] { test::from_json<state::Transaction>(json::json::parse(input)); },
-        ThrowsMessage<std::invalid_argument>(
-            "invalid hash: 0x1a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8"));
+    const auto tx = test::from_json<state::Transaction>(json::json::parse(input));
+    EXPECT_EQ(tx.type, state::Transaction::Type::blob);
 }
 
 TEST(statetest_loader, invalid_tx_type)
