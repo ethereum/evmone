@@ -329,7 +329,7 @@ std::variant<InstructionValidationResult, EOFValidationError> validate_instructi
 
             if (op == OP_RETURNCONTRACT)
             {
-                if (kind == ContainerKind::runtime || kind == ContainerKind::initcode_runtime)
+                if (kind == ContainerKind::runtime)
                     return EOFValidationError::incompatible_container_kind;
             }
 
@@ -338,7 +338,7 @@ std::variant<InstructionValidationResult, EOFValidationError> validate_instructi
         }
         else if (op == OP_RETURN || op == OP_STOP)
         {
-            if (kind == ContainerKind::initcode || kind == ContainerKind::initcode_runtime)
+            if (kind == ContainerKind::initcode)
                 return EOFValidationError::incompatible_container_kind;
         }
         else
@@ -683,8 +683,7 @@ EOFValidationError validate_eof1(
         {
             if (main_container == container)
                 return EOFValidationError::toplevel_container_truncated;
-            if (container_kind == ContainerKind::initcode ||
-                container_kind == ContainerKind::initcode_runtime)
+            if (container_kind == ContainerKind::initcode)
                 return EOFValidationError::eofcreate_with_truncated_container;
         }
 
@@ -696,14 +695,14 @@ EOFValidationError validate_eof1(
             const bool eofcreate = subcontainer_referenced_by_eofcreate[subcont_idx];
             const bool returncontract = subcontainer_referenced_by_returncontract[subcont_idx];
 
+            if (eofcreate && returncontract)
+                return EOFValidationError::ambiguous_container_kind;
             if (!eofcreate && !returncontract)
                 return EOFValidationError::unreferenced_subcontainer;
 
-            auto subcontainer_kind = ContainerKind::initcode_runtime;
-            if (!eofcreate)
-                subcontainer_kind = ContainerKind::runtime;
-            else if (!returncontract)
-                subcontainer_kind = ContainerKind::initcode;
+            const auto subcontainer_kind =
+                (eofcreate ? ContainerKind::initcode : ContainerKind::runtime);
+            assert(subcontainer_kind == ContainerKind::initcode || returncontract);
 
             container_queue.push({subcontainer, subcontainer_kind});
         }

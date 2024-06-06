@@ -1396,81 +1396,6 @@ TEST_F(eof_validation, runtime_container_returncontract)
     add_test_case(factory_container, EOFValidationError::incompatible_container_kind);
 }
 
-TEST_F(eof_validation, initcode_runtime_container_stop)
-{
-    const auto runtime_container = eof_bytecode(OP_STOP);
-
-    add_test_case(runtime_container, ContainerKind::initcode_runtime,
-        EOFValidationError::incompatible_container_kind);
-
-    const auto initcontainer =
-        eof_bytecode(eofcreate() + returncontract(0, 0, 0), 4).container(runtime_container);
-
-    add_test_case(
-        initcontainer, ContainerKind::initcode, EOFValidationError::incompatible_container_kind);
-
-    const auto factory_code = eofcreate() + OP_STOP;
-    const bytecode factory_container = eof_bytecode(factory_code, 4).container(initcontainer);
-
-    add_test_case(factory_container, EOFValidationError::incompatible_container_kind);
-}
-
-TEST_F(eof_validation, initcode_runtime_container_return)
-{
-    const auto runtime_container = eof_bytecode(ret(0, 0), 2);
-
-    add_test_case(runtime_container, ContainerKind::initcode_runtime,
-        EOFValidationError::incompatible_container_kind);
-
-    const auto initcontainer =
-        eof_bytecode(eofcreate() + returncontract(0, 0, 0), 4).container(runtime_container);
-
-    add_test_case(
-        initcontainer, ContainerKind::initcode, EOFValidationError::incompatible_container_kind);
-
-    const auto factory_code = eofcreate() + OP_STOP;
-    const bytecode factory_container = eof_bytecode(factory_code, 4).container(initcontainer);
-
-    add_test_case(factory_container, EOFValidationError::incompatible_container_kind);
-}
-
-TEST_F(eof_validation, initcode_runtime_container_revert)
-{
-    const auto runtime_container =
-        eof_bytecode(returncontract(0, 0, 0), 2).container(eof_bytecode(OP_INVALID));
-
-    add_test_case(runtime_container, ContainerKind::initcode_runtime,
-        EOFValidationError::incompatible_container_kind);
-
-    const auto initcontainer =
-        eof_bytecode(eofcreate() + returncontract(0, 0, 0), 4).container(runtime_container);
-
-    add_test_case(
-        initcontainer, ContainerKind::initcode, EOFValidationError::incompatible_container_kind);
-
-    const auto factory_code = eofcreate() + OP_STOP;
-    const bytecode factory_container = eof_bytecode(factory_code, 4).container(initcontainer);
-
-    add_test_case(factory_container, EOFValidationError::incompatible_container_kind);
-}
-
-TEST_F(eof_validation, initcode_runtime_container_returncontract)
-{
-    const auto runtime_container = eof_bytecode(revert(0, 0), 2);
-
-    add_test_case(runtime_container, ContainerKind::initcode_runtime, EOFValidationError::success);
-
-    const auto initcontainer =
-        eof_bytecode(eofcreate() + returncontract(0, 0, 0), 4).container(runtime_container);
-
-    add_test_case(initcontainer, ContainerKind::initcode, EOFValidationError::success);
-
-    const auto factory_code = eofcreate() + OP_STOP;
-    const bytecode factory_container = eof_bytecode(factory_code, 4).container(initcontainer);
-
-    add_test_case(factory_container, EOFValidationError::success);
-}
-
 TEST_F(eof_validation, eofcreate_stop_and_returncontract)
 {
     const auto runtime_container = eof_bytecode(OP_INVALID);
@@ -1491,4 +1416,21 @@ TEST_F(eof_validation, eofcreate_return_and_returncontract)
     const bytecode factory_container = eof_bytecode(factory_code, 4).container(initcontainer);
 
     add_test_case(factory_container, EOFValidationError::incompatible_container_kind);
+}
+
+TEST_F(eof_validation, eofcreate_and_returncontract_targeting_same_container)
+{
+    const auto runtime_container = eof_bytecode(OP_INVALID);
+    const auto initcode = eofcreate() + returncontract(0, 0, 0);
+    const auto initcontainer = eof_bytecode(initcode, 4).container(runtime_container);
+
+    add_test_case(
+        initcontainer, ContainerKind::initcode, EOFValidationError::ambiguous_container_kind);
+
+    const auto initcode2 = eofcreate() + eofcreate().container(1) + returncontract(1, 0, 0);
+    const auto initcontainer2 =
+        eof_bytecode(initcode, 4).container(runtime_container).container(runtime_container);
+
+    add_test_case(
+        initcontainer2, ContainerKind::initcode, EOFValidationError::ambiguous_container_kind);
 }

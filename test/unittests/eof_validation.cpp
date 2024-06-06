@@ -111,8 +111,6 @@ std::string_view to_string(ContainerKind container_kind) noexcept
         return "runtime";
     case (ContainerKind::initcode):
         return "initcode";
-    case (ContainerKind::initcode_runtime):
-        return "initcode_runtime";
     }
     return "<unknown>";
 }
