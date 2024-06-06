@@ -27,8 +27,12 @@ void run_state_test(const StateTransitionTest& test, evmc::VM& vm, bool trace_su
             const auto tx = test.multi_tx.get(expected.indexes);
             auto state = test.pre_state;
 
+            const auto start_time = std::chrono::steady_clock::now();
+
             const auto res = state::transition(state, test.block, tx, rev, vm, test.block.gas_limit,
                 state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK);
+
+            const auto exec_duration = std::chrono::steady_clock::now() - start_time;
 
             // Finalize block with reward 0.
             state::finalize(state, rev, test.block.coinbase, 0, {}, {});
@@ -46,8 +50,22 @@ void run_state_test(const StateTransitionTest& test, evmc::VM& vm, bool trace_su
                     else
                         std::clog << R"("pass":false,"error":")" << r.status << '"';
                     std::clog << R"(,"gasUsed":"0x)" << std::hex << r.gas_used << R"(",)";
+
+                    if (r.status == EVMC_SUCCESS)
+                    {
+                        std::clog << "LOGS:\n";
+                        for (const auto& log : r.logs)
+                        {
+                            std::clog << log.addr << ": " << hex(log.data) << "\n";
+                        }
+                    }
                 }
                 std::clog << R"("stateRoot":"0x)" << hex(state_root) << "\"}\n";
+
+                std::clog
+                    << "time: " << std::dec
+                    << std::chrono::duration_cast<std::chrono::microseconds>(exec_duration).count()
+                    << "us\n";
             }
 
             if (expected.exception)
