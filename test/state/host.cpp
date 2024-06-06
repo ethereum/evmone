@@ -257,7 +257,7 @@ std::optional<evmc_message> Host::prepare_message(evmc_message msg) noexcept
                     if (header == nullptr)
                         return {};  // Light early exception.
 
-                    if (!header->can_init(msg.input_size))
+                    if (!header->has_full_data(msg.input_size))
                         return {};  // Light early exception.
 
                     const auto container_size =
