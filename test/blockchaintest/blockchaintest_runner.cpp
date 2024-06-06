@@ -66,7 +66,7 @@ TransitionResult apply_block(state::State& state, evmc::VM& vm, const state::Blo
             cumulative_gas_used += receipt.gas_used;
             receipt.cumulative_gas_used = cumulative_gas_used;
             if (rev < EVMC_BYZANTIUM)
-                receipt.post_state = state::mpt_hash(state.get_accounts());
+                receipt.post_state = state::mpt_hash(TestState{state});
 
             block_gas_left -= receipt.gas_used;
             blob_gas_left -= tx.blob_gas_used();
@@ -91,13 +91,11 @@ std::optional<int64_t> mining_reward(evmc_revision rev) noexcept
     return std::nullopt;
 }
 
-std::string print_state(const state::State& s)
+std::string print_state(const TestState& s)
 {
     std::stringstream out;
-    const std::map<address, state::Account> ordered(
-        s.get_accounts().begin(), s.get_accounts().end());
 
-    for (const auto& [key, acc] : ordered)
+    for (const auto& [key, acc] : s)
     {
         out << key << " : \n";
         out << "\tnonce : " << acc.nonce << "\n";
@@ -106,15 +104,11 @@ std::string print_state(const state::State& s)
 
         if (!acc.storage.empty())
         {
-            const std::map<bytes32, state::StorageValue> ordered_storage(
-                acc.storage.begin(), acc.storage.end());
-
-            out << "\tstorage : "
-                << "\n";
-            for (const auto& [s_key, val] : ordered_storage)
+            out << "\tstorage : \n";
+            for (const auto& [s_key, val] : acc.storage)
             {
-                if (val.current)  // Skip 0 values.
-                    out << "\t\t" << s_key << " : " << hex0x(val.current) << "\n";
+                if (!is_zero(val))  // Skip 0 values.
+                    out << "\t\t" << s_key << " : " << hex0x(val) << "\n";
             }
         }
     }
@@ -131,7 +125,7 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
         SCOPED_TRACE(std::string{evmc::to_string(c.rev.get_revision(0))} + '/' +
                      std::to_string(case_index) + '/' + c.name);
 
-        auto state = c.pre_state;
+        auto state = c.pre_state.to_intra_state();
 
         const state::BlockInfo genesis{
             .number = c.genesis_block_header.block_number,
@@ -151,8 +145,7 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
 
         const auto genesis_res = apply_block(state, vm, genesis, {}, c.rev.get_revision(0), {});
 
-        EXPECT_EQ(
-            state::mpt_hash(state.get_accounts()), state::mpt_hash(c.pre_state.get_accounts()));
+        EXPECT_EQ(state::mpt_hash(TestState{state}), state::mpt_hash(c.pre_state));
 
         if (c.rev.get_revision(0) >= EVMC_SHANGHAI)
         {
@@ -184,7 +177,7 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
                          '/' + c.name + '/' + std::to_string(test_block.block_info.number));
 
             EXPECT_EQ(
-                state::mpt_hash(state.get_accounts()), test_block.expected_block_header.state_root);
+                state::mpt_hash(TestState{state}), test_block.expected_block_header.state_root);
 
             if (rev >= EVMC_SHANGHAI)
             {
@@ -203,16 +196,17 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
             // TODO: Add difficulty calculation verification.
         }
 
-        const auto post_state_hash =
-            std::holds_alternative<state::State>(c.expectation.post_state) ?
-                state::mpt_hash(std::get<state::State>(c.expectation.post_state).get_accounts()) :
+        const TestState post{state};
+        const auto expected_post_hash =
+            std::holds_alternative<TestState>(c.expectation.post_state) ?
+                state::mpt_hash(std::get<TestState>(c.expectation.post_state)) :
                 std::get<hash256>(c.expectation.post_state);
-        EXPECT_TRUE(state::mpt_hash(state.get_accounts()) == post_state_hash)
+        EXPECT_TRUE(state::mpt_hash(post) == expected_post_hash)
             << "Result state:\n"
-            << print_state(state)
-            << (std::holds_alternative<state::State>(c.expectation.post_state) ?
+            << print_state(post)
+            << (std::holds_alternative<TestState>(c.expectation.post_state) ?
                        "\n\nExpected state:\n" +
-                           print_state(std::get<state::State>(c.expectation.post_state)) :
+                           print_state(std::get<TestState>(c.expectation.post_state)) :
                        "");
     }
 }

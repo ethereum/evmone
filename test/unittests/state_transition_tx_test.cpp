@@ -25,7 +25,7 @@ TEST_F(state_transition, tx_non_existing_sender)
     tx.max_gas_price = 0;
     tx.max_priority_gas_price = 0;
     tx.nonce = 0;
-    pre.get_accounts().erase(Sender);
+    pre.erase(Sender);
 
     expect.status = EVMC_SUCCESS;
     expect.post.at(Sender).nonce = 1;
@@ -40,7 +40,7 @@ TEST_F(state_transition, invalid_tx_non_existing_sender)
     tx.max_gas_price = 1;
     tx.max_priority_gas_price = 1;
     tx.nonce = 0;
-    pre.get_accounts().erase(Sender);
+    pre.erase(Sender);
 
     expect.tx_error = INSUFFICIENT_FUNDS;
     expect.post[Sender].exists = false;
@@ -96,8 +96,7 @@ TEST_F(state_transition, access_list_storage)
     tx.to = To;
     tx.access_list = {{To, {0x01_bytes32}}};
 
-    pre.insert(To,
-        {.storage = {{0x01_bytes32, {0x01_bytes32, 0x01_bytes32}}}, .code = sstore(2, sload(1))});
+    pre.insert(To, {.storage = {{0x01_bytes32, 0x01_bytes32}}, .code = sstore(2, sload(1))});
 
     expect.post[To].storage[0x01_bytes32] = 0x01_bytes32;
     expect.post[To].storage[0x02_bytes32] = 0x01_bytes32;
