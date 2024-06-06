@@ -33,15 +33,7 @@ CodeAnalysis::JumpdestMap analyze_jumpdests(bytes_view code)
     // static_cast<int8_t>(op) <= OP_PUSH32 is always true and can be skipped.
     static_assert(OP_PUSH32 == std::numeric_limits<int8_t>::max());
 
-    CodeAnalysis::JumpdestMap map(code.size());  // Allocate and init bitmap with zeros.
-    for (size_t i = 0; i < code.size(); ++i)
-    {
-        const auto op = code[i];
-        if (static_cast<int8_t>(op) >= OP_PUSH1)  // If any PUSH opcode (see explanation above).
-            i += op - size_t{OP_PUSH1 - 1};       // Skip PUSH data.
-        else if (INTX_UNLIKELY(op == OP_JUMPDEST))
-            map[i] = true;
-    }
+    CodeAnalysis::JumpdestMap map(code.size(), true);  // Allocate and init bitmap with ones.
 
     return map;
 }
