@@ -696,7 +696,8 @@ EOFValidationError validate_eof1(
             const bool eofcreate = subcontainer_referenced_by_eofcreate[subcont_idx];
             const bool returncontract = subcontainer_referenced_by_returncontract[subcont_idx];
 
-            // TODO Validate whether subcontainer was referenced by any instruction
+            if (!eofcreate && !returncontract)
+                return EOFValidationError::unreferenced_subcontainer;
 
             auto subcontainer_kind = ContainerKind::initcode_runtime;
             if (!eofcreate)
@@ -988,6 +989,8 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "incompatible_container_kind";
     case EOFValidationError::container_size_above_limit:
         return "container_size_above_limit";
+    case EOFValidationError::unreferenced_subcontainer:
+        return "unreferenced_subcontainer";
     case EOFValidationError::impossible:
         return "impossible";
     }

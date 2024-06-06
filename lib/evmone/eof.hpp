@@ -142,6 +142,7 @@ enum class EOFValidationError
     ambiguous_container_kind,
     incompatible_container_kind,
     container_size_above_limit,
+    unreferenced_subcontainer,
 
     impossible,
 };
