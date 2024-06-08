@@ -33,40 +33,6 @@ struct HashedInputStubs : std::unordered_map<hash256, bytes>
 };
 }  // namespace
 
-ExecutionResult sha256_stub(
-    const uint8_t* input, size_t input_size, uint8_t* output, size_t max_output_size) noexcept
-{
-    static const HashedInputStubs stubs{
-        {0x012893657d8eb2efad4de0a91bcd0e39ad9837745dec3ea923737ea803fc8e3d_bytes32,
-            "38723a2e5e8a17aa7950dc008209944e898f69a7bd10a23c839d341e935fd5ca"_hex},
-        {0x17bc5666b1ec85903b4657b6adaa1e0d32cce50dfa483c1c5948ebb3d8787268_bytes32,
-            "73f5062fb68ed2a1ec82ff8c73f9251bb9cf53a623bc93527e16bc5ae29dad74"_hex},
-        {0x405787fa12a823e0f2b7631cc41b3ba8828b3321ca811111fa75cd3aa3bb5ace_bytes32,
-            "9267d3dbed802941483f1afa2a6bc68de5f653128aca9bf1461c5d0a3ad36ed2"_hex},
-        {0x43c4b4524adb81e4e9a5c4648a98e9d320e3908ac5b6c889144b642cd08ae16d_bytes32,
-            "3c8727e019a42b444667a587b6001251becadabbb36bfed8087a92c18882d111"_hex},
-        {0x4df2effad59eb919c30cf175fb15c66618dd52e6865b846c930752d44faf859d_bytes32,
-            "eceef81a484fea2cd17f305981f7b46d1eb583da375d9c499d90cdd63b650fbc"_hex},
-        {0x9ea7a819a0914e18e935cf832504011ef2ea4e0d3ee72af3c69d40e2066289af_bytes32,
-            "cb39b3bde22925b2f931111130c774761d8895e0e08437c9b396c1e97d10f34d"_hex},
-        {0xa9c584056064687e149968cbab758a3376d22aedc6a55823d1b3ecbee81b8fb9_bytes32,
-            "af9613760f72635fbdb44a5a0a63c39f12af30f950a6ee5c971be188e89c4051"_hex},
-        {0xad4ac87fa8b6f7014b17f40a9d8c5ee373cf34535661d6375156c5ba3a04e3af_bytes32,
-            "7392925565d67be8e9620aacbcfaecd8cb6ec58d709d25da9eccf1d08a41ce35"_hex},
-        {0xb10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6_bytes32,
-            "ec4916dd28fc4c10d78e287ca5d9cc51ee1ae73cbfde08c6b37324cbfaac8bc5"_hex},
-        {0xbc36789e7a1e281436464229828f817d6612f7b477d66591ff96a9e064bcc98a_bytes32,
-            "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"_hex},
-        {0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470_bytes32,
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"_hex},
-        {0xda9978f0bc086d41a18d2b99f16c51583c2a38ee4c9346aa834dc50e66b4964d_bytes32,
-            "611ab7d0b1e0f74d9d8e9dad7daae35404c3c0c5d9e94839338562d708d8e9d0"_hex},
-        {0xfd6d486de5910c769ade60684c4e74e68a93a919b286607d7995398daf42204d_bytes32,
-            "3b745a1c00d035c334f358d007a430e4cf0ae63aa0556fb05529706de546464d"_hex},
-    };
-    return stubs.lookup({input, input_size}, output, max_output_size);
-}
-
 ExecutionResult expmod_stub(
     const uint8_t* input, size_t input_size, uint8_t* output, size_t max_output_size) noexcept
 {
