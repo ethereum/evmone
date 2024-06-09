@@ -16,16 +16,10 @@ limitations under the License.
 
 #pragma once
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
+namespace evmone::crypto
+{
 void silkworm_sha256(uint8_t hash[32], const uint8_t* input, size_t len, bool use_cpu_extensions);
-
-#if defined(__cplusplus)
 }
-#endif

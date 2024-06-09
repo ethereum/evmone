@@ -19,9 +19,9 @@ limitations under the License.
 // https://github.com/noloader/SHA-Intrinsics (Author: Jeffrey Walton)
 // https://github.com/Mysticial/FeatureDetector (Author: Alexander Yee)
 
-#include "sha256.h"
+#include "sha256.hpp"
 
-#include <string.h>
+#include <cstring>
 
 #if defined(__x86_64__)
 
@@ -48,6 +48,9 @@ limitations under the License.
 #else
 #define ALWAYS_INLINE
 #endif
+
+namespace evmone::crypto
+{
 
 #define CHUNK_SIZE 64
 #define TOTAL_LEN_LEN 8
@@ -89,7 +92,7 @@ static inline uint32_t right_rot(uint32_t value, unsigned int count)
     return value >> count | value << (32 - count);
 }
 
-static void init_buf_state(struct buffer_state* state, const void* input, size_t len)
+static void init_buf_state(struct buffer_state* state, const uint8_t* input, size_t len)
 {
     state->p = input;
     state->len = len;
@@ -163,7 +166,7 @@ static bool calc_chunk(uint8_t chunk[CHUNK_SIZE], struct buffer_state* state)
 }
 
 static inline ALWAYS_INLINE void sha_256_implementation(
-    uint32_t h[8], const void* input, size_t len)
+    uint32_t h[8], const uint8_t* input, size_t len)
 {
     /*
      * Note 1: All integers (expect indexes) are 32-bit unsigned integers and addition is calculated
@@ -263,17 +266,17 @@ static inline ALWAYS_INLINE void sha_256_implementation(
     }
 }
 
-static void sha_256_generic(uint32_t h[8], const void* input, size_t len)
+static void sha_256_generic(uint32_t h[8], const uint8_t* input, size_t len)
 {
     sha_256_implementation(h, input, len);
 }
 
-static void (*sha_256_best)(uint32_t h[8], const void* input, size_t len) = sha_256_generic;
+static void (*sha_256_best)(uint32_t h[8], const uint8_t* input, size_t len) = sha_256_generic;
 
 #if defined(__x86_64__)
 
 __attribute__((target("bmi,bmi2"))) static void sha_256_x86_bmi(
-    uint32_t h[8], const void* input, size_t len)
+    uint32_t h[8], const uint8_t* input, size_t len)
 {
     sha_256_implementation(h, input, len);
 }
@@ -288,7 +291,7 @@ __attribute__((target("bmi,bmi2"))) static void sha_256_x86_bmi(
 /*   Based on code from Intel, and by Sean Gulley for      */
 /*   the miTLS project.                                    */
 __attribute__((target("sha,sse4.1"))) static void sha_256_x86_sha(
-    uint32_t h[8], const void* input, size_t len)
+    uint32_t h[8], const uint8_t* input, size_t len)
 {
     __m128i STATE0, STATE1;
     __m128i MSG, TMP;
@@ -550,7 +553,7 @@ __attribute__((constructor)) static void select_sha256_implementation(void)
 /*   Written and placed in public domain by Jeffrey Walton    */
 /*   Based on code from ARM, and by Johannes Schneiders, Skip */
 /*   Hovsmith and Barry O'Rourke for the mbedTLS project.     */
-static void sha_256_arm_v8(uint32_t h[8], const void* input, size_t len)
+static void sha_256_arm_v8(uint32_t h[8], const uint8_t* input, size_t len)
 {
     uint32x4_t STATE0, STATE1, ABEF_SAVE, CDGH_SAVE;
     uint32x4_t MSG0, MSG1, MSG2, MSG3;
@@ -774,3 +777,5 @@ void silkworm_sha256(uint8_t hash[32], const uint8_t* input, size_t len, bool us
         hash[j++] = (uint8_t)h[i];
     }
 }
+
+}  // namespace evmone::crypto
