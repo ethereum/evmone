@@ -543,7 +543,7 @@ jobs:
             SHOW_ARGS='-format=html -show-branches=count -show-regions -show-expansions'
             
             mkdir ~/coverage
-            llvm-profdata merge *.profraw -o evmone.profdata
+            llvm-profdata merge -sparse *.profraw -o evmone.profdata
             llvm-cov show $ARGS $SHOW_ARGS > ~/coverage/full.html
             llvm-cov show $ARGS $SHOW_ARGS -region-coverage-lt=100 > ~/coverage/missing.html
 

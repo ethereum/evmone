@@ -87,7 +87,12 @@ target_compile_options(evmone-unittests PRIVATE
     $<$<CXX_COMPILER_ID:MSVC>:-wd4789>
 )
 
-gtest_discover_tests(evmone-unittests TEST_PREFIX ${PROJECT_NAME}/unittests/)
+gtest_discover_tests(
+    evmone-unittests
+    TEST_PREFIX ${PROJECT_NAME}/unittests/
+    PROPERTIES
+    ENVIRONMENT LLVM_PROFILE_FILE=${PROJECT_BINARY_DIR}/unittests-%p.profraw
+)
 
 option(EVMONE_EVM_TEST_TOOL "Enable EVM unit testing tool for EVMC implementations (not maintained)" OFF)
 if(EVMONE_EVM_TEST_TOOL)
