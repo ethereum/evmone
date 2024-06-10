@@ -12,6 +12,36 @@ using namespace testing;
 
 // TODO: Add specific test of loading nonce, chainId, r, s, v
 
+TEST(statetest_loader, tx_to_empty_string)
+{
+    // The "to":"" is correctly parsed as a creation transaction.
+    constexpr std::string_view input = R"({
+        "to": "",
+        "input": "", "gas": "1", "chainId": "1", "value": "0", "sender": "a0a1",
+        "gasPrice": "1", "nonce": "0", "v": "1",
+        "r": "0x1111111111111111111111111111111111111111111111111111111111111111",
+        "s": "0x2222222222222222222222222222222222222222222222222222222222222222"
+    })";
+
+    const auto tx = test::from_json<state::Transaction>(json::json::parse(input));
+    EXPECT_FALSE(tx.to.has_value());
+}
+
+TEST(statetest_loader, tx_to_null)
+{
+    // The "to":null is correctly parsed as a creation transaction.
+    constexpr std::string_view input = R"({
+        "to": null,
+        "input": "", "gas": "1", "chainId": "1", "value": "0", "sender": "a0a1",
+        "gasPrice": "1", "nonce": "0", "v": "1",
+        "r": "0x1111111111111111111111111111111111111111111111111111111111111111",
+        "s": "0x2222222222222222222222222222222222222222222222222222222222222222"
+    })";
+
+    const auto tx = test::from_json<state::Transaction>(json::json::parse(input));
+    EXPECT_FALSE(tx.to.has_value());
+}
+
 TEST(statetest_loader, tx_create_legacy)
 {
     constexpr std::string_view input = R"({
@@ -20,7 +50,6 @@ TEST(statetest_loader, tx_create_legacy)
         "chainId": "0x5",
         "value": "0xe0e1",
         "sender": "a0a1",
-        "to": "",
         "gasPrice": "0x7071",
         "nonce": "0",
         "r": "0x1111111111111111111111111111111111111111111111111111111111111111",
@@ -86,7 +115,6 @@ TEST(statetest_loader, tx_access_list)
         "gas": "0",
         "value": "0",
         "sender": "",
-        "to": "",
         "maxFeePerGas": "0",
         "maxPriorityFeePerGas": "0",
         "accessList": [
@@ -150,7 +178,6 @@ TEST(statetest_loader, tx_type_1)
         "type": "1",
         "value": "0",
         "sender": "",
-        "to": "",
         "gasPrice": "0",
         "accessList": [
             {"address": "ac01", "storageKeys": []},
@@ -190,7 +217,6 @@ TEST(statetest_loader, tx_type_3)
         "type": "3",
         "value": "0",
         "sender": "",
-        "to": "",
         "maxFeePerGas": "0",
         "maxPriorityFeePerGas": "0",
         "accessList": [
@@ -280,7 +306,6 @@ TEST(statetest_loader, invalid_tx_type)
                 "type": "2",
                 "value": "0",
                 "sender": "",
-                "to": "",
                 "gasPrice": "0",
                 "accessList": [
                     {"address": "ac01", "storageKeys": []},
@@ -302,7 +327,6 @@ TEST(statetest_loader, invalid_tx_type)
             "type": "1",
             "value": "0",
             "sender": "",
-            "to": "",
             "gasPrice": "0",
             "nonce": "0",
             "r": "0x1111111111111111111111111111111111111111111111111111111111111111",
@@ -321,7 +345,6 @@ TEST(statetest_loader, invalid_tx_type)
             "type": "1",
             "value": "0",
             "sender": "",
-            "to": "",
             "maxFeePerGas": "0",
             "maxPriorityFeePerGas": "0",
             "accessList": [
