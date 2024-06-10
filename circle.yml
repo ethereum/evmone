@@ -131,12 +131,15 @@ commands:
     parameters:
       release:
         type: string
+      fixtures_suffix:
+        type: string
+        default: develop
     steps:
       - run:
-          name: "Download execution-spec-tests"
+          name: "Download execution-spec-tests: <<parameters.release>>"
           working_directory: ~/spec-tests
           command: |
-            curl -L https://github.com/ethereum/execution-spec-tests/releases/download/<<parameters.release>>/fixtures_develop.tar.gz | tar -xz
+            curl -L https://github.com/ethereum/execution-spec-tests/releases/download/<<parameters.release>>/fixtures_<<parameters.fixtures_suffix>>.tar.gz | tar -xz
             ls -l
 
   build:
@@ -371,9 +374,9 @@ jobs:
     environment:
       BUILD_TYPE: Coverage
     steps:
+      - build
       - download_execution_spec_tests:
           release: v2.1.1
-      - build
       - run:
           name: "Execution spec tests (state_tests)"
           working_directory: ~/build
@@ -387,6 +390,36 @@ jobs:
       - collect_coverage_gcc
       - upload_coverage:
           flags: execution_spec_tests
+
+  eof-execution-spec-tests:
+    executor: linux-gcc-latest
+    environment:
+      BUILD_TYPE: Coverage
+    steps:
+      - build
+      - download_execution_spec_tests:
+          release: eip7692@v1.0.1
+          fixtures_suffix: eip7692
+      - run:
+          name: "EOF pre-release execution spec tests (state_tests)"
+          working_directory: ~/build
+          command: >
+            bin/evmone-statetest ~/spec-tests/fixtures/state_tests
+      - run:
+          name: "EOF pre-release execution spec tests (blockchain_tests)"
+          working_directory: ~/build
+          command: >
+            bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests
+      - run:
+          # TODO: Enable all tests
+          name: "EOF pre-release execution spec tests (eof_tests)"
+          working_directory: ~/build
+          command: >
+            bin/evmone-eoftest ~/spec-tests/fixtures/eof_tests
+            --gtest_filter='-prague/eip7692_eof_v1/eip3540_eof_v1/code_validation.legacy_initcode_valid_eof_v1_contract'
+      - collect_coverage_gcc
+      - upload_coverage:
+          flags: eof_execution_spec_tests
 
   ethereum-tests:
     executor: linux-gcc-latest
@@ -665,6 +698,7 @@ workflows:
             tags:
               only: /^v[0-9].*/
       - execution-spec-tests
+      - eof-execution-spec-tests
       - ethereum-tests
       - precompiles-silkpre
       - cmake-min
