@@ -20,7 +20,8 @@ limitations under the License.
 // https://github.com/Mysticial/FeatureDetector (Author: Alexander Yee)
 
 #include "sha256.hpp"
-
+#include <bit>
+#include <cstdint>
 #include <cstring>
 
 #if defined(__x86_64__)
@@ -40,14 +41,6 @@ limitations under the License.
 #endif  // defined(__linux__), defined(__APPLE__)
 
 #endif  // defined(__x86_64__), defined(__aarch64__)
-
-#if _MSC_VER
-#define ALWAYS_INLINE __forceinline
-#elif __has_attribute(always_inline)
-#define ALWAYS_INLINE __attribute__((always_inline))
-#else
-#define ALWAYS_INLINE
-#endif
 
 namespace evmone::crypto
 {
@@ -74,34 +67,19 @@ static const uint32_t k[] = {0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3
     0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb,
     0xbef9a3f7, 0xc67178f2};
 
-struct buffer_state
+struct BufferState
 {
     const uint8_t* p;
     size_t len;
     size_t total_len;
-    bool single_one_delivered;
-    bool total_len_delivered;
+    bool single_one_delivered = false;
+    bool total_len_delivered = false;
+
+    constexpr BufferState(const uint8_t* input, size_t size) : p{input}, len{size}, total_len{size}
+    {}
 };
 
-static inline uint32_t right_rot(uint32_t value, unsigned int count)
-{
-    /*
-     * Defined behaviour in standard C for all count where 0 < count < 32,
-     * which is what we need here.
-     */
-    return value >> count | value << (32 - count);
-}
-
-static void init_buf_state(struct buffer_state* state, const uint8_t* input, size_t len)
-{
-    state->p = input;
-    state->len = len;
-    state->total_len = len;
-    state->single_one_delivered = false;
-    state->total_len_delivered = false;
-}
-
-static bool calc_chunk(uint8_t chunk[CHUNK_SIZE], struct buffer_state* state)
+static bool calc_chunk(uint8_t chunk[CHUNK_SIZE], struct BufferState* state)
 {
     if (state->total_len_delivered)
     {
@@ -117,7 +95,7 @@ static bool calc_chunk(uint8_t chunk[CHUNK_SIZE], struct buffer_state* state)
     }
 
     size_t space_in_chunk = CHUNK_SIZE - state->len;
-    if (state->len)
+    if (state->len != 0)
     {  // avoid adding 0 to nullptr
         memcpy(chunk, state->p, state->len);
         chunk += state->len;
@@ -165,7 +143,7 @@ static bool calc_chunk(uint8_t chunk[CHUNK_SIZE], struct buffer_state* state)
     return true;
 }
 
-static inline ALWAYS_INLINE void sha_256_implementation(
+[[gnu::always_inline, msvc::forceinline]] inline void sha_256_implementation(
     uint32_t h[8], const uint8_t* input, size_t len)
 {
     /*
@@ -182,15 +160,15 @@ static inline ALWAYS_INLINE void sha_256_implementation(
      *     the first word of the input message "abc" after padding is 0x61626380
      */
 
-    struct buffer_state state;
-    init_buf_state(&state, input, len);
+    BufferState state{input, len};
 
     /* 512-bit chunks is what we will operate on. */
     uint8_t chunk[CHUNK_SIZE];
 
     while (calc_chunk(chunk, &state))
     {
-        unsigned i = 0, j = 0;
+        unsigned i = 0;
+        unsigned j = 0;
 
         uint32_t ah[8];
         /* Initialize working variables to current hash value: */
@@ -231,19 +209,19 @@ static inline ALWAYS_INLINE void sha_256_implementation(
                 {
                     /* Extend the first 16 words into the remaining 48 words w[16..63] of the
                      * message schedule array: */
-                    const uint32_t s0 = right_rot(w[(j + 1) & 0xf], 7) ^
-                                        right_rot(w[(j + 1) & 0xf], 18) ^ (w[(j + 1) & 0xf] >> 3);
-                    const uint32_t s1 = right_rot(w[(j + 14) & 0xf], 17) ^
-                                        right_rot(w[(j + 14) & 0xf], 19) ^
+                    const uint32_t s0 = std::rotr(w[(j + 1) & 0xf], 7) ^
+                                        std::rotr(w[(j + 1) & 0xf], 18) ^ (w[(j + 1) & 0xf] >> 3);
+                    const uint32_t s1 = std::rotr(w[(j + 14) & 0xf], 17) ^
+                                        std::rotr(w[(j + 14) & 0xf], 19) ^
                                         (w[(j + 14) & 0xf] >> 10);
                     w[j] = w[j] + s0 + w[(j + 9) & 0xf] + s1;
                 }
                 const uint32_t s1 =
-                    right_rot(ah[4], 6) ^ right_rot(ah[4], 11) ^ right_rot(ah[4], 25);
+                    std::rotr(ah[4], 6) ^ std::rotr(ah[4], 11) ^ std::rotr(ah[4], 25);
                 const uint32_t ch = (ah[4] & ah[5]) ^ (~ah[4] & ah[6]);
                 const uint32_t temp1 = ah[7] + s1 + ch + k[i << 4 | j] + w[j];
                 const uint32_t s0 =
-                    right_rot(ah[0], 2) ^ right_rot(ah[0], 13) ^ right_rot(ah[0], 22);
+                    std::rotr(ah[0], 2) ^ std::rotr(ah[0], 13) ^ std::rotr(ah[0], 22);
                 const uint32_t maj = (ah[0] & ah[1]) ^ (ah[0] & ah[2]) ^ (ah[1] & ah[2]);
                 const uint32_t temp2 = s0 + maj;
 
@@ -293,12 +271,17 @@ __attribute__((target("bmi,bmi2"))) static void sha_256_x86_bmi(
 __attribute__((target("sha,sse4.1"))) static void sha_256_x86_sha(
     uint32_t h[8], const uint8_t* input, size_t len)
 {
+    // NOLINTBEGIN(readability-isolate-declaration)
     __m128i STATE0, STATE1;
     __m128i MSG, TMP;
     __m128i MSG0, MSG1, MSG2, MSG3;
     __m128i ABEF_SAVE, CDGH_SAVE;
-    const __m128i MASK = _mm_set_epi64x(0x0c0d0e0f08090a0bULL, 0x0405060700010203ULL);  // NOLINT
+    // NOLINTEND(readability-isolate-declaration)
 
+    const __m128i MASK = _mm_set_epi64x(0x0c0d0e0f08090a0bULL, 0x0405060700010203ULL);
+
+    // NOLINTBEGIN(cppcoreguidelines-pro-type-cstyle-cast)
+    // NOLINTBEGIN(portability-simd-intrinsics)
     /* Load initial values */
     TMP = _mm_loadu_si128((const __m128i*)&h[0]);
     STATE1 = _mm_loadu_si128((const __m128i*)&h[4]);
@@ -308,8 +291,7 @@ __attribute__((target("sha,sse4.1"))) static void sha_256_x86_sha(
     STATE0 = _mm_alignr_epi8(TMP, STATE1, 8);    /* ABEF */
     STATE1 = _mm_blend_epi16(STATE1, TMP, 0xF0); /* CDGH */
 
-    struct buffer_state state;
-    init_buf_state(&state, input, len);
+    BufferState state{input, len};
 
     /* 512-bit chunks is what we will operate on. */
     uint8_t chunk[CHUNK_SIZE];
@@ -501,21 +483,23 @@ __attribute__((target("sha,sse4.1"))) static void sha_256_x86_sha(
     /* Save state */
     _mm_storeu_si128((__m128i*)&h[0], STATE0);
     _mm_storeu_si128((__m128i*)&h[4], STATE1);
+    // NOLINTEND(portability-simd-intrinsics)
+    // NOLINTEND(cppcoreguidelines-pro-type-cstyle-cast)
 }
 
 #pragma GCC diagnostic pop
 
 // https://stackoverflow.com/questions/6121792/how-to-check-if-a-cpu-supports-the-sse3-instruction-set
-static void cpuid(int info[4], int InfoType)
-{  // NOLINT(readability-non-const-parameter)
+static void cpuid(int info[4], int InfoType)  // NOLINT(readability-non-const-parameter)
+{
     __cpuid_count(InfoType, 0, info[0], info[1], info[2], info[3]);
 }
 
-__attribute__((constructor)) static void select_sha256_implementation(void)
+__attribute__((constructor)) static void select_sha256_implementation()
 {
     int info[4];
     cpuid(info, 0);
-    int nIds = info[0];
+    const int nIds = info[0];
 
     bool hw_sse41 = false;
     bool hw_bmi1 = false;
@@ -563,8 +547,7 @@ static void sha_256_arm_v8(uint32_t h[8], const uint8_t* input, size_t len)
     STATE0 = vld1q_u32(&h[0]);
     STATE1 = vld1q_u32(&h[4]);
 
-    struct buffer_state state;
-    init_buf_state(&state, input, len);
+    BufferState state{input, len};
 
     /* 512-bit chunks is what we will operate on. */
     uint8_t chunk[CHUNK_SIZE];
