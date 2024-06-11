@@ -1,23 +1,14 @@
-/*
-Copyright 2022 The Silkworm Authors
+// evmone: Fast Ethereum Virtual Machine implementation
+// Copyright 2022 The Silkworm & evmone Authors.
+// SPDX-License-Identifier: Apache-2.0
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-// Based on several bits of code released to public domain:
-// https://github.com/amosnier/sha-2 (Author: Alain Mosnier)
-// https://github.com/noloader/SHA-Intrinsics (Author: Jeffrey Walton)
-// https://github.com/Mysticial/FeatureDetector (Author: Alexander Yee)
+/// @file
+/// SHA256 implementation.
+/// Initial version copied from the Silkworm project (https://github.com/erigontech/silkworm).
+/// Based on several bits of code released to public domain:
+/// https://github.com/amosnier/sha-2 (Author: Alain Mosnier)
+/// https://github.com/noloader/SHA-Intrinsics (Author: Jeffrey Walton)
+/// https://github.com/Mysticial/FeatureDetector (Author: Alexander Yee)
 
 #include "sha256.hpp"
 #include <bit>
@@ -733,7 +724,7 @@ __attribute__((constructor)) static void select_sha256_implementation(void)
  * support for bit string lengths that are not multiples of eight, and it really operates on arrays
  * of bytes. In particular, the len parameter is a number of bytes.
  */
-void silkworm_sha256(uint8_t hash[32], const uint8_t* input, size_t len, bool use_cpu_extensions)
+void sha256(uint8_t hash[32], const uint8_t* input, size_t len, bool use_cpu_extensions)
 {
     /*
      * Initialize hash values:
