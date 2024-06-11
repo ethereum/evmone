@@ -188,7 +188,8 @@ ExecutionResult sha256_execute(const uint8_t* input, size_t input_size, uint8_t*
     [[maybe_unused]] size_t output_size) noexcept
 {
     assert(output_size >= 32);
-    crypto::sha256(output, input, input_size, true);
+    crypto::sha256(reinterpret_cast<std::byte*>(output), reinterpret_cast<const std::byte*>(input),
+        input_size);
     return {EVMC_SUCCESS, 32};
 }
 

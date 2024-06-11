@@ -60,13 +60,14 @@ static const uint32_t k[] = {0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3
 
 struct BufferState
 {
-    const uint8_t* p;
+    const std::byte* p;
     size_t len;
     size_t total_len;
     bool single_one_delivered = false;
     bool total_len_delivered = false;
 
-    constexpr BufferState(const uint8_t* input, size_t size) : p{input}, len{size}, total_len{size}
+    constexpr BufferState(const std::byte* input, size_t size)
+      : p{input}, len{size}, total_len{size}
     {}
 };
 
@@ -135,7 +136,7 @@ static bool calc_chunk(uint8_t chunk[CHUNK_SIZE], struct BufferState* state)
 }
 
 [[gnu::always_inline, msvc::forceinline]] inline void sha_256_implementation(
-    uint32_t h[8], const uint8_t* input, size_t len)
+    uint32_t h[8], const std::byte* input, size_t len)
 {
     /*
      * Note 1: All integers (expect indexes) are 32-bit unsigned integers and addition is calculated
@@ -235,17 +236,17 @@ static bool calc_chunk(uint8_t chunk[CHUNK_SIZE], struct BufferState* state)
     }
 }
 
-static void sha_256_generic(uint32_t h[8], const uint8_t* input, size_t len)
+static void sha_256_generic(uint32_t h[8], const std::byte* input, size_t len)
 {
     sha_256_implementation(h, input, len);
 }
 
-static void (*sha_256_best)(uint32_t h[8], const uint8_t* input, size_t len) = sha_256_generic;
+static void (*sha_256_best)(uint32_t h[8], const std::byte* input, size_t len) = sha_256_generic;
 
 #if defined(__x86_64__)
 
 __attribute__((target("bmi,bmi2"))) static void sha_256_x86_bmi(
-    uint32_t h[8], const uint8_t* input, size_t len)
+    uint32_t h[8], const std::byte* input, size_t len)
 {
     sha_256_implementation(h, input, len);
 }
@@ -260,7 +261,7 @@ __attribute__((target("bmi,bmi2"))) static void sha_256_x86_bmi(
 /*   Based on code from Intel, and by Sean Gulley for      */
 /*   the miTLS project.                                    */
 __attribute__((target("sha,sse4.1"))) static void sha_256_x86_sha(
-    uint32_t h[8], const uint8_t* input, size_t len)
+    uint32_t h[8], const std::byte* input, size_t len)
 {
     // NOLINTBEGIN(readability-isolate-declaration)
     __m128i STATE0, STATE1;
@@ -528,7 +529,7 @@ __attribute__((constructor)) static void select_sha256_implementation()
 /*   Written and placed in public domain by Jeffrey Walton    */
 /*   Based on code from ARM, and by Johannes Schneiders, Skip */
 /*   Hovsmith and Barry O'Rourke for the mbedTLS project.     */
-static void sha_256_arm_v8(uint32_t h[8], const uint8_t* input, size_t len)
+static void sha_256_arm_v8(uint32_t h[8], const std::byte* input, size_t len)
 {
     uint32x4_t STATE0, STATE1, ABEF_SAVE, CDGH_SAVE;
     uint32x4_t MSG0, MSG1, MSG2, MSG3;
@@ -724,7 +725,7 @@ __attribute__((constructor)) static void select_sha256_implementation(void)
  * support for bit string lengths that are not multiples of eight, and it really operates on arrays
  * of bytes. In particular, the len parameter is a number of bytes.
  */
-void sha256(uint8_t hash[32], const uint8_t* input, size_t len, bool use_cpu_extensions)
+void sha256(std::byte hash[SHA256_HASH_SIZE], const std::byte* data, size_t size)
 {
     /*
      * Initialize hash values:
@@ -733,22 +734,15 @@ void sha256(uint8_t hash[32], const uint8_t* input, size_t len, bool use_cpu_ext
     uint32_t h[] = {0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c,
         0x1f83d9ab, 0x5be0cd19};
 
-    if (use_cpu_extensions)
-    {
-        sha_256_best(h, input, len);
-    }
-    else
-    {
-        sha_256_generic(h, input, len);
-    }
+    sha_256_best(h, data, size);
 
     /* Produce the final hash value (big-endian): */
     for (unsigned i = 0, j = 0; i < 8; i++)
     {
-        hash[j++] = (uint8_t)(h[i] >> 24);
-        hash[j++] = (uint8_t)(h[i] >> 16);
-        hash[j++] = (uint8_t)(h[i] >> 8);
-        hash[j++] = (uint8_t)h[i];
+        hash[j++] = static_cast<std::byte>(h[i] >> 24);
+        hash[j++] = static_cast<std::byte>(h[i] >> 16);
+        hash[j++] = static_cast<std::byte>(h[i] >> 8);
+        hash[j++] = static_cast<std::byte>(h[i]);
     }
 }
 
