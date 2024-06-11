@@ -398,7 +398,7 @@ jobs:
     steps:
       - build
       - download_execution_spec_tests:
-          release: eip7692@v1.0.1
+          release: eip7692@v1.0.3
           fixtures_suffix: eip7692
       - run:
           name: "EOF pre-release execution spec tests (state_tests)"
@@ -411,12 +411,10 @@ jobs:
           command: >
             bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests
       - run:
-          # TODO: Enable all tests
           name: "EOF pre-release execution spec tests (eof_tests)"
           working_directory: ~/build
           command: >
             bin/evmone-eoftest ~/spec-tests/fixtures/eof_tests
-            --gtest_filter='-prague/eip7692_eof_v1/eip3540_eof_v1/code_validation.legacy_initcode_valid_eof_v1_contract'
       - collect_coverage_gcc
       - upload_coverage:
           flags: eof_execution_spec_tests
