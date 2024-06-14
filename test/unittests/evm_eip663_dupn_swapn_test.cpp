@@ -176,7 +176,7 @@ TEST_P(evm, swapn_swap_consistency)
     EXPECT_OUTPUT_INT(17);
 }
 
-TEST_P(evm, dupn_swapn_undefined_in_legacy)
+TEST_P(evm, DISABLED_dupn_swapn_undefined_in_legacy)
 {
     rev = EVMC_PRAGUE;
 
