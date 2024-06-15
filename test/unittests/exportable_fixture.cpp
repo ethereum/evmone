@@ -28,9 +28,9 @@ fs::path get_export_test_path(const testing::TestInfo& test_info, std::string_vi
     const auto sub_suite_name = std::regex_match(stem, m, re) ? m[1] : std::string{};
 
     const auto dir = fs::path{export_dir} / suite_name / sub_suite_name;
-
     fs::create_directories(dir);
-    return dir / (std::string{test_info.name()} + ".json");
+    const auto extension = suite_name == "eof_validation" ? ".py" : ".json";
+    return dir / (std::string{test_info.name()} + extension);
 }
 }  // namespace
 

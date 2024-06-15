@@ -160,21 +160,3 @@ set_tests_properties(
     FIXTURES_REQUIRED EXPORT_JSON_TESTS
 )
 
-add_test(
-    NAME ${PREFIX}/export_validation_tests_to_json
-    COMMAND evmone-unittests --gtest_filter=eof_validation.*
-)
-set_tests_properties(
-    ${PREFIX}/export_validation_tests_to_json PROPERTIES
-    ENVIRONMENT EVMONE_EXPORT_TESTS=${EXPORT_DIR}
-    FIXTURES_SETUP EXPORT_JSON_VALIDATION_TESTS
-)
-
-add_test(
-    NAME ${PREFIX}/execute_exported_validation_tests
-    COMMAND evmone-eoftest ${EXPORT_DIR}/eof_validation
-)
-set_tests_properties(
-    ${PREFIX}/execute_exported_validation_tests PROPERTIES
-    FIXTURES_REQUIRED EXPORT_JSON_VALIDATION_TESTS
-)
