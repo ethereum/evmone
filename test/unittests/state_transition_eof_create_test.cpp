@@ -1989,7 +1989,7 @@ TEST_F(state_transition, txcreate_failure_after_txcreate_success)
         sstore(0, txcreate().initcode(keccak256(init_container)).salt(Salt)) +
         sstore(1, txcreate().initcode(keccak256(init_container)).salt(Salt)) +  // address collision
         sstore(2, returndatasize()) + sstore(3, 1) + OP_STOP;
-    const auto factory_container = eof_bytecode(factory_code, 5).container(init_container);
+    const auto factory_container = eof_bytecode(factory_code, 5);
 
     tx.to = To;
 
@@ -2229,7 +2229,7 @@ TEST_F(state_transition, txcreate_call_created_contract)
         OP_POP + sstore(2, returndataload(0)) + mstore8(31, 2) +
         extcall(create_address).input(0, 32) +  // calldata 2
         OP_POP + sstore(3, returndataload(0)) + sstore(4, 1) + OP_STOP;
-    const auto factory_container = eof_bytecode(factory_code, 5).container(init_container);
+    const auto factory_container = eof_bytecode(factory_code, 5);
 
     tx.to = To;
 

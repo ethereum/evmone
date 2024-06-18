@@ -189,10 +189,10 @@ TEST_F(eof_validation, EOF1_truncated_section)
     // Data section may be truncated in runtime subcontainer
     add_test_case(
         eof_bytecode(returncontract(0, 0, 2), 2).container(eof_bytecode(OP_INVALID).data("", 2)),
-        EOFValidationError::success);
+        ContainerKind::initcode, EOFValidationError::success);
     add_test_case(
         eof_bytecode(returncontract(0, 0, 1), 2).container(eof_bytecode(OP_INVALID).data("aa", 2)),
-        EOFValidationError::success);
+        ContainerKind::initcode, EOFValidationError::success);
 
     // Data section may not be truncated in toplevel container
     add_test_case(
@@ -517,7 +517,7 @@ TEST_F(eof_validation, EOF1_rjump_invalid_destination)
     // To RETURNCONTRACT immediate
     add_test_case(
         eof_bytecode(rjump(5) + 0 + 0 + OP_RETURNCONTRACT + Opcode{0}, 2).container(embedded),
-        EOFValidationError::invalid_rjump_destination);
+        ContainerKind::initcode, EOFValidationError::invalid_rjump_destination);
 }
 
 TEST_F(eof_validation, EOF1_rjumpi_invalid_destination)
@@ -557,7 +557,7 @@ TEST_F(eof_validation, EOF1_rjumpi_invalid_destination)
     // To RETURNCONTRACT immediate
     add_test_case(
         eof_bytecode(rjumpi(5, 0) + 0 + 0 + OP_RETURNCONTRACT + Opcode{0}, 2).container(embedded),
-        EOFValidationError::invalid_rjump_destination);
+        ContainerKind::initcode, EOFValidationError::invalid_rjump_destination);
 }
 
 TEST_F(eof_validation, EOF1_rjumpv_invalid_destination)
@@ -614,7 +614,7 @@ TEST_F(eof_validation, EOF1_rjumpv_invalid_destination)
     // To RETURNCONTRACT immediate
     add_test_case(
         eof_bytecode(rjumpv({5}, 0) + 0 + 0 + OP_RETURNCONTRACT + Opcode{0}, 2).container(embedded),
-        EOFValidationError::invalid_rjump_destination);
+        ContainerKind::initcode, EOFValidationError::invalid_rjump_destination);
 }
 
 TEST_F(eof_validation, EOF1_section_order)
@@ -1031,7 +1031,7 @@ TEST_F(eof_validation, EOF1_embedded_container)
     // data section is allowed to be truncated in runtime subcontainer
     add_test_case(
         eof_bytecode(returncontract(0, 0, 2), 2).container(eof_bytecode(OP_INVALID).data("", 2)),
-        EOFValidationError::success);
+        ContainerKind::initcode, EOFValidationError::success);
 
     // with data section
     add_test_case(
@@ -1152,19 +1152,19 @@ TEST_F(eof_validation, EOF1_returncontract_valid)
     const auto embedded = eof_bytecode(bytecode{OP_INVALID});
     add_test_case(
         eof_bytecode(bytecode(0) + 0 + OP_RETURNCONTRACT + Opcode{0}, 2).container(embedded),
-        EOFValidationError::success);
+        ContainerKind::initcode, EOFValidationError::success);
 
     // initcontainer_index = 1
     add_test_case(eof_bytecode(bytecode(0) + 0 + OP_RETURNCONTRACT + Opcode{1}, 2)
                       .container(embedded)
                       .container(embedded),
-        EOFValidationError::success);
+        ContainerKind::initcode, EOFValidationError::success);
 
     // initcontainer_index = 255
     auto cont = eof_bytecode(bytecode(0) + 0 + OP_RETURNCONTRACT + Opcode{255}, 2);
     for (auto i = 0; i < 256; ++i)
         cont.container(embedded);
-    add_test_case(cont, EOFValidationError::success);
+    add_test_case(cont, ContainerKind::initcode, EOFValidationError::success);
 }
 
 TEST_F(eof_validation, EOF1_returncontract_invalid)
@@ -1172,38 +1172,20 @@ TEST_F(eof_validation, EOF1_returncontract_invalid)
     // truncated immediate
     const auto embedded = eof_bytecode(bytecode{OP_INVALID});
     add_test_case(eof_bytecode(bytecode(0) + 0 + OP_RETURNCONTRACT, 4).container(embedded),
-        EOFValidationError::truncated_instruction);
+        ContainerKind::initcode, EOFValidationError::truncated_instruction);
 
     // referring to non-existent container section
     add_test_case(
         eof_bytecode(bytecode(0) + 0 + OP_RETURNCONTRACT + Opcode{1}, 4).container(embedded),
-        EOFValidationError::invalid_container_section_index);
+        ContainerKind::initcode, EOFValidationError::invalid_container_section_index);
     add_test_case(
         eof_bytecode(bytecode(0) + 0 + OP_RETURNCONTRACT + Opcode{0xff}, 4).container(embedded),
-        EOFValidationError::invalid_container_section_index);
+        ContainerKind::initcode, EOFValidationError::invalid_container_section_index);
 
     // Unreachable code after RETURNCONTRACT
     add_test_case(eof_bytecode(bytecode(0) + 0 + OP_RETURNCONTRACT + Opcode{0} + revert(0, 0), 2)
                       .container(embedded),
-        EOFValidationError::unreachable_instructions);
-}
-
-TEST_F(eof_validation, EOF1_eofcreate_returncontract_return_mix)
-{
-    // This test ensures that we _do not_ have a validation rule preventing EOFCREATE,
-    // RETURNCONTRACT and RETURN mixing.
-    const auto embedded = eof_bytecode(bytecode{OP_INVALID});
-
-    // This contains both RETURNCONTRACT and RETURN, as well as references same
-    // container from both EOFCREATE and RETURNCONTRACT
-    const auto mixing_initcode =
-        eofcreate().container(0) + rjumpi(6, 1) + returncontract(0, 0, 0) + ret_top();
-
-    const auto mixing_initcontainer = eof_bytecode(mixing_initcode, 4).container(embedded);
-
-    // This top level container mixes all combinations of EOFCREATE/RETURNCONTRACT/RETURN.
-    add_test_case(eof_bytecode(mixing_initcode, 4).container(mixing_initcontainer),
-        EOFValidationError::ambiguous_container_kind);
+        ContainerKind::initcode, EOFValidationError::unreachable_instructions);
 }
 
 TEST_F(eof_validation, EOF1_unreferenced_subcontainer_valid)

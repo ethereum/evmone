@@ -105,9 +105,7 @@ void eof_validation::TearDown()
     for (size_t i = 0; i < test_cases.size(); ++i)
     {
         const auto& test_case = test_cases[i];
-        // TODO make kind configurable
-        EXPECT_EQ(
-            evmone::validate_eof(rev, ContainerKind::runtime, test_case.container), test_case.error)
+        EXPECT_EQ(evmone::validate_eof(rev, test_case.kind, test_case.container), test_case.error)
             << "test case " << i << " " << test_case.name << "\n"
             << hex(test_case.container);
     }
