@@ -423,7 +423,6 @@ jobs:
     executor: linux-gcc-latest
     environment:
       BUILD_TYPE: Coverage
-      CMAKE_OPTIONS: -DCMAKE_CXX_FLAGS=-Og
     steps:
       - build
       - download_execution_tests:
