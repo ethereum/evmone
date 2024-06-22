@@ -53,8 +53,6 @@ extern "C" {
 size_t LLVMFuzzerCustomMutator(
     uint8_t* data_ptr, size_t data_size, size_t data_max_size, unsigned int seed)
 {
-    (void)seed;
-
     const bytes_view data{data_ptr, data_size};
 
     const auto vh = validate_header(REV, data);
@@ -81,9 +79,20 @@ size_t LLVMFuzzerCustomMutator(
         const auto d_size = static_cast<size_t>((data_ptr + data_size - d_begin));
         return mutate_part(data_ptr, data_size, data_max_size, d_begin, d_size);
     }
-    else if ()
-
-    return LLVMFuzzerMutate(data_ptr, data_size, data_max_size);
+    else if (idx <= c_codes)
+    {
+        const auto code_idx = idx - 1;
+        const auto code_begin = &data_ptr[header.code_offsets[code_idx]];
+        const auto code_size = header.code_sizes[code_idx];
+        return mutate_part(data_ptr, data_size, data_max_size, code_begin, code_size);
+    }
+    else
+    {
+        const auto cont_idx = idx - 1 - c_codes;
+        const auto cont_begin = &data_ptr[header.container_offsets[cont_idx]];
+        const auto cont_size = header.container_sizes[cont_idx];
+        return mutate_part(data_ptr, data_size, data_max_size, cont_begin, cont_size);
+    }
 }
 
 int LLVMFuzzerTestOneInput(const uint8_t* data_ptr, size_t data_size) noexcept
