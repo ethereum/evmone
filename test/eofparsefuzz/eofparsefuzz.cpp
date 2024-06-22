@@ -46,11 +46,7 @@ size_t mutate_part(
     return data_size + size_diff;
 }
 
-}  // namespace
-
-extern "C" {
-
-size_t LLVMFuzzerCustomMutator(
+size_t mutate_container(
     uint8_t* data_ptr, size_t data_size, size_t data_max_size, unsigned int seed)
 {
     const bytes_view data{data_ptr, data_size};
@@ -93,6 +89,15 @@ size_t LLVMFuzzerCustomMutator(
         const auto cont_size = header.container_sizes[cont_idx];
         return mutate_part(data_ptr, data_size, data_max_size, cont_begin, cont_size);
     }
+}
+}  // namespace
+
+extern "C" {
+
+size_t LLVMFuzzerCustomMutator(
+    uint8_t* data_ptr, size_t data_size, size_t data_max_size, unsigned int seed)
+{
+    return mutate_container(data_ptr, data_size, data_max_size, seed);
 }
 
 int LLVMFuzzerTestOneInput(const uint8_t* data_ptr, size_t data_size) noexcept
