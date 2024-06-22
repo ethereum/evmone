@@ -75,6 +75,13 @@ size_t LLVMFuzzerCustomMutator(
         const auto types_begin = types_end - types_size;
         return mutate_part(data_ptr, data_size, data_max_size, types_begin, types_size);
     }
+    else if (idx == c_all - 1)  // data
+    {
+        const auto d_begin = &data_ptr[header.data_offset];
+        const auto d_size = static_cast<size_t>((data_ptr + data_size - d_begin));
+        return mutate_part(data_ptr, data_size, data_max_size, d_begin, d_size);
+    }
+    else if ()
 
     return LLVMFuzzerMutate(data_ptr, data_size, data_max_size);
 }
