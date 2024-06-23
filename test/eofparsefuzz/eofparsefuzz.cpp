@@ -5,6 +5,7 @@
 #include "evmc/hex.hpp"
 #include <evmone/eof.hpp>
 #include <iostream>
+#include <random>
 
 using namespace evmone;
 
@@ -87,7 +88,19 @@ size_t mutate_container(
         const auto cont_idx = idx - 1 - c_codes;
         const auto cont_begin = &data_ptr[header.container_offsets[cont_idx]];
         const auto cont_size = header.container_sizes[cont_idx];
-        return mutate_part(data_ptr, data_size, data_max_size, cont_begin, cont_size);
+        const auto partEnd = cont_begin + cont_size;
+        const auto sizeAvailable = data_max_size - data_size;
+        const auto afterSize = static_cast<size_t>((data_ptr + data_size - partEnd));
+        std::memmove(partEnd + sizeAvailable, partEnd, afterSize);
+
+        const auto seed2 = static_cast<unsigned int>(std::minstd_rand{seed}());
+        const auto partNewSize =
+            mutate_container(cont_begin, cont_size, cont_size + sizeAvailable, seed2);
+
+        const auto partNewEnd = cont_begin + partNewSize;
+        std::memmove(partNewEnd, partEnd + sizeAvailable, afterSize);
+        const auto sizeDiff = partNewSize - cont_size;
+        return data_size + sizeDiff;
     }
 }
 }  // namespace
