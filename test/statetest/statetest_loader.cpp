@@ -470,7 +470,7 @@ void validate_state(const TestState& state, evmc_revision rev)
         {
             if (rev >= EVMC_PRAGUE)
             {
-                if (const auto result = validate_eof(rev, acc.code);
+                if (const auto result = validate_eof(rev, ContainerKind::runtime, acc.code);
                     result != EOFValidationError::success)
                 {
                     throw std::invalid_argument(

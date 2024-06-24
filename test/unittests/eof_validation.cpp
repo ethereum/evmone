@@ -89,11 +89,30 @@ std::string_view get_tests_error_message(EOFValidationError err) noexcept
         return "EOF_EofCreateWithTruncatedContainer";
     case EOFValidationError::toplevel_container_truncated:
         return "EOF_ToplevelContainerTruncated";
+    case EOFValidationError::ambiguous_container_kind:
+        return "EOF_AmbiguousContainerKind";
+    case EOFValidationError::incompatible_container_kind:
+        return "EOF_IncompatibleContainerKind";
     case EOFValidationError::impossible:
         return "impossible";
     }
     return "<unknown>";
 }
+
+std::string_view to_string(ContainerKind container_kind) noexcept
+{
+    switch (container_kind)
+    {
+    case (ContainerKind::runtime):
+        return "runtime";
+    case (ContainerKind::initcode):
+        return "initcode";
+    case (ContainerKind::initcode_runtime):
+        return "initcode_runtime";
+    }
+    return "<unknown>";
+}
+
 }  // namespace
 
 void eof_validation::TearDown()
@@ -101,7 +120,7 @@ void eof_validation::TearDown()
     for (size_t i = 0; i < test_cases.size(); ++i)
     {
         const auto& test_case = test_cases[i];
-        EXPECT_EQ(evmone::validate_eof(rev, test_case.container), test_case.error)
+        EXPECT_EQ(evmone::validate_eof(rev, test_case.kind, test_case.container), test_case.error)
             << "test case " << i << " " << test_case.name << "\n"
             << hex(test_case.container);
     }
@@ -125,6 +144,7 @@ void eof_validation::export_eof_validation_test()
 
         auto& jcase = jvectors[case_name];
         jcase["code"] = hex0x(test_case.container);
+        jcase["kind"] = to_string(test_case.kind);
 
         auto& jresults = jcase["results"][evmc::to_string(rev)];
         if (test_case.error == EOFValidationError::success)

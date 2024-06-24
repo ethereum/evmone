@@ -195,37 +195,6 @@ TEST_F(state_transition, eofcreate_empty_auxdata)
     expect.post[create_address].nonce = 1;
 }
 
-TEST_F(state_transition, eofcreate_extcall_returncontract)
-{
-    rev = EVMC_PRAGUE;
-    constexpr auto callee = 0xca11ee_address;
-    const auto deploy_container = eof_bytecode(bytecode(OP_INVALID));
-
-    pre.insert(
-        callee, {
-                    .code = eof_bytecode(returncontract(0, 0, 0), 2).container(deploy_container),
-                });
-
-
-    const auto init_code = mstore(0, extcall(callee)) + revert(0, 32);
-    const bytecode init_container = eof_bytecode(init_code, 4);
-
-    const auto factory_code =
-        sstore(0, eofcreate().container(0).salt(Salt)) + sstore(1, returndataload(0)) + OP_STOP;
-    const auto factory_container = eof_bytecode(factory_code, 4).container(init_container);
-
-    tx.to = To;
-
-    pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
-
-    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
-    // No new address returned from EOFCREATE.
-    expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
-    // Internal EXTCALL returned 2 (abort).
-    expect.post[*tx.to].storage[0x01_bytes32] = 0x02_bytes32;
-    expect.post[callee].exists = true;
-}
-
 TEST_F(state_transition, eofcreate_auxdata_equal_to_declared)
 {
     rev = EVMC_PRAGUE;
@@ -433,42 +402,6 @@ TEST_F(state_transition, eofcreate_initcontainer_aborts)
 {
     rev = EVMC_PRAGUE;
     const auto init_code = bytecode{Opcode{OP_INVALID}};
-    const auto init_container = eof_bytecode(init_code, 0);
-
-    const auto factory_code =
-        calldatacopy(0, 0, OP_CALLDATASIZE) +
-        sstore(0, eofcreate().container(0).input(0, OP_CALLDATASIZE).salt(Salt)) + OP_STOP;
-    const auto factory_container = eof_bytecode(factory_code, 4).container(init_container);
-
-    tx.to = To;
-    pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
-
-    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
-    expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
-}
-
-TEST_F(state_transition, eofcreate_initcontainer_return)
-{
-    rev = EVMC_PRAGUE;
-    const auto init_code = bytecode{0xaa + ret_top()};
-    const auto init_container = eof_bytecode(init_code, 2);
-
-    const auto factory_code =
-        calldatacopy(0, 0, OP_CALLDATASIZE) +
-        sstore(0, eofcreate().container(0).input(0, OP_CALLDATASIZE).salt(Salt)) + OP_STOP;
-    const auto factory_container = eof_bytecode(factory_code, 4).container(init_container);
-
-    tx.to = To;
-    pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
-
-    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
-    expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
-}
-
-TEST_F(state_transition, eofcreate_initcontainer_stop)
-{
-    rev = EVMC_PRAGUE;
-    const auto init_code = bytecode{Opcode{OP_STOP}};
     const auto init_container = eof_bytecode(init_code, 0);
 
     const auto factory_code =
@@ -1045,7 +978,7 @@ TEST_F(state_transition, creation_tx_initcontainer_return)
     tx.data = init_container;
 
     expect.post[Sender].nonce = pre.get(Sender).nonce + 1;
-    expect.status = EVMC_UNDEFINED_INSTRUCTION;
+    expect.status = EVMC_FAILURE;
 }
 
 TEST_F(state_transition, creation_tx_initcontainer_stop)
@@ -1057,7 +990,7 @@ TEST_F(state_transition, creation_tx_initcontainer_stop)
     tx.data = init_container;
 
     expect.post[Sender].nonce = pre.get(Sender).nonce + 1;
-    expect.status = EVMC_UNDEFINED_INSTRUCTION;
+    expect.status = EVMC_FAILURE;
 }
 
 TEST_F(state_transition, creation_tx_initcontainer_max_size)
@@ -1289,39 +1222,6 @@ TEST_F(state_transition, txcreate_empty_auxdata)
     const auto create_address = compute_eofcreate_address(*tx.to, Salt, init_container);
     expect.post[create_address].code = deploy_container;
     expect.post[create_address].nonce = 1;
-}
-
-TEST_F(state_transition, txcreate_extcall_returncontract)
-{
-    rev = EVMC_OSAKA;
-    constexpr auto callee = 0xca11ee_address;
-    const auto deploy_container = eof_bytecode(bytecode(OP_INVALID));
-
-    pre.insert(
-        callee, {
-                    .code = eof_bytecode(returncontract(0, 0, 0), 2).container(deploy_container),
-                });
-
-    const auto init_code = mstore(0, extcall(callee)) + revert(0, 32);
-    const bytecode init_container = eof_bytecode(init_code, 4);
-
-    tx.type = Transaction::Type::initcodes;
-    tx.initcodes.push_back(init_container);
-
-    const auto factory_code = sstore(0, txcreate().initcode(keccak256(init_container)).salt(Salt)) +
-                              sstore(1, returndataload(0)) + OP_STOP;
-    const auto factory_container = eof_bytecode(factory_code, 5);
-
-    tx.to = To;
-
-    pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
-
-    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
-    // No new address returned from TXCREATE.
-    expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
-    // Internal EXTCALL returned 2 (abort).
-    expect.post[*tx.to].storage[0x01_bytes32] = 0x02_bytes32;
-    expect.post[callee].exists = true;
 }
 
 TEST_F(state_transition, txcreate_auxdata_equal_to_declared)
@@ -1574,7 +1474,7 @@ TEST_F(state_transition, txcreate_initcontainer_return)
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
-    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
+    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;
     expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
 }
 
@@ -1597,7 +1497,7 @@ TEST_F(state_transition, txcreate_initcontainer_stop)
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
-    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
+    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;
     expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
 }
 
@@ -2089,7 +1989,7 @@ TEST_F(state_transition, txcreate_failure_after_txcreate_success)
         sstore(0, txcreate().initcode(keccak256(init_container)).salt(Salt)) +
         sstore(1, txcreate().initcode(keccak256(init_container)).salt(Salt)) +  // address collision
         sstore(2, returndatasize()) + sstore(3, 1) + OP_STOP;
-    const auto factory_container = eof_bytecode(factory_code, 5).container(init_container);
+    const auto factory_container = eof_bytecode(factory_code, 5);
 
     tx.to = To;
 
@@ -2329,7 +2229,7 @@ TEST_F(state_transition, txcreate_call_created_contract)
         OP_POP + sstore(2, returndataload(0)) + mstore8(31, 2) +
         extcall(create_address).input(0, 32) +  // calldata 2
         OP_POP + sstore(3, returndataload(0)) + sstore(4, 1) + OP_STOP;
-    const auto factory_container = eof_bytecode(factory_code, 5).container(init_container);
+    const auto factory_container = eof_bytecode(factory_code, 5);
 
     tx.to = To;
 

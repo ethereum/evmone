@@ -54,7 +54,7 @@ int main()
             }
 
             const auto& eof = *o;
-            const auto err = evmone::validate_eof(EVMC_PRAGUE, eof);
+            const auto err = evmone::validate_eof(EVMC_PRAGUE, evmone::ContainerKind::runtime, eof);
             if (err != evmone::EOFValidationError::success)
             {
                 std::cout << "err: " << evmone::get_error_message(err) << "\n";
