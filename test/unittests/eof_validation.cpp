@@ -89,6 +89,10 @@ std::string_view get_tests_error_message(EOFValidationError err) noexcept
         return "EOF_EofCreateWithTruncatedContainer";
     case EOFValidationError::toplevel_container_truncated:
         return "EOF_ToplevelContainerTruncated";
+    case EOFValidationError::ambiguous_container_kind:
+        return "EOF_AmbiguousContainerKind";
+    case EOFValidationError::incompatible_container_kind:
+        return "EOF_IncompatibleContainerKind";
     case EOFValidationError::impossible:
         return "impossible";
     }

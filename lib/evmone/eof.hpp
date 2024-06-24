@@ -139,6 +139,8 @@ enum class EOFValidationError
     invalid_container_section_index,
     eofcreate_with_truncated_container,
     toplevel_container_truncated,
+    ambiguous_container_kind,
+    incompatible_container_kind,
 
     impossible,
 };

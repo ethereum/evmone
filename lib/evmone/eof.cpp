@@ -244,6 +244,17 @@ std::variant<std::vector<EOFCodeType>, EOFValidationError> validate_types(
     return types;
 }
 
+enum class ContainerKind : uint8_t
+{
+    /// Container that uses RETURNCONTRACT. Can be used by EOFCREATE/TXCREATE/Creation transaction.
+    initcode,
+    /// Container that uses STOP/RETURN. Can be returned by RETURNCONTRACT.
+    runtime,
+    /// Container that uses only REVERT/INVALID or does not terminate execution.
+    /// Can be used in any context.
+    initcode_runtime,
+};
+
 /// Result of validating instructions in a code section.
 struct InstructionValidationResult
 {
@@ -255,7 +266,8 @@ struct InstructionValidationResult
 };
 
 std::variant<InstructionValidationResult, EOFValidationError> validate_instructions(
-    evmc_revision rev, const EOF1Header& header, size_t code_idx, bytes_view container) noexcept
+    evmc_revision rev, const EOF1Header& header, ContainerKind kind, size_t code_idx,
+    bytes_view container) noexcept
 {
     const bytes_view code{header.get_code(container, code_idx)};
     assert(!code.empty());  // guaranteed by EOF headers validation
@@ -323,8 +335,19 @@ std::variant<InstructionValidationResult, EOFValidationError> validate_instructi
             if (container_idx >= header.container_sizes.size())
                 return EOFValidationError::invalid_container_section_index;
 
-            subcontainer_references.emplace_back(container_idx, Opcode{op});
+            if (op == OP_RETURNCONTRACT)
+            {
+                if (kind == ContainerKind::runtime || kind == ContainerKind::initcode_runtime)
+                    return EOFValidationError::incompatible_container_kind;
+            }
+
+            subcontainer_references.push_back({container_idx, Opcode{op}});
             ++i;
+        }
+        else if (op == OP_RETURN || op == OP_STOP)
+        {
+            if (kind == ContainerKind::initcode || kind == ContainerKind::initcode_runtime)
+                return EOFValidationError::incompatible_container_kind;
         }
         else
             i += instr::traits[op].immediate_size;
@@ -577,15 +600,16 @@ EOFValidationError validate_eof1(evmc_revision rev, bytes_view main_container) n
     struct ContainerValidation
     {
         bytes_view bytes;
-        bool referenced_by_eofcreate = false;
+        ContainerKind kind;
     };
     // Queue of containers left to process
     std::queue<ContainerValidation> container_queue;
-    container_queue.push({main_container, false});
+
+    container_queue.push({main_container, ContainerKind::initcode_runtime});
 
     while (!container_queue.empty())
     {
-        const auto& [container, referenced_by_eofcreate] = container_queue.front();
+        const auto& [container, container_kind] = container_queue.front();
 
         // Validate header
         auto error_or_header = validate_header(rev, container);
@@ -603,6 +627,7 @@ EOFValidationError validate_eof1(evmc_revision rev, bytes_view main_container) n
 
         const auto subcontainer_count = header.container_sizes.size();
         std::vector<bool> subcontainer_referenced_by_eofcreate(subcontainer_count, false);
+        std::vector<bool> subcontainer_referenced_by_returncontract(subcontainer_count, false);
 
         while (!code_sections_queue.empty())
         {
@@ -616,7 +641,7 @@ EOFValidationError validate_eof1(evmc_revision rev, bytes_view main_container) n
 
             // Validate instructions
             const auto instr_validation_result_or_error =
-                validate_instructions(rev, header, code_idx, container);
+                validate_instructions(rev, header, container_kind, code_idx, container);
             if (const auto* error =
                     std::get_if<EOFValidationError>(&instr_validation_result_or_error))
                 return *error;
@@ -629,6 +654,10 @@ EOFValidationError validate_eof1(evmc_revision rev, bytes_view main_container) n
             {
                 if (opcode == OP_EOFCREATE)
                     subcontainer_referenced_by_eofcreate[index] = true;
+                else if (opcode == OP_RETURNCONTRACT)
+                    subcontainer_referenced_by_returncontract[index] = true;
+                else
+                    intx::unreachable();
             }
 
             // TODO(C++23): can use push_range()
@@ -657,7 +686,8 @@ EOFValidationError validate_eof1(evmc_revision rev, bytes_view main_container) n
         {
             if (main_container == container)
                 return EOFValidationError::toplevel_container_truncated;
-            if (referenced_by_eofcreate)
+            if (container_kind == ContainerKind::initcode ||
+                container_kind == ContainerKind::initcode_runtime)
                 return EOFValidationError::eofcreate_with_truncated_container;
         }
 
@@ -666,7 +696,18 @@ EOFValidationError validate_eof1(evmc_revision rev, bytes_view main_container) n
         {
             const bytes_view subcontainer{header.get_container(container, subcont_idx)};
 
-            container_queue.push({subcontainer, subcontainer_referenced_by_eofcreate[subcont_idx]});
+            const bool eofcreate = subcontainer_referenced_by_eofcreate[subcont_idx];
+            const bool returncontract = subcontainer_referenced_by_returncontract[subcont_idx];
+
+            // TODO Validate whether subcontainer was referenced by any instruction
+
+            auto subcontainer_kind = ContainerKind::initcode_runtime;
+            if (!eofcreate)
+                subcontainer_kind = ContainerKind::runtime;
+            else if (!returncontract)
+                subcontainer_kind = ContainerKind::initcode;
+
+            container_queue.push({subcontainer, subcontainer_kind});
         }
 
         container_queue.pop();
@@ -935,6 +976,10 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "eofcreate_with_truncated_container";
     case EOFValidationError::toplevel_container_truncated:
         return "toplevel_container_truncated";
+    case EOFValidationError::ambiguous_container_kind:
+        return "ambiguous_container_kind";
+    case EOFValidationError::incompatible_container_kind:
+        return "incompatible_container_kind";
     case EOFValidationError::impossible:
         return "impossible";
     }
