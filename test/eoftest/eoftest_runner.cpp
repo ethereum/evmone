@@ -30,6 +30,7 @@ struct EOFValidationTest
         ContainerKind kind = ContainerKind::runtime;
         std::vector<Expectation> expectations;
     };
+    std::string name;
     std::unordered_map<std::string, Case> cases;
 };
 
@@ -66,27 +67,43 @@ void from_json(const json::json& j, EOFValidationTest& o)
     if (!j.is_object() || j.empty())
         throw std::invalid_argument{"JSON test must be an object with single key of the test name"};
 
-    const auto& j_t = *j.begin();  // Content is in a dict with the test name.
-
-    for (const auto& [name, test] : j_t.at("vectors").items())
+    for (const auto& [name, test] : j.at("vectors").items())
     {
         o.cases.emplace(name, test.get<EOFValidationTest::Case>());
     }
+}
+
+void from_json(const json::json& j, std::vector<EOFValidationTest>& o)
+{
+    for (const auto& elem_it : j.items())
+    {
+        auto test = elem_it.value().get<EOFValidationTest>();
+        test.name = elem_it.key();
+        o.emplace_back(std::move(test));
+    }
+}
+
+std::vector<EOFValidationTest> load_eof_tests(std::istream& input)
+{
+    return json::json::parse(input).get<std::vector<EOFValidationTest>>();
 }
 
 }  // namespace
 
 void run_eof_test(std::istream& input)
 {
-    const auto test = json::json::parse(input).get<EOFValidationTest>();
-    for (const auto& [name, cases] : test.cases)
+    const auto tests = evmone::test::load_eof_tests(input);
+    for (const auto& test : tests)
     {
-        for (const auto& expectation : cases.expectations)
+        for (const auto& [name, cases] : test.cases)
         {
-            const auto result = evmone::validate_eof(expectation.rev, cases.kind, cases.code);
-            const bool b_result = (result == EOFValidationError::success);
-            EXPECT_EQ(b_result, expectation.result)
-                << name << " " << expectation.rev << " " << hex(cases.code);
+            for (const auto& expectation : cases.expectations)
+            {
+                const auto result = evmone::validate_eof(expectation.rev, cases.kind, cases.code);
+                const bool b_result = (result == EOFValidationError::success);
+                EXPECT_EQ(b_result, expectation.result)
+                    << name << " " << expectation.rev << " " << hex(cases.code);
+            }
         }
     }
 }
