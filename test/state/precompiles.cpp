@@ -9,6 +9,7 @@
 #include <evmone_precompiles/bn254.hpp>
 #include <evmone_precompiles/ripemd160.hpp>
 #include <evmone_precompiles/secp256k1.hpp>
+#include <evmone_precompiles/sha256.hpp>
 #include <intx/intx.hpp>
 #include <array>
 #include <bit>
@@ -183,6 +184,15 @@ ExecutionResult ecrecover_execute(const uint8_t* input, size_t input_size, uint8
         return {EVMC_SUCCESS, 0};
 }
 
+ExecutionResult sha256_execute(const uint8_t* input, size_t input_size, uint8_t* output,
+    [[maybe_unused]] size_t output_size) noexcept
+{
+    assert(output_size >= 32);
+    crypto::sha256(reinterpret_cast<std::byte*>(output), reinterpret_cast<const std::byte*>(input),
+        input_size);
+    return {EVMC_SUCCESS, 32};
+}
+
 ExecutionResult ripemd160_execute(const uint8_t* input, size_t input_size, uint8_t* output,
     [[maybe_unused]] size_t output_size) noexcept
 {
@@ -294,7 +304,7 @@ inline constexpr auto traits = []() noexcept {
     std::array<PrecompileTraits, NumPrecompiles> tbl{{
         {},  // undefined for 0
         {ecrecover_analyze, ecrecover_execute},
-        {sha256_analyze, sha256_stub},
+        {sha256_analyze, sha256_execute},
         {ripemd160_analyze, ripemd160_execute},
         {identity_analyze, identity_execute},
         {expmod_analyze, expmod_stub},
@@ -306,7 +316,7 @@ inline constexpr auto traits = []() noexcept {
     }};
 #ifdef EVMONE_PRECOMPILES_SILKPRE
     // tbl[static_cast<size_t>(PrecompileId::ecrecover)].execute = silkpre_ecrecover_execute;
-    tbl[static_cast<size_t>(PrecompileId::sha256)].execute = silkpre_sha256_execute;
+    // tbl[static_cast<size_t>(PrecompileId::sha256)].execute = silkpre_sha256_execute;
     // tbl[static_cast<size_t>(PrecompileId::ripemd160)].execute = silkpre_ripemd160_execute;
     tbl[static_cast<size_t>(PrecompileId::expmod)].execute = silkpre_expmod_execute;
     // tbl[static_cast<size_t>(PrecompileId::ecadd)].execute = silkpre_ecadd_execute;

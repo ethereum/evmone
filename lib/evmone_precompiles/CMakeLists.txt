@@ -16,4 +16,6 @@ target_sources(
     ripemd160.cpp
     secp256k1.hpp
     secp256k1.cpp
+    sha256.hpp
+    sha256.cpp
 )
