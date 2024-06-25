@@ -745,6 +745,12 @@ std::variant<EOF1Header, EOFValidationError> validate_header(
     if (rev < EVMC_PRAGUE)
         return EOFValidationError::eof_version_unknown;
 
+    // `offset` variable handled below is known to not be greater than the container size, as
+    // checked in `validate_section_headers`. Combined with the requirement for the container
+    // size to not exceed MAX_INITCODE_SIZE (checked before `validate-header` is called),
+    // this allows us to cast `offset` to narrower integers.
+    assert(container.size() <= MAX_INITCODE_SIZE);
+
     const auto section_headers_or_error = validate_section_headers(container);
     if (const auto* error = std::get_if<EOFValidationError>(&section_headers_or_error))
         return *error;
@@ -765,11 +771,6 @@ std::variant<EOF1Header, EOFValidationError> validate_header(
     const auto type_section_size = section_headers[TYPE_SECTION][0];
     auto offset = header_size + type_section_size;
 
-    // `offset` is being checked to not overflow the container size. NOTE: this is done
-    // implicitly in `validate_section_headers` above. Combined with the
-    // requirement for the container size to not exceed MAX_INITCODE_SIZE, this allows
-    // us to cast to a narrower integer.
-
     for (const auto code_size : code_sizes)
     {
         assert(offset <= std::numeric_limits<uint16_t>::max());
@@ -784,7 +785,6 @@ std::variant<EOF1Header, EOFValidationError> validate_header(
         container_offsets.emplace_back(static_cast<uint16_t>(offset));
         offset += container_size;
     }
-
     const auto data_offset = static_cast<uint16_t>(offset);
 
     return EOF1Header{
