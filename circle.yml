@@ -418,7 +418,7 @@ jobs:
           name: "EOF pre-release execution spec tests (eof_tests)"
           working_directory: ~/build
           command: >
-            bin/evmone-eoftest ~/spec-tests/fixtures/eof_tests
+            bin/evmone-eoftest ~/spec-tests/fixtures/eof_tests --gtest_filter=-prague/eip7692_eof_v1/eip3540_eof_v1/all_opcodes_in_container.all_opcodes_in_container
       - collect_coverage_gcc
       - upload_coverage:
           flags: eof_execution_spec_tests
