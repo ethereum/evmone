@@ -202,5 +202,83 @@ ProjPoint<IntT> mul(const evmmax::ModArith<IntT>& s, const ProjPoint<IntT>& z, c
     return p;
 }
 
+// Computes uG + vQ using "Shamir's trick". https://eprint.iacr.org/2003/257.pdf (page 7)
+template <typename UIntT>
+inline ProjPoint<UIntT> shamir_multiply(const ModArith<UIntT>& m, const UIntT& b3, const UIntT& u,
+    const ProjPoint<UIntT>& g, const UIntT& v, const ProjPoint<UIntT>& q)
+{
+    ProjPoint<UIntT> r;
+    const auto h = add(m, g, q, b3);
+
+    const auto u_lz = clz(u);
+    const auto v_lz = clz(v);
+
+    auto lz = std::min(u_lz, v_lz);
+
+    if (lz == UIntT::num_bits)
+        return {};
+
+    if (u_lz < v_lz)
+        r = g;
+    else if (u_lz > v_lz)
+        r = q;
+    else
+        r = h;
+
+    auto mask = (UIntT{1} << (UIntT::num_bits - 1 - lz - 1));
+
+    while (mask != 0)
+    {
+        r = dbl(m, r, b3);
+        if (u & v & mask)
+            r = add(m, r, h, b3);
+        else if (u & mask)
+            r = add(m, r, g, b3);
+        else if (v & mask)
+            r = add(m, r, q, b3);
+
+        mask >>= 1;
+    }
+
+    return r;
+}
+
+// Decomposes scalar k into k₁ and k₂ such that k₁ + k₂λ ≡ k mod n
+// Returns ((is_negative, k1), (is_negative, k2))
+template <typename ConfigT, typename UIntT>
+inline std::pair<std::pair<bool, UIntT>, std::pair<bool, UIntT>> decompose(const UIntT& k) noexcept
+{
+    using DIntT = intx::uint<2 * UIntT::num_bits>;
+
+    const auto round_div = [](const DIntT& n) {
+        const auto [q, r] = udivrem(n, ConfigT::DET);
+
+        return (r <= (ConfigT::DET / 2)) ? q : (q + 1);
+    };
+
+    const auto z1 = round_div(ConfigT::Y2 * k);
+    const auto z2 = round_div(ConfigT::Y1 * k);
+
+    auto const z1x1_z2x2 = z1 * ConfigT::X1 + z2 * ConfigT::X2;
+
+    auto k1_is_neg = false;
+    auto k2_is_neg = false;
+
+    auto tk = k;
+    if (tk < z1x1_z2x2)
+        k1_is_neg = true;
+
+    const auto k1 = !k1_is_neg ? (tk - z1x1_z2x2) : z1x1_z2x2 - tk;
+
+    const DIntT z2y2 = z2 * ConfigT::Y2;
+    const DIntT z1y1 = z1 * ConfigT::Y1;
+
+    if (z1y1 < z2y2)
+        k2_is_neg = true;
+
+    const DIntT k2 = !k2_is_neg ? (z1y1 - z2y2) : z2y2 - z1y1;
+
+    return {{k1_is_neg, UIntT{k1}}, {k2_is_neg, UIntT{k2}}};
+}
 
 }  // namespace evmmax::ecc
