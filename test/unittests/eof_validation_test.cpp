@@ -1211,9 +1211,11 @@ TEST_F(eof_validation, EOF1_subcontainer_containing_unreachable_code_sections)
 
 TEST_F(eof_validation, max_nested_containers)
 {
+    constexpr size_t MAX_CODE_SIZE = 0x6000;
+    constexpr size_t MAX_INITCODE_SIZE = 2 * MAX_CODE_SIZE;
     bytecode code{};
     bytecode nextcode = eof_bytecode(OP_INVALID);
-    while (nextcode.size() <= std::numeric_limits<uint16_t>::max())
+    while (nextcode.size() <= MAX_INITCODE_SIZE)
     {
         code = nextcode;
         nextcode = eof_bytecode(OP_INVALID).container(nextcode);

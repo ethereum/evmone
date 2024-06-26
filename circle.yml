@@ -129,6 +129,9 @@ commands:
 
   download_execution_spec_tests:
     parameters:
+      repo:
+        type: string
+        default: ethereum/execution-spec-tests
       release:
         type: string
       fixtures_suffix:
@@ -139,7 +142,7 @@ commands:
           name: "Download execution-spec-tests: <<parameters.release>>"
           working_directory: ~/spec-tests
           command: |
-            curl -L https://github.com/ethereum/execution-spec-tests/releases/download/<<parameters.release>>/fixtures_<<parameters.fixtures_suffix>>.tar.gz | tar -xz
+            curl -L https://github.com/<<parameters.repo>>/releases/download/<<parameters.release>>/fixtures_<<parameters.fixtures_suffix>>.tar.gz | tar -xz
             ls -l
 
   build:
@@ -398,7 +401,8 @@ jobs:
     steps:
       - build
       - download_execution_spec_tests:
-          release: eip7692@v1.0.3
+          repo: ipsilon/execution-spec-tests
+          release: eip7692@v1.0.4+ipsilon_bf37249b
           fixtures_suffix: eip7692
       - run:
           name: "EOF pre-release execution spec tests (state_tests)"

@@ -37,6 +37,9 @@ constexpr auto REL_OFFSET_SIZE = sizeof(int16_t);
 constexpr auto STACK_SIZE_LIMIT = 1024;
 constexpr uint8_t NON_RETURNING_FUNCTION = 0x80;
 
+constexpr size_t MAX_CODE_SIZE = 0x6000;
+constexpr size_t MAX_INITCODE_SIZE = 2 * MAX_CODE_SIZE;
+
 using EOFSectionHeaders = std::array<std::vector<uint16_t>, MAX_SECTION + 1>;
 
 size_t eof_header_size(const EOFSectionHeaders& headers) noexcept
@@ -592,6 +595,10 @@ EOFValidationError validate_eof1(
         bytes_view bytes;
         ContainerKind kind;
     };
+
+    if (main_container.size() > MAX_INITCODE_SIZE)
+        return EOFValidationError::container_size_above_limit;
+
     // Queue of containers left to process
     std::queue<ContainerValidation> container_queue;
 
@@ -738,6 +745,12 @@ std::variant<EOF1Header, EOFValidationError> validate_header(
     if (rev < EVMC_PRAGUE)
         return EOFValidationError::eof_version_unknown;
 
+    // `offset` variable handled below is known to not be greater than the container size, as
+    // checked in `validate_section_headers`. Combined with the requirement for the container
+    // size to not exceed MAX_INITCODE_SIZE (checked before `validate-header` is called),
+    // this allows us to cast `offset` to narrower integers.
+    assert(container.size() <= MAX_INITCODE_SIZE);
+
     const auto section_headers_or_error = validate_section_headers(container);
     if (const auto* error = std::get_if<EOFValidationError>(&section_headers_or_error))
         return *error;
@@ -757,6 +770,7 @@ std::variant<EOF1Header, EOFValidationError> validate_header(
     std::vector<uint16_t> code_offsets;
     const auto type_section_size = section_headers[TYPE_SECTION][0];
     auto offset = header_size + type_section_size;
+
     for (const auto code_size : code_sizes)
     {
         assert(offset <= std::numeric_limits<uint16_t>::max());
@@ -768,10 +782,11 @@ std::variant<EOF1Header, EOFValidationError> validate_header(
     std::vector<uint16_t> container_offsets;
     for (const auto container_size : container_sizes)
     {
+        assert(offset <= std::numeric_limits<uint16_t>::max());
         container_offsets.emplace_back(static_cast<uint16_t>(offset));
         offset += container_size;
     }
-    // NOTE: assertion always satisfied only as long as initcode limits apply (48K).
+
     assert(offset <= std::numeric_limits<uint16_t>::max());
     const auto data_offset = static_cast<uint16_t>(offset);
 
@@ -971,6 +986,8 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "ambiguous_container_kind";
     case EOFValidationError::incompatible_container_kind:
         return "incompatible_container_kind";
+    case EOFValidationError::container_size_above_limit:
+        return "container_size_above_limit";
     case EOFValidationError::impossible:
         return "impossible";
     }

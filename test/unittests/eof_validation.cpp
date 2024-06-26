@@ -93,6 +93,8 @@ std::string_view get_tests_error_message(EOFValidationError err) noexcept
         return "EOF_AmbiguousContainerKind";
     case EOFValidationError::incompatible_container_kind:
         return "EOF_IncompatibleContainerKind";
+    case EOFValidationError::container_size_above_limit:
+        return "EOF_ContainerSizeAboveLimit";
     case EOFValidationError::impossible:
         return "impossible";
     }
