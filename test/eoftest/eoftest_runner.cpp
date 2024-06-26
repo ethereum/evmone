@@ -34,16 +34,6 @@ struct EOFValidationTest
     std::unordered_map<std::string, Case> cases;
 };
 
-ContainerKind container_kind_from_string(std::string_view s)
-{
-    if (s == "runtime")
-        return ContainerKind::runtime;
-    else if (s == "initcode")
-        return ContainerKind::initcode;
-    else
-        throw std::invalid_argument{"unknown container kind"};
-}
-
 void from_json(const json::json& j, EOFValidationTest::Case& o)
 {
     const auto op_code = evmc::from_hex(j.at("code").get<std::string>());
@@ -51,8 +41,8 @@ void from_json(const json::json& j, EOFValidationTest::Case& o)
         throw std::invalid_argument{"code is invalid hex string"};
     o.code = *op_code;
 
-    if (const auto it_kind = j.find("kind"); it_kind != j.end())
-        o.kind = container_kind_from_string(it_kind->get<std::string>());
+    if (const auto it_initcode = j.find("initcode"); it_initcode != j.end())
+        o.kind = it_initcode->get<bool>() ? ContainerKind::initcode : ContainerKind::runtime;
 
     for (const auto& [rev, result] : j.at("results").items())
     {
