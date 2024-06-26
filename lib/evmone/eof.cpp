@@ -782,9 +782,12 @@ std::variant<EOF1Header, EOFValidationError> validate_header(
     std::vector<uint16_t> container_offsets;
     for (const auto container_size : container_sizes)
     {
+        assert(offset <= std::numeric_limits<uint16_t>::max());
         container_offsets.emplace_back(static_cast<uint16_t>(offset));
         offset += container_size;
     }
+
+    assert(offset <= std::numeric_limits<uint16_t>::max());
     const auto data_offset = static_cast<uint16_t>(offset);
 
     return EOF1Header{
