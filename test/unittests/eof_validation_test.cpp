@@ -12,6 +12,12 @@
 using namespace evmone;
 using namespace evmone::test;
 
+namespace
+{
+constexpr size_t MAX_CODE_SIZE = 0x6000;
+constexpr size_t MAX_INITCODE_SIZE = 2 * MAX_CODE_SIZE;
+}  // namespace
+
 TEST_F(eof_validation, before_activation)
 {
     ASSERT_EQ(
@@ -219,12 +225,10 @@ TEST_F(eof_validation, EOF1_code_section_offset)
 TEST_F(eof_validation, EOF1_trailing_bytes_in_subcontainer)
 {
     add_test_case(
-        "EF0001 010004 0200010001 0300010018 040000 00 00800000 FE EF0001 010004 0200010001 040000 "
-        "00 00800000 FE DEADBEEF",
+        eof_bytecode(eofcreate() + OP_STOP, 4).container(eof_bytecode(OP_INVALID) + "DEADBEEF"),
         EOFValidationError::invalid_section_bodies_size);
-    add_test_case(
-        "EF0001 010004 0200010001 030001001a 040000 00 00800000 FE EF0001 010004 0200010001 040002 "
-        "00 00800000 FE AABB DEADBEEF",
+    add_test_case(eof_bytecode(eofcreate() + OP_STOP, 4)
+                      .container(eof_bytecode(OP_INVALID).data("aabb") + "DEADBEEF"),
         EOFValidationError::invalid_section_bodies_size);
 }
 
@@ -619,51 +623,51 @@ TEST_F(eof_validation, EOF1_rjumpv_invalid_destination)
 
 TEST_F(eof_validation, EOF1_section_order)
 {
-    // 01 02 03
+    // 01 02 04
     add_test_case("EF0001 010004 0200010006 040002 00 00800001 6000E0000000 AABB",
         EOFValidationError::success);
 
-    // 01 03 02
+    // 01 04 02
     add_test_case("EF0001 010004 040002 0200010006 00 00800000 AABB 6000E0000000",
         EOFValidationError::code_section_missing);
 
-    // 02 01 03
+    // 02 01 04
     add_test_case("EF0001 0200010006 010004 040002 00 6000E0000000 00800000 AABB",
         EOFValidationError::type_section_missing);
 
-    // 02 03 01
+    // 02 04 01
     add_test_case("EF0001 0200010006 040002 010004 00 6000E0000000 AABB 00800000",
         EOFValidationError::type_section_missing);
 
-    // 03 01 02
+    // 04 01 02
     add_test_case("EF0001 040002 010004 0200010006 00 AABB 00800000 6000E0000000",
         EOFValidationError::type_section_missing);
 
-    // 03 02 01
+    // 04 02 01
     add_test_case("EF0001 040002 0200010006 010004 00 AABB 6000E0000000 00800000",
         EOFValidationError::type_section_missing);
 
     // 01 02 03 04
     add_test_case(
-        "EF0001 010004 0200010006 0300010014 040002 00 00800001 6000E0000000 "
+        "EF0001 010004 0200010007 0300010014 040002 00 00800004 5F5F5F5FEC0000 "
         "EF000101000402000100010400000000800000FE AABB",
         EOFValidationError::success);
 
     // 03 01 02 04
     add_test_case(
-        "EF0001 0300010014 010004 0200010006 040002 00 EF000101000402000100010400000000800000FE "
-        "00800001 6000E0000000 AABB",
+        "EF0001 0300010014 010004 0200010007 040002 00 EF000101000402000100010400000000800000FE "
+        "00800004 5F5F5F5FEC0000 AABB",
         EOFValidationError::type_section_missing);
 
     // 01 03 02 04
     add_test_case(
-        "EF0001 010004 0300010014 0200010006 040002 00 00800001 "
-        "EF000101000402000100010400000000800000FE 6000E0000000 AABB",
+        "EF0001 010004 0300010014 0200010007 040002 00 00800004 "
+        "EF000101000402000100010400000000800000FE 5F5F5F5FEC0000 AABB",
         EOFValidationError::code_section_missing);
 
     // 01 02 04 03
     add_test_case(
-        "EF0001 010004 0200010006 040002 0300010014 00 00800001 6000E0000000 AABB "
+        "EF0001 010004 0200010007 040002 0300010014 00 00800004 5F5F5F5FEC0000 AABB "
         "EF000101000402000100010400000000800000FE",
         EOFValidationError::header_terminator_missing);
 }
@@ -1023,7 +1027,7 @@ TEST_F(eof_validation, EOF1_embedded_container)
 {
     // no data section
     add_test_case(
-        "EF0001 010004 0200010006 0300010014 040000 00 00800001 6000E0000000 "
+        "EF0001 010004 0200010007 0300010014 040000 00 00800004 5F5F5F5FEC0000 "
         "EF000101000402000100010400000000800000FE",
         EOFValidationError::success);
 
@@ -1035,28 +1039,32 @@ TEST_F(eof_validation, EOF1_embedded_container)
 
     // with data section
     add_test_case(
-        "EF0001 010004 0200010006 0300010014 040002 00 00800001 6000E0000000 "
+        "EF0001 010004 0200010007 0300010014 040002 00 00800004 5F5F5F5FEC0000 "
         "EF000101000402000100010400000000800000FE AABB",
         EOFValidationError::success);
 
     // garbage in container section - not allowed
     add_test_case(
-        "EF0001 010004 0200010006 0300010006 040000 00 00800001 6000E0000000 aabbccddeeff",
+        "EF0001 010004 0200010007 0300010006 040000 00 00800004 5F5F5F5FEC0000 aabbccddeeff",
         EOFValidationError::invalid_prefix);
 
     // multiple container sections
     add_test_case(
-        "EF0001 010004 0200010006 03000200140016 040000 00 00800001 6000E0000000 "
+        "EF0001 010004 020001000E 03000200140016 040000 00 00800004 5F5F5F5FEC00505F5F5F5FEC0100 "
         "EF000101000402000100010400000000800000FE "
-        "EF0001010004020001000304000000008000025F5FF3",
+        "EF0001010004020001000304000000008000025F5FFD",
         EOFValidationError::success);
 
     // Max number (256) of container sections
-    const auto containers_header = bytecode{"030100"} + 256 * bytecode{"0014"};
-    const auto containers_body = 256 * bytecode{"EF000101000402000100010400000000800000FE"};
-    add_test_case("EF0001 010004 0200010006" + containers_header +
-                      "040000 00 00800001 6000E0000000" + containers_body,
-        EOFValidationError::success);
+    bytecode code;
+    for (auto i = 0; i < 256; ++i)
+        code += eofcreate().container(static_cast<uint8_t>(i)) + OP_POP;
+    code += bytecode{OP_STOP};
+    auto container = eof_bytecode(code, 4);
+    const auto subcontainer = eof_bytecode(OP_INVALID);
+    for (auto i = 0; i < 256; ++i)
+        container.container(subcontainer);
+    add_test_case(container, EOFValidationError::success);
 }
 
 TEST_F(eof_validation, EOF1_embedded_container_invalid)
@@ -1100,17 +1108,22 @@ TEST_F(eof_validation, EOF1_eofcreate_valid)
             .container(embedded),
         EOFValidationError::success);
 
-    // initcontainer_index = 1
+    // initcontainer_index = 0, 1
     add_test_case(
-        eof_bytecode(
-            eofcreate().container(1).input(0, OP_CALLDATASIZE).salt(0xff) + OP_POP + OP_STOP, 4)
+        eof_bytecode(eofcreate().container(0).input(0, OP_CALLDATASIZE).salt(0xff) + OP_POP +
+                         eofcreate().container(1).input(0, OP_CALLDATASIZE).salt(0xfe) + OP_POP +
+                         OP_STOP,
+            4)
             .container(embedded)
             .container(embedded),
         EOFValidationError::success);
 
-    // initcontainer_index = 255
-    auto cont = eof_bytecode(
-        eofcreate().container(255).input(0, OP_CALLDATASIZE).salt(0xff) + OP_POP + OP_STOP, 4);
+    // initcontainer_index  0..255
+    bytecode code;
+    for (auto i = 0; i < 256; ++i)
+        code += eofcreate().container(static_cast<uint8_t>(i)).input(0, OP_CALLDATASIZE) + OP_POP;
+    code += bytecode{OP_STOP};
+    auto cont = eof_bytecode(code, 4);
     for (auto i = 0; i < 256; ++i)
         cont.container(embedded);
     add_test_case(cont, EOFValidationError::success);
@@ -1148,20 +1161,23 @@ TEST_F(eof_validation, EOF1_eofcreate_invalid)
 
 TEST_F(eof_validation, EOF1_returncontract_valid)
 {
-    // initcontainer_index = 0
+    // deploy_container_index = 0
     const auto embedded = eof_bytecode(bytecode{OP_INVALID});
-    add_test_case(
-        eof_bytecode(bytecode(0) + 0 + OP_RETURNCONTRACT + Opcode{0}, 2).container(embedded),
+    add_test_case(eof_bytecode(returncontract(0, 0, 0), 2).container(embedded),
         ContainerKind::initcode, EOFValidationError::success);
 
-    // initcontainer_index = 1
-    add_test_case(eof_bytecode(bytecode(0) + 0 + OP_RETURNCONTRACT + Opcode{1}, 2)
+    // deploy_container_index = 0, 1
+    add_test_case(eof_bytecode(rjumpi(6, 0) + returncontract(0, 0, 0) + returncontract(1, 0, 0), 2)
                       .container(embedded)
                       .container(embedded),
         ContainerKind::initcode, EOFValidationError::success);
 
-    // initcontainer_index = 255
-    auto cont = eof_bytecode(bytecode(0) + 0 + OP_RETURNCONTRACT + Opcode{255}, 2);
+    // deploy_container_index = 0..255
+    bytecode code;
+    for (auto i = 0; i < 256; ++i)
+        code += rjumpi(6, 0) + returncontract(static_cast<uint8_t>(i), 0, 0);
+    code += revert(0, 0);
+    auto cont = eof_bytecode(code, 2);
     for (auto i = 0; i < 256; ++i)
         cont.container(embedded);
     add_test_case(cont, ContainerKind::initcode, EOFValidationError::success);
@@ -1188,16 +1204,17 @@ TEST_F(eof_validation, EOF1_returncontract_invalid)
         ContainerKind::initcode, EOFValidationError::unreachable_instructions);
 }
 
-TEST_F(eof_validation, EOF1_unreferenced_subcontainer_valid)
+TEST_F(eof_validation, EOF1_unreferenced_subcontainer_invalid)
 {
     const auto embedded = eof_bytecode(bytecode{OP_INVALID});
-    add_test_case(eof_bytecode(OP_STOP).container(embedded), EOFValidationError::success);
+    add_test_case(
+        eof_bytecode(OP_STOP).container(embedded), EOFValidationError::unreferenced_subcontainer);
 }
 
 TEST_F(eof_validation, EOF1_subcontainer_containing_unreachable_code_sections)
 {
     const auto embedded_1 = eof_bytecode(OP_INVALID).code(OP_INVALID, 0, 0x80, 0);
-    add_test_case(eof_bytecode(OP_INVALID).container(embedded_1),
+    add_test_case(eof_bytecode(eofcreate() + OP_STOP, 4).container(embedded_1),
         EOFValidationError::unreachable_code_sections);
 
     const auto embedded_2 = eof_bytecode(jumpf(1))
@@ -1205,20 +1222,37 @@ TEST_F(eof_validation, EOF1_subcontainer_containing_unreachable_code_sections)
                                 .code(OP_INVALID, 0, 0x80, 0)
                                 .code(jumpf(4), 0, 0x80, 0)
                                 .code(jumpf(3), 0, 0x80, 0);
-    add_test_case(eof_bytecode(OP_INVALID).container(embedded_2),
+    add_test_case(eof_bytecode(eofcreate() + OP_STOP, 4).container(embedded_2),
         EOFValidationError::unreachable_code_sections);
 }
 
-TEST_F(eof_validation, max_nested_containers)
+TEST_F(eof_validation, max_nested_containers_eofcreate)
 {
-    constexpr size_t MAX_CODE_SIZE = 0x6000;
-    constexpr size_t MAX_INITCODE_SIZE = 2 * MAX_CODE_SIZE;
     bytecode code{};
     bytecode nextcode = eof_bytecode(OP_INVALID);
     while (nextcode.size() <= MAX_INITCODE_SIZE)
     {
         code = nextcode;
-        nextcode = eof_bytecode(OP_INVALID).container(nextcode);
+        nextcode = eof_bytecode(4 * push0() + OP_EOFCREATE + Opcode{0} + OP_INVALID, 4)
+                       .container(nextcode);
+    }
+    add_test_case(code, EOFValidationError::success);
+}
+
+TEST_F(eof_validation, max_nested_containers_eofcreate_returncontract)
+{
+    bytecode code{};
+    bytecode nextcode = eof_bytecode(OP_INVALID);
+    while (nextcode.size() <= MAX_INITCODE_SIZE)
+    {
+        code = nextcode;
+
+        const bytecode initcode =
+            eof_bytecode(push0() + push0() + OP_RETURNCONTRACT + Opcode{0}, 2).container(nextcode);
+        if (initcode.size() >= std::numeric_limits<uint16_t>::max())
+            break;
+        nextcode = eof_bytecode(4 * push0() + OP_EOFCREATE + Opcode{0} + OP_INVALID, 4)
+                       .container(initcode);
     }
     add_test_case(code, EOFValidationError::success);
 }
@@ -1362,81 +1396,6 @@ TEST_F(eof_validation, runtime_container_returncontract)
     add_test_case(factory_container, EOFValidationError::incompatible_container_kind);
 }
 
-TEST_F(eof_validation, initcode_runtime_container_stop)
-{
-    const auto runtime_container = eof_bytecode(OP_STOP);
-
-    add_test_case(runtime_container, ContainerKind::initcode_runtime,
-        EOFValidationError::incompatible_container_kind);
-
-    const auto initcontainer =
-        eof_bytecode(eofcreate() + returncontract(0, 0, 0), 4).container(runtime_container);
-
-    add_test_case(
-        initcontainer, ContainerKind::initcode, EOFValidationError::incompatible_container_kind);
-
-    const auto factory_code = eofcreate() + OP_STOP;
-    const bytecode factory_container = eof_bytecode(factory_code, 4).container(initcontainer);
-
-    add_test_case(factory_container, EOFValidationError::incompatible_container_kind);
-}
-
-TEST_F(eof_validation, initcode_runtime_container_return)
-{
-    const auto runtime_container = eof_bytecode(ret(0, 0), 2);
-
-    add_test_case(runtime_container, ContainerKind::initcode_runtime,
-        EOFValidationError::incompatible_container_kind);
-
-    const auto initcontainer =
-        eof_bytecode(eofcreate() + returncontract(0, 0, 0), 4).container(runtime_container);
-
-    add_test_case(
-        initcontainer, ContainerKind::initcode, EOFValidationError::incompatible_container_kind);
-
-    const auto factory_code = eofcreate() + OP_STOP;
-    const bytecode factory_container = eof_bytecode(factory_code, 4).container(initcontainer);
-
-    add_test_case(factory_container, EOFValidationError::incompatible_container_kind);
-}
-
-TEST_F(eof_validation, initcode_runtime_container_revert)
-{
-    const auto runtime_container =
-        eof_bytecode(returncontract(0, 0, 0), 2).container(eof_bytecode(OP_INVALID));
-
-    add_test_case(runtime_container, ContainerKind::initcode_runtime,
-        EOFValidationError::incompatible_container_kind);
-
-    const auto initcontainer =
-        eof_bytecode(eofcreate() + returncontract(0, 0, 0), 4).container(runtime_container);
-
-    add_test_case(
-        initcontainer, ContainerKind::initcode, EOFValidationError::incompatible_container_kind);
-
-    const auto factory_code = eofcreate() + OP_STOP;
-    const bytecode factory_container = eof_bytecode(factory_code, 4).container(initcontainer);
-
-    add_test_case(factory_container, EOFValidationError::incompatible_container_kind);
-}
-
-TEST_F(eof_validation, initcode_runtime_container_returncontract)
-{
-    const auto runtime_container = eof_bytecode(revert(0, 0), 2);
-
-    add_test_case(runtime_container, ContainerKind::initcode_runtime, EOFValidationError::success);
-
-    const auto initcontainer =
-        eof_bytecode(eofcreate() + returncontract(0, 0, 0), 4).container(runtime_container);
-
-    add_test_case(initcontainer, ContainerKind::initcode, EOFValidationError::success);
-
-    const auto factory_code = eofcreate() + OP_STOP;
-    const bytecode factory_container = eof_bytecode(factory_code, 4).container(initcontainer);
-
-    add_test_case(factory_container, EOFValidationError::success);
-}
-
 TEST_F(eof_validation, eofcreate_stop_and_returncontract)
 {
     const auto runtime_container = eof_bytecode(OP_INVALID);
@@ -1457,4 +1416,21 @@ TEST_F(eof_validation, eofcreate_return_and_returncontract)
     const bytecode factory_container = eof_bytecode(factory_code, 4).container(initcontainer);
 
     add_test_case(factory_container, EOFValidationError::incompatible_container_kind);
+}
+
+TEST_F(eof_validation, eofcreate_and_returncontract_targeting_same_container)
+{
+    const auto runtime_container = eof_bytecode(OP_INVALID);
+    const auto initcode = eofcreate() + returncontract(0, 0, 0);
+    const auto initcontainer = eof_bytecode(initcode, 4).container(runtime_container);
+
+    add_test_case(
+        initcontainer, ContainerKind::initcode, EOFValidationError::ambiguous_container_kind);
+
+    const auto initcode2 = eofcreate() + eofcreate().container(1) + returncontract(1, 0, 0);
+    const auto initcontainer2 =
+        eof_bytecode(initcode, 4).container(runtime_container).container(runtime_container);
+
+    add_test_case(
+        initcontainer2, ContainerKind::initcode, EOFValidationError::ambiguous_container_kind);
 }

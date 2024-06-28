@@ -142,6 +142,7 @@ enum class EOFValidationError
     ambiguous_container_kind,
     incompatible_container_kind,
     container_size_above_limit,
+    unreferenced_subcontainer,
 
     impossible,
 };
@@ -152,9 +153,6 @@ enum class ContainerKind : uint8_t
     initcode,
     /// Container that uses STOP/RETURN. Can be returned by RETURNCONTRACT.
     runtime,
-    /// Container that uses only REVERT/INVALID or does not terminate execution.
-    /// Can be used in any context.
-    initcode_runtime,
 };
 
 /// Determines the EOF version of the container by inspecting container's EOF prefix.

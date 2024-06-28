@@ -95,6 +95,8 @@ std::string_view get_tests_error_message(EOFValidationError err) noexcept
         return "EOF_IncompatibleContainerKind";
     case EOFValidationError::container_size_above_limit:
         return "EOF_ContainerSizeAboveLimit";
+    case EOFValidationError::unreferenced_subcontainer:
+        return "EOF_UnreferencedSubcontainer";
     case EOFValidationError::impossible:
         return "impossible";
     }
@@ -109,8 +111,6 @@ std::string_view to_string(ContainerKind container_kind) noexcept
         return "runtime";
     case (ContainerKind::initcode):
         return "initcode";
-    case (ContainerKind::initcode_runtime):
-        return "initcode_runtime";
     }
     return "<unknown>";
 }

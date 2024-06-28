@@ -326,7 +326,7 @@ TEST_F(state_transition, eofcreate_with_auxdata_and_subcontainer)
     const auto deploy_data = "abcdef"_hex;
     const auto aux_data = "aabbccddeeff"_hex;
     const auto deploy_data_size = static_cast<uint16_t>(deploy_data.size() + aux_data.size());
-    const auto deploy_container = eof_bytecode(OP_INVALID)
+    const auto deploy_container = eof_bytecode(eofcreate() + OP_STOP, 4)
                                       .container(eof_bytecode(OP_INVALID))
                                       .data(deploy_data, deploy_data_size);
 
@@ -346,7 +346,7 @@ TEST_F(state_transition, eofcreate_with_auxdata_and_subcontainer)
 
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
-    const auto expected_container = eof_bytecode(bytecode(OP_INVALID))
+    const auto expected_container = eof_bytecode(eofcreate() + OP_STOP, 4)
                                         .container(eof_bytecode(OP_INVALID))
                                         .data(deploy_data + aux_data);
 

@@ -40,8 +40,6 @@ ContainerKind container_kind_from_string(std::string_view s)
         return ContainerKind::runtime;
     else if (s == "initcode")
         return ContainerKind::initcode;
-    else if (s == "initcode_runtime")
-        return ContainerKind::initcode_runtime;
     else
         throw std::invalid_argument{"unknown container kind"};
 }
