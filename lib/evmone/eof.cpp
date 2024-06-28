@@ -4,6 +4,7 @@
 
 #include "eof.hpp"
 #include "baseline_instruction_table.hpp"
+#include "constants.hpp"
 #include "execution_state.hpp"
 #include "instructions_traits.hpp"
 
@@ -36,9 +37,6 @@ constexpr auto OUTPUTS_INPUTS_NUMBER_LIMIT = 0x7F;
 constexpr auto REL_OFFSET_SIZE = sizeof(int16_t);
 constexpr auto STACK_SIZE_LIMIT = 1024;
 constexpr uint8_t NON_RETURNING_FUNCTION = 0x80;
-
-constexpr size_t MAX_CODE_SIZE = 0x6000;
-constexpr size_t MAX_INITCODE_SIZE = 2 * MAX_CODE_SIZE;
 
 using EOFSectionHeaders = std::array<std::vector<uint16_t>, MAX_SECTION + 1>;
 

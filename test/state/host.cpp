@@ -5,6 +5,7 @@
 #include "host.hpp"
 #include "precompiles.hpp"
 #include "rlp.hpp"
+#include <evmone/constants.hpp>
 #include <evmone/eof.hpp>
 
 namespace evmone::state
@@ -346,7 +347,7 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
     // because container section is not allowed to be empty
     assert(msg.kind != EVMC_EOFCREATE || result.status_code != EVMC_SUCCESS || !code.empty());
 
-    if (m_rev >= EVMC_SPURIOUS_DRAGON && code.size() > max_code_size)
+    if (m_rev >= EVMC_SPURIOUS_DRAGON && code.size() > MAX_CODE_SIZE)
         return evmc::Result{EVMC_FAILURE};
 
     // Code deployment cost.

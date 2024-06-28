@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "eof_validation.hpp"
+#include <evmone/constants.hpp>
 #include <evmone/eof.hpp>
 #include <evmone/instructions_traits.hpp>
 #include <gtest/gtest.h>
@@ -11,12 +12,6 @@
 
 using namespace evmone;
 using namespace evmone::test;
-
-namespace
-{
-constexpr size_t MAX_CODE_SIZE = 0x6000;
-constexpr size_t MAX_INITCODE_SIZE = 2 * MAX_CODE_SIZE;
-}  // namespace
 
 TEST_F(eof_validation, before_activation)
 {

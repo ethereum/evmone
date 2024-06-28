@@ -7,8 +7,8 @@
 #include "errors.hpp"
 #include "host.hpp"
 #include "rlp.hpp"
+#include <evmone/constants.hpp>
 #include <evmone/eof.hpp>
-#include <evmone/evmone.h>
 #include <evmone/execution_state.hpp>
 #include <algorithm>
 
@@ -16,6 +16,8 @@ namespace evmone::state
 {
 namespace
 {
+constexpr auto MAX_INITCODE_COUNT = 256;
+
 inline constexpr int64_t num_words(size_t size_in_bytes) noexcept
 {
     return static_cast<int64_t>((size_in_bytes + 31) / 32);
@@ -284,12 +286,12 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
     case Transaction::Type::initcodes:
         if (rev < EVMC_OSAKA)
             return make_error_code(TX_TYPE_NOT_SUPPORTED);
-        if (tx.initcodes.size() > max_initcode_count)
+        if (tx.initcodes.size() > MAX_INITCODE_COUNT)
             return make_error_code(INIT_CODE_COUNT_LIMIT_EXCEEDED);
         if (tx.initcodes.empty())
             return make_error_code(INIT_CODE_COUNT_ZERO);
         if (std::any_of(tx.initcodes.begin(), tx.initcodes.end(),
-                [](const bytes& v) { return v.size() > max_initcode_size; }))
+                [](const bytes& v) { return v.size() > MAX_INITCODE_SIZE; }))
             return make_error_code(INIT_CODE_SIZE_LIMIT_EXCEEDED);
         if (std::any_of(
                 tx.initcodes.begin(), tx.initcodes.end(), [](const bytes& v) { return v.empty(); }))
@@ -340,7 +342,7 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
         return make_error_code(NONCE_TOO_LOW);
 
     // initcode size is limited by EIP-3860.
-    if (rev >= EVMC_SHANGHAI && !tx.to.has_value() && tx.data.size() > max_initcode_size)
+    if (rev >= EVMC_SHANGHAI && !tx.to.has_value() && tx.data.size() > MAX_INITCODE_SIZE)
         return make_error_code(INIT_CODE_SIZE_LIMIT_EXCEEDED);
 
     // Compute and check if sender has enough balance for the theoretical maximum transaction cost.
