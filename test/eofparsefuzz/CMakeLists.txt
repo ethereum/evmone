@@ -14,5 +14,5 @@ else()
 endif()
 
 add_executable(evmone-eofparsefuzz eofparsefuzz.cpp)
-target_link_libraries(evmone-eofparsefuzz PRIVATE evmone)
+target_link_libraries(evmone-eofparsefuzz PRIVATE evmone evmone::testutils)
 target_include_directories(evmone-eofparsefuzz PRIVATE ${evmone_private_include_dir})
