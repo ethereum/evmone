@@ -47,8 +47,14 @@ static_assert(std::is_move_assignable_v<CodeAnalysis>);
 static_assert(!std::is_copy_constructible_v<CodeAnalysis>);
 static_assert(!std::is_copy_assignable_v<CodeAnalysis>);
 
-/// Analyze the code to build the bitmap of valid JUMPDEST locations.
-EVMC_EXPORT CodeAnalysis analyze(evmc_revision rev, bytes_view code);
+/// Analyze the EVM code in preparation for execution.
+///
+/// For legacy code this builds the map of valid JUMPDESTs.
+/// If EOF is enabled it recognized the EOF code by the code prefix.
+///
+/// @param code         The reference to the EVM code to be analyzed.
+/// @param eof_enabled  Should the EOF code prefix be recognized as EOF code?
+EVMC_EXPORT CodeAnalysis analyze(bytes_view code, bool eof_enabled);
 
 /// Executes in Baseline interpreter using EVMC-compatible parameters.
 evmc_result execute(evmc_vm* vm, const evmc_host_interface* host, evmc_host_context* ctx,
