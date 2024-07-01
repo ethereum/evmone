@@ -335,11 +335,12 @@ evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_co
 {
     auto vm = static_cast<VM*>(c_vm);
     const bytes_view container{code, code_size};
+    const auto eof_enabled = rev >= instr::REV_EOF1;
 
     // Since EOF validation recurses into subcontainers, it only makes sense to do for top level
     // message calls. The condition for `msg->kind` inside differentiates between creation tx code
     // (initcode) and already deployed code (runtime).
-    if (vm->validate_eof && rev >= EVMC_PRAGUE && is_eof_container(container) && msg->depth == 0)
+    if (vm->validate_eof && eof_enabled && is_eof_container(container) && msg->depth == 0)
     {
         const auto container_kind =
             (msg->kind == EVMC_EOFCREATE ? ContainerKind::initcode : ContainerKind::runtime);
@@ -347,7 +348,7 @@ evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_co
             return evmc_make_result(EVMC_CONTRACT_VALIDATION_FAILURE, 0, 0, nullptr, 0);
     }
 
-    const auto code_analysis = analyze(rev, container);
+    const auto code_analysis = analyze(container, eof_enabled);
     const auto data = code_analysis.eof_header.get_data(container);
     auto state = std::make_unique<ExecutionState>(*msg, rev, *host, ctx, container, data);
     return execute(*vm, msg->gas, *state, code_analysis);
