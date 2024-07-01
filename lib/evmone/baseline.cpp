@@ -82,11 +82,11 @@ CodeAnalysis analyze_eof1(bytes_view container)
 }
 }  // namespace
 
-CodeAnalysis analyze(evmc_revision rev, bytes_view code)
+CodeAnalysis analyze(bytes_view code, bool eof_enabled)
 {
-    if (rev < EVMC_PRAGUE || !is_eof_container(code))
-        return analyze_legacy(code);
-    return analyze_eof1(code);
+    if (eof_enabled && is_eof_container(code))
+        return analyze_eof1(code);
+    return analyze_legacy(code);
 }
 
 namespace
@@ -400,8 +400,9 @@ evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_co
 {
     auto vm = static_cast<VM*>(c_vm);
     const bytes_view container{code, code_size};
+    const auto eof_enabled = rev >= EVMC_PRAGUE;
 
-    if (vm->validate_eof && rev >= EVMC_PRAGUE && is_eof_container(container))
+    if (eof_enabled && vm->validate_eof && is_eof_container(container))
     {
         const auto container_kind =
             (msg->depth == 0 ? ContainerKind::initcode : ContainerKind::runtime);
@@ -409,7 +410,7 @@ evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_co
             return evmc_make_result(EVMC_CONTRACT_VALIDATION_FAILURE, 0, 0, nullptr, 0);
     }
 
-    const auto code_analysis = analyze(rev, container);
+    const auto code_analysis = analyze(container, eof_enabled);
     const auto data = code_analysis.eof_header.get_data(container);
     auto state = std::make_unique<ExecutionState>(*msg, rev, *host, ctx, container, data);
     return execute(*vm, msg->gas, *state, code_analysis);
