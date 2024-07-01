@@ -437,13 +437,14 @@ jobs:
     steps:
       - build
       - download_execution_tests:
-          rev: v13.3
+          rev: v14.0
       - run:
           name: "State tests"
           working_directory: ~/build
           command: >
             bin/evmone-statetest 
             ~/tests/GeneralStateTests 
+            ~/tests/LegacyTests/Cancun/GeneralStateTests
             ~/tests/LegacyTests/Constantinople/GeneralStateTests
       - run:
           name: "Blockchain tests (GeneralStateTests)"
@@ -459,6 +460,7 @@ jobs:
             bin/evmone-blockchaintest
             --gtest_filter='*:-bcMultiChainTest.*:bcTotalDifficultyTest.*:bcForkStressTest.ForkStressTest:bcGasPricerTest.RPC_API_Test:bcValidBlockTest.SimpleTx3LowS'
             ~/tests/BlockchainTests/ValidBlocks
+            ~/tests/LegacyTests/Cancun/BlockchainTests/ValidBlocks
       - run:
           name: "Blockchain tests (EIPs)"
           working_directory: ~/build
@@ -498,12 +500,13 @@ jobs:
           command: sudo apt-get -q update && sudo apt-get -qy install libgmp-dev
       - build
       - download_execution_tests:
-          rev: v13.3
+          rev: v14.0
+          legacy: false
       - run:
           name: "State tests"
           working_directory: ~/build
           command: |
-            bin/evmone-statetest ~/tests/GeneralStateTests ~/tests/LegacyTests/Constantinople/GeneralStateTests
+            bin/evmone-statetest ~/tests/GeneralStateTests
       - collect_coverage_gcc
       - upload_coverage:
           flags: ethereum_tests_silkpre
