@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "evm_fixture.hpp"
+#include <evmone/constants.hpp>
 #include <numeric>
 
 using namespace evmc::literals;
@@ -691,9 +692,8 @@ TEST_P(evm, staticmode)
 
 TEST_P(evm, max_code_size_push1)
 {
-    constexpr auto max_code_size = 0x6000;
-    const auto code = (max_code_size / 2) * push(1);
-    ASSERT_EQ(code.size(), max_code_size);
+    const auto code = (evmone::MAX_CODE_SIZE / 2) * push(1);
+    ASSERT_EQ(code.size(), evmone::MAX_CODE_SIZE);
 
     execute(code);
     EXPECT_STATUS(EVMC_STACK_OVERFLOW);
