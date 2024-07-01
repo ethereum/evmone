@@ -40,9 +40,9 @@ inline advanced::AdvancedCodeAnalysis advanced_analyse(evmc_revision rev, bytes_
     return advanced::analyze(rev, code);
 }
 
-inline baseline::CodeAnalysis baseline_analyse(evmc_revision rev, bytes_view code)
+inline baseline::CodeAnalysis baseline_analyse(evmc_revision /*rev*/, bytes_view code)
 {
-    return baseline::analyze(rev, code);
+    return baseline::analyze(code, true);  // Always enable EOF.
 }
 
 inline FakeCodeAnalysis evmc_analyse(evmc_revision /*rev*/, bytes_view /*code*/)
