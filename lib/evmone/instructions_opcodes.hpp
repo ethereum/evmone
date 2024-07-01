@@ -11,7 +11,7 @@ namespace evmone
 ///
 /// This is not enum class because we want implicit conversion to integers,
 /// e.g. for usage as an array index.
-enum Opcode : uint8_t
+enum Opcode : unsigned char
 {
     OP_STOP = 0x00,
     OP_ADD = 0x01,
