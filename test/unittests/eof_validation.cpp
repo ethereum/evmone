@@ -135,7 +135,7 @@ void eof_validation::export_eof_validation_test()
         auto& jcase = jvectors[case_name];
         jcase["code"] = hex0x(test_case.container);
         if (test_case.kind == ContainerKind::initcode)
-            jcase["initcode"] = true;
+            jcase["containerKind"] = "INITCODE";
 
         auto& jresults = jcase["results"][evmc::to_string(rev)];
         if (test_case.error == EOFValidationError::success)
