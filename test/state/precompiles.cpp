@@ -32,7 +32,7 @@ constexpr auto GasCostMax = std::numeric_limits<int64_t>::max();
 
 inline constexpr int64_t num_words(size_t size_in_bytes) noexcept
 {
-    return static_cast<int64_t>((size_in_bytes + 31) / 32);
+    return static_cast<int64_t>(size_in_bytes / 32 + (size_in_bytes % 32 != 0));
 }
 
 template <int BaseCost, int WordCost>
