@@ -401,17 +401,13 @@ jobs:
     steps:
       - build
       - download_execution_spec_tests:
-          repo: ipsilon/execution-spec-tests
-          release: eip7692@v1.0.4+ipsilon_bf37249b
+          release: eip7692@v1.0.5
           fixtures_suffix: eip7692
       - run:
           name: "EOF pre-release execution spec tests (state_tests)"
           working_directory: ~/build
-          # TODO: Disabled tests:
-          #   prague/eip7692_eof_v1/eip7620_eof_create/eofcreate.eofcreate_in_initcode_reverts: contains invalid EOF container: unreferenced subcontainer
           command: >
             bin/evmone-statetest ~/spec-tests/fixtures/state_tests
-            --gtest_filter=-prague/eip7692_eof_v1/eip7620_eof_create/eofcreate.eofcreate_in_initcode_reverts
       - run:
           name: "EOF pre-release execution spec tests (blockchain_tests)"
           working_directory: ~/build
@@ -420,12 +416,8 @@ jobs:
       - run:
           name: "EOF pre-release execution spec tests (eof_tests)"
           working_directory: ~/build
-          # TODO: Disabled tests:
-          #   prague/eip7692_eof_v1/eip3540_eof_v1/all_opcodes_in_container.all_opcodes_in_container
-          #   prague/eip7692_eof_v1/eip3540_eof_v1/code_validation.legacy_initcode_valid_eof_v1_contract: unreferenced subcontainers, fixed in https://github.com/ethereum/execution-spec-tests/pull/649
           command: >
             bin/evmone-eoftest ~/spec-tests/fixtures/eof_tests 
-            --gtest_filter=-prague/eip7692_eof_v1/eip3540_eof_v1/all_opcodes_in_container.all_opcodes_in_container:prague/eip7692_eof_v1/eip3540_eof_v1/code_validation.legacy_initcode_valid_eof_v1_contract
       - collect_coverage_gcc
       - upload_coverage:
           flags: eof_execution_spec_tests
