@@ -41,8 +41,11 @@ void from_json(const json::json& j, EOFValidationTest::Case& o)
         throw std::invalid_argument{"code is invalid hex string"};
     o.code = *op_code;
 
-    if (const auto it_initcode = j.find("initcode"); it_initcode != j.end())
-        o.kind = it_initcode->get<bool>() ? ContainerKind::initcode : ContainerKind::runtime;
+    if (const auto it_kind = j.find("containerKind"); it_kind != j.end())
+    {
+        if (it_kind->get<std::string>() == "INITCODE")
+            o.kind = ContainerKind::initcode;
+    }
 
     for (const auto& [rev, result] : j.at("results").items())
     {
