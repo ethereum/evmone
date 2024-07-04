@@ -42,10 +42,6 @@ public:
       : executable_code{code}, eof_header{std::move(header)}
     {}
 };
-static_assert(std::is_move_constructible_v<CodeAnalysis>);
-static_assert(std::is_move_assignable_v<CodeAnalysis>);
-static_assert(!std::is_copy_constructible_v<CodeAnalysis>);
-static_assert(!std::is_copy_assignable_v<CodeAnalysis>);
 
 /// Analyze the code to build the bitmap of valid JUMPDEST locations.
 EVMC_EXPORT CodeAnalysis analyze(evmc_revision rev, bytes_view code);
