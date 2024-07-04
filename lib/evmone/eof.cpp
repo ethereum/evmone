@@ -23,7 +23,8 @@ namespace evmone
 {
 namespace
 {
-constexpr uint8_t MAGIC[] = {0xef, 0x00};
+constexpr uint8_t MAGIC_BYTES[] = {0xef, 0x00};
+constexpr bytes_view MAGIC{MAGIC_BYTES, std::size(MAGIC_BYTES)};
 constexpr uint8_t TERMINATOR = 0x00;
 constexpr uint8_t TYPE_SECTION = 0x01;
 constexpr uint8_t CODE_SECTION = 0x02;
@@ -49,7 +50,7 @@ size_t eof_header_size(const EOFSectionHeaders& headers) noexcept
     constexpr auto non_code_section_header_size = 3;  // (SECTION_ID + SIZE) per each section
     constexpr auto section_size_size = 2;
 
-    auto header_size = sizeof(MAGIC) + 1 +  // 1 version byte
+    auto header_size = std::size(MAGIC) + 1 +  // 1 version byte
                        non_code_section_count * non_code_section_header_size +
                        sizeof(CODE_SECTION) + 2 + code_section_count * section_size_size +
                        sizeof(TERMINATOR);
@@ -727,7 +728,7 @@ size_t EOF1Header::data_size_position() const noexcept
 
 bool is_eof_container(bytes_view container) noexcept
 {
-    return container.size() > 1 && container[0] == MAGIC[0] && container[1] == MAGIC[1];
+    return container.starts_with(MAGIC);
 }
 
 std::variant<EOF1Header, EOFValidationError> validate_header(
@@ -891,9 +892,7 @@ bool append_data_section(bytes& container, bytes_view aux_data)
 
 uint8_t get_eof_version(bytes_view container) noexcept
 {
-    return (container.size() >= 3 && container[0] == MAGIC[0] && container[1] == MAGIC[1]) ?
-               container[2] :
-               0;
+    return is_eof_container(container) ? container[2] : 0;
 }
 
 EOFValidationError validate_eof(
