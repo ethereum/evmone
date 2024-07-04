@@ -11,8 +11,8 @@ add_library(evmone
     advanced_execution.cpp
     advanced_execution.hpp
     advanced_instructions.cpp
-    baseline.cpp
     baseline.hpp
+    baseline_analysis.cpp
     baseline_instruction_table.cpp
     baseline_instruction_table.hpp
     constants.hpp
