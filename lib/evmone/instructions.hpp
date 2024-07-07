@@ -741,14 +741,14 @@ Result sstore(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;
 /// Internal jump implementation for JUMP/JUMPI instructions.
 inline code_iterator jump_impl(ExecutionState& state, const uint256& dst) noexcept
 {
-    const auto& jumpdest_map = state.analysis.baseline->jumpdest_map;
-    if (dst >= jumpdest_map.size() || !jumpdest_map[static_cast<size_t>(dst)])
+    const auto hi_part_is_nonzero = (dst[3] | dst[2] | dst[1]) != 0;
+    if (hi_part_is_nonzero || !state.analysis.baseline->check_jumpdest(dst[0])) [[unlikely]]
     {
         state.status = EVMC_BAD_JUMP_DESTINATION;
         return nullptr;
     }
 
-    return &state.analysis.baseline->executable_code[static_cast<size_t>(dst)];
+    return &state.analysis.baseline->executable_code()[static_cast<size_t>(dst[0])];
 }
 
 /// JUMP instruction implementation using baseline::CodeAnalysis.
@@ -801,7 +801,7 @@ inline code_iterator rjumpv(StackTop stack, ExecutionState& /*state*/, code_iter
 
 inline code_iterator pc(StackTop stack, ExecutionState& state, code_iterator pos) noexcept
 {
-    stack.push(static_cast<uint64_t>(pos - state.analysis.baseline->executable_code.data()));
+    stack.push(static_cast<uint64_t>(pos - state.analysis.baseline->executable_code().data()));
     return pos + 1;
 }
 
@@ -1098,7 +1098,7 @@ Result eofcreate(
 inline code_iterator callf(StackTop stack, ExecutionState& state, code_iterator pos) noexcept
 {
     const auto index = read_uint16_be(&pos[1]);
-    const auto& header = state.analysis.baseline->eof_header;
+    const auto& header = state.analysis.baseline->eof_header();
     const auto stack_size = &stack.top() - state.stack_space.bottom();
 
     const auto callee_required_stack_size =
@@ -1118,8 +1118,7 @@ inline code_iterator callf(StackTop stack, ExecutionState& state, code_iterator 
     state.call_stack.push_back(pos + 3);
 
     const auto offset = header.code_offsets[index] - header.code_offsets[0];
-    auto code = state.analysis.baseline->executable_code;
-    return code.data() + offset;
+    return state.analysis.baseline->executable_code().data() + offset;
 }
 
 inline code_iterator retf(StackTop /*stack*/, ExecutionState& state, code_iterator /*pos*/) noexcept
@@ -1132,7 +1131,7 @@ inline code_iterator retf(StackTop /*stack*/, ExecutionState& state, code_iterat
 inline code_iterator jumpf(StackTop stack, ExecutionState& state, code_iterator pos) noexcept
 {
     const auto index = read_uint16_be(&pos[1]);
-    const auto& header = state.analysis.baseline->eof_header;
+    const auto& header = state.analysis.baseline->eof_header();
     const auto stack_size = &stack.top() - state.stack_space.bottom();
 
     const auto callee_required_stack_size =
@@ -1144,8 +1143,7 @@ inline code_iterator jumpf(StackTop stack, ExecutionState& state, code_iterator 
     }
 
     const auto offset = header.code_offsets[index] - header.code_offsets[0];
-    const auto code = state.analysis.baseline->executable_code;
-    return code.data() + offset;
+    return state.analysis.baseline->executable_code().data() + offset;
 }
 
 template <evmc_status_code StatusCode>

@@ -68,7 +68,7 @@ CodeAnalysis analyze_eof1(bytes_view container)
     const auto executable_code =
         container.substr(code_sections_offset, code_sections_end - code_sections_offset);
 
-    return CodeAnalysis{executable_code, std::move(header)};
+    return CodeAnalysis{container, executable_code, std::move(header)};
 }
 }  // namespace
 
