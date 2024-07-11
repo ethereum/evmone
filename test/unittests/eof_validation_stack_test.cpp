@@ -1267,15 +1267,15 @@ TEST_F(eof_validation, jumpf_to_nonreturning)
     // Target has 3 inputs
 
     // Exactly required inputs on stack at JUMPF
-    add_test_case("EF0001 010008 02000200060001 040000 00 0080000303800003 5F5F5FE50001 00",
+    add_test_case(eof_bytecode(3 * OP_PUSH0 + jumpf(1), 3).code(OP_STOP, 3, 0x80, 3),
         EOFValidationError::success);
 
     // Extra items on stack at JUMPF
-    add_test_case("EF0001 010008 02000200070001 040000 00 0080000403800003 5F5F5F5FE50001 00",
+    add_test_case(eof_bytecode(4 * OP_PUSH0 + jumpf(1), 4).code(OP_STOP, 3, 0x80, 3),
         EOFValidationError::success);
 
     // Not enough inputs on stack at JUMPF
-    add_test_case("EF0001 010008 02000200050001 040000 00 0080000203800003 5F5FE50001 00",
+    add_test_case(eof_bytecode(2 * OP_PUSH0 + jumpf(1), 2).code(OP_STOP, 3, 0x80, 3),
         EOFValidationError::stack_underflow);
 }
 
