@@ -37,6 +37,7 @@ DUP1,4
 endif()
 
 add_subdirectory(eofparse)
+add_subdirectory(export)
 add_subdirectory(statetest)
 add_subdirectory(t8n)
 

@@ -277,6 +277,10 @@ jobs:
     steps:
       - build
       - test
+      - run:
+          name: "Export JSON tests"
+          working_directory: ~/package
+          command: tar -C ~/build/test/integration/export -cz fixtures > evmone-tests.tar.gz
       - package
 
   release-windows:
