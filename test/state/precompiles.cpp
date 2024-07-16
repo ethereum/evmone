@@ -364,19 +364,14 @@ evmc::Result call_precompile(evmc_revision rev, const evmc_message& msg) noexcep
     if (gas_left < 0)
         return evmc::Result{EVMC_OUT_OF_GAS};
 
-    // Buffer for the precompile's output.
-    // Big enough to handle all "expmod" tests, but in case does not match the size requirement
-    // from analysis, the result will likely be incorrect.
-    // TODO: Replace with std::pmr::monotonic_buffer_resource?
-    uint8_t output_buf[4096];
-    assert(std::size(output_buf) >= max_output_size);
-
+    // Allocate buffer for the precompile's output and pass its ownership to evmc::Result.
+    // TODO: This can be done more elegantly by providing constructor evmc::Result(std::unique_ptr).
+    const auto output_data = new (std::nothrow) uint8_t[max_output_size];
     const auto [status_code, output_size] =
-        execute(msg.input_data, msg.input_size, output_buf, std::size(output_buf));
-
-    evmc::Result result{
-        status_code, status_code == EVMC_SUCCESS ? gas_left : 0, 0, output_buf, output_size};
-
-    return result;
+        execute(msg.input_data, msg.input_size, output_data, max_output_size);
+    const evmc_result result{status_code, status_code == EVMC_SUCCESS ? gas_left : 0, 0,
+        output_data, output_size,
+        [](const evmc_result* res) noexcept { delete[] res->output_data; }};
+    return evmc::Result{result};
 }
 }  // namespace evmone::state
