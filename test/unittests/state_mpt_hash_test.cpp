@@ -20,7 +20,7 @@ using namespace evmone::test;
 
 TEST(state_mpt_hash, empty)
 {
-    EXPECT_EQ(mpt_hash(TestState{}), emptyMPTHash);
+    EXPECT_EQ(mpt_hash(TestState{}), EMPTY_MPT_HASH);
 }
 
 TEST(state_mpt_hash, single_account_v1)

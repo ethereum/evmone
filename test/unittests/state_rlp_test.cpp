@@ -4,6 +4,7 @@
 
 #include <gmock/gmock.h>
 #include <test/state/hash_utils.hpp>
+#include <test/state/mpt_hash.hpp>
 #include <test/state/rlp.hpp>
 #include <test/state/state.hpp>
 #include <test/utils/utils.hpp>
@@ -17,9 +18,6 @@ using namespace testing;
 
 static constexpr auto emptyBytesHash =
     0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470_bytes32;
-
-static constexpr auto emptyMPTHash =
-    0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421_bytes32;
 
 TEST(state_rlp, empty_bytes_hash)
 {
@@ -36,7 +34,7 @@ TEST(state_rlp, empty_mpt_hash)
 {
     const auto rlp_null = rlp::encode(0);
     EXPECT_EQ(rlp_null, bytes{0x80});
-    EXPECT_EQ(keccak256(rlp_null), emptyMPTHash);
+    EXPECT_EQ(keccak256(rlp_null), state::EMPTY_MPT_HASH);
 }
 
 TEST(state_rlp, encode_string_short)
@@ -92,7 +90,7 @@ TEST(state_rlp, encode_account_with_balance)
         "a0 56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"
         "a0 c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"_hex;
 
-    const auto r = rlp::encode_tuple(uint64_t{0}, 1_u256, emptyMPTHash, emptyBytesHash);
+    const auto r = rlp::encode_tuple(uint64_t{0}, 1_u256, state::EMPTY_MPT_HASH, emptyBytesHash);
     EXPECT_EQ(r, expected);
 }
 
