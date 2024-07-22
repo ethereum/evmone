@@ -4,6 +4,7 @@
 
 #include <gtest/gtest.h>
 #include <test/state/mpt.hpp>
+#include <test/state/mpt_hash.hpp>
 #include <test/state/rlp.hpp>
 #include <test/utils/utils.hpp>
 #include <numeric>
@@ -17,7 +18,7 @@ using namespace evmone::test;
 
 TEST(state_mpt, empty_trie)
 {
-    EXPECT_EQ(MPT{}.hash(), emptyMPTHash);
+    EXPECT_EQ(MPT{}.hash(), EMPTY_MPT_HASH);
 }
 
 TEST(state_mpt, single_account_v1)
@@ -29,7 +30,7 @@ TEST(state_mpt, single_account_v1)
     constexpr auto addr = 0x0000000000000000000000000000000000000002_address;
     constexpr uint64_t nonce = 0;
     constexpr auto balance = 1_u256;
-    constexpr auto storage_hash = emptyMPTHash;
+    constexpr auto storage_hash = EMPTY_MPT_HASH;
     constexpr auto code_hash =
         0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470_bytes32;
 

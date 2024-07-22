@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "mpt.hpp"
+#include "mpt_hash.hpp"
 #include "rlp.hpp"
 #include <algorithm>
 #include <cassert>
@@ -268,7 +269,7 @@ void MPT::insert(bytes_view key, bytes&& value)
 [[nodiscard]] hash256 MPT::hash() const
 {
     if (m_root == nullptr)
-        return emptyMPTHash;
+        return EMPTY_MPT_HASH;
     return keccak256(m_root->encode());
 }
 

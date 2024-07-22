@@ -5,7 +5,6 @@
 
 #include "hash_utils.hpp"
 #include <span>
-#include <unordered_map>
 
 namespace evmone::test
 {
@@ -14,6 +13,12 @@ class TestState;
 
 namespace evmone::state
 {
+/// The hash of the empty Merkle Patricia Trie.
+///
+/// Specifically, this is the value of keccak256(RLP("")), i.e. keccak256({0x80}).
+constexpr auto EMPTY_MPT_HASH =
+    0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421_bytes32;
+
 /// Computes Merkle Patricia Trie root hash for the given collection of state accounts.
 hash256 mpt_hash(const test::TestState& state);
 
