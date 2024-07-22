@@ -44,3 +44,23 @@ TEST_F(state_system_call, beacon_roots)
     EXPECT_EQ(storage.at(0x01_bytes32).current, block.parent_beacon_block_root);
     EXPECT_EQ(storage.at(0x00_bytes32).current, to_bytes32(SYSTEM_ADDRESS));
 }
+
+TEST_F(state_system_call, history_storage)
+{
+    static constexpr auto NUMBER = 123456789;
+    static constexpr auto PREV_BLOCKHASH = 0xbbbb_bytes32;
+    const BlockInfo block{.number = NUMBER, .known_block_hashes = {{NUMBER - 1, PREV_BLOCKHASH}}};
+    state.insert(HISTORY_STORAGE_ADDRESS,
+        {.code = sstore(OP_NUMBER, calldataload(0)) + sstore(0, OP_CALLER)});
+
+    system_call(state, block, EVMC_PRAGUE, vm);
+
+    ASSERT_EQ(state.get_accounts().size(), 1);
+    EXPECT_EQ(state.find(SYSTEM_ADDRESS), nullptr);
+    EXPECT_EQ(state.get(HISTORY_STORAGE_ADDRESS).nonce, 0);
+    EXPECT_EQ(state.get(HISTORY_STORAGE_ADDRESS).balance, 0);
+    const auto& storage = state.get(HISTORY_STORAGE_ADDRESS).storage;
+    ASSERT_EQ(storage.size(), 2);
+    EXPECT_EQ(storage.at(bytes32{NUMBER}).current, PREV_BLOCKHASH);
+    EXPECT_EQ(storage.at(0x00_bytes32).current, to_bytes32(SYSTEM_ADDRESS));
+}

@@ -24,6 +24,10 @@ struct SystemContract
 constexpr std::array SYSTEM_CONTRACTS{
     SystemContract{EVMC_CANCUN, BEACON_ROOTS_ADDRESS,
         [](const BlockInfo& block) noexcept { return bytes_view{block.parent_beacon_block_root}; }},
+    SystemContract{EVMC_PRAGUE, HISTORY_STORAGE_ADDRESS,
+        [](const BlockInfo& block) noexcept {
+            return bytes_view{block.known_block_hashes.at(block.number - 1)};
+        }},
 };
 
 static_assert(std::ranges::is_sorted(SYSTEM_CONTRACTS,
