@@ -892,7 +892,7 @@ bool append_data_section(bytes& container, bytes_view aux_data)
 
 uint8_t get_eof_version(bytes_view container) noexcept
 {
-    return is_eof_container(container) ? container[2] : 0;
+    return (is_eof_container(container) && container.size() >= 3) ? container[2] : 0;
 }
 
 EOFValidationError validate_eof(
