@@ -110,9 +110,17 @@ void eof_validation::TearDown()
     for (size_t i = 0; i < test_cases.size(); ++i)
     {
         const auto& test_case = test_cases[i];
-        EXPECT_EQ(evmone::validate_eof(rev, test_case.kind, test_case.container), test_case.error)
+
+        // Move the container to new heap-allocated buffer of exact size
+        // to easily find out-of-buffer reads with address sanitizer.
+        const auto size = test_case.container.size();
+        const auto buffer = std::make_unique_for_overwrite<uint8_t[]>(size);
+        std::ranges::copy(test_case.container, buffer.get());
+        const bytes_view container{buffer.get(), size};
+
+        EXPECT_EQ(evmone::validate_eof(rev, test_case.kind, container), test_case.error)
             << "test case " << i << " " << test_case.name << "\n"
-            << hex(test_case.container);
+            << hex(container);
     }
 
     if (!export_file_path.empty())
