@@ -195,25 +195,6 @@ address compute_create2_address(
     return addr;
 }
 
-address compute_eofcreate_address(
-    const address& sender, const bytes32& salt, bytes_view initcontainer) noexcept
-{
-    const auto initcontainer_hash = keccak256(initcontainer);
-    const auto buffer_size = 1 + sizeof(sender) + sizeof(salt) + sizeof(initcontainer_hash);
-    bytes buffer;
-    buffer.reserve(buffer_size);
-    buffer += uint8_t{0xff};
-    buffer += bytes_view{sender.bytes, std::size(sender.bytes)};
-    buffer += bytes_view{salt.bytes, std::size(salt.bytes)};
-    buffer += bytes_view{initcontainer_hash.bytes, std::size(initcontainer_hash.bytes)};
-
-    const auto addr_base_hash = keccak256(buffer);
-
-    evmc_address new_addr{};
-    std::copy_n(&addr_base_hash.bytes[12], sizeof(new_addr), new_addr.bytes);
-    return new_addr;
-}
-
 std::optional<evmc_message> Host::prepare_message(evmc_message msg) noexcept
 {
     if (msg.depth == 0 || msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2 ||
@@ -282,7 +263,7 @@ std::optional<evmc_message> Host::prepare_message(evmc_message msg) noexcept
                 {
                     const bytes_view initcontainer{msg.code, msg.code_size};
                     msg.recipient =
-                        compute_eofcreate_address(msg.sender, msg.create2_salt, initcontainer);
+                        compute_create2_address(msg.sender, msg.create2_salt, initcontainer);
                 }
             }
 
