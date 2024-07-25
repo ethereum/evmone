@@ -558,6 +558,7 @@ jobs:
   clang-latest-sanitizers:
     executor: linux-clang-xlarge
     environment:
+      TOOLCHAIN: clang-libcxx
       CMAKE_OPTIONS: -DBUILD_SHARED_LIBS=NO -DSANITIZE=address,undefined,shift-exponent,implicit-conversion,nullability
       UBSAN_OPTIONS: halt_on_error=1
     steps:
