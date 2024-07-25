@@ -190,7 +190,7 @@ TEST_F(state_transition, eofcreate_empty_auxdata)
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
-    const auto create_address = compute_eofcreate_address(*tx.to, Salt, init_container);
+    const auto create_address = compute_create2_address(*tx.to, Salt, init_container);
     expect.post[create_address].code = deploy_container;
     expect.post[create_address].nonce = 1;
 }
@@ -222,7 +222,7 @@ TEST_F(state_transition, eofcreate_auxdata_equal_to_declared)
     const auto expected_container = eof_bytecode(bytecode(OP_INVALID)).data(deploy_data + aux_data);
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
-    const auto create_address = compute_eofcreate_address(*tx.to, Salt, init_container);
+    const auto create_address = compute_create2_address(*tx.to, Salt, init_container);
     expect.post[create_address].code = expected_container;
     expect.post[create_address].nonce = 1;
 }
@@ -256,7 +256,7 @@ TEST_F(state_transition, eofcreate_auxdata_longer_than_declared)
         eof_bytecode(bytecode(OP_INVALID)).data(deploy_data + aux_data1 + aux_data2);
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
-    const auto create_address = compute_eofcreate_address(*tx.to, Salt, init_container);
+    const auto create_address = compute_create2_address(*tx.to, Salt, init_container);
     expect.post[create_address].code = expected_container;
     expect.post[create_address].nonce = 1;
 }
@@ -313,7 +313,7 @@ TEST_F(state_transition, eofcreate_dataloadn_referring_to_auxdata)
     const auto expected_container = eof_bytecode(deploy_code, 2).data(deploy_data + aux_data);
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
-    const auto create_address = compute_eofcreate_address(*tx.to, Salt, init_container);
+    const auto create_address = compute_create2_address(*tx.to, Salt, init_container);
     expect.post[*tx.to].storage[0x00_bytes32] = to_bytes32(create_address);
     expect.post[*tx.to].storage[0x01_bytes32] = 0x01_bytes32;
     expect.post[create_address].code = expected_container;
@@ -351,7 +351,7 @@ TEST_F(state_transition, eofcreate_with_auxdata_and_subcontainer)
                                         .data(deploy_data + aux_data);
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
-    const auto create_address = compute_eofcreate_address(*tx.to, Salt, init_container);
+    const auto create_address = compute_create2_address(*tx.to, Salt, init_container);
     expect.post[*tx.to].storage[0x00_bytes32] = to_bytes32(create_address);
     expect.post[*tx.to].storage[0x01_bytes32] = 0x01_bytes32;
     expect.post[create_address].code = expected_container;
@@ -442,7 +442,7 @@ TEST_F(state_transition, eofcreate_deploy_container_max_size)
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
-    const auto create_address = compute_eofcreate_address(*tx.to, Salt, init_container);
+    const auto create_address = compute_create2_address(*tx.to, Salt, init_container);
     expect.post[*tx.to].storage[0x00_bytes32] = to_bytes32(create_address);
     expect.post[create_address].code = deploy_container;
 }
@@ -508,7 +508,7 @@ TEST_F(state_transition, eofcreate_appended_data_size_larger_than_64K)
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 2;  // 1 successful creation + 1 hard fail
     expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
-    const auto create_address = compute_eofcreate_address(*tx.to, salt2, init_container);
+    const auto create_address = compute_create2_address(*tx.to, salt2, init_container);
     expect.post[*tx.to].storage[0x01_bytes32] = to_bytes32(create_address);
     expect.post[create_address].code = deploy_container;
     expect.post[create_address].nonce = 1;
@@ -569,12 +569,12 @@ TEST_F(state_transition, eofcreate_nested_eofcreate)
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
-    const auto create_address = compute_eofcreate_address(*tx.to, Salt, init_container);
+    const auto create_address = compute_create2_address(*tx.to, Salt, init_container);
     expect.post[*tx.to].storage[0x00_bytes32] = to_bytes32(create_address);
     expect.post[create_address].code = deploy_container;
     expect.post[create_address].nonce = 2;
     const auto create_address_nested =
-        compute_eofcreate_address(create_address, Salt, init_container_nested);
+        compute_create2_address(create_address, Salt, init_container_nested);
     expect.post[create_address].storage[0x00_bytes32] = to_bytes32(create_address_nested);
     expect.post[create_address_nested].code = deploy_container_nested;
     expect.post[create_address_nested].nonce = 1;
@@ -753,7 +753,7 @@ TEST_F(state_transition, eofcreate_clears_returndata)
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
     expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
     expect.post[*tx.to].storage[0x01_bytes32] = 0x0a_bytes32;
-    const auto create_address = compute_eofcreate_address(*tx.to, Salt, init_container);
+    const auto create_address = compute_create2_address(*tx.to, Salt, init_container);
     expect.post[*tx.to].storage[0x02_bytes32] = to_bytes32(create_address);
     expect.post[*tx.to].storage[0x03_bytes32] = 0x00_bytes32;
     expect.post[*tx.to].storage[0x04_bytes32] = 0x01_bytes32;
@@ -784,7 +784,7 @@ TEST_F(state_transition, eofcreate_failure_after_eofcreate_success)
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 2;
-    const auto create_address = compute_eofcreate_address(*tx.to, Salt, init_container);
+    const auto create_address = compute_create2_address(*tx.to, Salt, init_container);
     expect.post[*tx.to].storage[0x00_bytes32] = to_bytes32(create_address);
     expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;
     expect.post[*tx.to].storage[0x02_bytes32] = 0x00_bytes32;
@@ -813,7 +813,7 @@ TEST_F(state_transition, eofcreate_call_created_contract)
         calldatacopy(0, 0, OP_CALLDATASIZE) + returncontract(0, 0, OP_CALLDATASIZE);
     const bytecode init_container = eof_bytecode(init_code, 3).container(deploy_container);
 
-    const auto create_address = compute_eofcreate_address(To, Salt, init_container);
+    const auto create_address = compute_create2_address(To, Salt, init_container);
 
     const auto factory_code =
         calldatacopy(0, 0, OP_CALLDATASIZE) +
@@ -1110,7 +1110,7 @@ TEST_F(state_transition, creation_tx_nested_eofcreate)
     expect.post[create_address].code = deploy_container;
     expect.post[create_address].nonce = 2;
     const auto create_address_nested =
-        compute_eofcreate_address(create_address, Salt, init_container_nested);
+        compute_create2_address(create_address, Salt, init_container_nested);
     expect.post[create_address].storage[0x00_bytes32] = to_bytes32(create_address_nested);
     expect.post[create_address_nested].code = deploy_container_nested;
     expect.post[create_address_nested].nonce = 1;
@@ -1219,7 +1219,7 @@ TEST_F(state_transition, txcreate_empty_auxdata)
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
-    const auto create_address = compute_eofcreate_address(*tx.to, Salt, init_container);
+    const auto create_address = compute_create2_address(*tx.to, Salt, init_container);
     expect.post[create_address].code = deploy_container;
     expect.post[create_address].nonce = 1;
 }
@@ -1253,7 +1253,7 @@ TEST_F(state_transition, txcreate_auxdata_equal_to_declared)
     const auto expected_container = eof_bytecode(bytecode(OP_INVALID)).data(deploy_data + aux_data);
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
-    const auto create_address = compute_eofcreate_address(*tx.to, Salt, init_container);
+    const auto create_address = compute_create2_address(*tx.to, Salt, init_container);
     expect.post[create_address].code = expected_container;
     expect.post[create_address].nonce = 1;
 }
@@ -1289,7 +1289,7 @@ TEST_F(state_transition, txcreate_auxdata_longer_than_declared)
         eof_bytecode(bytecode(OP_INVALID)).data(deploy_data + aux_data1 + aux_data2);
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
-    const auto create_address = compute_eofcreate_address(*tx.to, Salt, init_container);
+    const auto create_address = compute_create2_address(*tx.to, Salt, init_container);
     expect.post[create_address].code = expected_container;
     expect.post[create_address].nonce = 1;
 }
@@ -1377,7 +1377,7 @@ TEST_F(state_transition, txcreate_dataloadn_referring_to_auxdata)
     const auto expected_container = eof_bytecode(deploy_code, 2).data(deploy_data + aux_data);
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
-    const auto create_address = compute_eofcreate_address(*tx.to, Salt, init_container);
+    const auto create_address = compute_create2_address(*tx.to, Salt, init_container);
     expect.post[*tx.to].storage[0x00_bytes32] = to_bytes32(create_address);
     expect.post[*tx.to].storage[0x01_bytes32] = 0x01_bytes32;
     expect.post[create_address].code = expected_container;
@@ -1528,7 +1528,7 @@ TEST_F(state_transition, txcreate_initcontainer_max_size)
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
-    const auto create_address = compute_eofcreate_address(*tx.to, Salt, init_container);
+    const auto create_address = compute_create2_address(*tx.to, Salt, init_container);
     expect.post[create_address].code = deploy_container;
     expect.post[create_address].nonce = 1;
 }
@@ -1678,7 +1678,7 @@ TEST_F(state_transition, txcreate_deploy_container_max_size)
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
-    const auto create_address = compute_eofcreate_address(*tx.to, Salt, init_container);
+    const auto create_address = compute_create2_address(*tx.to, Salt, init_container);
     expect.post[*tx.to].storage[0x00_bytes32] = to_bytes32(create_address);
     expect.post[create_address].code = deploy_container;
 }
@@ -1751,7 +1751,7 @@ TEST_F(state_transition, txcreate_appended_data_size_larger_than_64K)
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 2;  // 1 successful creation + 1 hard fail
     expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
-    const auto create_address = compute_eofcreate_address(*tx.to, salt2, init_container);
+    const auto create_address = compute_create2_address(*tx.to, salt2, init_container);
     expect.post[*tx.to].storage[0x01_bytes32] = to_bytes32(create_address);
     expect.post[create_address].code = deploy_container;
     expect.post[create_address].nonce = 1;
@@ -1822,12 +1822,12 @@ TEST_F(state_transition, txcreate_nested_txcreate)
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
-    const auto create_address = compute_eofcreate_address(*tx.to, Salt, init_container);
+    const auto create_address = compute_create2_address(*tx.to, Salt, init_container);
     expect.post[*tx.to].storage[0x00_bytes32] = to_bytes32(create_address);
     expect.post[create_address].code = deploy_container;
     expect.post[create_address].nonce = 2;
     const auto create_address_nested =
-        compute_eofcreate_address(create_address, Salt, init_container_nested);
+        compute_create2_address(create_address, Salt, init_container_nested);
     expect.post[create_address].storage[0x00_bytes32] = to_bytes32(create_address_nested);
     expect.post[create_address_nested].code = deploy_container_nested;
     expect.post[create_address_nested].nonce = 1;
@@ -1892,12 +1892,12 @@ TEST_F(state_transition, txcreate_nested_eofcreate)
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
-    const auto create_address = compute_eofcreate_address(*tx.to, Salt, init_container);
+    const auto create_address = compute_create2_address(*tx.to, Salt, init_container);
     expect.post[*tx.to].storage[0x00_bytes32] = to_bytes32(create_address);
     expect.post[create_address].code = deploy_container;
     expect.post[create_address].nonce = 2;
     const auto create_address_nested =
-        compute_eofcreate_address(create_address, Salt, init_container_nested);
+        compute_create2_address(create_address, Salt, init_container_nested);
     expect.post[create_address].storage[0x00_bytes32] = to_bytes32(create_address_nested);
     expect.post[create_address_nested].code = deploy_container_nested;
     expect.post[create_address_nested].nonce = 1;
@@ -1961,7 +1961,7 @@ TEST_F(state_transition, txcreate_clears_returndata)
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
     expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
     expect.post[*tx.to].storage[0x01_bytes32] = 0x0a_bytes32;
-    const auto create_address = compute_eofcreate_address(*tx.to, Salt, init_container);
+    const auto create_address = compute_create2_address(*tx.to, Salt, init_container);
     expect.post[*tx.to].storage[0x02_bytes32] = to_bytes32(create_address);
     expect.post[*tx.to].storage[0x03_bytes32] = 0x00_bytes32;
     expect.post[*tx.to].storage[0x04_bytes32] = 0x01_bytes32;
@@ -1996,7 +1996,7 @@ TEST_F(state_transition, txcreate_failure_after_txcreate_success)
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 2;
-    const auto create_address = compute_eofcreate_address(*tx.to, Salt, init_container);
+    const auto create_address = compute_create2_address(*tx.to, Salt, init_container);
     expect.post[*tx.to].storage[0x00_bytes32] = to_bytes32(create_address);
     expect.post[*tx.to].storage[0x01_bytes32] = 0x00_bytes32;
     expect.post[*tx.to].storage[0x02_bytes32] = 0x00_bytes32;
@@ -2216,7 +2216,7 @@ TEST_F(state_transition, txcreate_call_created_contract)
     tx.type = Transaction::Type::initcodes;
     tx.initcodes.push_back(init_container);
 
-    const auto create_address = compute_eofcreate_address(To, Salt, init_container);
+    const auto create_address = compute_create2_address(To, Salt, init_container);
 
     const auto factory_code =
         calldatacopy(0, 0, OP_CALLDATASIZE) +

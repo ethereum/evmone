@@ -23,28 +23,16 @@ using evmc::uint256be;
 /// @return              The address computed with the CREATE scheme.
 [[nodiscard]] address compute_create_address(const address& sender, uint64_t sender_nonce) noexcept;
 
-/// Computes the address of to-be-created contract with the CREATE2 scheme.
+/// Computes the address of to-be-created contract with the CREATE2 / EOFCREATE scheme.
 ///
-/// Computes the new account address for the contract creation context of the CREATE2 instruction.
-/// This is defined by 𝐀𝐃𝐃𝐑 in Yellow Paper, 7. Contract Creation, (88-90), the case for ζ ≠ ∅.
-///
-/// @param sender        The address of the message sender. YP: 𝑠.
-/// @param salt          The salt. YP: ζ.
-/// @param init_code     The contract creation init code. YP: 𝐢.
-/// @return              The address computed with the CREATE2 scheme.
-[[nodiscard]] address compute_create2_address(
-    const address& sender, const bytes32& salt, bytes_view init_code) noexcept;
-
-/// Computes the address of to-be-created contract with the EOFCREATE scheme.
-///
-/// Computes the new account address for the contract creation context of the EOFCREATE instruction.
+/// Computes the new account address for the contract creation context of the create instruction.
 ///
 /// @param sender        The address of the message sender.
 /// @param salt          The salt.
-/// @param initcontainer The contract creation init container.
-/// @return              The address computed with the EOFCREATE scheme.
-[[nodiscard]] address compute_eofcreate_address(
-    const address& sender, const bytes32& salt, bytes_view initcontainer) noexcept;
+/// @param init_code     The init_code to hash (initcode or initcontainer).
+/// @return              The address computed with the scheme.
+[[nodiscard]] address compute_create2_address(
+    const address& sender, const bytes32& salt, bytes_view init_code) noexcept;
 
 class Host : public evmc::Host
 {
