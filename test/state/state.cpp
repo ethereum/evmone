@@ -56,13 +56,16 @@ int64_t compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& tx) noex
 {
     static constexpr auto call_tx_cost = 21000;
     static constexpr auto create_tx_cost = 53000;
+    static constexpr auto per_auth_base_cost = 2500;
     static constexpr auto initcode_word_cost = 2;
     const auto is_create = !tx.to.has_value();  // Covers also EOF creation txs.
+    const auto auth_list_cost =
+        static_cast<int64_t>(per_auth_base_cost * tx.authorization_list.size());
     const auto initcode_cost =
         is_create && rev >= EVMC_SHANGHAI ? initcode_word_cost * num_words(tx.data.size()) : 0;
     const auto tx_cost = is_create && rev >= EVMC_HOMESTEAD ? create_tx_cost : call_tx_cost;
     return tx_cost + compute_tx_data_cost(rev, tx.data) + compute_access_list_cost(tx.access_list) +
-           compute_initcode_list_cost(rev, tx.initcodes) + initcode_cost;
+           compute_initcode_list_cost(rev, tx.initcodes) + auth_list_cost + initcode_cost;
 }
 
 evmc_message build_message(
@@ -283,6 +286,15 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
             return make_error_code(BLOB_GAS_LIMIT_EXCEEDED);
         break;
 
+    case Transaction::Type::set_code:
+        if (rev < EVMC_PRAGUE)
+            return make_error_code(TX_TYPE_NOT_SUPPORTED);
+        if (!tx.to.has_value())
+            return make_error_code(CREATE_SET_CODE_TX);
+        if (tx.authorization_list.empty())
+            return make_error_code(EMPTY_AUTHORIZATION_LIST);
+        break;
+
     case Transaction::Type::initcodes:
         if (rev < EVMC_OSAKA)
             return make_error_code(TX_TYPE_NOT_SUPPORTED);
@@ -305,6 +317,7 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
     {
     case Transaction::Type::blob:
     case Transaction::Type::initcodes:
+    case Transaction::Type::set_code:
     case Transaction::Type::eip1559:
         if (rev < EVMC_LONDON)
             return make_error_code(TX_TYPE_NOT_SUPPORTED);
@@ -329,6 +342,7 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
     if (tx.max_gas_price < block.base_fee)
         return make_error_code(FEE_CAP_LESS_THEN_BLOCKS);
 
+    // TODO this is relaxed for 7702
     if (!sender_acc.code.empty())
         return make_error_code(SENDER_NOT_EOA);  // Origin must not be a contract (EIP-3607).
 
@@ -442,6 +456,11 @@ void finalize(State& state, evmc_revision rev, const address& coinbase,
         delete_empty_accounts(state);
 }
 
+constexpr bool is_code_delegated(bytes_view code) noexcept
+{
+    return code.starts_with(DELEGATION_MAGIC);
+}
+
 std::variant<TransactionReceipt, std::error_code> transition(State& state, const BlockInfo& block,
     const Transaction& tx, evmc_revision rev, evmc::VM& vm, int64_t block_gas_left,
     int64_t blob_gas_left)
@@ -457,6 +476,26 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
 
     if (holds_alternative<std::error_code>(validation_result))
         return get<std::error_code>(validation_result);
+
+    for (const auto& auth : tx.authorization_list)
+    {
+        // TODO check chain_id
+
+        auto& acc = state.get_or_insert(auth.signer);
+        if (!acc.code.empty() && !is_code_delegated(acc.code))
+            continue;
+
+        if (acc.nonce != auth.nonce)
+            continue;
+
+        acc.code.reserve(std::size(DELEGATION_MAGIC) + std::size(auth.addr.bytes));
+        acc.code = DELEGATION_MAGIC;
+        acc.code += auth.addr;
+
+        ++acc.nonce;
+
+        acc.access_status = EVMC_ACCESS_WARM;
+    }
 
     // Once the transaction is valid, create new sender account.
     // The account won't be empty because its nonce will be bumped.
