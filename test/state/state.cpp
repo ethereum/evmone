@@ -56,11 +56,11 @@ int64_t compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& tx) noex
 {
     static constexpr auto call_tx_cost = 21000;
     static constexpr auto create_tx_cost = 53000;
-    static constexpr auto per_auth_base_cost = 2500;
+    static constexpr auto per_empty_account_cost = 25000;
     static constexpr auto initcode_word_cost = 2;
     const auto is_create = !tx.to.has_value();  // Covers also EOF creation txs.
     const auto auth_list_cost =
-        static_cast<int64_t>(per_auth_base_cost * tx.authorization_list.size());
+        static_cast<int64_t>(per_empty_account_cost * tx.authorization_list.size());
     const auto initcode_cost =
         is_create && rev >= EVMC_SHANGHAI ? initcode_word_cost * num_words(tx.data.size()) : 0;
     const auto tx_cost = is_create && rev >= EVMC_HOMESTEAD ? create_tx_cost : call_tx_cost;
@@ -480,20 +480,39 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
     {
         // TODO check chain_id
 
-        auto& acc = state.get_or_insert(auth.signer);
-        if (!acc.code.empty() && !is_code_delegated(acc.code))
-            continue;
+        // Check if authority exists
+        auto* authority_ptr = state.find(auth.signer);
+        if (authority_ptr != nullptr)
+        {
+            // Skip if authority has non-delegated code
+            if (!authority_ptr->code.empty() && !is_code_delegated(authority_ptr->code))
+                continue;
 
-        if (acc.nonce != auth.nonce)
-            continue;
+            // Skip if authorization nonce is incorrect
+            if (auth.nonce != authority_ptr->nonce)
+                continue;
 
-        acc.code.reserve(std::size(DELEGATION_MAGIC) + std::size(auth.addr.bytes));
-        acc.code = DELEGATION_MAGIC;
-        acc.code += auth.addr;
+            // Refund if authority account creation is not needed
+            static constexpr int64_t EXISTING_AUTHORITY_REFUND = 25000 - 2500;
+            sender_ptr->balance += EXISTING_AUTHORITY_REFUND;
+        }
+        else
+        {
+            // Skip if authorization nonce is incorrect
+            if (auth.nonce != 0)
+                continue;
 
-        ++acc.nonce;
+            // Create authority account
+            authority_ptr = &state.insert(auth.signer, {});
+        }
 
-        acc.access_status = EVMC_ACCESS_WARM;
+        authority_ptr->code.reserve(std::size(DELEGATION_MAGIC) + std::size(auth.addr.bytes));
+        authority_ptr->code = DELEGATION_MAGIC;
+        authority_ptr->code += auth.addr;
+
+        ++authority_ptr->nonce;
+
+        authority_ptr->access_status = EVMC_ACCESS_WARM;
     }
 
     // Once the transaction is valid, create new sender account.
