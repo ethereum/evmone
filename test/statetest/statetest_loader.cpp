@@ -121,6 +121,27 @@ state::AccessList from_json<state::AccessList>(const json::json& j)
     return o;
 }
 
+template <>
+state::AuthorizationList from_json<state::AuthorizationList>(const json::json& j)
+{
+    state::AuthorizationList o;
+    for (const auto& a : j)
+    {
+        state::Authorization authorization{};
+        authorization.chain_id = from_json<uint64_t>(a.at("chainId"));
+        authorization.addr = from_json<address>(a.at("address"));
+        // TODO: this is current spec, but EEST still has nonce as a list, let's pick the first item
+        // authorization.nonce = from_json<uint64_t>(a.at("nonce"));
+        authorization.nonce = from_json<uint64_t>(a.at("nonce")[0]);
+        authorization.signer = from_json<address>(a.at("signer"));
+        authorization.r = from_json<intx::uint256>(a.at("r"));
+        authorization.s = from_json<intx::uint256>(a.at("s"));
+        authorization.v = from_json<uint8_t>(a.at("v"));
+        o.emplace_back(authorization);
+    }
+    return o;
+}
+
 // Based on calculateEIP1559BaseFee from ethereum/retesteth
 inline uint64_t calculate_current_base_fee_eip1559(
     uint64_t parent_gas_used, uint64_t parent_gas_limit, uint64_t parent_base_fee)
@@ -336,6 +357,12 @@ static void from_json_tx_common(const json::json& j, state::Transaction& o)
         o.type = state::Transaction::Type::initcodes;
         for (const auto& initcode : *it_initcodes)
             o.initcodes.push_back(from_json<bytes>(initcode));
+    }
+    else if (const auto au_it = j.find("authorizationList"); au_it != j.end())
+    {
+        o.authorization_list = from_json<state::AuthorizationList>(*au_it);
+        if (o.type <= state::Transaction::Type::eip1559)
+            o.type = state::Transaction::Type::set_code;
     }
 }
 
