@@ -67,6 +67,12 @@ Result call_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noexce
             return {EVMC_OUT_OF_GAS, gas_left};
     }
 
+    const auto target_addr_or_result = get_target_address(dst, gas_left, state);
+    if (const auto* result = std::get_if<Result>(&target_addr_or_result))
+        return *result;
+
+    const auto& code_addr = std::get<evmc::address>(target_addr_or_result);
+
     if (!check_memory(gas_left, state.memory, input_offset_u256, input_size_u256))
         return {EVMC_OUT_OF_GAS, gas_left};
 
@@ -82,7 +88,7 @@ Result call_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noexce
     msg.flags = (Op == OP_STATICCALL) ? uint32_t{EVMC_STATIC} : state.msg->flags;
     msg.depth = state.msg->depth + 1;
     msg.recipient = (Op == OP_CALL || Op == OP_STATICCALL) ? dst : state.msg->recipient;
-    msg.code_address = dst;
+    msg.code_address = code_addr;
     msg.sender = (Op == OP_DELEGATECALL) ? state.msg->sender : state.msg->recipient;
     msg.value =
         (Op == OP_DELEGATECALL) ? state.msg->value : intx::be::store<evmc::uint256be>(value);
@@ -178,6 +184,12 @@ Result extcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
             return {EVMC_OUT_OF_GAS, gas_left};
     }
 
+    const auto target_addr_or_result = get_target_address(dst, gas_left, state);
+    if (const auto* result = std::get_if<Result>(&target_addr_or_result))
+        return *result;
+
+    const auto& code_addr = std::get<evmc::address>(target_addr_or_result);
+
     if (!check_memory(gas_left, state.memory, input_offset_u256, input_size_u256))
         return {EVMC_OUT_OF_GAS, gas_left};
 
@@ -188,7 +200,7 @@ Result extcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
     msg.flags = (Op == OP_EXTSTATICCALL) ? uint32_t{EVMC_STATIC} : state.msg->flags;
     msg.depth = state.msg->depth + 1;
     msg.recipient = (Op != OP_EXTDELEGATECALL) ? dst : state.msg->recipient;
-    msg.code_address = dst;
+    msg.code_address = code_addr;
     msg.sender = (Op == OP_EXTDELEGATECALL) ? state.msg->sender : state.msg->recipient;
     msg.value =
         (Op == OP_EXTDELEGATECALL) ? state.msg->value : intx::be::store<evmc::uint256be>(value);
