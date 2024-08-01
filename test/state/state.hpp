@@ -182,8 +182,10 @@ struct Authorization
     address signer;
     intx::uint256 r;
     intx::uint256 s;
-    bool y_parity = false;
+    uint8_t v = 0;
 };
+
+using AuthorizationList = std::vector<Authorization>;
 
 struct Transaction
 {
@@ -239,7 +241,7 @@ struct Transaction
     intx::uint256 r;
     intx::uint256 s;
     uint8_t v = 0;
-    std::vector<Authorization> authorization_list;
+    AuthorizationList authorization_list;
     std::vector<bytes> initcodes;
 };
 
@@ -312,6 +314,9 @@ void system_call(State& state, const BlockInfo& block, evmc_revision rev, evmc::
 
 /// Defines how to RLP-encode a Withdrawal.
 [[nodiscard]] bytes rlp_encode(const Withdrawal& withdrawal);
+
+/// Defnies how to RLP-encode an Authorization (EIP-7702).
+[[nodiscard]] bytes rlp_encode(const Authorization& authorization);
 
 [[nodiscard]] std::string get_tests_invalid_tx_message(ErrorCode errc) noexcept;
 
