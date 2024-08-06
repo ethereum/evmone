@@ -14,7 +14,7 @@ TEST(secp256k1, field_inv)
 {
     const evmmax::ModArith m{FieldPrime};
 
-    for (const auto& t : {
+    for (const auto& t : std::array{
              1_u256,
              0x6e140df17432311190232a91a38daed3ee9ed7f038645dd0278da7ca6e497de_u256,
              FieldPrime - 1,
@@ -32,7 +32,7 @@ TEST(secp256k1, field_sqrt)
 {
     const evmmax::ModArith m{FieldPrime};
 
-    for (const auto& t : {
+    for (const auto& t : std::array{
              1_u256,
              0x6e140df17432311190232a91a38daed3ee9ed7f038645dd0278da7ca6e497de_u256,
              0xf3b9accc43dc8919ba3b4f1e14c8f7c72e7c4c013a404e9fd35e9c9a5b7b228_u256,
@@ -60,7 +60,7 @@ TEST(secp256k1, field_sqrt_invalid)
 {
     const evmmax::ModArith m{FieldPrime};
 
-    for (const auto& t : {3_u256, FieldPrime - 1})
+    for (const auto& t : std::array{3_u256, FieldPrime - 1})
     {
         EXPECT_FALSE(field_sqrt(m, m.to_mont(t)).has_value());
     }
@@ -70,7 +70,7 @@ TEST(secp256k1, scalar_inv)
 {
     const evmmax::ModArith n{Order};
 
-    for (const auto& t : {
+    for (const auto& t : std::array{
              1_u256,
              0x6e140df17432311190232a91a38daed3ee9ed7f038645dd0278da7ca6e497de_u256,
              Order - 1,
@@ -131,8 +131,10 @@ TEST(secp256k1, calculate_y_invalid)
 {
     const evmmax::ModArith m{FieldPrime};
 
-    for (const auto& t :
-        {0x207ea538f1835f6de40c793fc23d22b14da5a80015a0fecddf56f146b21d7949_u256, FieldPrime - 1})
+    for (const auto& t : std::array{
+             0x207ea538f1835f6de40c793fc23d22b14da5a80015a0fecddf56f146b21d7949_u256,
+             FieldPrime - 1,
+         })
     {
         const auto x = m.to_mont(t);
 
