@@ -6,12 +6,11 @@
 
 namespace evmmax::bn254
 {
-
 namespace
 {
-const ModArith<uint256> Fp{FieldPrime};
-const auto B = Fp.to_mont(3);
-const auto B3 = Fp.to_mont(3 * 3);
+constexpr ModArith Fp{FieldPrime};
+constexpr auto B = Fp.to_mont(3);
+constexpr auto B3 = Fp.to_mont(3 * 3);
 }  // namespace
 
 bool validate(const Point& pt) noexcept

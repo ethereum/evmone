@@ -8,9 +8,9 @@ namespace evmmax::secp256k1
 {
 namespace
 {
-const ModArith<uint256> Fp{FieldPrime};
-const auto B = Fp.to_mont(7);
-const auto B3 = Fp.to_mont(7 * 3);
+constexpr ModArith Fp{FieldPrime};
+constexpr auto B = Fp.to_mont(7);
+constexpr auto B3 = Fp.to_mont(7 * 3);
 
 constexpr Point G{0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798_u256,
     0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8_u256};
