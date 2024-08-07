@@ -565,10 +565,11 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
         if (to_ptr != nullptr && is_code_delegated(to_ptr->code))
         {
             assert(to_ptr->code.size() ==
-                   std::size(DELEGATION_MAGIC) + std::size(message.recipient.bytes));
+                   std::size(DELEGATION_MAGIC) + std::size(message.code_address.bytes));
 
-            std::copy_n(message.recipient.bytes, std::size(message.recipient.bytes),
-                &to_ptr->code[std::size(DELEGATION_MAGIC)]);
+            std::copy_n(&to_ptr->code[std::size(DELEGATION_MAGIC)],
+                std::size(message.code_address.bytes), message.code_address.bytes);
+            message.kind = EVMC_DELEGATECALL;
         }
     }
 

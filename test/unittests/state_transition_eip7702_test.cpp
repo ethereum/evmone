@@ -31,6 +31,23 @@ TEST_F(state_transition, eip7702_set_code_transaction)
     expect.post[authority].code = bytes{0xef, 0x01, 0x00} + hex(delegate);
 }
 
+TEST_F(state_transition, eip7702_set_code_transaction_to_sender)
+{
+    rev = EVMC_PRAGUE;
+
+    constexpr auto delegate = 0xde1e_address;
+    pre.insert(delegate, {
+                             .code = bytecode{OP_STOP},
+                         });
+    tx.to = To;
+    tx.type = Transaction::Type::set_code;
+    tx.authorization_list = {{.addr = delegate, .nonce = 0, .signer = To}};
+
+    expect.post[delegate].exists = true;
+    expect.post[To].nonce = 1;
+    expect.post[To].code = bytes{0xef, 0x01, 0x00} + hex(delegate);
+}
+
 TEST_F(state_transition, eip7702_extcodesize)
 {
     rev = EVMC_PRAGUE;
