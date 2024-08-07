@@ -46,6 +46,8 @@ RevisionSchedule to_rev_schedule(std::string_view s)
 {
     if (s == "ShanghaiToCancunAtTime15k")
         return {EVMC_SHANGHAI, EVMC_CANCUN, 15'000};
+    if (s == "CancunToPragueAtTime15k")
+        return {EVMC_CANCUN, EVMC_PRAGUE, 15'000};
 
     const auto single_rev = to_rev(s);
     return {single_rev, single_rev, 0};

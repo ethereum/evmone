@@ -412,6 +412,39 @@ void system_call(State& state, const BlockInfo& block, evmc_revision rev, evmc::
             }
         }
     }
+
+    static constexpr auto HISTORY_STORAGE_ADDRESS =
+        0x0aae40965e6800cd9b1f4b05ff21581047e3f91e_address;
+    if (rev >= EVMC_PRAGUE)
+    {
+        if (const auto acc = state.find(HISTORY_STORAGE_ADDRESS);
+            acc != nullptr && !block.known_block_hashes.empty())
+        {
+            const auto parent_block_hash = block.known_block_hashes.at(block.number - 1);
+            const evmc_message msg{
+                .kind = EVMC_CALL,
+                .gas = 30'000'000,
+                .recipient = HISTORY_STORAGE_ADDRESS,
+                .sender = SystemAddress,
+                .input_data = parent_block_hash.bytes,
+                .input_size = sizeof(parent_block_hash),
+            };
+
+            const Transaction empty_tx{};
+            Host host{rev, vm, state, block, empty_tx};
+            const auto& code = acc->code;
+            [[maybe_unused]] const auto res = vm.execute(host, rev, msg, code.data(), code.size());
+            assert(res.status_code == EVMC_SUCCESS);
+            assert(acc->access_status == EVMC_ACCESS_COLD);
+
+            // Reset storage status.
+            for (auto& [_, val] : acc->storage)
+            {
+                val.access_status = EVMC_ACCESS_COLD;
+                val.original = val.current;
+            }
+        }
+    }
 }
 
 void finalize(State& state, evmc_revision rev, const address& coinbase,
