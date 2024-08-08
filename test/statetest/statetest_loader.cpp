@@ -130,9 +130,7 @@ state::AuthorizationList from_json<state::AuthorizationList>(const json::json& j
         state::Authorization authorization{};
         authorization.chain_id = from_json<uint64_t>(a.at("chainId"));
         authorization.addr = from_json<address>(a.at("address"));
-        // TODO: this is current spec, but EEST still has nonce as a list, let's pick the first item
-        // authorization.nonce = from_json<uint64_t>(a.at("nonce"));
-        authorization.nonce = from_json<uint64_t>(a.at("nonce")[0]);
+        authorization.nonce = from_json<uint64_t>(a.at("nonce"));
         authorization.signer = from_json<address>(a.at("signer"));
         authorization.r = from_json<intx::uint256>(a.at("r"));
         authorization.s = from_json<intx::uint256>(a.at("s"));
