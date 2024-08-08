@@ -576,7 +576,7 @@ inline constexpr auto traits = []() noexcept {
         {expmod_analyze, expmod_stub},
         {ecadd_analyze, ecadd_execute},
         {ecmul_analyze, ecmul_execute},
-        {ecpairing_analyze, ecpairing_stub},
+        {ecpairing_analyze, ecpairing_execute},
         {blake2bf_analyze, blake2bf_execute},
         {point_evaluation_analyze, point_evaluation_execute},
         {bls12_g1add_analyze, bls12_g1add_execute},
@@ -594,7 +594,7 @@ inline constexpr auto traits = []() noexcept {
     tbl[static_cast<size_t>(PrecompileId::expmod)].execute = silkpre_expmod_execute;
     // tbl[static_cast<size_t>(PrecompileId::ecadd)].execute = silkpre_ecadd_execute;
     // tbl[static_cast<size_t>(PrecompileId::ecmul)].execute = silkpre_ecmul_execute;
-    tbl[static_cast<size_t>(PrecompileId::ecpairing)].execute = silkpre_ecpairing_execute;
+    // tbl[static_cast<size_t>(PrecompileId::ecpairing)].execute = silkpre_ecpairing_execute;
     // tbl[static_cast<size_t>(PrecompileId::blake2bf)].execute = silkpre_blake2bf_execute;
 #endif
     return tbl;
