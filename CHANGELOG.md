@@ -5,6 +5,161 @@ Documentation of all notable changes to the **evmone** project.
 The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
+## [0.12.0] — unreleased
+
+This release is focused on the Prague upgrade and EOF.
+
+### Added
+
+- Added `evmone-precompiles-bench` tool to benchmark precompiles.
+  [#765](https://github.com/ethereum/evmone/pull/765)
+- Added native implementations of the precompiled hash functions:
+  - RIPEMD160
+    [#846](https://github.com/ethereum/evmone/pull/846)
+  - BLAKE2bf
+    [#857](https://github.com/ethereum/evmone/pull/857)
+  - SHA256
+    [#924](https://github.com/ethereum/evmone/pull/924)
+- Added `validate_eof` EVMC option to validate EOF before execution.
+  This option is enabled by default in `evmc run`.
+  [#768](https://github.com/ethereum/evmone/pull/768)
+  [#960](https://github.com/ethereum/evmone/pull/960)
+- Implemented [EIP-7610] "Revert creation in case of non-empty storage"
+  in the testing infrastructure.
+  [#816](https://github.com/ethereum/evmone/pull/816)
+- Added `--version` option to testing tools.
+  [#902](https://github.com/ethereum/evmone/pull/902)
+- Introduce `TestState` and `TestAccount` to testing infrastructure.
+  [#811](https://github.com/ethereum/evmone/pull/811)
+- Added support for validating "initcode" containers in `eofparse` and `eoftest`.
+  [#934](https://github.com/ethereum/evmone/pull/934)
+  [#943](https://github.com/ethereum/evmone/pull/943)
+
+### Changed
+
+- **EVM Object Format (EOF)**
+  
+  Completed implementation of the [EIP-7692]: EVM Object Format (EOFv1) Meta.
+  - Added `EOFCREATE` and `RETURNCONTRACT` instructions.
+    [#553](https://github.com/ethereum/evmone/pull/553)
+  - Added `TXCREATE` instruction, later moved to the future EOF version (Osaka).
+    [#702](https://github.com/ethereum/evmone/pull/702)
+    [#889](https://github.com/ethereum/evmone/pull/889)
+  - Make `EXT*CALL` instructions Address Space Expansion ready.
+    [#915](https://github.com/ethereum/evmone/pull/915)
+  - Added EOF validation of sub-container kinds.
+    [#876](https://github.com/ethereum/evmone/pull/876)
+  - Limit validated container size to `MAX_INITCODE_SIZE`.
+    [#930](https://github.com/ethereum/evmone/pull/930)
+  - Added `RETURNDATALOAD` instruction.
+    [#786](https://github.com/ethereum/evmone/pull/786)
+  - Implementation of "less restricted" stack validation.
+    [#676](https://github.com/ethereum/evmone/pull/676)
+  - Added implementation of `EXCHANGE` from [EIP-663].
+    [#839](https://github.com/ethereum/evmone/pull/839)
+  - Disallow unreachable code sections in EOF containers.
+    [#721](https://github.com/ethereum/evmone/pull/721)
+    [#866](https://github.com/ethereum/evmone/pull/866)
+  - Restrict `DUPN` and `SWAPN` to EOF only in EOF only.
+    [#788](https://github.com/ethereum/evmone/pull/788)
+  - Change `DATA*` opcodes.
+    [#797](https://github.com/ethereum/evmone/pull/797)
+  - Disable EOF ↔ legacy cross-creation.
+    [#825](https://github.com/ethereum/evmone/pull/825)
+  - Deprecate and reject code/gas-observability in EOF.
+    [#834](https://github.com/ethereum/evmone/pull/834)
+  - Make EOF opaque for `EXTCODE*` instructions.
+    [#587](https://github.com/ethereum/evmone/pull/587)
+  - Implement EOF creation transactions.
+    [#878](https://github.com/ethereum/evmone/pull/878)
+  - Modify EOF `RETURNDATA*` to allow out-of-bounds reads (instead of failing execution).
+    [#909](https://github.com/ethereum/evmone/pull/909)
+  - Tune EOF validation: disallow truncated data in top-level EOF containers.
+    [#921](https://github.com/ethereum/evmone/pull/921)
+  - Disallow unreferenced sub-containers and sub-containers of conflicting kinds.
+    [#916](https://github.com/ethereum/evmone/pull/916)
+
+- **Testing**
+
+  There are a lot of improvements to the testing tools and test formats.
+  In particular, big portion of evmone's unit tests has been re-shaped
+  to have a structure of State Tests or EOF Validation Tests.
+
+  Moreover, we added the option to export these tests to JSON and the archive
+  of the exported tests ("fixture") is the artifact of this release.
+
+  Upgraded external test suites:
+  - [ethereum/tests][Ethereum Execution Tests]: [14.0][tests 14.0]
+  - [Execution Spec Tests]: [3.0.0][Execution Spec Tests 3.0.0]
+
+  Other details:
+  - Add some missing State Test export features.
+    [#807](https://github.com/ethereum/evmone/pull/807)
+  - Check for unexpected `EF` prefix in test code.
+    [#809](https://github.com/ethereum/evmone/pull/809)
+  - EOF Validation Test fixture.
+    [#810](https://github.com/ethereum/evmone/pull/810)
+  - Export EOF validation unit tests to JSON EOF Validation Tests.
+    [#818](https://github.com/ethereum/evmone/pull/818)
+  - Output failed test case index in EOF Validation Tests.
+    [#820](https://github.com/ethereum/evmone/pull/820)
+  - Add `ExportableFixture` for JSON tests exporting.
+    [#821](https://github.com/ethereum/evmone/pull/821)
+  - Recognize all official fork/revision names.
+    [#830](https://github.com/ethereum/evmone/pull/830)
+  - Export State Tests with invalid transactions.
+    [#858](https://github.com/ethereum/evmone/pull/858)
+  - Allow `"to": null` in JSON transactions.
+    [#927](https://github.com/ethereum/evmone/pull/927)
+  - EOF Validation Tests runner: support "initcode" flag.
+    [#936](https://github.com/ethereum/evmone/pull/936)
+  - `evmone-blockchaintest`: Simplify genesis handling.
+    [#954](https://github.com/ethereum/evmone/pull/954)
+  - Optimization: only empty accounts are marked "touched".
+    [#785](https://github.com/ethereum/evmone/pull/785)
+  - Adjust ethash difficulty if below minimum `0x20000`.
+    [#803](https://github.com/ethereum/evmone/pull/803)
+
+- Requirements and dependencies updates:
+  - CMake 3.18
+    [#840](https://github.com/ethereum/evmone/pull/840)
+  - Xcode 15.0
+    [#847](https://github.com/ethereum/evmone/pull/847)
+  - [EVMC][EVMC 12.0.0]
+    [#966](https://github.com/ethereum/evmone/pull/966)
+  - [intx][intx 0.11.0]
+    [#967](https://github.com/ethereum/evmone/pull/967)
+
+- Use 32-byte aligned allocation for Baseline stack space.
+  [#907](https://github.com/ethereum/evmone/pull/907)
+- Split Baseline analysis and execution into separate files.
+  [#946](https://github.com/ethereum/evmone/pull/946)
+- Convert EVMMAX to header-only library with full `constexpr` capabilities.
+  [#864](https://github.com/ethereum/evmone/pull/864)
+  [#964](https://github.com/ethereum/evmone/pull/964)
+- Return number of errors from `eofparse`.
+  [#873](https://github.com/ethereum/evmone/pull/873)
+
+### Fixed
+
+- Implement Frontier behavior of failing code deployment (testing infrastructure).
+  [#824](https://github.com/ethereum/evmone/pull/824)
+- Fix error messages for compatibility with external testing tools.
+  [#828](https://github.com/ethereum/evmone/pull/828)
+  [#886](https://github.com/ethereum/evmone/pull/886)
+- Fix initcode handling before EOF is enabled:
+  an initcode staring with `EF00` should not be validated as EOF unconditionally.
+  [#893](https://github.com/ethereum/evmone/pull/893)
+- Fix EOF header parsing bug (introduced by code refactoring).
+  [#957](https://github.com/ethereum/evmone/pull/957)
+  [#958](https://github.com/ethereum/evmone/pull/958)
+- Fix `eoftest` to run all tests from a JSON file.
+  [#935](https://github.com/ethereum/evmone/pull/935)
+- Improve output buffer handling for precompiles in testing infrastructure.
+  This fixes out-of-bound access for some fuzzing-generated state tests.
+  [#951](https://github.com/ethereum/evmone/pull/951)
+
+
 ## [0.11.0] — 2023-12-21
 
 This release is focused on [Cancun] and EOF.
@@ -72,7 +227,8 @@ This release is focused on [Cancun] and EOF.
 
 ### Changed
 
-- **EVM Object Format (EOF)**:
+- **EVM Object Format (EOF)**
+
   EOF implementation follows the [EOF spec] (aka _Mega EOF Endgame_)
   and is tentatively enabled in the **Prague** EVM revision.
   - Tests have been migrated to [ipsilon/tests/eof](https://github.com/ipsilon/tests/tree/eof)
@@ -91,6 +247,7 @@ This release is focused on [Cancun] and EOF.
     [#640](https://github.com/ethereum/evmone/pull/640)
   - Implementation of the `JUMPF` instruction and the _non-returning_ functions
     [#644](https://github.com/ethereum/evmone/pull/644)
+
 - Opcodes of new instructions have been assigned following
   [the execution-spec opcodes list](https://github.com/ethereum/execution-specs/tree/master/lists/evm)
   [#665](https://github.com/ethereum/evmone/pull/665)
@@ -613,6 +770,7 @@ It delivers fully-compatible and high-speed EVM implementation.
 - Exposes [EVMC] 6 ABI.
 - The [intx 0.2.0](https://github.com/chfast/intx/releases/tag/v0.2.0) library is used for 256-bit precision arithmetic. 
 
+[0.12.0]: https://github.com/ethereum/evmone/compare/v0.11.0..master
 [0.11.0]: https://github.com/ethereum/evmone/releases/tag/v0.11.0
 [0.10.0]: https://github.com/ethereum/evmone/releases/tag/v0.10.0
 [0.9.1]: https://github.com/ethereum/evmone/releases/tag/v0.9.1
@@ -653,6 +811,8 @@ It delivers fully-compatible and high-speed EVM implementation.
 [EIP-5656]: https://eips.ethereum.org/EIPS/eip-5656
 [EIP-6780]: https://eips.ethereum.org/EIPS/eip-6780
 [EIP-7516]: https://eips.ethereum.org/EIPS/eip-7516
+[EIP-7610]: https://eips.ethereum.org/EIPS/eip-7610
+[EIP-7692]: https://eips.ethereum.org/EIPS/eip-7692
 
 [Spurious Dragon]: https://eips.ethereum.org/EIPS/eip-607
 [Petersburg]: https://eips.ethereum.org/EIPS/eip-1716
@@ -663,6 +823,7 @@ It delivers fully-compatible and high-speed EVM implementation.
 [Cancun]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/cancun.md
 
 [EVMC]: https://github.com/ethereum/evmc
+[EVMC 12.0.0]: https://github.com/ethereum/evmc/releases/tag/v12.0.0
 [EVMC 11.0.1]: https://github.com/ethereum/evmc/releases/tag/v11.0.1
 [EVMC 10.1.0]: https://github.com/ethereum/evmc/releases/tag/v10.1.0
 [EVMC 10.0.0]: https://github.com/ethereum/evmc/releases/tag/v10.0.0
@@ -674,6 +835,7 @@ It delivers fully-compatible and high-speed EVM implementation.
 [EVMC 7.0.0]: https://github.com/ethereum/evmc/releases/tag/v7.0.0
 
 [intx]: https://github.com/chfast/intx
+[intx 0.11.0]: https://github.com/chfast/intx/releases/tag/v0.11.0
 [intx 0.10.1]: https://github.com/chfast/intx/releases/tag/v0.10.1
 [intx 0.10.0]: https://github.com/chfast/intx/releases/tag/v0.10.0
 [intx 0.8.0]: https://github.com/chfast/intx/releases/tag/v0.8.0
@@ -685,12 +847,14 @@ It delivers fully-compatible and high-speed EVM implementation.
 [ethash 1.0.0]: https://github.com/chfast/ethash/releases/tag/v1.0.0
 
 [Ethereum Execution Tests]: https://github.com/ethereum/tests
+[tests 14.0]: https://github.com/ethereum/tests/releases/tag/v14.0
 [tests 13]: https://github.com/ethereum/tests/releases/tag/v13
 [tests 12.2]: https://github.com/ethereum/tests/releases/tag/v12.2
 [tests 9.0.2]: https://github.com/ethereum/tests/releases/tag/9.0.2
 [tests 8.0.4]: https://github.com/ethereum/tests/releases/tag/8.0.4
 
 [Execution Spec Tests]: https://github.com/ethereum/execution-spec-tests
+[Execution Spec Tests 3.0.0]: https://github.com/ethereum/execution-spec-tests/releases/tag/v3.0.0
 [Execution Spec Tests 1.0.6]: https://github.com/ethereum/execution-spec-tests/releases/tag/v1.0.6
 
 [Aleth]: https://github.com/ethereum/aleth
