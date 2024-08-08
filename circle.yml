@@ -464,6 +464,17 @@ jobs:
             bin/evmone-blockchaintest
             --gtest_filter='-*StateTests/stEOF/*.*:*StateTests/stEIP2537.*'
             ~/tests/EIPTests/BlockchainTests/
+      - run:
+          name: "State tests (EOF) v14.0"
+          working_directory: ~/build
+          command: |
+            bin/evmone-statetest ~/tests/EIPTests/StateTests/stEOF
+      - run:
+          name: "EOF validation tests v14.0"
+          working_directory: ~/build
+          command: >
+            bin/evmone-eoftest ~/tests/EOFTests
+            --gtest_filter=-:EIP3540.validInvalid:efExample.validInvalid:efValidation.EOF1_embedded_container_:efValidation.EOF1_eofcreate_valid_:efValidation.EOF1_returncontract_valid_:efValidation.EOF1_section_order_:efValidation.EOF1_truncated_section_:efValidation.EOF1_undefined_opcodes_:ori.validInvalid
       - download_execution_tests:
           repo: ipsilon/tests
           rev: eof-initcode-tests
