@@ -443,6 +443,18 @@ jobs:
             ~/tests/LegacyTests/Cancun/GeneralStateTests
             ~/tests/LegacyTests/Constantinople/GeneralStateTests
       - run:
+          name: "EOF State tests"
+          working_directory: ~/build
+          command: |
+            bin/evmone-statetest ~/tests/EIPTests/StateTests/stEOF
+      - run:
+          name: "EOF validation tests (+exclusion list)"
+          working_directory: ~/build
+          # The outdated tests are excluded.
+          command: >
+            bin/evmone-eoftest ~/tests/EOFTests
+            --gtest_filter=-EIP3540.validInvalid:efExample.validInvalid:efValidation.EOF1_embedded_container_:efValidation.EOF1_eofcreate_valid_:efValidation.EOF1_returncontract_valid_:efValidation.EOF1_section_order_:efValidation.EOF1_truncated_section_:efValidation.EOF1_undefined_opcodes_:ori.validInvalid
+      - run:
           name: "Blockchain tests (GeneralStateTests)"
           working_directory: ~/build
           command: >
@@ -466,15 +478,15 @@ jobs:
             ~/tests/EIPTests/BlockchainTests/
       - download_execution_tests:
           repo: ipsilon/tests
-          rev: eof-initcode-tests
+          rev: eof-toplevel
           legacy: false
       - run:
-          name: "State tests (EOF)"
+          name: "EOF State tests (ipsilon fork)"
           working_directory: ~/build
           command: |
             bin/evmone-statetest ~/tests/EIPTests/StateTests/stEOF
       - run:
-          name: "EOF validation tests"
+          name: "EOF validation tests (ipsilon fork)"
           working_directory: ~/build
           # TODO: Disabled tests:
           #   efValidation.EOF1_embedded_container_:efValidation.EOF1_eofcreate_valid_:efValidation.EOF1_section_order_: unreferenced subcontainer
