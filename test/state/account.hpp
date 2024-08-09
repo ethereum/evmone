@@ -45,7 +45,7 @@ struct Account
     /// The account code.
     bytes code;
 
-    /// The account has been destructed and should be erased at the end of of a transaction.
+    /// The account has been destructed and should be erased at the end of a transaction.
     bool destructed = false;
 
     /// The account should be erased if it is empty at the end of a transaction.
