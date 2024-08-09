@@ -225,6 +225,23 @@ void state_transition::export_state_test(
         }
     }
 
+    if (!tx.authorization_list.empty())
+    {
+        auto& ja = jtx["authorizationList"];
+        for (const auto& [chain_id, addr, nonce, signer, r, s, y_parity] : tx.authorization_list)
+        {
+            json::json je;
+            je["chainId"] = hex0x(chain_id);
+            je["address"] = hex0x(addr);
+            je["nonce"] = json::json::array({hex0x(nonce)});
+            je["v"] = hex0x(y_parity);
+            je["r"] = hex0x(r);
+            je["s"] = hex0x(s);
+            je["signer"] = hex0x(signer);
+            ja.emplace_back(std::move(je));
+        }
+    }
+
     auto& jpost = jt["post"][to_test_fork_name(rev)][0];
     jpost["indexes"] = {{"data", 0}, {"gas", 0}, {"value", 0}};
     jpost["hash"] = hex0x(mpt_hash(post));

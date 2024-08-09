@@ -56,13 +56,16 @@ int64_t compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& tx) noex
 {
     static constexpr auto call_tx_cost = 21000;
     static constexpr auto create_tx_cost = 53000;
+    static constexpr auto per_empty_account_cost = 25000;
     static constexpr auto initcode_word_cost = 2;
     const auto is_create = !tx.to.has_value();  // Covers also EOF creation txs.
+    const auto auth_list_cost =
+        static_cast<int64_t>(per_empty_account_cost * tx.authorization_list.size());
     const auto initcode_cost =
         is_create && rev >= EVMC_SHANGHAI ? initcode_word_cost * num_words(tx.data.size()) : 0;
     const auto tx_cost = is_create && rev >= EVMC_HOMESTEAD ? create_tx_cost : call_tx_cost;
     return tx_cost + compute_tx_data_cost(rev, tx.data) + compute_access_list_cost(tx.access_list) +
-           compute_initcode_list_cost(rev, tx.initcodes) + initcode_cost;
+           compute_initcode_list_cost(rev, tx.initcodes) + auth_list_cost + initcode_cost;
 }
 
 evmc_message build_message(
@@ -88,6 +91,11 @@ evmc_message build_message(
         .code_address = recipient,
         .code = nullptr,
         .code_size = 0};
+}
+
+constexpr bool is_code_delegated(bytes_view code) noexcept
+{
+    return code.starts_with(DELEGATION_MAGIC);
 }
 }  // namespace
 
@@ -283,6 +291,15 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
             return make_error_code(BLOB_GAS_LIMIT_EXCEEDED);
         break;
 
+    case Transaction::Type::set_code:
+        if (rev < EVMC_PRAGUE)
+            return make_error_code(TX_TYPE_NOT_SUPPORTED);
+        if (!tx.to.has_value())
+            return make_error_code(CREATE_SET_CODE_TX);
+        if (tx.authorization_list.empty())
+            return make_error_code(EMPTY_AUTHORIZATION_LIST);
+        break;
+
     case Transaction::Type::initcodes:
         if (rev < EVMC_OSAKA)
             return make_error_code(TX_TYPE_NOT_SUPPORTED);
@@ -305,6 +322,7 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
     {
     case Transaction::Type::blob:
     case Transaction::Type::initcodes:
+    case Transaction::Type::set_code:
     case Transaction::Type::eip1559:
         if (rev < EVMC_LONDON)
             return make_error_code(TX_TYPE_NOT_SUPPORTED);
@@ -329,7 +347,7 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
     if (tx.max_gas_price < block.base_fee)
         return make_error_code(FEE_CAP_LESS_THEN_BLOCKS);
 
-    if (!sender_acc.code.empty())
+    if (!sender_acc.code.empty() && is_code_delegated(sender_acc.code))
         return make_error_code(SENDER_NOT_EOA);  // Origin must not be a contract (EIP-3607).
 
     if (sender_acc.nonce == Account::NonceMax)  // Nonce value limit (EIP-2681).
@@ -458,6 +476,45 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
     if (holds_alternative<std::error_code>(validation_result))
         return get<std::error_code>(validation_result);
 
+    for (const auto& auth : tx.authorization_list)
+    {
+        // TODO check chain_id
+
+        // Check if authority exists
+        auto* authority_ptr = state.find(auth.signer);
+        if (authority_ptr != nullptr)
+        {
+            // Skip if authority has non-delegated code
+            if (!authority_ptr->code.empty() && !is_code_delegated(authority_ptr->code))
+                continue;
+
+            // Skip if authorization nonce is incorrect
+            if (auth.nonce != authority_ptr->nonce)
+                continue;
+
+            // Refund if authority account creation is not needed
+            static constexpr int64_t EXISTING_AUTHORITY_REFUND = 25000 - 2500;
+            sender_ptr->balance += EXISTING_AUTHORITY_REFUND;
+        }
+        else
+        {
+            // Skip if authorization nonce is incorrect
+            if (auth.nonce != 0)
+                continue;
+
+            // Create authority account
+            authority_ptr = &state.insert(auth.signer, {});
+        }
+
+        authority_ptr->code.reserve(std::size(DELEGATION_MAGIC) + std::size(auth.addr.bytes));
+        authority_ptr->code = DELEGATION_MAGIC;
+        authority_ptr->code += auth.addr;
+
+        ++authority_ptr->nonce;
+
+        authority_ptr->access_status = EVMC_ACCESS_WARM;
+    }
+
     // Once the transaction is valid, create new sender account.
     // The account won't be empty because its nonce will be bumped.
     auto& sender_acc = (sender_ptr != nullptr) ? *sender_ptr : state.insert(tx.sender);
@@ -501,7 +558,23 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
     if (rev >= EVMC_SHANGHAI)
         host.access_account(block.coinbase);
 
-    const auto result = host.call(build_message(tx, execution_gas_limit, rev));
+    auto message = build_message(tx, execution_gas_limit, rev);
+    if (tx.to.has_value())
+    {
+        auto* to_ptr = state.find(*tx.to);
+        if (to_ptr != nullptr && is_code_delegated(to_ptr->code))
+        {
+            assert(to_ptr->code.size() ==
+                   std::size(DELEGATION_MAGIC) + std::size(message.code_address.bytes));
+
+            std::copy_n(message.code_address.bytes, std::size(message.code_address.bytes),
+                &to_ptr->code[std::size(DELEGATION_MAGIC)]);
+
+            message.kind = EVMC_DELEGATECALL;
+        }
+    }
+
+    const auto result = host.call(message);
 
     auto gas_used = tx.gas_limit - result.gas_left;
 
@@ -555,7 +628,7 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
 
 [[nodiscard]] bytes rlp_encode(const Transaction& tx)
 {
-    assert(tx.type <= Transaction::Type::blob);
+    assert(tx.type <= Transaction::Type::set_code);
 
     // TODO: Refactor this function. For all type of transactions most of the code is similar.
     if (tx.type == Transaction::Type::legacy)
@@ -585,7 +658,7 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
                    tx.to.has_value() ? tx.to.value() : bytes_view(), tx.value, tx.data,
                    tx.access_list, tx.v, tx.r, tx.s);
     }
-    else  // Transaction::Type::blob
+    else if (tx.type == Transaction::Type::blob)
     {
         // tx_type +
         // rlp [chain_id, nonce, max_priority_fee_per_gas, max_fee_per_gas, gas_limit, to, value,
@@ -595,6 +668,17 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
                    static_cast<uint64_t>(tx.gas_limit),
                    tx.to.has_value() ? tx.to.value() : bytes_view(), tx.value, tx.data,
                    tx.access_list, tx.max_blob_gas_price, tx.blob_hashes, tx.v, tx.r, tx.s);
+    }
+    else  // Transaction::Type::set_code
+    {
+        // tx_type +
+        // rlp [chain_id, nonce, max_priority_fee_per_gas, max_fee_per_gas, gas_limit, to, value,
+        // data, access_list, authorization_list, sig_parity, r, s];
+        return bytes{0x04} +  // Transaction type (set_code type == 4)
+               rlp::encode_tuple(tx.chain_id, tx.nonce, tx.max_priority_gas_price, tx.max_gas_price,
+                   static_cast<uint64_t>(tx.gas_limit),
+                   tx.to.has_value() ? tx.to.value() : bytes_view(), tx.value, tx.data,
+                   tx.access_list, tx.authorization_list, tx.v, tx.r, tx.s);
     }
 }
 
@@ -624,6 +708,12 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
 {
     return rlp::encode_tuple(withdrawal.index, withdrawal.validator_index, withdrawal.recipient,
         withdrawal.amount_in_gwei);
+}
+
+[[nodiscard]] bytes rlp_encode(const Authorization& authorization)
+{
+    return rlp::encode_tuple(authorization.chain_id, authorization.addr, authorization.nonce,
+        authorization.v, authorization.r, authorization.s);
 }
 
 [[nodiscard]] std::string get_tests_invalid_tx_message(ErrorCode errc) noexcept

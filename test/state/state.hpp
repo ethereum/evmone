@@ -174,6 +174,19 @@ struct BlockInfo
 
 using AccessList = std::vector<std::pair<address, std::vector<bytes32>>>;
 
+struct Authorization
+{
+    uint64_t chain_id = 0;
+    address addr;
+    uint64_t nonce = 0;
+    address signer;
+    intx::uint256 r;
+    intx::uint256 s;
+    uint8_t v = 0;
+};
+
+using AuthorizationList = std::vector<Authorization>;
+
 struct Transaction
 {
     /// The type of the transaction.
@@ -197,8 +210,12 @@ struct Transaction
         /// Introduced by EIP-4844 https://eips.ethereum.org/EIPS/eip-4844.
         blob = 3,
 
+        /// The typed set code transaction (with authorization list).
+        /// Introduced by EIP-7702 https://eips.ethereum.org/EIPS/eip-7702.
+        set_code = 4,
+
         /// The typed transaction with initcode list.
-        initcodes = 4,
+        initcodes = 5,
     };
 
     /// Returns amount of blob gas used by this transaction
@@ -224,6 +241,7 @@ struct Transaction
     intx::uint256 r;
     intx::uint256 s;
     uint8_t v = 0;
+    AuthorizationList authorization_list;
     std::vector<bytes> initcodes;
 };
 
@@ -296,6 +314,9 @@ void system_call(State& state, const BlockInfo& block, evmc_revision rev, evmc::
 
 /// Defines how to RLP-encode a Withdrawal.
 [[nodiscard]] bytes rlp_encode(const Withdrawal& withdrawal);
+
+/// Defnies how to RLP-encode an Authorization (EIP-7702).
+[[nodiscard]] bytes rlp_encode(const Authorization& authorization);
 
 [[nodiscard]] std::string get_tests_invalid_tx_message(ErrorCode errc) noexcept;
 
