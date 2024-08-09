@@ -176,6 +176,16 @@ TEST_F(state_transition, create_tx_collision)
     expect.post[CREATED].nonce = 2;
 }
 
+TEST_F(state_transition, create_tx_collision_storage)
+{
+    // Test create address collision with an account only having storage (EIP-7610).
+    const auto created = compute_create_address(Sender, pre[Sender].nonce);
+    pre[created] = {.storage = {{0x00_bytes32, 0x01_bytes32}}};
+
+    expect.status = EVMC_FAILURE;
+    expect.post[created].storage[0x00_bytes32] = 0x01_bytes32;
+}
+
 TEST_F(state_transition, create_collision)
 {
     static constexpr auto CREATED = 0x8bbc3514477d75ec797bbe4e19d7961660bb849c_address;
@@ -186,6 +196,19 @@ TEST_F(state_transition, create_collision)
 
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
     expect.post[CREATED].nonce = pre.get(CREATED).nonce;
+}
+
+TEST_F(state_transition, create_collision_storage)
+{
+    // Test create address collision with an account only having storage (EIP-7610).
+    tx.to = To;
+    pre[To] = {.code = sstore(0, create())};
+    const auto created = compute_create_address(To, pre[To].nonce);
+    pre[created] = {.storage = {{0x00_bytes32, 0x01_bytes32}}};
+
+    expect.post[To].nonce = pre[To].nonce + 1;
+    expect.post[To].storage[0x00_bytes32] = 0x00_bytes32;
+    expect.post[created].storage[0x00_bytes32] = 0x01_bytes32;
 }
 
 TEST_F(state_transition, create_collision_revert)
