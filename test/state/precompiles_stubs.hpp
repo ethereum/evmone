@@ -11,6 +11,4 @@ ExecutionResult expmod_stub(
     const uint8_t* input, size_t input_size, uint8_t* output, size_t max_output_size) noexcept;
 ExecutionResult ecpairing_stub(
     const uint8_t* input, size_t input_size, uint8_t* output, size_t max_output_size) noexcept;
-ExecutionResult point_evaluation_stub(
-    const uint8_t* input, size_t input_size, uint8_t* output, size_t max_output_size) noexcept;
 }  // namespace evmone::state
