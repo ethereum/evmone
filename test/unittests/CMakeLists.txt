@@ -49,6 +49,7 @@ target_sources(
     instructions_test.cpp
     precompiles_blake2b_test.cpp
     precompiles_bls_test.cpp
+    precompiles_kzg_test.cpp
     precompiles_ripemd160_test.cpp
     precompiles_sha256_test.cpp
     state_block_test.cpp
