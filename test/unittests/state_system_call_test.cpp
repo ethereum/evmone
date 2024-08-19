@@ -12,31 +12,35 @@ using namespace evmc::literals;
 using namespace evmone::state;
 using namespace evmone::test;
 
-TEST(state_system_call, non_existient)
+class state_system_call : public testing::Test
 {
-    evmc::VM vm;
+protected:
+    evmc::VM vm{evmc_create_evmone()};
     State state;
+};
 
-    system_call(state, {}, EVMC_CANCUN, vm);
+TEST_F(state_system_call, non_existient)
+{
+    // Use MAX revision to invoke all activate system contracts.
+    system_call(state, {}, EVMC_MAX_REVISION, vm);
 
-    EXPECT_EQ(state.get_accounts().size(), 0);
+    EXPECT_EQ(state.get_accounts().size(), 0) << "State must remain unchanged";
 }
 
-TEST(state_system_call, sstore_timestamp)
+TEST_F(state_system_call, beacon_roots)
 {
-    static constexpr auto BeaconRootsAddress = 0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02_address;
-
-    evmc::VM vm{evmc_create_evmone()};
-    const BlockInfo block{.number = 1, .timestamp = 0x0404};
-    State state;
-    state.insert(BeaconRootsAddress, {.code = sstore(OP_NUMBER, OP_TIMESTAMP)});
+    const BlockInfo block{.number = 1, .parent_beacon_block_root = 0xbeac04004a54_bytes32};
+    state.insert(
+        BEACON_ROOTS_ADDRESS, {.code = sstore(OP_NUMBER, calldataload(0)) + sstore(0, OP_CALLER)});
 
     system_call(state, block, EVMC_CANCUN, vm);
 
     ASSERT_EQ(state.get_accounts().size(), 1);
-    EXPECT_EQ(state.get(BeaconRootsAddress).nonce, 0);
-    EXPECT_EQ(state.get(BeaconRootsAddress).balance, 0);
-    const auto& storage = state.get(BeaconRootsAddress).storage;
-    ASSERT_EQ(storage.size(), 1);
-    EXPECT_EQ(storage.at(0x01_bytes32).current, 0x0404_bytes32);
+    EXPECT_EQ(state.find(SYSTEM_ADDRESS), nullptr);
+    EXPECT_EQ(state.get(BEACON_ROOTS_ADDRESS).nonce, 0);
+    EXPECT_EQ(state.get(BEACON_ROOTS_ADDRESS).balance, 0);
+    const auto& storage = state.get(BEACON_ROOTS_ADDRESS).storage;
+    ASSERT_EQ(storage.size(), 2);
+    EXPECT_EQ(storage.at(0x01_bytes32).current, block.parent_beacon_block_root);
+    EXPECT_EQ(storage.at(0x00_bytes32).current, to_bytes32(SYSTEM_ADDRESS));
 }

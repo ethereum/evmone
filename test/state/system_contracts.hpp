@@ -7,7 +7,15 @@
 
 namespace evmone::state
 {
-class BlockInfo;
+using namespace evmc::literals;
+
+/// The address of the sender of the system calls (EIP-4788).
+constexpr auto SYSTEM_ADDRESS = 0xfffffffffffffffffffffffffffffffffffffffe_address;
+
+/// The address of the system contract storing the root hashes of beacon chain blocks (EIP-4788).
+constexpr auto BEACON_ROOTS_ADDRESS = 0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02_address;
+
+struct BlockInfo;
 class State;
 
 /// Performs the system call: invokes system contracts.
