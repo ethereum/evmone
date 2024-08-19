@@ -5,6 +5,7 @@
 #include <evmone/evmone.h>
 #include <gtest/gtest.h>
 #include <test/state/state.hpp>
+#include <test/state/system_contracts.hpp>
 #include <test/utils/bytecode.hpp>
 
 using namespace evmc::literals;
