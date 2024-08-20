@@ -402,7 +402,7 @@ jobs:
     steps:
       - build
       - download_execution_tests:
-          rev: v14.0
+          commit: fd26aad70e24f042fcd135b2f0338b1c6bf1a324
       - run:
           name: "State tests"
           working_directory: ~/build
@@ -419,10 +419,10 @@ jobs:
       - run:
           name: "EOF validation tests (+exclusion list)"
           working_directory: ~/build
-          # The outdated tests are excluded.
+          # TODO: The outdated tests are excluded.
           command: >
             bin/evmone-eoftest ~/tests/EOFTests
-            --gtest_filter=-EIP3540.validInvalid:efExample.validInvalid:efValidation.EOF1_embedded_container_:efValidation.EOF1_eofcreate_valid_:efValidation.EOF1_returncontract_valid_:efValidation.EOF1_section_order_:efValidation.EOF1_truncated_section_:efValidation.EOF1_undefined_opcodes_:ori.validInvalid
+            --gtest_filter=-efValidation.EOF1_embedded_container_:efValidation.EOF1_section_order_
       - run:
           name: "Blockchain tests (GeneralStateTests)"
           working_directory: ~/build
@@ -445,23 +445,6 @@ jobs:
             bin/evmone-blockchaintest
             --gtest_filter='-*StateTests/stEOF/*.*:*StateTests/stEIP2537.*'
             ~/tests/EIPTests/BlockchainTests/
-      - download_execution_tests:
-          repo: ipsilon/tests
-          rev: eof-toplevel
-          legacy: false
-      - run:
-          name: "EOF State tests (ipsilon fork)"
-          working_directory: ~/build
-          command: |
-            bin/evmone-statetest ~/tests/EIPTests/StateTests/stEOF
-      - run:
-          name: "EOF validation tests (ipsilon fork)"
-          working_directory: ~/build
-          # TODO: Disabled tests:
-          #   efValidation.EOF1_embedded_container_:efValidation.EOF1_eofcreate_valid_:efValidation.EOF1_section_order_: unreferenced subcontainer
-          command: >
-            bin/evmone-eoftest ~/tests/EOFTests
-            --gtest_filter=-:efValidation.EOF1_embedded_container_:efValidation.EOF1_eofcreate_valid_:efValidation.EOF1_section_order_
       - collect_coverage_gcc
       - upload_coverage:
           flags: ethereum_tests
