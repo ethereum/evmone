@@ -72,6 +72,7 @@ EOFValidationError get_section_missing_error(uint8_t section_id) noexcept
         return EOFValidationError::type_section_missing;
     case CODE_SECTION:
         return EOFValidationError::code_section_missing;
+    case CONTAINER_SECTION:
     case DATA_SECTION:
         return EOFValidationError::data_section_missing;
     default:
@@ -106,7 +107,7 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
             // If DATA_SECTION is expected, CONTAINER_SECTION is also allowed, because
             // container section is optional.
             if (section_id != expected_section_id &&
-                (expected_section_id != DATA_SECTION || section_id != CONTAINER_SECTION))
+                (expected_section_id != CONTAINER_SECTION || section_id != DATA_SECTION))
                 return get_section_missing_error(expected_section_id);
 
             switch (section_id)
@@ -128,7 +129,7 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
                     return EOFValidationError::zero_section_size;
                 if (section_num > CODE_SECTION_NUMBER_LIMIT)
                     return EOFValidationError::too_many_code_sections;
-                expected_section_id = DATA_SECTION;
+                expected_section_id = CONTAINER_SECTION;
                 state = State::section_size;
                 break;
             }
