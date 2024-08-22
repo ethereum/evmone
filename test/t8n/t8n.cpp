@@ -238,6 +238,11 @@ int main(int argc, const char* argv[])
                 hex0x(state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK - blob_gas_left);
             j_result["currentExcessBlobGas"] = hex0x(block.excess_blob_gas);
         }
+        if (rev >= EVMC_PRAGUE)
+        {
+            // EIP-7685: General purpose execution layer requests
+            j_result["requestsRoot"] = hex0x(state::EMPTY_MPT_HASH);
+        }
 
         std::ofstream{output_dir / output_result_file} << std::setw(2) << j_result;
 
