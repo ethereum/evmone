@@ -402,7 +402,7 @@ evmc::Result Host::execute_message(const evmc_message& msg) noexcept
         }
     }
 
-    if (is_precompile(m_rev, msg.code_address))
+    if (is_precompile(m_rev, msg.code_address) && (msg.flags & EVMC_DELEGATED) == 0)
         return call_precompile(m_rev, msg);
 
     // In case msg.recipient == msg.code_address, this is the second lookup of the same address.
