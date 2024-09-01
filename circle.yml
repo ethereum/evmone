@@ -402,7 +402,7 @@ jobs:
     steps:
       - build
       - download_execution_tests:
-          commit: fd26aad70e24f042fcd135b2f0338b1c6bf1a324
+          rev: v14.1
       - run:
           name: "State tests"
           working_directory: ~/build
@@ -417,12 +417,10 @@ jobs:
           command: |
             bin/evmone-statetest ~/tests/EIPTests/StateTests/stEOF
       - run:
-          name: "EOF validation tests (+exclusion list)"
+          name: "EOF validation tests"
           working_directory: ~/build
-          # TODO: The outdated tests are excluded.
           command: >
             bin/evmone-eoftest ~/tests/EOFTests
-            --gtest_filter=-efValidation.EOF1_embedded_container_:efValidation.EOF1_section_order_
       - run:
           name: "Blockchain tests (GeneralStateTests)"
           working_directory: ~/build
@@ -460,7 +458,7 @@ jobs:
           command: sudo apt-get -q update && sudo apt-get -qy install libgmp-dev
       - build
       - download_execution_tests:
-          rev: v14.0
+          rev: v14.1
           legacy: false
       - run:
           name: "State tests"
