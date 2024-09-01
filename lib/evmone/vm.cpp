@@ -72,7 +72,7 @@ evmc_set_option_result set_option(evmc_vm* c_vm, char const* c_name, char const*
 }  // namespace
 
 
-inline constexpr VM::VM() noexcept
+VM::VM() noexcept
   : evmc_vm{
         EVMC_ABI_VERSION,
         "evmone",
@@ -82,7 +82,20 @@ inline constexpr VM::VM() noexcept
         evmone::get_capabilities,
         evmone::set_option,
     }
-{}
+{
+    m_execution_states.reserve(1025);
+}
+
+ExecutionState& VM::get_execution_state(size_t depth) noexcept
+{
+    // Vector already has the capacity for all possible depths,
+    // so reallocation never happens (therefore: noexcept).
+    // The ExecutionStates are lazily created because they pre-allocate EVM memory and stack.
+    assert(depth < m_execution_states.capacity());
+    if (m_execution_states.size() <= depth)
+        m_execution_states.resize(depth + 1);
+    return m_execution_states[depth];
+}
 
 }  // namespace evmone
 
