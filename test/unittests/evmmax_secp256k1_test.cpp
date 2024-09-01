@@ -211,8 +211,6 @@ TEST(evmmax, secp256k1_pt_add_inf)
 
 TEST(evmmax, secp256k1_pt_add)
 {
-    const evmmax::ModArith s{evmmax::secp256k1::FieldPrime};
-
     const Point p1{0x18f4057699e2d9679421de8f4e11d7df9fa4b9e7cb841ea48aed75f1567b9731_u256,
         0x6db5b7ecd8e226c06f538d15173267bf1e78acc02bb856e83b3d6daec6a68144_u256};
     const Point p2{0xf929e07c83d65da3569113ae03998d13359ba982216285a686f4d66e721a0beb_u256,
@@ -261,8 +259,6 @@ TEST(evmmax, secp256k1_pt_mul_inf)
 
 TEST(evmmax, secp256k1_pt_mul)
 {
-    const evmmax::ModArith s{evmmax::secp256k1::FieldPrime};
-
     const Point p1{0x18f4057699e2d9679421de8f4e11d7df9fa4b9e7cb841ea48aed75f1567b9731_u256,
         0x6db5b7ecd8e226c06f538d15173267bf1e78acc02bb856e83b3d6daec6a68144_u256};
 
