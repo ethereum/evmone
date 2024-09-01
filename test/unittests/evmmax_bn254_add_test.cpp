@@ -117,8 +117,6 @@ const TestCase
 
 TEST(evmmax, bn254_validate_inputs)
 {
-    const evmmax::ModArith s{evmmax::bn254::FieldPrime};
-
     for (const auto& t : test_cases)
     {
         ASSERT_EQ(t.input.size(), 128);
@@ -139,8 +137,6 @@ TEST(evmmax, bn254_validate_inputs)
 
 TEST(evmmax, bn254_pt_add)
 {
-    const evmmax::ModArith s{evmmax::bn254::FieldPrime};
-
     for (const auto& t : test_cases)
     {
         const Point a{
