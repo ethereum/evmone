@@ -363,6 +363,15 @@ jobs:
           working_directory: ~/build
           command: >
             bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests
+      - download_execution_spec_tests:
+          release: pectra-devnet-3@v1.4.0
+          fixtures_suffix: pectra-devnet-3
+      - run:
+          name: "Execution spec tests (develop, state_tests)"
+          # Tests for in-development EVM revision currently passing.
+          working_directory: ~/spec-tests/fixtures/state_tests
+          command: >
+            ~/build/bin/evmone-statetest prague/eip2537_bls_12_381_precompiles/bls12_precompiles_before_fork
       - collect_coverage_gcc
       - upload_coverage:
           flags: execution_spec_tests
