@@ -15,11 +15,7 @@ struct Point
     IntT x = 0;
     IntT y = 0;
 
-    friend constexpr bool operator==(const Point& a, const Point& b) noexcept
-    {
-        // TODO(intx): C++20 operator<=> = default does not work for uint256.
-        return a.x == b.x && a.y == b.y;
-    }
+    friend constexpr bool operator==(const Point& a, const Point& b) noexcept = default;
 
     /// Checks if the point represents the special "infinity" value.
     [[nodiscard]] constexpr bool is_inf() const noexcept { return *this == Point{}; }

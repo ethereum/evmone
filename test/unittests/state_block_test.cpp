@@ -6,7 +6,7 @@
 #include <test/state/state.hpp>
 
 using namespace evmone::state;
-using namespace intx;
+using namespace intx::literals;
 
 TEST(state_block, blob_gas_price)
 {
