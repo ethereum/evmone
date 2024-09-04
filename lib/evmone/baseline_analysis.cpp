@@ -16,6 +16,35 @@ static_assert(!std::is_copy_assignable_v<CodeAnalysis>);
 
 namespace
 {
+constexpr bool first_instruction_terminates(uint8_t op) noexcept
+{
+    return op < OP_ADDRESS || op > OP_PUSH32;
+}
+
+consteval bool proof() noexcept
+{
+    for (size_t op = 0; op <= 0x80; ++op)
+    {
+        if (!first_instruction_terminates(op))
+            continue;
+
+
+        const auto& tr = instr::traits[op];
+        const auto& g = instr::gas_costs[EVMC_MAX_REVISION][op];
+        if (tr.is_terminating)
+            continue;
+        if (g == instr::undefined)
+            continue;
+        if (tr.stack_height_required > 0)
+            continue;
+        return false;
+    }
+    return true;
+}
+static_assert(proof());
+
+// bool is_jumpdest_analysis_needed(bytes_view code) noexcept {}
+
 CodeAnalysis::JumpdestMap analyze_jumpdests(bytes_view code)
 {
     // To find if op is any PUSH opcode (OP_PUSH1 <= op <= OP_PUSH32)
