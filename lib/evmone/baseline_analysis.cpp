@@ -16,32 +16,41 @@ static_assert(!std::is_copy_assignable_v<CodeAnalysis>);
 
 namespace
 {
+/// Heuristic that checks if the given opcode as the first instruction in a code
+/// terminates the execution for any reason.
+/// This heuristic may have false negatives.
 constexpr bool first_instruction_terminates(uint8_t op) noexcept
 {
     return op < OP_ADDRESS || op > OP_PUSH32;
 }
 
+consteval bool proof_first_instruction_terminates(uint8_t op) noexcept
+{
+    const auto& tr = instr::traits[op];
+    if (!tr.since.has_value())  // is undefined in all revisions
+        return true;
+    if (tr.is_terminating)  // terminates normally
+        return true;
+    if (tr.stack_height_required > 0)  // causes stack underflow
+        return true;
+    return false;
+}
+
 consteval bool proof() noexcept
 {
-    for (size_t op = 0; op <= 0x80; ++op)
+    for (size_t i = 0; i <= 0xff; ++i)
     {
-        if (!first_instruction_terminates(op))
-            continue;
-
-
-        const auto& tr = instr::traits[op];
-        const auto& g = instr::gas_costs[EVMC_MAX_REVISION][op];
-        if (tr.is_terminating)
-            continue;
-        if (g == instr::undefined)
-            continue;
-        if (tr.stack_height_required > 0)
-            continue;
-        return false;
+        const auto op = static_cast<uint8_t>(i);
+        if (first_instruction_terminates(op))
+        {
+            if (!proof_first_instruction_terminates(op))
+                return false;
+        }
     }
     return true;
 }
 static_assert(proof());
+static_assert(first_instruction_terminates(0xEF));  // EOF is included.
 
 // bool is_jumpdest_analysis_needed(bytes_view code) noexcept {}
 
