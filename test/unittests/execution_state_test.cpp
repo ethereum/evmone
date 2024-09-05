@@ -8,15 +8,15 @@
 #include <type_traits>
 
 static_assert(std::is_default_constructible_v<evmone::ExecutionState>);
-static_assert(!std::is_move_constructible_v<evmone::ExecutionState>);
+static_assert(std::is_move_constructible_v<evmone::ExecutionState>);
 static_assert(!std::is_copy_constructible_v<evmone::ExecutionState>);
-static_assert(!std::is_move_assignable_v<evmone::ExecutionState>);
+static_assert(std::is_move_assignable_v<evmone::ExecutionState>);
 static_assert(!std::is_copy_assignable_v<evmone::ExecutionState>);
 
 static_assert(std::is_default_constructible_v<evmone::advanced::AdvancedExecutionState>);
-static_assert(!std::is_move_constructible_v<evmone::advanced::AdvancedExecutionState>);
+static_assert(std::is_move_constructible_v<evmone::advanced::AdvancedExecutionState>);
 static_assert(!std::is_copy_constructible_v<evmone::advanced::AdvancedExecutionState>);
-static_assert(!std::is_move_assignable_v<evmone::advanced::AdvancedExecutionState>);
+static_assert(std::is_move_assignable_v<evmone::advanced::AdvancedExecutionState>);
 static_assert(!std::is_copy_assignable_v<evmone::advanced::AdvancedExecutionState>);
 
 TEST(execution_state, construct)
