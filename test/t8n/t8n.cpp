@@ -6,6 +6,7 @@
 #include "../state/ethash_difficulty.hpp"
 #include "../state/mpt_hash.hpp"
 #include "../state/rlp.hpp"
+#include "../state/system_contracts.hpp"
 #include "../statetest/statetest.hpp"
 #include "../utils/utils.hpp"
 #include <evmone/evmone.h>

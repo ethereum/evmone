@@ -30,6 +30,8 @@ target_sources(
     rlp.hpp
     state.hpp
     state.cpp
+    system_contracts.hpp
+    system_contracts.cpp
     test_state.hpp
     test_state.cpp
 )

@@ -5,6 +5,7 @@
 #include "../state/mpt_hash.hpp"
 #include "../state/rlp.hpp"
 #include "../state/state.hpp"
+#include "../state/system_contracts.hpp"
 #include "../test/statetest/statetest.hpp"
 #include "blockchaintest.hpp"
 #include <gtest/gtest.h>
