@@ -6,6 +6,7 @@
 #include "eof.hpp"
 #include "instructions.hpp"
 #include <memory>
+#include <ranges>
 
 namespace evmone::baseline
 {
@@ -26,6 +27,9 @@ constexpr bool first_instruction_terminates(uint8_t op) noexcept
 
 consteval bool proof_first_instruction_terminates(uint8_t op) noexcept
 {
+    if (!first_instruction_terminates(op))  // ignore if not positive
+        return true;
+
     const auto& tr = instr::traits[op];
     if (!tr.since.has_value())  // is undefined in all revisions
         return true;
@@ -35,24 +39,9 @@ consteval bool proof_first_instruction_terminates(uint8_t op) noexcept
         return true;
     return false;
 }
-
-consteval bool proof() noexcept
-{
-    for (size_t i = 0; i <= 0xff; ++i)
-    {
-        const auto op = static_cast<uint8_t>(i);
-        if (first_instruction_terminates(op))
-        {
-            if (!proof_first_instruction_terminates(op))
-                return false;
-        }
-    }
-    return true;
-}
-static_assert(proof());
+static_assert(std::ranges::all_of(
+    std::views::iota(uint8_t{0}) | std::views::take(256), proof_first_instruction_terminates));
 static_assert(first_instruction_terminates(0xEF));  // EOF is included.
-
-// bool is_jumpdest_analysis_needed(bytes_view code) noexcept {}
 
 CodeAnalysis::JumpdestMap analyze_jumpdests(bytes_view code)
 {
