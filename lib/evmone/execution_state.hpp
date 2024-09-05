@@ -76,14 +76,19 @@ public:
 /// The EVM memory.
 ///
 /// The implementations uses initial allocation of 4k and then grows capacity with 2x factor.
-/// Some benchmarks has been done to confirm 4k is ok-ish value.
+/// Some benchmarks have been done to confirm 4k is ok-ish value.
 class Memory
 {
     /// The size of allocation "page".
     static constexpr size_t page_size = 4 * 1024;
 
-    /// Pointer to allocated memory.
-    uint8_t* m_data = nullptr;
+    struct FreeDeleter
+    {
+        void operator()(uint8_t* p) const noexcept { std::free(p); }
+    };
+
+    /// Owned pointer to allocated memory.
+    std::unique_ptr<uint8_t[], FreeDeleter> m_data;
 
     /// The "virtual" size of the memory.
     size_t m_size = 0;
@@ -95,8 +100,8 @@ class Memory
 
     void allocate_capacity() noexcept
     {
-        m_data = static_cast<uint8_t*>(std::realloc(m_data, m_capacity));
-        if (m_data == nullptr)
+        m_data.reset(static_cast<uint8_t*>(std::realloc(m_data.release(), m_capacity)));
+        if (!m_data) [[unlikely]]
             handle_out_of_memory();
     }
 
@@ -104,18 +109,12 @@ public:
     /// Creates Memory object with initial capacity allocation.
     Memory() noexcept { allocate_capacity(); }
 
-    /// Frees all allocated memory.
-    ~Memory() noexcept { std::free(m_data); }
-
-    Memory(const Memory&) = delete;
-    Memory& operator=(const Memory&) = delete;
-
     uint8_t& operator[](size_t index) noexcept { return m_data[index]; }
 
-    [[nodiscard]] const uint8_t* data() const noexcept { return m_data; }
+    [[nodiscard]] const uint8_t* data() const noexcept { return m_data.get(); }
     [[nodiscard]] size_t size() const noexcept { return m_size; }
 
-    /// Grows the memory to the given size. The extend is filled with zeros.
+    /// Grows the memory to the given size. The extent is filled with zeros.
     ///
     /// @param new_size  New memory size. Must be larger than the current size and multiple of 32.
     void grow(size_t new_size) noexcept
@@ -138,7 +137,7 @@ public:
 
             allocate_capacity();
         }
-        std::memset(m_data + m_size, 0, new_size - m_size);
+        std::memset(&m_data[m_size], 0, new_size - m_size);
         m_size = new_size;
     }
 
