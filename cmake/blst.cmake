@@ -3,13 +3,20 @@ include(ExternalProject)
 
 if(MSVC)
     set(BLST_BUILD_SCRIPT build.bat)
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    # Don't pass CC to the script because it doesn't work.
-    set(BLST_BUILD_SCRIPT ./build.sh -mmacosx-version-min=${CMAKE_OSX_DEPLOYMENT_TARGET})
 else()
-    # Pass CC and AR, this supports cross-compilation.
-    # Pass CFLAGS as part of CC (e.g. to pass -m32). Using CFLAGS directly overwrites blst's default.
-    string(JOIN " " BLST_CC ${CMAKE_C_COMPILER} ${CMAKE_C_FLAGS})
+    # Build CC compiler invocation.
+    set(BLST_CC ${CMAKE_C_COMPILER})
+    if(CMAKE_OSX_SYSROOT)
+        set(BLST_CC "${BLST_CC} ${CMAKE_C_SYSROOT_FLAG} ${CMAKE_OSX_SYSROOT}")
+    endif()
+    if(CMAKE_OSX_DEPLOYMENT_TARGET)
+        set(BLST_CC "${BLST_CC} ${CMAKE_C_OSX_DEPLOYMENT_TARGET_FLAG}${CMAKE_OSX_DEPLOYMENT_TARGET}")
+    endif()
+    if(CMAKE_C_FLAGS)
+        # Pass CFLAGS as part of CC (e.g. to pass -m32). Using CFLAGS directly overwrites blst's default.
+        set(BLST_CC "${BLST_CC} ${CMAKE_C_FLAGS}")
+    endif()
+
     set(BLST_BUILD_SCRIPT ./build.sh CC='${BLST_CC}' AR='${CMAKE_AR}')
 endif()
 
