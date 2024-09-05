@@ -56,6 +56,9 @@ static_assert(first_instruction_terminates(0xEF));  // EOF is included.
 
 CodeAnalysis::JumpdestMap analyze_jumpdests(bytes_view code)
 {
+    if (code.empty() || first_instruction_terminates(code[0]))
+        return {};
+
     // To find if op is any PUSH opcode (OP_PUSH1 <= op <= OP_PUSH32)
     // it can be noticed that OP_PUSH32 is INT8_MAX (0x7f) therefore
     // static_cast<int8_t>(op) <= OP_PUSH32 is always true and can be skipped.
