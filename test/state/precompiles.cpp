@@ -153,6 +153,60 @@ PrecompileAnalysis point_evaluation_analyze(bytes_view, evmc_revision) noexcept
     return {POINT_EVALUATION_PRECOMPILE_GAS, 64};
 }
 
+PrecompileAnalysis bls12_g1add_analyze(bytes_view, evmc_revision) noexcept
+{
+    // TODO: Implement
+    return {GasCostMax, 0};
+}
+
+PrecompileAnalysis bls12_g1mul_analyze(bytes_view, evmc_revision) noexcept
+{
+    // TODO: Implement
+    return {GasCostMax, 0};
+}
+
+PrecompileAnalysis bls12_g1msm_analyze(bytes_view, evmc_revision) noexcept
+{
+    // TODO: Implement
+    return {GasCostMax, 0};
+}
+
+PrecompileAnalysis bls12_g2add_analyze(bytes_view, evmc_revision) noexcept
+{
+    // TODO: Implement
+    return {GasCostMax, 0};
+}
+
+PrecompileAnalysis bls12_g2mul_analyze(bytes_view, evmc_revision) noexcept
+{
+    // TODO: Implement
+    return {GasCostMax, 0};
+}
+
+PrecompileAnalysis bls12_g2msm_analyze(bytes_view, evmc_revision) noexcept
+{
+    // TODO: Implement
+    return {GasCostMax, 0};
+}
+
+PrecompileAnalysis bls12_pairing_check_analyze(bytes_view, evmc_revision) noexcept
+{
+    // TODO: Implement
+    return {GasCostMax, 0};
+}
+
+PrecompileAnalysis bls12_map_fp_to_g1_analyze(bytes_view, evmc_revision) noexcept
+{
+    // TODO: Implement
+    return {GasCostMax, 0};
+}
+
+PrecompileAnalysis bls12_map_fp2_to_g2_analyze(bytes_view, evmc_revision) noexcept
+{
+    // TODO: Implement
+    return {GasCostMax, 0};
+}
+
 ExecutionResult ecrecover_execute(const uint8_t* input, size_t input_size, uint8_t* output,
     [[maybe_unused]] size_t output_size) noexcept
 {
@@ -292,6 +346,51 @@ ExecutionResult blake2bf_execute(const uint8_t* input, [[maybe_unused]] size_t i
     return {EVMC_SUCCESS, sizeof(h)};
 }
 
+ExecutionResult bls12_g1add_execute(const uint8_t*, size_t, uint8_t*, size_t) noexcept
+{
+    return {EVMC_PRECOMPILE_FAILURE, 0};
+}
+
+ExecutionResult bls12_g1mul_execute(const uint8_t*, size_t, uint8_t*, size_t) noexcept
+{
+    return {EVMC_PRECOMPILE_FAILURE, 0};
+}
+
+ExecutionResult bls12_g1msm_execute(const uint8_t*, size_t, uint8_t*, size_t) noexcept
+{
+    return {EVMC_PRECOMPILE_FAILURE, 0};
+}
+
+ExecutionResult bls12_g2add_execute(const uint8_t*, size_t, uint8_t*, size_t) noexcept
+{
+    return {EVMC_PRECOMPILE_FAILURE, 0};
+}
+
+ExecutionResult bls12_g2mul_execute(const uint8_t*, size_t, uint8_t*, size_t) noexcept
+{
+    return {EVMC_PRECOMPILE_FAILURE, 0};
+}
+
+ExecutionResult bls12_g2msm_execute(const uint8_t*, size_t, uint8_t*, size_t) noexcept
+{
+    return {EVMC_PRECOMPILE_FAILURE, 0};
+}
+
+ExecutionResult bls12_pairing_check_execute(const uint8_t*, size_t, uint8_t*, size_t) noexcept
+{
+    return {EVMC_PRECOMPILE_FAILURE, 0};
+}
+
+ExecutionResult bls12_map_fp_to_g1_execute(const uint8_t*, size_t, uint8_t*, size_t) noexcept
+{
+    return {EVMC_PRECOMPILE_FAILURE, 0};
+}
+
+ExecutionResult bls12_map_fp2_to_g2_execute(const uint8_t*, size_t, uint8_t*, size_t) noexcept
+{
+    return {EVMC_PRECOMPILE_FAILURE, 0};
+}
+
 namespace
 {
 struct PrecompileTraits
@@ -313,6 +412,15 @@ inline constexpr auto traits = []() noexcept {
         {ecpairing_analyze, ecpairing_stub},
         {blake2bf_analyze, blake2bf_execute},
         {point_evaluation_analyze, point_evaluation_stub},
+        {bls12_g1add_analyze, bls12_g1add_execute},
+        {bls12_g1mul_analyze, bls12_g1mul_execute},
+        {bls12_g1msm_analyze, bls12_g1msm_execute},
+        {bls12_g2add_analyze, bls12_g2add_execute},
+        {bls12_g2mul_analyze, bls12_g2mul_execute},
+        {bls12_g2msm_analyze, bls12_g2msm_execute},
+        {bls12_pairing_check_analyze, bls12_pairing_check_execute},
+        {bls12_map_fp_to_g1_analyze, bls12_map_fp_to_g1_execute},
+        {bls12_map_fp2_to_g2_analyze, bls12_map_fp2_to_g2_execute},
     }};
 #ifdef EVMONE_PRECOMPILES_SILKPRE
     // tbl[static_cast<size_t>(PrecompileId::ecrecover)].execute = silkpre_ecrecover_execute;
@@ -346,6 +454,9 @@ bool is_precompile(evmc_revision rev, const evmc::address& addr) noexcept
         return false;
 
     if (rev < EVMC_CANCUN && id >= stdx::to_underlying(PrecompileId::since_cancun))
+        return false;
+
+    if (rev < EVMC_PRAGUE && id >= stdx::to_underlying(PrecompileId::since_prague))
         return false;
 
     return true;
