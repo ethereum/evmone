@@ -11,7 +11,7 @@
 #include <random>
 #include <ranges>
 
-using namespace intx;
+using namespace intx::literals;
 using namespace evmone;
 using namespace evmone::state;
 using namespace evmone::test;

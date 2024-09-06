@@ -9,12 +9,6 @@
 using namespace intx;
 using namespace evmmax;
 
-// TODO(intx): Add ""_u384.
-inline constexpr auto operator""_u384(const char* s)
-{
-    return intx::from_string<intx::uint384>(s);
-}
-
 constexpr auto P23 = 23_u256;
 constexpr auto BN254Mod = 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47_u256;
 constexpr auto Secp256k1Mod =

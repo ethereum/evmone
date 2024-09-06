@@ -7,7 +7,6 @@
 #include <test/utils/utils.hpp>
 
 using namespace evmmax::bn254;
-using namespace intx;
 using namespace evmone::test;
 
 namespace

@@ -7,7 +7,7 @@
 #include <test/statetest/statetest.hpp>
 
 using namespace evmone;
-using namespace intx;
+using namespace intx::literals;
 using namespace testing;
 
 // TODO: Add specific test of loading nonce, chainId, r, s, v

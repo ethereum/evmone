@@ -298,8 +298,7 @@ TEST_F(tracing, trace_eof)
 
 TEST_F(tracing, trace_create_instruction)
 {
-    using namespace intx;
-    using evmc::operator""_address;
+    using namespace evmc::literals;
 
     vm.add_tracer(evmone::create_instruction_tracer(trace_stream));
 
@@ -307,10 +306,10 @@ TEST_F(tracing, trace_create_instruction)
 
     const auto code = push(10) + push(0) + push(0) + OP_CREATE + ret_top();
 
-    auto result_data = "0x60016000526001601ff3"_hex;
+    const auto result_data = "0x60016000526001601ff3"_hex;
     host.call_result.create_address = 0x1122334455667788991011223344556677889910_address;
-    host.call_result.output_data = result_data.c_str();
-    host.call_result.output_size = 10;
+    host.call_result.output_data = result_data.data();
+    host.call_result.output_size = result_data.size();
 
     EXPECT_EQ(trace(code, 0, 0, EVMC_BERLIN), R"(
 {"pc":0,"op":96,"gas":"0xf4240","gasCost":"0x3","memSize":0,"stack":[],"depth":1,"refund":0,"opName":"PUSH1"}

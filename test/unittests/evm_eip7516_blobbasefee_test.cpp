@@ -8,7 +8,7 @@
 #include "evm_fixture.hpp"
 
 using namespace evmc::literals;
-using namespace intx;
+using namespace intx::literals;
 using namespace evmone::test;
 
 TEST_P(evm, blobbasefee_pre_cancun)
