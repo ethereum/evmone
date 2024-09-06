@@ -34,11 +34,21 @@ TEST(state_precompiles, is_precompile)
         // Cancun:
         EXPECT_EQ(is_precompile(rev, 0x0a_address), rev >= EVMC_CANCUN);
 
+        // Prague:
+        EXPECT_EQ(is_precompile(rev, 0x0b_address), rev >= EVMC_PRAGUE);
+        EXPECT_EQ(is_precompile(rev, 0x0c_address), rev >= EVMC_PRAGUE);
+        EXPECT_EQ(is_precompile(rev, 0x0d_address), rev >= EVMC_PRAGUE);
+        EXPECT_EQ(is_precompile(rev, 0x0e_address), rev >= EVMC_PRAGUE);
+        EXPECT_EQ(is_precompile(rev, 0x0f_address), rev >= EVMC_PRAGUE);
+        EXPECT_EQ(is_precompile(rev, 0x10_address), rev >= EVMC_PRAGUE);
+        EXPECT_EQ(is_precompile(rev, 0x11_address), rev >= EVMC_PRAGUE);
+        EXPECT_EQ(is_precompile(rev, 0x12_address), rev >= EVMC_PRAGUE);
+        EXPECT_EQ(is_precompile(rev, 0x13_address), rev >= EVMC_PRAGUE);
+
         // Future?
-        EXPECT_FALSE(is_precompile(rev, 0x0b_address));
-        EXPECT_FALSE(is_precompile(rev, 0x0c_address));
-        EXPECT_FALSE(is_precompile(rev, 0x0d_address));
-        EXPECT_FALSE(is_precompile(rev, 0x0e_address));
-        EXPECT_FALSE(is_precompile(rev, 0x0f_address));
+        EXPECT_FALSE(is_precompile(rev, 0x14_address));
+        EXPECT_FALSE(is_precompile(rev, 0x15_address));
+        EXPECT_FALSE(is_precompile(rev, 0x16_address));
+        EXPECT_FALSE(is_precompile(rev, 0x17_address));
     }
 }

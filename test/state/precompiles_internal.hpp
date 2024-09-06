@@ -29,6 +29,15 @@ PrecompileAnalysis ecmul_analyze(evmc::bytes_view input, evmc_revision rev) noex
 PrecompileAnalysis ecpairing_analyze(evmc::bytes_view input, evmc_revision rev) noexcept;
 PrecompileAnalysis blake2bf_analyze(evmc::bytes_view input, evmc_revision rev) noexcept;
 PrecompileAnalysis point_evaluation_analyze(evmc::bytes_view input, evmc_revision rev) noexcept;
+PrecompileAnalysis bls12_g1add_analyze(evmc::bytes_view input, evmc_revision rev) noexcept;
+PrecompileAnalysis bls12_g1mul_analyze(evmc::bytes_view input, evmc_revision rev) noexcept;
+PrecompileAnalysis bls12_g1msm_analyze(evmc::bytes_view input, evmc_revision rev) noexcept;
+PrecompileAnalysis bls12_g2add_analyze(evmc::bytes_view input, evmc_revision rev) noexcept;
+PrecompileAnalysis bls12_g2mul_analyze(evmc::bytes_view input, evmc_revision rev) noexcept;
+PrecompileAnalysis bls12_g2msm_analyze(evmc::bytes_view input, evmc_revision rev) noexcept;
+PrecompileAnalysis bls12_pairing_check_analyze(evmc::bytes_view input, evmc_revision rev) noexcept;
+PrecompileAnalysis bls12_map_fp_to_g1_analyze(evmc::bytes_view input, evmc_revision rev) noexcept;
+PrecompileAnalysis bls12_map_fp2_to_g2_analyze(evmc::bytes_view input, evmc_revision rev) noexcept;
 
 ExecutionResult ecrecover_execute(
     const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
@@ -43,5 +52,23 @@ ExecutionResult ecadd_execute(
 ExecutionResult ecmul_execute(
     const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
 ExecutionResult blake2bf_execute(
+    const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
+ExecutionResult bls12_g1add_execute(
+    const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
+ExecutionResult bls12_g1mul_execute(
+    const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
+ExecutionResult bls12_g1msm_execute(
+    const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
+ExecutionResult bls12_g2add_execute(
+    const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
+ExecutionResult bls12_g2mul_execute(
+    const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
+ExecutionResult bls12_g2msm_execute(
+    const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
+ExecutionResult bls12_pairing_check_execute(
+    const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
+ExecutionResult bls12_map_fp_to_g1_execute(
+    const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
+ExecutionResult bls12_map_fp2_to_g2_execute(
     const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
 }  // namespace evmone::state

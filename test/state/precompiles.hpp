@@ -22,11 +22,21 @@ enum class PrecompileId : uint8_t
     ecpairing = 0x08,
     blake2bf = 0x09,
     point_evaluation = 0x0a,
+    bls12_g1add = 0x0b,
+    bls12_g1mul = 0x0c,
+    bls12_g1msm = 0x0d,
+    bls12_g2add = 0x0e,
+    bls12_g2mul = 0x0f,
+    bls12_g2msm = 0x10,
+    bls12_pairing_check = 0x11,
+    bls12_map_fp_to_g1 = 0x12,
+    bls12_map_fp2_to_g2 = 0x13,
 
     since_byzantium = expmod,         ///< The first precompile introduced in Byzantium.
     since_istanbul = blake2bf,        ///< The first precompile introduced in Istanbul.
     since_cancun = point_evaluation,  ///< The first precompile introduced in Cancun.
-    latest = point_evaluation         ///< The latest introduced precompile (highest address).
+    since_prague = bls12_g1add,       ///< The first precompile introduced in Prague.
+    latest = bls12_map_fp2_to_g2      ///< The latest introduced precompile (highest address).
 };
 
 /// The total number of known precompiles ids, including 0.
