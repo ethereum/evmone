@@ -45,8 +45,7 @@ evmc_result execute(evmc_vm* /*unused*/, const evmc_host_interface* host, evmc_h
     }
     else
         analysis = analyze(rev, container);
-    auto state =
-        std::make_unique<AdvancedExecutionState>(*msg, rev, *host, ctx, container, bytes_view{});
+    auto state = std::make_unique<AdvancedExecutionState>(*msg, rev, *host, ctx, container);
     return execute(*state, analysis);
 }
 }  // namespace evmone::advanced

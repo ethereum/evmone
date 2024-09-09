@@ -292,6 +292,9 @@ evmc_result execute(
 {
     state.analysis.baseline = &analysis;  // Assign code analysis for instruction implementations.
 
+    // Init EOF
+    state.data = analysis.eof_header.get_data(container);
+
     const auto code = analysis.executable_code;
 
     const auto& cost_table = get_baseline_cost_table(state.rev, analysis.eof_header.version);
@@ -348,8 +351,7 @@ evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_co
     }
 
     const auto code_analysis = analyze(rev, container);
-    const auto data = code_analysis.eof_header.get_data(container);
-    auto state = std::make_unique<ExecutionState>(*msg, rev, *host, ctx, container, data);
+    auto state = std::make_unique<ExecutionState>(*msg, rev, *host, ctx, container);
     return execute(*vm, msg->gas, *state, code_analysis);
 }
 }  // namespace evmone::baseline
