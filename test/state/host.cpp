@@ -258,7 +258,7 @@ std::optional<evmc_message> Host::prepare_message(evmc_message msg) noexcept
 
                     msg.recipient = compute_create_address(msg.sender, sender_nonce);
                 }
-                // EOFCREATE or TXCREATE
+                // EOFCREATE
                 else
                 {
                     const bytes_view initcontainer{msg.code, msg.code_size};
@@ -345,7 +345,7 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
     {
         if (m_rev >= EVMC_PRAGUE)
         {
-            // Only EOFCREATE/TXCREATE/EOF-creation-tx is allowed to deploy code starting with EF.
+            // Only EOFCREATE/EOF-creation-tx is allowed to deploy code starting with EF.
             // It must be valid EOF, which was validated before execution.
             if (msg.kind != EVMC_EOFCREATE)
                 return evmc::Result{EVMC_CONTRACT_VALIDATION_FAILURE};

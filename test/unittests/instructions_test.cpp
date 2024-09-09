@@ -137,7 +137,6 @@ constexpr bool instruction_only_in_evmone(evmc_revision rev, Opcode op) noexcept
     case OP_EXTDELEGATECALL:
     case OP_EXTSTATICCALL:
     case OP_EOFCREATE:
-    case OP_TXCREATE:
     case OP_RETURNCONTRACT:
         return true;
     default:
