@@ -8,7 +8,7 @@ namespace evmone::test
 {
 json::json to_json(const TestState& state)
 {
-    json::json j;
+    json::json j = json::json({});
     for (const auto& [addr, acc] : state)
     {
         auto& j_acc = j[hex0x(addr)];
