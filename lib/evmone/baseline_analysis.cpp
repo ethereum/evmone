@@ -6,6 +6,7 @@
 #include "eof.hpp"
 #include "instructions.hpp"
 #include <memory>
+#include <ranges>
 
 namespace evmone::baseline
 {
@@ -16,8 +17,37 @@ static_assert(!std::is_copy_assignable_v<CodeAnalysis>);
 
 namespace
 {
+/// Heuristic that checks if the given opcode as the first instruction in a code
+/// terminates the execution for any reason.
+/// This heuristic may have false negatives.
+constexpr bool first_instruction_terminates(uint8_t op) noexcept
+{
+    return op < OP_ADDRESS || op > OP_PUSH32;
+}
+
+consteval bool proof_first_instruction_terminates(uint8_t op) noexcept
+{
+    if (!first_instruction_terminates(op))  // ignore if not positive
+        return true;
+
+    const auto& tr = instr::traits[op];
+    if (!tr.since.has_value())  // is undefined in all revisions
+        return true;
+    if (tr.is_terminating)  // terminates normally
+        return true;
+    if (tr.stack_height_required > 0)  // causes stack underflow
+        return true;
+    return false;
+}
+static_assert(std::ranges::all_of(
+    std::views::iota(uint8_t{0}) | std::views::take(256), proof_first_instruction_terminates));
+static_assert(first_instruction_terminates(0xEF));  // EOF is included.
+
 CodeAnalysis::JumpdestMap analyze_jumpdests(bytes_view code)
 {
+    if (code.empty() || first_instruction_terminates(code[0]))
+        return {};
+
     // To find if op is any PUSH opcode (OP_PUSH1 <= op <= OP_PUSH32)
     // it can be noticed that OP_PUSH32 is INT8_MAX (0x7f) therefore
     // static_cast<int8_t>(op) <= OP_PUSH32 is always true and can be skipped.
