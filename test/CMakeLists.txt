@@ -28,6 +28,7 @@ add_subdirectory(statetest)
 add_subdirectory(eoftest)
 add_subdirectory(t8n)
 add_subdirectory(unittests)
+add_subdirectory(testtool)
 
 set(targets evmone-bench evmone-bench-internal evmone-eofparse evmone-blockchaintest evmone-precompiles-bench evmone-state evmone-statetest evmone-eoftest evmone-t8n evmone-unittests)
 
