@@ -220,7 +220,9 @@ public:
         status = EVMC_SUCCESS;
         output_offset = 0;
         output_size = 0;
+        deploy_container = {};
         m_tx = {};
+        call_stack = {};
     }
 
     [[nodiscard]] bool in_static_mode() const { return (msg->flags & EVMC_STATIC) != 0; }
