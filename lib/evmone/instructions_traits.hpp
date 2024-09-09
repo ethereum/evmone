@@ -227,7 +227,7 @@ struct Traits
     /// available.
     std::optional<evmc_revision> since;
 
-    /// The EVM revision in which the instruction has been valid in EOF. For instructions invalid
+    /// The EVM revision in which the instruction has become valid in EOF. For instructions invalid
     /// in EOF the value is not available.
     std::optional<evmc_revision> eof_since;
 };
