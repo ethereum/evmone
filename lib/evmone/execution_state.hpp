@@ -232,25 +232,5 @@ public:
             m_tx = host.get_tx_context();
         return m_tx;
     }
-
-    /// Get initcode by its hash from transaction initcodes.
-    ///
-    /// Returns empty bytes_view if no such initcode was found.
-    [[nodiscard]] bytes_view get_tx_initcode_by_hash(const evmc_bytes32& hash) noexcept
-    {
-        if (!m_initcodes.has_value())
-        {
-            m_initcodes.emplace();
-            const auto& tx_context = get_tx_context();
-            for (size_t i = 0; i < tx_context.initcodes_count; ++i)
-            {
-                const auto& initcode = tx_context.initcodes[i];
-                m_initcodes->insert({initcode.hash, {initcode.code, initcode.code_size}});
-            }
-        }
-
-        const auto it = m_initcodes->find(hash);
-        return it != m_initcodes->end() ? it->second : bytes_view{};
-    }
 };
 }  // namespace evmone
