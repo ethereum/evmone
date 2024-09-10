@@ -205,8 +205,9 @@ void state_transition::export_state_test(
     jtx["gasLimit"][0] = hex0x(tx.gas_limit);
     jtx["value"][0] = hex0x(tx.value);
 
+    // Force `accessLists` output even if empty.
     if (tx.type >= Transaction::Type::access_list)
-        jtx["accessLists"][0] = json::json::array({});
+        jtx["accessLists"][0] = json::json::array();
 
     if (!tx.access_list.empty())
     {
