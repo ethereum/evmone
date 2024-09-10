@@ -559,7 +559,25 @@ std::variant<TransactionReceipt, std::error_code> transition(const StateView& st
     if (rev >= EVMC_SHANGHAI)
         host.access_account(block.coinbase);
 
-    const auto result = host.call(build_message(tx, execution_gas_limit, rev));
+    auto message = build_message(tx, execution_gas_limit, rev);
+    if (tx.to.has_value())
+    {
+        const auto* to_ptr = state.find(*tx.to);
+        if (to_ptr != nullptr && is_code_delegated(to_ptr->code))
+        {
+            assert(rev >= EVMC_PRAGUE);
+            assert(to_ptr->code.size() ==
+                   std::size(DELEGATION_MAGIC) + std::size(message.code_address.bytes));
+
+            // Copy delegate address from to_ptr->code to message.code_address.
+            std::copy_n(&to_ptr->code[std::size(DELEGATION_MAGIC)],
+                std::size(message.code_address.bytes), message.code_address.bytes);
+            message.flags |= EVMC_DELEGATED;
+            host.access_account(message.code_address);
+        }
+    }
+
+    const auto result = host.call(message);
 
     auto gas_used = tx.gas_limit - result.gas_left;
 
