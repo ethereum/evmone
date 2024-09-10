@@ -6,6 +6,7 @@
 #include "precompiles_internal.hpp"
 #include "precompiles_stubs.hpp"
 #include <evmone_precompiles/blake2b.hpp>
+#include <evmone_precompiles/bls.hpp>
 #include <evmone_precompiles/bn254.hpp>
 #include <evmone_precompiles/ripemd160.hpp>
 #include <evmone_precompiles/secp256k1.hpp>
@@ -155,8 +156,8 @@ PrecompileAnalysis point_evaluation_analyze(bytes_view, evmc_revision) noexcept
 
 PrecompileAnalysis bls12_g1add_analyze(bytes_view, evmc_revision) noexcept
 {
-    // TODO: Implement
-    return {GasCostMax, 0};
+    static constexpr auto BLS12_G1ADD_PRECOMPILE_GAS = 500;
+    return {BLS12_G1ADD_PRECOMPILE_GAS, 128};
 }
 
 PrecompileAnalysis bls12_g1mul_analyze(bytes_view, evmc_revision) noexcept
@@ -346,9 +347,18 @@ ExecutionResult blake2bf_execute(const uint8_t* input, [[maybe_unused]] size_t i
     return {EVMC_SUCCESS, sizeof(h)};
 }
 
-ExecutionResult bls12_g1add_execute(const uint8_t*, size_t, uint8_t*, size_t) noexcept
+ExecutionResult bls12_g1add_execute(const uint8_t* input, size_t input_size, uint8_t* output,
+    [[maybe_unused]] size_t output_size) noexcept
 {
-    return {EVMC_PRECOMPILE_FAILURE, 0};
+    if (input_size != 256)
+        return {EVMC_PRECOMPILE_FAILURE, 0};
+
+    assert(output_size == 128);
+
+    if (!crypto::bls::g1_add(output, &output[64], input, &input[64], &input[128], &input[192]))
+        return {EVMC_PRECOMPILE_FAILURE, 0};
+
+    return {EVMC_SUCCESS, 128};
 }
 
 ExecutionResult bls12_g1mul_execute(const uint8_t*, size_t, uint8_t*, size_t) noexcept

@@ -371,7 +371,9 @@ jobs:
           # Tests for in-development EVM revision currently passing.
           working_directory: ~/spec-tests/fixtures/state_tests
           command: >
-            ~/build/bin/evmone-statetest prague/eip2537_bls_12_381_precompiles/bls12_precompiles_before_fork
+            ~/build/bin/evmone-statetest 
+            prague/eip2537_bls_12_381_precompiles/bls12_precompiles_before_fork
+            prague/eip2537_bls_12_381_precompiles/bls12_g1add
       - collect_coverage_gcc
       - upload_coverage:
           flags: execution_spec_tests
