@@ -15,6 +15,9 @@ constexpr auto SYSTEM_ADDRESS = 0xfffffffffffffffffffffffffffffffffffffffe_addre
 /// The address of the system contract storing the root hashes of beacon chain blocks (EIP-4788).
 constexpr auto BEACON_ROOTS_ADDRESS = 0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02_address;
 
+/// The address of the system contract storing historical block hashes (EIP-2935).
+constexpr auto HISTORY_STORAGE_ADDRESS = 0x0aae40965e6800cd9b1f4b05ff21581047e3f91e_address;
+
 struct BlockInfo;
 class State;
 

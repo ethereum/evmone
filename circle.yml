@@ -371,9 +371,16 @@ jobs:
           # Tests for in-development EVM revision currently passing.
           working_directory: ~/spec-tests/fixtures/state_tests
           command: >
-            ~/build/bin/evmone-statetest 
+            ~/build/bin/evmone-statetest
             prague/eip2537_bls_12_381_precompiles/bls12_precompiles_before_fork
             prague/eip2537_bls_12_381_precompiles/bls12_g1add
+      - run:
+          name: "Execution spec tests (develop, blockchain_tests)"
+          # Tests for in-development EVM revision currently passing.
+          working_directory: ~/spec-tests/fixtures/blockchain_tests
+          command: >
+            ~/build/bin/evmone-blockchaintest
+            prague/eip2935_historical_block_hashes_from_state
       - collect_coverage_gcc
       - upload_coverage:
           flags: execution_spec_tests
