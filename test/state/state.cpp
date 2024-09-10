@@ -16,8 +16,6 @@ namespace evmone::state
 {
 namespace
 {
-constexpr auto MAX_INITCODE_COUNT = 256;
-
 inline constexpr int64_t num_words(size_t size_in_bytes) noexcept
 {
     return static_cast<int64_t>((size_in_bytes + 31) / 32);
@@ -44,14 +42,6 @@ int64_t compute_access_list_cost(const AccessList& access_list) noexcept
     return cost;
 }
 
-int64_t compute_initcode_list_cost(evmc_revision rev, std::span<const bytes> initcodes) noexcept
-{
-    int64_t cost = 0;
-    for (const auto& initcode : initcodes)
-        cost += compute_tx_data_cost(rev, initcode);
-    return cost;
-}
-
 int64_t compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& tx) noexcept
 {
     static constexpr auto call_tx_cost = 21000;
@@ -62,7 +52,7 @@ int64_t compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& tx) noex
         is_create && rev >= EVMC_SHANGHAI ? initcode_word_cost * num_words(tx.data.size()) : 0;
     const auto tx_cost = is_create && rev >= EVMC_HOMESTEAD ? create_tx_cost : call_tx_cost;
     return tx_cost + compute_tx_data_cost(rev, tx.data) + compute_access_list_cost(tx.access_list) +
-           compute_initcode_list_cost(rev, tx.initcodes) + initcode_cost;
+           initcode_cost;
 }
 
 evmc_message build_message(
@@ -283,28 +273,12 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
             return make_error_code(BLOB_GAS_LIMIT_EXCEEDED);
         break;
 
-    case Transaction::Type::initcodes:
-        if (rev < EVMC_OSAKA)
-            return make_error_code(TX_TYPE_NOT_SUPPORTED);
-        if (tx.initcodes.size() > MAX_INITCODE_COUNT)
-            return make_error_code(INIT_CODE_COUNT_LIMIT_EXCEEDED);
-        if (tx.initcodes.empty())
-            return make_error_code(INIT_CODE_COUNT_ZERO);
-        if (std::any_of(tx.initcodes.begin(), tx.initcodes.end(),
-                [](const bytes& v) { return v.size() > MAX_INITCODE_SIZE; }))
-            return make_error_code(INIT_CODE_SIZE_LIMIT_EXCEEDED);
-        if (std::any_of(
-                tx.initcodes.begin(), tx.initcodes.end(), [](const bytes& v) { return v.empty(); }))
-            return make_error_code(INIT_CODE_EMPTY);
-        break;
-
     default:;
     }
 
     switch (tx.type)
     {
     case Transaction::Type::blob:
-    case Transaction::Type::initcodes:
     case Transaction::Type::eip1559:
         if (rev < EVMC_LONDON)
             return make_error_code(TX_TYPE_NOT_SUPPORTED);
@@ -620,12 +594,6 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
         return "SenderNotEOA";
     case INIT_CODE_SIZE_LIMIT_EXCEEDED:
         return "TR_InitCodeLimitExceeded";
-    case INIT_CODE_EMPTY:
-        return "TR_InitCodeEmpty";
-    case INIT_CODE_COUNT_LIMIT_EXCEEDED:
-        return "TR_InitCodeCountLimitExceeded";
-    case INIT_CODE_COUNT_ZERO:
-        return "TR_InitCodeCountZero";
     case CREATE_BLOB_TX:
         return "TR_BLOBCREATE";
     case EMPTY_BLOB_HASHES_LIST:

@@ -1198,20 +1198,3 @@ TEST_F(state_transition, creation_tx_invalid_eof_version)
     expect.status = EVMC_FAILURE;
     expect.gas_used = 53516;
 }
-
-TEST_F(state_transition, initcode_transaction_before_prague)
-{
-    rev = EVMC_CANCUN;
-
-    const auto deploy_container = eof_bytecode(bytecode(OP_INVALID));
-
-    const auto init_code = returncontract(0, 0, 0);
-    const bytecode init_container = eof_bytecode(init_code, 2).container(deploy_container);
-
-    tx.type = Transaction::Type::initcodes;
-    tx.initcodes.assign(257, init_container);
-
-    tx.to = To;
-
-    expect.tx_error = TX_TYPE_NOT_SUPPORTED;
-}

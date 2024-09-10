@@ -175,7 +175,6 @@ public:
 
 private:
     evmc_tx_context m_tx = {};
-    std::optional<std::unordered_map<evmc::bytes32, bytes_view>> m_initcodes;
 
 public:
     /// Pointer to code analysis.
