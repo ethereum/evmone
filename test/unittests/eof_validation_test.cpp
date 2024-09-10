@@ -1223,7 +1223,6 @@ TEST_F(eof_validation, max_nested_containers_eofcreate_returncontract)
 // | ---------------------------- | ------ | ------ | ------ | -------------- |
 // | top-level initcode           | -      | -      | +      | +              |
 // | EOFCREATE                    | -      | -      | +      | +              |
-// | TXCREATE                     | -      | -      | +      | +              |
 // | top-level runtime            | +      | +      | +      | -              |
 // | RETURNCONTRACT               | +      | +      | +      | -              |
 // | EOFCREATE and RETURNCONTRACT | -      | -      | +      | -              |

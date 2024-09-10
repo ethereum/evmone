@@ -331,12 +331,6 @@ static void from_json_tx_common(const json::json& j, state::Transaction& o)
         for (const auto& hash : *it)
             o.blob_hashes.push_back(from_json<bytes32>(hash));
     }
-    else if (const auto it_initcodes = j.find("initcodes"); it_initcodes != j.end())
-    {
-        o.type = state::Transaction::Type::initcodes;
-        for (const auto& initcode : *it_initcodes)
-            o.initcodes.push_back(from_json<bytes>(initcode));
-    }
 }
 
 template <>
