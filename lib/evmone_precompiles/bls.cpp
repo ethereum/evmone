@@ -68,4 +68,28 @@ void store_result(uint8_t _rx[64], uint8_t _ry[64], const blst_p1* out) noexcept
 
     return true;
 }
+
+[[nodiscard]] bool g1_mul(uint8_t _rx[64], uint8_t _ry[64], const uint8_t _x[64],
+    const uint8_t _y[64], const uint8_t _c[32]) noexcept
+{
+    blst_scalar scalar;
+    blst_scalar_from_bendian(&scalar, _c);
+
+    const auto p_affine = validate_point(_x, _y);
+    if (!p_affine.has_value())
+        return false;
+
+    blst_p1 p;
+    blst_p1_from_affine(&p, &*p_affine);
+
+    if (!blst_p1_in_g1(&p))
+        return false;
+
+    blst_p1 out;
+    blst_p1_mult(&out, &p, scalar.b, 256);
+
+    store_result(_rx, _ry, &out);
+
+    return true;
+}
 }  // namespace evmone::crypto::bls
