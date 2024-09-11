@@ -393,7 +393,7 @@ jobs:
     steps:
       - build
       - download_execution_spec_tests:
-          release: eip7692@v1.0.8
+          release: eip7692@v1.0.9
           fixtures_suffix: eip7692
       - run:
           name: "EOF pre-release execution spec tests (state_tests)"
