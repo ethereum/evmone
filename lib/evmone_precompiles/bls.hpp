@@ -16,4 +16,11 @@ inline constexpr auto BLS_FIELD_MODULUS =
 [[nodiscard]] bool g1_add(uint8_t _rx[64], uint8_t _ry[64], const uint8_t _x0[64],
     const uint8_t _y0[64], const uint8_t _x1[64], const uint8_t _y1[64]) noexcept;
 
+/// Scalar multiplication in BLS12-381 curve G1 subgroup.
+///
+/// Computes [c]P for a point in affine coordinate on the BLS12-381 curve, performs subgroup check
+/// according to spec https://eips.ethereum.org/EIPS/eip-2537#abi-for-g1-multiplication
+[[nodiscard]] bool g1_mul(uint8_t _rx[64], uint8_t _ry[64], const uint8_t _x[64],
+    const uint8_t _y[64], const uint8_t _c[32]) noexcept;
+
 }  // namespace evmone::crypto::bls
