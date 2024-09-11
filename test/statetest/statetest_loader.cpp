@@ -273,6 +273,7 @@ template <>
 TestState from_json<TestState>(const json::json& j)
 {
     TestState o;
+    assert(j.is_object());
     for (const auto& [j_addr, j_acc] : j.items())
     {
         auto& acc =
