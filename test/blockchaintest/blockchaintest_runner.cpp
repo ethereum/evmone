@@ -116,6 +116,22 @@ std::string print_state(const TestState& s)
 
     return out.str();
 }
+
+/// How many first/last state hashes to check in the series of block for the "partial" check.
+constexpr size_t PARTIAL_STATE_HASH_CHECK_MARGIN = 5;
+
+/// List of test names for which only perform the partial state root hash checks.
+/// For tests on the list, only check state hashes for first M (early problems)
+/// and last M (final check of the chain) blocks,
+/// where M is defined by PARTIAL_STATE_HASH_CHECK_MARGIN.
+/// Otherwise, for very long blockchain test we spend a lot of time in MPT hashing
+/// because the implementation of it is very simplistic: the trie is not updated
+/// along the state changes but a new trie is build from scratch for every block.
+constexpr std::array PARTIAL_STATE_HASH_CHECK_TESTS{
+    "a test name",
+};
+
+
 }  // namespace
 
 void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
@@ -123,6 +139,10 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
     for (size_t case_index = 0; case_index != tests.size(); ++case_index)
     {
         const auto& c = tests[case_index];
+
+        const bool partial_state_hash_check = std::ranges::find(PARTIAL_STATE_HASH_CHECK_TESTS,
+                                                  c.name) != PARTIAL_STATE_HASH_CHECK_TESTS.end();
+
         SCOPED_TRACE(std::string{evmc::to_string(c.rev.get_revision(0))} + '/' +
                      std::to_string(case_index) + '/' + c.name);
 
@@ -142,8 +162,9 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
         std::unordered_map<int64_t, hash256> known_block_hashes{
             {c.genesis_block_header.block_number, c.genesis_block_header.hash}};
 
-        for (const auto& test_block : c.test_blocks)
+        for (size_t block_idx = 0; block_idx != c.test_blocks.size(); ++block_idx)
         {
+            const auto& test_block = c.test_blocks[block_idx];
             auto bi = test_block.block_info;
             bi.known_block_hashes = known_block_hashes;
 
@@ -158,8 +179,12 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
             SCOPED_TRACE(std::string{evmc::to_string(rev)} + '/' + std::to_string(case_index) +
                          '/' + c.name + '/' + std::to_string(test_block.block_info.number));
 
-            EXPECT_EQ(
-                state::mpt_hash(TestState{state}), test_block.expected_block_header.state_root);
+            if (!partial_state_hash_check || block_idx < PARTIAL_STATE_HASH_CHECK_MARGIN ||
+                block_idx >= c.test_blocks.size() - PARTIAL_STATE_HASH_CHECK_MARGIN)
+            {
+                EXPECT_EQ(
+                    state::mpt_hash(TestState{state}), test_block.expected_block_header.state_root);
+            }
 
             if (rev >= EVMC_SHANGHAI)
             {
