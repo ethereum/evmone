@@ -55,6 +55,9 @@ public:
     /// Reference to the EOF header.
     [[nodiscard]] const EOF1Header& eof_header() const noexcept { return m_eof_header; }
 
+    /// Reference to the EOF data section. May be empty.
+    [[nodiscard]] bytes_view eof_data() const noexcept { return m_eof_header.get_data(m_raw_code); }
+
     /// Check if given position is valid jump destination. Use only for legacy code.
     [[nodiscard]] bool check_jumpdest(uint64_t position) const noexcept
     {

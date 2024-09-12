@@ -349,8 +349,7 @@ evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_co
     }
 
     const auto code_analysis = analyze(container, eof_enabled);
-    const auto data = code_analysis.eof_header().get_data(container);
-    auto state = std::make_unique<ExecutionState>(*msg, rev, *host, ctx, container, data);
+    auto state = std::make_unique<ExecutionState>(*msg, rev, *host, ctx, container);
     return execute(*vm, msg->gas, *state, code_analysis);
 }
 }  // namespace evmone::baseline
