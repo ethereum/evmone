@@ -40,9 +40,9 @@ inline advanced::AdvancedCodeAnalysis advanced_analyse(evmc_revision rev, bytes_
     return advanced::analyze(rev, code);
 }
 
-inline baseline::CodeAnalysis baseline_analyse(evmc_revision rev, bytes_view code)
+inline baseline::CodeAnalysis baseline_analyse(evmc_revision /*rev*/, bytes_view code)
 {
-    return baseline::analyze(rev, code);
+    return baseline::analyze(code, true);  // Always enable EOF.
 }
 
 inline FakeCodeAnalysis evmc_analyse(evmc_revision /*rev*/, bytes_view /*code*/)
@@ -55,7 +55,7 @@ inline evmc::Result advanced_execute(evmc::VM& /*vm*/, advanced::AdvancedExecuti
     const advanced::AdvancedCodeAnalysis& analysis, const evmc_message& msg, evmc_revision rev,
     evmc::Host& host, bytes_view code)
 {
-    exec_state.reset(msg, rev, host.get_interface(), host.to_context(), code, {});
+    exec_state.reset(msg, rev, host.get_interface(), host.to_context(), code);
     return evmc::Result{execute(exec_state, analysis)};
 }
 
@@ -64,7 +64,7 @@ inline evmc::Result baseline_execute(evmc::VM& c_vm, ExecutionState& exec_state,
     evmc::Host& host, bytes_view code)
 {
     const auto& vm = *static_cast<evmone::VM*>(c_vm.get_raw_pointer());
-    exec_state.reset(msg, rev, host.get_interface(), host.to_context(), code, {});
+    exec_state.reset(msg, rev, host.get_interface(), host.to_context(), code);
     return evmc::Result{baseline::execute(vm, msg.gas, exec_state, analysis)};
 }
 

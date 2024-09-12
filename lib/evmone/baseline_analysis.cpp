@@ -68,14 +68,14 @@ CodeAnalysis analyze_eof1(bytes_view container)
     const auto executable_code =
         container.substr(code_sections_offset, code_sections_end - code_sections_offset);
 
-    return CodeAnalysis{executable_code, std::move(header)};
+    return CodeAnalysis{container, executable_code, std::move(header)};
 }
 }  // namespace
 
-CodeAnalysis analyze(evmc_revision rev, bytes_view code)
+CodeAnalysis analyze(bytes_view code, bool eof_enabled)
 {
-    if (rev < EVMC_PRAGUE || !is_eof_container(code))
-        return analyze_legacy(code);
-    return analyze_eof1(code);
+    if (eof_enabled && is_eof_container(code))
+        return analyze_eof1(code);
+    return analyze_legacy(code);
 }
 }  // namespace evmone::baseline

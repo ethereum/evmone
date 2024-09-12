@@ -741,14 +741,14 @@ Result sstore(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept;
 /// Internal jump implementation for JUMP/JUMPI instructions.
 inline code_iterator jump_impl(ExecutionState& state, const uint256& dst) noexcept
 {
-    const auto& jumpdest_map = state.analysis.baseline->jumpdest_map;
-    if (dst >= jumpdest_map.size() || !jumpdest_map[static_cast<size_t>(dst)])
+    const auto hi_part_is_nonzero = (dst[3] | dst[2] | dst[1]) != 0;
+    if (hi_part_is_nonzero || !state.analysis.baseline->check_jumpdest(dst[0])) [[unlikely]]
     {
         state.status = EVMC_BAD_JUMP_DESTINATION;
         return nullptr;
     }
 
-    return &state.analysis.baseline->executable_code[static_cast<size_t>(dst)];
+    return &state.analysis.baseline->executable_code()[static_cast<size_t>(dst[0])];
 }
 
 /// JUMP instruction implementation using baseline::CodeAnalysis.
@@ -801,7 +801,7 @@ inline code_iterator rjumpv(StackTop stack, ExecutionState& /*state*/, code_iter
 
 inline code_iterator pc(StackTop stack, ExecutionState& state, code_iterator pos) noexcept
 {
-    stack.push(static_cast<uint64_t>(pos - state.analysis.baseline->executable_code.data()));
+    stack.push(static_cast<uint64_t>(pos - state.analysis.baseline->executable_code().data()));
     return pos + 1;
 }
 
@@ -985,38 +985,40 @@ inline Result mcopy(StackTop stack, int64_t gas_left, ExecutionState& state) noe
 
 inline void dataload(StackTop stack, ExecutionState& state) noexcept
 {
+    const auto data = state.analysis.baseline->eof_data();
     auto& index = stack.top();
 
-    if (state.data.size() < index)
+    if (data.size() < index)
         index = 0;
     else
     {
         const auto begin = static_cast<size_t>(index);
-        const auto end = std::min(begin + 32, state.data.size());
+        const auto end = std::min(begin + 32, data.size());
 
-        uint8_t data[32] = {};
+        uint8_t d[32] = {};
         for (size_t i = 0; i < (end - begin); ++i)
-            data[i] = state.data[begin + i];
+            d[i] = data[begin + i];
 
-        index = intx::be::unsafe::load<uint256>(data);
+        index = intx::be::unsafe::load<uint256>(d);
     }
 }
 
 inline void datasize(StackTop stack, ExecutionState& state) noexcept
 {
-    stack.push(state.data.size());
+    stack.push(state.analysis.baseline->eof_data().size());
 }
 
 inline code_iterator dataloadn(StackTop stack, ExecutionState& state, code_iterator pos) noexcept
 {
     const auto index = read_uint16_be(&pos[1]);
 
-    stack.push(intx::be::unsafe::load<uint256>(&state.data[index]));
+    stack.push(intx::be::unsafe::load<uint256>(&state.analysis.baseline->eof_data()[index]));
     return pos + 3;
 }
 
 inline Result datacopy(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
+    const auto data = state.analysis.baseline->eof_data();
     const auto& mem_index = stack.pop();
     const auto& data_index = stack.pop();
     const auto& size = stack.pop();
@@ -1026,16 +1028,15 @@ inline Result datacopy(StackTop stack, int64_t gas_left, ExecutionState& state) 
 
     const auto dst = static_cast<size_t>(mem_index);
     // TODO why?
-    const auto src =
-        state.data.size() < data_index ? state.data.size() : static_cast<size_t>(data_index);
+    const auto src = data.size() < data_index ? data.size() : static_cast<size_t>(data_index);
     const auto s = static_cast<size_t>(size);
-    const auto copy_size = std::min(s, state.data.size() - src);
+    const auto copy_size = std::min(s, data.size() - src);
 
     if (const auto cost = copy_cost(s); (gas_left -= cost) < 0)
         return {EVMC_OUT_OF_GAS, gas_left};
 
     if (copy_size > 0)
-        std::memcpy(&state.memory[dst], &state.data[src], copy_size);
+        std::memcpy(&state.memory[dst], &data[src], copy_size);
 
     if (s - copy_size > 0)
         std::memset(&state.memory[dst + copy_size], 0, s - copy_size);
@@ -1098,7 +1099,7 @@ Result eofcreate(
 inline code_iterator callf(StackTop stack, ExecutionState& state, code_iterator pos) noexcept
 {
     const auto index = read_uint16_be(&pos[1]);
-    const auto& header = state.analysis.baseline->eof_header;
+    const auto& header = state.analysis.baseline->eof_header();
     const auto stack_size = &stack.top() - state.stack_space.bottom();
 
     const auto callee_required_stack_size =
@@ -1118,8 +1119,7 @@ inline code_iterator callf(StackTop stack, ExecutionState& state, code_iterator 
     state.call_stack.push_back(pos + 3);
 
     const auto offset = header.code_offsets[index] - header.code_offsets[0];
-    auto code = state.analysis.baseline->executable_code;
-    return code.data() + offset;
+    return state.analysis.baseline->executable_code().data() + offset;
 }
 
 inline code_iterator retf(StackTop /*stack*/, ExecutionState& state, code_iterator /*pos*/) noexcept
@@ -1132,7 +1132,7 @@ inline code_iterator retf(StackTop /*stack*/, ExecutionState& state, code_iterat
 inline code_iterator jumpf(StackTop stack, ExecutionState& state, code_iterator pos) noexcept
 {
     const auto index = read_uint16_be(&pos[1]);
-    const auto& header = state.analysis.baseline->eof_header;
+    const auto& header = state.analysis.baseline->eof_header();
     const auto stack_size = &stack.top() - state.stack_space.bottom();
 
     const auto callee_required_stack_size =
@@ -1144,8 +1144,7 @@ inline code_iterator jumpf(StackTop stack, ExecutionState& state, code_iterator 
     }
 
     const auto offset = header.code_offsets[index] - header.code_offsets[0];
-    const auto code = state.analysis.baseline->executable_code;
-    return code.data() + offset;
+    return state.analysis.baseline->executable_code().data() + offset;
 }
 
 template <evmc_status_code StatusCode>

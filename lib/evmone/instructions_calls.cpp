@@ -351,7 +351,7 @@ Result eofcreate(
     const auto initcontainer_index = pos[1];
     pos += 2;
     const auto& container = state.original_code;
-    const auto& eof_header = state.analysis.baseline->eof_header;
+    const auto& eof_header = state.analysis.baseline->eof_header();
     const auto initcontainer = eof_header.get_container(container, initcontainer_index);
 
     // Charge for initcode hashing.
