@@ -373,6 +373,7 @@ jobs:
           command: >
             ~/build/bin/evmone-statetest
             prague/eip2537_bls_12_381_precompiles
+            prague/eip7702_set_code_tx
       - run:
           name: "Execution spec tests (develop, blockchain_tests)"
           # Tests for in-development EVM revision currently passing.
