@@ -174,8 +174,8 @@ PrecompileAnalysis bls12_g1msm_analyze(bytes_view, evmc_revision) noexcept
 
 PrecompileAnalysis bls12_g2add_analyze(bytes_view, evmc_revision) noexcept
 {
-    // TODO: Implement
-    return {GasCostMax, 0};
+    static constexpr auto BLS12_G2ADD_PRECOMPILE_GAS = 800;
+    return {BLS12_G2ADD_PRECOMPILE_GAS, 256};
 }
 
 PrecompileAnalysis bls12_g2mul_analyze(bytes_view, evmc_revision) noexcept
@@ -380,9 +380,18 @@ ExecutionResult bls12_g1msm_execute(const uint8_t*, size_t, uint8_t*, size_t) no
     return {EVMC_PRECOMPILE_FAILURE, 0};
 }
 
-ExecutionResult bls12_g2add_execute(const uint8_t*, size_t, uint8_t*, size_t) noexcept
+ExecutionResult bls12_g2add_execute(const uint8_t* input, size_t input_size, uint8_t* output,
+    [[maybe_unused]] size_t output_size) noexcept
 {
-    return {EVMC_PRECOMPILE_FAILURE, 0};
+    if (input_size != 512)
+        return {EVMC_PRECOMPILE_FAILURE, 0};
+
+    assert(output_size == 256);
+
+    if (!crypto::bls::g2_add(output, &output[128], input, &input[128], &input[256], &input[384]))
+        return {EVMC_PRECOMPILE_FAILURE, 0};
+
+    return {EVMC_SUCCESS, 256};
 }
 
 ExecutionResult bls12_g2mul_execute(const uint8_t*, size_t, uint8_t*, size_t) noexcept
