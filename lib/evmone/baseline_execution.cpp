@@ -287,12 +287,16 @@ TARGET_OP_UNDEFINED:
 #endif
 }  // namespace
 
-evmc_result execute(
-    const VM& vm, int64_t gas, ExecutionState& state, const CodeAnalysis& analysis) noexcept
+evmc_result execute(VM& vm, const evmc_host_interface& host, evmc_host_context* ctx,
+    evmc_revision rev, const evmc_message& msg, const CodeAnalysis& analysis) noexcept
 {
-    state.analysis.baseline = &analysis;  // Assign code analysis for instruction implementations.
-
     const auto code = analysis.executable_code();
+    auto gas = msg.gas;
+
+    auto& state = vm.get_execution_state(static_cast<size_t>(msg.depth));
+    state.reset(msg, rev, host, ctx, analysis.raw_code());
+
+    state.analysis.baseline = &analysis;  // Assign code analysis for instruction implementations.
 
     const auto& cost_table = get_baseline_cost_table(state.rev, analysis.eof_header().version);
 
@@ -349,7 +353,6 @@ evmc_result execute(evmc_vm* c_vm, const evmc_host_interface* host, evmc_host_co
     }
 
     const auto code_analysis = analyze(container, eof_enabled);
-    auto state = std::make_unique<ExecutionState>(*msg, rev, *host, ctx, container);
-    return execute(*vm, msg->gas, *state, code_analysis);
+    return execute(*vm, *host, ctx, rev, *msg, code_analysis);
 }
 }  // namespace evmone::baseline

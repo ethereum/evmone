@@ -3,8 +3,10 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
+#include "execution_state.hpp"
 #include "tracing.hpp"
 #include <evmc/evmc.h>
+#include <vector>
 
 #if defined(_MSC_VER) && !defined(__clang__)
 #define EVMONE_CGOTO_SUPPORTED 0
@@ -22,10 +24,13 @@ public:
     bool validate_eof = false;
 
 private:
+    std::vector<ExecutionState> m_execution_states;
     std::unique_ptr<Tracer> m_first_tracer;
 
 public:
-    inline constexpr VM() noexcept;
+    VM() noexcept;
+
+    [[nodiscard]] ExecutionState& get_execution_state(size_t depth) noexcept;
 
     void add_tracer(std::unique_ptr<Tracer> tracer) noexcept
     {

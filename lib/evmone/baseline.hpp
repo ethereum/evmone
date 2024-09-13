@@ -80,9 +80,9 @@ EVMC_EXPORT CodeAnalysis analyze(bytes_view code, bool eof_enabled);
 evmc_result execute(evmc_vm* vm, const evmc_host_interface* host, evmc_host_context* ctx,
     evmc_revision rev, const evmc_message* msg, const uint8_t* code, size_t code_size) noexcept;
 
-/// Executes in Baseline interpreter on the given external and initialized state.
-EVMC_EXPORT evmc_result execute(
-    const VM&, int64_t gas_limit, ExecutionState& state, const CodeAnalysis& analysis) noexcept;
+/// Executes in Baseline interpreter with the pre-processed code.
+EVMC_EXPORT evmc_result execute(VM&, const evmc_host_interface& host, evmc_host_context* ctx,
+    evmc_revision rev, const evmc_message& msg, const CodeAnalysis& analysis) noexcept;
 
 }  // namespace baseline
 }  // namespace evmone
