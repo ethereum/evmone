@@ -31,4 +31,12 @@ inline constexpr auto BLS_FIELD_MODULUS =
 [[nodiscard]] bool g2_add(uint8_t _rx[128], uint8_t _ry[128], const uint8_t _x0[128],
     const uint8_t _y0[128], const uint8_t _x1[128], const uint8_t _y1[128]) noexcept;
 
+/// Scalar multiplication in BLS12-381 curve group over G2 extension field
+///
+/// Computes [c]P for a point in affine coordinate on the BLS12-381 curve over G2 extension
+/// field, performs subgroup check according to spec
+/// https://eips.ethereum.org/EIPS/eip-2537#abi-for-g2-multiplication
+[[nodiscard]] bool g2_mul(uint8_t _rx[128], uint8_t _ry[128], const uint8_t _x[128],
+    const uint8_t _y[128], const uint8_t _c[32]) noexcept;
+
 }  // namespace evmone::crypto::bls
