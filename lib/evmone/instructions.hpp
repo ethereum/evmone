@@ -1174,9 +1174,8 @@ inline TermResult returncontract(
         return {EVMC_OUT_OF_GAS, gas_left};
 
     const auto deploy_container_index = size_t{pos[1]};
-
-    const auto header = read_valid_eof1_header(state.original_code);
-    bytes deploy_container{header.get_container(state.original_code, deploy_container_index)};
+    bytes deploy_container{state.analysis.baseline->eof_header().get_container(
+        state.original_code, deploy_container_index)};
 
     // Append (offset, size) to data section
     if (!append_data_section(deploy_container,
