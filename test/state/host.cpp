@@ -376,26 +376,29 @@ evmc::Result Host::execute_message(const evmc_message& msg) noexcept
             m_state.journal_create(msg.recipient, exists);
     }
 
-    assert(msg.kind != EVMC_CALL || evmc::address{msg.recipient} == msg.code_address);
-    auto* const dst_acc =
-        (msg.kind == EVMC_CALL) ? &m_state.touch(msg.recipient) : m_state.find(msg.code_address);
-
-    if (msg.kind == EVMC_CALL && !evmc::is_zero(msg.value))
+    if (msg.kind == EVMC_CALL)
     {
-        // Transfer value: sender → recipient.
-        // The sender's balance is already checked therefore the sender account must exist.
-        const auto value = intx::be::load<intx::uint256>(msg.value);
-        assert(m_state.get(msg.sender).balance >= value);
-        m_state.journal_balance_change(msg.sender, m_state.get(msg.sender).balance);
-        m_state.journal_balance_change(msg.recipient, dst_acc->balance);
-        m_state.get(msg.sender).balance -= value;
-        dst_acc->balance += value;
+        auto& dst_acc = m_state.touch(msg.recipient);
+
+        if (!evmc::is_zero(msg.value))
+        {
+            // Transfer value: sender → recipient.
+            // The sender's balance is already checked therefore the sender account must exist.
+            const auto value = intx::be::load<intx::uint256>(msg.value);
+            assert(m_state.get(msg.sender).balance >= value);
+            m_state.journal_balance_change(msg.sender, m_state.get(msg.sender).balance);
+            m_state.journal_balance_change(msg.recipient, dst_acc.balance);
+            m_state.get(msg.sender).balance -= value;
+            dst_acc.balance += value;
+        }
     }
 
     if (is_precompile(m_rev, msg.code_address))
         return call_precompile(m_rev, msg);
 
-    const auto code = dst_acc != nullptr ? bytes_view{dst_acc->code} : bytes_view{};
+    // In case msg.recipient == msg.code_address, this is the second lookup of the same address.
+    const auto* const code_acc = m_state.find(msg.code_address);
+    const auto code = code_acc != nullptr ? bytes_view{code_acc->code} : bytes_view{};
     return m_vm.execute(*this, m_rev, msg, code.data(), code.size());
 }
 
