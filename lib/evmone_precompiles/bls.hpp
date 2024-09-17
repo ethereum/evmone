@@ -39,4 +39,20 @@ inline constexpr auto BLS_FIELD_MODULUS =
 [[nodiscard]] bool g2_mul(uint8_t _rx[128], uint8_t _ry[128], const uint8_t _x[128],
     const uint8_t _y[128], const uint8_t _c[32]) noexcept;
 
+/// Multi scalar multiplication in BLS12-381 curve G1 subgroup.
+///
+/// Computes ∑ⁿₖ₌₁cₖPₖ for points in affine coordinate on the BLS12-381 curve, performs
+/// subgroup check according to spec
+/// https://eips.ethereum.org/EIPS/eip-2537#abi-for-g1-msm
+[[nodiscard]] bool g1_msm(
+    uint8_t _rx[64], uint8_t _ry[64], const uint8_t* _xycs, size_t size) noexcept;
+
+/// Multi scalar multiplication in BLS12-381 curve G2 subgroup.
+///
+/// Computes ∑ⁿₖ₌₁cₖPₖ for points in affine coordinate on the BLS12-381 curve  over G2 extension
+/// field, performs subgroup check according to spec
+/// https://eips.ethereum.org/EIPS/eip-2537#abi-for-g2-msm
+[[nodiscard]] bool g2_msm(
+    uint8_t _rx[128], uint8_t _ry[128], const uint8_t* _xycs, size_t size) noexcept;
+
 }  // namespace evmone::crypto::bls

@@ -1,6 +1,8 @@
 #include "bls.hpp"
 #include <blst.h>
+#include <memory>
 #include <optional>
+#include <vector>
 
 namespace evmone::crypto::bls
 {
@@ -174,6 +176,136 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
 
     blst_p2 out;
     blst_p2_mult(&out, &p, scalar.b, 256);
+
+    blst_p2_affine result;
+    blst_p2_to_affine(&result, &out);
+    store(_rx, result.x);
+    store(_ry, result.y);
+
+    return true;
+}
+
+[[nodiscard]] bool g1_msm(
+    uint8_t _rx[64], uint8_t _ry[64], const uint8_t* _xycs, size_t size) noexcept
+{
+    constexpr auto SINGLE_ENTRY_SIZE = (64 * 2 + 32);
+    assert(size % SINGLE_ENTRY_SIZE == 0);
+    auto npoints = size / SINGLE_ENTRY_SIZE;
+
+    std::vector<blst_p1_affine> p1_affines;
+    std::vector<const blst_p1_affine*> p1_affine_ptrs;
+    p1_affines.reserve(npoints);
+    p1_affine_ptrs.reserve(npoints);
+
+    std::vector<blst_scalar> scalars;
+    std::vector<const uint8_t*> scalars_ptrs;
+    scalars.reserve(npoints);
+    scalars_ptrs.reserve(npoints);
+
+    auto ptr = _xycs;
+    for (size_t i = 0; i < npoints; ++i)
+    {
+        const auto p_affine = validate_p1(ptr, &ptr[64]);
+        if (!p_affine.has_value())
+            return false;
+
+        if (!blst_p1_affine_in_g1(&*p_affine))
+            return false;
+
+        // Point at infinity must be filtered out for BLST library.
+        if (blst_p1_affine_is_inf(&*p_affine))
+            continue;
+
+        const auto& p = p1_affines.emplace_back(*p_affine);
+        p1_affine_ptrs.emplace_back(&p);
+
+        blst_scalar scalar;
+        blst_scalar_from_bendian(&scalar, &ptr[128]);
+        const auto& s = scalars.emplace_back(scalar);
+        scalars_ptrs.emplace_back(s.b);
+
+        ptr += SINGLE_ENTRY_SIZE;
+    }
+
+    npoints = p1_affine_ptrs.size();
+
+    if (npoints == 0)
+    {
+        memset(_rx, 0, 64);
+        memset(_ry, 0, 64);
+        return true;
+    }
+
+    const auto scratch_size = blst_p1s_mult_pippenger_scratch_sizeof(npoints) / sizeof(limb_t);
+    const auto scratch_space = std::make_unique_for_overwrite<limb_t[]>(scratch_size);
+    blst_p1 out;
+    blst_p1s_mult_pippenger(
+        &out, p1_affine_ptrs.data(), npoints, scalars_ptrs.data(), 256, scratch_space.get());
+
+    blst_p1_affine result;
+    blst_p1_to_affine(&result, &out);
+    store(_rx, result.x);
+    store(_ry, result.y);
+
+    return true;
+}
+
+[[nodiscard]] bool g2_msm(
+    uint8_t _rx[128], uint8_t _ry[128], const uint8_t* _xycs, size_t size) noexcept
+{
+    constexpr auto SINGLE_ENTRY_SIZE = (128 * 2 + 32);
+    assert(size % SINGLE_ENTRY_SIZE == 0);
+    auto npoints = size / SINGLE_ENTRY_SIZE;
+
+    std::vector<blst_p2_affine> p2_affines;
+    std::vector<const blst_p2_affine*> p2_affine_ptrs;
+    p2_affines.reserve(npoints);
+    p2_affine_ptrs.reserve(npoints);
+
+    std::vector<blst_scalar> scalars;
+    std::vector<const uint8_t*> scalars_ptrs;
+    scalars.reserve(npoints);
+    scalars_ptrs.reserve(npoints);
+
+    auto ptr = _xycs;
+    for (size_t i = 0; i < npoints; ++i)
+    {
+        const auto p_affine = validate_p2(ptr, &ptr[128]);
+        if (!p_affine.has_value())
+            return false;
+
+        if (!blst_p2_affine_in_g2(&*p_affine))
+            return false;
+
+        // Point at infinity must be filtered out for BLST library.
+        if (blst_p2_affine_is_inf(&*p_affine))
+            continue;
+
+        const auto& p = p2_affines.emplace_back(*p_affine);
+        p2_affine_ptrs.emplace_back(&p);
+
+        blst_scalar scalar;
+        blst_scalar_from_bendian(&scalar, &ptr[256]);
+        const auto& s = scalars.emplace_back(scalar);
+        scalars_ptrs.emplace_back(s.b);
+
+        ptr += SINGLE_ENTRY_SIZE;
+    }
+
+    npoints = p2_affine_ptrs.size();
+
+    if (npoints == 0)
+    {
+        memset(_rx, 0, 128);
+        memset(_ry, 0, 128);
+        return true;
+    }
+
+    const auto scratch_size = blst_p2s_mult_pippenger_scratch_sizeof(npoints) / sizeof(limb_t);
+    const auto scratch_space = std::make_unique_for_overwrite<limb_t[]>(scratch_size);
+    blst_p2 out;
+    blst_p2s_mult_pippenger(
+        &out, p2_affine_ptrs.data(), npoints, scalars_ptrs.data(), 256, scratch_space.get());
 
     blst_p2_affine result;
     blst_p2_to_affine(&result, &out);
