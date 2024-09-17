@@ -378,10 +378,15 @@ evmc::Result Host::execute_message(const evmc_message& msg) noexcept
 
     if (msg.kind == EVMC_CALL)
     {
-        auto& dst_acc = m_state.touch(msg.recipient);
-
-        if (!evmc::is_zero(msg.value))
+        if (evmc::is_zero(msg.value))
+            m_state.touch(msg.recipient);
+        else
         {
+            // We skip touching if we send value, because account cannot end up empty.
+            // It will either have value, or code that transfers this value out, or will be
+            // selfdestructed anyway.
+            auto& dst_acc = m_state.get_or_insert(msg.recipient);
+
             // Transfer value: sender → recipient.
             // The sender's balance is already checked therefore the sender account must exist.
             const auto value = intx::be::load<intx::uint256>(msg.value);
