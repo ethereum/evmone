@@ -188,6 +188,8 @@ PrecompileAnalysis bls12_g1mul_analyze(bytes_view, evmc_revision) noexcept
 
 PrecompileAnalysis bls12_g1msm_analyze(bytes_view input, evmc_revision) noexcept
 {
+    // assert(!input.empty());
+    // assert(input.size() % 160 == 0);
     if (input.empty() || input.size() % 160 != 0)
         return {GasCostMax, 0};
 
@@ -209,6 +211,8 @@ PrecompileAnalysis bls12_g2mul_analyze(bytes_view, evmc_revision) noexcept
 
 PrecompileAnalysis bls12_g2msm_analyze(bytes_view input, evmc_revision) noexcept
 {
+    // assert(!input.empty());
+    // assert(input.size() % 288 == 0);
     if (input.empty() || input.size() % 288 != 0)
         return {GasCostMax, 0};
 
