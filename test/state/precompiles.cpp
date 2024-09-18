@@ -41,6 +41,25 @@ inline constexpr int64_t cost_per_input_word(size_t input_size) noexcept
 {
     return BaseCost + WordCost * num_words(input_size);
 }
+
+int64_t bls_msm_cost(size_t k, int64_t multiplication_cost) noexcept
+{
+    assert(k > 0);
+
+    static constexpr int64_t MULTIPLIER = 1000;
+    static constexpr int16_t DISCOUNT[128] = {1200, 888, 764, 641, 594, 547, 500, 453, 438, 423,
+        408, 394, 379, 364, 349, 334, 330, 326, 322, 318, 314, 310, 306, 302, 298, 294, 289, 285,
+        281, 277, 273, 269, 268, 266, 265, 263, 262, 260, 259, 257, 256, 254, 253, 251, 250, 248,
+        247, 245, 244, 242, 241, 239, 238, 236, 235, 233, 232, 231, 229, 228, 226, 225, 223, 222,
+        221, 220, 219, 219, 218, 217, 216, 216, 215, 214, 213, 213, 212, 211, 211, 210, 209, 208,
+        208, 207, 206, 205, 205, 204, 203, 202, 202, 201, 200, 199, 199, 198, 197, 196, 196, 195,
+        194, 193, 193, 192, 191, 191, 190, 189, 188, 188, 187, 186, 185, 185, 184, 183, 182, 182,
+        181, 180, 179, 179, 178, 177, 176, 176, 175, 174};
+
+    const auto d = DISCOUNT[std::min(k, std::size(DISCOUNT)) - 1];
+    return (static_cast<int64_t>(k) * multiplication_cost * d) / MULTIPLIER;
+}
+
 }  // namespace
 
 PrecompileAnalysis ecrecover_analyze(bytes_view /*input*/, evmc_revision /*rev*/) noexcept
@@ -166,10 +185,13 @@ PrecompileAnalysis bls12_g1mul_analyze(bytes_view, evmc_revision) noexcept
     return {BLS12_G1MUL_PRECOMPILE_GAS, 128};
 }
 
-PrecompileAnalysis bls12_g1msm_analyze(bytes_view, evmc_revision) noexcept
+PrecompileAnalysis bls12_g1msm_analyze(bytes_view input, evmc_revision) noexcept
 {
-    // TODO: Implement
-    return {GasCostMax, 0};
+    if (input.empty() || input.size() % 160 != 0)
+        return {GasCostMax, 0};
+
+    static constexpr auto BLS12_G1MUL_PRECOMPILE_GAS = 12000;
+    return {bls_msm_cost(input.size() / 160, BLS12_G1MUL_PRECOMPILE_GAS), 128};
 }
 
 PrecompileAnalysis bls12_g2add_analyze(bytes_view, evmc_revision) noexcept
@@ -184,10 +206,13 @@ PrecompileAnalysis bls12_g2mul_analyze(bytes_view, evmc_revision) noexcept
     return {BLS12_G2MUL_PRECOMPILE_GAS, 256};
 }
 
-PrecompileAnalysis bls12_g2msm_analyze(bytes_view, evmc_revision) noexcept
+PrecompileAnalysis bls12_g2msm_analyze(bytes_view input, evmc_revision) noexcept
 {
-    // TODO: Implement
-    return {GasCostMax, 0};
+    if (input.empty() || input.size() % 288 != 0)
+        return {GasCostMax, 0};
+
+    static constexpr auto BLS12_G2MUL_PRECOMPILE_GAS = 45000;
+    return {bls_msm_cost(input.size() / 288, BLS12_G2MUL_PRECOMPILE_GAS), 256};
 }
 
 PrecompileAnalysis bls12_pairing_check_analyze(bytes_view, evmc_revision) noexcept
@@ -375,9 +400,18 @@ ExecutionResult bls12_g1mul_execute(const uint8_t* input, size_t input_size, uin
     return {EVMC_SUCCESS, 128};
 }
 
-ExecutionResult bls12_g1msm_execute(const uint8_t*, size_t, uint8_t*, size_t) noexcept
+ExecutionResult bls12_g1msm_execute(const uint8_t* input, size_t input_size, uint8_t* output,
+    [[maybe_unused]] size_t output_size) noexcept
 {
-    return {EVMC_PRECOMPILE_FAILURE, 0};
+    if (input_size % 160 != 0)
+        return {EVMC_PRECOMPILE_FAILURE, 0};
+
+    assert(output_size == 128);
+
+    if (!crypto::bls::g1_msm(output, &output[64], input, input_size))
+        return {EVMC_PRECOMPILE_FAILURE, 0};
+
+    return {EVMC_SUCCESS, 128};
 }
 
 ExecutionResult bls12_g2add_execute(const uint8_t* input, size_t input_size, uint8_t* output,
@@ -408,9 +442,18 @@ ExecutionResult bls12_g2mul_execute(const uint8_t* input, size_t input_size, uin
     return {EVMC_SUCCESS, 256};
 }
 
-ExecutionResult bls12_g2msm_execute(const uint8_t*, size_t, uint8_t*, size_t) noexcept
+ExecutionResult bls12_g2msm_execute(const uint8_t* input, size_t input_size, uint8_t* output,
+    [[maybe_unused]] size_t output_size) noexcept
 {
-    return {EVMC_PRECOMPILE_FAILURE, 0};
+    if (input_size % 288 != 0)
+        return {EVMC_PRECOMPILE_FAILURE, 0};
+
+    assert(output_size == 256);
+
+    if (!crypto::bls::g2_msm(output, &output[128], input, input_size))
+        return {EVMC_PRECOMPILE_FAILURE, 0};
+
+    return {EVMC_SUCCESS, 256};
 }
 
 ExecutionResult bls12_pairing_check_execute(const uint8_t*, size_t, uint8_t*, size_t) noexcept
