@@ -379,6 +379,8 @@ jobs:
             prague/eip2537_bls_12_381_precompiles/bls12_g2mul
             prague/eip2537_bls_12_381_precompiles/bls12_g1msm
             prague/eip2537_bls_12_381_precompiles/bls12_g2msm
+            prague/eip2537_bls_12_381_precompiles/bls12_map_fp_to_g1
+            prague/eip2537_bls_12_381_precompiles/bls12_map_fp2_to_g2
       - run:
           name: "Execution spec tests (develop, blockchain_tests)"
           # Tests for in-development EVM revision currently passing.

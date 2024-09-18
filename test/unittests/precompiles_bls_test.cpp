@@ -256,3 +256,41 @@ TEST(bls, g2_msm_inf_2)
     EXPECT_EQ(evmc::bytes_view(rx, sizeof rx), expected_x);
     EXPECT_EQ(evmc::bytes_view(ry, sizeof ry), expected_y);
 }
+
+TEST(bls, map_fp_to_g1)
+{
+    using namespace evmc::literals;
+    auto input =
+        "00000000000000000000000000000000156c8a6a2c184569d69a76be144b5cdc5141d2d2ca4fe341f011e25e3969c55ad9e9b9ce2eb833c81a908e5fa4ac5f03"_hex;
+    uint8_t rx[64];
+    uint8_t ry[64];
+
+    EXPECT_TRUE(evmone::crypto::bls::map_fp_to_g1(rx, ry, input.data()));
+
+    const auto expected_x =
+        "00000000000000000000000000000000184bb665c37ff561a89ec2122dd343f20e0f4cbcaec84e3c3052ea81d1834e192c426074b02ed3dca4e7676ce4ce48ba"_hex;
+    const auto expected_y =
+        "0000000000000000000000000000000004407b8d35af4dacc809927071fc0405218f1401a6d15af775810e4e460064bcc9468beeba82fdc751be70476c888bf3"_hex;
+
+    EXPECT_EQ(evmc::bytes_view(rx, sizeof rx), expected_x);
+    EXPECT_EQ(evmc::bytes_view(ry, sizeof ry), expected_y);
+}
+
+TEST(bls, map_fp2_to_g2)
+{
+    using namespace evmc::literals;
+    auto input =
+        "0000000000000000000000000000000007355d25caf6e7f2f0cb2812ca0e513bd026ed09dda65b177500fa31714e09ea0ded3a078b526bed3307f804d4b93b040000000000000000000000000000000002829ce3c021339ccb5caf3e187f6370e1e2a311dec9b75363117063ab2015603ff52c3d3b98f19c2f65575e99e8b78c"_hex;
+    uint8_t rx[128];
+    uint8_t ry[128];
+
+    EXPECT_TRUE(evmone::crypto::bls::map_fp2_to_g2(rx, ry, input.data()));
+
+    const auto expected_x =
+        "0000000000000000000000000000000000e7f4568a82b4b7dc1f14c6aaa055edf51502319c723c4dc2688c7fe5944c213f510328082396515734b6612c4e7bb700000000000000000000000000000000126b855e9e69b1f691f816e48ac6977664d24d99f8724868a184186469ddfd4617367e94527d4b74fc86413483afb35b"_hex;
+    const auto expected_y =
+        "000000000000000000000000000000000caead0fd7b6176c01436833c79d305c78be307da5f6af6c133c47311def6ff1e0babf57a0fb5539fce7ee12407b0a42000000000000000000000000000000001498aadcf7ae2b345243e281ae076df6de84455d766ab6fcdaad71fab60abb2e8b980a440043cd305db09d283c895e3d"_hex;
+
+    EXPECT_EQ(evmc::bytes_view(rx, sizeof rx), expected_x);
+    EXPECT_EQ(evmc::bytes_view(ry, sizeof ry), expected_y);
+}

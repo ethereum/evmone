@@ -12,30 +12,47 @@ namespace
 /// https://eips.ethereum.org/EIPS/eip-2537#field-elements-encoding
 constexpr auto FP_BYTES_OFFSET = 64 - 48;
 
+/// Validates that integer encoded in big endian is valid element of BLS12-381 Fp field
+[[nodiscard]] std::optional<blst_fp> validate_fp(const uint8_t _p[64]) noexcept
+{
+    if (intx::be::unsafe::load<intx::uint512>(_p) >= BLS_FIELD_MODULUS)
+        return std::nullopt;
+
+    blst_fp p;
+    blst_fp_from_bendian(&p, &_p[FP_BYTES_OFFSET]);
+    return p;
+}
+
 /// Validates p1 affine point. Checks that point coordinates are from the BLS12-381 field and
 /// that the point is on curve. https://eips.ethereum.org/EIPS/eip-2537#abi-for-g1-addition
 [[nodiscard]] std::optional<blst_p1_affine> validate_p1(
     const uint8_t _x[64], const uint8_t _y[64]) noexcept
 {
-    constexpr auto is_field_element = [](const uint8_t _p[64]) {
-        return intx::be::unsafe::load<intx::uint512>(_p) < BLS_FIELD_MODULUS;
-    };
-
-    if (!is_field_element(_x))
+    const auto x = validate_fp(_x);
+    if (!x.has_value())
         return std::nullopt;
-    if (!is_field_element(_y))
+    const auto y = validate_fp(_y);
+    if (!y.has_value())
         return std::nullopt;
 
-    blst_fp x;
-    blst_fp y;
-    blst_fp_from_bendian(&x, &_x[FP_BYTES_OFFSET]);
-    blst_fp_from_bendian(&y, &_y[FP_BYTES_OFFSET]);
-
-    const blst_p1_affine p0_affine{x, y};
+    const blst_p1_affine p0_affine{*x, *y};
     if (!blst_p1_affine_on_curve(&p0_affine))
         return std::nullopt;
 
     return p0_affine;
+}
+
+/// Validates that integer encoded in big endian is valid element of BLS12-381 Fp2 extension field
+[[nodiscard]] std::optional<blst_fp2> validate_fp2(const uint8_t _p[128]) noexcept
+{
+    const auto fp0 = validate_fp(_p);
+    if (!fp0.has_value())
+        return std::nullopt;
+    const auto fp1 = validate_fp(&_p[64]);
+    if (!fp1.has_value())
+        return std::nullopt;
+
+    return {{*fp0, *fp1}};
 }
 
 /// Validates p2 affine point. Checks that point coordinates are from the BLS12-381 field and
@@ -43,26 +60,15 @@ constexpr auto FP_BYTES_OFFSET = 64 - 48;
 [[nodiscard]] std::optional<blst_p2_affine> validate_p2(
     const uint8_t _x[128], const uint8_t _y[128]) noexcept
 {
-    constexpr auto is_field_element = [](const uint8_t _p[128]) {
-        return intx::be::unsafe::load<intx::uint512>(_p) < BLS_FIELD_MODULUS &&
-               intx::be::unsafe::load<intx::uint512>(&_p[64]) < BLS_FIELD_MODULUS;
-    };
-
-    if (!is_field_element(_x))
-        return std::nullopt;
-    if (!is_field_element(_y))
+    const auto x = validate_fp2(_x);
+    if (!x.has_value())
         return std::nullopt;
 
-    blst_fp x0;
-    blst_fp x1;
-    blst_fp y0;
-    blst_fp y1;
-    blst_fp_from_bendian(&x0, &_x[FP_BYTES_OFFSET]);
-    blst_fp_from_bendian(&x1, &_x[FP_BYTES_OFFSET + 64]);
-    blst_fp_from_bendian(&y0, &_y[FP_BYTES_OFFSET]);
-    blst_fp_from_bendian(&y1, &_y[FP_BYTES_OFFSET + 64]);
+    const auto y = validate_fp2(_y);
+    if (!y.has_value())
+        return std::nullopt;
 
-    const blst_p2_affine p_affine{{x0, x1}, {y0, y1}};
+    const blst_p2_affine p_affine{*x, *y};
     if (!blst_p2_affine_on_curve(&p_affine))
         return std::nullopt;
 
@@ -306,6 +312,41 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
     blst_p2 out;
     blst_p2s_mult_pippenger(
         &out, p2_affine_ptrs.data(), npoints, scalars_ptrs.data(), 256, scratch_space.get());
+
+    blst_p2_affine result;
+    blst_p2_to_affine(&result, &out);
+    store(_rx, result.x);
+    store(_ry, result.y);
+
+    return true;
+}
+
+[[nodiscard]] bool map_fp_to_g1(uint8_t _rx[64], uint8_t _ry[64], const uint8_t _fp[64]) noexcept
+{
+    const auto fp = validate_fp(_fp);
+    if (!fp.has_value())
+        return false;
+
+    blst_p1 out;
+    blst_map_to_g1(&out, &*fp);
+
+    blst_p1_affine result;
+    blst_p1_to_affine(&result, &out);
+    store(_rx, result.x);
+    store(_ry, result.y);
+
+    return true;
+}
+
+[[nodiscard]] bool map_fp2_to_g2(
+    uint8_t _rx[128], uint8_t _ry[128], const uint8_t _fp2[128]) noexcept
+{
+    const auto fp2 = validate_fp2(_fp2);
+    if (!fp2.has_value())
+        return false;
+
+    blst_p2 out;
+    blst_map_to_g2(&out, &*fp2);
 
     blst_p2_affine result;
     blst_p2_to_affine(&result, &out);
