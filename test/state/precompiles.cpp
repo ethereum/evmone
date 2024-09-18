@@ -223,14 +223,14 @@ PrecompileAnalysis bls12_pairing_check_analyze(bytes_view, evmc_revision) noexce
 
 PrecompileAnalysis bls12_map_fp_to_g1_analyze(bytes_view, evmc_revision) noexcept
 {
-    // TODO: Implement
-    return {GasCostMax, 0};
+    static constexpr auto BLS12_MAP_FP_TO_G1_PRECOMPILE_GAS = 5500;
+    return {BLS12_MAP_FP_TO_G1_PRECOMPILE_GAS, 128};
 }
 
 PrecompileAnalysis bls12_map_fp2_to_g2_analyze(bytes_view, evmc_revision) noexcept
 {
-    // TODO: Implement
-    return {GasCostMax, 0};
+    static constexpr auto BLS12_MAP_FP2_TO_G2_PRECOMPILE_GAS = 75000;
+    return {BLS12_MAP_FP2_TO_G2_PRECOMPILE_GAS, 256};
 }
 
 ExecutionResult ecrecover_execute(const uint8_t* input, size_t input_size, uint8_t* output,
@@ -461,14 +461,32 @@ ExecutionResult bls12_pairing_check_execute(const uint8_t*, size_t, uint8_t*, si
     return {EVMC_PRECOMPILE_FAILURE, 0};
 }
 
-ExecutionResult bls12_map_fp_to_g1_execute(const uint8_t*, size_t, uint8_t*, size_t) noexcept
+ExecutionResult bls12_map_fp_to_g1_execute(const uint8_t* input, size_t input_size, uint8_t* output,
+    [[maybe_unused]] size_t output_size) noexcept
 {
-    return {EVMC_PRECOMPILE_FAILURE, 0};
+    if (input_size != 64)
+        return {EVMC_PRECOMPILE_FAILURE, 0};
+
+    assert(output_size == 128);
+
+    if (!crypto::bls::map_fp_to_g1(output, &output[64], input))
+        return {EVMC_PRECOMPILE_FAILURE, 0};
+
+    return {EVMC_SUCCESS, 128};
 }
 
-ExecutionResult bls12_map_fp2_to_g2_execute(const uint8_t*, size_t, uint8_t*, size_t) noexcept
+ExecutionResult bls12_map_fp2_to_g2_execute(const uint8_t* input, size_t input_size,
+    uint8_t* output, [[maybe_unused]] size_t output_size) noexcept
 {
-    return {EVMC_PRECOMPILE_FAILURE, 0};
+    if (input_size != 128)
+        return {EVMC_PRECOMPILE_FAILURE, 0};
+
+    assert(output_size == 256);
+
+    if (!crypto::bls::map_fp2_to_g2(output, &output[128], input))
+        return {EVMC_PRECOMPILE_FAILURE, 0};
+
+    return {EVMC_SUCCESS, 256};
 }
 
 namespace

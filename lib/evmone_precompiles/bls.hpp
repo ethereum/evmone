@@ -55,4 +55,19 @@ inline constexpr auto BLS_FIELD_MODULUS =
 [[nodiscard]] bool g2_msm(
     uint8_t _rx[128], uint8_t _ry[128], const uint8_t* _xycs, size_t size) noexcept;
 
+/// Maps field element of Fp to curve point on BLS12-381 curve G1 subgroup.
+///
+/// Performs field Fp element check. Returns `false` if an element is not from the field.
+/// According to spec
+/// https://eips.ethereum.org/EIPS/eip-2537#abi-for-mapping-fp-element-to-g1-point
+[[nodiscard]] bool map_fp_to_g1(uint8_t _rx[64], uint8_t _ry[64], const uint8_t _fp[64]) noexcept;
+
+/// Maps field element of Fp2 to curve point on BLS12-381 curve G2 subgroup.
+///
+/// Performs field Fp2 element check. Returns `false` if an element is not from the field.
+/// According to spec
+/// https://eips.ethereum.org/EIPS/eip-2537#abi-for-mapping-fp2-element-to-g2-point
+[[nodiscard]] bool map_fp2_to_g2(
+    uint8_t _rx[128], uint8_t _ry[128], const uint8_t _fp[128]) noexcept;
+
 }  // namespace evmone::crypto::bls
