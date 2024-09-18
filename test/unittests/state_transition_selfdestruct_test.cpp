@@ -47,6 +47,43 @@ TEST_F(state_transition, selfdestruct_same_tx_cancun)
     expect.post[0xbe_address].balance = 0x4e;
 }
 
+TEST_F(state_transition, selfdestruct_same_create_cancun)
+{
+    // Use CREATE to temporarily create an account using initcode with SELFDESTRUCT.
+    // The CREATE should succeed by returning proper address, but the created account
+    // should not be in the post state.
+    rev = EVMC_CANCUN;
+    static constexpr auto BENEFICIARY = 0x4a0000be_address;
+    const auto initcode = selfdestruct(BENEFICIARY);
+
+    tx.to = To;
+    pre[To] = {
+        .balance = 0x4e,
+        .code = mstore(0, push(initcode)) +
+                create().input(32 - initcode.size(), initcode.size()).value(0x0e) + sstore(0),
+    };
+
+    expect.post[To].balance = 0x40;
+    expect.post[To].storage[0x00_bytes32] = to_bytes32(compute_create_address(To, pre[To].nonce));
+    expect.post[BENEFICIARY].balance = 0x0e;
+}
+
+TEST_F(state_transition, selfdestruct_beneficiary_with_code)
+{
+    // Send ETH via SELFDESTRUCT to an account with code.
+    // This test checks if the beneficiary's code in the state is not somehow disturbed
+    // by this action as we likely don't load the code from database.
+    rev = EVMC_CANCUN;
+    static constexpr auto BENEFICIARY = 0x4a0000be_address;
+
+    tx.to = To;
+    pre[To] = {.balance = 1, .code = selfdestruct(BENEFICIARY)};
+    pre[BENEFICIARY] = {.code = bytecode{OP_STOP}};
+
+    expect.post[To].balance = 0;
+    expect.post[BENEFICIARY].code = pre[BENEFICIARY].code;
+}
+
 TEST_F(state_transition, selfdestruct_double_revert)
 {
     rev = EVMC_SHANGHAI;
