@@ -356,4 +356,63 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
     return true;
 }
 
+[[nodiscard]] bool pairing_check(uint8_t _r[32], const uint8_t* _pairs, size_t size) noexcept
+{
+    static constexpr auto FP_SIZE = 64;
+    static constexpr auto FP2_SIZE = 2 * FP_SIZE;
+    static constexpr auto P1_SIZE = 2 * FP_SIZE;
+    static constexpr auto P2_SIZE = 2 * FP2_SIZE;
+    static constexpr auto PAIR_SIZE = P1_SIZE + P2_SIZE;
+    assert(size % PAIR_SIZE == 0);
+
+    const auto npairs = size / PAIR_SIZE;
+    auto ptr = _pairs;
+    auto has_inf = false;
+    blst_fp12 acc = *blst_fp12_one();
+
+    const auto Qlines = std::make_unique_for_overwrite<blst_fp6[]>(68);
+
+    for (size_t i = 0; i < npairs; ++i)
+    {
+        const auto P_affine = validate_p1(ptr, &ptr[FP_SIZE]);
+        if (!P_affine.has_value())
+            return false;
+
+        const auto Q_affine = validate_p2(&ptr[P1_SIZE], &ptr[P1_SIZE + FP2_SIZE]);
+        if (!Q_affine.has_value())
+            return false;
+
+        if (!blst_p1_affine_in_g1(&*P_affine))
+            return false;
+
+        if (!blst_p2_affine_in_g2(&*Q_affine))
+            return false;
+
+        if (blst_p1_affine_is_inf(&*P_affine) || blst_p2_affine_is_inf(&*Q_affine))
+            has_inf = true;
+
+        if (!has_inf)
+        {
+            blst_precompute_lines(Qlines.get(), &*Q_affine);
+
+            blst_fp12 ml_res;
+            blst_miller_loop_lines(&ml_res, Qlines.get(), &*P_affine);
+            blst_fp12_mul(&acc, &acc, &ml_res);
+        }
+
+        ptr += PAIR_SIZE;
+    }
+
+    bool result = true;
+    if (!has_inf)  // if any point-at-infinity encountered the answer is 1, so skip final exp.
+    {
+        blst_final_exp(&acc, &acc);
+        result = blst_fp12_is_one(&acc);
+    }
+
+    std::memset(_r, 0, 31);
+    _r[31] = result ? 1 : 0;
+    return true;
+}
+
 }  // namespace evmone::crypto::bls
