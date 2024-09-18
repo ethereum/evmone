@@ -70,4 +70,10 @@ inline constexpr auto BLS_FIELD_MODULUS =
 [[nodiscard]] bool map_fp2_to_g2(
     uint8_t _rx[128], uint8_t _ry[128], const uint8_t _fp[128]) noexcept;
 
+/// Computes pairing for pairs of P and Q point from G1 and G2 accordingly.
+///
+/// Performs filed and groups check for both input points. Returns 'false' if any of requirement is
+/// not met according to spec https://eips.ethereum.org/EIPS/eip-2537#abi-for-pairing-check
+[[nodiscard]] bool pairing_check(uint8_t _r[32], const uint8_t* _pairs, size_t size) noexcept;
+
 }  // namespace evmone::crypto::bls
