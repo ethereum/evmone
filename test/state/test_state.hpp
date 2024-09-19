@@ -15,6 +15,7 @@ namespace state
 {
 struct BlockInfo;
 struct Ommer;
+struct StateDiff;
 struct Transaction;
 struct TransactionReceipt;
 struct Withdrawal;
@@ -68,6 +69,9 @@ public:
 
     /// Converts the TestState to intra state for transaction execution.
     [[nodiscard]] state::State to_intra_state() const;
+
+    /// Apply the state changes.
+    void apply(const state::StateDiff& diff);
 };
 
 /// Wrapping of state::transition() which operates on TestState.

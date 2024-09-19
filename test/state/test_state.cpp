@@ -33,6 +33,28 @@ state::State TestState::to_intra_state() const
     return intra_state;
 }
 
+void TestState::apply(const state::StateDiff& diff)
+{
+    for (const auto& m : diff.modified_accounts)
+    {
+        auto& a = (*this)[m.addr];
+        a.nonce = m.nonce;
+        a.balance = m.balance;
+        if (!m.code.empty())
+            a.code = m.code;  // TODO: Consider taking rvalue ref to avoid code copy.
+        for (const auto& [k, v] : m.modified_storage)
+        {
+            if (v)
+                a.storage.insert_or_assign(k, v);
+            else
+                a.storage.erase(k);
+        }
+    }
+
+    for (const auto& addr : diff.deleted_accounts)
+        erase(addr);
+}
+
 [[nodiscard]] std::variant<state::TransactionReceipt, std::error_code> transition(TestState& state,
     const state::BlockInfo& block, const state::Transaction& tx, evmc_revision rev, evmc::VM& vm,
     int64_t block_gas_left, int64_t blob_gas_left)
