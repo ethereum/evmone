@@ -22,4 +22,6 @@ target_sources(
     secp256k1.cpp
     sha256.hpp
     sha256.cpp
+    kzg.hpp
+    kzg.cpp
 )

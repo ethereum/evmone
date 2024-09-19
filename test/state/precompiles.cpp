@@ -8,6 +8,7 @@
 #include <evmone_precompiles/blake2b.hpp>
 #include <evmone_precompiles/bls.hpp>
 #include <evmone_precompiles/bn254.hpp>
+#include <evmone_precompiles/kzg.hpp>
 #include <evmone_precompiles/ripemd160.hpp>
 #include <evmone_precompiles/secp256k1.hpp>
 #include <evmone_precompiles/sha256.hpp>
@@ -382,6 +383,29 @@ ExecutionResult blake2bf_execute(const uint8_t* input, [[maybe_unused]] size_t i
     return {EVMC_SUCCESS, sizeof(h)};
 }
 
+ExecutionResult point_evaluation_execute(const uint8_t* input, size_t input_size, uint8_t* output,
+    [[maybe_unused]] size_t output_size) noexcept
+{
+    assert(output_size >= 64);
+    if (input_size != 192)
+        return {EVMC_PRECOMPILE_FAILURE, 0};
+
+    const auto r = crypto::kzg_verify_proof(reinterpret_cast<const std::byte*>(&input[0]),
+        reinterpret_cast<const std::byte*>(&input[32]),
+        reinterpret_cast<const std::byte*>(&input[64]),
+        reinterpret_cast<const std::byte*>(&input[96]),
+        reinterpret_cast<const std::byte*>(&input[96 + 48]));
+
+    if (!r)
+        return {EVMC_PRECOMPILE_FAILURE, 0};
+
+    // Return FIELD_ELEMENTS_PER_BLOB and BLS_MODULUS as padded 32 byte big endian values
+    // as required by the EIP-4844.
+    intx::be::unsafe::store(output, crypto::FIELD_ELEMENTS_PER_BLOB);
+    intx::be::unsafe::store(output + 32, crypto::BLS_MODULUS);
+    return {EVMC_SUCCESS, 64};
+}
+
 ExecutionResult bls12_g1add_execute(const uint8_t* input, size_t input_size, uint8_t* output,
     [[maybe_unused]] size_t output_size) noexcept
 {
@@ -528,7 +552,7 @@ inline constexpr auto traits = []() noexcept {
         {ecmul_analyze, ecmul_execute},
         {ecpairing_analyze, ecpairing_stub},
         {blake2bf_analyze, blake2bf_execute},
-        {point_evaluation_analyze, point_evaluation_stub},
+        {point_evaluation_analyze, point_evaluation_execute},
         {bls12_g1add_analyze, bls12_g1add_execute},
         {bls12_g1mul_analyze, bls12_g1mul_execute},
         {bls12_g1msm_analyze, bls12_g1msm_execute},
