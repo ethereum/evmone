@@ -87,43 +87,43 @@ public:
         // EdMSM: Multi-Scalar-Multiplication for SNARKs and Faster Montgomery multiplication
         // https://eprint.iacr.org/2022/1400.pdf
 
-        constexpr uint64_t most_significant_mod_word_limit {std::numeric_limits<uint64_t>::max() >> 1};
+        constexpr uint64_t most_significant_mod_word_limit{
+            std::numeric_limits<uint64_t>::max() >> 1};
         constexpr auto S = UintT::num_words;  // TODO(C++23): Make it static
 
         intx::uint<UintT::num_bits + 64> t;
-        if (mod[S - 1] < most_significant_mod_word_limit)
+        for (size_t i = 0; i != S; ++i)
         {
-            for (size_t i = 0; i != S; ++i)
+            uint64_t c = 0;
+            for (size_t j = 0; j != S; ++j)
+                std::tie(c, t[j]) = addmul(t[j], x[j], y[i], c);
+
+            uint64_t carry = 0;
+            if (mod[S - 1] < most_significant_mod_word_limit)
             {
-                uint64_t c = 0;
-                for (size_t j = 0; j != S; ++j)
-                    std::tie(c, t[j]) = addmul(t[j], x[j], y[i], c);
-                auto const c_2 = c;
-                const auto m = t[0] * m_mod_inv;
-                std::tie(c, std::ignore) = addmul(t[0], m, mod[0], 0);
-                for (size_t j = 1; j != S; ++j)
-                    std::tie(c, t[j - 1]) = addmul(t[j], m, mod[j], c);
-                t[S - 1] = c_2 + c;
+                carry = c;
             }
-        }
-        else
-        {
-            for (size_t i = 0; i != S; ++i)
+            else
             {
-                uint64_t c = 0;
-                for (size_t j = 0; j != S; ++j)
-                    std::tie(c, t[j]) = addmul(t[j], x[j], y[i], c);
                 auto tmp = intx::addc(t[S], c);
                 t[S] = tmp.value;
-                const auto d = tmp.carry;  // TODO: Carry is 0 for sparse modulus.
+                carry = tmp.carry;
+            }
 
-                const auto m = t[0] * m_mod_inv;
-                std::tie(c, std::ignore) = addmul(t[0], m, mod[0], 0);
-                for (size_t j = 1; j != S; ++j)
-                    std::tie(c, t[j - 1]) = addmul(t[j], m, mod[j], c);
-                tmp = intx::addc(t[S], c);
+            const auto m = t[0] * m_mod_inv;
+            std::tie(c, std::ignore) = addmul(t[0], m, mod[0], 0);
+            for (size_t j = 1; j != S; ++j)
+                std::tie(c, t[j - 1]) = addmul(t[j], m, mod[j], c);
+
+            if (mod[S - 1] < most_significant_mod_word_limit)
+            {
+                t[S - 1] = carry + c;
+            }
+            else
+            {
+                auto tmp = intx::addc(t[S], c);
                 t[S - 1] = tmp.value;
-                t[S] = d + tmp.carry;  // TODO: Carry is 0 for sparse modulus.
+                t[S] = carry + tmp.carry;
             }
         }
 
