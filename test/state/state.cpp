@@ -402,6 +402,9 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
     // The account won't be empty because its nonce will be bumped.
     auto& sender_acc = (sender_ptr != nullptr) ? *sender_ptr : state.insert(tx.sender);
 
+    assert(sender_acc.nonce < Account::NonceMax);  // Checked in transaction validation
+    ++sender_acc.nonce;                            // Bump sender nonce.
+
     const auto execution_gas_limit = get<int64_t>(validation_result);
 
     const auto base_fee = (rev >= EVMC_LONDON) ? block.base_fee : 0;

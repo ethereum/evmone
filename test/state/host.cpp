@@ -201,23 +201,27 @@ std::optional<evmc_message> Host::prepare_message(evmc_message msg) noexcept
         msg.kind == EVMC_EOFCREATE)
     {
         auto& sender_acc = m_state.get(msg.sender);
-        const auto sender_nonce = sender_acc.nonce;
 
         // EIP-2681 (already checked for depth 0 during transaction validation).
-        if (sender_nonce == Account::NonceMax)
+        if (sender_acc.nonce == Account::NonceMax)
             return {};  // Light early exception.
 
         if (msg.depth != 0)
+        {
             m_state.journal_bump_nonce(msg.sender);
-        ++sender_acc.nonce;  // Bump sender nonce.
+            ++sender_acc.nonce;  // Bump sender nonce.
+        }
 
         if (msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2 || msg.kind == EVMC_EOFCREATE)
         {
             // Compute and set the address of the account being created.
             assert(msg.recipient == address{});
             assert(msg.code_address == address{});
+            // Nonce was already incremented, but creation calculation needs non-incremented value
+            assert(sender_acc.nonce != 0);
+            const auto creation_sender_nonce = sender_acc.nonce - 1;
             if (msg.kind == EVMC_CREATE)
-                msg.recipient = compute_create_address(msg.sender, sender_nonce);
+                msg.recipient = compute_create_address(msg.sender, creation_sender_nonce);
             else if (msg.kind == EVMC_CREATE2)
             {
                 msg.recipient = compute_create2_address(
@@ -256,7 +260,7 @@ std::optional<evmc_message> Host::prepare_message(evmc_message msg) noexcept
                         EOFValidationError::success)
                         return {};  // Light early exception.
 
-                    msg.recipient = compute_create_address(msg.sender, sender_nonce);
+                    msg.recipient = compute_create_address(msg.sender, creation_sender_nonce);
                 }
                 // EOFCREATE
                 else
