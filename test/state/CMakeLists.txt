@@ -32,6 +32,7 @@ target_sources(
     rlp.hpp
     state.hpp
     state.cpp
+    state_diff.hpp
     system_contracts.hpp
     system_contracts.cpp
     test_state.hpp

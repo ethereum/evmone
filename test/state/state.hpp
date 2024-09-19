@@ -9,6 +9,7 @@
 #include "bloom_filter.hpp"
 #include "errors.hpp"
 #include "hash_utils.hpp"
+#include "state_diff.hpp"
 #include "transaction.hpp"
 #include <variant>
 
@@ -89,6 +90,8 @@ public:
     [[nodiscard]] auto& get_accounts() noexcept { return m_accounts; }
 
     [[nodiscard]] const auto& get_accounts() const noexcept { return m_accounts; }
+
+    StateDiff build_diff(evmc_revision rev) const;
 
     /// Returns the state journal checkpoint. It can be later used to in rollback()
     /// to revert changes newer than the checkpoint.

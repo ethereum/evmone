@@ -78,6 +78,43 @@ evmc_message build_message(
 }
 }  // namespace
 
+StateDiff State::build_diff(evmc_revision rev) const
+{
+    StateDiff diff;
+    for (const auto& [addr, m] : m_accounts)
+    {
+        if (m.destructed)
+        {
+            // TODO: This must be done even for just_created
+            //   because destructed may pre-date just_created. Add test to evmone (EEST has it).
+            diff.deleted_accounts.emplace_back(addr);
+            continue;
+        }
+        if (m.erase_if_empty && rev >= EVMC_SPURIOUS_DRAGON && m.is_empty())
+        {
+            if (!m.just_created)  // Don't report just created accounts
+                diff.deleted_accounts.emplace_back(addr);
+            continue;
+        }
+
+        // Unconditionally report nonce and balance as modified.
+        // TODO: We don't have information if the balance/nonce has actually changed.
+        //   One option is to just keep the original values. This may be handy for RPC.
+        // TODO(clang): In old Clang emplace_back without Account doesn't compile.
+        //   NOLINTNEXTLINE(modernize-use-emplace)
+        auto& a = diff.modified_accounts.emplace_back(StateDiff::Entry{addr, m.nonce, m.balance});
+        if (m.just_created && !m.code.empty())
+            a.code = m.code;
+
+        for (const auto& [k, v] : m.storage)
+        {
+            if (v.current != v.original)
+                a.modified_storage.emplace_back(k, v.current);
+        }
+    }
+    return diff;
+}
+
 Account& State::insert(const address& addr, Account account)
 {
     const auto r = m_accounts.insert({addr, std::move(account)});
