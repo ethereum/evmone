@@ -60,6 +60,22 @@ class StdBasicStringUint8Printer:
         return '{%s}' % (', '.join(hex(byte) for byte in content))
 
 
+STRING_VIEW_TARGET_TYPES = [
+    "std::basic_string_view<unsigned char, evmc::byte_traits<unsigned char> >",
+    "const std::basic_string_view<unsigned char, evmc::byte_traits<unsigned char> >",
+]
+
+
+class StdBasicStringViewUint8Printer:
+    def __init__(self, val):
+        self.val = val
+
+    def to_string(self):
+        start = self.val['_M_str']
+        length = self.val['_M_len']
+        content = [int(start[i]) for i in range(length)]
+        return '{%s}' % (', '.join(hex(byte) for byte in content))
+
 def register_printers(obj):
     if obj == None:
         obj = gdb
@@ -78,6 +94,9 @@ def lookup_function(val):
 
     if type_str in STRING_TARGET_TYPES:
         return StdBasicStringUint8Printer(val)
+
+    if type_str in STRING_VIEW_TARGET_TYPES:
+        return StdBasicStringViewUint8Printer(val)
 
     return None
 
