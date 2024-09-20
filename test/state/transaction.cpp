@@ -16,7 +16,7 @@ namespace evmone::state
 
 [[nodiscard]] bytes rlp_encode(const Transaction& tx)
 {
-    assert(tx.type <= Transaction::Type::blob);
+    assert(tx.type <= Transaction::Type::set_code);
 
     // TODO: Refactor this function. For all type of transactions most of the code is similar.
     if (tx.type == Transaction::Type::legacy)
@@ -46,7 +46,7 @@ namespace evmone::state
                    tx.to.has_value() ? tx.to.value() : bytes_view(), tx.value, tx.data,
                    tx.access_list, tx.v, tx.r, tx.s);
     }
-    else  // Transaction::Type::blob
+    else if (tx.type == Transaction::Type::blob)
     {
         // tx_type +
         // rlp [chain_id, nonce, max_priority_fee_per_gas, max_fee_per_gas, gas_limit, to, value,
@@ -56,6 +56,17 @@ namespace evmone::state
                    static_cast<uint64_t>(tx.gas_limit),
                    tx.to.has_value() ? tx.to.value() : bytes_view(), tx.value, tx.data,
                    tx.access_list, tx.max_blob_gas_price, tx.blob_hashes, tx.v, tx.r, tx.s);
+    }
+    else  // Transaction::Type::set_code
+    {
+        // tx_type +
+        // rlp [chain_id, nonce, max_priority_fee_per_gas, max_fee_per_gas, gas_limit, to, value,
+        // data, access_list, authorization_list, sig_parity, r, s];
+        return bytes{0x04} +  // Transaction type (set_code type == 4)
+               rlp::encode_tuple(tx.chain_id, tx.nonce, tx.max_priority_gas_price, tx.max_gas_price,
+                   static_cast<uint64_t>(tx.gas_limit),
+                   tx.to.has_value() ? tx.to.value() : bytes_view(), tx.value, tx.data,
+                   tx.access_list, tx.authorization_list, tx.v, tx.r, tx.s);
     }
 }
 
@@ -79,5 +90,11 @@ namespace evmone::state
                             static_cast<uint64_t>(receipt.cumulative_gas_used),
                             bytes_view(receipt.logs_bloom_filter), receipt.logs);
     }
+}
+
+[[nodiscard]] bytes rlp_encode(const Authorization& authorization)
+{
+    return rlp::encode_tuple(authorization.chain_id, authorization.addr, authorization.nonce,
+        authorization.v, authorization.r, authorization.s);
 }
 }  // namespace evmone::state
