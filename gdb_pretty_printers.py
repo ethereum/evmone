@@ -26,6 +26,21 @@ class EvmcBytesPrinter:
         return "0x" + (''.join(f'{byte:02x}' for byte in bytes_int))
 
 
+INTX_UINT_TARGET_TYPES = [
+    "intx::uint<256>",
+    "const intx::uint<256>",
+]
+
+class IntxUintPrinter:
+    def __init__(self, val):
+        self.val = val
+
+    def to_string(self):
+        words = self.val['words_']
+        words_int = [int(words[i]) for i in range(4)]
+        v = words_int[0] + (words_int[1] << 64) + (words_int[2] << 128) + (words_int[3] << 192)
+        return str(v)
+
 # In CLion these are automatically overwritten by std::* pretty printers.
 # Reload this script manually (`source -v ../../gdb_pretty_printers.py`) to activate them again.
 STRING_TARGET_TYPES = [
@@ -53,10 +68,13 @@ def register_printers(obj):
 
 def lookup_function(val):
     type_str = str(val.type.strip_typedefs())
-    # print("lookup " + type_str) # uncomment to see exact type requested
+    # print("lookup " + type_str)  # uncomment to see exact type requested
 
     if type_str in EVMC_BYTES_TARGET_TYPES:
         return EvmcBytesPrinter(val)
+
+    if type_str in INTX_UINT_TARGET_TYPES:
+        return IntxUintPrinter(val)
 
     if type_str in STRING_TARGET_TYPES:
         return StdBasicStringUint8Printer(val)
