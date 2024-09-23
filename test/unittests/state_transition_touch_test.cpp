@@ -14,6 +14,7 @@ TEST_F(state_transition, touch_empty_sd)
     block.base_fee = 0;
     static constexpr auto EMPTY = 0xee_address;
 
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     pre.insert(*tx.to, {.code = call(EMPTY)});
     pre.insert(EMPTY, {});
@@ -28,6 +29,7 @@ TEST_F(state_transition, touch_empty_tw)
     block.base_fee = 0;
     static constexpr auto EMPTY = 0xee_address;
 
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     pre.insert(*tx.to, {.code = call(EMPTY)});
     pre.insert(EMPTY, {});
@@ -42,6 +44,7 @@ TEST_F(state_transition, touch_nonexistent_tw)
     block.base_fee = 0;
     static constexpr auto NONEXISTENT = 0x4e_address;
 
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     pre.insert(*tx.to, {.code = call(NONEXISTENT)});
 
@@ -55,6 +58,7 @@ TEST_F(state_transition, touch_nonexistent_sd)
     block.base_fee = 0;
     static constexpr auto NONEXISTENT = 0x4e_address;
 
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     pre.insert(*tx.to, {.code = call(NONEXISTENT)});
 
@@ -67,6 +71,7 @@ TEST_F(state_transition, touch_nonempty_tw)
     block.base_fee = 0;
     static constexpr auto WITH_BALANCE = 0xba_address;
 
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     pre.insert(*tx.to, {.code = call(WITH_BALANCE)});
     pre.insert(WITH_BALANCE, {.balance = 1});
@@ -81,6 +86,7 @@ TEST_F(state_transition, touch_revert_empty)
     block.base_fee = 0;
     static constexpr auto EMPTY = 0xee_address;
 
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     pre.insert(*tx.to, {.code = call(EMPTY) + revert(0, 0)});
     pre.insert(EMPTY, {});
@@ -96,6 +102,7 @@ TEST_F(state_transition, touch_revert_nonexistent_istanbul)
     block.base_fee = 0;
     static constexpr auto EMPTY = 0xee_address;
 
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     pre.insert(*tx.to, {.code = call(EMPTY) + revert(0, 0)});
 
@@ -110,6 +117,7 @@ TEST_F(state_transition, touch_revert_nonexistent_tw)
     block.base_fee = 0;
     static constexpr auto EMPTY = 0xee_address;
 
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     pre.insert(*tx.to, {.code = call(EMPTY) + OP_INVALID});
 
@@ -124,6 +132,7 @@ TEST_F(state_transition, touch_revert_nonempty_tw)
     block.base_fee = 0;
     static constexpr auto WITH_BALANCE = 0xba_address;
 
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     pre.insert(*tx.to, {.code = call(WITH_BALANCE) + OP_INVALID});
     pre.insert(WITH_BALANCE, {.balance = 1});
@@ -140,6 +149,7 @@ TEST_F(state_transition, touch_revert_nonexistent_touch_again_tw)
     static constexpr auto EMPTY = 0xee_address;
     static constexpr auto REVERT_PROXY = 0x94_address;
 
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     pre.insert(REVERT_PROXY, {.code = call(EMPTY) + OP_INVALID});
     pre.insert(*tx.to, {.code = call(REVERT_PROXY).gas(0xffff) + call(EMPTY)});
@@ -156,6 +166,7 @@ TEST_F(state_transition, touch_touch_revert_nonexistent_tw)
     static constexpr auto EMPTY = 0xee_address;
     static constexpr auto REVERT_PROXY = 0x94_address;
 
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     pre.insert(REVERT_PROXY, {.code = call(EMPTY) + OP_INVALID});
     pre.insert(*tx.to, {.code = call(EMPTY) + call(REVERT_PROXY).gas(0xffff)});
@@ -172,6 +183,7 @@ TEST_F(state_transition, touch_revert_touch_revert_nonexistent_tw)
     static constexpr auto EMPTY = 0xee_address;
     static constexpr auto REVERT_PROXY = 0x94_address;
 
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     pre.insert(REVERT_PROXY, {.code = call(EMPTY) + OP_INVALID});
     pre.insert(*tx.to, {.code = 2 * call(REVERT_PROXY).gas(0xffff)});
@@ -187,6 +199,7 @@ TEST_F(state_transition, touch_touch_revert_nonexistent_tw_2)
     block.base_fee = 0;
     static constexpr auto EMPTY = 0xee_address;
 
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     pre.insert(*tx.to, {.code = call(EMPTY) + call(EMPTY) + OP_INVALID});
 
@@ -202,6 +215,7 @@ TEST_F(state_transition, touch_revert_selfdestruct_to_nonexistient_tw)
     static constexpr auto DESTRUCTOR = 0xde_address;
     static constexpr auto BENEFICIARY = 0xbe_address;
 
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     pre.insert(*tx.to, {.code = call(DESTRUCTOR).gas(0xffff) + OP_INVALID});
     pre.insert(DESTRUCTOR, {.code = selfdestruct(BENEFICIARY)});

@@ -66,6 +66,7 @@ TEST_F(state_transition, code_deployment_out_of_gas_tw)
     block.base_fee = 0;
     const auto initcode = ret(0, 5000);  // create contract with a lot of zeros, deploy cost 1M
 
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     tx.gas_limit = 1000000;
     pre.insert(To, {.code = mstore(0, push(initcode)) +
@@ -80,6 +81,7 @@ TEST_F(state_transition, code_deployment_out_of_gas_f)
     block.base_fee = 0;
     const auto initcode = ret(0, 1000);  // create contract with a lot of zeros
 
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     tx.gas_limit = 100000;
     pre.insert(To, {.code = mstore(0, push(initcode)) +
@@ -98,6 +100,7 @@ TEST_F(state_transition, code_deployment_out_of_gas_storage_tw)
     const auto initcode = sstore(0, 1)     // set storage
                           + ret(0, 5000);  // create contract with a lot of zeros
 
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     tx.gas_limit = 1000000;
     pre.insert(To, {.code = mstore(0, push(initcode)) +
@@ -113,6 +116,7 @@ TEST_F(state_transition, code_deployment_out_of_gas_storage_f)
     const auto initcode = sstore(0, 1)     // set storage
                           + ret(0, 1000);  // create contract with a lot of zeros
 
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     tx.gas_limit = 100000;
     pre.insert(To, {.code = mstore(0, push(initcode)) +
@@ -135,6 +139,7 @@ TEST_F(state_transition, code_deployment_out_of_gas_refund_tw)
                           + sstore(0, 0)   // gas refund
                           + ret(0, 5000);  // create contract with a lot of zeros
 
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     tx.gas_limit = 1000000;
     pre.insert(To, {.code = mstore(0, push(initcode)) +
@@ -152,6 +157,7 @@ TEST_F(state_transition, code_deployment_out_of_gas_refund_f)
                           + sstore(0, 0)   // gas refund
                           + ret(0, 1000);  // create contract with a lot of zeros
 
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     tx.gas_limit = 100000;
     pre.insert(To, {.code = mstore(0, push(initcode)) +
@@ -255,6 +261,7 @@ TEST_F(state_transition, create_revert_sd)
     block.base_fee = 0;
     static constexpr auto CREATED = 0x8bbc3514477d75ec797bbe4e19d7961660bb849c_address;
 
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     pre.insert(*tx.to, {.code = create() + OP_INVALID});
 
@@ -269,6 +276,7 @@ TEST_F(state_transition, create_revert_tw)
     block.base_fee = 0;
     static constexpr auto CREATED = 0x8bbc3514477d75ec797bbe4e19d7961660bb849c_address;
 
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     pre.insert(*tx.to, {.code = create() + OP_INVALID});
 
@@ -296,6 +304,7 @@ TEST_F(state_transition, create_collision_empty_revert_tw)
     block.base_fee = 0;
     static constexpr auto CREATED = 0x8bbc3514477d75ec797bbe4e19d7961660bb849c_address;
 
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     pre.insert(*tx.to, {.code = create() + OP_INVALID});
     pre.insert(CREATED, {});
@@ -326,6 +335,7 @@ TEST_F(state_transition, touch_create_collision_empty_revert_tw)
     static constexpr auto CREATED = 0x11f72042f0f1c9d8a1aeffc3680d0b41dd7769a7_address;
     static constexpr auto REVERT_PROXY = 0x94_address;
 
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     pre.insert(*tx.to, {.code = call(CREATED) + call(REVERT_PROXY).gas(0xffff)});
     pre.insert(REVERT_PROXY, {.code = create() + OP_INVALID});

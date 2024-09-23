@@ -14,6 +14,7 @@ TEST_F(state_transition, extcodehash_existent)
     block.base_fee = 0;
 
     static constexpr auto EXT = 0xe4_address;
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     pre.insert(To, {.code = sstore(0, push(EXT) + OP_EXTCODEHASH)});
     pre.insert(EXT, {.code = bytecode{"1234"}});
@@ -28,6 +29,7 @@ TEST_F(state_transition, extcodesize_existent)
     block.base_fee = 0;
 
     static constexpr auto EXT = 0xe4_address;
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     pre.insert(To, {.code = sstore(0, push(EXT) + OP_EXTCODESIZE)});
     pre.insert(EXT, {.code = bytes(3, 0)});
