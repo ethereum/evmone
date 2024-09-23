@@ -299,6 +299,11 @@ static void from_json_tx_common(const json::json& j, state::Transaction& o)
     o.sender = from_json<evmc::address>(j.at("sender"));
     o.nonce = from_json<uint64_t>(j.at("nonce"));
 
+    if (const auto chain_id_it = j.find("chainId"); chain_id_it != j.end())
+        o.chain_id = from_json<uint8_t>(*chain_id_it);
+    else
+        o.chain_id = 1;
+
     if (const auto to_it = j.find("to"); to_it != j.end())
     {
         if (!to_it->is_null() && !to_it->get<std::string>().empty())
@@ -339,8 +344,6 @@ state::Transaction from_json<state::Transaction>(const json::json& j)
 {
     state::Transaction o;
     from_json_tx_common(j, o);
-    if (const auto chain_id_it = j.find("chainId"); chain_id_it != j.end())
-        o.chain_id = from_json<uint8_t>(*chain_id_it);
 
     if (const auto it = j.find("data"); it != j.end())
         o.data = from_json<bytes>(*it);

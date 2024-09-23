@@ -95,7 +95,7 @@ TEST(statetest_loader, tx_eip1559)
     EXPECT_EQ(tx.type, state::Transaction::Type::eip1559);
     EXPECT_EQ(tx.data, (bytes{0xb0, 0xb1}));
     EXPECT_EQ(tx.gas_limit, 0x9091);
-    EXPECT_EQ(tx.chain_id, 0);
+    EXPECT_EQ(tx.chain_id, 1);
     EXPECT_EQ(tx.value, 0xe0e1);
     EXPECT_EQ(tx.sender, 0xa0a1_address);
     EXPECT_EQ(tx.to, 0xc0c1_address);
