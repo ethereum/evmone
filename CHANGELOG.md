@@ -5,6 +5,77 @@ Documentation of all notable changes to the **evmone** project.
 The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
+## [0.13.0] — unreleased
+
+This release adds BLS precompiles and a system contract for [Prague]
+and improves the interpreter API.
+
+### Added
+
+- Implementation of all [EIP-2537] BLS precompiles, enabled in **Prague**:
+  [#984](https://github.com/ethereum/evmone/pull/984)
+  - uses [blst] [v0.3.13](https://github.com/supranational/blst/releases/tag/v0.3.13) library,
+    [#972](https://github.com/ethereum/evmone/pull/972)
+    [#986](https://github.com/ethereum/evmone/pull/986)
+  - `bls12_g1add` (`0x0b`)
+    [#982](https://github.com/ethereum/evmone/pull/982)
+  - `bls12_g1mul` (`0x0c`)
+    [#994](https://github.com/ethereum/evmone/pull/994)
+  - `bls12_g1msm` (`0x0d`)
+    [#1010](https://github.com/ethereum/evmone/pull/1010)
+  - `bls12_g2add` (`0x0e`)
+    [#995](https://github.com/ethereum/evmone/pull/995)
+  - `bls12_g2mul` (`0x0f`)
+    [#999](https://github.com/ethereum/evmone/pull/999)
+  - `bls12_g2msm` (`0x10`)
+    [#1010](https://github.com/ethereum/evmone/pull/1010)
+  - `bls12_pairing_check` (`0x11`)
+    [#1016](https://github.com/ethereum/evmone/pull/1016)
+  - `bls12_map_fp_to_g1` (`0x12`)
+    [#1012](https://github.com/ethereum/evmone/pull/1012)
+  - `bls12_map_fp2_to_g2` (`0x13`)
+    [#1012](https://github.com/ethereum/evmone/pull/1012)
+- Implementation of KZG proof verification (aka "point evaluation") precompile from [EIP-4844].
+  [#979](https://github.com/ethereum/evmone/pull/979)
+- Implementation of [EIP-2935] "Serve historical block hashes from state".
+  [#953](https://github.com/ethereum/evmone/pull/953)
+
+### Changed
+
+- Refactor `system_call()` in preparation for more **Pectra** system contracts.
+  [#976](https://github.com/ethereum/evmone/pull/976)
+- Improved Baseline code analysis API.
+  [#941](https://github.com/ethereum/evmone/pull/941)
+- Provide execution states at VM object level and hide them from public API.
+  [#1005](https://github.com/ethereum/evmone/pull/1005)
+- Requirements and dependencies updates:
+  - Support for 32-bit MSVC compiler has been dropped.
+    [#973](https://github.com/ethereum/evmone/pull/973)
+  - [intx] [v0.12.0](https://github.com/chfast/intx/releases/tag/v0.12.0)
+    [#985](https://github.com/ethereum/evmone/pull/985)
+- External test suites:
+  - EEST EOF tests upgraded to [eip7692@v1.1.0](https://github.com/ethereum/execution-spec-tests/releases/tag/eip7692%40v1.1.0).
+    [#1025](https://github.com/ethereum/evmone/pull/1025)
+  - Added EEST tests for Pectra [pectra-devnet-3@v1.5.0](https://github.com/ethereum/execution-spec-tests/releases/tag/pectra-devnet-3%40v1.5.0)
+    [#997](https://github.com/ethereum/evmone/pull/997)
+  - [ethereum/tests] upgraded to [v14.1](https://github.com/ethereum/tests/releases/tag/v14.1).
+    [#980](https://github.com/ethereum/evmone/pull/980)
+
+### Fixed
+
+- Fixed EOF parsing bug allowing multiple subcontainer kinds in the header.
+  [#978](https://github.com/ethereum/evmone/pull/978)
+- Ensure mandatory fields are included in the exported state tests.
+  [#993](https://github.com/ethereum/evmone/pull/993)
+- Properly handle EOF additions in `ExecutionState::reset()`.
+  [#1004](https://github.com/ethereum/evmone/pull/1004)
+
+### Removed
+
+- The implementation of EOF's `TXCREATE` has been removed. It will be back when scheduled for a network upgrade.
+  [#992](https://github.com/ethereum/evmone/pull/992)
+
+
 ## [0.12.0] — 2024-08-08
 
 This release is focused on the Prague upgrade and EOF.
@@ -125,9 +196,9 @@ This release is focused on the Prague upgrade and EOF.
     [#840](https://github.com/ethereum/evmone/pull/840)
   - Xcode 15.0
     [#847](https://github.com/ethereum/evmone/pull/847)
-  - [EVMC][EVMC 12.0.0]
+  - [EVMC] [12.0.0][EVMC 12.0.0]
     [#966](https://github.com/ethereum/evmone/pull/966)
-  - [intx][intx 0.11.0]
+  - [intx] [0.11.0][intx 0.11.0]
     [#967](https://github.com/ethereum/evmone/pull/967)
 
 - Use 32-byte aligned allocation for Baseline stack space.
@@ -770,6 +841,7 @@ It delivers fully-compatible and high-speed EVM implementation.
 - Exposes [EVMC] 6 ABI.
 - The [intx 0.2.0](https://github.com/chfast/intx/releases/tag/v0.2.0) library is used for 256-bit precision arithmetic. 
 
+[0.13.0]: https://github.com/ethereum/evmone/compare/v0.12.0..master
 [0.12.0]: https://github.com/ethereum/evmone/releases/tag/v0.12.0
 [0.11.0]: https://github.com/ethereum/evmone/releases/tag/v0.11.0
 [0.10.0]: https://github.com/ethereum/evmone/releases/tag/v0.10.0
@@ -794,7 +866,9 @@ It delivers fully-compatible and high-speed EVM implementation.
 [EIP-1884]: https://eips.ethereum.org/EIPS/eip-1884
 [EIP-1344]: https://eips.ethereum.org/EIPS/eip-1344
 [EIP-2200]: https://eips.ethereum.org/EIPS/eip-2200
+[EIP-2537]: https://eips.ethereum.org/EIPS/eip-2537
 [EIP-2929]: https://eips.ethereum.org/EIPS/eip-2929
+[EIP-2935]: https://eips.ethereum.org/EIPS/eip-2935
 [EIP-3155]: https://eips.ethereum.org/EIPS/eip-3155
 [EIP-3198]: https://eips.ethereum.org/EIPS/eip-3198
 [EIP-3540]: https://eips.ethereum.org/EIPS/eip-3540
@@ -821,6 +895,7 @@ It delivers fully-compatible and high-speed EVM implementation.
 [London]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/london.md
 [Shanghai]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/shanghai.md
 [Cancun]: https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/cancun.md
+[Prague]: https://eips.ethereum.org/EIPS/eip-7600
 
 [EVMC]: https://github.com/ethereum/evmc
 [EVMC 12.0.0]: https://github.com/ethereum/evmc/releases/tag/v12.0.0
@@ -846,6 +921,7 @@ It delivers fully-compatible and high-speed EVM implementation.
 [ethash 0.7.0]: https://github.com/chfast/ethash/releases/tag/v0.7.0
 [ethash 1.0.0]: https://github.com/chfast/ethash/releases/tag/v1.0.0
 
+[ethereum/tests]: https://github.com/ethereum/tests
 [Ethereum Execution Tests]: https://github.com/ethereum/tests
 [tests 14.0]: https://github.com/ethereum/tests/releases/tag/v14.0
 [tests 13]: https://github.com/ethereum/tests/releases/tag/v13
@@ -867,6 +943,7 @@ It delivers fully-compatible and high-speed EVM implementation.
 [retesteth]: https://github.com/ethereum/retesteth
 [Silkworm]: https://github.com/torquem-ch/silkworm
 [t8n]: https://ethereum-tests.readthedocs.io/en/develop/t8ntool-ref.html
+[blst]: https://github.com/supranational/blst
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.1.0/
 [Semantic Versioning]: https://semver.org/spec/v2.0.0.html
