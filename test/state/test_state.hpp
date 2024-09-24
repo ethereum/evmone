@@ -6,13 +6,20 @@
 #include <evmc/evmc.hpp>
 #include <intx/intx.hpp>
 #include <map>
+#include <span>
+#include <variant>
 
 namespace evmone
 {
 namespace state
 {
+struct BlockInfo;
+struct Ommer;
+struct Transaction;
+struct TransactionReceipt;
+struct Withdrawal;
 class State;
-}
+}  // namespace state
 
 namespace test
 {
@@ -62,6 +69,19 @@ public:
     /// Converts the TestState to intra state for transaction execution.
     [[nodiscard]] state::State to_intra_state() const;
 };
+
+/// Wrapping of state::transition() which operates on TestState.
+[[nodiscard]] std::variant<state::TransactionReceipt, std::error_code> transition(TestState& state,
+    const state::BlockInfo& block, const state::Transaction& tx, evmc_revision rev, evmc::VM& vm,
+    int64_t block_gas_left, int64_t blob_gas_left);
+
+/// Wrapping of state::finalize() which operates on TestState.
+void finalize(TestState& state, evmc_revision rev, const address& coinbase,
+    std::optional<uint64_t> block_reward, std::span<const state::Ommer> ommers,
+    std::span<const state::Withdrawal> withdrawals);
+
+/// Wrapping of state::system_call() which operates on TestState.
+void system_call(TestState& state, const state::BlockInfo& block, evmc_revision rev, evmc::VM& vm);
 
 }  // namespace test
 }  // namespace evmone
