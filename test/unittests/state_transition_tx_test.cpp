@@ -12,6 +12,7 @@ TEST_F(state_transition, tx_legacy)
 {
     rev = EVMC_ISTANBUL;
     block.base_fee = 0;  // should be 0 before London
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
 
     expect.post.at(Sender).nonce = pre.get(Sender).nonce + 1;
@@ -21,6 +22,7 @@ TEST_F(state_transition, tx_non_existing_sender)
 {
     rev = EVMC_BERLIN;
     block.base_fee = 0;  // should be 0 before London
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     tx.max_gas_price = 0;
     tx.max_priority_gas_price = 0;
@@ -36,6 +38,7 @@ TEST_F(state_transition, invalid_tx_non_existing_sender)
 {
     rev = EVMC_BERLIN;
     block.base_fee = 0;  // should be 0 before London
+    tx.type = Transaction::Type::legacy;
     tx.to = To;
     tx.max_gas_price = 1;
     tx.max_priority_gas_price = 1;
@@ -49,12 +52,12 @@ TEST_F(state_transition, invalid_tx_non_existing_sender)
 TEST_F(state_transition, tx_blob_gas_price)
 {
     rev = EVMC_CANCUN;
+    tx.type = Transaction::Type::blob;
     tx.to = To;
     tx.gas_limit = 25000;
     tx.max_gas_price = block.base_fee;  // minimal gas price to make it
     tx.max_priority_gas_price = 0;
     tx.nonce = 1;
-    tx.type = Transaction::Type::blob;
     tx.blob_hashes.emplace_back(
         0x0100000000000000000000000000000000000000000000000000000000000000_bytes32);
     tx.max_blob_gas_price = 1;
@@ -70,9 +73,10 @@ TEST_F(state_transition, empty_coinbase_fee_0_sd)
     rev = EVMC_SPURIOUS_DRAGON;
     block_reward = 0;
     block.base_fee = 0;  // should be 0 before London
+    tx.type = Transaction::Type::legacy;
+    tx.to = To;
     tx.max_gas_price = 0;
     tx.max_priority_gas_price = 0;
-    tx.to = To;
     pre.insert(Coinbase, {});
     expect.post[To].exists = false;
     expect.post[Coinbase].exists = false;
@@ -83,9 +87,10 @@ TEST_F(state_transition, empty_coinbase_fee_0_tw)
     rev = EVMC_TANGERINE_WHISTLE;
     block_reward = 0;
     block.base_fee = 0;  // should be 0 before London
+    tx.type = Transaction::Type::legacy;
+    tx.to = To;
     tx.max_gas_price = 0;
     tx.max_priority_gas_price = 0;
-    tx.to = To;
     pre.insert(Coinbase, {});
     expect.post[To].exists = true;
     expect.post[Coinbase].balance = 0;

@@ -189,15 +189,15 @@ void state_transition::export_state_test(
     jtx["sender"] = hex0x(tx.sender);
     jtx["secretKey"] = hex0x(SenderSecretKey);
     jtx["nonce"] = hex0x(tx.nonce);
-    if (rev < EVMC_LONDON)
-    {
-        assert(tx.max_gas_price == tx.max_priority_gas_price);
-        jtx["gasPrice"] = hex0x(tx.max_gas_price);
-    }
-    else
+    if (tx.type >= Transaction::Type::eip1559)
     {
         jtx["maxFeePerGas"] = hex0x(tx.max_gas_price);
         jtx["maxPriorityFeePerGas"] = hex0x(tx.max_priority_gas_price);
+    }
+    else
+    {
+        assert(tx.max_gas_price == tx.max_priority_gas_price);
+        jtx["gasPrice"] = hex0x(tx.max_gas_price);
     }
 
     jtx["data"][0] = hex0x(tx.data);
