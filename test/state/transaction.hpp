@@ -4,173 +4,13 @@
 
 #pragma once
 
-#include "account.hpp"
 #include "bloom_filter.hpp"
-#include "errors.hpp"
-#include "hash_utils.hpp"
+#include <intx/intx.hpp>
 #include <optional>
-#include <variant>
 #include <vector>
 
 namespace evmone::state
 {
-/// The Ethereum State: the collection of accounts mapped by their addresses.
-class State
-{
-    struct JournalBase
-    {
-        address addr;
-    };
-
-    struct JournalBalanceChange : JournalBase
-    {
-        intx::uint256 prev_balance;
-    };
-
-    struct JournalTouched : JournalBase
-    {};
-
-    struct JournalStorageChange : JournalBase
-    {
-        bytes32 key;
-        bytes32 prev_value;
-        evmc_access_status prev_access_status;
-    };
-
-    struct JournalTransientStorageChange : JournalBase
-    {
-        bytes32 key;
-        bytes32 prev_value;
-    };
-
-    struct JournalNonceBump : JournalBase
-    {};
-
-    struct JournalCreate : JournalBase
-    {
-        bool existed;
-    };
-
-    struct JournalDestruct : JournalBase
-    {};
-
-    struct JournalAccessAccount : JournalBase
-    {};
-
-    using JournalEntry =
-        std::variant<JournalBalanceChange, JournalTouched, JournalStorageChange, JournalNonceBump,
-            JournalCreate, JournalTransientStorageChange, JournalDestruct, JournalAccessAccount>;
-
-    std::unordered_map<address, Account> m_accounts;
-
-    /// The state journal: the list of changes made in the state
-    /// with information how to revert them.
-    std::vector<JournalEntry> m_journal;
-
-public:
-    State() = default;
-    State(const State&) = delete;
-    State(State&&) = default;
-    State& operator=(State&&) = default;
-
-    /// Inserts the new account at the address.
-    /// There must not exist any account under this address before.
-    Account& insert(const address& addr, Account account = {});
-
-    /// Returns the pointer to the account at the address if the account exists. Null otherwise.
-    Account* find(const address& addr) noexcept;
-
-    /// Gets the account at the address (the account must exist).
-    Account& get(const address& addr) noexcept;
-
-    /// Gets an existing account or inserts new account.
-    Account& get_or_insert(const address& addr, Account account = {});
-
-    [[nodiscard]] auto& get_accounts() noexcept { return m_accounts; }
-
-    [[nodiscard]] const auto& get_accounts() const noexcept { return m_accounts; }
-
-    /// Returns the state journal checkpoint. It can be later used to in rollback()
-    /// to revert changes newer than the checkpoint.
-    [[nodiscard]] size_t checkpoint() const noexcept { return m_journal.size(); }
-
-    /// Reverts state changes made after the checkpoint.
-    void rollback(size_t checkpoint);
-
-    /// Methods performing changes to the state which can be reverted by rollback().
-    /// @{
-
-    /// Touches (as in EIP-161) an existing account or inserts new erasable account.
-    Account& touch(const address& addr);
-
-    void journal_balance_change(const address& addr, const intx::uint256& prev_balance);
-
-    void journal_storage_change(const address& addr, const bytes32& key, const StorageValue& value);
-
-    void journal_transient_storage_change(
-        const address& addr, const bytes32& key, const bytes32& value);
-
-    void journal_bump_nonce(const address& addr);
-
-    void journal_create(const address& addr, bool existed);
-
-    void journal_destruct(const address& addr);
-
-    void journal_access_account(const address& addr);
-
-    /// @}
-};
-
-struct Ommer
-{
-    address beneficiary;  ///< Ommer block beneficiary address.
-    uint32_t delta = 0;   ///< Difference between current and ommer block number.
-};
-
-struct Withdrawal
-{
-    uint64_t index = 0;
-    uint64_t validator_index = 0;
-    address recipient;
-    uint64_t amount_in_gwei = 0;  ///< The amount is denominated in gwei.
-
-    /// Returns withdrawal amount in wei.
-    [[nodiscard]] intx::uint256 get_amount() const noexcept
-    {
-        return intx::uint256{amount_in_gwei} * 1'000'000'000;
-    }
-};
-
-struct BlockInfo
-{
-    /// Max amount of blob gas allowed in block. It's constant now but can be dynamic in the future.
-    static constexpr int64_t MAX_BLOB_GAS_PER_BLOCK = 786432;
-
-    int64_t number = 0;
-    int64_t timestamp = 0;
-    int64_t parent_timestamp = 0;
-    int64_t gas_limit = 0;
-    address coinbase;
-    int64_t difficulty = 0;
-    int64_t parent_difficulty = 0;
-    hash256 parent_ommers_hash;
-    bytes32 prev_randao;
-    hash256 parent_beacon_block_root;
-    uint64_t base_fee = 0;
-
-    /// The "excess blob gas" parameter from EIP-4844
-    /// for computing the blob gas price in the current block.
-    uint64_t excess_blob_gas = 0;
-
-    /// The blob gas price parameter from EIP-4844.
-    /// This values is not stored in block headers directly but computed from excess_blob_gas.
-    intx::uint256 blob_base_fee = 0;
-
-    std::vector<Ommer> ommers;
-    std::vector<Withdrawal> withdrawals;
-    std::unordered_map<int64_t, hash256> known_block_hashes;
-};
-
 using AccessList = std::vector<std::pair<address, std::vector<bytes32>>>;
 
 struct Transaction
@@ -255,25 +95,6 @@ struct TransactionReceipt
     std::optional<bytes32> post_state;
 };
 
-/// Computes the current blob gas price based on the excess blob gas.
-intx::uint256 compute_blob_gas_price(uint64_t excess_blob_gas) noexcept;
-
-/// Finalize state after applying a "block" of transactions.
-///
-/// Applies block reward to coinbase, withdrawals (post Shanghai) and deletes empty touched accounts
-/// (post Spurious Dragon).
-void finalize(State& state, evmc_revision rev, const address& coinbase,
-    std::optional<uint64_t> block_reward, std::span<const Ommer> ommers,
-    std::span<const Withdrawal> withdrawals);
-
-[[nodiscard]] std::variant<TransactionReceipt, std::error_code> transition(State& state,
-    const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm,
-    int64_t block_gas_left, int64_t blob_gas_left);
-
-std::variant<int64_t, std::error_code> validate_transaction(const Account& sender_acc,
-    const BlockInfo& block, const Transaction& tx, evmc_revision rev, int64_t block_gas_left,
-    int64_t blob_gas_left) noexcept;
-
 /// Defines how to RLP-encode a Transaction.
 [[nodiscard]] bytes rlp_encode(const Transaction& tx);
 
@@ -282,7 +103,4 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
 
 /// Defines how to RLP-encode a Log.
 [[nodiscard]] bytes rlp_encode(const Log& log);
-
-/// Defines how to RLP-encode a Withdrawal.
-[[nodiscard]] bytes rlp_encode(const Withdrawal& withdrawal);
 }  // namespace evmone::state
