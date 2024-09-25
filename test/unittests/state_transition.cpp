@@ -228,8 +228,8 @@ void state_transition::export_state_test(
 
     if (holds_alternative<std::error_code>(res))
     {
-        jpost["expectException"] = get_tests_invalid_tx_message(
-            static_cast<ErrorCode>(std::get<std::error_code>(res).value()));
+        jpost["expectException"] =
+            get_invalid_tx_message(static_cast<ErrorCode>(std::get<std::error_code>(res).value()));
         jpost["logs"] = hex0x(logs_hash(std::vector<Log>()));
     }
     else
