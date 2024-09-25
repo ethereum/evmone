@@ -3,9 +3,10 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
+#include "../state/block.hpp"
 #include "../state/bloom_filter.hpp"
-#include "../state/state.hpp"
 #include "../state/test_state.hpp"
+#include "../state/transaction.hpp"
 #include "../utils/utils.hpp"
 #include <evmc/evmc.hpp>
 #include <span>

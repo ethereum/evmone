@@ -6,7 +6,6 @@
 
 #include "state.hpp"
 #include <optional>
-#include <unordered_set>
 
 namespace evmone::state
 {
