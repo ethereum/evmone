@@ -36,6 +36,8 @@ target_sources(
     system_contracts.cpp
     test_state.hpp
     test_state.cpp
+    transaction.hpp
+    transaction.cpp
 )
 
 option(EVMONE_PRECOMPILES_SILKPRE "Enable precompiles support via silkpre library" OFF)
