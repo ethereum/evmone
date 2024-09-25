@@ -95,6 +95,10 @@ state::Transaction from_json<state::Transaction>(const json::json& j);
 /// Exports the State (accounts) to JSON format (aka pre/post/alloc state).
 json::json to_json(const TestState& state);
 
+/// Returns the standardized error message for the transaction validation error.
+[[nodiscard]] std::string get_invalid_tx_message(state::ErrorCode errc) noexcept;
+
+
 std::vector<StateTransitionTest> load_state_tests(std::istream& input);
 
 /// Validates an Ethereum state:

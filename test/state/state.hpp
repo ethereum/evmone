@@ -8,7 +8,6 @@
 #include "bloom_filter.hpp"
 #include "errors.hpp"
 #include "hash_utils.hpp"
-#include <cassert>
 #include <optional>
 #include <variant>
 #include <vector>
@@ -286,7 +285,4 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
 
 /// Defines how to RLP-encode a Withdrawal.
 [[nodiscard]] bytes rlp_encode(const Withdrawal& withdrawal);
-
-[[nodiscard]] std::string get_tests_invalid_tx_message(ErrorCode errc) noexcept;
-
 }  // namespace evmone::state
