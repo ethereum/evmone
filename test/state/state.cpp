@@ -4,12 +4,9 @@
 
 #include "state.hpp"
 #include "../utils/stdx/utility.hpp"
-#include "errors.hpp"
 #include "host.hpp"
-#include "rlp.hpp"
 #include <evmone/constants.hpp>
 #include <evmone/eof.hpp>
-#include <evmone/execution_state.hpp>
 #include <algorithm>
 
 namespace evmone::state
@@ -223,29 +220,6 @@ void State::rollback(size_t checkpoint)
             m_journal.back());
         m_journal.pop_back();
     }
-}
-
-intx::uint256 compute_blob_gas_price(uint64_t excess_blob_gas) noexcept
-{
-    /// A helper function approximating `factor * e ** (numerator / denominator)`.
-    /// https://eips.ethereum.org/EIPS/eip-4844#helpers
-    static constexpr auto fake_exponential = [](uint64_t factor, uint64_t numerator,
-                                                 uint64_t denominator) noexcept {
-        intx::uint256 i = 1;
-        intx::uint256 output = 0;
-        intx::uint256 numerator_accum = factor * denominator;
-        while (numerator_accum > 0)
-        {
-            output += numerator_accum;
-            numerator_accum = (numerator_accum * numerator) / (denominator * i);
-            i += 1;
-        }
-        return output / denominator;
-    };
-
-    static constexpr auto MIN_BLOB_GASPRICE = 1;
-    static constexpr auto BLOB_GASPRICE_UPDATE_FRACTION = 3338477;
-    return fake_exponential(MIN_BLOB_GASPRICE, excess_blob_gas, BLOB_GASPRICE_UPDATE_FRACTION);
 }
 
 /// Validates transaction and computes its execution gas limit (the amount of gas provided to EVM).
@@ -489,83 +463,5 @@ std::variant<TransactionReceipt, std::error_code> transition(State& state, const
     }
 
     return receipt;
-}
-
-[[nodiscard]] bytes rlp_encode(const Log& log)
-{
-    return rlp::encode_tuple(log.addr, log.topics, log.data);
-}
-
-[[nodiscard]] bytes rlp_encode(const Transaction& tx)
-{
-    assert(tx.type <= Transaction::Type::blob);
-
-    // TODO: Refactor this function. For all type of transactions most of the code is similar.
-    if (tx.type == Transaction::Type::legacy)
-    {
-        // rlp [nonce, gas_price, gas_limit, to, value, data, v, r, s];
-        return rlp::encode_tuple(tx.nonce, tx.max_gas_price, static_cast<uint64_t>(tx.gas_limit),
-            tx.to.has_value() ? tx.to.value() : bytes_view(), tx.value, tx.data, tx.v, tx.r, tx.s);
-    }
-    else if (tx.type == Transaction::Type::access_list)
-    {
-        // tx_type +
-        // rlp [chain_id, nonce, gas_price, gas_limit, to, value, data, access_list, v, r, s];
-        return bytes{0x01} +  // Transaction type (eip2930 type == 1)
-               rlp::encode_tuple(tx.chain_id, tx.nonce, tx.max_gas_price,
-                   static_cast<uint64_t>(tx.gas_limit),
-                   tx.to.has_value() ? tx.to.value() : bytes_view(), tx.value, tx.data,
-                   tx.access_list, tx.v, tx.r, tx.s);
-    }
-    else if (tx.type == Transaction::Type::eip1559)
-    {
-        // tx_type +
-        // rlp [chain_id, nonce, max_priority_fee_per_gas, max_fee_per_gas, gas_limit, to, value,
-        // data, access_list, sig_parity, r, s];
-        return bytes{0x02} +  // Transaction type (eip1559 type == 2)
-               rlp::encode_tuple(tx.chain_id, tx.nonce, tx.max_priority_gas_price, tx.max_gas_price,
-                   static_cast<uint64_t>(tx.gas_limit),
-                   tx.to.has_value() ? tx.to.value() : bytes_view(), tx.value, tx.data,
-                   tx.access_list, tx.v, tx.r, tx.s);
-    }
-    else  // Transaction::Type::blob
-    {
-        // tx_type +
-        // rlp [chain_id, nonce, max_priority_fee_per_gas, max_fee_per_gas, gas_limit, to, value,
-        // data, access_list, max_fee_per_blob_gas, blob_versioned_hashes, sig_parity, r, s];
-        return bytes{stdx::to_underlying(Transaction::Type::blob)} +
-               rlp::encode_tuple(tx.chain_id, tx.nonce, tx.max_priority_gas_price, tx.max_gas_price,
-                   static_cast<uint64_t>(tx.gas_limit),
-                   tx.to.has_value() ? tx.to.value() : bytes_view(), tx.value, tx.data,
-                   tx.access_list, tx.max_blob_gas_price, tx.blob_hashes, tx.v, tx.r, tx.s);
-    }
-}
-
-[[nodiscard]] bytes rlp_encode(const TransactionReceipt& receipt)
-{
-    if (receipt.post_state.has_value())
-    {
-        assert(receipt.type == Transaction::Type::legacy);
-
-        return rlp::encode_tuple(receipt.post_state.value(),
-            static_cast<uint64_t>(receipt.cumulative_gas_used),
-            bytes_view(receipt.logs_bloom_filter), receipt.logs);
-    }
-    else
-    {
-        const auto prefix = receipt.type == Transaction::Type::legacy ?
-                                bytes{} :
-                                bytes{stdx::to_underlying(receipt.type)};
-
-        return prefix + rlp::encode_tuple(receipt.status == EVMC_SUCCESS,
-                            static_cast<uint64_t>(receipt.cumulative_gas_used),
-                            bytes_view(receipt.logs_bloom_filter), receipt.logs);
-    }
-}
-
-[[nodiscard]] bytes rlp_encode(const Withdrawal& withdrawal)
-{
-    return rlp::encode_tuple(withdrawal.index, withdrawal.validator_index, withdrawal.recipient,
-        withdrawal.amount_in_gwei);
 }
 }  // namespace evmone::state
