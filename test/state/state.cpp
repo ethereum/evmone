@@ -10,10 +10,19 @@
 #include <evmone/eof.hpp>
 #include <algorithm>
 
+using namespace intx;
+
 namespace evmone::state
 {
 namespace
 {
+constexpr auto SECP256K1N = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141_u256;
+constexpr auto SECP256K1N_OVER_2 = SECP256K1N / 2;
+// EIP-7702: The cost of authorization that sets delegation to an account that didn't exist before
+constexpr auto AUTHORIZATION_EMPTY_ACCOUNT_COST = 25000;
+// EIP-7702: The cost of authorization that sets delegation to an account that already exists
+constexpr auto AUTHORIZATION_BASE_COST = 2500;
+
 inline constexpr int64_t num_words(size_t size_in_bytes) noexcept
 {
     return static_cast<int64_t>((size_in_bytes + 31) / 32);
@@ -46,11 +55,13 @@ int64_t compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& tx) noex
     static constexpr auto create_tx_cost = 53000;
     static constexpr auto initcode_word_cost = 2;
     const auto is_create = !tx.to.has_value();  // Covers also EOF creation txs.
+    const auto auth_list_cost =
+        static_cast<int64_t>(tx.authorization_list.size()) * AUTHORIZATION_EMPTY_ACCOUNT_COST;
     const auto initcode_cost =
         is_create && rev >= EVMC_SHANGHAI ? initcode_word_cost * num_words(tx.data.size()) : 0;
     const auto tx_cost = is_create && rev >= EVMC_HOMESTEAD ? create_tx_cost : call_tx_cost;
     return tx_cost + compute_tx_data_cost(rev, tx.data) + compute_access_list_cost(tx.access_list) +
-           initcode_cost;
+           auth_list_cost + initcode_cost;
 }
 
 evmc_message build_message(
@@ -320,12 +331,29 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
             return make_error_code(BLOB_GAS_LIMIT_EXCEEDED);
         break;
 
+    case Transaction::Type::set_code:
+        if (rev < EVMC_PRAGUE)
+            return make_error_code(TX_TYPE_NOT_SUPPORTED);
+        if (!tx.to.has_value())
+            return make_error_code(CREATE_SET_CODE_TX);
+        if (tx.authorization_list.empty())
+            return make_error_code(EMPTY_AUTHORIZATION_LIST);
+        for (const auto& auth : tx.authorization_list)
+        {
+            if (auth.v != 0 && auth.v != 1)
+                return make_error_code(INVALID_AUTHORIZATION_SIGNATURE);
+            if (auth.s > SECP256K1N_OVER_2)
+                return make_error_code(AUTHORIZATION_SIGNATURE_S_TOO_HIGH);
+        }
+        break;
+
     default:;
     }
 
     switch (tx.type)
     {
     case Transaction::Type::blob:
+    case Transaction::Type::set_code:
     case Transaction::Type::eip1559:
         if (rev < EVMC_LONDON)
             return make_error_code(TX_TYPE_NOT_SUPPORTED);
@@ -350,6 +378,7 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
     if (tx.max_gas_price < block.base_fee)
         return make_error_code(FEE_CAP_LESS_THEN_BLOCKS);
 
+    // TODO this is relaxed for 7702
     if (sender_acc.code_hash != Account::EMPTY_CODE_HASH)
         return make_error_code(SENDER_NOT_EOA);  // Origin must not be a contract (EIP-3607).
 
@@ -415,6 +444,11 @@ StateDiff finalize(const StateView& state_view, evmc_revision rev, const address
     return state.build_diff(rev);
 }
 
+constexpr bool is_code_delegated(bytes_view code) noexcept
+{
+    return code.starts_with(DELEGATION_MAGIC);
+}
+
 std::variant<TransactionReceipt, std::error_code> transition(const StateView& state_view,
     const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm,
     int64_t block_gas_left, int64_t blob_gas_left)
@@ -438,6 +472,55 @@ std::variant<TransactionReceipt, std::error_code> transition(const StateView& st
 
     assert(sender_acc.nonce < Account::NonceMax);  // Checked in transaction validation
     ++sender_acc.nonce;                            // Bump sender nonce.
+
+    auto delegation_refund = 0;
+
+    for (const auto& auth : tx.authorization_list)
+    {
+        if (auth.chain_id != 0 && auth.chain_id != tx.chain_id)
+            continue;
+
+        // Check if signer could be ecrecovered.
+        if (!auth.signer.has_value())
+            continue;
+
+        // Check if authority exists.
+        auto* authority_ptr = state.find(*auth.signer);
+        if (authority_ptr != nullptr && !authority_ptr->is_empty())
+        {
+            authority_ptr->access_status = EVMC_ACCESS_WARM;
+
+            // Skip if authority has non-delegated code.
+            if (!authority_ptr->code.empty() && !is_code_delegated(authority_ptr->code))
+                continue;
+
+            // Skip if authorization nonce is incorrect.
+            if (auth.nonce != authority_ptr->nonce)
+                continue;
+
+            // Refund if authority account creation is not needed.
+            static constexpr int64_t EXISTING_AUTHORITY_REFUND =
+                AUTHORIZATION_EMPTY_ACCOUNT_COST - AUTHORIZATION_BASE_COST;
+            delegation_refund += EXISTING_AUTHORITY_REFUND;
+        }
+        else
+        {
+            // Create authority account.
+            // It is still considered empty at this point until nonce increment, but already warm.
+            authority_ptr = &state.get_or_insert(
+                *auth.signer, {.erase_if_empty = true, .access_status = EVMC_ACCESS_WARM});
+
+            // Skip if authorization nonce is incorrect.
+            if (auth.nonce != 0)
+                continue;
+        }
+
+        authority_ptr->code.reserve(std::size(DELEGATION_MAGIC) + std::size(auth.addr.bytes));
+        authority_ptr->code = DELEGATION_MAGIC;
+        authority_ptr->code += auth.addr;
+
+        ++authority_ptr->nonce;
+    }
 
     const auto execution_gas_limit = get<int64_t>(validation_result);
 
@@ -483,7 +566,7 @@ std::variant<TransactionReceipt, std::error_code> transition(const StateView& st
 
     const auto max_refund_quotient = rev >= EVMC_LONDON ? 5 : 2;
     const auto refund_limit = gas_used / max_refund_quotient;
-    const auto refund = std::min(result.gas_refund, refund_limit);
+    const auto refund = std::min(delegation_refund + result.gas_refund, refund_limit);
     gas_used -= refund;
     assert(gas_used > 0);
 
