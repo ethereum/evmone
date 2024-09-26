@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "bloom_filter.hpp"
-#include "state.hpp"
+#include "transaction.hpp"
 
 namespace evmone::state
 {

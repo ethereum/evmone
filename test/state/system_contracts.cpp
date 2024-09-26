@@ -4,7 +4,6 @@
 
 #include "system_contracts.hpp"
 #include "host.hpp"
-#include "state.hpp"
 
 namespace evmone::state
 {
