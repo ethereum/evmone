@@ -29,8 +29,6 @@ enum ErrorCode : int
     BLOB_GAS_LIMIT_EXCEEDED,
     CREATE_SET_CODE_TX,
     EMPTY_AUTHORIZATION_LIST,
-    INVALID_AUTHORIZATION_SIGNATURE,
-    AUTHORIZATION_SIGNATURE_S_TOO_HIGH,
     UNKNOWN_ERROR,
 };
 
@@ -81,10 +79,6 @@ inline const std::error_category& evmone_category() noexcept
                 return "set code transaction must not be a create transaction";
             case EMPTY_AUTHORIZATION_LIST:
                 return "empty authorization list";
-            case INVALID_AUTHORIZATION_SIGNATURE:
-                return "invalid authorization signature";
-            case AUTHORIZATION_SIGNATURE_S_TOO_HIGH:
-                return "authorization signature s value too high";
             case UNKNOWN_ERROR:
                 return "Unknown error";
             default:
