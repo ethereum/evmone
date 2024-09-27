@@ -15,6 +15,24 @@
 
 namespace evmone
 {
+/// Loads big endian int16_t from data. Unsafe.
+/// TODO: Move it to intx
+inline int16_t read_int16_be(auto it) noexcept
+{
+    const uint8_t h = *it++;
+    const uint8_t l = *it;
+    return static_cast<int16_t>((h << 8) | l);
+}
+
+/// Loads big endian uint16_t from data. Unsafe.
+/// TODO: Move it to intx
+inline uint16_t read_uint16_be(auto it) noexcept
+{
+    const uint8_t h = *it++;
+    const uint8_t l = *it;
+    return static_cast<uint16_t>((h << 8) | l);
+}
+
 using evmc::bytes;
 using evmc::bytes_view;
 using namespace evmc::literals;
@@ -40,8 +58,14 @@ struct EOFCodeType
 
 struct EOF1Header
 {
+    /// Size of a type entry in bytes.
+    static constexpr size_t TYPE_ENTRY_SIZE = sizeof(EOFCodeType);
+
     /// The EOF version, 0 means legacy code.
     uint8_t version = 0;
+
+    /// Offset of the type section start.
+    size_t type_section_offset = 0;
 
     /// Size of every code section.
     std::vector<uint16_t> code_sizes;
@@ -62,7 +86,20 @@ struct EOF1Header
     /// Offset of every container section start;
     std::vector<uint16_t> container_offsets;
 
-    std::vector<EOFCodeType> types;
+    /// A helper to extract reference to a specific type section.
+    [[nodiscard]] EOFCodeType get_type(bytes_view container, size_t type_idx) const noexcept
+    {
+        const auto offset = type_section_offset + type_idx * TYPE_ENTRY_SIZE;
+        // TODO: Make EOFCodeType aggregate type and use designated initializers.
+        return EOFCodeType{
+            container[offset],                      // inputs
+            container[offset + 1],                  // outputs
+            read_uint16_be(&container[offset + 2])  // max_stack_height
+        };
+    }
+
+    /// Returns the number of types in the type section.
+    [[nodiscard]] size_t get_type_count() const noexcept { return code_sizes.size(); }
 
     /// A helper to extract reference to a specific code section.
     [[nodiscard]] bytes_view get_code(bytes_view container, size_t code_idx) const noexcept
@@ -181,23 +218,5 @@ enum class ContainerKind : uint8_t
 
 /// Output operator for EOFValidationError.
 EVMC_EXPORT std::ostream& operator<<(std::ostream& os, EOFValidationError err) noexcept;
-
-/// Loads big endian int16_t from data. Unsafe.
-/// TODO: Move it to intx
-inline int16_t read_int16_be(auto it) noexcept
-{
-    const uint8_t h = *it++;
-    const uint8_t l = *it;
-    return static_cast<int16_t>((h << 8) | l);
-}
-
-/// Loads big endian uint16_t from data. Unsafe.
-/// TODO: Move it to intx
-inline uint16_t read_uint16_be(auto it) noexcept
-{
-    const uint8_t h = *it++;
-    const uint8_t l = *it;
-    return static_cast<uint16_t>((h << 8) | l);
-}
 
 }  // namespace evmone
