@@ -79,6 +79,16 @@ EOFValidationError get_section_missing_error(uint8_t section_id) noexcept
     }
 }
 
+EOFCodeType get_type(bytes_view container, size_t header_size, size_t index)
+{
+    size_t offset = header_size + index * 4;
+    return EOFCodeType(
+        container[offset],
+        container[offset + 1],
+        read_uint16_be(&container[offset + 2])
+    );
+}
+
 std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(bytes_view container)
 {
     enum class State
@@ -220,14 +230,14 @@ std::variant<std::vector<EOFCodeType>, EOFValidationError> validate_types(
     assert(!container.empty());  // guaranteed by EOF headers validation
 
     std::vector<EOFCodeType> types;
+    types.reserve(type_section_size / 4);
 
     // guaranteed by EOF headers validation
     assert(header_size + type_section_size < container.size());
 
-    for (auto offset = header_size; offset < header_size + type_section_size; offset += 4)
+    for (size_t i = 0; i < type_section_size / 4; ++i)
     {
-        types.emplace_back(
-            container[offset], container[offset + 1], read_uint16_be(&container[offset + 2]));
+        types.emplace_back(get_type(container, header_size, i));
     }
 
     // check 1st section is (0, 0x80)
