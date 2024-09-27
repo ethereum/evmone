@@ -4,6 +4,7 @@
 
 #include <evmone/eof.hpp>
 #include <gtest/gtest.h>
+#include <test/state/hash_utils.hpp>
 #include <test/utils/bytecode.hpp>
 #include <test/utils/utils.hpp>
 
@@ -114,4 +115,9 @@ TEST(eof, get_error_message)
 
     // NOLINTNEXTLINE(*.EnumCastOutOfRange)
     EXPECT_EQ(evmone::get_error_message(static_cast<EOFValidationError>(-1)), "<unknown>");
+}
+
+TEST(eof, extcodehash_sentinel)
+{
+    EXPECT_EQ(keccak256(EOF_MAGIC), EOF_CODE_HASH_SENTINEL);
 }
