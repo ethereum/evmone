@@ -16,8 +16,6 @@ namespace evmone::state
 {
 namespace
 {
-constexpr auto SECP256K1N = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141_u256;
-constexpr auto SECP256K1N_OVER_2 = SECP256K1N / 2;
 // EIP-7702: The cost of authorization that sets delegation to an account that didn't exist before
 constexpr auto AUTHORIZATION_EMPTY_ACCOUNT_COST = 25000;
 // EIP-7702: The cost of authorization that sets delegation to an account that already exists
@@ -343,13 +341,6 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
             return make_error_code(CREATE_SET_CODE_TX);
         if (tx.authorization_list.empty())
             return make_error_code(EMPTY_AUTHORIZATION_LIST);
-        for (const auto& auth : tx.authorization_list)
-        {
-            if (auth.v != 0 && auth.v != 1)
-                return make_error_code(INVALID_AUTHORIZATION_SIGNATURE);
-            if (auth.s > SECP256K1N_OVER_2)
-                return make_error_code(AUTHORIZATION_SIGNATURE_S_TOO_HIGH);
-        }
         break;
 
     default:;
