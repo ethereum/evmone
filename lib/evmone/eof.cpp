@@ -81,12 +81,8 @@ EOFValidationError get_section_missing_error(uint8_t section_id) noexcept
 
 EOFCodeType get_type(bytes_view container, size_t header_size, size_t index)
 {
-    size_t offset = header_size + index * 4;
-    return EOFCodeType(
-        container[offset],
-        container[offset + 1],
-        read_uint16_be(&container[offset + 2])
-    );
+    const size_t offset = header_size + index * 4;
+    return {container[offset], container[offset + 1], read_uint16_be(&container[offset + 2])};
 }
 
 std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(bytes_view container)
