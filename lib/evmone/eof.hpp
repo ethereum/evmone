@@ -9,7 +9,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <string>
+#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -17,6 +17,9 @@ namespace evmone
 {
 using evmc::bytes;
 using evmc::bytes_view;
+
+constexpr uint8_t EOF_MAGIC_BYTES[] = {0xef, 0x00};
+constexpr bytes_view EOF_MAGIC{EOF_MAGIC_BYTES, std::size(EOF_MAGIC_BYTES)};
 
 struct EOFCodeType
 {
