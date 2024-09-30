@@ -14,7 +14,6 @@
 #include <cassert>
 #include <limits>
 #include <numeric>
-#include <ostream>
 #include <queue>
 #include <unordered_set>
 #include <vector>
@@ -23,8 +22,6 @@ namespace evmone
 {
 namespace
 {
-constexpr uint8_t MAGIC_BYTES[] = {0xef, 0x00};
-constexpr bytes_view MAGIC{MAGIC_BYTES, std::size(MAGIC_BYTES)};
 constexpr uint8_t TERMINATOR = 0x00;
 constexpr uint8_t TYPE_SECTION = 0x01;
 constexpr uint8_t CODE_SECTION = 0x02;
@@ -50,7 +47,7 @@ size_t eof_header_size(const EOFSectionHeaders& headers) noexcept
     constexpr auto non_code_section_header_size = 3;  // (SECTION_ID + SIZE) per each section
     constexpr auto section_size_size = 2;
 
-    auto header_size = std::size(MAGIC) + 1 +  // 1 version byte
+    auto header_size = std::size(EOF_MAGIC) + 1 +  // 1 version byte
                        non_code_section_count * non_code_section_header_size +
                        sizeof(CODE_SECTION) + 2 + code_section_count * section_size_size +
                        sizeof(TERMINATOR);
@@ -93,7 +90,7 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
     uint16_t section_num = 0;
     EOFSectionHeaders section_headers{};
     const auto container_end = container.end();
-    auto it = container.begin() + std::size(MAGIC) + 1;  // MAGIC + VERSION
+    auto it = container.begin() + std::size(EOF_MAGIC) + 1;  // MAGIC + VERSION
     uint8_t expected_section_id = TYPE_SECTION;
     while (it != container_end && state != State::terminated)
     {
@@ -719,7 +716,7 @@ size_t EOF1Header::data_size_position() const noexcept
 {
     const auto num_code_sections = code_sizes.size();
     const auto num_container_sections = container_sizes.size();
-    return std::size(MAGIC) + 1 +       // magic + version
+    return std::size(EOF_MAGIC) + 1 +   // magic + version
            3 +                          // type section kind + size
            3 + 2 * num_code_sections +  // code sections kind + count + sizes
            // container sections kind + count + sizes
@@ -729,7 +726,7 @@ size_t EOF1Header::data_size_position() const noexcept
 
 bool is_eof_container(bytes_view container) noexcept
 {
-    return container.starts_with(MAGIC);
+    return container.starts_with(EOF_MAGIC);
 }
 
 std::variant<EOF1Header, EOFValidationError> validate_header(
@@ -806,7 +803,7 @@ std::variant<EOF1Header, EOFValidationError> validate_header(
 EOF1Header read_valid_eof1_header(bytes_view container)
 {
     EOFSectionHeaders section_headers;
-    auto it = container.begin() + std::size(MAGIC) + 1;  // MAGIC + VERSION
+    auto it = container.begin() + std::size(EOF_MAGIC) + 1;  // MAGIC + VERSION
     while (*it != TERMINATOR)
     {
         const auto section_id = *it++;

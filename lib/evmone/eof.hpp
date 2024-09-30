@@ -4,12 +4,12 @@
 #pragma once
 
 #include <evmc/bytes.hpp>
-#include <evmc/evmc.h>
+#include <evmc/evmc.hpp>
 #include <evmc/utils.h>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <string>
+#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -17,6 +17,15 @@ namespace evmone
 {
 using evmc::bytes;
 using evmc::bytes_view;
+using namespace evmc::literals;
+
+constexpr uint8_t EOF_MAGIC_BYTES[] = {0xef, 0x00};
+constexpr bytes_view EOF_MAGIC{EOF_MAGIC_BYTES, std::size(EOF_MAGIC_BYTES)};
+
+/// The value returned by EXTCODEHASH of an address with EOF code.
+/// See EIP-3540: https://eips.ethereum.org/EIPS/eip-3540#changes-to-execution-semantics.
+static constexpr auto EOF_CODE_HASH_SENTINEL =
+    0x9dbf3648db8210552e9c4f75c6a1c3057c0ca432043bd648be15fe7be05646f5_bytes32;
 
 struct EOFCodeType
 {
