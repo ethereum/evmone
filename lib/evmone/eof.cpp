@@ -346,10 +346,11 @@ std::variant<InstructionValidationResult, EOFValidationError> validate_instructi
     if (is_returning != declared_returning)
         return EOFValidationError::invalid_non_returning_flag;
 
-    return InstructionValidationResult{subcontainer_references, accessed_code_sections};
+    return InstructionValidationResult{
+        std::move(subcontainer_references), std::move(accessed_code_sections)};
 }
 
-/// Validates that that we don't rjump inside an instruction's immediate.
+/// Validates that we don't rjump inside an instruction's immediate.
 /// Requires that the input is validated against truncation.
 bool validate_rjump_destinations(bytes_view code) noexcept
 {
