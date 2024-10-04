@@ -57,7 +57,7 @@ class StdBasicStringUint8Printer:
         start = self.val['_M_dataplus']['_M_p']
         length = self.val['_M_string_length']
         content = [int(start[i]) for i in range(length)]
-        return '{%s}' % (', '.join(hex(byte) for byte in content))
+        return '{size = %d, data = {%s}}' % (length, ', '.join(hex(byte) for byte in content))
 
 
 STRING_VIEW_TARGET_TYPES = [
@@ -74,7 +74,7 @@ class StdBasicStringViewUint8Printer:
         start = self.val['_M_str']
         length = self.val['_M_len']
         content = [int(start[i]) for i in range(length)]
-        return '{%s}' % (', '.join(hex(byte) for byte in content))
+        return '{size = %d, data = {%s}}' % (length, ', '.join(hex(byte) for byte in content))
 
 def register_printers(obj):
     if obj == None:
