@@ -15,6 +15,7 @@
 
 namespace evmone
 {
+inline uint16_t read_uint16_be(auto it) noexcept;
 using evmc::bytes;
 using evmc::bytes_view;
 
@@ -52,8 +53,29 @@ struct EOF1Header
     std::vector<uint16_t> container_sizes;
     /// Offset of every container section start;
     std::vector<uint16_t> container_offsets;
+    /// Size of every type section.
+    uint16_t type_section_size;
+    /// Offset of type container section start.
+    size_t type_section_offset; 
 
-    std::vector<EOFCodeType> types;
+    /// A helper to extract reference to a specific type section.
+    [[nodiscard]] EOFCodeType get_type(bytes_view container, size_t type_idx) const noexcept
+    {
+        static constexpr size_t TYPE_ENTRY_SIZE = 4;  // Size of each type entry in bytes
+        const size_t type_entry_offset = type_section_offset + type_idx * TYPE_ENTRY_SIZE;
+    
+        return EOFCodeType{
+            container[type_entry_offset],                                  // inputs
+            container[type_entry_offset + 1],                              // outputs
+            read_uint16_be(&container[type_entry_offset + 2])              // max_stack_height
+        };
+    }
+
+    /// Returns the number of types in the types section.
+    [[nodiscard]] size_t get_type_count() const noexcept
+    {
+        return type_section_size / 4;
+    }
 
     /// A helper to extract reference to a specific code section.
     [[nodiscard]] bytes_view get_code(bytes_view container, size_t code_idx) const noexcept
