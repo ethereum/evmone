@@ -65,17 +65,14 @@ struct EOF1Header
         const size_t type_entry_offset = type_section_offset + type_idx * TYPE_ENTRY_SIZE;
     
         return EOFCodeType{
-            container[type_entry_offset],                                  // inputs
-            container[type_entry_offset + 1],                              // outputs
-            read_uint16_be(&container[type_entry_offset + 2])              // max_stack_height
+            container[type_entry_offset],                      // inputs
+            container[type_entry_offset + 1],                  // outputs
+            read_uint16_be(&container[type_entry_offset + 2])  // max_stack_height
         };
     }
 
     /// Returns the number of types in the types section.
-    [[nodiscard]] size_t get_type_count() const noexcept
-    {
-        return type_section_size / 4;
-    }
+    [[nodiscard]] size_t get_type_count() const noexcept { return type_section_size / 4; }
 
     /// A helper to extract reference to a specific code section.
     [[nodiscard]] bytes_view get_code(bytes_view container, size_t code_idx) const noexcept
