@@ -98,7 +98,7 @@ TEST(eof, read_valid_eof1_header)
             << test_case.code;
 
         const auto header = read_valid_eof1_header(code);
-        const auto number_of_types = header.type_section_size / 4; 
+        const auto number_of_types = header.type_section_size / 4;
         EXPECT_EQ(header.code_sizes, test_case.code_sizes) << test_case.code;
         EXPECT_EQ(header.data_size, test_case.data_size) << test_case.code;
         EXPECT_EQ(number_of_types * 4, test_case.types_size) << test_case.code;

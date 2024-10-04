@@ -56,7 +56,7 @@ struct EOF1Header
     /// Size of every type section.
     uint16_t type_section_size;
     /// Offset of type container section start.
-    size_t type_section_offset; 
+    size_t type_section_offset;
 
     /// A helper to extract reference to a specific type section.
     [[nodiscard]] EOFCodeType get_type(bytes_view container, size_t type_idx) const noexcept

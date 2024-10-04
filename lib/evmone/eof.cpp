@@ -217,7 +217,7 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
 EOFValidationError validate_types(
     bytes_view container, size_t type_section_offset, uint16_t type_section_size) noexcept
 {
-    assert(!container.empty()); // guaranteed by EOF headers validation
+    assert(!container.empty());  // guaranteed by EOF headers validation
 
     const size_t num_types = type_section_size / 4;
 
@@ -350,7 +350,7 @@ std::variant<InstructionValidationResult, EOFValidationError> validate_instructi
             i += instr::traits[op].immediate_size;
     }
 
-    const auto declared_returning = 
+    const auto declared_returning =
         (header.get_type(container, code_idx).outputs != NON_RETURNING_FUNCTION);
     if (is_returning != declared_returning)
         return EOFValidationError::invalid_non_returning_flag;
@@ -490,7 +490,7 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
                 if (code_type_by_func_index.outputs < code_type.outputs)
                     return EOFValidationError::jumpf_destination_incompatible_outputs;
 
-                stack_height_required = 
+                stack_height_required =
                     code_type_by_func_index.outputs + code_type.inputs - code_type.outputs;
 
                 // JUMPF to returning function requires exact number of stack items
@@ -682,7 +682,7 @@ EOFValidationError validate_eof1(
                 header.get_code(container, code_idx), code_idx, header, container);
             if (const auto* error = std::get_if<EOFValidationError>(&msh_or_error))
                 return *error;
-            if (std::get<int32_t>(msh_or_error) != 
+            if (std::get<int32_t>(msh_or_error) !=
                 header.get_type(container, code_idx).max_stack_height)
                 return EOFValidationError::invalid_max_stack_height;
         }
@@ -851,7 +851,7 @@ EOF1Header read_valid_eof1_header(bytes_view container)
 
     if (!section_headers[TYPE_SECTION].empty())
     {
-        assert(header.type_section_size % 4 == 0); 
+        assert(header.type_section_size % 4 == 0);
         header.type_section_size = section_headers[TYPE_SECTION][0];
         header.type_section_offset = header_size;
     }
