@@ -434,7 +434,7 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
     };
 
     assert(!code.empty());
-    
+
     const EOFCodeType code_type_by_func_index = header.get_type(container, func_index);
     std::vector<StackHeightRange> stack_heights(code.size());
     stack_heights[0] = {code_type_by_func_index.inputs, code_type_by_func_index.inputs};
@@ -459,10 +459,10 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
             const auto fid = read_uint16_be(&code[i + 1]);
             if (fid >= header.get_type_count())
                 return EOFValidationError::invalid_code_section_index;
-            
+
             const EOFCodeType code_type = header.get_type(container, fid);
             stack_height_required = code_type.inputs;
-        
+
             if (stack_height.max + code_type.max_stack_height - stack_height_required >
                 STACK_SIZE_LIMIT)
                 return EOFValidationError::stack_overflow;
@@ -476,7 +476,7 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
             const auto fid = read_uint16_be(&code[i + 1]);
             if (fid >= header.get_type_count())
                 return EOFValidationError::invalid_code_section_index;
-            
+
             const EOFCodeType code_type = header.get_type(container, fid);
             if (stack_height.max + code_type.max_stack_height - code_type.inputs > STACK_SIZE_LIMIT)
                 return EOFValidationError::stack_overflow;
@@ -595,7 +595,7 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
 
     const auto max_stack_height_it = std::max_element(stack_heights.begin(), stack_heights.end(),
         [](StackHeightRange lhs, StackHeightRange rhs) noexcept { return lhs.max < rhs.max; });
-        
+
     return max_stack_height_it->max;
 }
 
@@ -851,7 +851,6 @@ EOF1Header read_valid_eof1_header(bytes_view container)
 
     if (!section_headers[TYPE_SECTION].empty())
     {
-        assert(header.type_section_size % 4 == 0);
         header.type_section_size = section_headers[TYPE_SECTION][0];
         header.type_section_offset = header_size;
     }

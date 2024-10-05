@@ -63,7 +63,6 @@ struct EOF1Header
     {
         static constexpr size_t TYPE_ENTRY_SIZE = 4;  // Size of each type entry in bytes
         const size_t type_entry_offset = type_section_offset + type_idx * TYPE_ENTRY_SIZE;
-    
         return EOFCodeType{
             container[type_entry_offset],                      // inputs
             container[type_entry_offset + 1],                  // outputs
