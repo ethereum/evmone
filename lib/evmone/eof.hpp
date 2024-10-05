@@ -54,9 +54,9 @@ struct EOF1Header
     /// Offset of every container section start;
     std::vector<uint16_t> container_offsets;
     /// Size of every type section.
-    uint16_t type_section_size;
+    uint16_t type_section_size = 0;
     /// Offset of type container section start.
-    size_t type_section_offset;
+    size_t type_section_offset = 0;
 
     /// A helper to extract reference to a specific type section.
     [[nodiscard]] EOFCodeType get_type(bytes_view container, size_t type_idx) const noexcept
