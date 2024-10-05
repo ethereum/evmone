@@ -113,9 +113,13 @@ size_t Host::get_code_size(const address& addr) const noexcept
 
 bytes32 Host::get_code_hash(const address& addr) const noexcept
 {
-    // TODO: Cache code hash. It will be needed also to compute the MPT hash.
     const auto* const acc = m_state.find(addr);
-    return (acc != nullptr && !acc->is_empty()) ? keccak256(extcode(acc->code)) : bytes32{};
+    if (acc == nullptr || acc->is_empty())
+        return {};
+    if (is_eof_container(acc->code))
+        return EOF_CODE_HASH_SENTINEL;
+    // TODO: Cache code hash. It will be needed also to compute the MPT hash.
+    return keccak256(acc->code);
 }
 
 size_t Host::copy_code(const address& addr, size_t code_offset, uint8_t* buffer_data,
