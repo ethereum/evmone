@@ -798,14 +798,14 @@ std::variant<EOF1Header, EOFValidationError> validate_header(
     const auto data_offset = static_cast<uint16_t>(offset);
 
     return EOF1Header{.version = container[2],
+        .type_section_size = type_section_size,
+        .type_section_offset = type_section_offset,
         .code_sizes = code_sizes,
         .code_offsets = code_offsets,
         .data_size = data_size,
         .data_offset = data_offset,
         .container_sizes = container_sizes,
-        .container_offsets = container_offsets,
-        .type_section_size = type_section_size,
-        .type_section_offset = type_section_offset};
+        .container_offsets = container_offsets};
 }
 
 /// This function expects the prefix and version to be valid, as it ignores it.
