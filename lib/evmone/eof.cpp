@@ -256,7 +256,6 @@ struct InstructionValidationResult
     std::unordered_set<uint16_t> accessed_code_sections;
 };
 
-
 std::variant<InstructionValidationResult, EOFValidationError> validate_instructions(
     evmc_revision rev, const EOF1Header& header, ContainerKind kind, size_t code_idx,
     bytes_view container) noexcept
@@ -290,11 +289,11 @@ std::variant<InstructionValidationResult, EOFValidationError> validate_instructi
         else if (op == OP_CALLF)
         {
             const auto fid = read_uint16_be(&code[i + 1]);
-            if (fid >= header.type_section_size)
+            if (fid >= header.get_type_count())
                 return EOFValidationError::invalid_code_section_index;
 
-            const EOFCodeType code_type = header.get_type(container, fid);
-            if (code_type.outputs == NON_RETURNING_FUNCTION)
+            const auto type = header.get_type(container, fid);
+            if (type.outputs == NON_RETURNING_FUNCTION)
                 return EOFValidationError::callf_to_non_returning_function;
             if (code_idx != fid)
                 accessed_code_sections.insert(fid);
@@ -308,12 +307,12 @@ std::variant<InstructionValidationResult, EOFValidationError> validate_instructi
         else if (op == OP_JUMPF)
         {
             const auto fid = read_uint16_be(&code[i + 1]);
-            if (fid >= header.type_section_size)
+            if (fid >= header.get_type_count())
                 return EOFValidationError::invalid_code_section_index;
 
-            const EOFCodeType code_type = header.get_type(container, fid);
+            const auto type = header.get_type(container, fid);
             // JUMPF into returning function means current function is returning.
-            if (code_type.outputs != NON_RETURNING_FUNCTION)
+            if (type.outputs != NON_RETURNING_FUNCTION)
                 is_returning = true;
             if (code_idx != fid)
                 accessed_code_sections.insert(fid);
@@ -435,9 +434,9 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
 
     assert(!code.empty());
 
-    const EOFCodeType code_type_by_func_index = header.get_type(container, func_index);
+    const auto type = header.get_type(container, func_index);
     std::vector<StackHeightRange> stack_heights(code.size());
-    stack_heights[0] = {code_type_by_func_index.inputs, code_type_by_func_index.inputs};
+    stack_heights[0] = {type.inputs, type.inputs};
 
     for (size_t i = 0; i < code.size();)
     {
@@ -457,27 +456,22 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
         if (opcode == OP_CALLF)
         {
             const auto fid = read_uint16_be(&code[i + 1]);
-            if (fid >= header.get_type_count())
-                return EOFValidationError::invalid_code_section_index;
+            const auto callee_type = header.get_type(container, fid);
+            stack_height_required = callee_type.inputs;
 
-            const EOFCodeType code_type = header.get_type(container, fid);
-            stack_height_required = code_type.inputs;
-
-            if (stack_height.max + code_type.max_stack_height - stack_height_required >
+            if (stack_height.max + callee_type.max_stack_height - stack_height_required >
                 STACK_SIZE_LIMIT)
                 return EOFValidationError::stack_overflow;
 
             // Instruction validation ensures target function is returning
-            assert(code_type.outputs != NON_RETURNING_FUNCTION);
-            stack_height_change = static_cast<int8_t>(code_type.outputs - stack_height_required);
+            assert(callee_type.outputs != NON_RETURNING_FUNCTION);
+            stack_height_change = static_cast<int8_t>(callee_type.outputs - stack_height_required);
         }
         else if (opcode == OP_JUMPF)
         {
             const auto fid = read_uint16_be(&code[i + 1]);
-            if (fid >= header.get_type_count())
-                return EOFValidationError::invalid_code_section_index;
+            const auto code_type = header.get_type(container, fid);
 
-            const EOFCodeType code_type = header.get_type(container, fid);
             if (stack_height.max + code_type.max_stack_height - code_type.inputs > STACK_SIZE_LIMIT)
                 return EOFValidationError::stack_overflow;
 
@@ -487,11 +481,10 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
             }
             else
             {
-                if (code_type_by_func_index.outputs < code_type.outputs)
+                if (type.outputs < code_type.outputs)
                     return EOFValidationError::jumpf_destination_incompatible_outputs;
 
-                stack_height_required =
-                    code_type_by_func_index.outputs + code_type.inputs - code_type.outputs;
+                stack_height_required = type.outputs + code_type.inputs - code_type.outputs;
 
                 // JUMPF to returning function requires exact number of stack items
                 // and is allowed only in constant stack segment.
@@ -501,7 +494,7 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
         }
         else if (opcode == OP_RETF)
         {
-            stack_height_required = code_type_by_func_index.outputs;
+            stack_height_required = type.outputs;
             // RETF allowed only in constant stack segment
             if (stack_height.max > stack_height_required)
                 return EOFValidationError::stack_higher_than_outputs_required;

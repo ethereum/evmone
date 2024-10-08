@@ -1101,7 +1101,7 @@ inline code_iterator callf(StackTop stack, ExecutionState& state, code_iterator 
     const auto index = read_uint16_be(&pos[1]);
     const auto& header = state.analysis.baseline->eof_header();
     const auto stack_size = &stack.top() - state.stack_space.bottom();
-    const EOFCodeType code_type = header.get_type(state.original_code, index);
+    const auto code_type = header.get_type(state.original_code, index);
 
     const auto callee_required_stack_size = code_type.max_stack_height - code_type.inputs;
     if (stack_size + callee_required_stack_size > StackSpace::limit)
@@ -1134,9 +1134,9 @@ inline code_iterator jumpf(StackTop stack, ExecutionState& state, code_iterator 
     const auto index = read_uint16_be(&pos[1]);
     const auto& header = state.analysis.baseline->eof_header();
     const auto stack_size = &stack.top() - state.stack_space.bottom();
-    const EOFCodeType code_type = header.get_type(state.original_code, index);
+    const auto callee_type = header.get_type(state.original_code, index);
 
-    const auto callee_required_stack_size = code_type.max_stack_height - code_type.inputs;
+    const auto callee_required_stack_size = callee_type.max_stack_height - callee_type.inputs;
     if (stack_size + callee_required_stack_size > StackSpace::limit)
     {
         state.status = EVMC_STACK_OVERFLOW;
