@@ -242,11 +242,20 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
         return true;
     }
 
-    const auto scratch_size = blst_p1s_mult_pippenger_scratch_sizeof(npoints) / sizeof(limb_t);
-    const auto scratch_space = std::make_unique_for_overwrite<limb_t[]>(scratch_size);
     blst_p1 out;
-    blst_p1s_mult_pippenger(
-        &out, p1_affine_ptrs.data(), npoints, scalars_ptrs.data(), 256, scratch_space.get());
+    if (npoints == 1)
+    {
+        blst_p1 p;
+        blst_p1_from_affine(&p, &p1_affines[0]);
+        blst_p1_mult(&out, &p, scalars[0].b, 256);
+    }
+    else
+    {
+        const auto scratch_size = blst_p1s_mult_pippenger_scratch_sizeof(npoints) / sizeof(limb_t);
+        const auto scratch_space = std::make_unique_for_overwrite<limb_t[]>(scratch_size);
+        blst_p1s_mult_pippenger(
+            &out, p1_affine_ptrs.data(), npoints, scalars_ptrs.data(), 256, scratch_space.get());
+    }
 
     blst_p1_affine result;
     blst_p1_to_affine(&result, &out);
@@ -307,11 +316,20 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
         return true;
     }
 
-    const auto scratch_size = blst_p2s_mult_pippenger_scratch_sizeof(npoints) / sizeof(limb_t);
-    const auto scratch_space = std::make_unique_for_overwrite<limb_t[]>(scratch_size);
     blst_p2 out;
-    blst_p2s_mult_pippenger(
-        &out, p2_affine_ptrs.data(), npoints, scalars_ptrs.data(), 256, scratch_space.get());
+    if (npoints == 1)
+    {
+        blst_p2 p;
+        blst_p2_from_affine(&p, &p2_affines[0]);
+        blst_p2_mult(&out, &p, scalars[0].b, 256);
+    }
+    else
+    {
+        const auto scratch_size = blst_p2s_mult_pippenger_scratch_sizeof(npoints) / sizeof(limb_t);
+        const auto scratch_space = std::make_unique_for_overwrite<limb_t[]>(scratch_size);
+        blst_p2s_mult_pippenger(
+            &out, p2_affine_ptrs.data(), npoints, scalars_ptrs.data(), 256, scratch_space.get());
+    }
 
     blst_p2_affine result;
     blst_p2_to_affine(&result, &out);
