@@ -105,8 +105,6 @@ TEST_F(eof_validation, backwards_rjump)
 
 TEST_F(eof_validation, backwards_rjump_variable_stack)
 {
-    add_test_case(eof_bytecode(varstack + rjump(-3), 3), EOFValidationError::success);
-
     add_test_case(
         eof_bytecode(varstack + OP_PUSH0 + OP_POP + rjump(-5), 4), EOFValidationError::success);
 
@@ -151,8 +149,6 @@ TEST_F(eof_validation, backwards_rjump_variable_stack)
 
 TEST_F(eof_validation, forwards_rjump)
 {
-    add_test_case(eof_bytecode(rjump(0) + OP_STOP), EOFValidationError::success);
-
     // forwards rjump + fallthrough - equal stack
     add_test_case(eof_bytecode(push0() + rjumpi(3, 0) + rjump(1) + OP_NOT + OP_STOP, 2),
         EOFValidationError::success);
@@ -219,8 +215,6 @@ TEST_F(eof_validation, forwards_rjump_variable_stack)
 
 TEST_F(eof_validation, backwards_rjumpi)
 {
-    add_test_case(eof_bytecode(rjumpi(-5, 0) + OP_STOP, 1), EOFValidationError::success);
-
     add_test_case(
         eof_bytecode(push0() + OP_POP + rjumpi(-7, 0) + OP_STOP, 1), EOFValidationError::success);
 
@@ -865,10 +859,6 @@ TEST_F(eof_validation, underflow)
     // JUMPF to non-returning function
     add_test_case(eof_bytecode(jumpf(1), 0).code(revert(0, 0), 1, 0x80, 3),
         EOFValidationError::stack_underflow);
-
-    // RETF underflow
-    add_test_case(eof_bytecode(callf(1) + OP_STOP, 2).code(push0() + OP_RETF, 0, 2, 1),
-        EOFValidationError::stack_underflow);
 }
 
 TEST_F(eof_validation, underflow_variable_stack)
@@ -895,26 +885,12 @@ TEST_F(eof_validation, underflow_variable_stack)
                       .code(bytecode{OP_POP} + OP_POP + OP_RETF, 5, 3, 3),
         EOFValidationError::stack_underflow);
 
-    // JUMPF to returning function - only max enough for 3 inputs
-    add_test_case(eof_bytecode(callf(1) + OP_STOP, 3)
-                      .code(varstack + jumpf(2), 0, 3, 3)
-                      .code(bytecode{OP_RETF}, 3, 3, 3),
-        EOFValidationError::stack_underflow);
-
     // JUMPF to non-returning function - [1, 3] stack - neither min nor max enough for 5 inputs
     add_test_case(eof_bytecode(varstack + jumpf(1), 0).code(revert(0, 0), 5, 0x80, 7),
         EOFValidationError::stack_underflow);
 
     // JUMPF to non-returning function - [1, 3] stack - only max enough for 3 inputs
     add_test_case(eof_bytecode(varstack + jumpf(1), 0).code(revert(0, 0), 3, 0x80, 5),
-        EOFValidationError::stack_underflow);
-
-    // RETF from [1, 3] stack - neither min nor max enough for 5 outputs
-    add_test_case(eof_bytecode(callf(1) + OP_STOP, 5).code(varstack + OP_RETF, 0, 5, 3),
-        EOFValidationError::stack_underflow);
-
-    // RETF from [1, 3] stack - only max enough for 3 outputs
-    add_test_case(eof_bytecode(callf(1) + OP_STOP, 3).code(varstack + OP_RETF, 0, 3, 3),
         EOFValidationError::stack_underflow);
 }
 
@@ -1256,9 +1232,6 @@ TEST_F(eof_validation, jumpf_to_returning_variable_stack)
 TEST_F(eof_validation, jumpf_to_nonreturning)
 {
     // Target has 0 inputs
-
-    // 0 inputs on stack at JUMPF
-    add_test_case(eof_bytecode(jumpf(1)).code(OP_STOP, 0, 0x80, 0), EOFValidationError::success);
 
     // Extra items on stack at JUMPF
     add_test_case(eof_bytecode(push0() + push0() + jumpf(1), 2).code(OP_STOP, 0, 0x80, 0),
