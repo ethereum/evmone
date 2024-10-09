@@ -58,6 +58,8 @@ Checks:
   - "portability-*"
   - "readability-*"
   - "-readability-braces-around-statements"
+  # Sometimes we actually want to take the address of the first element.
+  - "-readability-container-data-pointer"
   - "-readability-else-after-return"
   - "-readability-function-cognitive-complexity"
   - "-readability-function-size"
