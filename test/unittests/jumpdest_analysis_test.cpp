@@ -8,6 +8,7 @@
 
 using namespace evmone;
 using namespace evmone::experimental;
+using namespace evmone::test;
 
 namespace
 {

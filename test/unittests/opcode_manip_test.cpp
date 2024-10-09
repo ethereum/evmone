@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 using namespace evmone::experimental;
+using namespace evmone::test;
 
 TEST(opcode_manip, find_first_push)
 {
