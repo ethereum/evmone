@@ -6,6 +6,7 @@
 
 namespace evmone::crypto::bls
 {
+using namespace intx;
 namespace
 {
 /// Offset of the beginning of field element. First 16 bytes must be zero according to spec
@@ -15,6 +16,7 @@ constexpr auto FP_BYTES_OFFSET = 64 - 48;
 /// Validates that integer encoded in big endian is valid element of BLS12-381 Fp field
 [[nodiscard]] std::optional<blst_fp> validate_fp(const uint8_t _p[64]) noexcept
 {
+    // assert(intx::be::unsafe::load<intx::uint512>(_p) != BLS_FIELD_MODULUS);
     if (intx::be::unsafe::load<intx::uint512>(_p) >= BLS_FIELD_MODULUS)
         return std::nullopt;
 
@@ -29,13 +31,20 @@ constexpr auto FP_BYTES_OFFSET = 64 - 48;
     const uint8_t _x[64], const uint8_t _y[64]) noexcept
 {
     const auto x = validate_fp(_x);
+    const auto y = validate_fp(_y);
+
+    // assert(x.has_value() && y.has_value());
+    // assert(x.has_value() && !y.has_value());
+    // assert(!x.has_value() && !y.has_value());
+    // assert(!x.has_value() && y.has_value());
+
     if (!x.has_value())
         return std::nullopt;
-    const auto y = validate_fp(_y);
     if (!y.has_value())
         return std::nullopt;
 
     const blst_p1_affine p0_affine{*x, *y};
+    // assert(blst_p1_affine_on_curve(&p0_affine));
     if (!blst_p1_affine_on_curve(&p0_affine))
         return std::nullopt;
 
@@ -46,9 +55,15 @@ constexpr auto FP_BYTES_OFFSET = 64 - 48;
 [[nodiscard]] std::optional<blst_fp2> validate_fp2(const uint8_t _p[128]) noexcept
 {
     const auto fp0 = validate_fp(_p);
+    const auto fp1 = validate_fp(&_p[64]);
+
+    // assert(fp0.has_value() && fp1.has_value());
+    // assert(fp0.has_value() && !fp1.has_value());
+    // assert(!fp0.has_value() && !fp1.has_value());
+    // assert(!fp0.has_value() && fp1.has_value());
+
     if (!fp0.has_value())
         return std::nullopt;
-    const auto fp1 = validate_fp(&_p[64]);
     if (!fp1.has_value())
         return std::nullopt;
 
@@ -61,14 +76,21 @@ constexpr auto FP_BYTES_OFFSET = 64 - 48;
     const uint8_t _x[128], const uint8_t _y[128]) noexcept
 {
     const auto x = validate_fp2(_x);
+    const auto y = validate_fp2(_y);
+
+    // assert(x.has_value() && y.has_value());
+    // assert(x.has_value() && !y.has_value());
+    // assert(!x.has_value() && !y.has_value());
+    // assert(!x.has_value() && y.has_value());
+
     if (!x.has_value())
         return std::nullopt;
 
-    const auto y = validate_fp2(_y);
     if (!y.has_value())
         return std::nullopt;
 
     const blst_p2_affine p_affine{*x, *y};
+    // assert(blst_p2_affine_on_curve(&p_affine));
     if (!blst_p2_affine_on_curve(&p_affine))
         return std::nullopt;
 
@@ -209,6 +231,7 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
     scalars_ptrs.reserve(npoints);
 
     auto ptr = _xycs;
+    [[maybe_unused]] const auto x_org_npoints = npoints;
     for (size_t i = 0; i < npoints; ++i)
     {
         const auto p_affine = validate_p1(ptr, &ptr[64]);
@@ -220,11 +243,18 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
 
         // Point at infinity must be filtered out for BLST library.
         if (blst_p1_affine_is_inf(&*p_affine))
+        {
+            [[maybe_unused]] const auto xs = be::unsafe::load<uint256>(ptr + 128);
+            // assert(xs == 0);
+            // assert(xs != 0);
+            assert(xs != 1);
             continue;
+        }
 
         const auto& p = p1_affines.emplace_back(*p_affine);
         p1_affine_ptrs.emplace_back(&p);
 
+        // assert((ptr[128] & 0x80) != 0);
         blst_scalar scalar;
         blst_scalar_from_bendian(&scalar, &ptr[128]);
         const auto& s = scalars.emplace_back(scalar);
@@ -237,6 +267,8 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
 
     if (npoints == 0)
     {
+        // assert(x_org_npoints == 0);
+        assert(x_org_npoints != 0);
         memset(_rx, 0, 64);
         memset(_ry, 0, 64);
         return true;
@@ -273,6 +305,7 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
     scalars.reserve(npoints);
     scalars_ptrs.reserve(npoints);
 
+    [[maybe_unused]] const auto x_org_npoints = npoints;
     auto ptr = _xycs;
     for (size_t i = 0; i < npoints; ++i)
     {
@@ -285,11 +318,18 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
 
         // Point at infinity must be filtered out for BLST library.
         if (blst_p2_affine_is_inf(&*p_affine))
+        {
+            [[maybe_unused]] const auto xs = be::unsafe::load<uint256>(ptr + 256);
+            // assert(xs == 0);
+            // assert(xs != 0);
+            assert(xs != 1);
             continue;
+        }
 
         const auto& p = p2_affines.emplace_back(*p_affine);
         p2_affine_ptrs.emplace_back(&p);
 
+        // assert((ptr[256] & 0x80) != 0);
         blst_scalar scalar;
         blst_scalar_from_bendian(&scalar, &ptr[256]);
         const auto& s = scalars.emplace_back(scalar);
@@ -302,6 +342,8 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
 
     if (npoints == 0)
     {
+        // assert(x_org_npoints == 0);
+        assert(x_org_npoints != 0);
         memset(_rx, 0, 128);
         memset(_ry, 0, 128);
         return true;
