@@ -470,6 +470,9 @@ std::variant<TransactionReceipt, std::error_code> transition(const StateView& st
         if (auth.chain_id != 0 && auth.chain_id != tx.chain_id)
             continue;
 
+        if (auth.nonce == Account::NonceMax)
+            continue;
+
         // Check if signer could be ecrecovered.
         if (!auth.signer.has_value())
             continue;
