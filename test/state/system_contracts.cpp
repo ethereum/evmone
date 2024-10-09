@@ -4,6 +4,7 @@
 
 #include "system_contracts.hpp"
 #include "host.hpp"
+#include "state_view.hpp"
 
 namespace evmone::state
 {
@@ -35,17 +36,19 @@ static_assert(std::ranges::is_sorted(SYSTEM_CONTRACTS,
 
 }  // namespace
 
-void system_call(State& state, const BlockInfo& block, evmc_revision rev, evmc::VM& vm)
+StateDiff system_call(
+    const StateView& state_view, const BlockInfo& block, evmc_revision rev, evmc::VM& vm)
 {
+    State state{state_view};
     for (const auto& [since, addr, get_input] : SYSTEM_CONTRACTS)
     {
         if (rev < since)
-            return;  // Because entries are ordered, there are no other contracts for this revision.
+            break;  // Because entries are ordered, there are no other contracts for this revision.
 
         // Skip the call if the target account doesn't exist. This is by EIP-4788 spec.
         // > if no code exists at [address], the call must fail silently.
-        const auto acc = state.find(addr);
-        if (acc == nullptr)
+        const auto code = state_view.get_account_code(addr);
+        if (code.empty())
             continue;
 
         const auto input = get_input(block);
@@ -61,17 +64,10 @@ void system_call(State& state, const BlockInfo& block, evmc_revision rev, evmc::
 
         const Transaction empty_tx{};
         Host host{rev, vm, state, block, empty_tx};
-        const auto& code = acc->code;
         [[maybe_unused]] const auto res = vm.execute(host, rev, msg, code.data(), code.size());
         assert(res.status_code == EVMC_SUCCESS);
-        assert(acc->access_status == EVMC_ACCESS_COLD);
-
-        // Reset storage status.
-        for (auto& [_, val] : acc->storage)
-        {
-            val.access_status = EVMC_ACCESS_COLD;
-            val.original = val.current;
-        }
     }
+    // TODO: Should we return empty diff if no system contracts?
+    return state.build_diff(rev);
 }
 }  // namespace evmone::state

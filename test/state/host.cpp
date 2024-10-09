@@ -18,10 +18,7 @@ bool Host::account_exists(const address& addr) const noexcept
 
 bytes32 Host::get_storage(const address& addr, const bytes32& key) const noexcept
 {
-    const auto& acc = m_state.get(addr);
-    if (const auto it = acc.storage.find(key); it != acc.storage.end())
-        return it->second.current;
-    return {};
+    return m_state.get_storage(addr, key).current;
 }
 
 evmc_storage_status Host::set_storage(
@@ -30,7 +27,7 @@ evmc_storage_status Host::set_storage(
     // Follow EVMC documentation https://evmc.ethereum.org/storagestatus.html#autotoc_md3
     // and EIP-2200 specification https://eips.ethereum.org/EIPS/eip-2200.
 
-    auto& storage_slot = m_state.get(addr).storage[key];
+    auto& storage_slot = m_state.get_storage(addr, key);
     const auto& [current, original, _] = storage_slot;
 
     const auto dirty = original != current;
@@ -92,23 +89,28 @@ bytes_view extcode(bytes_view code) noexcept
 /// as defined in the [EIP-7610](https://eips.ethereum.org/EIPS/eip-7610).
 [[nodiscard]] bool is_create_collision(const Account& acc) noexcept
 {
-    if (acc.nonce != 0 || !acc.code.empty())
+    // TODO: This requires much more testing:
+    // - what if an account had storage but is destructed?
+    // - what if an account had cold storage but it was emptied?
+    // - what if an account without cold storage gain one?
+    if (acc.nonce != 0)
+        return true;
+    if (acc.code_hash != Account::EMPTY_CODE_HASH)
+        return true;
+    if (acc.has_initial_storage)
         return true;
 
-    // acc.storage may have entries from access list, even if account storage is empty.
-    // Check for non-zero current values.
-    if (std::ranges::any_of(
-            acc.storage, [](auto& e) noexcept { return !is_zero(e.second.current); }))
-        return true;
-
+    // The hot storage is ignored because it can contain elements from access list.
+    // TODO: Is this correct for destructed accounts?
+    assert(!acc.destructed && "untested");
     return false;
 }
 }  // namespace
 
 size_t Host::get_code_size(const address& addr) const noexcept
 {
-    const auto* const acc = m_state.find(addr);
-    return (acc != nullptr) ? extcode(acc->code).size() : 0;
+    const auto raw_code = m_state.get_code(addr);
+    return extcode(raw_code).size();
 }
 
 bytes32 Host::get_code_hash(const address& addr) const noexcept
@@ -116,17 +118,20 @@ bytes32 Host::get_code_hash(const address& addr) const noexcept
     const auto* const acc = m_state.find(addr);
     if (acc == nullptr || acc->is_empty())
         return {};
-    if (is_eof_container(acc->code))
+
+    // Load code and check if not EOF.
+    // TODO: Optimize the second account lookup here.
+    if (is_eof_container(m_state.get_code(addr)))
         return EOF_CODE_HASH_SENTINEL;
-    // TODO: Cache code hash. It will be needed also to compute the MPT hash.
-    return keccak256(acc->code);
+
+    return acc->code_hash;
 }
 
 size_t Host::copy_code(const address& addr, size_t code_offset, uint8_t* buffer_data,
     size_t buffer_size) const noexcept
 {
-    const auto* const acc = m_state.find(addr);
-    const auto code = (acc != nullptr) ? extcode(acc->code) : bytes_view{};
+    const auto raw_code = m_state.get_code(addr);
+    const auto code = extcode(raw_code);
     const auto code_slice = code.substr(std::min(code_offset, code.size()));
     const auto num_bytes = std::min(buffer_size, code_slice.size());
     std::copy_n(code_slice.begin(), num_bytes, buffer_data);
@@ -367,6 +372,7 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
         }
     }
 
+    new_acc->code_hash = keccak256(code);
     new_acc->code = code;
 
     return evmc::Result{result.status_code, gas_left, result.gas_refund, msg.recipient};
@@ -409,9 +415,8 @@ evmc::Result Host::execute_message(const evmc_message& msg) noexcept
     if (is_precompile(m_rev, msg.code_address))
         return call_precompile(m_rev, msg);
 
-    // In case msg.recipient == msg.code_address, this is the second lookup of the same address.
-    const auto* const code_acc = m_state.find(msg.code_address);
-    const auto code = code_acc != nullptr ? bytes_view{code_acc->code} : bytes_view{};
+    // TODO: get_code() performs the account lookup. Add a way to get an account with code?
+    const auto code = m_state.get_code(msg.code_address);
     return m_vm.execute(*this, m_rev, msg, code.data(), code.size());
 }
 
@@ -503,7 +508,7 @@ evmc_access_status Host::access_account(const address& addr) noexcept
 
 evmc_access_status Host::access_storage(const address& addr, const bytes32& key) noexcept
 {
-    auto& storage_slot = m_state.get(addr).storage[key];
+    auto& storage_slot = m_state.get_storage(addr, key);
     m_state.journal_storage_change(addr, key, storage_slot);
     return std::exchange(storage_slot.access_status, EVMC_ACCESS_WARM);
 }

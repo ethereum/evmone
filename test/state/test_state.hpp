@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
+#include "state_view.hpp"
 #include <evmc/evmc.hpp>
 #include <intx/intx.hpp>
 #include <map>
@@ -15,10 +16,10 @@ namespace state
 {
 struct BlockInfo;
 struct Ommer;
+struct StateDiff;
 struct Transaction;
 struct TransactionReceipt;
 struct Withdrawal;
-class State;
 }  // namespace state
 
 namespace test
@@ -44,10 +45,14 @@ struct TestAccount
 /// This is a simplified variant of state::State:
 /// it hides some details related to transaction execution (e.g. original storage values)
 /// and is also easier to work with in tests.
-class TestState : public std::map<address, TestAccount>
+class TestState : public state::StateView, public std::map<address, TestAccount>
 {
 public:
     using map::map;
+
+    std::optional<Account> get_account(const address& addr) const noexcept override;
+    bytes get_account_code(const address& addr) const noexcept override;
+    bytes32 get_storage(const address& addr, const bytes32& key) const noexcept override;
 
     /// Inserts new account to the state.
     ///
@@ -63,11 +68,8 @@ public:
     /// TODO: deprecate this method.
     TestAccount& get(const address& addr) { return (*this)[addr]; }
 
-    /// Converts the intra state to TestState.
-    explicit TestState(const state::State& intra_state);
-
-    /// Converts the TestState to intra state for transaction execution.
-    [[nodiscard]] state::State to_intra_state() const;
+    /// Apply the state changes.
+    void apply(const state::StateDiff& diff);
 };
 
 /// Wrapping of state::transition() which operates on TestState.
