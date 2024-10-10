@@ -478,11 +478,7 @@ bytes32 Host::get_block_hash(int64_t block_number) const noexcept
     if (const auto& it = m_block.known_block_hashes.find(block_number);
         it != m_block.known_block_hashes.end())
         return it->second;
-
-    // Convention for testing: if the block hash in unknown return the predefined "fake" value.
-    // https://github.com/ethereum/go-ethereum/blob/v1.12.2/tests/state_test_util.go#L432
-    const auto s = std::to_string(block_number);
-    return keccak256({reinterpret_cast<const uint8_t*>(s.data()), s.size()});
+    return {};
 }
 
 void Host::emit_log(const address& addr, const uint8_t* data, size_t data_size,
