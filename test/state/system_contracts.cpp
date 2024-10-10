@@ -13,7 +13,7 @@ namespace
 /// Information about a registered system contract.
 struct SystemContract
 {
-    using GetInputFn = bytes_view(const BlockInfo&) noexcept;
+    using GetInputFn = bytes32(const BlockInfo&) noexcept;
 
     evmc_revision since = EVMC_MAX_REVISION;  ///< EVM revision in which added.
     address addr;                             ///< Address of the system contract.
@@ -23,10 +23,10 @@ struct SystemContract
 /// Registered system contracts.
 constexpr std::array SYSTEM_CONTRACTS{
     SystemContract{EVMC_CANCUN, BEACON_ROOTS_ADDRESS,
-        [](const BlockInfo& block) noexcept { return bytes_view{block.parent_beacon_block_root}; }},
+        [](const BlockInfo& block) noexcept { return block.parent_beacon_block_root; }},
     SystemContract{EVMC_PRAGUE, HISTORY_STORAGE_ADDRESS,
         [](const BlockInfo& block) noexcept {
-            return bytes_view{block.known_block_hashes.at(block.number - 1)};
+            return block.known_block_hashes.at(block.number - 1);
         }},
 };
 
@@ -58,8 +58,8 @@ StateDiff system_call(
             .gas = 30'000'000,
             .recipient = addr,
             .sender = SYSTEM_ADDRESS,
-            .input_data = input.data(),
-            .input_size = input.size(),
+            .input_data = input.bytes,
+            .input_size = std::size(input.bytes),
         };
 
         const Transaction empty_tx{};
