@@ -88,6 +88,11 @@ evmc_message build_message(
         .code = nullptr,
         .code_size = 0};
 }
+
+constexpr bool is_code_delegated(bytes_view code) noexcept
+{
+    return code.starts_with(DELEGATION_MAGIC);
+}
 }  // namespace
 
 StateDiff State::build_diff(evmc_revision rev) const
@@ -378,8 +383,7 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
     if (tx.max_gas_price < block.base_fee)
         return make_error_code(FEE_CAP_LESS_THEN_BLOCKS);
 
-    // TODO this is relaxed for 7702
-    if (sender_acc.code_hash != Account::EMPTY_CODE_HASH)
+    if (sender_acc.code_hash != Account::EMPTY_CODE_HASH && !is_code_delegated(sender_acc.code))
         return make_error_code(SENDER_NOT_EOA);  // Origin must not be a contract (EIP-3607).
 
     if (sender_acc.nonce == Account::NonceMax)  // Nonce value limit (EIP-2681).
@@ -442,11 +446,6 @@ StateDiff finalize(const StateView& state_view, evmc_revision rev, const address
         state.touch(withdrawal.recipient).balance += withdrawal.get_amount();
 
     return state.build_diff(rev);
-}
-
-constexpr bool is_code_delegated(bytes_view code) noexcept
-{
-    return code.starts_with(DELEGATION_MAGIC);
 }
 
 std::variant<TransactionReceipt, std::error_code> transition(const StateView& state_view,
