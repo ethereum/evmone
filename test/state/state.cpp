@@ -121,7 +121,7 @@ StateDiff State::build_diff(evmc_revision rev) const
 
         // Output only the new code.
         // TODO: Output also the code hash. It will be needed for DB update and MPT hash.
-        if (m.just_created && !m.code.empty())
+        if ((m.just_created && !m.code.empty()) || m.code_changed)
             a.code = m.code;
 
         for (const auto& [k, v] : m.storage)
@@ -445,6 +445,8 @@ std::variant<TransactionReceipt, std::error_code> transition(const StateView& st
 {
     State state{state_view};
     auto* sender_ptr = state.find(tx.sender);
+    // TODO hack to load full code into sender_ptr account
+    state.get_code(tx.sender);
 
     // Validate transaction. The validation needs the sender account, so in case
     // it doesn't exist provide an empty one. The account isn't created in the state
@@ -484,7 +486,8 @@ std::variant<TransactionReceipt, std::error_code> transition(const StateView& st
             authority_ptr->access_status = EVMC_ACCESS_WARM;
 
             // Skip if authority has non-delegated code.
-            if (!authority_ptr->code.empty() && !is_code_delegated(authority_ptr->code))
+            if (authority_ptr->code_hash != Account::EMPTY_CODE_HASH &&
+                !is_code_delegated(state.get_code(*auth.signer)))
                 continue;
 
             // Skip if authorization nonce is incorrect.
@@ -511,6 +514,9 @@ std::variant<TransactionReceipt, std::error_code> transition(const StateView& st
         authority_ptr->code.reserve(std::size(DELEGATION_MAGIC) + std::size(auth.addr.bytes));
         authority_ptr->code = DELEGATION_MAGIC;
         authority_ptr->code += auth.addr;
+        authority_ptr->code_hash = keccak256(authority_ptr->code);
+        // TODO set only if code is changed to another delegation
+        authority_ptr->code_changed = true;
 
         ++authority_ptr->nonce;
     }
@@ -557,7 +563,7 @@ std::variant<TransactionReceipt, std::error_code> transition(const StateView& st
     if (tx.to.has_value())
     {
         const auto* to_ptr = state.find(*tx.to);
-        if (to_ptr != nullptr && is_code_delegated(to_ptr->code))
+        if (to_ptr != nullptr && is_code_delegated(state.get_code(*tx.to)))
         {
             assert(rev >= EVMC_PRAGUE);
             assert(to_ptr->code.size() ==
