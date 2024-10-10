@@ -67,6 +67,7 @@ target_sources(
     state_transition_call_test.cpp
     state_transition_create_test.cpp
     state_transition_eip663_test.cpp
+    state_transition_eip7702_test.cpp
     state_transition_eof_calls_test.cpp
     state_transition_eof_create_test.cpp
     state_transition_extcode_test.cpp

@@ -27,6 +27,10 @@ enum ErrorCode : int
     EMPTY_BLOB_HASHES_LIST,
     INVALID_BLOB_HASH_VERSION,
     BLOB_GAS_LIMIT_EXCEEDED,
+    CREATE_SET_CODE_TX,
+    EMPTY_AUTHORIZATION_LIST,
+    INVALID_AUTHORIZATION_SIGNATURE,
+    AUTHORIZATION_SIGNATURE_S_TOO_HIGH,
     UNKNOWN_ERROR,
 };
 
@@ -73,6 +77,14 @@ inline const std::error_category& evmone_category() noexcept
                 return "invalid blob hash version";
             case BLOB_GAS_LIMIT_EXCEEDED:
                 return "blob gas limit exceeded";
+            case CREATE_SET_CODE_TX:
+                return "set code transaction must not be a create transaction";
+            case EMPTY_AUTHORIZATION_LIST:
+                return "empty authorization list";
+            case INVALID_AUTHORIZATION_SIGNATURE:
+                return "invalid authorization signature";
+            case AUTHORIZATION_SIGNATURE_S_TOO_HIGH:
+                return "authorization signature s value too high";
             case UNKNOWN_ERROR:
                 return "Unknown error";
             default:
