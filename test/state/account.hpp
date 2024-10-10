@@ -73,6 +73,9 @@ struct Account
     /// The account has been created in the current transaction.
     bool just_created = false;
 
+    // This account's code changed due to setting EIP-7702 delegation.
+    bool code_changed = false;
+
     evmc_access_status access_status = EVMC_ACCESS_COLD;
 
     [[nodiscard]] bool is_empty() const noexcept
