@@ -13,7 +13,7 @@ namespace
 /// Information about a registered system contract.
 struct SystemContract
 {
-    using GetInputFn = bytes32(const BlockInfo&) noexcept;
+    using GetInputFn = bytes32(const BlockInfo&, const BlockHashes&) noexcept;
 
     evmc_revision since = EVMC_MAX_REVISION;  ///< EVM revision in which added.
     address addr;                             ///< Address of the system contract.
@@ -23,10 +23,12 @@ struct SystemContract
 /// Registered system contracts.
 constexpr std::array SYSTEM_CONTRACTS{
     SystemContract{EVMC_CANCUN, BEACON_ROOTS_ADDRESS,
-        [](const BlockInfo& block) noexcept { return block.parent_beacon_block_root; }},
+        [](const BlockInfo& block, const BlockHashes&) noexcept {
+            return block.parent_beacon_block_root;
+        }},
     SystemContract{EVMC_PRAGUE, HISTORY_STORAGE_ADDRESS,
-        [](const BlockInfo& block) noexcept {
-            return block.known_block_hashes.at(block.number - 1);
+        [](const BlockInfo& block, const BlockHashes& block_hashes) noexcept {
+            return block_hashes.get_block_hash(block.number - 1);
         }},
 };
 
@@ -36,8 +38,8 @@ static_assert(std::ranges::is_sorted(SYSTEM_CONTRACTS,
 
 }  // namespace
 
-StateDiff system_call(
-    const StateView& state_view, const BlockInfo& block, evmc_revision rev, evmc::VM& vm)
+StateDiff system_call(const StateView& state_view, const BlockInfo& block,
+    const BlockHashes& block_hashes, evmc_revision rev, evmc::VM& vm)
 {
     State state{state_view};
     for (const auto& [since, addr, get_input] : SYSTEM_CONTRACTS)
@@ -51,7 +53,7 @@ StateDiff system_call(
         if (code.empty())
             continue;
 
-        const auto input = get_input(block);
+        const auto input = get_input(block, block_hashes);
 
         const evmc_message msg{
             .kind = EVMC_CALL,
@@ -63,7 +65,7 @@ StateDiff system_call(
         };
 
         const Transaction empty_tx{};
-        Host host{rev, vm, state, block, empty_tx};
+        Host host{rev, vm, state, block, block_hashes, empty_tx};
         [[maybe_unused]] const auto res = vm.execute(host, rev, msg, code.data(), code.size());
         assert(res.status_code == EVMC_SUCCESS);
     }

@@ -74,8 +74,9 @@ bytes32 TestBlockHashes::get_block_hash(int64_t block_number) const noexcept
     const state::BlockInfo& block, const state::Transaction& tx, evmc_revision rev, evmc::VM& vm,
     int64_t block_gas_left, int64_t blob_gas_left)
 {
+    const TestBlockHashes block_hashes{block.known_block_hashes};
     const auto result_or_error =
-        state::transition(state, block, tx, rev, vm, block_gas_left, blob_gas_left);
+        state::transition(state, block, block_hashes, tx, rev, vm, block_gas_left, blob_gas_left);
     if (const auto result = get_if<state::TransactionReceipt>(&result_or_error))
         state.apply(result->state_diff);
     return result_or_error;
@@ -91,7 +92,8 @@ void finalize(TestState& state, evmc_revision rev, const address& coinbase,
 
 void system_call(TestState& state, const state::BlockInfo& block, evmc_revision rev, evmc::VM& vm)
 {
-    const auto diff = state::system_call(state, block, rev, vm);
+    const TestBlockHashes block_hashes{block.known_block_hashes};
+    const auto diff = state::system_call(state, block, block_hashes, rev, vm);
     state.apply(diff);
 }
 }  // namespace evmone::test
