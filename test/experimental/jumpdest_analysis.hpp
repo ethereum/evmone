@@ -9,6 +9,16 @@
 
 namespace evmone::experimental
 {
+class JumpdestBitset : std::vector<bool>
+{
+public:
+    using std::vector<bool>::operator[];
+
+    JumpdestBitset(size_t size) : std::vector<bool>(size) {}
+
+    bool check_jumpdest(size_t index) const noexcept { return index < size() && (*this)[index]; }
+};
+
 using JumpdestMap = std::vector<bool>;
 
 inline bool is_jumpdest(const JumpdestMap& jumpdest_map, size_t index) noexcept
@@ -53,7 +63,7 @@ public:
     }
 };
 
-JumpdestMap official_analyze_jumpdests(const uint8_t* code, size_t code_size);
+JumpdestBitset official_analyze_jumpdests(bytes_view code);
 std::vector<bool> build_jumpdest_map_vec1(const uint8_t* code, size_t code_size);
 std::vector<bool> build_jumpdest_map_vec2(const uint8_t* code, size_t code_size);
 std::vector<bool> build_jumpdest_map_vec3(const uint8_t* code, size_t code_size);
