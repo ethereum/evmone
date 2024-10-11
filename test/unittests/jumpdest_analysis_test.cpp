@@ -13,6 +13,13 @@ using namespace evmone::test;
 
 namespace
 {
+struct JumpdestAnalysisImpl
+{
+    static constexpr auto name = "baseline";
+    static auto analyze(bytes_view code) { return baseline::analyze(code, false); }
+};
+
+
 constexpr auto tail_code_padding = 100;
 
 inline bool is_jumpdest(const bitset32& a, size_t index) noexcept
@@ -42,6 +49,39 @@ const bytecode bytecode_test_cases[]{
 };
 }  // namespace
 
+template <typename>
+class ja_test : public testing::Test
+{};
+
+using test_types = testing::Types<JumpdestAnalysisImpl>;
+
+class NameGenerator
+{
+public:
+    template <typename T>
+    static std::string GetName(int)
+    {
+        return T::name;
+    }
+};
+
+TYPED_TEST_SUITE(ja_test, test_types, NameGenerator);
+
+TYPED_TEST(ja_test, validate)
+{
+    for (const auto& code : bytecode_test_cases)
+    {
+        const auto a0 = official_analyze_jumpdests(code.data(), code.size());
+        const auto analysis = TypeParam::analyze(code);
+
+        for (size_t i = 0; i < code.size() + tail_code_padding; ++i)
+        {
+            SCOPED_TRACE(i);
+            EXPECT_EQ(analysis.check_jumpdest(i), is_jumpdest(a0, i));
+        }
+    }
+}
+
 TEST(jumpdest_analysis, compare_implementations)
 {
     for (const auto& t : bytecode_test_cases)
@@ -50,7 +90,8 @@ TEST(jumpdest_analysis, compare_implementations)
         const auto data = t.data();
         const auto data_size = t.size();
 
-        const auto xxx = baseline::analyze({data, data_size}, false);
+        const auto xxx = JumpdestAnalysisImpl::analyze(t);
+
         const auto a0 = official_analyze_jumpdests(data, data_size);
         const auto a2 = build_jumpdest_map_vec1(data, data_size);
         const auto v2 = build_jumpdest_map_vec2(data, data_size);
