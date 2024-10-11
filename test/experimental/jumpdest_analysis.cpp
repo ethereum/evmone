@@ -104,9 +104,10 @@ std::vector<bool> build_jumpdest_map_vec3(const uint8_t* code, size_t code_size)
     return m;
 }
 
-std::vector<bool> build_jumpdest_map_sttni(const uint8_t* code, size_t code_size)
+JumpdestBitset build_jumpdest_map_sttni(bytes_view code)
 {
-    std::vector<bool> m(code_size);
+    const auto code_size = code.size();
+    JumpdestBitset m(code_size);
 
     __m128i match_ranges{};
     match_ranges = _mm_insert_epi8(match_ranges, OP_PUSH1, 0);

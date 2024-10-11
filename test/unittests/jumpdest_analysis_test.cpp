@@ -19,6 +19,12 @@ struct JumpdestAnalysisImpl
     static auto analyze(bytes_view code) { return baseline::analyze(code, false); }
 };
 
+struct JumpdestAnalysisImpl2
+{
+    static constexpr auto name = "jumpdest_bitset_sttni";
+    static auto analyze(bytes_view code) { return build_jumpdest_map_sttni(code); }
+};
+
 
 constexpr auto tail_code_padding = 100;
 
@@ -53,7 +59,7 @@ template <typename>
 class ja_test : public testing::Test
 {};
 
-using test_types = testing::Types<JumpdestAnalysisImpl>;
+using test_types = testing::Types<JumpdestAnalysisImpl, JumpdestAnalysisImpl2>;
 
 class NameGenerator
 {
@@ -96,7 +102,6 @@ TEST(jumpdest_analysis, compare_implementations)
         const auto a2 = build_jumpdest_map_vec1(data, data_size);
         const auto v2 = build_jumpdest_map_vec2(data, data_size);
         const auto x3 = build_jumpdest_map_vec3(data, data_size);
-        const auto v3 = build_jumpdest_map_sttni(data, data_size);
         const auto v4 = build_jumpdest_map_str_avx2(data, data_size);
         const auto v5 = build_jumpdest_map_str_avx2_mask(data, data_size);
         const auto v5a = build_jumpdest_map_str_avx2_mask_v2(data, data_size);
@@ -120,7 +125,6 @@ TEST(jumpdest_analysis, compare_implementations)
             EXPECT_EQ(is_jumpdest(a2, i), expected);
             EXPECT_EQ(is_jumpdest(v2, i), expected);
             EXPECT_EQ(is_jumpdest(x3, i), expected);
-            EXPECT_EQ(is_jumpdest(v3, i), expected);
             EXPECT_EQ(is_jumpdest(v4, i), expected);
             EXPECT_EQ(is_jumpdest(v5, i), expected);
             EXPECT_EQ(is_jumpdest(v5a, i), expected);
