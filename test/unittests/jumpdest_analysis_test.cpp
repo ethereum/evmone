@@ -4,6 +4,7 @@
 
 #include "test/experimental/jumpdest_analysis.hpp"
 #include "test/utils/bytecode.hpp"
+#include <evmone/baseline.hpp>
 #include <gtest/gtest.h>
 
 using namespace evmone;
@@ -49,6 +50,7 @@ TEST(jumpdest_analysis, compare_implementations)
         const auto data = t.data();
         const auto data_size = t.size();
 
+        const auto xxx = baseline::analyze({data, data_size}, false);
         const auto a0 = official_analyze_jumpdests(data, data_size);
         const auto a2 = build_jumpdest_map_vec1(data, data_size);
         const auto v2 = build_jumpdest_map_vec2(data, data_size);
@@ -73,6 +75,7 @@ TEST(jumpdest_analysis, compare_implementations)
         {
             SCOPED_TRACE(i);
             const bool expected = is_jumpdest(a0, i);
+            EXPECT_EQ(xxx.check_jumpdest(i), expected);
             EXPECT_EQ(is_jumpdest(a2, i), expected);
             EXPECT_EQ(is_jumpdest(v2, i), expected);
             EXPECT_EQ(is_jumpdest(x3, i), expected);
