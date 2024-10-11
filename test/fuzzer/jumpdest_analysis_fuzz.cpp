@@ -31,7 +31,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
     const auto a0 = official_analyze_jumpdests(data, data_size);
     const auto a2 = build_jumpdest_map_vec1(data, data_size);
     const auto v2 = build_jumpdest_map_vec2(data, data_size);
-    const auto x3 = build_jumpdest_map_vec3(data, data_size);
     const auto v3 = build_jumpdest_map_sttni(data, data_size);
     const auto v4 = build_jumpdest_map_str_avx2(data, data_size);
     const auto v5 = build_jumpdest_map_str_avx2_mask(data, data_size);

@@ -61,20 +61,6 @@ static pushdata_info build_pushdata_mask(const uint8_t* code, uint32_t push_mask
     return {pushdata_mask, 32};
 }
 
-std::vector<bool> build_jumpdest_map_vec1(const uint8_t* code, size_t code_size)
-{
-    std::vector<bool> m(code_size);
-    for (size_t i = 0; i < code_size; ++i)
-    {
-        const auto op = code[i];
-        if (is_push(op))
-            i += get_push_data_size(op);
-        else if (__builtin_expect(op == OP_JUMPDEST, false))
-            m[i] = true;
-    }
-    return m;
-}
-
 std::vector<bool> build_jumpdest_map_vec2(const uint8_t* code, size_t code_size)
 {
     std::vector<bool> m(code_size);
@@ -84,20 +70,6 @@ std::vector<bool> build_jumpdest_map_vec2(const uint8_t* code, size_t code_size)
         const auto potential_push_data_len = get_push_data_size(op);
         if (potential_push_data_len <= 32)
             i += potential_push_data_len;
-        else if (__builtin_expect(op == OP_JUMPDEST, false))
-            m[i] = true;
-    }
-    return m;
-}
-
-std::vector<bool> build_jumpdest_map_vec3(const uint8_t* code, size_t code_size)
-{
-    std::vector<bool> m(code_size);
-    for (size_t i = 0; i < code_size; ++i)
-    {
-        const auto op = code[i];
-        if (static_cast<int8_t>(op) >= static_cast<int8_t>(OP_PUSH1))
-            i += get_push_data_size(op);
         else if (__builtin_expect(op == OP_JUMPDEST, false))
             m[i] = true;
     }

@@ -796,14 +796,12 @@ using namespace evmone;
 
 struct JumpdestAnalysisImpl
 {
-    static constexpr auto name = "baseline";
     static auto analyze(bytes_view code) { return baseline::analyze(code, false); }
 };
 
 template <typename T, T Fn(bytes_view)>
 struct JumpdestAnalysisImpl2
 {
-    // static constexpr auto name = "jumpdest_bitset_sttni";
     static auto analyze(bytes_view code) { return Fn(code); }
 };
 
@@ -823,11 +821,7 @@ BENCHMARK_TEMPLATE(build_jumpdest, evmone::experimental::JumpdestMap,
 BENCHMARK_TEMPLATE(build_jumpdest, evmone::experimental::JumpdestMap, build_bitset2);
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, build_vec);
 BENCHMARK_TEMPLATE(
-    build_jumpdest, std::vector<bool>, evmone::experimental::build_jumpdest_map_vec1);
-BENCHMARK_TEMPLATE(
     build_jumpdest, std::vector<bool>, evmone::experimental::build_jumpdest_map_vec2);
-BENCHMARK_TEMPLATE(
-    build_jumpdest, std::vector<bool>, evmone::experimental::build_jumpdest_map_vec3);
 // BENCHMARK_TEMPLATE(
 //     build_jumpdest, std::vector<bool>, evmone::experimental::build_jumpdest_map_sttni);
 BENCHMARK_TEMPLATE(

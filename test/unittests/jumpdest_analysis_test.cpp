@@ -13,17 +13,20 @@ using namespace evmone::test;
 
 namespace
 {
-struct JumpdestAnalysisImpl
+template <typename T, T Fn(bytes_view)>
+struct JAImpl
 {
-    static constexpr auto name = "baseline";
-    static auto analyze(bytes_view code) { return baseline::analyze(code, false); }
+    static constexpr auto analyze = Fn;
 };
 
-struct JumpdestAnalysisImpl2
+
+auto baseline_analyze(bytes_view code)
 {
-    static constexpr auto name = "jumpdest_bitset_sttni";
-    static auto analyze(bytes_view code) { return build_jumpdest_map_sttni(code); }
-};
+    return baseline::analyze(code, false);
+}
+
+using JumpdestAnalysisImpl = JAImpl<baseline::CodeAnalysis, baseline_analyze>;
+using JumpdestAnalysisImpl2 = JAImpl<JumpdestBitset, build_jumpdest_map_sttni>;
 
 
 constexpr auto tail_code_padding = 100;
@@ -71,7 +74,7 @@ public:
     }
 };
 
-TYPED_TEST_SUITE(ja_test, test_types, NameGenerator);
+TYPED_TEST_SUITE(ja_test, test_types);
 
 TYPED_TEST(ja_test, validate)
 {
@@ -99,9 +102,7 @@ TEST(jumpdest_analysis, compare_implementations)
         const auto xxx = JumpdestAnalysisImpl::analyze(t);
 
         const auto a0 = official_analyze_jumpdests(t);
-        const auto a2 = build_jumpdest_map_vec1(data, data_size);
         const auto v2 = build_jumpdest_map_vec2(data, data_size);
-        const auto x3 = build_jumpdest_map_vec3(data, data_size);
         const auto v4 = build_jumpdest_map_str_avx2(data, data_size);
         const auto v5 = build_jumpdest_map_str_avx2_mask(data, data_size);
         const auto v5a = build_jumpdest_map_str_avx2_mask_v2(data, data_size);
@@ -122,9 +123,7 @@ TEST(jumpdest_analysis, compare_implementations)
             SCOPED_TRACE(i);
             const bool expected = a0.check_jumpdest(i);
             EXPECT_EQ(xxx.check_jumpdest(i), expected);
-            EXPECT_EQ(is_jumpdest(a2, i), expected);
             EXPECT_EQ(is_jumpdest(v2, i), expected);
-            EXPECT_EQ(is_jumpdest(x3, i), expected);
             EXPECT_EQ(is_jumpdest(v4, i), expected);
             EXPECT_EQ(is_jumpdest(v5, i), expected);
             EXPECT_EQ(is_jumpdest(v5a, i), expected);
