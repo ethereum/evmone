@@ -821,7 +821,7 @@ BENCHMARK_TEMPLATE(build_jumpdest, evmone::experimental::JumpdestMap,
 BENCHMARK_TEMPLATE(build_jumpdest, evmone::experimental::JumpdestMap, build_bitset2);
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, build_vec);
 BENCHMARK_TEMPLATE(
-    build_jumpdest, std::vector<bool>, evmone::experimental::build_jumpdest_map_vec2);
+    build_jumpdest, std::vector<bool>, evmone::experimental::jda_speculate_push_data_size);
 // BENCHMARK_TEMPLATE(
 //     build_jumpdest, std::vector<bool>, evmone::experimental::build_jumpdest_map_sttni);
 BENCHMARK_TEMPLATE(

@@ -58,7 +58,7 @@ template <typename>
 class jumpdest_analysis_test : public testing::Test
 {};
 using test_types = testing::Types<I<baseline::CodeAnalysis, baseline_analyze>,
-    I<JumpdestBitset, build_jumpdest_map_sttni>>;
+    I<JumpdestBitset, jda_speculate_push_data_size>, I<JumpdestBitset, build_jumpdest_map_sttni>>;
 TYPED_TEST_SUITE(jumpdest_analysis_test, test_types);
 
 TYPED_TEST(jumpdest_analysis_test, validate)
@@ -84,10 +84,8 @@ TEST(jumpdest_analysis, compare_implementations)
         const auto data = t.data();
         const auto data_size = t.size();
 
-        const auto xxx = I<baseline::CodeAnalysis, baseline_analyze>::analyze(t);
-
         const auto a0 = jda_reference(t);
-        const auto v2 = build_jumpdest_map_vec2(data, data_size);
+        const auto v2 = jda_speculate_push_data_size(data);
         const auto v4 = build_jumpdest_map_str_avx2(data, data_size);
         const auto v5 = build_jumpdest_map_str_avx2_mask(data, data_size);
         const auto v5a = build_jumpdest_map_str_avx2_mask_v2(data, data_size);
@@ -107,8 +105,6 @@ TEST(jumpdest_analysis, compare_implementations)
         {
             SCOPED_TRACE(i);
             const bool expected = a0.check_jumpdest(i);
-            EXPECT_EQ(xxx.check_jumpdest(i), expected);
-            EXPECT_EQ(is_jumpdest(v2, i), expected);
             EXPECT_EQ(is_jumpdest(v4, i), expected);
             EXPECT_EQ(is_jumpdest(v5, i), expected);
             EXPECT_EQ(is_jumpdest(v5a, i), expected);

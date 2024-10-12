@@ -59,16 +59,16 @@ static pushdata_info build_pushdata_mask(const uint8_t* code, uint32_t push_mask
     return {pushdata_mask, 32};
 }
 
-std::vector<bool> build_jumpdest_map_vec2(const uint8_t* code, size_t code_size)
+JumpdestBitset jda_speculate_push_data_size(bytes_view code)
 {
-    std::vector<bool> m(code_size);
-    for (size_t i = 0; i < code_size; ++i)
+    JumpdestBitset m(code.size());
+    for (size_t i = 0; i < code.size(); ++i)
     {
         const auto op = code[i];
         const auto potential_push_data_len = get_push_data_size(op);
         if (potential_push_data_len <= 32)
             i += potential_push_data_len;
-        else if (__builtin_expect(op == OP_JUMPDEST, false))
+        else if (op == OP_JUMPDEST) [[unlikely]]
             m[i] = true;
     }
     return m;
