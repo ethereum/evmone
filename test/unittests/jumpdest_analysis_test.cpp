@@ -13,32 +13,21 @@ using namespace evmone::test;
 
 namespace
 {
-template <typename T, T Fn(bytes_view)>
-struct JAImpl
-{
-    static constexpr auto analyze = Fn;
-};
-
+constexpr auto CODE_PADDING_CHECK_SIZE = 100;
 
 auto baseline_analyze(bytes_view code)
 {
     return baseline::analyze(code, false);
 }
 
-using JumpdestAnalysisImpl = JAImpl<baseline::CodeAnalysis, baseline_analyze>;
-using JumpdestAnalysisImpl2 = JAImpl<JumpdestBitset, build_jumpdest_map_sttni>;
-
-
-constexpr auto tail_code_padding = 100;
-
-inline bool is_jumpdest(const bitset32& a, size_t index) noexcept
+bool is_jumpdest(const bitset32& a, size_t index) noexcept
 {
     return (index < a.size() && a[index]);
 }
 
 const bytecode bytecode_test_cases[]{
-    push(0x5b),
     {},
+    push(0x5b),
     OP_JUMPDEST,
     push(0),
     push(0x5b) + OP_JUMPDEST,
@@ -58,32 +47,28 @@ const bytecode bytecode_test_cases[]{
 };
 }  // namespace
 
-template <typename>
-class ja_test : public testing::Test
-{};
-
-using test_types = testing::Types<JumpdestAnalysisImpl, JumpdestAnalysisImpl2>;
-
-class NameGenerator
+/// Wrapper for jumpdest analysis implementations suitable for typed tests.
+template <typename T, T Fn(bytes_view)>
+struct I
 {
-public:
-    template <typename T>
-    static std::string GetName(int)
-    {
-        return T::name;
-    }
+    static constexpr auto analyze = Fn;
 };
 
-TYPED_TEST_SUITE(ja_test, test_types);
+template <typename>
+class jumpdest_analysis_test : public testing::Test
+{};
+using test_types = testing::Types<I<baseline::CodeAnalysis, baseline_analyze>,
+    I<JumpdestBitset, build_jumpdest_map_sttni>>;
+TYPED_TEST_SUITE(jumpdest_analysis_test, test_types);
 
-TYPED_TEST(ja_test, validate)
+TYPED_TEST(jumpdest_analysis_test, validate)
 {
     for (const auto& code : bytecode_test_cases)
     {
         const auto expected = jda_reference(code);
         const auto analysis = TypeParam::analyze(code);
 
-        for (size_t i = 0; i < code.size() + tail_code_padding; ++i)
+        for (size_t i = 0; i < code.size() + CODE_PADDING_CHECK_SIZE; ++i)
         {
             SCOPED_TRACE(i);
             EXPECT_EQ(analysis.check_jumpdest(i), expected.check_jumpdest(i));
@@ -99,7 +84,7 @@ TEST(jumpdest_analysis, compare_implementations)
         const auto data = t.data();
         const auto data_size = t.size();
 
-        const auto xxx = JumpdestAnalysisImpl::analyze(t);
+        const auto xxx = I<baseline::CodeAnalysis, baseline_analyze>::analyze(t);
 
         const auto a0 = jda_reference(t);
         const auto v2 = build_jumpdest_map_vec2(data, data_size);
@@ -118,7 +103,7 @@ TEST(jumpdest_analysis, compare_implementations)
         const auto s3 = build_jumpdest_map_simd3(data, data_size);
         const auto s4 = build_jumpdest_map_simd4(data, data_size);
 
-        for (size_t i = 0; i < data_size + tail_code_padding; ++i)
+        for (size_t i = 0; i < data_size + CODE_PADDING_CHECK_SIZE; ++i)
         {
             SCOPED_TRACE(i);
             const bool expected = a0.check_jumpdest(i);
