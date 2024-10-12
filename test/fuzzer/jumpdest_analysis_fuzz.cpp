@@ -28,10 +28,10 @@ inline bool is_jumpdest(const bitset32& a, size_t index) noexcept
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noexcept
 {
-    const auto a0 = official_analyze_jumpdests(data, data_size);
-    const auto a2 = build_jumpdest_map_vec1(data, data_size);
+    const bytes_view code{data, data_size};
+    const auto a0 = jda_reference(code);
     const auto v2 = build_jumpdest_map_vec2(data, data_size);
-    const auto v3 = build_jumpdest_map_sttni(data, data_size);
+    const auto v3 = build_jumpdest_map_sttni(code);
     const auto v4 = build_jumpdest_map_str_avx2(data, data_size);
     const auto v5 = build_jumpdest_map_str_avx2_mask(data, data_size);
     const auto v6 = build_jumpdest_map_str_avx2_mask2(data, data_size);
@@ -48,11 +48,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
 
     for (size_t i = 0; i < data_size + tail_code_padding; ++i)
     {
-        const bool expected = is_jumpdest(a0, i);
-        EXPECT_EQ(is_jumpdest(a2, i), expected);
+        const bool expected = a0.check_jumpdest(i);
         EXPECT_EQ(is_jumpdest(v2, i), expected);
-        EXPECT_EQ(is_jumpdest(x3, i), expected);
-        EXPECT_EQ(is_jumpdest(v3, i), expected);
+        EXPECT_EQ(v3.check_jumpdest(i), expected);
         EXPECT_EQ(is_jumpdest(v4, i), expected);
         EXPECT_EQ(is_jumpdest(v5, i), expected);
         EXPECT_EQ(is_jumpdest(v6, i), expected);

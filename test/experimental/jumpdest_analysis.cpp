@@ -11,19 +11,17 @@
 
 namespace evmone::experimental
 {
-JumpdestBitset official_analyze_jumpdests(bytes_view code)
+JumpdestBitset jda_reference(bytes_view code)
 {
     JumpdestBitset map(code.size());
-
     for (size_t i = 0; i < code.size(); ++i)
     {
         const auto op = code[i];
         if (static_cast<int8_t>(op) >= OP_PUSH1)
             i += op - (OP_PUSH1 - 1);
-        else if (__builtin_expect(op == OP_JUMPDEST, false))
+        else if (op == OP_JUMPDEST) [[unlikely]]
             map[i] = true;
     }
-
     return map;
 }
 

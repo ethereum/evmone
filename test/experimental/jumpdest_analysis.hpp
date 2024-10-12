@@ -63,7 +63,7 @@ public:
     }
 };
 
-JumpdestBitset official_analyze_jumpdests(bytes_view code);
+JumpdestBitset jda_reference(bytes_view code);
 std::vector<bool> build_jumpdest_map_vec2(const uint8_t* code, size_t code_size);
 JumpdestBitset build_jumpdest_map_sttni(bytes_view code);
 std::vector<bool> build_jumpdest_map_str_avx2(const uint8_t* code, size_t code_size);

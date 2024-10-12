@@ -80,7 +80,7 @@ TYPED_TEST(ja_test, validate)
 {
     for (const auto& code : bytecode_test_cases)
     {
-        const auto expected = official_analyze_jumpdests(code);
+        const auto expected = jda_reference(code);
         const auto analysis = TypeParam::analyze(code);
 
         for (size_t i = 0; i < code.size() + tail_code_padding; ++i)
@@ -101,7 +101,7 @@ TEST(jumpdest_analysis, compare_implementations)
 
         const auto xxx = JumpdestAnalysisImpl::analyze(t);
 
-        const auto a0 = official_analyze_jumpdests(t);
+        const auto a0 = jda_reference(t);
         const auto v2 = build_jumpdest_map_vec2(data, data_size);
         const auto v4 = build_jumpdest_map_str_avx2(data, data_size);
         const auto v5 = build_jumpdest_map_str_avx2_mask(data, data_size);
