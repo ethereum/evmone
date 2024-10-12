@@ -776,54 +776,34 @@ void build_jumpdest(benchmark::State& state)
         Counter::kIsRate};
 }
 
-template <typename T>
-void ja_bench(benchmark::State& state)
+using namespace evmone;
+using namespace evmone::experimental;
+using namespace benchmark;
+
+template <typename ResultT, ResultT AnalyzeFn(bytes_view)>
+void jumpdest_analysis(State& state)
 {
     for (auto _ : state)
     {
-        auto r = T::analyze(test_bytecode);
-        benchmark::DoNotOptimize(r);
+        auto r = AnalyzeFn(test_bytecode);
+        DoNotOptimize(r);
     }
 
-    using namespace benchmark;
     state.counters["bytes"] = {
         static_cast<double>(static_cast<IterationCount>(test_bytecode.size()) * state.iterations()),
         Counter::kIsRate};
 }
 
-using namespace evmone::experimental;
-using namespace evmone;
-
-struct JumpdestAnalysisImpl
-{
-    static auto analyze(bytes_view code) { return baseline::analyze(code, false); }
-};
-
-template <typename T, T Fn(bytes_view)>
-struct JumpdestAnalysisImpl2
-{
-    static auto analyze(bytes_view code) { return Fn(code); }
-};
-
 }  // namespace
 
-namespace
-{
-using baseline = JumpdestAnalysisImpl;
-BENCHMARK(ja_bench<baseline>);
-}  // namespace
-BENCHMARK(ja_bench<JumpdestAnalysisImpl2<JumpdestBitset, build_jumpdest_map_sttni>>);
+BENCHMARK(jumpdest_analysis<JumpdestBitset, jda_reference>);
+BENCHMARK(jumpdest_analysis<JumpdestBitset, build_jumpdest_map_sttni>);
+BENCHMARK(jumpdest_analysis<JumpdestBitset, jda_speculate_push_data_size>);
 
-// BENCHMARK_TEMPLATE(build_jumpdest, evmone::experimental::JumpdestMap,
-//     evmone::experimental::official_analyze_jumpdests);
 BENCHMARK_TEMPLATE(build_jumpdest, evmone::experimental::JumpdestMap,
     evmone::experimental::build_jumpdest_map_bitset1);
 BENCHMARK_TEMPLATE(build_jumpdest, evmone::experimental::JumpdestMap, build_bitset2);
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, build_vec);
-BENCHMARK_TEMPLATE(
-    build_jumpdest, std::vector<bool>, evmone::experimental::jda_speculate_push_data_size);
-// BENCHMARK_TEMPLATE(
-//     build_jumpdest, std::vector<bool>, evmone::experimental::build_jumpdest_map_sttni);
 BENCHMARK_TEMPLATE(
     build_jumpdest, std::vector<bool>, evmone::experimental::build_jumpdest_map_str_avx2);
 BENCHMARK_TEMPLATE(
