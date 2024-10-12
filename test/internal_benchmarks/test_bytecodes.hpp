@@ -9,5 +9,5 @@
 
 namespace evmone::test
 {
-extern const std::array<bytes, 7> test_bytecodes;
+extern const std::array<bytes, 10> test_bytecodes;
 }
