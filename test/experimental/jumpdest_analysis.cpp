@@ -9,7 +9,7 @@
 #include <cstring>
 #include <limits>
 
-namespace evmone::experimental
+namespace evmone::exp::jda
 {
 JumpdestBitset jda_reference(bytes_view code)
 {
@@ -65,6 +65,24 @@ JumpdestBitset jda_speculate_push_data_size(bytes_view code)
     for (size_t i = 0; i < code.size(); ++i)
     {
         const auto op = code[i];
+        const auto potential_push_data_len = get_push_data_size(op);
+        if (potential_push_data_len <= 32)
+            i += potential_push_data_len;
+        else if (op == OP_JUMPDEST) [[unlikely]]
+            m[i] = true;
+    }
+    return m;
+}
+
+JumpdestBitset jda_speculate_push_data_size2(bytes_view code)
+{
+    JumpdestBitset m(code.size());
+    for (size_t i = 0; i < code.size(); ++i)
+    {
+        const auto op = code[i];
+        if (op < OP_JUMPDEST)
+            continue;
+
         const auto potential_push_data_len = get_push_data_size(op);
         if (potential_push_data_len <= 32)
             i += potential_push_data_len;

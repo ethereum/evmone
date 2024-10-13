@@ -1,11 +1,12 @@
 // evmone: Fast Ethereum Virtual Machine implementation
 // Copyright 2020 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
+#pragma once
 
 #include <evmone/instructions_opcodes.hpp>
 #include <cstdint>
 
-namespace evmone::experimental
+namespace evmone::exp
 {
 inline constexpr bool is_push(uint8_t op) noexcept
 {
@@ -72,4 +73,4 @@ inline int find_first_push_opt3(const uint8_t* code) noexcept
     auto z2 = z / 8;
     return z2;
 }
-}  // namespace evmone::experimental
+}  // namespace evmone::exp

@@ -8,7 +8,7 @@
 #include <gtest/gtest.h>
 
 using namespace evmone;
-using namespace evmone::experimental;
+using namespace evmone::exp::jda;
 using namespace evmone::test;
 
 namespace
@@ -26,12 +26,16 @@ bool is_jumpdest(const bitset32& a, size_t index) noexcept
 }
 
 const bytecode bytecode_test_cases[]{
-    {},
+    bytecode{},
     push(0x5b),
     OP_JUMPDEST,
     push(0),
     push(0x5b) + OP_JUMPDEST,
     push(0x60) + OP_JUMPDEST,
+    bytecode{"00"} + OP_JUMPDEST,
+    bytecode{"80"} + OP_JUMPDEST,
+    bytecode{"5f"} + OP_JUMPDEST,
+    bytecode{"ff"} + OP_JUMPDEST,
     "5b000000000000000000000000000000",
     "005b0000000000000000000000000000",
     "605b00605b000000000000000000000000000000000000000000000000000000",
@@ -58,20 +62,22 @@ template <typename>
 class jumpdest_analysis_test : public testing::Test
 {};
 using test_types = testing::Types<I<baseline::CodeAnalysis, baseline_analyze>,
-    I<JumpdestBitset, jda_speculate_push_data_size>, I<JumpdestBitset, build_jumpdest_map_sttni>>;
+    I<JumpdestBitset, jda_speculate_push_data_size>,
+    I<JumpdestBitset, jda_speculate_push_data_size2>, I<JumpdestBitset, build_jumpdest_map_sttni>>;
 TYPED_TEST_SUITE(jumpdest_analysis_test, test_types);
 
 TYPED_TEST(jumpdest_analysis_test, validate)
 {
-    for (const auto& code : bytecode_test_cases)
+    for (size_t t = 0; t < std::size(bytecode_test_cases); ++t)
     {
+        const auto& code = bytecode_test_cases[t];
         const auto expected = jda_reference(code);
         const auto analysis = TypeParam::analyze(code);
 
         for (size_t i = 0; i < code.size() + CODE_PADDING_CHECK_SIZE; ++i)
         {
-            SCOPED_TRACE(i);
-            EXPECT_EQ(analysis.check_jumpdest(i), expected.check_jumpdest(i));
+            EXPECT_EQ(analysis.check_jumpdest(i), expected.check_jumpdest(i))
+                << t << "[" << i << "]";
         }
     }
 }
@@ -85,7 +91,6 @@ TEST(jumpdest_analysis, compare_implementations)
         const auto data_size = t.size();
 
         const auto a0 = jda_reference(t);
-        const auto v2 = jda_speculate_push_data_size(data);
         const auto v4 = build_jumpdest_map_str_avx2(data, data_size);
         const auto v5 = build_jumpdest_map_str_avx2_mask(data, data_size);
         const auto v5a = build_jumpdest_map_str_avx2_mask_v2(data, data_size);

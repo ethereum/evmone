@@ -29,7 +29,7 @@ enum : uint8_t
 
 [[gnu::noinline]] auto build_bitset2(const uint8_t* code, size_t code_size)
 {
-    evmone::experimental::JumpdestMap m(code_size);
+    evmone::exp::jda::JumpdestMap m(code_size);
     for (size_t i = 0; i < code_size; ++i)
     {
         const auto op = code[i];
@@ -302,7 +302,7 @@ void build_jumpdest(benchmark::State& state)
 }
 
 using namespace evmone;
-using namespace evmone::experimental;
+using namespace evmone::exp::jda;
 using namespace benchmark;
 
 template <typename ResultT, ResultT AnalyzeFn(bytes_view)>
@@ -328,35 +328,35 @@ void jumpdest_analysis(State& state)
 BENCHMARK(jumpdest_analysis<JumpdestBitset, jda_reference>) ARGS;
 BENCHMARK(jumpdest_analysis<JumpdestBitset, build_jumpdest_map_sttni>) ARGS;
 BENCHMARK(jumpdest_analysis<JumpdestBitset, jda_speculate_push_data_size>) ARGS;
+BENCHMARK(jumpdest_analysis<JumpdestBitset, jda_speculate_push_data_size2>) ARGS;
 
-BENCHMARK_TEMPLATE(build_jumpdest, evmone::experimental::JumpdestMap,
-    evmone::experimental::build_jumpdest_map_bitset1)
+BENCHMARK_TEMPLATE(
+    build_jumpdest, evmone::exp::jda::JumpdestMap, evmone::exp::jda::build_jumpdest_map_bitset1)
 ARGS;
-BENCHMARK_TEMPLATE(build_jumpdest, evmone::experimental::JumpdestMap, build_bitset2) ARGS;
+BENCHMARK_TEMPLATE(build_jumpdest, evmone::exp::jda::JumpdestMap, build_bitset2) ARGS;
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, build_vec) ARGS;
-BENCHMARK_TEMPLATE(
-    build_jumpdest, std::vector<bool>, evmone::experimental::build_jumpdest_map_str_avx2)
+BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, evmone::exp::jda::build_jumpdest_map_str_avx2)
 ARGS;
 BENCHMARK_TEMPLATE(
-    build_jumpdest, std::vector<bool>, evmone::experimental::build_jumpdest_map_str_avx2_mask)
+    build_jumpdest, std::vector<bool>, evmone::exp::jda::build_jumpdest_map_str_avx2_mask)
 ARGS;
 BENCHMARK_TEMPLATE(
-    build_jumpdest, std::vector<bool>, evmone::experimental::build_jumpdest_map_str_avx2_mask_v2)
+    build_jumpdest, std::vector<bool>, evmone::exp::jda::build_jumpdest_map_str_avx2_mask_v2)
 ARGS;
 BENCHMARK_TEMPLATE(
-    build_jumpdest, std::vector<bool>, evmone::experimental::build_jumpdest_map_str_avx2_mask2)
+    build_jumpdest, std::vector<bool>, evmone::exp::jda::build_jumpdest_map_str_avx2_mask2)
 ARGS;
 BENCHMARK_TEMPLATE(
-    build_jumpdest, evmone::experimental::bitset32, evmone::experimental::build_jumpdest_map_simd1)
+    build_jumpdest, evmone::exp::jda::bitset32, evmone::exp::jda::build_jumpdest_map_simd1)
 ARGS;
 BENCHMARK_TEMPLATE(
-    build_jumpdest, evmone::experimental::bitset32, evmone::experimental::build_jumpdest_map_simd2)
+    build_jumpdest, evmone::exp::jda::bitset32, evmone::exp::jda::build_jumpdest_map_simd2)
 ARGS;
 BENCHMARK_TEMPLATE(
-    build_jumpdest, evmone::experimental::bitset32, evmone::experimental::build_jumpdest_map_simd3)
+    build_jumpdest, evmone::exp::jda::bitset32, evmone::exp::jda::build_jumpdest_map_simd3)
 ARGS;
 BENCHMARK_TEMPLATE(
-    build_jumpdest, evmone::experimental::bitset32, evmone::experimental::build_jumpdest_map_simd4)
+    build_jumpdest, evmone::exp::jda::bitset32, evmone::exp::jda::build_jumpdest_map_simd4)
 ARGS;
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, build_vec3) ARGS;
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, build_vec4) ARGS;
@@ -365,19 +365,19 @@ BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, build_vec6) ARGS;
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<bool>, build_vec7) ARGS;
 BENCHMARK_TEMPLATE(build_jumpdest, std::vector<uint8_t>, build_bytes) ARGS;
 BENCHMARK_TEMPLATE(
-    build_jumpdest, std::unique_ptr<uint8_t[]>, evmone::experimental::build_internal_code_v1)
+    build_jumpdest, std::unique_ptr<uint8_t[]>, evmone::exp::jda::build_internal_code_v1)
 ARGS;
 BENCHMARK_TEMPLATE(
-    build_jumpdest, std::unique_ptr<uint8_t[]>, evmone::experimental::build_internal_code_v2)
+    build_jumpdest, std::unique_ptr<uint8_t[]>, evmone::exp::jda::build_internal_code_v2)
 ARGS;
 BENCHMARK_TEMPLATE(
-    build_jumpdest, std::unique_ptr<uint8_t[]>, evmone::experimental::build_internal_code_v3)
+    build_jumpdest, std::unique_ptr<uint8_t[]>, evmone::exp::jda::build_internal_code_v3)
 ARGS;
 BENCHMARK_TEMPLATE(
-    build_jumpdest, std::unique_ptr<uint8_t[]>, evmone::experimental::build_internal_code_v4)
+    build_jumpdest, std::unique_ptr<uint8_t[]>, evmone::exp::jda::build_internal_code_v4)
 ARGS;
 BENCHMARK_TEMPLATE(
-    build_jumpdest, std::unique_ptr<uint8_t[]>, evmone::experimental::build_internal_code_v8)
+    build_jumpdest, std::unique_ptr<uint8_t[]>, evmone::exp::jda::build_internal_code_v8)
 ARGS;
 BENCHMARK_TEMPLATE(build_jumpdest, std::unique_ptr<uint8_t[]>, build_shadow_code2p) ARGS;
 BENCHMARK_TEMPLATE(build_jumpdest, std::unique_ptr<uint8_t[]>, build_shadow_code3p) ARGS;
