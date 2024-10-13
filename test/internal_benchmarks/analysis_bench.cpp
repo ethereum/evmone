@@ -325,9 +325,9 @@ void jumpdest_analysis(State& state)
 
 #define ARGS ->DenseRange(0, test_bytecodes.size() - 1)
 
-BENCHMARK(jumpdest_analysis<JumpdestBitset, jda_reference>) ARGS;
+BENCHMARK(jumpdest_analysis<JumpdestBitset, reference>) ARGS;
 BENCHMARK(jumpdest_analysis<JumpdestBitset, build_jumpdest_map_sttni>) ARGS;
-BENCHMARK(jumpdest_analysis<JumpdestBitset, jda_speculate_push_data_size>) ARGS;
+BENCHMARK(jumpdest_analysis<JumpdestBitset, speculate_push_data_size>) ARGS;
 BENCHMARK(jumpdest_analysis<JumpdestBitset, jda_speculate_push_data_size2>) ARGS;
 
 BENCHMARK_TEMPLATE(

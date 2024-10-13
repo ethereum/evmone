@@ -11,7 +11,7 @@
 
 namespace evmone::exp::jda
 {
-JumpdestBitset jda_reference(bytes_view code)
+JumpdestBitset reference(bytes_view code)
 {
     JumpdestBitset map(code.size());
     for (size_t i = 0; i < code.size(); ++i)
@@ -59,7 +59,7 @@ static pushdata_info build_pushdata_mask(const uint8_t* code, uint32_t push_mask
     return {pushdata_mask, 32};
 }
 
-JumpdestBitset jda_speculate_push_data_size(bytes_view code)
+JumpdestBitset speculate_push_data_size(bytes_view code)
 {
     JumpdestBitset m(code.size());
     for (size_t i = 0; i < code.size(); ++i)

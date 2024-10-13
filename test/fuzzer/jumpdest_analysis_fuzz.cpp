@@ -29,8 +29,8 @@ inline bool is_jumpdest(const bitset32& a, size_t index) noexcept
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noexcept
 {
     const bytes_view code{data, data_size};
-    const auto a0 = jda_reference(code);
-    const auto v2 = jda_speculate_push_data_size(data);
+    const auto a0 = reference(code);
+    const auto v2 = speculate_push_data_size(data);
     const auto v3 = build_jumpdest_map_sttni(code);
     const auto v4 = build_jumpdest_map_str_avx2(data, data_size);
     const auto v5 = build_jumpdest_map_str_avx2_mask(data, data_size);

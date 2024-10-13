@@ -62,7 +62,7 @@ template <typename>
 class jumpdest_analysis_test : public testing::Test
 {};
 using test_types = testing::Types<I<baseline::CodeAnalysis, baseline_analyze>,
-    I<JumpdestBitset, jda_speculate_push_data_size>,
+    I<JumpdestBitset, speculate_push_data_size>,
     I<JumpdestBitset, jda_speculate_push_data_size2>, I<JumpdestBitset, build_jumpdest_map_sttni>>;
 TYPED_TEST_SUITE(jumpdest_analysis_test, test_types);
 
@@ -71,7 +71,7 @@ TYPED_TEST(jumpdest_analysis_test, validate)
     for (size_t t = 0; t < std::size(bytecode_test_cases); ++t)
     {
         const auto& code = bytecode_test_cases[t];
-        const auto expected = jda_reference(code);
+        const auto expected = reference(code);
         const auto analysis = TypeParam::analyze(code);
 
         for (size_t i = 0; i < code.size() + CODE_PADDING_CHECK_SIZE; ++i)
@@ -90,7 +90,7 @@ TEST(jumpdest_analysis, compare_implementations)
         const auto data = t.data();
         const auto data_size = t.size();
 
-        const auto a0 = jda_reference(t);
+        const auto a0 = reference(t);
         const auto v4 = build_jumpdest_map_str_avx2(data, data_size);
         const auto v5 = build_jumpdest_map_str_avx2_mask(data, data_size);
         const auto v5a = build_jumpdest_map_str_avx2_mask_v2(data, data_size);
