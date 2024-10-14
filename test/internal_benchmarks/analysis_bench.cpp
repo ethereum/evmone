@@ -14,6 +14,7 @@
 #include <iostream>
 
 using namespace evmone::test;
+using namespace evmone::exp::jda;
 
 
 namespace

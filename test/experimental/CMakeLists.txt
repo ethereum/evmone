@@ -10,6 +10,6 @@ target_link_libraries(evmone-experimental PRIVATE evmone evmc::instructions)
 target_compile_options(evmone-experimental PUBLIC -mavx -mavx2 -msse4)
 target_sources(
     evmone-experimental PRIVATE
+    jumpdest_analysis.hpp
     jumpdest_analysis.cpp
-    opcode_manip.hpp
 )
