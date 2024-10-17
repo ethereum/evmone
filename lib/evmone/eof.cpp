@@ -212,22 +212,11 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
     return section_headers;
 }
 
-EOFValidationError validate_types(
-    bytes_view container, size_t type_section_offset, uint16_t type_section_size) noexcept
+EOFValidationError validate_types(bytes_view container, const EOF1Header& header) noexcept
 {
-    assert(!container.empty());  // guaranteed by EOF headers validation
-
-
-    // guaranteed by EOF headers validation
-    assert(type_section_offset + type_section_size < container.size());
-
-    const auto num_types = type_section_size / EOF1Header::TYPE_ENTRY_SIZE;
-    for (size_t i = 0; i < num_types; ++i)
+    for (size_t i = 0; i < header.get_type_count(); ++i)
     {
-        const auto offset = type_section_offset + (i * EOF1Header::TYPE_ENTRY_SIZE);
-        const auto inputs = container[offset];
-        const auto outputs = container[offset + 1];
-        const auto max_stack_height = read_uint16_be(&container[offset + 2]);
+        const auto [inputs, outputs, max_stack_height] = header.get_type(container, i);
 
         // First type should be (0, 0x80)
         if (i == 0 && (inputs != 0 || outputs != NON_RETURNING_FUNCTION))
@@ -621,6 +610,9 @@ EOFValidationError validate_eof1(
         if (container.size() > static_cast<size_t>(header.data_offset) + header.data_size)
             return EOFValidationError::invalid_section_bodies_size;
 
+        if (const auto err = validate_types(container, header); err != EOFValidationError::success)
+            return err;
+
         // Validate code sections
         std::vector<bool> visited_code_sections(header.code_sizes.size());
         std::queue<uint16_t> code_sections_queue({0});
@@ -770,10 +762,6 @@ std::variant<EOF1Header, EOFValidationError> validate_header(
 
     if (type_section_size != code_sizes.size() * EOF1Header::TYPE_ENTRY_SIZE)
         return EOFValidationError::invalid_type_section_size;
-
-    const auto validation_error = validate_types(container, type_section_offset, type_section_size);
-    if (validation_error != EOFValidationError::success)
-        return validation_error;
 
     std::vector<uint16_t> code_offsets;
     auto offset = header_size + type_section_size;
