@@ -21,7 +21,7 @@ constexpr auto SECP256K1N_OVER_2 = SECP256K1N / 2;
 // EIP-7702: The cost of authorization that sets delegation to an account that didn't exist before
 constexpr auto AUTHORIZATION_EMPTY_ACCOUNT_COST = 25000;
 // EIP-7702: The cost of authorization that sets delegation to an account that already exists
-constexpr auto AUTHORIZATION_BASE_COST = 2500;
+constexpr auto AUTHORIZATION_BASE_COST = 12500;
 
 inline constexpr int64_t num_words(size_t size_in_bytes) noexcept
 {
