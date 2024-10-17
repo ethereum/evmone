@@ -511,10 +511,18 @@ std::variant<TransactionReceipt, std::error_code> transition(const StateView& st
                 continue;
         }
 
-        authority_ptr->code.reserve(std::size(DELEGATION_MAGIC) + std::size(auth.addr.bytes));
-        authority_ptr->code = DELEGATION_MAGIC;
-        authority_ptr->code += auth.addr;
-        authority_ptr->code_hash = keccak256(authority_ptr->code);
+        if (auth.addr == address{})
+        {
+            authority_ptr->code.clear();
+            authority_ptr->code_hash = bytes32{};
+        }
+        else
+        {
+            authority_ptr->code.reserve(std::size(DELEGATION_MAGIC) + std::size(auth.addr.bytes));
+            authority_ptr->code = DELEGATION_MAGIC;
+            authority_ptr->code += auth.addr;
+            authority_ptr->code_hash = keccak256(authority_ptr->code);
+        }
         // TODO set only if code is changed to another delegation
         authority_ptr->code_changed = true;
 
