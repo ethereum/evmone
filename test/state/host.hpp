@@ -17,10 +17,10 @@ using evmc::uint256be;
 /// or a create transaction.
 /// This is defined by 𝐀𝐃𝐃𝐑 in Yellow Paper, 7. Contract Creation, (88-90), the case for ζ = ∅.
 ///
-/// @param sender        The address of the message sender. YP: 𝑠.
-/// @param sender_nonce  The sender's nonce before the increase. YP: 𝑛.
-/// @return              The address computed with the CREATE scheme.
-[[nodiscard]] address compute_create_address(const address& sender, uint64_t sender_nonce) noexcept;
+/// @param sender  The address of the message sender. YP: 𝑠.
+/// @param nonce   The sender's nonce before the increase. YP: 𝑛.
+/// @return        The address computed with the CREATE scheme.
+[[nodiscard]] address compute_create_address(const address& sender, uint64_t nonce) noexcept;
 
 /// Computes the address of to-be-created contract with the CREATE2 / EOFCREATE scheme.
 ///
