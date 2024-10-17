@@ -47,6 +47,7 @@ target_sources(
     exportable_fixture.hpp
     exportable_fixture.cpp
     instructions_test.cpp
+    jumpdest_analysis_test.cpp
     precompiles_blake2b_test.cpp
     precompiles_bls_test.cpp
     precompiles_kzg_test.cpp
@@ -83,7 +84,7 @@ target_sources(
     statetest_withdrawals_test.cpp
     tracing_test.cpp
 )
-target_link_libraries(evmone-unittests PRIVATE evmone evmone::evmmax evmone::state evmone::statetestutils testutils evmc::instructions GTest::gtest GTest::gtest_main)
+target_link_libraries(evmone-unittests PRIVATE evmone evmone::evmmax evmone::experimental evmone::state evmone::statetestutils testutils evmc::instructions GTest::gtest GTest::gtest_main)
 target_include_directories(evmone-unittests PRIVATE ${evmone_private_include_dir})
 target_compile_options(evmone-unittests PRIVATE
     # Disable false positive C4789
