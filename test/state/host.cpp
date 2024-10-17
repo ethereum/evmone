@@ -178,24 +178,24 @@ bool Host::selfdestruct(const address& addr, const address& beneficiary) noexcep
 
 address compute_create_address(const address& sender, uint64_t nonce) noexcept
 {
+    const auto nonce_has_len_prefix = nonce >= 0x80;
     const auto nonce_len = nonce < 0x80 ? 0 : ((unsigned)std::bit_width(nonce) + 7) / 8;
     const size_t total_size = 23 + nonce_len;
-
-    uint8_t nonce_buf[sizeof(nonce) * 2];
-    intx::be::unsafe::store(nonce_buf, nonce);
-
 
     uint8_t buffer[31];
     buffer[0] = static_cast<uint8_t>(0xd6 + nonce_len);
     buffer[1] = 0x94;
-    const auto nonce_out = std::copy_n(sender.bytes, sizeof(sender.bytes), &buffer[2]);
+    auto nonce_out = std::copy_n(sender.bytes, sizeof(sender.bytes), &buffer[2]);
 
-    if (nonce < 0x80)
+    if (!nonce_has_len_prefix)
+    {
         nonce_out[0] = nonce != 0 ? static_cast<uint8_t>(nonce) : 0x80;
+    }
     else
     {
-        nonce_out[0] = static_cast<uint8_t>(0x80 + nonce_len);
-        std::copy_n(&nonce_buf[sizeof(nonce) - nonce_len], sizeof(nonce), &nonce_out[1]);
+        *nonce_out++ = static_cast<uint8_t>(0x80 + nonce_len);
+        intx::be::unsafe::store(nonce_out, nonce);
+        std::shift_left(nonce_out, nonce_out + sizeof(nonce), sizeof(nonce) - nonce_len);
     }
 
 
