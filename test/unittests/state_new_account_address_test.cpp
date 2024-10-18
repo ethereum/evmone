@@ -52,25 +52,32 @@ TEST(state_new_account_address, create_nonces)
         {0x81, 0x2823552581b0be905c3d9ba0eb7902a92ccfcf6b_address},
         {0xff, 0x2e021f429ff10bfc9373f73720a14bee2cfd5fdd_address},
         {0x100, 0x1183a5a83c1fa113618603abc4509077ec672699_address},
+        {0x102, 0x62ee87c550024e18d0e4686b17239b107e62ec14_address},
         {0xffff, 0xae80be2f887b0efb148934160afd38459969571a_address},
         {0x10000, 0x3c61d75af3a48777914e865f50a38540a11c41c0_address},
+        {0x10203, 0x20d47d9d7d3758fd2d8c6cb806bd747325aa5007_address},
         {0xffffff, 0xbbaeb4cb1f1468d2820259d137e7f2a80c751f33_address},
         {0x1000000, 0xb5987b13b2788f3bd5703fd8873557ccada84bb8_address},
+        {0x1020304, 0x1f6e1417f5d7ec4f848288984671e7a3570054fb_address},
         {0xffffffff, 0x83317d2df02af8fe91040765f49719e8115c0f04_address},
         {0x100000000, 0x736fd6c74b4cf6cc32253372850bd559067ac5f7_address},
+        {0x102030405, 0x05c57791ff9b81d62f55ef655605fe2dfa39ff36_address},
         {0xffffffffff, 0xb07df933f16bfa5a78a4e62826e18cc8acefddb5_address},
         {0x10000000000, 0xcc8d3e72cf698064b521d663088943001a02316f_address},
+        {0x10203040506, 0x8598e018febfee476bd1de54be4297e415a723e4_address},
         {0xffffffffffff, 0x154238be5817b2576267644878b50d61f4d240d5_address},
         {0x1000000000000, 0x0ea0057ebcbf62c4021299d808472714b6a0f340_address},
+        {0x1020304050607, 0x7f566e72ca7338eb0f695705b187efdb38bf74db_address},
         {0xffffffffffffff, 0x06ef26aa0739f263e6026ec283df7ee579dd05f6_address},
         {0x100000000000000, 0xe72a12bd4ead3c02e618af2cc3379bcddbb56177_address},
+        {0x102030405060708, 0x1c70eb0bba02ae69b1c09f3d42da8788513f7de9_address},
         {0xffffffffffffffff, 0x1262d73ea59d3a661bf8751d16cf1a5377149e75_address},
     };
 
     static constexpr auto SENDER = 0x00_address;  // Use the simplest address.
     for (const auto& [nonce, expected_addr] : TEST_CASES)
     {
-        EXPECT_EQ(addr(SENDER, nonce), expected_addr);
+        EXPECT_EQ(addr(SENDER, nonce), expected_addr) << std::hex << nonce;
     }
 }
 
