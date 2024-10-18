@@ -36,6 +36,8 @@ void TestState::apply(const state::StateDiff& diff)
         a.balance = m.balance;
         if (!m.code.empty())
             a.code = m.code;  // TODO: Consider taking rvalue ref to avoid code copy.
+        if (m.code_cleared)
+            a.code.clear();
         for (const auto& [k, v] : m.modified_storage)
         {
             if (v)
