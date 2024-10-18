@@ -125,6 +125,8 @@ StateDiff State::build_diff(evmc_revision rev) const
         // TODO: Output also the code hash. It will be needed for DB update and MPT hash.
         if ((m.just_created && !m.code.empty()) || m.code_changed)
             a.code = m.code;
+        if (m.code_changed && m.code.empty())
+            a.code_cleared = true;
 
         for (const auto& [k, v] : m.storage)
         {
@@ -177,7 +179,7 @@ bytes_view State::get_code(const address& addr)
         return {};
     if (a->code_hash == Account::EMPTY_CODE_HASH)
         return {};
-    if (a->code.empty())
+    if (a->code.empty() /* && !a->code_changed*/)
         a->code = m_initial.get_account_code(addr);
     return a->code;
 }
