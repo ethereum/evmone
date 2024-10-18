@@ -9,13 +9,15 @@ namespace evmmax::ecc
 {
 
 /// The affine (two coordinates) point on an Elliptic Curve over a prime field.
-template <typename IntT>
+template <typename ValueT>
 struct Point
 {
-    IntT x = 0;
-    IntT y = 0;
+    ValueT x = {};
+    ValueT y = {};
 
     friend constexpr bool operator==(const Point& a, const Point& b) noexcept = default;
+
+    friend constexpr Point operator-(const Point& p) noexcept { return {p.x, -p.y}; }
 
     /// Checks if the point represents the special "infinity" value.
     [[nodiscard]] constexpr bool is_inf() const noexcept { return *this == Point{}; }
@@ -32,9 +34,40 @@ struct ProjPoint
 
     /// Checks if the point represents the special "infinity" value.
     [[nodiscard]] constexpr bool is_inf() const noexcept { return x == 0 && z == 0; }
+
+    friend constexpr ProjPoint operator-(const ProjPoint& p) noexcept { return {p.x, -p.y, p.z}; }
 };
 
 static_assert(ProjPoint<unsigned>{}.is_inf());
+
+// Jacobian (three) coordinates point implementation.
+template <typename ValueT>
+struct JacPoint
+{
+    ValueT x = 1;
+    ValueT y = 1;
+    ValueT z = 0;
+
+    // Compares two Jacobian coordinates points
+    friend constexpr bool operator==(const JacPoint& a, const JacPoint& b) noexcept
+    {
+        const auto bz2 = b.z * b.z;
+        const auto az2 = a.z * a.z;
+
+        const auto bz3 = bz2 * b.z;
+        const auto az3 = az2 * a.z;
+
+        return a.x * bz2 == b.x * az2 && a.y * bz3 == b.y * az3;
+    }
+
+    friend constexpr JacPoint operator-(const JacPoint& p) noexcept { return {p.x, -p.y, p.z}; }
+
+    // Creates Jacobian coordinates point from affine point
+    static constexpr JacPoint from(const ecc::Point<ValueT>& ap) noexcept
+    {
+        return {ap.x, ap.y, ValueT::one()};
+    }
+};
 
 template <typename IntT>
 using InvFn = IntT (*)(const ModArith<IntT>&, const IntT& x) noexcept;
