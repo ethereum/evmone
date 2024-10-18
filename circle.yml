@@ -1,6 +1,6 @@
 version: 2.1
 orbs:
-  codecov: codecov/codecov@4.1.0
+  codecov: codecov/codecov@5.0.0
   win: circleci/windows@5.0
 
 executors:
@@ -224,8 +224,8 @@ commands:
         type: string
     steps:
       - codecov/upload:
-          upload_args: --plugin noop
-          file: ../build/coverage.json
+          plugins: noop
+          files: ../build/coverage.json
           flags: <<parameters.flags>>
 
   package:
