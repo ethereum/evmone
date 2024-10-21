@@ -13,7 +13,7 @@ TEST_P(evm, exchange)
     if (evm::is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
 
     auto pushes = bytecode{};
     for (uint64_t i = 1; i <= 20; ++i)
@@ -86,7 +86,7 @@ TEST_P(evm, exchange_deep_stack)
     if (evm::is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     auto full_stack_code = bytecode{};
     for (uint64_t i = 255; i >= 1; --i)
         full_stack_code += push(i);
@@ -104,7 +104,7 @@ TEST_P(evm, exchange_deep_stack)
 
 TEST_P(evm, exchange_undefined_in_legacy)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
 
     execute(push(1) + push(2) + push(3) + OP_EXCHANGE + "00");
     EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);

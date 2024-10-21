@@ -10,7 +10,7 @@ using namespace evmone::test;
 
 TEST_F(state_transition, eof1_extdelegatecall_eof1)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
 
     constexpr auto callee = 0xca11ee_address;
     pre.insert(callee,
@@ -35,7 +35,7 @@ TEST_F(state_transition, eof1_extdelegatecall_eof1)
 
 TEST_F(state_transition, eof1_extdelegatecall_legacy)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
 
     constexpr auto callee = 0xca11ee_address;
     pre.insert(callee, {
@@ -61,7 +61,7 @@ TEST_F(state_transition, eof1_extdelegatecall_legacy)
 
 TEST_F(state_transition, extdelegatecall_static)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     // Checks if EXTDELEGATECALL forwards the "static" flag.
     constexpr auto callee1 = 0xca11ee01_address;
     constexpr auto callee2 = 0xca11ee02_address;
@@ -93,7 +93,7 @@ TEST_F(state_transition, extdelegatecall_static)
 
 TEST_F(state_transition, extcall_static_with_value)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
 
     constexpr auto callee1 = 0xca11ee01_address;
     constexpr auto callee2 = 0xca11ee02_address;
@@ -117,7 +117,7 @@ TEST_F(state_transition, extcall_static_with_value)
 
 TEST_F(state_transition, extcall_failing_with_value_balance_check)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee, {
@@ -138,7 +138,7 @@ TEST_F(state_transition, extcall_failing_with_value_balance_check)
 
 TEST_F(state_transition, extcall_failing_with_value_additional_cost)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee, {
@@ -163,7 +163,7 @@ TEST_F(state_transition, extcall_failing_with_value_additional_cost)
 
 TEST_F(state_transition, extcall_with_value)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee, {
@@ -186,7 +186,7 @@ TEST_F(state_transition, extcall_with_value)
 
 TEST_F(state_transition, extcall_min_callee_gas_failure_mode)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee, {
@@ -208,7 +208,7 @@ TEST_F(state_transition, extcall_min_callee_gas_failure_mode)
 
 TEST_F(state_transition, extcall_output)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee, {
@@ -228,7 +228,7 @@ TEST_F(state_transition, extcall_output)
 
 TEST_F(state_transition, extdelegatecall_output)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee, {
@@ -249,7 +249,7 @@ TEST_F(state_transition, extdelegatecall_output)
 
 TEST_F(state_transition, extstaticcall_output)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee, {
@@ -270,7 +270,7 @@ TEST_F(state_transition, extstaticcall_output)
 
 TEST_F(state_transition, extcall_memory)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     tx.to = To;
@@ -284,7 +284,7 @@ TEST_F(state_transition, extcall_memory)
 
 TEST_F(state_transition, extdelegatecall_memory)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     tx.to = To;
@@ -299,7 +299,7 @@ TEST_F(state_transition, extdelegatecall_memory)
 
 TEST_F(state_transition, extstaticcall_memory)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     tx.to = To;
@@ -314,7 +314,7 @@ TEST_F(state_transition, extstaticcall_memory)
 
 TEST_F(state_transition, extcall_ase_ready_violation)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee =
         0x0000000000000000000000010000000000000000000000000000000000000000_bytes32;
 
@@ -329,7 +329,7 @@ TEST_F(state_transition, extcall_ase_ready_violation)
 
 TEST_F(state_transition, extdelegatecall_ase_ready_violation)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee =
         0x0000000000000000000000010000000000000000000000000000000000000000_bytes32;
 
@@ -344,7 +344,7 @@ TEST_F(state_transition, extdelegatecall_ase_ready_violation)
 
 TEST_F(state_transition, extstaticcall_ase_ready_violation)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee =
         0x0000000000000000000000010000000000000000000000000000000000000000_bytes32;
 
@@ -359,7 +359,7 @@ TEST_F(state_transition, extstaticcall_ase_ready_violation)
 
 TEST_F(state_transition, extcall_cold_oog)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     tx.to = To;
@@ -374,7 +374,7 @@ TEST_F(state_transition, extcall_cold_oog)
 
 TEST_F(state_transition, extdelegatecall_cold_oog)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     tx.to = To;
@@ -389,7 +389,7 @@ TEST_F(state_transition, extdelegatecall_cold_oog)
 
 TEST_F(state_transition, extstaticcall_cold_oog)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     tx.to = To;
@@ -404,7 +404,7 @@ TEST_F(state_transition, extstaticcall_cold_oog)
 
 TEST_F(state_transition, extcall_value_zero_to_nonexistent_account)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     tx.to = To;
@@ -418,7 +418,7 @@ TEST_F(state_transition, extcall_value_zero_to_nonexistent_account)
 
 TEST_F(state_transition, extcall_then_oog)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee, {
@@ -443,7 +443,7 @@ TEST_F(state_transition, extcall_then_oog)
 
 TEST_F(state_transition, extdelegatecall_then_oog)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee, {
@@ -468,7 +468,7 @@ TEST_F(state_transition, extdelegatecall_then_oog)
 
 TEST_F(state_transition, extstaticcall_then_oog)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee, {
@@ -492,7 +492,7 @@ TEST_F(state_transition, extstaticcall_then_oog)
 
 TEST_F(state_transition, extcall_callee_revert)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee, {
@@ -511,7 +511,7 @@ TEST_F(state_transition, extcall_callee_revert)
 
 TEST_F(state_transition, extdelegatecall_callee_revert)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee, {
@@ -530,7 +530,7 @@ TEST_F(state_transition, extdelegatecall_callee_revert)
 
 TEST_F(state_transition, extstaticcall_callee_revert)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee, {
@@ -549,7 +549,7 @@ TEST_F(state_transition, extstaticcall_callee_revert)
 
 TEST_F(state_transition, extcall_callee_abort)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee, {
@@ -568,7 +568,7 @@ TEST_F(state_transition, extcall_callee_abort)
 
 TEST_F(state_transition, extdelegatecall_callee_abort)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee, {
@@ -587,7 +587,7 @@ TEST_F(state_transition, extdelegatecall_callee_abort)
 
 TEST_F(state_transition, extstaticcall_callee_abort)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee, {
@@ -606,7 +606,7 @@ TEST_F(state_transition, extstaticcall_callee_abort)
 
 TEST_F(state_transition, extcall_input)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee, {
@@ -626,7 +626,7 @@ TEST_F(state_transition, extcall_input)
 
 TEST_F(state_transition, extdelegatecall_input)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee, {
@@ -647,7 +647,7 @@ TEST_F(state_transition, extdelegatecall_input)
 
 TEST_F(state_transition, extstaticcall_input)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee, {
@@ -668,7 +668,7 @@ TEST_F(state_transition, extstaticcall_input)
 
 TEST_F(state_transition, extcall_with_value_enough_gas)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee, {.balance = 0x1});
@@ -689,7 +689,7 @@ TEST_F(state_transition, extcall_with_value_enough_gas)
 
 TEST_F(state_transition, extcall_with_value_low_gas)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee, {.balance = 0x1});
@@ -709,7 +709,7 @@ TEST_F(state_transition, extcall_with_value_low_gas)
 
 TEST_F(state_transition, extcall_recipient_and_code_address)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee,
@@ -729,7 +729,7 @@ TEST_F(state_transition, extcall_recipient_and_code_address)
 
 TEST_F(state_transition, extdelegatecall_recipient_and_code_address)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee,
@@ -749,7 +749,7 @@ TEST_F(state_transition, extdelegatecall_recipient_and_code_address)
 
 TEST_F(state_transition, extstaticcall_recipient_and_code_address)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee,
@@ -770,7 +770,7 @@ TEST_F(state_transition, extstaticcall_recipient_and_code_address)
 
 TEST_F(state_transition, extcall_value)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee, {
@@ -789,7 +789,7 @@ TEST_F(state_transition, extcall_value)
 
 TEST_F(state_transition, returndatasize_before_extcall)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
 
     tx.to = To;
     pre.insert(*tx.to, {
@@ -801,7 +801,7 @@ TEST_F(state_transition, returndatasize_before_extcall)
 
 TEST_F(state_transition, extdelegatecall_returndatasize)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee, {
@@ -820,7 +820,7 @@ TEST_F(state_transition, extdelegatecall_returndatasize)
 
 TEST_F(state_transition, extdelegatecall_returndatasize_abort)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee, {
@@ -839,7 +839,7 @@ TEST_F(state_transition, extdelegatecall_returndatasize_abort)
 
 TEST_F(state_transition, returndatacopy)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
     const auto call_output =
         0x497f3c9f61479c1cfa53f0373d39d2bf4e5f73f71411da62f1d6b85c03a60735_bytes32;
@@ -863,7 +863,7 @@ TEST_F(state_transition, returndatacopy)
 
 TEST_F(state_transition, returndataload)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
     const auto call_output =
         0x497f3c9f61479c1cfa53f0373d39d2bf4e5f73f71411da62f1d6b85c03a60735_bytes32;
@@ -885,7 +885,7 @@ TEST_F(state_transition, returndataload)
 
 TEST_F(state_transition, extcall_clears_returndata)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
     const auto call_output =
         0x497f3c9f61479c1cfa53f0373d39d2bf4e5f73f71411da62f1d6b85c03a60735_bytes32;
@@ -908,7 +908,7 @@ TEST_F(state_transition, extcall_clears_returndata)
 
 TEST_F(state_transition, extcall_gas_refund_propagation)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee, {
@@ -927,7 +927,7 @@ TEST_F(state_transition, extcall_gas_refund_propagation)
 
 TEST_F(state_transition, extdelegatecall_gas_refund_propagation)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     constexpr auto callee = 0xca11ee_address;
 
     pre.insert(callee, {

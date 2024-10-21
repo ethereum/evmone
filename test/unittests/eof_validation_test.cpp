@@ -297,7 +297,7 @@ TEST_F(eof_validation, EOF1_too_many_code_sections)
 
 TEST_F(eof_validation, EOF1_undefined_opcodes)
 {
-    const auto& gas_table = evmone::instr::gas_costs[EVMC_PRAGUE];
+    const auto& gas_table = evmone::instr::gas_costs[EVMC_OSAKA];
 
     for (uint16_t opcode = 0; opcode <= 0xff; ++opcode)
     {
