@@ -343,13 +343,6 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
             return make_error_code(CREATE_SET_CODE_TX);
         if (tx.authorization_list.empty())
             return make_error_code(EMPTY_AUTHORIZATION_LIST);
-        for (const auto& auth : tx.authorization_list)
-        {
-            if (auth.v != 0 && auth.v != 1)
-                return make_error_code(INVALID_AUTHORIZATION_SIGNATURE);
-            if (auth.s > SECP256K1N_OVER_2)
-                return make_error_code(AUTHORIZATION_SIGNATURE_S_TOO_HIGH);
-        }
         break;
 
     default:;
@@ -481,6 +474,9 @@ std::variant<TransactionReceipt, std::error_code> transition(const StateView& st
 
         // Check if signer could be ecrecovered.
         if (!auth.signer.has_value())
+            continue;
+
+        if (auth.s > SECP256K1N_OVER_2)
             continue;
 
         // Check if authority exists.
