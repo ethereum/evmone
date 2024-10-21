@@ -193,7 +193,7 @@ TEST_F(state_transition, eof_examples_eofcreate)
         //                    Code section: PUSH0 [aux data size], PUSH0 [aux data offset],
         //                                  RETURNCONTRACT first subcontainer
         //                                                               |
-        //               Header: 1 code section 8 bytes long             |
+        //               Header: 1 code section 4 bytes long             |
         //               |                                               |
         //    version    |                                 Header terminator
         //    |          |___________                      |             |_________
