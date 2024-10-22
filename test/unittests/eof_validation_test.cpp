@@ -309,7 +309,7 @@ TEST_F(eof_validation, EOF1_undefined_opcodes)
             opcode == OP_DATALOADN || opcode == OP_JUMPF || opcode == OP_EOFCREATE ||
             opcode == OP_RETURNCONTRACT)
             continue;
-        // These opcodes are deprecated since Prague.
+        // These opcodes are deprecated since Osaka.
         // gas_cost table current implementation does not allow to undef instructions.
         if (opcode == OP_JUMP || opcode == OP_JUMPI || opcode == OP_PC || opcode == OP_CALLCODE ||
             opcode == OP_SELFDESTRUCT || opcode == OP_CALL || opcode == OP_STATICCALL ||

@@ -29,22 +29,22 @@ DUP1,4
 {\"pc\":6,\"op\":3,\"gas\":\"0xf4234\",\"gasCost\":\"0x3\",\"memSize\":0,\"stack\":\\[\"0x0\",\"0x4\"\\],\"depth\":1,\"refund\":0,\"opName\":\"SUB\"}
 ")
 
-    add_test(NAME ${PREFIX}/validate_eof COMMAND evmc::tool --vm $<TARGET_FILE:evmone>,validate_eof run --rev 13 EF0001)
+    add_test(NAME ${PREFIX}/validate_eof COMMAND evmc::tool --vm $<TARGET_FILE:evmone>,validate_eof run --rev 14 EF0001)
     set_tests_properties(
         ${PREFIX}/validate_eof PROPERTIES PASS_REGULAR_EXPRESSION
         "contract validation failure")
         
-    add_test(NAME ${PREFIX}/validate_eof_success COMMAND evmc::tool --vm $<TARGET_FILE:evmone>,validate_eof run --rev 13 EF00010100040200010001040000000080000000)
+    add_test(NAME ${PREFIX}/validate_eof_success COMMAND evmc::tool --vm $<TARGET_FILE:evmone>,validate_eof run --rev 14 EF00010100040200010001040000000080000000)
     set_tests_properties(
         ${PREFIX}/validate_eof_success PROPERTIES PASS_REGULAR_EXPRESSION
         "Result:   success")
         
-    add_test(NAME ${PREFIX}/validate_eof_create COMMAND evmc::tool --vm $<TARGET_FILE:evmone>,validate_eof run --rev 13 --create EF00010100040200010001040000000080000000)
+    add_test(NAME ${PREFIX}/validate_eof_create COMMAND evmc::tool --vm $<TARGET_FILE:evmone>,validate_eof run --rev 14 --create EF00010100040200010001040000000080000000)
     set_tests_properties(
         ${PREFIX}/validate_eof_create PROPERTIES PASS_REGULAR_EXPRESSION
         "contract validation failure")
         
-    add_test(NAME ${PREFIX}/validate_eof_create_success COMMAND evmc::tool --vm $<TARGET_FILE:evmone>,validate_eof run --rev 13 --create EF00010100040200010004030001001404000000008000025F5FEE00EF00010100040200010001040000000080000000)
+    add_test(NAME ${PREFIX}/validate_eof_create_success COMMAND evmc::tool --vm $<TARGET_FILE:evmone>,validate_eof run --rev 14 --create EF00010100040200010004030001001404000000008000025F5FEE00EF00010100040200010001040000000080000000)
     set_tests_properties(
         ${PREFIX}/validate_eof_create_success PROPERTIES PASS_REGULAR_EXPRESSION
         "Result:   success")
