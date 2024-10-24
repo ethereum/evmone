@@ -429,11 +429,6 @@ jobs:
             ~/tests/LegacyTests/Cancun/GeneralStateTests
             ~/tests/LegacyTests/Constantinople/GeneralStateTests
       - run:
-          name: "EOF State tests"
-          working_directory: ~/build
-          command: |
-            bin/evmone-statetest ~/tests/EIPTests/StateTests/stEOF
-      - run:
           name: "EOF validation tests"
           working_directory: ~/build
           command: >
@@ -458,7 +453,7 @@ jobs:
           working_directory: ~/build
           command: >
             bin/evmone-blockchaintest
-            --gtest_filter='-*StateTests/stEOF/*.*:*StateTests/stEIP2537.*'
+            --gtest_filter='*:-*StateTests/stEIP2537.*'
             ~/tests/EIPTests/BlockchainTests/
       - collect_coverage_gcc
       - upload_coverage:
