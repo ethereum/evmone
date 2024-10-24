@@ -416,8 +416,8 @@ StateDiff finalize(const StateView& state_view, evmc_revision rev, const address
 }
 
 std::variant<TransactionReceipt, std::error_code> transition(const StateView& state_view,
-    const BlockInfo& block, const Transaction& tx, evmc_revision rev, evmc::VM& vm,
-    int64_t block_gas_left, int64_t blob_gas_left)
+    const BlockInfo& block, const BlockHashes& block_hashes, const Transaction& tx,
+    evmc_revision rev, evmc::VM& vm, int64_t block_gas_left, int64_t blob_gas_left)
 {
     State state{state_view};
     auto* sender_ptr = state.find(tx.sender);
@@ -460,7 +460,7 @@ std::variant<TransactionReceipt, std::error_code> transition(const StateView& st
         sender_acc.balance -= blob_fee;
     }
 
-    Host host{rev, vm, state, block, tx};
+    Host host{rev, vm, state, block, block_hashes, tx};
 
     sender_acc.access_status = EVMC_ACCESS_WARM;  // Tx sender is always warm.
     if (tx.to.has_value())

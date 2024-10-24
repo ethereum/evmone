@@ -59,12 +59,24 @@ bytes32 TestState::get_storage(const address& addr, const bytes32& key) const no
     return (it != storage.end()) ? it->second : bytes32{};
 }
 
+bytes32 TestBlockHashes::get_block_hash(int64_t block_number) const noexcept
+{
+    if (const auto& it = known_block_hashes_.find(block_number); it != known_block_hashes_.end())
+        return it->second;
+
+    // Convention for testing: if the block hash in unknown return the predefined "fake" value.
+    // https://github.com/ethereum/go-ethereum/blob/v1.12.2/tests/state_test_util.go#L432
+    const auto s = std::to_string(block_number);
+    return keccak256({reinterpret_cast<const uint8_t*>(s.data()), s.size()});
+}
+
 [[nodiscard]] std::variant<state::TransactionReceipt, std::error_code> transition(TestState& state,
     const state::BlockInfo& block, const state::Transaction& tx, evmc_revision rev, evmc::VM& vm,
     int64_t block_gas_left, int64_t blob_gas_left)
 {
+    const TestBlockHashes block_hashes{block.known_block_hashes};
     const auto result_or_error =
-        state::transition(state, block, tx, rev, vm, block_gas_left, blob_gas_left);
+        state::transition(state, block, block_hashes, tx, rev, vm, block_gas_left, blob_gas_left);
     if (const auto result = get_if<state::TransactionReceipt>(&result_or_error))
         state.apply(result->state_diff);
     return result_or_error;
@@ -80,7 +92,8 @@ void finalize(TestState& state, evmc_revision rev, const address& coinbase,
 
 void system_call(TestState& state, const state::BlockInfo& block, evmc_revision rev, evmc::VM& vm)
 {
-    const auto diff = state::system_call(state, block, rev, vm);
+    const TestBlockHashes block_hashes{block.known_block_hashes};
+    const auto diff = state::system_call(state, block, block_hashes, rev, vm);
     state.apply(diff);
 }
 }  // namespace evmone::test
