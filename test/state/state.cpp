@@ -59,7 +59,7 @@ evmc_message build_message(
     const auto recipient = tx.to.has_value() ? *tx.to : evmc::address{};
 
     const auto is_legacy_eof_create =
-        rev >= EVMC_PRAGUE && !tx.to.has_value() && is_eof_container(tx.data);
+        rev >= EVMC_OSAKA && !tx.to.has_value() && is_eof_container(tx.data);
 
     return {.kind = is_legacy_eof_create ? EVMC_EOFCREATE :
                     tx.to.has_value()    ? EVMC_CALL :

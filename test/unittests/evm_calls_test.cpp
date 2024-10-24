@@ -764,28 +764,28 @@ TEST_P(evm, returndatacopy_outofrange_highbits)
 
 TEST_P(evm, returndataload_undefined_in_legacy)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     execute(staticcall(0) + returndataload(0));
     EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
 }
 
 TEST_P(evm, extcall_undefined_in_legacy)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     execute(extcall(0));
     EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
 }
 
 TEST_P(evm, extdelegatecall_undefined_in_legacy)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     execute(extdelegatecall(0));
     EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
 }
 
 TEST_P(evm, extstaticcall_undefined_in_legacy)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     execute(extstaticcall(0));
     EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
 }
