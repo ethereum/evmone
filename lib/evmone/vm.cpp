@@ -97,6 +97,28 @@ ExecutionState& VM::get_execution_state(size_t depth) noexcept
     return m_execution_states[depth];
 }
 
+EVMC_EXPORT std::optional<evmc::Result> VM::execute_cached_code(evmc::Host& host, evmc_revision rev,
+    const evmc_message& msg, const evmc::bytes32& code_hash,
+    const std::function<evmc::bytes_view(evmc::address)>& get_code) noexcept
+{
+    if (execute != static_cast<decltype(execute)>(baseline::execute))  // Only Baseline is supported
+        return {};
+
+    static std::unordered_map<evmc::bytes32, baseline::CodeAnalysis> code_cache;
+
+    auto it = code_cache.find(code_hash);
+    if (it == code_cache.end())
+    {
+        const auto code = get_code(msg.code_address);
+        std::tie(it, std::ignore) =
+            code_cache.insert({code_hash, baseline::analyze(code, rev >= EVMC_PRAGUE)});
+    }
+
+    const auto& ca = it->second;
+    return evmc::Result{
+        baseline::execute(*this, evmc::Host::get_interface(), host.to_context(), rev, msg, ca)};
+}
+
 }  // namespace evmone
 
 extern "C" {
