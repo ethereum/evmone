@@ -440,6 +440,9 @@ evmc::Result Host::execute_message(const evmc_message& msg) noexcept
 
     // TODO: get_code() performs the account lookup. Add a way to get an account with code?
     const auto code = m_state.get_code(msg.code_address);
+    if (code.empty())
+        return evmc::Result{EVMC_SUCCESS, msg.gas};  // Skip trivial execution.
+
     return m_vm.execute(*this, m_rev, msg, code.data(), code.size());
 }
 
