@@ -72,6 +72,19 @@ public:
     void apply(const state::StateDiff& diff);
 };
 
+class TestBlockHashes : public state::BlockHashes
+{
+    /// The map block_number => block hash of known blocks.
+    const std::unordered_map<int64_t, bytes32>& known_block_hashes_;
+
+public:
+    explicit TestBlockHashes(const std::unordered_map<int64_t, bytes32>& known_block_hashes)
+      : known_block_hashes_{known_block_hashes}
+    {}
+
+    bytes32 get_block_hash(int64_t block_number) const noexcept override;
+};
+
 /// Wrapping of state::transition() which operates on TestState.
 [[nodiscard]] std::variant<state::TransactionReceipt, std::error_code> transition(TestState& state,
     const state::BlockInfo& block, const state::Transaction& tx, evmc_revision rev, evmc::VM& vm,
