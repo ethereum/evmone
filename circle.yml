@@ -419,7 +419,8 @@ jobs:
     steps:
       - build
       - download_execution_tests:
-          rev: v14.1
+          repo: "ipsilon/tests"
+          rev: "eof-osaka-20241028"
       - run:
           name: "State tests"
           working_directory: ~/build
