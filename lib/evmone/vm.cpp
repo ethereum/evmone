@@ -110,6 +110,10 @@ EVMC_EXPORT std::optional<evmc::Result> VM::execute_cached_code(evmc::Host& host
     if (it == code_cache.end())
     {
         const auto code = get_code(msg.code_address);
+
+        if (is_eof_container(code))
+            return {};  // EOF not supported because CodeAnalysis don't have a copy of the code.
+
         std::tie(it, std::ignore) =
             code_cache.insert({code_hash, baseline::analyze(code, rev >= EVMC_PRAGUE)});
     }
