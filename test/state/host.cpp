@@ -6,6 +6,7 @@
 #include "precompiles.hpp"
 #include <evmone/constants.hpp>
 #include <evmone/eof.hpp>
+#include <evmone/vm.hpp>
 
 namespace evmone::state
 {
@@ -441,6 +442,12 @@ evmc::Result Host::execute_message(const evmc_message& msg) noexcept
     const auto code_acc = m_state.find(msg.code_address);
     if (code_acc == nullptr || code_acc->code_hash == Account::EMPTY_CODE_HASH)
         return evmc::Result{EVMC_SUCCESS, msg.gas};
+
+    auto* my_vm = static_cast<VM*>(m_vm.get_raw_pointer());
+    auto opt_result = my_vm->execute_cached_code(*this, m_rev, msg, code_acc->code_hash,
+        [this](const address& addr) { return m_state.get_code(addr); });
+    if (opt_result.has_value())
+        return std::move(*opt_result);
 
     // TODO: get_code() performs the account lookup. Add a way to get an account with code?
     const auto code = m_state.get_code(msg.code_address);
