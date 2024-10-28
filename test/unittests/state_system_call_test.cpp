@@ -18,12 +18,13 @@ class state_system_call : public testing::Test
 protected:
     evmc::VM vm{evmc_create_evmone()};
     TestState state;
+    TestBlockHashes block_hashes;
 };
 
 TEST_F(state_system_call, non_existient)
 {
     // Use MAX revision to invoke all activate system contracts.
-    system_call(state, {}, EVMC_MAX_REVISION, vm);
+    system_call(state, {}, block_hashes, EVMC_MAX_REVISION, vm);
 
     EXPECT_EQ(state.size(), 0) << "State must remain unchanged";
 }
@@ -34,7 +35,7 @@ TEST_F(state_system_call, beacon_roots)
     state.insert(
         BEACON_ROOTS_ADDRESS, {.code = sstore(OP_NUMBER, calldataload(0)) + sstore(0, OP_CALLER)});
 
-    system_call(state, block, EVMC_CANCUN, vm);
+    system_call(state, block, block_hashes, EVMC_CANCUN, vm);
 
     ASSERT_EQ(state.size(), 1);
     EXPECT_FALSE(state.contains(SYSTEM_ADDRESS));
@@ -50,11 +51,12 @@ TEST_F(state_system_call, history_storage)
 {
     static constexpr auto NUMBER = 123456789;
     static constexpr auto PREV_BLOCKHASH = 0xbbbb_bytes32;
-    const BlockInfo block{.number = NUMBER, .known_block_hashes = {{NUMBER - 1, PREV_BLOCKHASH}}};
+    const BlockInfo block{.number = NUMBER};
+    block_hashes = {{NUMBER - 1, PREV_BLOCKHASH}};
     state.insert(HISTORY_STORAGE_ADDRESS,
         {.code = sstore(OP_NUMBER, calldataload(0)) + sstore(0, OP_CALLER)});
 
-    system_call(state, block, EVMC_PRAGUE, vm);
+    system_call(state, block, block_hashes, EVMC_PRAGUE, vm);
 
     ASSERT_EQ(state.size(), 1);
     EXPECT_FALSE(state.contains(SYSTEM_ADDRESS));

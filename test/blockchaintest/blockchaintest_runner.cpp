@@ -29,10 +29,10 @@ struct TransitionResult
 namespace
 {
 TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockInfo& block,
-    const std::vector<state::Transaction>& txs, evmc_revision rev,
-    std::optional<int64_t> block_reward)
+    const state::BlockHashes& block_hashes, const std::vector<state::Transaction>& txs,
+    evmc_revision rev, std::optional<int64_t> block_reward)
 {
-    system_call(state, block, rev, vm);
+    system_call(state, block, block_hashes, rev, vm);
 
     std::vector<state::Log> txs_logs;
     int64_t block_gas_left = block.gas_limit;
@@ -48,7 +48,8 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
         const auto& tx = txs[i];
 
         const auto computed_tx_hash = keccak256(rlp::encode(tx));
-        auto res = test::transition(state, block, tx, rev, vm, block_gas_left, blob_gas_left);
+        auto res =
+            transition(state, block, block_hashes, tx, rev, vm, block_gas_left, blob_gas_left);
 
         if (holds_alternative<std::error_code>(res))
         {
@@ -73,7 +74,7 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
         }
     }
 
-    test::finalize(state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
+    finalize(state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
 
     const auto bloom = compute_bloom_filter(receipts);
     return {std::move(receipts), std::move(rejected_txs), cumulative_gas_used, bloom};
@@ -137,20 +138,19 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
 
         auto state = c.pre_state;
 
-        std::unordered_map<int64_t, hash256> known_block_hashes{
+        TestBlockHashes block_hashes{
             {c.genesis_block_header.block_number, c.genesis_block_header.hash}};
 
         for (const auto& test_block : c.test_blocks)
         {
             auto bi = test_block.block_info;
-            bi.known_block_hashes = known_block_hashes;
 
             const auto rev = c.rev.get_revision(bi.timestamp);
 
-            const auto res =
-                apply_block(state, vm, bi, test_block.transactions, rev, mining_reward(rev));
+            const auto res = apply_block(
+                state, vm, bi, block_hashes, test_block.transactions, rev, mining_reward(rev));
 
-            known_block_hashes[test_block.expected_block_header.block_number] =
+            block_hashes[test_block.expected_block_header.block_number] =
                 test_block.expected_block_header.hash;
 
             SCOPED_TRACE(std::string{evmc::to_string(rev)} + '/' + std::to_string(case_index) +

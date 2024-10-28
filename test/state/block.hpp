@@ -57,10 +57,6 @@ struct BlockInfo
 
     std::vector<Ommer> ommers;
     std::vector<Withdrawal> withdrawals;
-
-    /// Collection of known block hashes by block number. Only use in tests.
-    /// TODO: This should be moved to evmone::test.
-    std::unordered_map<int64_t, hash256> known_block_hashes;
 };
 
 /// Computes the current blob gas price based on the excess blob gas.

@@ -77,6 +77,7 @@ protected:
         .coinbase = Coinbase,
         .base_fee = 999,
     };
+    TestBlockHashes block_hashes;
     Transaction tx{
         // The default type corresponds to the default `rev` and majority of tests.
         .type = Transaction::Type::eip1559,

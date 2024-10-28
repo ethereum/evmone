@@ -59,6 +59,7 @@ struct StateTransitionTest
     std::string name;
     TestState pre_state;
     state::BlockInfo block;
+    TestBlockHashes block_hashes;
     TestMultiTransaction multi_tx;
     std::vector<Case> cases;
     std::unordered_map<uint64_t, std::string> input_labels;
@@ -84,6 +85,9 @@ bytes from_json<bytes>(const json::json& j);
 
 template <>
 state::BlockInfo from_json<state::BlockInfo>(const json::json& j);
+
+template <>
+TestBlockHashes from_json<TestBlockHashes>(const json::json& j);
 
 template <>
 state::Withdrawal from_json<state::Withdrawal>(const json::json& j);
