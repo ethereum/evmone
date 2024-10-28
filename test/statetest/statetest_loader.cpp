@@ -212,13 +212,6 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
             withdrawals.push_back(from_json<state::Withdrawal>(withdrawal));
     }
 
-    std::unordered_map<int64_t, hash256> block_hashes;
-    if (const auto block_hashes_it = j.find("blockHashes"); block_hashes_it != j.end())
-    {
-        for (const auto& [j_num, j_hash] : block_hashes_it->items())
-            block_hashes[from_json<int64_t>(j_num)] = from_json<hash256>(j_hash);
-    }
-
     std::vector<state::Ommer> ommers;
     if (const auto ommers_it = j.find("ommers"); ommers_it != j.end())
     {
@@ -265,8 +258,19 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
         .blob_base_fee = state::compute_blob_gas_price(excess_blob_gas),
         .ommers = std::move(ommers),
         .withdrawals = std::move(withdrawals),
-        .known_block_hashes = std::move(block_hashes),
     };
+}
+
+template <>
+TestBlockHashes from_json<TestBlockHashes>(const json::json& j)
+{
+    TestBlockHashes block_hashes;
+    if (const auto block_hashes_it = j.find("blockHashes"); block_hashes_it != j.end())
+    {
+        for (const auto& [j_num, j_hash] : block_hashes_it->items())
+            block_hashes[from_json<int64_t>(j_num)] = from_json<hash256>(j_hash);
+    }
+    return block_hashes;
 }
 
 template <>
@@ -425,6 +429,7 @@ static void from_json(const json::json& j_t, StateTransitionTest& o)
     o.multi_tx = j_t.at("transaction").get<TestMultiTransaction>();
 
     o.block = from_json<state::BlockInfo>(j_t.at("env"));
+    o.block_hashes = from_json<TestBlockHashes>(j_t.at("env"));
 
     if (const auto info_it = j_t.find("_info"); info_it != j_t.end())
     {

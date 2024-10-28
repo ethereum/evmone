@@ -19,9 +19,10 @@ TEST_F(state_transition, block_apply_withdrawal)
 
 TEST_F(state_transition, known_block_hash)
 {
-    block.known_block_hashes = {
+    block_hashes = {
         {1, 0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421_bytes32},
-        {2, 0x0000000000000000000000000000000000000000000000000000000000000111_bytes32}};
+        {2, 0x0000000000000000000000000000000000000000000000000000000000000111_bytes32},
+    };
     block.number = 5;
 
     tx.to = To;

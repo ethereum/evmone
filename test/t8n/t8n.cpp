@@ -75,6 +75,7 @@ int main(int argc, const char* argv[])
         }
 
         state::BlockInfo block;
+        TestBlockHashes block_hashes;
         TestState state;
 
         if (!alloc_file.empty())
@@ -86,7 +87,8 @@ int main(int argc, const char* argv[])
         if (!env_file.empty())
         {
             const auto j = json::json::parse(std::ifstream{env_file});
-            block = test::from_json<state::BlockInfo>(j);
+            block = from_json<state::BlockInfo>(j);
+            block_hashes = from_json<TestBlockHashes>(j);
         }
 
         json::json j_result;
@@ -133,7 +135,7 @@ int main(int argc, const char* argv[])
                 j_result["receipts"] = json::json::array();
                 j_result["rejected"] = json::json::array();
 
-                test::system_call(state, block, rev, vm);
+                test::system_call(state, block, block_hashes, rev, vm);
 
                 for (size_t i = 0; i < j_txs.size(); ++i)
                 {
@@ -168,8 +170,8 @@ int main(int argc, const char* argv[])
                         std::clog.rdbuf(trace_file_output.rdbuf());
                     }
 
-                    auto res =
-                        test::transition(state, block, tx, rev, vm, block_gas_left, blob_gas_left);
+                    auto res = test::transition(
+                        state, block, block_hashes, tx, rev, vm, block_gas_left, blob_gas_left);
 
                     if (holds_alternative<std::error_code>(res))
                     {

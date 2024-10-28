@@ -57,8 +57,8 @@ void state_transition::TearDown()
     if (trace)
         trace_capture.emplace();
 
-    const auto res = test::transition(state, block, tx, rev, selected_vm, block.gas_limit,
-        state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK);
+    const auto res = test::transition(state, block, block_hashes, tx, rev, selected_vm,
+        block.gas_limit, state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK);
     test::finalize(state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
     const auto& post = state;
 

@@ -72,23 +72,19 @@ public:
     void apply(const state::StateDiff& diff);
 };
 
-class TestBlockHashes : public state::BlockHashes
+class TestBlockHashes : public state::BlockHashes, public std::unordered_map<int64_t, bytes32>
 {
-    /// The map block_number => block hash of known blocks.
-    const std::unordered_map<int64_t, bytes32>& known_block_hashes_;
-
 public:
-    explicit TestBlockHashes(const std::unordered_map<int64_t, bytes32>& known_block_hashes)
-      : known_block_hashes_{known_block_hashes}
-    {}
+    using std::unordered_map<int64_t, bytes32>::unordered_map;
 
     bytes32 get_block_hash(int64_t block_number) const noexcept override;
 };
 
 /// Wrapping of state::transition() which operates on TestState.
 [[nodiscard]] std::variant<state::TransactionReceipt, std::error_code> transition(TestState& state,
-    const state::BlockInfo& block, const state::Transaction& tx, evmc_revision rev, evmc::VM& vm,
-    int64_t block_gas_left, int64_t blob_gas_left);
+    const state::BlockInfo& block, const state::BlockHashes& block_hashes,
+    const state::Transaction& tx, evmc_revision rev, evmc::VM& vm, int64_t block_gas_left,
+    int64_t blob_gas_left);
 
 /// Wrapping of state::finalize() which operates on TestState.
 void finalize(TestState& state, evmc_revision rev, const address& coinbase,
@@ -96,7 +92,8 @@ void finalize(TestState& state, evmc_revision rev, const address& coinbase,
     std::span<const state::Withdrawal> withdrawals);
 
 /// Wrapping of state::system_call() which operates on TestState.
-void system_call(TestState& state, const state::BlockInfo& block, evmc_revision rev, evmc::VM& vm);
+void system_call(TestState& state, const state::BlockInfo& block,
+    const state::BlockHashes& block_hashes, evmc_revision rev, evmc::VM& vm);
 
 }  // namespace test
 }  // namespace evmone
