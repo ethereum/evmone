@@ -21,6 +21,19 @@ namespace baseline
 class CodeAnalysis;
 }
 
+class CodeCache
+{
+    // TODO: Make configurable by VM API.
+    static constexpr size_t SIZE = 2;
+
+    std::unordered_map<evmc::bytes32, std::shared_ptr<baseline::CodeAnalysis>> map_;
+
+public:
+    std::shared_ptr<baseline::CodeAnalysis> get(const evmc::bytes32& code_hash);
+
+    void put(const evmc::bytes32& code_hash, std::shared_ptr<baseline::CodeAnalysis> code);
+};
+
 /// The evmone EVMC instance.
 class VM : public evmc_vm
 {
@@ -30,6 +43,7 @@ public:
 
 private:
     std::vector<ExecutionState> m_execution_states;
+    CodeCache m_code_cache;
     std::unique_ptr<Tracer> m_first_tracer;
 
 public:

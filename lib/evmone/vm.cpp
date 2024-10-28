@@ -97,6 +97,20 @@ ExecutionState& VM::get_execution_state(size_t depth) noexcept
     return m_execution_states[depth];
 }
 
+std::shared_ptr<baseline::CodeAnalysis> CodeCache::get(const evmc::bytes32& code_hash)
+{
+    const auto it = map_.find(code_hash);
+    if (it == map_.end())
+        return nullptr;
+    return it->second;
+}
+
+void CodeCache::put(const evmc::bytes32& code_hash, std::shared_ptr<baseline::CodeAnalysis> code)
+{
+    map_.emplace(code_hash, std::move(code));
+}
+
+
 EVMC_EXPORT std::optional<evmc::Result> VM::execute_cached_code(evmc::Host& host, evmc_revision rev,
     const evmc_message& msg, const evmc::bytes32& code_hash,
     const std::function<evmc::bytes_view(evmc::address)>& get_code) noexcept
@@ -104,21 +118,19 @@ EVMC_EXPORT std::optional<evmc::Result> VM::execute_cached_code(evmc::Host& host
     if (execute != static_cast<decltype(execute)>(baseline::execute))  // Only Baseline is supported
         return {};
 
-    static std::unordered_map<evmc::bytes32, baseline::CodeAnalysis> code_cache;
-
-    auto it = code_cache.find(code_hash);
-    if (it == code_cache.end())
+    auto p = m_code_cache.get(code_hash);
+    if (p == nullptr)
     {
         const auto code = get_code(msg.code_address);
 
         if (is_eof_container(code))
             return {};  // EOF not supported because CodeAnalysis don't have a copy of the code.
 
-        std::tie(it, std::ignore) =
-            code_cache.insert({code_hash, baseline::analyze(code, rev >= EVMC_PRAGUE)});
+        p = std::make_shared<baseline::CodeAnalysis>(baseline::analyze(code, rev >= EVMC_PRAGUE));
+        m_code_cache.put(code_hash, p);
     }
 
-    const auto& ca = it->second;
+    const auto& ca = *p;
     return evmc::Result{
         baseline::execute(*this, evmc::Host::get_interface(), host.to_context(), rev, msg, ca)};
 }
