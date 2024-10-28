@@ -26,7 +26,7 @@ class CodeAnalysis;
 class CodeCache
 {
     // TODO: Make configurable by VM API.
-    static constexpr size_t SIZE = 2;
+    static constexpr size_t SIZE = 5000;
 
     using LRUList = std::list<std::pair<evmc::bytes32, std::shared_ptr<baseline::CodeAnalysis>>>;
     LRUList lru_list_;
