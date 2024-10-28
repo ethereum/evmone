@@ -6,6 +6,8 @@
 #include "execution_state.hpp"
 #include "tracing.hpp"
 #include <evmc/evmc.h>
+
+#include <list>
 #include <vector>
 
 #if defined(_MSC_VER) && !defined(__clang__)
@@ -26,7 +28,9 @@ class CodeCache
     // TODO: Make configurable by VM API.
     static constexpr size_t SIZE = 2;
 
-    std::unordered_map<evmc::bytes32, std::shared_ptr<baseline::CodeAnalysis>> map_;
+    using LRUList = std::list<std::pair<evmc::bytes32, std::shared_ptr<baseline::CodeAnalysis>>>;
+    LRUList lru_list_;
+    std::unordered_map<evmc::bytes32, LRUList::iterator> map_;
 
 public:
     std::shared_ptr<baseline::CodeAnalysis> get(const evmc::bytes32& code_hash);
