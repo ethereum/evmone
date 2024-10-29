@@ -20,21 +20,43 @@ using enum PrecompileId;
 
 std::mt19937_64 rng{std::random_device{}()};
 
+std::array<byte, 32> rand_scalar()
+{
+    std::array<byte, 32> ret;
+    for (unsigned char& b : ret)
+        b = static_cast<byte>(rng());
+    return ret;
+}
+
 bytes rand_p1()
 {
-    byte scalar[256];
-    for (unsigned char& i : scalar)
-        i = static_cast<byte>(rng());
+    const auto scalar = rand_scalar();
     blst_p1 out;
-    blst_p1_mult(&out, blst_p1_generator(), scalar, 256);
+    blst_p1_mult(&out, blst_p1_generator(), scalar.data(), 256);
     blst_p1_affine r;
     blst_p1_to_affine(&r, &out);
-    auto g = blst_p1_affine_generator();
 
     bytes o;
     o.resize(128);
-    blst_bendian_from_fp(&o[16], &g->x);
-    blst_bendian_from_fp(&o[64 + 16], &g->y);
+    blst_bendian_from_fp(&o[16], &r.x);
+    blst_bendian_from_fp(&o[64 + 16], &r.y);
+    return o;
+}
+
+bytes rand_p2()
+{
+    const auto scalar = rand_scalar();
+    blst_p2 out;
+    blst_p2_mult(&out, blst_p2_generator(), scalar.data(), 256);
+    blst_p2_affine r;
+    blst_p2_to_affine(&r, &out);
+
+    bytes o;
+    o.resize(256);
+    blst_bendian_from_fp(&o[16], &r.x.fp[0]);
+    blst_bendian_from_fp(&o[64 + 16], &r.x.fp[1]);
+    blst_bendian_from_fp(&o[128 + 16 ], &r.y.fp[0]);
+    blst_bendian_from_fp(&o[128 + 64 + 16], &r.y.fp[1]);
     return o;
 }
 
@@ -48,6 +70,15 @@ struct PrecompileTrait<bls12_g1add>
     static constexpr auto execute = bls12_g1add_execute;
 
     static bytes get_input(size_t) { return rand_p1() + rand_p1(); }
+};
+
+template <>
+struct PrecompileTrait<bls12_g2add>
+{
+    static constexpr auto analyze = bls12_g2add_analyze;
+    static constexpr auto execute = bls12_g2add_execute;
+
+    static bytes get_input(size_t) { return rand_p2() + rand_p2(); }
 };
 
 template <PrecompileId Id>
@@ -77,5 +108,6 @@ void precompile_bls(benchmark::State& state)
         Counter(static_cast<double>(gas_cost * state.max_iterations), Counter::kIsRate);
 }
 BENCHMARK(precompile_bls<bls12_g1add>)->Arg(1);
+BENCHMARK(precompile_bls<bls12_g2add>)->Arg(1);
 
 }  // namespace
