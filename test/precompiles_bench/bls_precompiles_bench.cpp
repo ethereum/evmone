@@ -44,6 +44,23 @@ bytes rand_worst_scalar()
     return ret;
 }
 
+bytes rand_fp()
+{
+    using namespace intx;
+    uint384 x;
+    for (size_t i = 0; i < 6; ++i)
+        x[i] = rng();
+
+    static constexpr auto BLS_FIELD_MODULUS =
+        0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab_u384;
+    x = x % BLS_FIELD_MODULUS;
+
+    bytes ret;
+    ret.resize(64);
+    be::unsafe::store(&ret[16], x);
+    return ret;
+}
+
 bytes rand_scalar()
 {
     bytes ret;
@@ -154,6 +171,24 @@ struct PrecompileTrait<bls12_g2msm>
     }
 };
 
+template <>
+struct PrecompileTrait<bls12_map_fp_to_g1>
+{
+    static constexpr auto analyze = bls12_map_fp_to_g1_analyze;
+    static constexpr auto execute = bls12_map_fp_to_g1_execute;
+
+    static bytes get_input(size_t) { return rand_fp(); }
+};
+
+template <>
+struct PrecompileTrait<bls12_map_fp2_to_g2>
+{
+    static constexpr auto analyze = bls12_map_fp2_to_g2_analyze;
+    static constexpr auto execute = bls12_map_fp2_to_g2_execute;
+
+    static bytes get_input(size_t) { return rand_fp() + rand_fp(); }
+};
+
 template <PrecompileId Id>
 void precompile_bls(benchmark::State& state)
 {
@@ -186,5 +221,7 @@ BENCHMARK(precompile_bls<bls12_g1msm>)->DenseRange(1, 31)->DenseRange(32, 256, 1
 BENCHMARK(precompile_bls<bls12_g2add>)->Arg(1);
 BENCHMARK(precompile_bls<bls12_g2mul>)->Arg(1);
 BENCHMARK(precompile_bls<bls12_g2msm>)->DenseRange(1, 31)->DenseRange(32, 256, 16);
+BENCHMARK(precompile_bls<bls12_map_fp_to_g1>)->Arg(1);
+BENCHMARK(precompile_bls<bls12_map_fp2_to_g2>)->Arg(1);
 
 }  // namespace
