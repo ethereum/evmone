@@ -241,7 +241,13 @@ int main(int argc, const char* argv[])
         if (rev >= EVMC_PRAGUE)
         {
             // EIP-7685: General purpose execution layer requests
-            j_result["requestsRoot"] = hex0x(state::EMPTY_MPT_HASH);
+            j_result["requests"] = json::json::array();
+            // TODO: actual requests should be used in the following lines, for now all empty.
+            j_result["requests"][0] = "0x";
+            j_result["requests"][1] = "0x";
+            j_result["requests"][2] = "0x";
+            j_result["requestsHash"] =
+                "0x6036c41849da9c076ed79654d434017387a88fb833c2856b32e18218b3341c5f";
         }
 
         std::ofstream{output_dir / output_result_file} << std::setw(2) << j_result;
