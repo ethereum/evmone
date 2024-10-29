@@ -125,6 +125,23 @@ TEST_F(tracing, three_tracers)
     EXPECT_EQ(trace(dup1(0)), "A0:PUSH1 B0:PUSH1 C0:PUSH1 A2:DUP1 B2:DUP1 C2:DUP1 ");
 }
 
+TEST_F(tracing, tracer_removed)
+{
+    vm.add_tracer(std::make_unique<OpcodeTracer>(*this, ""));
+    vm.remove_tracers();
+
+    EXPECT_EQ(vm.get_tracer(), nullptr);
+}
+
+TEST_F(tracing, tracers_removed)
+{
+    vm.add_tracer(std::make_unique<OpcodeTracer>(*this, "A"));
+    vm.add_tracer(std::make_unique<OpcodeTracer>(*this, "B"));
+    vm.remove_tracers();
+
+    EXPECT_EQ(vm.get_tracer(), nullptr);
+}
+
 TEST_F(tracing, histogram)
 {
     vm.add_tracer(evmone::create_histogram_tracer(trace_stream));
