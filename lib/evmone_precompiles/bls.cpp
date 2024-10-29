@@ -174,9 +174,6 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
 [[nodiscard]] bool g2_mul(uint8_t _rx[128], uint8_t _ry[128], const uint8_t _x[128],
     const uint8_t _y[128], const uint8_t _c[32]) noexcept
 {
-    blst_scalar scalar;
-    blst_scalar_from_bendian(&scalar, _c);
-
     const auto p_affine = validate_p2(_x, _y);
     if (!p_affine.has_value())
         return false;
@@ -186,6 +183,16 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
 
     if (!blst_p2_in_g2(&p))
         return false;
+
+    static constexpr auto BLS_MODULUS =
+    52435875175126190479447740508185965837690552500527637822603658699938581184513_u256;
+
+    const auto s = intx::be::unsafe::load<intx::uint256>(_c) % BLS_MODULUS;
+    byte c2[32];
+    intx::le::store(c2, s);
+
+    blst_scalar scalar;
+    blst_scalar_from_lendian(&scalar, c2);
 
     blst_p2 out;
     blst_p2_mult(&out, &p, scalar.b, 256);
