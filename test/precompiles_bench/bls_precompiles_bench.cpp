@@ -20,10 +20,11 @@ using enum PrecompileId;
 
 std::mt19937_64 rng{std::random_device{}()};
 
-std::array<byte, 32> rand_scalar()
+bytes rand_scalar()
 {
-    std::array<byte, 32> ret;
-    for (unsigned char& b : ret)
+    bytes ret;
+    ret.resize(32);
+    for (auto& b : ret)
         b = static_cast<byte>(rng());
     return ret;
 }
@@ -55,7 +56,7 @@ bytes rand_p2()
     o.resize(256);
     blst_bendian_from_fp(&o[16], &r.x.fp[0]);
     blst_bendian_from_fp(&o[64 + 16], &r.x.fp[1]);
-    blst_bendian_from_fp(&o[128 + 16 ], &r.y.fp[0]);
+    blst_bendian_from_fp(&o[128 + 16], &r.y.fp[0]);
     blst_bendian_from_fp(&o[128 + 64 + 16], &r.y.fp[1]);
     return o;
 }
@@ -70,6 +71,15 @@ struct PrecompileTrait<bls12_g1add>
     static constexpr auto execute = bls12_g1add_execute;
 
     static bytes get_input(size_t) { return rand_p1() + rand_p1(); }
+};
+
+template <>
+struct PrecompileTrait<bls12_g1mul>
+{
+    static constexpr auto analyze = bls12_g1mul_analyze;
+    static constexpr auto execute = bls12_g1mul_execute;
+
+    static bytes get_input(size_t) { return rand_p1() + rand_scalar(); }
 };
 
 template <>
@@ -108,6 +118,7 @@ void precompile_bls(benchmark::State& state)
         Counter(static_cast<double>(gas_cost * state.max_iterations), Counter::kIsRate);
 }
 BENCHMARK(precompile_bls<bls12_g1add>)->Arg(1);
+BENCHMARK(precompile_bls<bls12_g1mul>)->Arg(1);
 BENCHMARK(precompile_bls<bls12_g2add>)->Arg(1);
 
 }  // namespace
