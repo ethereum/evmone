@@ -139,6 +139,21 @@ struct PrecompileTrait<bls12_g2mul>
     static bytes get_input(size_t) { return rand_p2() + rand_worst_scalar(); }
 };
 
+template <>
+struct PrecompileTrait<bls12_g2msm>
+{
+    static constexpr auto analyze = bls12_g2msm_analyze;
+    static constexpr auto execute = bls12_g2msm_execute;
+
+    static bytes get_input(size_t n)
+    {
+        bytes input;
+        for (size_t i = 0; i < n; ++i)
+            input += (rand_p2() + rand_worst_scalar());
+        return input;
+    }
+};
+
 template <PrecompileId Id>
 void precompile_bls(benchmark::State& state)
 {
@@ -170,5 +185,6 @@ BENCHMARK(precompile_bls<bls12_g1mul>)->Arg(1);
 BENCHMARK(precompile_bls<bls12_g1msm>)->DenseRange(1, 31)->DenseRange(32, 256, 16);
 BENCHMARK(precompile_bls<bls12_g2add>)->Arg(1);
 BENCHMARK(precompile_bls<bls12_g2mul>)->Arg(1);
+BENCHMARK(precompile_bls<bls12_g2msm>)->DenseRange(1, 31)->DenseRange(32, 256, 16);
 
 }  // namespace
