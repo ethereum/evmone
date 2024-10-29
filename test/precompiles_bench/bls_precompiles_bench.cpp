@@ -4,6 +4,7 @@
 
 #include "../utils/utils.hpp"
 #include <benchmark/benchmark.h>
+#include <intx/intx.hpp>
 #include <state/precompiles.hpp>
 #include <state/precompiles_internal.hpp>
 #include <memory>
@@ -19,6 +20,29 @@ using namespace evmone::test;
 using enum PrecompileId;
 
 std::mt19937_64 rng{std::random_device{}()};
+
+bytes rand_worst_scalar()
+{
+    using namespace intx;
+    uint256 x;
+    x[0] = rng();
+    x[1] = rng();
+    x[2] = rng();
+    x[3] = rng();
+
+    static constexpr auto M = ~uint256{};
+    static constexpr auto BLS_MODULUS =
+        52435875175126190479447740508185965837690552500527637822603658699938581184513_u256;
+    static constexpr auto B2 = 2 * BLS_MODULUS;
+
+    auto y = x % (M - B2 + 1);
+    auto z = y + B2;
+
+    bytes ret;
+    ret.resize(32);
+    be::unsafe::store(ret.data(), z);
+    return ret;
+}
 
 bytes rand_scalar()
 {
@@ -79,7 +103,7 @@ struct PrecompileTrait<bls12_g1mul>
     static constexpr auto analyze = bls12_g1mul_analyze;
     static constexpr auto execute = bls12_g1mul_execute;
 
-    static bytes get_input(size_t) { return rand_p1() + rand_scalar(); }
+    static bytes get_input(size_t) { return rand_p1() + rand_worst_scalar(); }
 };
 
 template <>
