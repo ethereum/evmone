@@ -738,7 +738,7 @@ std::variant<EOF1Header, EOFValidationError> validate_header(
     if (version != 1)
         return EOFValidationError::eof_version_unknown;
 
-    if (rev < EVMC_PRAGUE)
+    if (rev < EVMC_OSAKA)
         return EOFValidationError::eof_version_unknown;
 
     // `offset` variable handled below is known to not be greater than the container size, as

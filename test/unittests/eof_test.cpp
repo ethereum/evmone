@@ -95,7 +95,7 @@ TEST(eof, read_valid_eof1_header)
     {
         const auto code = from_spaced_hex(test_case.code).value();
         EXPECT_EQ(
-            validate_eof(EVMC_PRAGUE, ContainerKind::runtime, code), EOFValidationError::success)
+            validate_eof(EVMC_OSAKA, ContainerKind::runtime, code), EOFValidationError::success)
             << test_case.code;
 
         const auto header = read_valid_eof1_header(code);

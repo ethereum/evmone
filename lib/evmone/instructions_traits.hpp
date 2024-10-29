@@ -171,27 +171,27 @@ constexpr inline GasCostTable gas_costs = []() noexcept {
     table[EVMC_CANCUN][OP_MCOPY] = 3;
 
     table[EVMC_PRAGUE] = table[EVMC_CANCUN];
-    table[EVMC_PRAGUE][OP_DUPN] = 3;
-    table[EVMC_PRAGUE][OP_SWAPN] = 3;
-    table[EVMC_PRAGUE][OP_EXCHANGE] = 3;
-    table[EVMC_PRAGUE][OP_RJUMP] = 2;
-    table[EVMC_PRAGUE][OP_RJUMPI] = 4;
-    table[EVMC_PRAGUE][OP_RJUMPV] = 4;
-    table[EVMC_PRAGUE][OP_CALLF] = 5;
-    table[EVMC_PRAGUE][OP_RETF] = 3;
-    table[EVMC_PRAGUE][OP_JUMPF] = 5;
-    table[EVMC_PRAGUE][OP_DATALOAD] = 4;
-    table[EVMC_PRAGUE][OP_DATALOADN] = 3;
-    table[EVMC_PRAGUE][OP_DATASIZE] = 2;
-    table[EVMC_PRAGUE][OP_DATACOPY] = 3;
-    table[EVMC_PRAGUE][OP_RETURNDATALOAD] = 3;
-    table[EVMC_PRAGUE][OP_EXTCALL] = warm_storage_read_cost;
-    table[EVMC_PRAGUE][OP_EXTDELEGATECALL] = warm_storage_read_cost;
-    table[EVMC_PRAGUE][OP_EXTSTATICCALL] = warm_storage_read_cost;
-    table[EVMC_PRAGUE][OP_EOFCREATE] = 32000;
-    table[EVMC_PRAGUE][OP_RETURNCONTRACT] = 0;
 
     table[EVMC_OSAKA] = table[EVMC_PRAGUE];
+    table[EVMC_OSAKA][OP_DUPN] = 3;
+    table[EVMC_OSAKA][OP_SWAPN] = 3;
+    table[EVMC_OSAKA][OP_EXCHANGE] = 3;
+    table[EVMC_OSAKA][OP_RJUMP] = 2;
+    table[EVMC_OSAKA][OP_RJUMPI] = 4;
+    table[EVMC_OSAKA][OP_RJUMPV] = 4;
+    table[EVMC_OSAKA][OP_CALLF] = 5;
+    table[EVMC_OSAKA][OP_RETF] = 3;
+    table[EVMC_OSAKA][OP_JUMPF] = 5;
+    table[EVMC_OSAKA][OP_DATALOAD] = 4;
+    table[EVMC_OSAKA][OP_DATALOADN] = 3;
+    table[EVMC_OSAKA][OP_DATASIZE] = 2;
+    table[EVMC_OSAKA][OP_DATACOPY] = 3;
+    table[EVMC_OSAKA][OP_RETURNDATALOAD] = 3;
+    table[EVMC_OSAKA][OP_EXTCALL] = warm_storage_read_cost;
+    table[EVMC_OSAKA][OP_EXTDELEGATECALL] = warm_storage_read_cost;
+    table[EVMC_OSAKA][OP_EXTSTATICCALL] = warm_storage_read_cost;
+    table[EVMC_OSAKA][OP_EOFCREATE] = 32000;
+    table[EVMC_OSAKA][OP_RETURNCONTRACT] = 0;
 
     return table;
 }();
@@ -199,7 +199,7 @@ constexpr inline GasCostTable gas_costs = []() noexcept {
 static_assert(gas_costs[EVMC_MAX_REVISION][OP_ADD] > 0, "gas costs missing for a revision");
 
 /// The revision related to introduction of the EOFv1.
-constexpr auto REV_EOF1 = EVMC_PRAGUE;
+constexpr auto REV_EOF1 = EVMC_OSAKA;
 
 
 /// The EVM instruction traits.

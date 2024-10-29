@@ -13,7 +13,7 @@ TEST_P(evm, eof1_rjump)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     auto code = eof_bytecode(rjumpi(3, 0) + rjump(1) + OP_INVALID + mstore8(0, 1) + ret(0, 1), 2);
 
     execute(code);
@@ -36,7 +36,7 @@ TEST_P(evm, eof1_rjump_backward)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     auto code = eof_bytecode(rjumpi(10, 1) + mstore8(0, 1) + ret(0, 1) + rjump(-13), 2);
 
     execute(code);
@@ -58,7 +58,7 @@ TEST_P(evm, eof1_rjump_0_offset)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     auto code = eof_bytecode(rjump(0) + mstore8(0, 1) + ret(0, 1), 2);
 
     execute(code);
@@ -73,7 +73,7 @@ TEST_P(evm, eof1_rjumpi)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     auto code = eof_bytecode(
         rjumpi(10, calldataload(0)) + mstore8(0, 2) + ret(0, 1) + mstore8(0, 1) + ret(0, 1), 2);
 
@@ -96,7 +96,7 @@ TEST_P(evm, eof1_rjumpi_backwards)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     auto code = eof_bytecode(rjumpi(10, 1) + mstore8(0, 1) + ret(0, 1) +
                                  rjumpi(-16, calldataload(0)) + mstore8(0, 2) + ret(0, 1),
         2);
@@ -120,7 +120,7 @@ TEST_P(evm, eof1_rjumpi_0_offset)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     auto code = eof_bytecode(rjumpi(0, calldataload(0)) + mstore8(0, 1) + ret(0, 1), 2);
 
     // RJUMPI condition is true
@@ -142,7 +142,7 @@ TEST_P(evm, eof1_rjumpv_single_offset)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     auto code = eof_bytecode(rjumpv({3}, 0) + OP_JUMPDEST + OP_JUMPDEST + OP_STOP + 20 + 0 + 0 +
                                  OP_DATACOPY + ret(0, 20),
         3)
@@ -161,7 +161,7 @@ TEST_P(evm, eof1_rjumpv_multiple_offsets)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     const auto code =
         eof_bytecode(rjumpi(12, 1) + 10 + 0 + 0 + OP_DATACOPY + ret(0, 10) +
                          rjumpv({12, -23, 0}, calldataload(0)) + 10 + 10 + 0 + OP_DATACOPY +
@@ -197,7 +197,7 @@ TEST_P(evm, eof1_rjumpv_long_jumps)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     const auto code_ret_7 = push(7) + ret_top();
     // code_ret_7 and jumpdests together make up 0x7fff bytes
     const auto jumpdests = (0x7fff - static_cast<int>(code_ret_7.size())) * bytecode{OP_JUMPDEST};
@@ -228,7 +228,7 @@ TEST_P(evm, eof1_rjumpv_long_jumps)
 
 TEST_P(evm, rjump_undefined_in_legacy)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     const auto code = rjump(1) + OP_INVALID + mstore8(0, 1) + ret(0, 1);
     execute(code);
     EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
@@ -236,7 +236,7 @@ TEST_P(evm, rjump_undefined_in_legacy)
 
 TEST_P(evm, rjumpi_undefined_in_legacy)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     const auto code = rjumpi(10, 1) + mstore8(0, 2) + ret(0, 1) + mstore8(0, 1) + ret(0, 1);
     execute(code);
     EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
@@ -244,7 +244,7 @@ TEST_P(evm, rjumpi_undefined_in_legacy)
 
 TEST_P(evm, rjumpv_undefined_in_legacy)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     const auto code = rjumpv({0}, calldataload(0)) + OP_STOP;
     execute(code);
     EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
