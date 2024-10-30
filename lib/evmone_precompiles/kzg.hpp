@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #pragma once
-#include "sha256.hpp"
+#include "../crypto/sha256.hpp"
 #include <intx/intx.hpp>
 
 namespace evmone::crypto

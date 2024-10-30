@@ -2,6 +2,7 @@
 // Copyright 2023 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+#include "../lib/crypto/sha256.hpp"
 #include "../state/errors.hpp"
 #include "../state/ethash_difficulty.hpp"
 #include "../state/mpt_hash.hpp"
@@ -241,7 +242,39 @@ int main(int argc, const char* argv[])
         if (rev >= EVMC_PRAGUE)
         {
             // EIP-7685: General purpose execution layer requests
-            j_result["requestsRoot"] = hex0x(state::EMPTY_MPT_HASH);
+            j_result["requests"] = json::json::array();
+            // TODO: actual requests should be used in the following lines, for now all empty.
+            const uint8_t withdrawals[1] = {0x00};
+            const uint8_t deposits[1] = {0x01};
+            const uint8_t consolidations[1] = {0x02};
+            j_result["requests"][0] = "0x";
+            j_result["requests"][1] = "0x";
+            j_result["requests"][2] = "0x";
+
+            uint8_t withdrawals_hash[crypto::SHA256_HASH_SIZE];
+            uint8_t deposits_hash[crypto::SHA256_HASH_SIZE];
+            uint8_t consolidations_hash[crypto::SHA256_HASH_SIZE];
+
+            crypto::sha256(reinterpret_cast<std::byte*>(withdrawals_hash),
+                reinterpret_cast<const std::byte*>(withdrawals), 1);
+            crypto::sha256(reinterpret_cast<std::byte*>(deposits_hash),
+                reinterpret_cast<const std::byte*>(deposits), 1);
+            crypto::sha256(reinterpret_cast<std::byte*>(consolidations_hash),
+                reinterpret_cast<const std::byte*>(consolidations), 1);
+
+            uint8_t buffer[3 * crypto::SHA256_HASH_SIZE];
+            {
+                auto it = std::begin(buffer);
+                it = std::copy_n(withdrawals_hash, crypto::SHA256_HASH_SIZE, it);
+                it = std::copy_n(deposits_hash, crypto::SHA256_HASH_SIZE, it);
+                std::copy_n(consolidations_hash, crypto::SHA256_HASH_SIZE, it);
+            }
+
+            uint8_t requests_hash[crypto::SHA256_HASH_SIZE];
+            crypto::sha256(reinterpret_cast<std::byte*>(requests_hash),
+                reinterpret_cast<const std::byte*>(buffer), 3 * crypto::SHA256_HASH_SIZE);
+
+            j_result["requestsHash"] = hex0x({requests_hash, 32});
         }
 
         std::ofstream{output_dir / output_result_file} << std::setw(2) << j_result;
