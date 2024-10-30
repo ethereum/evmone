@@ -9,6 +9,11 @@
 #include <array>
 #include <memory>
 
+#include <ethash/keccak.h>
+#include <intx/intx.hpp>
+#include <secp256k1.h>
+#include <secp256k1_recovery.h>
+
 #ifdef EVMONE_PRECOMPILES_SILKPRE
 #include <state/precompiles_silkpre.hpp>
 #endif
@@ -177,7 +182,70 @@ BENCHMARK_TEMPLATE(precompile, PrecompileId::identity, identity_execute);
 namespace bench_ecrecovery
 {
 constexpr auto evmmax_cpp = ecrecover_execute;
+
+auto* ctx = secp256k1_context_create(SECP256K1_CONTEXT_VERIFY);
+
+static bool recover(uint8_t public_key[65], const uint8_t message[32], const uint8_t signature[64],
+    bool odd_y_parity, secp256k1_context* context)
+{
+    secp256k1_ecdsa_recoverable_signature sig;
+    if (!secp256k1_ecdsa_recoverable_signature_parse_compact(
+            context, &sig, signature, odd_y_parity))
+    {
+        return false;
+    }
+
+    secp256k1_pubkey pub_key;
+    if (!secp256k1_ecdsa_recover(context, &pub_key, &sig, message))
+    {
+        return false;
+    }
+
+    size_t key_len = 65;
+    secp256k1_ec_pubkey_serialize(
+        context, public_key, &key_len, &pub_key, SECP256K1_EC_UNCOMPRESSED);
+    return true;
+}
+
+//! Tries extract address from recovered public key
+//! \param [in] public_key: The recovered public key
+//! \return Whether the recovery has succeeded.
+static bool public_key_to_address(uint8_t out[20], const uint8_t public_key[65])
+{
+    if (public_key[0] != 4u)
+    {
+        return false;
+    }
+    // Ignore first byte of public key
+    const union ethash_hash256 key_hash = ethash_keccak256(public_key + 1, 64);
+    memcpy(out, &key_hash.bytes[12], 20);
+    return true;
+}
+
+bool silkpre_recover_address(uint8_t out[20], const uint8_t message[32],
+    const uint8_t signature[64], bool odd_y_parity, secp256k1_context* context)
+{
+    uint8_t public_key[65];
+    if (!recover(public_key, message, signature, odd_y_parity, context))
+    {
+        return false;
+    }
+    return public_key_to_address(out, public_key);
+}
+
+ExecutionResult my_ecrec(const uint8_t* input, size_t, uint8_t* output, size_t) noexcept
+{
+    const auto v{intx::be::unsafe::load<intx::uint256>(&input[32])};
+    std::memset(output, 0, 32);
+    if (!silkpre_recover_address(output + 12, &input[0], &input[64], v != 27, ctx))
+    {
+        return {EVMC_SUCCESS, 0};
+    }
+    return {EVMC_SUCCESS, 32};
+}
+
 BENCHMARK_TEMPLATE(precompile, PrecompileId::ecrecover, evmmax_cpp);
+BENCHMARK_TEMPLATE(precompile, PrecompileId::ecrecover, my_ecrec);
 #ifdef EVMONE_PRECOMPILES_SILKPRE
 constexpr auto libsecp256k1 = silkpre_ecrecover_execute;
 BENCHMARK_TEMPLATE(precompile, PrecompileId::ecrecover, libsecp256k1);
