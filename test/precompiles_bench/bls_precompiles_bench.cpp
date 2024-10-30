@@ -230,14 +230,18 @@ void precompile_bls(benchmark::State& state)
     state.counters["gas_rate"] =
         Counter(static_cast<double>(gas_cost * state.max_iterations), Counter::kIsRate);
 }
-BENCHMARK(precompile_bls<bls12_g1add>)->Arg(1);
-BENCHMARK(precompile_bls<bls12_g1mul>)->Arg(1);
-BENCHMARK(precompile_bls<bls12_g1msm>)->DenseRange(1, 31)->DenseRange(32, 256, 16);
-BENCHMARK(precompile_bls<bls12_g2add>)->Arg(1);
-BENCHMARK(precompile_bls<bls12_g2mul>)->Arg(1);
-BENCHMARK(precompile_bls<bls12_g2msm>)->DenseRange(1, 31)->DenseRange(32, 256, 16);
-BENCHMARK(precompile_bls<bls12_pairing_check>)->DenseRange(1, 1000, 10);
-BENCHMARK(precompile_bls<bls12_map_fp_to_g1>)->Arg(1);
-BENCHMARK(precompile_bls<bls12_map_fp2_to_g2>)->Arg(1);
+
+// Set ranges to exceed 0.25s execution time, matching 120Mgas/s and 30M gas limit.
+
+using benchmark::kMicrosecond;
+BENCHMARK(precompile_bls<bls12_g1add>)->Unit(kMicrosecond)->Arg(1);
+BENCHMARK(precompile_bls<bls12_g1mul>)->Unit(kMicrosecond)->Arg(1);
+BENCHMARK(precompile_bls<bls12_g1msm>)->Unit(kMicrosecond)->DenseRange(1, 5120);
+BENCHMARK(precompile_bls<bls12_g2add>)->Unit(kMicrosecond)->Arg(1);
+BENCHMARK(precompile_bls<bls12_g2mul>)->Unit(kMicrosecond)->Arg(1);
+BENCHMARK(precompile_bls<bls12_g2msm>)->Unit(kMicrosecond)->DenseRange(1, 3072);
+BENCHMARK(precompile_bls<bls12_pairing_check>)->Unit(kMicrosecond)->DenseRange(1, 1024);
+BENCHMARK(precompile_bls<bls12_map_fp_to_g1>)->Unit(kMicrosecond)->Arg(1);
+BENCHMARK(precompile_bls<bls12_map_fp2_to_g2>)->Unit(kMicrosecond)->Arg(1);
 
 }  // namespace

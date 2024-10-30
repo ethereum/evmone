@@ -245,7 +245,7 @@ ExecutionResult my_ecrec(const uint8_t* input, size_t, uint8_t* output, size_t) 
 }
 
 BENCHMARK_TEMPLATE(precompile, PrecompileId::ecrecover, evmmax_cpp);
-BENCHMARK_TEMPLATE(precompile, PrecompileId::ecrecover, my_ecrec);
+BENCHMARK_TEMPLATE(precompile, PrecompileId::ecrecover, my_ecrec)->Unit(benchmark::kMicrosecond);
 #ifdef EVMONE_PRECOMPILES_SILKPRE
 constexpr auto libsecp256k1 = silkpre_ecrecover_execute;
 BENCHMARK_TEMPLATE(precompile, PrecompileId::ecrecover, libsecp256k1);
