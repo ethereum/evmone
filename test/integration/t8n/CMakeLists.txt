@@ -57,3 +57,38 @@ set_tests_properties(
     FIXTURES_CLEANUP ${TEST_CASE}
     PASS_REGULAR_EXPRESSION ${EXPECTED_OUT_ALLOC}
 )
+
+set(TEST_CASE osaka_empty_requests)
+
+add_test(
+    NAME ${PREFIX}/${TEST_CASE}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${TEST_CASE}
+    COMMAND
+    evmone-t8n
+    --state.fork Osaka
+    --state.reward 0
+    --state.chainid 1
+    --input.alloc alloc.json
+    --input.txs txs.json
+    --input.env env.json
+    --output.basedir ${CMAKE_CURRENT_BINARY_DIR}/${TEST_CASE}
+    --output.result out.json
+)
+set_tests_properties(${PREFIX}/${TEST_CASE} PROPERTIES FIXTURES_REQUIRED ${TEST_CASE})
+
+add_test(
+    NAME ${PREFIX}/${TEST_CASE}/out.json
+    COMMAND ${CMAKE_COMMAND} -E cat ${CMAKE_CURRENT_BINARY_DIR}/${TEST_CASE}/out.json
+)
+string(
+    JOIN ".*" EXPECTED_OUT
+    # empty requests list of exactly 3 elements (withdrawals, deposits, consolidations)
+    [=["requests": \[[^],]*"0x",[^],]*"0x",[^],]*"0x"[^,]*\]]=]
+    # requests hash should be present
+    [=["requestsHash": "0x6036c41849da9c076ed79654d434017387a88fb833c2856b32e18218b3341c5f"]=]
+)
+set_tests_properties(
+    ${PREFIX}/${TEST_CASE}/out.json PROPERTIES
+    FIXTURES_CLEANUP ${TEST_CASE}
+    PASS_REGULAR_EXPRESSION ${EXPECTED_OUT}
+)
