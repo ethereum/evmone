@@ -419,8 +419,8 @@ jobs:
     steps:
       - build
       - download_execution_tests:
-          repo: "ipsilon/tests"
-          rev: "eof-osaka-20241028"
+          # Latest commit from the main "develop" branch of ethereum/tests.
+          commit: 4c87ebbf024a3e9ec842bcce90564f629a3bcd82
       - run:
           name: "State tests"
           working_directory: ~/build
@@ -449,13 +449,6 @@ jobs:
             --gtest_filter='*:-bcMultiChainTest.*:bcTotalDifficultyTest.*:bcForkStressTest.ForkStressTest:bcGasPricerTest.RPC_API_Test:bcValidBlockTest.SimpleTx3LowS'
             ~/tests/BlockchainTests/ValidBlocks
             ~/tests/LegacyTests/Cancun/BlockchainTests/ValidBlocks
-      - run:
-          name: "Blockchain tests (EIPs)"
-          working_directory: ~/build
-          command: >
-            bin/evmone-blockchaintest
-            --gtest_filter='*:-*StateTests/stEIP2537.*'
-            ~/tests/EIPTests/BlockchainTests/
       - collect_coverage_gcc
       - upload_coverage:
           flags: ethereum_tests
