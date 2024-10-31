@@ -471,7 +471,7 @@ void validate_state(const TestState& state, evmc_revision rev)
         //       https://github.com/ethereum/tests/issues/1331
         if (is_eof_container(acc.code))
         {
-            if (rev >= EVMC_PRAGUE)
+            if (rev >= EVMC_OSAKA)
             {
                 if (const auto result = validate_eof(rev, ContainerKind::runtime, acc.code);
                     result != EOFValidationError::success)

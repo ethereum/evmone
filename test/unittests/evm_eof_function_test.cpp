@@ -13,7 +13,7 @@ TEST_P(evm, eof_function_example1)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     const bytecode code = eof_bytecode(push(1) + push(8) + OP_CALLF + "0001" + ret_top(), 2)
                               .code(bytecode{OP_SUB} + OP_RETF, 2, 1, 2);
 
@@ -28,7 +28,7 @@ TEST_P(evm, eof_function_example2)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     const auto code =
         "ef0001 01000c 020003 003b 0017 001d 040000 00 00800004 01010003 01010004"
         "60043560003560e01c63c76652678114e1001c63c6c2ea178114e100065050600080fd50e30002600052602060"
@@ -57,7 +57,7 @@ TEST_P(evm, callf_stack_size_1024)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     const bytecode code =
         eof_bytecode(1023 * push(1) + OP_CALLF + "0001" + 1021 * OP_POP + OP_RETURN, 1023)
             .code(push(1) + OP_POP + OP_RETF, 0, 0, 1);
@@ -72,7 +72,7 @@ TEST_P(evm, callf_with_inputs_stack_size_1024)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     const bytecode code =
         eof_bytecode(1023 * push(1) + OP_CALLF + "0001" + 1021 * OP_POP + OP_RETURN, 1023)
             .code(push(1) + OP_POP + OP_RETF, 3, 3, 4);
@@ -87,7 +87,7 @@ TEST_P(evm, callf_stack_overflow)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     const bytecode code =
         eof_bytecode(1023 * push(1) + OP_CALLF + "0001" + 1021 * OP_POP + OP_RETURN, 1023)
             .code(push(1) + OP_CALLF + "0002" + OP_POP + OP_RETF, 0, 0, 1)
@@ -103,7 +103,7 @@ TEST_P(evm, callf_with_inputs_stack_overflow)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     const bytecode code =
         eof_bytecode(1023 * push(1) + OP_CALLF + "0001" + 1021 * OP_POP + OP_RETURN, 1023)
             .code(push(1) + OP_CALLF + "0002" + OP_POP + OP_RETF, 3, 3, 4)
@@ -119,7 +119,7 @@ TEST_P(evm, callf_call_stack_size_1024)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     const bytecode code = eof_bytecode(push(1023) + OP_CALLF + "0001" + OP_STOP, 1)
                               .code(bytecode{OP_DUP1} + OP_RJUMPI + "0002" + OP_POP + OP_RETF +
                                         push(1) + OP_SWAP1 + OP_SUB + OP_CALLF + "0001" + OP_RETF,
@@ -135,7 +135,7 @@ TEST_P(evm, callf_call_stack_size_1025)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     const bytecode code = eof_bytecode(push(1024) + OP_CALLF + "0001" + OP_STOP, 1)
                               .code(bytecode{OP_DUP1} + OP_RJUMPI + "0002" + OP_POP + OP_RETF +
                                         push(1) + OP_SWAP1 + OP_SUB + OP_CALLF + "0001" + OP_RETF,
@@ -151,7 +151,7 @@ TEST_P(evm, minimal_jumpf)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     const bytecode code =
         eof_bytecode(bytecode{OP_JUMPF} + "0001").code(bytecode{OP_STOP}, 0, 0x80, 0);
 
@@ -165,7 +165,7 @@ TEST_P(evm, jumpf_to_returning_function)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     const bytecode code = eof_bytecode(
         bytecode{OP_CALLF} + "0001" + OP_PUSH0 + OP_MSTORE + OP_PUSH1 + "20" + OP_PUSH0 + OP_RETURN,
         2)
@@ -183,7 +183,7 @@ TEST_P(evm, jumpf_to_function_with_fewer_outputs)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     const bytecode code = eof_bytecode(
         bytecode{OP_CALLF} + "0001" + OP_PUSH0 + OP_MSTORE + OP_PUSH1 + "20" + OP_PUSH0 + OP_RETURN,
         3)
@@ -201,7 +201,7 @@ TEST_P(evm, jumpf_stack_size_1024)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     const bytecode code =
         eof_bytecode(1023 * push0() + OP_JUMPF + "0001", 1023).code(push0() + OP_STOP, 0, 0x80, 1);
 
@@ -215,7 +215,7 @@ TEST_P(evm, jumpf_with_inputs_stack_size_1024)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     const bytecode code =
         eof_bytecode(1023 * push0() + OP_JUMPF + "0001", 1023).code(push0() + OP_STOP, 3, 0x80, 4);
 
@@ -229,7 +229,7 @@ TEST_P(evm, jumpf_stack_overflow)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     const bytecode code = eof_bytecode(1023 * push0() + OP_JUMPF + "0001", 1023)
                               .code(push0() + OP_JUMPF + "0002", 0, 0x80, 1)
                               .code(push0() + OP_STOP, 0, 0x80, 1);
@@ -244,7 +244,7 @@ TEST_P(evm, jumpf_with_inputs_stack_overflow)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     const bytecode code = eof_bytecode(1023 * push0() + OP_JUMPF + "0001", 1023)
                               .code(push0() + OP_JUMPF + "0002", 3, 0x80, 4)
                               .code(push0() + OP_STOP, 3, 0x80, 4);
@@ -257,7 +257,7 @@ TEST_P(evm, jumpf_with_inputs_stack_overflow)
 
 TEST_P(evm, functions_undefined_in_legacy)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     auto code = bytecode{OP_CALLF} + "0001" + OP_STOP;
     execute(code);
     EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);

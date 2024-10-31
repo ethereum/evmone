@@ -391,18 +391,18 @@ jobs:
     steps:
       - build
       - download_execution_spec_tests:
-          release: eip7692@v1.1.1
-          fixtures_suffix: eip7692
+          release: eip7692@v2.0.0
+          fixtures_suffix: eip7692-osaka
       - run:
           name: "EOF pre-release execution spec tests (state_tests)"
           working_directory: ~/build
           command: >
-            bin/evmone-statetest ~/spec-tests/fixtures/state_tests
+            bin/evmone-statetest ~/spec-tests/fixtures/state_tests/osaka
       - run:
           name: "EOF pre-release execution spec tests (blockchain_tests)"
           working_directory: ~/build
           command: >
-            bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests
+            bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests/osaka
       - run:
           name: "EOF pre-release execution spec tests (eof_tests)"
           working_directory: ~/build
@@ -419,7 +419,8 @@ jobs:
     steps:
       - build
       - download_execution_tests:
-          rev: v14.1
+          repo: "ipsilon/tests"
+          rev: "eof-osaka-20241028"
       - run:
           name: "State tests"
           working_directory: ~/build
@@ -428,11 +429,6 @@ jobs:
             ~/tests/GeneralStateTests 
             ~/tests/LegacyTests/Cancun/GeneralStateTests
             ~/tests/LegacyTests/Constantinople/GeneralStateTests
-      - run:
-          name: "EOF State tests"
-          working_directory: ~/build
-          command: |
-            bin/evmone-statetest ~/tests/EIPTests/StateTests/stEOF
       - run:
           name: "EOF validation tests"
           working_directory: ~/build
@@ -458,7 +454,7 @@ jobs:
           working_directory: ~/build
           command: >
             bin/evmone-blockchaintest
-            --gtest_filter='-*StateTests/stEOF/*.*:*StateTests/stEIP2537.*'
+            --gtest_filter='*:-*StateTests/stEIP2537.*'
             ~/tests/EIPTests/BlockchainTests/
       - collect_coverage_gcc
       - upload_coverage:

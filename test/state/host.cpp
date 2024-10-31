@@ -379,7 +379,7 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
 
     if (!code.empty() && code[0] == 0xEF)
     {
-        if (m_rev >= EVMC_PRAGUE)
+        if (m_rev >= EVMC_OSAKA)
         {
             // Only EOFCREATE/EOF-creation-tx is allowed to deploy code starting with EF.
             // It must be valid EOF, which was validated before execution.

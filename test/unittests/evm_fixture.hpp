@@ -80,7 +80,7 @@ protected:
             host.access_account(msg.recipient);
         }
 
-        if (rev >= EVMC_PRAGUE && is_eof_container(code))
+        if (rev >= EVMC_OSAKA && is_eof_container(code))
         {
             ASSERT_EQ(get_error_message(validate_eof(rev, ContainerKind::runtime, code)),
                 get_error_message(EOFValidationError::success));

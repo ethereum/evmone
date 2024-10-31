@@ -10,7 +10,7 @@ using namespace evmone::test;
 
 TEST_F(state_transition, dupn)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     tx.to = To;
     pre.insert(*tx.to,
         {
@@ -23,7 +23,7 @@ TEST_F(state_transition, dupn)
 
 TEST_F(state_transition, swapn)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     tx.to = To;
     pre.insert(*tx.to,
         {
@@ -36,7 +36,7 @@ TEST_F(state_transition, swapn)
 
 TEST_F(state_transition, exchange)
 {
-    rev = EVMC_PRAGUE;
+    rev = EVMC_OSAKA;
     tx.to = To;
     pre.insert(*tx.to, {
                            .code = eof_bytecode(push(1) + push(2) + push(3) + OP_EXCHANGE + "00" +
