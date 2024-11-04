@@ -2,7 +2,6 @@
 // Copyright 2023 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-#include "../lib/crypto/sha256.hpp"
 #include "../state/errors.hpp"
 #include "../state/ethash_difficulty.hpp"
 #include "../state/mpt_hash.hpp"
@@ -11,6 +10,7 @@
 #include "../utils/utils.hpp"
 #include <evmone/evmone.h>
 #include <evmone/version.h>
+#include <evmone_precompiles/sha256.hpp>
 #include <nlohmann/json.hpp>
 #include <filesystem>
 #include <fstream>

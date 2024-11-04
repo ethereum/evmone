@@ -2,9 +2,9 @@
 // Copyright 2024 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-#include <crypto/sha256.hpp>
 #include <evmc/evmc.hpp>
 #include <evmone_precompiles/kzg.hpp>
+#include <evmone_precompiles/sha256.hpp>
 #include <gtest/gtest.h>
 #include <intx/intx.hpp>
 #include <span>

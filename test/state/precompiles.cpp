@@ -5,13 +5,13 @@
 #include "precompiles.hpp"
 #include "precompiles_internal.hpp"
 #include "precompiles_stubs.hpp"
-#include <crypto/sha256.hpp>
 #include <evmone_precompiles/blake2b.hpp>
 #include <evmone_precompiles/bls.hpp>
 #include <evmone_precompiles/bn254.hpp>
 #include <evmone_precompiles/kzg.hpp>
 #include <evmone_precompiles/ripemd160.hpp>
 #include <evmone_precompiles/secp256k1.hpp>
+#include <evmone_precompiles/sha256.hpp>
 #include <intx/intx.hpp>
 #include <array>
 #include <bit>
