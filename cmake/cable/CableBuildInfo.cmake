@@ -22,8 +22,15 @@ include(GNUInstallDirs)
 set(cable_buildinfo_template_dir ${CMAKE_CURRENT_LIST_DIR}/buildinfo)
 
 function(cable_add_buildinfo_library)
-
-    cmake_parse_arguments("" "" PROJECT_NAME;EXPORT "" ${ARGN})
+    set(
+        ARG_NAMES
+        PROJECT_NAME
+        EXPORT
+        GIT_DESCRIBE
+        GIT_BRANCH
+        GIT_ORIGIN_URL
+    )
+    cmake_parse_arguments(PARSE_ARGV 0 "" "" "${ARG_NAMES}" "")
 
     if(NOT _PROJECT_NAME)
         message(FATAL_ERROR "The PROJECT_NAME argument missing")
@@ -55,10 +62,14 @@ function(cable_add_buildinfo_library)
         ${name}-git
         COMMAND ${CMAKE_COMMAND}
         -DGIT=${GIT_EXECUTABLE}
+        -DGIT_DESCRIBE=${_GIT_DESCRIBE}
+        -DGIT_BRANCH=${_GIT_BRANCH}
+        -DGIT_ORIGIN_URL=${_GIT_ORIGIN_URL}
         -DSOURCE_DIR=${PROJECT_SOURCE_DIR}
         -DOUTPUT_DIR=${output_dir}
         -P ${cable_buildinfo_template_dir}/gitinfo.cmake
         BYPRODUCTS ${output_dir}/gitinfo.txt
+        COMMENT "CableBuildInfo: updating gitinfo.txt"
     )
 
     add_custom_command(

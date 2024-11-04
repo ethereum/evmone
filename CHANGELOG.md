@@ -5,6 +5,13 @@ Documentation of all notable changes to the **evmone** project.
 The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
+## [0.14.0] — 2024-XX-XX
+
+### Added
+
+- cable: external git info
+  [#1067](https://github.com/ethereum/evmone/pull/1067)
+
 ## [0.13.0] — 2024-09-23
 
 This release adds BLS precompiles and a system contract for [Prague]
