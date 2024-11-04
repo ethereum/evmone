@@ -85,6 +85,10 @@ Result call_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noexce
 
     evmc_message msg{.kind = to_call_kind(Op)};
     msg.flags = (Op == OP_STATICCALL) ? uint32_t{EVMC_STATIC} : state.msg->flags;
+    if (dst != code_addr)
+        msg.flags |= EVMC_DELEGATED;
+    else
+        msg.flags &= ~std::underlying_type_t<evmc_flags>{EVMC_DELEGATED};
     msg.depth = state.msg->depth + 1;
     msg.recipient = (Op == OP_CALL || Op == OP_STATICCALL) ? dst : state.msg->recipient;
     msg.code_address = code_addr;
@@ -197,6 +201,10 @@ Result extcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
 
     evmc_message msg{.kind = to_call_kind(Op)};
     msg.flags = (Op == OP_EXTSTATICCALL) ? uint32_t{EVMC_STATIC} : state.msg->flags;
+    if (dst != code_addr)
+        msg.flags |= EVMC_DELEGATED;
+    else
+        msg.flags &= ~std::underlying_type_t<evmc_flags>{EVMC_DELEGATED};
     msg.depth = state.msg->depth + 1;
     msg.recipient = (Op != OP_EXTDELEGATECALL) ? dst : state.msg->recipient;
     msg.code_address = code_addr;
