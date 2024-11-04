@@ -58,14 +58,14 @@ set_tests_properties(
     PASS_REGULAR_EXPRESSION ${EXPECTED_OUT_ALLOC}
 )
 
-set(TEST_CASE osaka_empty_requests)
+set(TEST_CASE prague_empty_requests)
 
 add_test(
     NAME ${PREFIX}/${TEST_CASE}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${TEST_CASE}
     COMMAND
     evmone-t8n
-    --state.fork Osaka
+    --state.fork Prague
     --state.reward 0
     --state.chainid 1
     --input.alloc alloc.json
