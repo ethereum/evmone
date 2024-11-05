@@ -433,11 +433,16 @@ static void from_json(const json::json& j_t, StateTransitionTest& o)
 
     if (const auto info_it = j_t.find("_info"); info_it != j_t.end())
     {
+        // Parse input labels to improve test readability.
+        // EEST don't use labels so exclude this code from coverage
+        // to help with ethereum/tests -> EEST conversion.
+        // LCOV_EXCL_START
         if (const auto labels_it = info_it->find("labels"); labels_it != info_it->end())
         {
             for (const auto& [j_id, j_label] : labels_it->items())
                 o.input_labels.emplace(from_json<uint64_t>(j_id), j_label);
         }
+        // LCOV_EXCL_STOP
     }
 
     for (const auto& [rev_name, expectations] : j_t.at("post").items())
