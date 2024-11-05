@@ -75,11 +75,15 @@ bytes32 TestBlockHashes::get_block_hash(int64_t block_number) const noexcept
     const state::Transaction& tx, evmc_revision rev, evmc::VM& vm, int64_t block_gas_left,
     int64_t blob_gas_left)
 {
-    const auto result_or_error =
-        state::transition(state, block, block_hashes, tx, rev, vm, block_gas_left, blob_gas_left);
-    if (const auto result = get_if<state::TransactionReceipt>(&result_or_error))
-        state.apply(result->state_diff);
-    return result_or_error;
+    const auto execution_gas_or_error =
+        state::validate_transaction(state, block, tx, rev, block_gas_left, blob_gas_left);
+    if (const auto err = get_if<std::error_code>(&execution_gas_or_error))
+        return *err;
+
+    auto receipt = state::transition(
+        state, block, block_hashes, tx, rev, vm, get<int64_t>(execution_gas_or_error));
+    state.apply(receipt.state_diff);
+    return receipt;
 }
 
 void finalize(TestState& state, evmc_revision rev, const address& coinbase,

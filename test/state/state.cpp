@@ -297,7 +297,7 @@ void State::rollback(size_t checkpoint)
 
 /// Validates transaction and computes its execution gas limit (the amount of gas provided to EVM).
 /// @return  Execution gas limit or transaction validation error.
-std::variant<int64_t, std::error_code> validate_transaction(const Account& sender_acc,
+std::variant<int64_t, std::error_code> validate_transaction(const StateView& state_view,
     const BlockInfo& block, const Transaction& tx, evmc_revision rev, int64_t block_gas_left,
     int64_t blob_gas_left) noexcept
 {
@@ -350,6 +350,11 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
     if (tx.max_gas_price < block.base_fee)
         return make_error_code(FEE_CAP_LESS_THEN_BLOCKS);
 
+    // We need some information about the sender so lookup the account in the state.
+    // TODO: During transaction execution this account will be also needed, so we may pass it along.
+    const auto sender_acc = state_view.get_account(tx.sender).value_or(
+        StateView::Account{.code_hash = Account::EMPTY_CODE_HASH});
+
     if (sender_acc.code_hash != Account::EMPTY_CODE_HASH)
         return make_error_code(SENDER_NOT_EOA);  // Origin must not be a contract (EIP-3607).
 
@@ -369,7 +374,7 @@ std::variant<int64_t, std::error_code> validate_transaction(const Account& sende
     // Compute and check if sender has enough balance for the theoretical maximum transaction cost.
     // Note this is different from tx_max_cost computed with effective gas price later.
     // The computation cannot overflow if done with 512-bit precision.
-    auto max_total_fee = umul(intx::uint256{tx.gas_limit}, tx.max_gas_price);
+    auto max_total_fee = umul(uint256{tx.gas_limit}, tx.max_gas_price);
     max_total_fee += tx.value;
 
     if (tx.type == Transaction::Type::blob)
@@ -415,40 +420,24 @@ StateDiff finalize(const StateView& state_view, evmc_revision rev, const address
     return state.build_diff(rev);
 }
 
-std::variant<TransactionReceipt, std::error_code> transition(const StateView& state_view,
-    const BlockInfo& block, const BlockHashes& block_hashes, const Transaction& tx,
-    evmc_revision rev, evmc::VM& vm, int64_t block_gas_left, int64_t blob_gas_left)
+TransactionReceipt transition(const StateView& state_view, const BlockInfo& block,
+    const BlockHashes& block_hashes, const Transaction& tx, evmc_revision rev, evmc::VM& vm,
+    int64_t execution_gas_limit)
 {
     State state{state_view};
-    auto* sender_ptr = state.find(tx.sender);
 
-    // Validate transaction. The validation needs the sender account, so in case
-    // it doesn't exist provide an empty one. The account isn't created in the state
-    // to prevent the state modification in case the transaction is invalid.
-    const auto validation_result =
-        validate_transaction((sender_ptr != nullptr) ? *sender_ptr : Account{}, block, tx, rev,
-            block_gas_left, blob_gas_left);
-
-    if (holds_alternative<std::error_code>(validation_result))
-        return get<std::error_code>(validation_result);
-
-    // Once the transaction is valid, create new sender account.
-    // The account won't be empty because its nonce will be bumped.
-    auto& sender_acc = (sender_ptr != nullptr) ? *sender_ptr : state.insert(tx.sender);
-
-    assert(sender_acc.nonce < Account::NonceMax);  // Checked in transaction validation
+    auto& sender_acc = state.get_or_insert(tx.sender);
+    assert(sender_acc.nonce < Account::NonceMax);  // Required for valid tx.
     ++sender_acc.nonce;                            // Bump sender nonce.
 
-    const auto execution_gas_limit = get<int64_t>(validation_result);
-
     const auto base_fee = (rev >= EVMC_LONDON) ? block.base_fee : 0;
-    assert(tx.max_gas_price >= base_fee);                   // Checked at the front.
-    assert(tx.max_gas_price >= tx.max_priority_gas_price);  // Checked at the front.
+    assert(tx.max_gas_price >= base_fee);                   // Required for valid tx.
+    assert(tx.max_gas_price >= tx.max_priority_gas_price);  // Required for valid tx.
     const auto priority_gas_price =
         std::min(tx.max_priority_gas_price, tx.max_gas_price - base_fee);
     const auto effective_gas_price = base_fee + priority_gas_price;
 
-    assert(effective_gas_price <= tx.max_gas_price);
+    assert(effective_gas_price <= tx.max_gas_price);  // Required for valid tx.
     const auto tx_max_cost = tx.gas_limit * effective_gas_price;
 
     sender_acc.balance -= tx_max_cost;  // Modify sender balance after all checks.
@@ -456,7 +445,7 @@ std::variant<TransactionReceipt, std::error_code> transition(const StateView& st
     if (tx.type == Transaction::Type::blob)
     {
         const auto blob_fee = tx.blob_gas_used() * block.blob_base_fee;
-        assert(sender_acc.balance >= blob_fee);  // Checked at the front.
+        assert(sender_acc.balance >= blob_fee);  // Required for valid tx.
         sender_acc.balance -= blob_fee;
     }
 
