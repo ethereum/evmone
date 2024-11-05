@@ -137,11 +137,17 @@ public:
     const address& coinbase, std::optional<uint64_t> block_reward, std::span<const Ommer> ommers,
     std::span<const Withdrawal> withdrawals);
 
-[[nodiscard]] std::variant<TransactionReceipt, std::error_code> transition(const StateView& state,
-    const BlockInfo& block, const BlockHashes& block_hashes, const Transaction& tx,
-    evmc_revision rev, evmc::VM& vm, int64_t block_gas_left, int64_t blob_gas_left);
+/// Executes a valid transaction.
+///
+/// @return Transaction receipt with state diff.
+TransactionReceipt transition(const StateView& state, const BlockInfo& block,
+    const BlockHashes& block_hashes, const Transaction& tx, evmc_revision rev, evmc::VM& vm,
+    int64_t execution_gas_limit);
 
-std::variant<int64_t, std::error_code> validate_transaction(const Account& sender_acc,
-    const BlockInfo& block, const Transaction& tx, evmc_revision rev, int64_t block_gas_left,
-    int64_t blob_gas_left) noexcept;
+/// Validate a transaction.
+///
+/// @return Computed execution gas limit or validation error.
+[[nodiscard]] std::variant<int64_t, std::error_code> validate_transaction(
+    const StateView& state_view, const BlockInfo& block, const Transaction& tx, evmc_revision rev,
+    int64_t block_gas_left, int64_t blob_gas_left) noexcept;
 }  // namespace evmone::state
