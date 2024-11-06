@@ -128,13 +128,34 @@ state::AuthorizationList from_json<state::AuthorizationList>(const json::json& j
     for (const auto& a : j)
     {
         state::Authorization authorization{};
-        authorization.chain_id = from_json<uint64_t>(a.at("chainId"));
+        try
+        {
+            authorization.chain_id = from_json<uint64_t>(a.at("chainId"));
+        }
+        catch (const std::out_of_range&)
+        {
+            throw UnsupportedTestFeature("tests with out of range chainId are not supported");
+        }
         authorization.addr = from_json<address>(a.at("address"));
-        authorization.nonce = from_json<uint64_t>(a.at("nonce"));
+        try
+        {
+            authorization.nonce = from_json<uint64_t>(a.at("nonce"));
+        }
+        catch (const std::out_of_range&)
+        {
+            throw UnsupportedTestFeature("tests with out of range nonce are not supported");
+        }
         if (a.contains("signer"))
             authorization.signer = from_json<address>(a.at("signer"));
-        authorization.r = from_json<intx::uint256>(a.at("r"));
-        authorization.s = from_json<intx::uint256>(a.at("s"));
+        try
+        {
+            authorization.r = from_json<intx::uint256>(a.at("r"));
+            authorization.s = from_json<intx::uint256>(a.at("s"));
+        }
+        catch (const std::out_of_range&)
+        {
+            throw UnsupportedTestFeature("tests with out of range r and s are not supported");
+        }
         authorization.v = from_json<intx::uint256>(a.at("v"));
         o.emplace_back(authorization);
     }

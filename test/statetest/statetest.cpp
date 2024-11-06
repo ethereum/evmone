@@ -27,9 +27,16 @@ public:
     void TestBody() final
     {
         std::ifstream f{m_json_test_file};
-        const auto tests = evmone::test::load_state_tests(f);
-        for (const auto& test : tests)
-            evmone::test::run_state_test(test, m_vm, m_trace);
+        try
+        {
+            const auto tests = evmone::test::load_state_tests(f);
+            for (const auto& test : tests)
+                evmone::test::run_state_test(test, m_vm, m_trace);
+        }
+        catch (const evmone::test::UnsupportedTestFeature& ex)
+        {
+            GTEST_SKIP() << ex.what();
+        }
     }
 };
 

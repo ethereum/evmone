@@ -13,6 +13,10 @@ namespace json = nlohmann;
 
 namespace evmone::test
 {
+struct UnsupportedTestFeature : std::runtime_error
+{
+    using runtime_error::runtime_error;
+};
 
 struct TestMultiTransaction : state::Transaction
 {
