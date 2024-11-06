@@ -33,6 +33,9 @@ struct StateDiff
         /// New account code. If empty, it means the code has not changed.
         bytes code;
 
+        /// If true, account code was emptied due to resetting EIP-7702 delegation.
+        bool code_cleared = false;
+
         /// The list of the account's storage modifications: key => new value.
         /// The value 0 means the storage entry is deleted.
         std::vector<std::pair<bytes32, bytes32>> modified_storage;
