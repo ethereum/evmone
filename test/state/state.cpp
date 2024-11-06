@@ -381,8 +381,8 @@ std::variant<int64_t, std::error_code> validate_transaction(const StateView& sta
     const auto sender_acc = state_view.get_account(tx.sender).value_or(
         StateView::Account{.code_hash = Account::EMPTY_CODE_HASH});
 
-    // TODO this is relaxed for 7702
-    if (sender_acc.code_hash != Account::EMPTY_CODE_HASH)
+    if (sender_acc.code_hash != Account::EMPTY_CODE_HASH &&
+        !is_code_delegated(state_view.get_account_code(tx.sender)))
         return make_error_code(SENDER_NOT_EOA);  // Origin must not be a contract (EIP-3607).
 
     if (sender_acc.nonce == Account::NonceMax)  // Nonce value limit (EIP-2681).
