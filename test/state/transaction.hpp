@@ -36,6 +36,10 @@ struct Transaction
         /// The typed blob transaction (with array of blob hashes).
         /// Introduced by EIP-4844 https://eips.ethereum.org/EIPS/eip-4844.
         blob = 3,
+
+        /// The typed set code transaction (with authorization list).
+        /// Introduced by EIP-7702 https://eips.ethereum.org/EIPS/eip-7702.
+        set_code = 4,
     };
 
     /// Returns amount of blob gas used by this transaction

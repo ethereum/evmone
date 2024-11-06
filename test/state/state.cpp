@@ -325,6 +325,11 @@ std::variant<TransactionProperties, std::error_code> validate_transaction(
 
     switch (tx.type)
     {
+    case Transaction::Type::set_code:
+        if (rev < EVMC_PRAGUE)
+            return make_error_code(TX_TYPE_NOT_SUPPORTED);
+        [[fallthrough]];
+
     case Transaction::Type::blob:
     case Transaction::Type::eip1559:
         if (rev < EVMC_LONDON)
