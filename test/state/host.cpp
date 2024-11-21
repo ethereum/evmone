@@ -9,6 +9,14 @@
 
 namespace evmone::state
 {
+namespace
+{
+/// The value returned by EXTCODEHASH of an address with EIP-7702 delegation designator.
+/// See https://eips.ethereum.org/EIPS/eip-7702#delegation-designation
+constexpr auto EIP7702_CODE_HASH_SENTINEL =
+    0xeadcdba66a79ab5dce91622d1d75c8cff5cff0b96944c3bf1072cd08ce018329_bytes32;
+}  // namespace
+
 bool Host::account_exists(const address& addr) const noexcept
 {
     const auto* const acc = m_state.find(addr);
@@ -81,7 +89,7 @@ namespace
 /// unconditionally, because EOF contracts dot no have EXTCODE* instructions.
 bytes_view extcode(bytes_view code) noexcept
 {
-    return is_eof_container(code) ? code.substr(0, 2) : code;
+    return (is_eof_container(code) || is_code_delegated(code)) ? code.substr(0, 2) : code;
 }
 
 /// Check if an existing account is the "create collision"
@@ -120,8 +128,12 @@ bytes32 Host::get_code_hash(const address& addr) const noexcept
 
     // Load code and check if not EOF.
     // TODO: Optimize the second account lookup here.
-    if (is_eof_container(m_state.get_code(addr)))
+    const auto code = m_state.get_code(addr);
+    if (is_eof_container(code))
         return EOF_CODE_HASH_SENTINEL;
+
+    if (is_code_delegated(code))
+        return EIP7702_CODE_HASH_SENTINEL;
 
     return acc->code_hash;
 }
@@ -546,5 +558,18 @@ void Host::set_transient_storage(
     auto& slot = m_state.get(addr).transient_storage[key];
     m_state.journal_transient_storage_change(addr, key, slot);
     slot = value;
+}
+
+address Host::get_delegate_address(const address& addr) const noexcept
+{
+    const auto raw_code = m_state.get_code(addr);
+
+    if (!is_code_delegated(raw_code))
+        return {};
+
+    address delegate;
+    assert(raw_code.size() == std::size(DELEGATION_MAGIC) + sizeof(delegate));
+    std::copy_n(&raw_code[std::size(DELEGATION_MAGIC)], sizeof(delegate), delegate.bytes);
+    return delegate;
 }
 }  // namespace evmone::state

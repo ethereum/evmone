@@ -16,6 +16,34 @@ constexpr auto EXTCALL_ABORT = 2;
 
 namespace evmone::instr::core
 {
+namespace
+{
+/// Get target address of a code executing instruction.
+///
+/// Returns EIP-7702 delegate address if addr is delegated, or addr itself otherwise.
+/// Applies gas charge for accessing delegate account and may fail with out of gas.
+inline std::variant<evmc::address, Result> get_target_address(
+    const evmc::address& addr, int64_t& gas_left, ExecutionState& state) noexcept
+{
+    if (state.rev < EVMC_PRAGUE)
+        return addr;
+
+    const auto delegate_addr = state.host.get_delegate_address(addr);
+    if (delegate_addr == evmc::address{})
+        return addr;
+
+    const auto delegate_account_access_cost =
+        (state.host.access_account(delegate_addr) == EVMC_ACCESS_COLD ?
+                instr::cold_account_access_cost :
+                instr::warm_storage_read_cost);
+
+    if ((gas_left -= delegate_account_access_cost) < 0)
+        return Result{EVMC_OUT_OF_GAS, gas_left};
+
+    return delegate_addr;
+}
+}  // namespace
+
 /// Converts an opcode to matching EVMC call kind.
 consteval evmc_call_kind to_call_kind(Opcode op) noexcept
 {
