@@ -123,7 +123,7 @@ StateDiff State::build_diff(evmc_revision rev) const
 
         // Output only the new code.
         // TODO: Output also the code hash. It will be needed for DB update and MPT hash.
-        if (m.just_created && !m.code.empty())
+        if ((m.just_created && !m.code.empty()) || m.code_changed)
             a.code = m.code;
 
         for (const auto& [k, v] : m.storage)
@@ -511,9 +511,17 @@ TransactionReceipt transition(const StateView& state_view, const BlockInfo& bloc
             delegation_refund += EXISTING_AUTHORITY_REFUND;
         }
 
-        authority_ptr->code.reserve(std::size(DELEGATION_MAGIC) + std::size(auth.addr.bytes));
-        authority_ptr->code = DELEGATION_MAGIC;
-        authority_ptr->code += auth.addr;
+        bytes new_code(bytes(DELEGATION_MAGIC) + bytes(auth.addr));
+        if (authority_ptr->code != new_code)
+            authority_ptr->code_changed = true;
+        authority_ptr->code = std::move(new_code);
+
+        // TODO The hash of delegated accounts is not used anywhere,
+        // it is only important that it is not a hash of empty.
+        // We could avoid this hashing, if we found a way to not rely only on code_hash for
+        // emptiness checks.
+        // (e.g for emptiness check code_hash == EMPTY_CODE_HASH && !code_changed)
+        authority_ptr->code_hash = keccak256(authority_ptr->code);
 
         ++authority_ptr->nonce;
     }
