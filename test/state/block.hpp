@@ -62,6 +62,10 @@ struct BlockInfo
 /// Computes the current blob gas price based on the excess blob gas.
 intx::uint256 compute_blob_gas_price(uint64_t excess_blob_gas) noexcept;
 
+/// Computes the current excess blob gas based on the parent.
+intx::uint256 calc_excess_blob_gas(
+    uint64_t parent_excess_blob_gas, uint64_t parent_blob_gas_used) noexcept;
+
 /// Defines how to RLP-encode a Withdrawal.
 [[nodiscard]] bytes rlp_encode(const Withdrawal& withdrawal);
 }  // namespace evmone::state

@@ -80,6 +80,14 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
     return {std::move(receipts), std::move(rejected_txs), cumulative_gas_used, bloom};
 }
 
+bool validate_block(const TestBlock& test_block, const BlockHeader& parent_header) noexcept
+{
+    if (test_block.expected_block_header.excess_blob_gas !=
+        state::calc_excess_blob_gas(parent_header.excess_blob_gas, parent_header.blob_gas_used))
+        return false;
+    return true;
+}
+
 std::optional<int64_t> mining_reward(evmc_revision rev) noexcept
 {
     if (rev < EVMC_BYZANTIUM)
@@ -128,6 +136,7 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
         // Validate the genesis block header.
         EXPECT_EQ(c.genesis_block_header.block_number, 0);
         EXPECT_EQ(c.genesis_block_header.gas_used, 0);
+        EXPECT_EQ(c.genesis_block_header.blob_gas_used, 0);
         EXPECT_EQ(c.genesis_block_header.transactions_root, state::EMPTY_MPT_HASH);
         EXPECT_EQ(c.genesis_block_header.receipts_root, state::EMPTY_MPT_HASH);
         EXPECT_EQ(c.genesis_block_header.withdrawal_root,
@@ -141,11 +150,17 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
         TestBlockHashes block_hashes{
             {c.genesis_block_header.block_number, c.genesis_block_header.hash}};
 
+        // FIXME: reference?
+        BlockHeader parent_header = c.genesis_block_header;
+
         for (const auto& test_block : c.test_blocks)
         {
             auto bi = test_block.block_info;
 
             const auto rev = c.rev.get_revision(bi.timestamp);
+
+            if (!validate_block(test_block, parent_header))
+                continue;
 
             const auto res = apply_block(
                 state, vm, bi, block_hashes, test_block.transactions, rev, mining_reward(rev));
@@ -171,6 +186,8 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
             EXPECT_EQ(res.gas_used, test_block.expected_block_header.gas_used);
             EXPECT_EQ(
                 bytes_view{res.bloom}, bytes_view{test_block.expected_block_header.logs_bloom});
+
+            parent_header = test_block.expected_block_header;
 
             // TODO: Add difficulty calculation verification.
         }

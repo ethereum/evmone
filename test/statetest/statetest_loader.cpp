@@ -228,6 +228,7 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
         parent_timestamp = from_json<int64_t>(*parent_timestamp_it);
 
     uint64_t excess_blob_gas = 0;
+    // FIXME: refactor
     if (const auto it = j.find("parentExcessBlobGas"); it != j.end())
     {
         const auto parent_excess_blob_gas = from_json<uint64_t>(*it);

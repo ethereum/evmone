@@ -42,6 +42,7 @@ BlockHeader from_json<BlockHeader>(const json::json& j)
         .withdrawal_root = load_if_exists<hash256>(j, "withdrawalsRoot"),
         .parent_beacon_block_root = load_if_exists<hash256>(j, "parentBeaconBlockRoot"),
         .excess_blob_gas = load_if_exists<uint64_t>(j, "excessBlobGas"),
+        .blob_gas_used = from_json<uint64_t>(j.at("blobGasUsed")),
     };
 }
 
@@ -72,11 +73,12 @@ static TestBlock load_test_block(const json::json& j, evmc_revision rev)
         }
     }
 
-    if (const auto it = j.find("expectException"); it != j.end())
-    {
-        // TODO: Add support for invalid blocks.
-        throw UnsupportedTestFeature("tests with invalid blocks are not supported");
-    }
+    // FIXME: uncomment/remove
+    // if (const auto it = j.find("expectException"); it != j.end())
+    // {
+    //     // TODO: Add support for invalid blocks.
+    //     throw UnsupportedTestFeature("tests with invalid blocks are not supported");
+    // }
 
     if (const auto it = j.find("transactionSequence"); it != j.end())
     {
