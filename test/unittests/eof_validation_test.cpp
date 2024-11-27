@@ -116,7 +116,7 @@ TEST_F(eof_validation, EOF1_code_section_0_size)
 
 TEST_F(eof_validation, EOF1_data_section_before_code_section)
 {
-    add_test_case("EF0001 010004 030001 0200010001 00 00800000 AA FE",
+    add_test_case("EF0001 010004 040001 0200010001 00 00800000 AA FE",
         EOFValidationError::code_section_missing);
 }
 
@@ -263,13 +263,23 @@ TEST_F(eof_validation, EOF1_invalid_type_section_size)
 
 TEST_F(eof_validation, EOF1_invalid_section_0_type)
 {
-    add_test_case("EF0001 010004 0200010001 040000 00 00000000 00",
+    add_test_case("EF0001 010004 0200010002 040000 00 00000000 5FE4",
         EOFValidationError::invalid_first_section_type);
     add_test_case("EF0001 010004 0200010003 040000 00 00010000 60005C",
         EOFValidationError::invalid_first_section_type);
-    add_test_case("EF0001 010004 0200010001 040000 00 01800000 FE",
+    add_test_case("EF0001 010004 0200010002 040000 00 007F0000 5FE4",
+        EOFValidationError::invalid_first_section_type);
+    add_test_case("EF0001 010004 0200010002 040000 00 00810000 5FE4",
+        EOFValidationError::invalid_first_section_type);
+    add_test_case("EF0001 010004 0200010002 040000 00 00FF0000 5FE4",
+        EOFValidationError::invalid_first_section_type);
+    add_test_case("EF0001 010004 0200010002 040000 00 01800000 50E4",
         EOFValidationError::invalid_first_section_type);
     add_test_case("EF0001 010004 0200010003 040000 00 02030000 60005C",
+        EOFValidationError::invalid_first_section_type);
+    add_test_case("EF0001 010004 0200010002 040000 00 80800000 50E4",
+        EOFValidationError::invalid_first_section_type);
+    add_test_case("EF0001 010004 0200010002 040000 00 FF800000 50E4",
         EOFValidationError::invalid_first_section_type);
 }
 
