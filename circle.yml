@@ -391,8 +391,8 @@ jobs:
     steps:
       - build
       - download_execution_spec_tests:
-          release: eip7692@v2.0.0
-          fixtures_suffix: eip7692-osaka
+          release: eip7692@v2.1.0
+          fixtures_suffix: eip7692
       - run:
           name: "EOF pre-release execution spec tests (state_tests)"
           working_directory: ~/build
