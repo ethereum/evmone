@@ -7,7 +7,7 @@
 
 namespace evmone::state
 {
-static constexpr int64_t TARGET_BLOB_GAS_PER_BLOCK = 393216;
+static constexpr uint64_t TARGET_BLOB_GAS_PER_BLOCK = 393216;
 
 intx::uint256 compute_blob_gas_price(uint64_t excess_blob_gas) noexcept
 {
@@ -20,6 +20,7 @@ intx::uint256 compute_blob_gas_price(uint64_t excess_blob_gas) noexcept
         intx::uint256 numerator_accum = factor * denominator;
         while (numerator_accum > 0)
         {
+            auto hnm = intx::hex(numerator_accum);
             output += numerator_accum;
             numerator_accum = (numerator_accum * numerator) / (denominator * i);
             i += 1;
@@ -36,13 +37,9 @@ intx::uint256 calc_excess_blob_gas(
     uint64_t parent_excess_blob_gas, uint64_t parent_blob_gas_used) noexcept
 {
     if (parent_excess_blob_gas + parent_blob_gas_used < TARGET_BLOB_GAS_PER_BLOCK)
-    {
         return 0;
-    }
     else
-    {
         return parent_excess_blob_gas + parent_blob_gas_used - TARGET_BLOB_GAS_PER_BLOCK;
-    }
 }
 
 [[nodiscard]] bytes rlp_encode(const Withdrawal& withdrawal)

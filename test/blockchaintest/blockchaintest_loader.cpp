@@ -42,7 +42,7 @@ BlockHeader from_json<BlockHeader>(const json::json& j)
         .withdrawal_root = load_if_exists<hash256>(j, "withdrawalsRoot"),
         .parent_beacon_block_root = load_if_exists<hash256>(j, "parentBeaconBlockRoot"),
         .excess_blob_gas = load_if_exists<uint64_t>(j, "excessBlobGas"),
-        .blob_gas_used = from_json<uint64_t>(j.at("blobGasUsed")),
+        .blob_gas_used = load_if_exists<uint64_t>(j, "blobGasUsed"),
     };
 }
 
@@ -64,6 +64,7 @@ static TestBlock load_test_block(const json::json& j, evmc_revision rev)
         tb.block_info.parent_beacon_block_root = tb.expected_block_header.parent_beacon_block_root;
         tb.block_info.blob_base_fee =
             compute_blob_gas_price(tb.expected_block_header.excess_blob_gas);
+        tb.block_info.excess_blob_gas = tb.expected_block_header.excess_blob_gas;
 
         // Override prev_randao with difficulty pre-Merge
         if (rev < EVMC_PARIS)
@@ -125,7 +126,13 @@ BlockchainTest load_blockchain_test_case(const std::string& name, const json::js
     bt.rev = to_rev_schedule(j.at("network").get<std::string>());
 
     for (const auto& el : j.at("blocks"))
-        bt.test_blocks.emplace_back(load_test_block(el, bt.rev.get_revision(0)));
+    {
+        if (const auto it = el.find("rlp_decoded"); it != el.end())
+            bt.test_blocks.emplace_back(
+                load_test_block(el.at("rlp_decoded"), bt.rev.get_revision(0)));
+        else
+            bt.test_blocks.emplace_back(load_test_block(el, bt.rev.get_revision(0)));
+    }
 
     bt.expectation.last_block_hash = from_json<hash256>(j.at("lastblockhash"));
 

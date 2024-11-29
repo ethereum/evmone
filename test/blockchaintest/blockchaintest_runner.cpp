@@ -7,6 +7,7 @@
 #include "../test/statetest/statetest.hpp"
 #include "blockchaintest.hpp"
 #include <gtest/gtest.h>
+#include <iostream>
 
 namespace evmone::test
 {
@@ -82,7 +83,7 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
 
 bool validate_block(const TestBlock& test_block, const BlockHeader& parent_header) noexcept
 {
-    if (test_block.expected_block_header.excess_blob_gas !=
+    if (test_block.block_info.excess_blob_gas !=
         state::calc_excess_blob_gas(parent_header.excess_blob_gas, parent_header.blob_gas_used))
         return false;
     return true;
@@ -196,7 +197,7 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
             std::holds_alternative<TestState>(c.expectation.post_state) ?
                 state::mpt_hash(std::get<TestState>(c.expectation.post_state)) :
                 std::get<hash256>(c.expectation.post_state);
-        EXPECT_TRUE(state::mpt_hash(state) == expected_post_hash)
+        EXPECT_EQ(state::mpt_hash(state), expected_post_hash)
             << "Result state:\n"
             << print_state(state)
             << (std::holds_alternative<TestState>(c.expectation.post_state) ?
