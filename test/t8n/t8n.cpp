@@ -111,7 +111,8 @@ int main(int argc, const char* argv[])
                 block.prev_randao = intx::be::store<bytes32>(intx::uint256{current_difficulty});
         }
 
-        j_result["currentBaseFee"] = hex0x(block.base_fee);
+        if (rev >= EVMC_LONDON)
+            j_result["currentBaseFee"] = hex0x(block.base_fee);
 
         int64_t cumulative_gas_used = 0;
         int64_t blob_gas_left = state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK;
