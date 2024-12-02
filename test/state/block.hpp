@@ -51,10 +51,6 @@ struct BlockInfo
     /// for computing the blob gas price in the current block.
     uint64_t excess_blob_gas = 0;
 
-    /// The blob gas price parameter from EIP-4844.
-    /// This value is not stored in block headers directly but computed from excess_blob_gas.
-    intx::uint256 blob_base_fee = 0;
-
     std::vector<Ommer> ommers;
     std::vector<Withdrawal> withdrawals;
 };
