@@ -6,6 +6,7 @@
 #include "../state/rlp.hpp"
 #include "../test/statetest/statetest.hpp"
 #include "blockchaintest.hpp"
+#include <evmone_precompiles/kzg.hpp>
 #include <gtest/gtest.h>
 #include <iostream>
 
@@ -37,7 +38,7 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
 
     std::vector<state::Log> txs_logs;
     int64_t block_gas_left = block.gas_limit;
-    int64_t blob_gas_left = state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK;
+    int64_t blob_gas_left = static_cast<int64_t>(block.blob_gas_used);
 
     std::vector<RejectedTransaction> rejected_txs;
     std::vector<state::TransactionReceipt> receipts;
@@ -49,8 +50,8 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
         const auto& tx = txs[i];
 
         const auto computed_tx_hash = keccak256(rlp::encode(tx));
-        auto res =
-            transition(state, block, block_hashes, tx, rev, vm, block_gas_left, blob_gas_left);
+        auto res = test::transition(
+            state, block, block_hashes, tx, rev, vm, block_gas_left, blob_gas_left);
 
         if (holds_alternative<std::error_code>(res))
         {
@@ -70,7 +71,7 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
                 receipt.post_state = state::mpt_hash(state);
 
             block_gas_left -= receipt.gas_used;
-            blob_gas_left -= tx.blob_gas_used();
+            blob_gas_left -= static_cast<int64_t>(tx.blob_gas_used());
             receipts.emplace_back(std::move(receipt));
         }
     }
@@ -83,8 +84,48 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
 
 bool validate_block(const TestBlock& test_block, const BlockHeader& parent_header) noexcept
 {
+    // Check that the excess blob gas was updated correctly.
     if (test_block.block_info.excess_blob_gas !=
         state::calc_excess_blob_gas(parent_header.excess_blob_gas, parent_header.blob_gas_used))
+        return false;
+
+    // TODO: missing check for sender balance enough to cover gas
+    // TODO: missing the update to the balance check from EIP-4844
+
+    uint64_t blob_gas_used = 0;
+
+    for (const auto& tx : test_block.transactions)
+    {
+        // Add validity logic specific to blob txs.
+        if (tx.type == state::Transaction::Type::blob)
+        {
+            // There must be at least one blob.
+            if (tx.blob_hashes.empty())
+                return false;
+
+            // All versioned blob hashes must start with VERSIONED_HASH_VERSION_KZG.
+            for (const auto& h : tx.blob_hashes)
+            {
+                if (std::byte(h.bytes[0]) != crypto::VERSIONED_HASH_VERSION_KZG)
+                    return false;
+            }
+
+            // Ensure that the user was willing to at least pay the current blob base fee.
+            if (tx.max_blob_gas_price <
+                state::compute_blob_gas_price(test_block.block_info.excess_blob_gas))
+                return false;
+
+            // Keep track of total blob gas spent in the block
+            blob_gas_used += tx.blob_gas_used();
+        }
+    }
+
+    // Ensure the total blob gas spent is at most equal to the limit
+    if (test_block.block_info.blob_gas_used > state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK)
+        return false;
+
+    // Ensure blob_gas_used matches header
+    if (test_block.block_info.blob_gas_used != blob_gas_used)
         return false;
     return true;
 }

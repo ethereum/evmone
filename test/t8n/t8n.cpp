@@ -114,7 +114,7 @@ int main(int argc, const char* argv[])
         j_result["currentBaseFee"] = hex0x(block.base_fee);
 
         int64_t cumulative_gas_used = 0;
-        int64_t blob_gas_left = state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK;
+        int64_t blob_gas_left = static_cast<int64_t>(state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK);
         std::vector<state::Transaction> transactions;
         std::vector<state::TransactionReceipt> receipts;
         int64_t block_gas_left = block.gas_limit;
@@ -207,7 +207,7 @@ int main(int argc, const char* argv[])
                         j_receipt["root"] = "";
                         j_receipt["status"] = "0x1";
                         j_receipt["transactionIndex"] = hex0x(i);
-                        blob_gas_left -= tx.blob_gas_used();
+                        blob_gas_left -= static_cast<int64_t>(tx.blob_gas_used());
                         transactions.emplace_back(std::move(tx));
                         block_gas_left -= receipt.gas_used;
                         receipts.emplace_back(std::move(receipt));
@@ -235,8 +235,8 @@ int main(int argc, const char* argv[])
         j_result["gasUsed"] = hex0x(cumulative_gas_used);
         if (rev >= EVMC_CANCUN)
         {
-            j_result["blobGasUsed"] =
-                hex0x(state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK - blob_gas_left);
+            j_result["blobGasUsed"] = hex0x(
+                static_cast<int64_t>(state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK) - blob_gas_left);
             j_result["currentExcessBlobGas"] = hex0x(block.excess_blob_gas);
         }
         if (rev >= EVMC_PRAGUE)

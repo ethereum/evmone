@@ -256,6 +256,7 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
         .parent_beacon_block_root = load_if_exists<hash256>(j, "parentBeaconBlockRoot"),
         .base_fee = base_fee,
         .excess_blob_gas = excess_blob_gas,
+        .blob_gas_used = load_if_exists<uint64_t>(j, "blobGasUsed"),
         .ommers = std::move(ommers),
         .withdrawals = std::move(withdrawals),
     };

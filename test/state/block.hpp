@@ -33,7 +33,7 @@ struct Withdrawal
 struct BlockInfo
 {
     /// Max amount of blob gas allowed in block. It's constant now but can be dynamic in the future.
-    static constexpr int64_t MAX_BLOB_GAS_PER_BLOCK = 786432;
+    static constexpr uint64_t MAX_BLOB_GAS_PER_BLOCK = 786432;
 
     int64_t number = 0;
     int64_t timestamp = 0;
@@ -50,6 +50,8 @@ struct BlockInfo
     /// The "excess blob gas" parameter from EIP-4844
     /// for computing the blob gas price in the current block.
     uint64_t excess_blob_gas = 0;
+
+    uint64_t blob_gas_used = 0;
 
     std::vector<Ommer> ommers;
     std::vector<Withdrawal> withdrawals;
