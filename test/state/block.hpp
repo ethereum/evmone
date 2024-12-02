@@ -45,6 +45,8 @@ struct BlockInfo
     hash256 parent_ommers_hash;
     bytes32 prev_randao;
     hash256 parent_beacon_block_root;
+
+    /// The EIP-1559 base fee, since London.
     uint64_t base_fee = 0;
 
     /// The "excess blob gas" parameter from EIP-4844
