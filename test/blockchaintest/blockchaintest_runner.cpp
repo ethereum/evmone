@@ -35,7 +35,9 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
     const state::BlockHashes& block_hashes, const std::vector<state::Transaction>& txs,
     evmc_revision rev, std::optional<int64_t> block_reward)
 {
-    const auto system_call_diff = system_call(state, block, block_hashes, rev, vm);
+    TestState block_state(state);
+    const auto system_call_diff = system_call(block_state, block, block_hashes, rev, vm);
+    block_state.apply(system_call_diff);
 
     std::vector<state::Log> txs_logs;
     int64_t block_gas_left = block.gas_limit;
@@ -52,7 +54,7 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
 
         const auto computed_tx_hash = keccak256(rlp::encode(tx));
         auto res = test::transition(
-            state, block, block_hashes, tx, rev, vm, block_gas_left, blob_gas_left);
+            block_state, block, block_hashes, tx, rev, vm, block_gas_left, blob_gas_left);
 
         if (holds_alternative<std::error_code>(res))
         {
@@ -62,6 +64,7 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
         else
         {
             auto& receipt = get<state::TransactionReceipt>(res);
+            block_state.apply(receipt.state_diff);
 
             const auto& tx_logs = receipt.logs;
 
@@ -78,7 +81,8 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
     }
 
     const auto finalize_diff =
-        finalize(state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
+        finalize(block_state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
+    // No need to finalize on block_state here.
 
     const auto bloom = compute_bloom_filter(receipts);
 
