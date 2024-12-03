@@ -8,7 +8,6 @@
 #include "blockchaintest.hpp"
 #include <evmone_precompiles/kzg.hpp>
 #include <gtest/gtest.h>
-#include <iostream>
 
 namespace evmone::test
 {
@@ -204,12 +203,12 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
 
         TestBlockHashes block_hashes{
             {c.genesis_block_header.block_number, c.genesis_block_header.hash}};
-
-        // FIXME: reference?
-        BlockHeader parent_header = c.genesis_block_header;
-
-        for (const auto& test_block : c.test_blocks)
+        for (size_t i = 0; i < c.test_blocks.size(); ++i)
         {
+            const auto& test_block = c.test_blocks[i];
+            const auto& parent_header =
+                i == 0 ? c.genesis_block_header : c.test_blocks[i - 1].expected_block_header;
+
             auto bi = test_block.block_info;
 
             const auto rev = c.rev.get_revision(bi.timestamp);
@@ -243,8 +242,6 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
             EXPECT_EQ(res.gas_used, test_block.expected_block_header.gas_used);
             EXPECT_EQ(
                 bytes_view{res.bloom}, bytes_view{test_block.expected_block_header.logs_bloom});
-
-            parent_header = test_block.expected_block_header;
 
             // TODO: Add difficulty calculation verification.
         }

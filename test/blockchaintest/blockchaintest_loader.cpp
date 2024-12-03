@@ -73,13 +73,6 @@ static TestBlock load_test_block(const json::json& j, evmc_revision rev)
         }
     }
 
-    // FIXME: uncomment/remove
-    // if (const auto it = j.find("expectException"); it != j.end())
-    // {
-    //     // TODO: Add support for invalid blocks.
-    //     throw UnsupportedTestFeature("tests with invalid blocks are not supported");
-    // }
-
     if (const auto it = j.find("transactionSequence"); it != j.end())
     {
         // TODO: Add support for invalid blocks.

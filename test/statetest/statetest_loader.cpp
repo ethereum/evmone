@@ -228,15 +228,11 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
         parent_timestamp = from_json<int64_t>(*parent_timestamp_it);
 
     uint64_t excess_blob_gas = 0;
-    // FIXME: refactor
     if (const auto it = j.find("parentExcessBlobGas"); it != j.end())
     {
         const auto parent_excess_blob_gas = from_json<uint64_t>(*it);
         const auto parent_blob_gas_used = from_json<uint64_t>(j.at("parentBlobGasUsed"));
-        static constexpr uint64_t TARGET_BLOB_GAS_PER_BLOCK = 0x60000;
-        excess_blob_gas =
-            std::max(parent_excess_blob_gas + parent_blob_gas_used, TARGET_BLOB_GAS_PER_BLOCK) -
-            TARGET_BLOB_GAS_PER_BLOCK;
+        excess_blob_gas = state::calc_excess_blob_gas(parent_excess_blob_gas, parent_blob_gas_used);
     }
     else if (const auto it2 = j.find("currentExcessBlobGas"); it2 != j.end())
     {

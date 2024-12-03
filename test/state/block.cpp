@@ -32,7 +32,7 @@ intx::uint256 compute_blob_gas_price(uint64_t excess_blob_gas) noexcept
     return fake_exponential(MIN_BLOB_GASPRICE, excess_blob_gas, BLOB_GASPRICE_UPDATE_FRACTION);
 }
 
-intx::uint256 calc_excess_blob_gas(
+uint64_t calc_excess_blob_gas(
     uint64_t parent_excess_blob_gas, uint64_t parent_blob_gas_used) noexcept
 {
     if (parent_excess_blob_gas + parent_blob_gas_used < TARGET_BLOB_GAS_PER_BLOCK)
