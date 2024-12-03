@@ -82,22 +82,21 @@ bytes32 TestBlockHashes::get_block_hash(int64_t block_number) const noexcept
 
     auto receipt = state::transition(
         state, block, block_hashes, tx, rev, vm, get<int64_t>(execution_gas_or_error));
-    state.apply(receipt.state_diff);
     return receipt;
 }
 
-void finalize(TestState& state, evmc_revision rev, const address& coinbase,
+state::StateDiff finalize(TestState& state, evmc_revision rev, const address& coinbase,
     std::optional<uint64_t> block_reward, std::span<const state::Ommer> ommers,
     std::span<const state::Withdrawal> withdrawals)
 {
     const auto diff = state::finalize(state, rev, coinbase, block_reward, ommers, withdrawals);
-    state.apply(diff);
+    return diff;
 }
 
-void system_call(TestState& state, const state::BlockInfo& block,
+state::StateDiff system_call(TestState& state, const state::BlockInfo& block,
     const state::BlockHashes& block_hashes, evmc_revision rev, evmc::VM& vm)
 {
     const auto diff = state::system_call(state, block, block_hashes, rev, vm);
-    state.apply(diff);
+    return diff;
 }
 }  // namespace evmone::test

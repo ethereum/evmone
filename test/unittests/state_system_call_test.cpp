@@ -35,7 +35,8 @@ TEST_F(state_system_call, beacon_roots)
     state.insert(
         BEACON_ROOTS_ADDRESS, {.code = sstore(OP_NUMBER, calldataload(0)) + sstore(0, OP_CALLER)});
 
-    system_call(state, block, block_hashes, EVMC_CANCUN, vm);
+    const auto diff = system_call(state, block, block_hashes, EVMC_CANCUN, vm);
+    state.apply(diff);
 
     ASSERT_EQ(state.size(), 1);
     EXPECT_FALSE(state.contains(SYSTEM_ADDRESS));
@@ -56,7 +57,8 @@ TEST_F(state_system_call, history_storage)
     state.insert(HISTORY_STORAGE_ADDRESS,
         {.code = sstore(OP_NUMBER, calldataload(0)) + sstore(0, OP_CALLER)});
 
-    system_call(state, block, block_hashes, EVMC_PRAGUE, vm);
+    const auto diff = system_call(state, block, block_hashes, EVMC_PRAGUE, vm);
+    state.apply(diff);
 
     ASSERT_EQ(state.size(), 1);
     EXPECT_FALSE(state.contains(SYSTEM_ADDRESS));
