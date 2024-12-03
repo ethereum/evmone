@@ -20,7 +20,6 @@ intx::uint256 compute_blob_gas_price(uint64_t excess_blob_gas) noexcept
         intx::uint256 numerator_accum = factor * denominator;
         while (numerator_accum > 0)
         {
-            auto hnm = intx::hex(numerator_accum);
             output += numerator_accum;
             numerator_accum = (numerator_accum * numerator) / (denominator * i);
             i += 1;

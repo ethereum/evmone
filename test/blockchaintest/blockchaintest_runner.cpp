@@ -104,6 +104,8 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
 
 bool validate_block(const TestBlock& test_block, const BlockHeader& parent_header) noexcept
 {
+    // NOTE: includes only block validity unrelated to individual txs. See `apply_block`.
+
     // Check that the excess blob gas was updated correctly.
     if (test_block.block_info.excess_blob_gas !=
         state::calc_excess_blob_gas(parent_header.excess_blob_gas, parent_header.blob_gas_used))
