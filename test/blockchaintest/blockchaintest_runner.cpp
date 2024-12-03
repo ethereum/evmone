@@ -101,44 +101,10 @@ bool validate_block(const TestBlock& test_block, const BlockHeader& parent_heade
         state::calc_excess_blob_gas(parent_header.excess_blob_gas, parent_header.blob_gas_used))
         return false;
 
-    // TODO: missing check for sender balance enough to cover gas
-    // TODO: missing the update to the balance check from EIP-4844
-
-    // uint64_t blob_gas_used = 0;
-
-    // for (const auto& tx : test_block.transactions)
-    // {
-    //     // Add validity logic specific to blob txs.
-    //     if (tx.type == state::Transaction::Type::blob)
-    //     {
-    //         // There must be at least one blob.
-    //         if (tx.blob_hashes.empty())
-    //             return false;
-
-    //         // All versioned blob hashes must start with VERSIONED_HASH_VERSION_KZG.
-    //         for (const auto& h : tx.blob_hashes)
-    //         {
-    //             if (std::byte(h.bytes[0]) != crypto::VERSIONED_HASH_VERSION_KZG)
-    //                 return false;
-    //         }
-
-    //         // Ensure that the user was willing to at least pay the current blob base fee.
-    //         if (tx.max_blob_gas_price <
-    //             state::compute_blob_gas_price(test_block.block_info.excess_blob_gas))
-    //             return false;
-
-    //         // Keep track of total blob gas spent in the block
-    //         blob_gas_used += tx.blob_gas_used();
-    //     }
-    // }
-
     // Ensure the total blob gas spent is at most equal to the limit
     if (test_block.block_info.blob_gas_used > state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK)
         return false;
 
-    // Ensure blob_gas_used matches header
-    // if (test_block.block_info.blob_gas_used != blob_gas_used)
-    //     return false;
     return true;
 }
 
