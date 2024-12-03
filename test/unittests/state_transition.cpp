@@ -59,13 +59,7 @@ void state_transition::TearDown()
 
     const auto res = test::transition(state, block, block_hashes, tx, rev, selected_vm,
         block.gas_limit, state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK);
-    if (holds_alternative<TransactionReceipt>(res))
-    {
-        state.apply(std::get<TransactionReceipt>(res).state_diff);
-    }
-    const auto finalize_diff =
-        test::finalize(state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
-    state.apply(finalize_diff);
+    test::finalize(state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
     const auto& post = state;
 
     if (const auto expected_error = make_error_code(expect.tx_error))

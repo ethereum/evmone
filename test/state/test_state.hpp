@@ -87,12 +87,12 @@ public:
     int64_t blob_gas_left);
 
 /// Wrapping of state::finalize() which operates on TestState.
-state::StateDiff finalize(TestState& state, evmc_revision rev, const address& coinbase,
+void finalize(TestState& state, evmc_revision rev, const address& coinbase,
     std::optional<uint64_t> block_reward, std::span<const state::Ommer> ommers,
     std::span<const state::Withdrawal> withdrawals);
 
 /// Wrapping of state::system_call() which operates on TestState.
-state::StateDiff system_call(TestState& state, const state::BlockInfo& block,
+void system_call(TestState& state, const state::BlockInfo& block,
     const state::BlockHashes& block_hashes, evmc_revision rev, evmc::VM& vm);
 
 }  // namespace test

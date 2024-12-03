@@ -36,8 +36,7 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
     evmc_revision rev, std::optional<int64_t> block_reward)
 {
     TestState block_state(state);
-    const auto system_call_diff = system_call(block_state, block, block_hashes, rev, vm);
-    block_state.apply(system_call_diff);
+    system_call(block_state, block, block_hashes, rev, vm);
 
     std::vector<state::Log> txs_logs;
     int64_t block_gas_left = block.gas_limit;
@@ -64,7 +63,6 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
         else
         {
             auto& receipt = get<state::TransactionReceipt>(res);
-            block_state.apply(receipt.state_diff);
 
             const auto& tx_logs = receipt.logs;
 
@@ -80,20 +78,13 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
         }
     }
 
-    const auto finalize_diff =
-        finalize(block_state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
-    // No need to finalize on block_state here.
+    finalize(block_state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
 
     const auto bloom = compute_bloom_filter(receipts);
 
     if (rejected_txs.empty() && blob_gas_left == 0)
     {
-        state.apply(system_call_diff);
-        for (const auto& receipt : receipts)
-        {
-            state.apply(receipt.state_diff);
-        }
-        state.apply(finalize_diff);
+        state = std::move(block_state);
         return {std::move(receipts), std::move(rejected_txs), cumulative_gas_used, bloom, true};
     }
     else

@@ -136,9 +136,7 @@ int main(int argc, const char* argv[])
                 j_result["receipts"] = json::json::array();
                 j_result["rejected"] = json::json::array();
 
-                const auto system_call_diff =
-                    test::system_call(state, block, block_hashes, rev, vm);
-                state.apply(system_call_diff);
+                test::system_call(state, block, block_hashes, rev, vm);
 
                 for (size_t i = 0; i < j_txs.size(); ++i)
                 {
@@ -213,7 +211,6 @@ int main(int argc, const char* argv[])
                         transactions.emplace_back(std::move(tx));
                         block_gas_left -= receipt.gas_used;
                         receipts.emplace_back(std::move(receipt));
-                        state.apply(receipt.state_diff);
                     }
 
                     // Restore original std::clog buffer (otherwise std::clog crashes at exit).
@@ -222,9 +219,8 @@ int main(int argc, const char* argv[])
                 }
             }
 
-            const auto finalize_diff = test::finalize(
+            test::finalize(
                 state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
-            state.apply(finalize_diff);
 
             j_result["logsHash"] = hex0x(logs_hash(txs_logs));
             j_result["stateRoot"] = hex0x(state::mpt_hash(state));

@@ -29,14 +29,9 @@ void run_state_test(const StateTransitionTest& test, evmc::VM& vm, bool trace_su
 
             const auto res = test::transition(state, test.block, test.block_hashes, tx, rev, vm,
                 test.block.gas_limit, state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK);
-            if (holds_alternative<state::TransactionReceipt>(res))
-            {
-                state.apply(std::get<state::TransactionReceipt>(res).state_diff);
-            }
 
             // Finalize block with reward 0.
-            const auto finalize_diff = test::finalize(state, rev, test.block.coinbase, 0, {}, {});
-            state.apply(finalize_diff);
+            test::finalize(state, rev, test.block.coinbase, 0, {}, {});
 
             const auto state_root = state::mpt_hash(state);
 
