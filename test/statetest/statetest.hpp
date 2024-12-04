@@ -136,3 +136,13 @@ inline std::string hex0x(const bytes_view& v)
     return "0x" + evmc::hex(v);
 }
 }  // namespace evmone::test
+
+inline std::ostream& operator<<(std::ostream& out, const evmone::address& a)
+{
+    return out << evmone::test::hex0x(a);
+}
+
+inline std::ostream& operator<<(std::ostream& out, const evmone::bytes32& b)
+{
+    return out << evmone::test::hex0x(b);
+}
