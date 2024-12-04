@@ -17,7 +17,6 @@ target_sources(
     ethash_difficulty.hpp
     ethash_difficulty.cpp
     hash_utils.hpp
-    hash_utils.cpp
     host.hpp
     host.cpp
     mpt.hpp
