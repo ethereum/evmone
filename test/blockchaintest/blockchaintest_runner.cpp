@@ -39,7 +39,7 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
 
     std::vector<state::Log> txs_logs;
     int64_t block_gas_left = block.gas_limit;
-    auto blob_gas_left = static_cast<int64_t>(block.blob_gas_used);
+    auto blob_gas_left = static_cast<int64_t>(block.blob_gas_used.value_or(0));
 
     std::vector<RejectedTransaction> rejected_txs;
     std::vector<state::TransactionReceipt> receipts;
@@ -92,18 +92,26 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
     }
 }
 
-bool validate_block(const TestBlock& test_block, const BlockHeader& parent_header) noexcept
+bool validate_block(
+    evmc_revision rev, const TestBlock& test_block, const BlockHeader& parent_header) noexcept
 {
     // NOTE: includes only block validity unrelated to individual txs. See `apply_block`.
 
     // Check that the excess blob gas was updated correctly.
-    if (test_block.block_info.excess_blob_gas !=
-        state::calc_excess_blob_gas(parent_header.excess_blob_gas, parent_header.blob_gas_used))
-        return false;
+    if (rev >= EVMC_CANCUN)
+    {
+        if (!test_block.block_info.excess_blob_gas.has_value() or
+            !test_block.block_info.blob_gas_used.has_value())
+            return false;
+        if (test_block.block_info.excess_blob_gas.value() !=
+            state::calc_excess_blob_gas(
+                parent_header.excess_blob_gas.value_or(0), parent_header.blob_gas_used.value_or(0)))
+            return false;
 
-    // Ensure the total blob gas spent is at most equal to the limit
-    if (test_block.block_info.blob_gas_used > state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK)
-        return false;
+        // Ensure the total blob gas spent is at most equal to the limit
+        if (test_block.block_info.blob_gas_used.value() > state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK)
+            return false;
+    }
 
     return true;
 }
@@ -156,7 +164,6 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
         // Validate the genesis block header.
         EXPECT_EQ(c.genesis_block_header.block_number, 0);
         EXPECT_EQ(c.genesis_block_header.gas_used, 0);
-        EXPECT_EQ(c.genesis_block_header.blob_gas_used, 0);
         EXPECT_EQ(c.genesis_block_header.transactions_root, state::EMPTY_MPT_HASH);
         EXPECT_EQ(c.genesis_block_header.receipts_root, state::EMPTY_MPT_HASH);
         EXPECT_EQ(c.genesis_block_header.withdrawal_root,
@@ -179,7 +186,7 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
 
             const auto rev = c.rev.get_revision(bi.timestamp);
 
-            if (!validate_block(test_block, parent_header))
+            if (!validate_block(rev, test_block, parent_header))
                 continue;
 
             const auto res = apply_block(

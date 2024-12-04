@@ -49,9 +49,9 @@ struct BlockInfo
 
     /// The "excess blob gas" parameter from EIP-4844
     /// for computing the blob gas price in the current block.
-    uint64_t excess_blob_gas = 0;
+    std::optional<uint64_t> excess_blob_gas;
 
-    uint64_t blob_gas_used = 0;
+    std::optional<uint64_t> blob_gas_used;
 
     std::vector<Ommer> ommers;
     std::vector<Withdrawal> withdrawals;

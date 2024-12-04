@@ -18,6 +18,13 @@ T load_if_exists(const json::json& j, std::string_view key)
         return from_json<T>(*it);
     return {};
 }
+template <typename T>
+std::optional<T> load_optional(const json::json& j, std::string_view key)
+{
+    if (const auto it = j.find(key); it != j.end())
+        return std::optional(from_json<T>(*it));
+    return std::nullopt;
+}
 }  // namespace
 
 template <>
@@ -41,8 +48,8 @@ BlockHeader from_json<BlockHeader>(const json::json& j)
         .transactions_root = from_json<hash256>(j.at("transactionsTrie")),
         .withdrawal_root = load_if_exists<hash256>(j, "withdrawalsRoot"),
         .parent_beacon_block_root = load_if_exists<hash256>(j, "parentBeaconBlockRoot"),
-        .excess_blob_gas = load_if_exists<uint64_t>(j, "excessBlobGas"),
-        .blob_gas_used = load_if_exists<uint64_t>(j, "blobGasUsed"),
+        .excess_blob_gas = load_optional<uint64_t>(j, "excessBlobGas"),
+        .blob_gas_used = load_optional<uint64_t>(j, "blobGasUsed"),
     };
 }
 
