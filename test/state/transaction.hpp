@@ -67,7 +67,7 @@ struct Log
 {
     address addr;
     bytes data;
-    std::vector<hash256> topics;
+    std::vector<bytes32> topics;
 };
 
 /// Transaction Receipt
