@@ -39,7 +39,7 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
 
     std::vector<state::Log> txs_logs;
     int64_t block_gas_left = block.gas_limit;
-    int64_t blob_gas_left = static_cast<int64_t>(block.blob_gas_used);
+    auto blob_gas_left = static_cast<int64_t>(block.blob_gas_used);
 
     std::vector<RejectedTransaction> rejected_txs;
     std::vector<state::TransactionReceipt> receipts;

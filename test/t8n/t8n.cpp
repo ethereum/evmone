@@ -114,7 +114,7 @@ int main(int argc, const char* argv[])
         j_result["currentBaseFee"] = hex0x(block.base_fee);
 
         int64_t cumulative_gas_used = 0;
-        int64_t blob_gas_left = static_cast<int64_t>(state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK);
+        auto blob_gas_left = static_cast<int64_t>(state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK);
         std::vector<state::Transaction> transactions;
         std::vector<state::TransactionReceipt> receipts;
         int64_t block_gas_left = block.gas_limit;
