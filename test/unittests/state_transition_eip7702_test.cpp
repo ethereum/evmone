@@ -72,7 +72,7 @@ TEST_F(state_transition, eip7702_extcodesize)
 
     expect.post[callee].exists = true;
     expect.post[delegate].exists = true;
-    expect.post[To].storage[0x01_bytes32] = 0x0400_bytes32;
+    expect.post[To].storage[0x01_bytes32] = 0x02_bytes32;
 }
 
 TEST_F(state_transition, eip7702_extcodehash_delegation_to_empty)
@@ -87,7 +87,26 @@ TEST_F(state_transition, eip7702_extcodehash_delegation_to_empty)
 
     expect.post[callee].exists = true;
     expect.post[delegate].exists = false;
-    expect.post[To].storage[0x00_bytes32] = 0x00_bytes32;
+    expect.post[To].storage[0x00_bytes32] =
+        0xeadcdba66a79ab5dce91622d1d75c8cff5cff0b96944c3bf1072cd08ce018329_bytes32;
+    expect.post[To].storage[0x01_bytes32] = 0x01_bytes32;
+}
+
+TEST_F(state_transition, eip7702_extcodecopy)
+{
+    rev = EVMC_PRAGUE;
+
+    constexpr auto callee = 0xca11ee_address;
+    constexpr auto delegate = 0xde1e_address;
+    pre[callee] = {.nonce = 1, .code = bytes{0xef, 0x01, 0x00} + hex(delegate)};
+    tx.to = To;
+    pre[To] = {.code = push(10) + push0() + push0() + push(callee) + OP_EXTCODECOPY +
+                       sstore(0, mload(0)) + sstore(1, 1)};
+
+    expect.post[callee].exists = true;
+    expect.post[delegate].exists = false;
+    expect.post[To].storage[0x00_bytes32] =
+        0xef01000000000000000000000000000000000000000000000000000000000000_bytes32;
     expect.post[To].storage[0x01_bytes32] = 0x01_bytes32;
 }
 

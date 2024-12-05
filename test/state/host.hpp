@@ -89,6 +89,8 @@ private:
     void emit_log(const address& addr, const uint8_t* data, size_t data_size,
         const bytes32 topics[], size_t topics_count) noexcept override;
 
+    address get_delegate_address(const address& addr) const noexcept override;
+
 public:
     evmc_access_status access_account(const address& addr) noexcept override;
 

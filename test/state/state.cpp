@@ -88,11 +88,6 @@ evmc_message build_message(
         .code = nullptr,
         .code_size = 0};
 }
-
-constexpr bool is_code_delegated(bytes_view code) noexcept
-{
-    return code.starts_with(DELEGATION_MAGIC);
-}
 }  // namespace
 
 StateDiff State::build_diff(evmc_revision rev) const

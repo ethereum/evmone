@@ -150,4 +150,15 @@ TransactionReceipt transition(const StateView& state, const BlockInfo& block,
 [[nodiscard]] std::variant<int64_t, std::error_code> validate_transaction(
     const StateView& state_view, const BlockInfo& block, const Transaction& tx, evmc_revision rev,
     int64_t block_gas_left, int64_t blob_gas_left) noexcept;
+
+/// Prefix of code for delegated accounts
+/// defined by [EIP-7702](https://eips.ethereum.org/EIPS/eip-7702)
+constexpr uint8_t DELEGATION_MAGIC_BYTES[] = {0xef, 0x01, 0x00};
+constexpr bytes_view DELEGATION_MAGIC{DELEGATION_MAGIC_BYTES, std::size(DELEGATION_MAGIC_BYTES)};
+
+/// Check if code contains EIP-7702 delegation designator
+constexpr bool is_code_delegated(bytes_view code) noexcept
+{
+    return code.starts_with(DELEGATION_MAGIC);
+}
 }  // namespace evmone::state
