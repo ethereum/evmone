@@ -69,7 +69,7 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
             cumulative_gas_used += receipt.gas_used;
             receipt.cumulative_gas_used = cumulative_gas_used;
             if (rev < EVMC_BYZANTIUM)
-                receipt.post_state = state::mpt_hash(state);
+                receipt.post_state = state::mpt_hash(block_state);
 
             block_gas_left -= receipt.gas_used;
             blob_gas_left -= static_cast<int64_t>(tx.blob_gas_used());
