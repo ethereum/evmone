@@ -40,6 +40,7 @@ struct BlockHeader
     hash256 withdrawal_root;
     hash256 parent_beacon_block_root;
     uint64_t excess_blob_gas;
+    hash256 requests_hash;
 };
 
 struct TestBlock
