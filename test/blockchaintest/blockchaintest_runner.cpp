@@ -6,10 +6,16 @@
 #include "../state/rlp.hpp"
 #include "../test/statetest/statetest.hpp"
 #include "blockchaintest.hpp"
+#include <evmone_precompiles/sha256.hpp>
 #include <gtest/gtest.h>
 
 namespace evmone::test
 {
+namespace
+{
+/// The address of the deposit contract.
+constexpr auto DEPOSIT_CONTRACT_ADDRESS = 0x00000000219ab540356cBB839Cbe05303d7705Fa_address;
+}  // namespace
 
 struct RejectedTransaction
 {
@@ -18,16 +24,73 @@ struct RejectedTransaction
     std::string message;
 };
 
+struct Requests
+{
+    uint8_t type = 0;
+    bytes data;
+};
+
 struct TransitionResult
 {
     std::vector<state::TransactionReceipt> receipts;
     std::vector<RejectedTransaction> rejected;
+    std::vector<Requests> requests;
     int64_t gas_used;
     state::BloomFilter bloom;
 };
 
 namespace
 {
+Requests collect_deposit_requests(std::span<const state::TransactionReceipt> receipts)
+{
+    Requests requests{.type = 0};
+    for (const auto& receipt : receipts)
+    {
+        for (const auto& log : receipt.logs)
+        {
+            if (log.addr == DEPOSIT_CONTRACT_ADDRESS)
+            {
+                constexpr auto pubkey_offset = 32 * 5 + 32;
+                constexpr auto withdrawal_credentials_offset = pubkey_offset + 64 + 32;
+                constexpr auto amount_offset = withdrawal_credentials_offset + 32 + 32;
+                constexpr auto signature_offset = amount_offset + 32 + 32;
+                constexpr auto index_offset = signature_offset + 96 + 32;
+
+                assert(log.data.size() == index_offset + 32);
+
+                requests.data += log.data.substr(pubkey_offset, 48);
+                requests.data += log.data.substr(withdrawal_credentials_offset, 32);
+                requests.data += log.data.substr(amount_offset, 8);
+                requests.data += log.data.substr(signature_offset, 96);
+                requests.data += log.data.substr(index_offset, 8);
+            }
+        }
+    }
+    return requests;
+}
+
+hash256 calculate_requests_hash(std::span<const Requests> all_requests)
+{
+    bytes request_hash_list;
+    for (const auto& requests : all_requests)
+    {
+        // TODO recent change in the spec, uncomment when tests are ready
+        //        if (requests.data.empty())
+        //            continue;
+
+        const bytes request_bytes = requests.type + requests.data;
+        bytes32 requests_hash;
+        crypto::sha256(reinterpret_cast<std::byte*>(requests_hash.bytes),
+            reinterpret_cast<const std::byte*>(request_bytes.data()), request_bytes.size());
+        request_hash_list += requests_hash;
+    }
+
+    bytes32 all_requests_hash;
+    crypto::sha256(reinterpret_cast<std::byte*>(all_requests_hash.bytes),
+        reinterpret_cast<const std::byte*>(request_hash_list.data()), request_hash_list.size());
+    return all_requests_hash;
+}
+
 TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockInfo& block,
     const state::BlockHashes& block_hashes, const std::vector<state::Transaction>& txs,
     evmc_revision rev, std::optional<int64_t> block_reward)
@@ -76,8 +139,13 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
 
     finalize(state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
 
+    auto requests = (rev >= EVMC_PRAGUE ? std::vector<Requests>{collect_deposit_requests(receipts),
+                                              Requests{.type = 1}, Requests{.type = 2}} :
+                                          std::vector<Requests>{});
+
     const auto bloom = compute_bloom_filter(receipts);
-    return {std::move(receipts), std::move(rejected_txs), cumulative_gas_used, bloom};
+    return {std::move(receipts), std::move(rejected_txs), std::move(requests), cumulative_gas_used,
+        bloom};
 }
 
 std::optional<int64_t> mining_reward(evmc_revision rev) noexcept
@@ -168,6 +236,11 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
                 test_block.expected_block_header.transactions_root);
             EXPECT_EQ(
                 state::mpt_hash(res.receipts), test_block.expected_block_header.receipts_root);
+            if (rev >= EVMC_PRAGUE)
+            {
+                EXPECT_EQ(calculate_requests_hash(res.requests),
+                    test_block.expected_block_header.requests_hash);
+            }
             EXPECT_EQ(res.gas_used, test_block.expected_block_header.gas_used);
             EXPECT_EQ(
                 bytes_view{res.bloom}, bytes_view{test_block.expected_block_header.logs_bloom});
