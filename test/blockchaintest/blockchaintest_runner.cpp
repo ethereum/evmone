@@ -97,19 +97,20 @@ bool validate_block(
 {
     // NOTE: includes only block validity unrelated to individual txs. See `apply_block`.
 
-    // Check that the excess blob gas was updated correctly.
     if (rev >= EVMC_CANCUN)
     {
         if (!test_block.block_info.excess_blob_gas.has_value() or
             !test_block.block_info.blob_gas_used.has_value())
             return false;
-        if (test_block.block_info.excess_blob_gas.value() !=
+
+        // Check that the excess blob gas was updated correctly.
+        if (*test_block.block_info.excess_blob_gas !=
             state::calc_excess_blob_gas(
                 parent_header.excess_blob_gas.value_or(0), parent_header.blob_gas_used.value_or(0)))
             return false;
 
         // Ensure the total blob gas spent is at most equal to the limit
-        if (test_block.block_info.blob_gas_used.value() > state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK)
+        if (*test_block.block_info.blob_gas_used > state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK)
             return false;
     }
 
