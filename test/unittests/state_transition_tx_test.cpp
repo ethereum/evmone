@@ -62,6 +62,9 @@ TEST_F(state_transition, tx_blob_gas_price)
         0x0100000000000000000000000000000000000000000000000000000000000000_bytes32);
     tx.max_blob_gas_price = 1;
 
+    block.excess_blob_gas = 0;
+    block.blob_gas_used = 786432;
+
     pre.get(tx.sender).balance = 0x20000 + tx.gas_limit * tx.max_gas_price;
 
     expect.post[Coinbase].exists = false;  // all gas is burned, Coinbase gets nothing

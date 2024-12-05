@@ -39,10 +39,10 @@ struct Transaction
     };
 
     /// Returns amount of blob gas used by this transaction
-    [[nodiscard]] int64_t blob_gas_used() const
+    [[nodiscard]] uint64_t blob_gas_used() const
     {
         static constexpr auto GAS_PER_BLOB = 0x20000;
-        return GAS_PER_BLOB * static_cast<int64_t>(blob_hashes.size());
+        return GAS_PER_BLOB * blob_hashes.size();
     }
 
     Type type = Type::legacy;

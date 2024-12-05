@@ -18,6 +18,13 @@ T load_if_exists(const json::json& j, std::string_view key)
         return from_json<T>(*it);
     return {};
 }
+template <typename T>
+std::optional<T> load_optional(const json::json& j, std::string_view key)
+{
+    if (const auto it = j.find(key); it != j.end())
+        return std::optional(from_json<T>(*it));
+    return std::nullopt;
+}
 }  // namespace
 
 template <>
@@ -41,7 +48,8 @@ BlockHeader from_json<BlockHeader>(const json::json& j)
         .transactions_root = from_json<hash256>(j.at("transactionsTrie")),
         .withdrawal_root = load_if_exists<hash256>(j, "withdrawalsRoot"),
         .parent_beacon_block_root = load_if_exists<hash256>(j, "parentBeaconBlockRoot"),
-        .excess_blob_gas = load_if_exists<uint64_t>(j, "excessBlobGas"),
+        .excess_blob_gas = load_optional<uint64_t>(j, "excessBlobGas"),
+        .blob_gas_used = load_optional<uint64_t>(j, "blobGasUsed"),
     };
 }
 
@@ -61,8 +69,8 @@ static TestBlock load_test_block(const json::json& j, evmc_revision rev)
         tb.block_info.prev_randao = tb.expected_block_header.prev_randao;
         tb.block_info.base_fee = tb.expected_block_header.base_fee_per_gas;
         tb.block_info.parent_beacon_block_root = tb.expected_block_header.parent_beacon_block_root;
-        tb.block_info.blob_base_fee =
-            compute_blob_gas_price(tb.expected_block_header.excess_blob_gas);
+        tb.block_info.excess_blob_gas = tb.expected_block_header.excess_blob_gas;
+        tb.block_info.blob_gas_used = tb.expected_block_header.blob_gas_used;
 
         // Override prev_randao with difficulty pre-Merge
         if (rev < EVMC_PARIS)
@@ -70,12 +78,6 @@ static TestBlock load_test_block(const json::json& j, evmc_revision rev)
             tb.block_info.prev_randao =
                 intx::be::store<bytes32>(intx::uint256{tb.block_info.difficulty});
         }
-    }
-
-    if (const auto it = j.find("expectException"); it != j.end())
-    {
-        // TODO: Add support for invalid blocks.
-        throw UnsupportedTestFeature("tests with invalid blocks are not supported");
     }
 
     if (const auto it = j.find("transactionSequence"); it != j.end())
@@ -123,7 +125,13 @@ BlockchainTest load_blockchain_test_case(const std::string& name, const json::js
     bt.rev = to_rev_schedule(j.at("network").get<std::string>());
 
     for (const auto& el : j.at("blocks"))
-        bt.test_blocks.emplace_back(load_test_block(el, bt.rev.get_revision(0)));
+    {
+        if (const auto it = el.find("rlp_decoded"); it != el.end())
+            bt.test_blocks.emplace_back(
+                load_test_block(el.at("rlp_decoded"), bt.rev.get_revision(0)));
+        else
+            bt.test_blocks.emplace_back(load_test_block(el, bt.rev.get_revision(0)));
+    }
 
     bt.expectation.last_block_hash = from_json<hash256>(j.at("lastblockhash"));
 

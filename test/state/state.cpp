@@ -311,7 +311,7 @@ std::variant<int64_t, std::error_code> validate_transaction(const StateView& sta
         if (tx.blob_hashes.empty())
             return make_error_code(EMPTY_BLOB_HASHES_LIST);
 
-        if (tx.max_blob_gas_price < block.blob_base_fee)
+        if (tx.max_blob_gas_price < compute_blob_gas_price(block.excess_blob_gas.value()))
             return make_error_code(FEE_CAP_LESS_THEN_BLOCKS);
 
         if (std::ranges::any_of(tx.blob_hashes, [](const auto& h) { return h.bytes[0] != 0x01; }))
@@ -444,7 +444,8 @@ TransactionReceipt transition(const StateView& state_view, const BlockInfo& bloc
 
     if (tx.type == Transaction::Type::blob)
     {
-        const auto blob_fee = tx.blob_gas_used() * block.blob_base_fee;
+        const auto blob_fee =
+            tx.blob_gas_used() * compute_blob_gas_price(block.excess_blob_gas.value());
         assert(sender_acc.balance >= blob_fee);  // Required for valid tx.
         sender_acc.balance -= blob_fee;
     }
