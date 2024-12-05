@@ -4,6 +4,7 @@
 #pragma once
 
 #include "baseline.hpp"
+#include "constants.hpp"
 #include "eof.hpp"
 #include "execution_state.hpp"
 #include "instructions_traits.hpp"
@@ -126,6 +127,55 @@ inline bool check_memory(
         return false;
 
     return check_memory(gas_left, memory, offset, static_cast<uint64_t>(size));
+}
+
+/// Check if code contains EIP-7702 delegation designator
+constexpr bool is_code_delegated(bytes_view code) noexcept
+{
+    return code.starts_with(DELEGATION_MAGIC);
+}
+
+/// Get EIP-7702 delegate address from the code of addr, if it is delegated.
+inline std::optional<evmc::address> get_delegate_address(
+    const evmc::address& addr, const evmc::HostContext& host) noexcept
+{
+    uint8_t prefix[std::size(DELEGATION_MAGIC)] = {};
+    host.copy_code(addr, 0, prefix, std::size(prefix));
+
+    if (!is_code_delegated(bytes_view{prefix, std::size(prefix)}))
+        return {};
+
+    evmc::address delegate_address;
+    assert(host.get_code_size(addr) ==
+           std::size(DELEGATION_MAGIC) + std::size(delegate_address.bytes));
+    host.copy_code(
+        addr, std::size(prefix), delegate_address.bytes, std::size(delegate_address.bytes));
+    return delegate_address;
+}
+
+/// Get target address of an instruction with address argument.
+///
+/// Returns EIP-7702 delegate address if addr is delegated, or addr itself otherwise.
+/// Applies gas charge for accessing delegate account and may fail with out of gas.
+inline std::variant<evmc::address, Result> get_target_address(
+    const evmc::address& addr, int64_t& gas_left, ExecutionState& state) noexcept
+{
+    if (state.rev < EVMC_PRAGUE)
+        return addr;
+
+    const auto delegate_addr = get_delegate_address(addr, state.host);
+    if (!delegate_addr.has_value())
+        return addr;
+
+    const auto delegate_account_access_cost =
+        (state.host.access_account(*delegate_addr) == EVMC_ACCESS_COLD ?
+                instr::cold_account_access_cost :
+                instr::warm_storage_read_cost);
+
+    if ((gas_left -= delegate_account_access_cost) < 0)
+        return Result{EVMC_OUT_OF_GAS, gas_left};
+
+    return *delegate_addr;
 }
 
 namespace instr::core
@@ -515,6 +565,7 @@ inline void blobbasefee(StackTop stack, ExecutionState& state) noexcept
     stack.push(intx::be::load<uint256>(state.get_tx_context().blob_base_fee));
 }
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 inline Result extcodesize(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     auto& x = stack.top();
@@ -526,10 +577,17 @@ inline Result extcodesize(StackTop stack, int64_t gas_left, ExecutionState& stat
             return {EVMC_OUT_OF_GAS, gas_left};
     }
 
-    x = state.host.get_code_size(addr);
+    const auto target_addr_or_result = get_target_address(addr, gas_left, state);
+    if (const auto* result = std::get_if<Result>(&target_addr_or_result))
+        return *result;
+
+    const auto& target_addr = std::get<evmc::address>(target_addr_or_result);
+
+    x = state.host.get_code_size(target_addr);
     return {EVMC_SUCCESS, gas_left};
 }
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 inline Result extcodecopy(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     const auto addr = intx::be::trunc<evmc::address>(stack.pop());
@@ -550,12 +608,18 @@ inline Result extcodecopy(StackTop stack, int64_t gas_left, ExecutionState& stat
             return {EVMC_OUT_OF_GAS, gas_left};
     }
 
+    const auto target_addr_or_result = get_target_address(addr, gas_left, state);
+    if (const auto* result = std::get_if<Result>(&target_addr_or_result))
+        return *result;
+
+    const auto& target_addr = std::get<evmc::address>(target_addr_or_result);
+
     if (s > 0)
     {
         const auto src =
             (max_buffer_size < input_index) ? max_buffer_size : static_cast<size_t>(input_index);
         const auto dst = static_cast<size_t>(mem_index);
-        const auto num_bytes_copied = state.host.copy_code(addr, src, &state.memory[dst], s);
+        const auto num_bytes_copied = state.host.copy_code(target_addr, src, &state.memory[dst], s);
         if (const auto num_bytes_to_clear = s - num_bytes_copied; num_bytes_to_clear > 0)
             std::memset(&state.memory[dst + num_bytes_copied], 0, num_bytes_to_clear);
     }
@@ -633,6 +697,7 @@ inline Result returndatacopy(StackTop stack, int64_t gas_left, ExecutionState& s
     return {EVMC_SUCCESS, gas_left};
 }
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 inline Result extcodehash(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     auto& x = stack.top();
@@ -644,7 +709,13 @@ inline Result extcodehash(StackTop stack, int64_t gas_left, ExecutionState& stat
             return {EVMC_OUT_OF_GAS, gas_left};
     }
 
-    x = intx::be::load<uint256>(state.host.get_code_hash(addr));
+    const auto target_addr_or_result = get_target_address(addr, gas_left, state);
+    if (const auto* result = std::get_if<Result>(&target_addr_or_result))
+        return *result;
+
+    const auto& target_addr = std::get<evmc::address>(target_addr_or_result);
+
+    x = intx::be::load<uint256>(state.host.get_code_hash(target_addr));
     return {EVMC_SUCCESS, gas_left};
 }
 

@@ -364,8 +364,8 @@ jobs:
           command: >
             bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests
       - download_execution_spec_tests:
-          release: pectra-devnet-3@v1.5.0
-          fixtures_suffix: pectra-devnet-3
+          release: pectra-devnet-4@v1.0.1
+          fixtures_suffix: pectra-devnet-4
       - run:
           name: "Execution spec tests (develop, state_tests)"
           # Tests for in-development EVM revision currently passing.
@@ -373,6 +373,7 @@ jobs:
           command: >
             ~/build/bin/evmone-statetest
             prague/eip2537_bls_12_381_precompiles
+            prague/eip7702_set_code_tx
       - run:
           name: "Execution spec tests (develop, blockchain_tests)"
           # Tests for in-development EVM revision currently passing.
@@ -380,6 +381,7 @@ jobs:
           command: >
             ~/build/bin/evmone-blockchaintest
             prague/eip2935_historical_block_hashes_from_state
+            prague/eip7702_set_code_tx
       - collect_coverage_gcc
       - upload_coverage:
           flags: execution_spec_tests
