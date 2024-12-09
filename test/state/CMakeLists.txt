@@ -28,6 +28,8 @@ target_sources(
     precompiles_internal.hpp
     precompiles_stubs.hpp
     precompiles_stubs.cpp
+    requests.hpp
+    requests.cpp
     rlp.hpp
     state.hpp
     state.cpp
