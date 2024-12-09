@@ -381,6 +381,7 @@ jobs:
             ~/build/bin/evmone-blockchaintest
             prague/eip2935_historical_block_hashes_from_state
             prague/eip6110_deposits
+            prague/eip7002_el_triggerable_withdrawals
       - collect_coverage_gcc
       - upload_coverage:
           flags: execution_spec_tests
