@@ -80,12 +80,6 @@ static TestBlock load_test_block(const json::json& j, evmc_revision rev)
         }
     }
 
-    if (const auto it = j.find("transactionSequence"); it != j.end())
-    {
-        // TODO: Add support for invalid blocks.
-        throw UnsupportedTestFeature("tests with invalid transactions are not supported");
-    }
-
     if (const auto it = j.find("uncleHeaders"); it != j.end())
     {
         const auto current_block_number = tb.block_info.number;
