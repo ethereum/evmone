@@ -22,6 +22,9 @@ constexpr auto HISTORY_STORAGE_ADDRESS = 0x0aae40965e6800cd9b1f4b05ff21581047e3f
 /// The address of the system contract processing EL-triggerable withdrawals (EIP-7002).
 constexpr auto WITHDRAWAL_REQUESTS_ADDRESS = 0x09Fc772D0857550724b07B850a4323f39112aAaA_address;
 
+/// The address of the system contract processing consolidations (EIP-7251).
+constexpr auto CONSOLIDATION_REQUEST_ADDRESS = 0x01aBEa29659e5e97C95107F20bb753cD3e09bBBb_address;
+
 struct BlockInfo;
 struct StateDiff;
 class BlockHashes;
