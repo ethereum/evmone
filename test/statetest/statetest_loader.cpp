@@ -232,10 +232,7 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
     {
         const auto parent_excess_blob_gas = from_json<uint64_t>(*it);
         const auto parent_blob_gas_used = from_json<uint64_t>(j.at("parentBlobGasUsed"));
-        static constexpr uint64_t TARGET_BLOB_GAS_PER_BLOCK = 0x60000;
-        excess_blob_gas =
-            std::max(parent_excess_blob_gas + parent_blob_gas_used, TARGET_BLOB_GAS_PER_BLOCK) -
-            TARGET_BLOB_GAS_PER_BLOCK;
+        excess_blob_gas = state::calc_excess_blob_gas(parent_excess_blob_gas, parent_blob_gas_used);
     }
     else if (const auto it2 = j.find("currentExcessBlobGas"); it2 != j.end())
     {
@@ -255,7 +252,7 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
         .parent_beacon_block_root = load_if_exists<hash256>(j, "parentBeaconBlockRoot"),
         .base_fee = base_fee,
         .excess_blob_gas = excess_blob_gas,
-        .blob_base_fee = state::compute_blob_gas_price(excess_blob_gas),
+        .blob_gas_used = load_if_exists<uint64_t>(j, "blobGasUsed"),
         .ommers = std::move(ommers),
         .withdrawals = std::move(withdrawals),
     };
@@ -300,7 +297,8 @@ TestState from_json<TestState>(const json::json& j)
 /// Load common parts of Transaction or TestMultiTransaction.
 static void from_json_tx_common(const json::json& j, state::Transaction& o)
 {
-    o.sender = from_json<evmc::address>(j.at("sender"));
+    // Invalid block tests have only v, r, s, no sender.
+    o.sender = load_if_exists<evmc::address>(j, "sender");
     o.nonce = from_json<uint64_t>(j.at("nonce"));
 
     if (const auto chain_id_it = j.find("chainId"); chain_id_it != j.end())

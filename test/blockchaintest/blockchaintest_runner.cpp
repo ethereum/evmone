@@ -6,6 +6,7 @@
 #include "../state/rlp.hpp"
 #include "../test/statetest/statetest.hpp"
 #include "blockchaintest.hpp"
+#include <evmone_precompiles/kzg.hpp>
 #include <gtest/gtest.h>
 
 namespace evmone::test
@@ -24,6 +25,7 @@ struct TransitionResult
     std::vector<RejectedTransaction> rejected;
     int64_t gas_used;
     state::BloomFilter bloom;
+    bool block_valid;
 };
 
 namespace
@@ -32,11 +34,12 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
     const state::BlockHashes& block_hashes, const std::vector<state::Transaction>& txs,
     evmc_revision rev, std::optional<int64_t> block_reward)
 {
-    system_call(state, block, block_hashes, rev, vm);
+    TestState block_state(state);
+    system_call(block_state, block, block_hashes, rev, vm);
 
     std::vector<state::Log> txs_logs;
     int64_t block_gas_left = block.gas_limit;
-    int64_t blob_gas_left = state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK;
+    auto blob_gas_left = static_cast<int64_t>(block.blob_gas_used.value_or(0));
 
     std::vector<RejectedTransaction> rejected_txs;
     std::vector<state::TransactionReceipt> receipts;
@@ -48,8 +51,8 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
         const auto& tx = txs[i];
 
         const auto computed_tx_hash = keccak256(rlp::encode(tx));
-        auto res =
-            transition(state, block, block_hashes, tx, rev, vm, block_gas_left, blob_gas_left);
+        auto res = test::transition(
+            block_state, block, block_hashes, tx, rev, vm, block_gas_left, blob_gas_left);
 
         if (holds_alternative<std::error_code>(res))
         {
@@ -66,18 +69,52 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
             cumulative_gas_used += receipt.gas_used;
             receipt.cumulative_gas_used = cumulative_gas_used;
             if (rev < EVMC_BYZANTIUM)
-                receipt.post_state = state::mpt_hash(state);
+                receipt.post_state = state::mpt_hash(block_state);
 
             block_gas_left -= receipt.gas_used;
-            blob_gas_left -= tx.blob_gas_used();
+            blob_gas_left -= static_cast<int64_t>(tx.blob_gas_used());
             receipts.emplace_back(std::move(receipt));
         }
     }
 
-    finalize(state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
+    finalize(block_state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
 
     const auto bloom = compute_bloom_filter(receipts);
-    return {std::move(receipts), std::move(rejected_txs), cumulative_gas_used, bloom};
+
+    if (rejected_txs.empty() && blob_gas_left == 0)
+    {
+        state = std::move(block_state);
+        return {std::move(receipts), std::move(rejected_txs), cumulative_gas_used, bloom, true};
+    }
+    else
+    {
+        return {std::move(receipts), std::move(rejected_txs), cumulative_gas_used, bloom, false};
+    }
+}
+
+bool validate_block(
+    evmc_revision rev, const TestBlock& test_block, const BlockHeader& parent_header) noexcept
+{
+    // NOTE: includes only block validity unrelated to individual txs. See `apply_block`.
+
+    if (rev >= EVMC_CANCUN)
+    {
+        if (!test_block.block_info.excess_blob_gas.has_value() or
+            !test_block.block_info.blob_gas_used.has_value())
+            return false;
+
+        // Check that the excess blob gas was updated correctly.
+        if (*test_block.block_info.excess_blob_gas !=
+            state::calc_excess_blob_gas(
+                parent_header.excess_blob_gas.value_or(0), parent_header.blob_gas_used.value_or(0)))
+            return false;
+
+        // Ensure the total blob gas spent is at most equal to the limit
+        if (*test_block.block_info.blob_gas_used > state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK)
+            return false;
+    }
+
+    return true;
 }
 
 std::optional<int64_t> mining_reward(evmc_revision rev) noexcept
@@ -140,15 +177,23 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
 
         TestBlockHashes block_hashes{
             {c.genesis_block_header.block_number, c.genesis_block_header.hash}};
-
-        for (const auto& test_block : c.test_blocks)
+        for (size_t i = 0; i < c.test_blocks.size(); ++i)
         {
+            const auto& test_block = c.test_blocks[i];
+            const auto& parent_header =
+                i == 0 ? c.genesis_block_header : c.test_blocks[i - 1].expected_block_header;
+
             auto bi = test_block.block_info;
 
             const auto rev = c.rev.get_revision(bi.timestamp);
 
+            if (!validate_block(rev, test_block, parent_header))
+                continue;
+
             const auto res = apply_block(
                 state, vm, bi, block_hashes, test_block.transactions, rev, mining_reward(rev));
+            if (!res.block_valid)
+                continue;
 
             block_hashes[test_block.expected_block_header.block_number] =
                 test_block.expected_block_header.hash;
@@ -179,7 +224,7 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
             std::holds_alternative<TestState>(c.expectation.post_state) ?
                 state::mpt_hash(std::get<TestState>(c.expectation.post_state)) :
                 std::get<hash256>(c.expectation.post_state);
-        EXPECT_TRUE(state::mpt_hash(state) == expected_post_hash)
+        EXPECT_EQ(state::mpt_hash(state), expected_post_hash)
             << "Result state:\n"
             << print_state(state)
             << (std::holds_alternative<TestState>(c.expectation.post_state) ?
