@@ -77,7 +77,7 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
     }
 
     auto requests =
-        (rev >= EVMC_PRAGUE ? std::vector{state::Requests(state::Requests::Type::deposit),
+        (rev >= EVMC_PRAGUE ? std::vector{collect_deposit_requests(receipts),
                                   state::Requests(state::Requests::Type::withdrawal),
                                   state::Requests(state::Requests::Type::consolidation)} :
                               std::vector<state::Requests>{});
