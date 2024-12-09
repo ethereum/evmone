@@ -5,6 +5,7 @@
 #pragma once
 
 #include "hash_utils.hpp"
+#include "transaction.hpp"
 #include <evmc/evmc.hpp>
 #include <span>
 #include <vector>
@@ -42,4 +43,5 @@ struct Requests
 /// Calculate commitment value of block requests list
 hash256 calculate_requests_hash(std::span<const Requests> requests_list);
 
+Requests collect_deposit_requests(std::span<const TransactionReceipt> receipts);
 }  // namespace evmone::state
