@@ -83,9 +83,6 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
     auto sytem_call_requests = system_call_block_end(state, block, block_hashes, rev, vm);
     requests.insert(requests.end(), sytem_call_requests.begin(), sytem_call_requests.end());
 
-    if (rev >= EVMC_PRAGUE)
-        requests.push_back({.type = state::Requests::Type::consolidation});
-
     finalize(state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
 
     const auto bloom = compute_bloom_filter(receipts);
