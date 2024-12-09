@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
+#include "requests.hpp"
 #include <evmc/evmc.hpp>
 
 namespace evmone::state
@@ -18,6 +19,9 @@ constexpr auto BEACON_ROOTS_ADDRESS = 0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02
 /// The address of the system contract storing historical block hashes (EIP-2935).
 constexpr auto HISTORY_STORAGE_ADDRESS = 0x0aae40965e6800cd9b1f4b05ff21581047e3f91e_address;
 
+/// The address of the system contract processing EL-triggerable withdrawals (EIP-7002).
+constexpr auto WITHDRAWAL_REQUESTS_ADDRESS = 0x09Fc772D0857550724b07B850a4323f39112aAaA_address;
+
 struct BlockInfo;
 struct StateDiff;
 class BlockHashes;
@@ -29,4 +33,8 @@ class StateView;
 /// The sender's nonce is not increased.
 [[nodiscard]] StateDiff system_call(const StateView& state_view, const BlockInfo& block,
     const BlockHashes& block_hashes, evmc_revision rev, evmc::VM& vm);
+
+[[nodiscard]] std::pair<StateDiff, RequestsList> system_call_block_end(const StateView& state_view,
+    const BlockInfo& block, const state::BlockHashes& block_hashes, evmc_revision rev,
+    evmc::VM& vm);
 }  // namespace evmone::state

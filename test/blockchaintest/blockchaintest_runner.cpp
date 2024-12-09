@@ -5,6 +5,7 @@
 #include "../state/mpt_hash.hpp"
 #include "../state/requests.hpp"
 #include "../state/rlp.hpp"
+#include "../state/system_contracts.hpp"
 #include "../test/statetest/statetest.hpp"
 #include "blockchaintest.hpp"
 #include <gtest/gtest.h>
@@ -110,15 +111,16 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
     }
 
     auto requests =
-        (rev >= EVMC_PRAGUE ? state::RequestsList{{.type = 0}, {.type = 1}, {.type = 2}} :
-                              state::RequestsList{});
+        (rev >= EVMC_PRAGUE ? std::vector<state::Requests>{collect_deposit_requests(receipts)} :
+                              std::vector<state::Requests>{});
+
+    auto sytem_call_requests = system_call_block_end(state, block, block_hashes, rev, vm);
+    requests.insert(requests.end(), sytem_call_requests.begin(), sytem_call_requests.end());
+
+    if (rev >= EVMC_PRAGUE)
+        requests.push_back({.type = 2, .data = {}});
 
     finalize(state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
-
-    auto requests =
-        (rev >= EVMC_PRAGUE ? state::RequestsList{collect_deposit_requests(receipts),
-                                  state::Requests{.type = 1}, state::Requests{.type = 2}} :
-                              state::RequestsList{});
 
     const auto bloom = compute_bloom_filter(receipts);
     return {std::move(receipts), std::move(rejected_txs), std::move(requests), cumulative_gas_used,
