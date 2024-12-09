@@ -11,6 +11,11 @@
 
 namespace evmone::test
 {
+namespace
+{
+/// The address of the deposit contract.
+constexpr auto DEPOSIT_CONTRACT_ADDRESS = 0x00000000219ab540356cBB839Cbe05303d7705Fa_address;
+}  // namespace
 
 struct RejectedTransaction
 {
@@ -30,6 +35,34 @@ struct TransitionResult
 
 namespace
 {
+state::Requests collect_deposit_requests(std::span<const state::TransactionReceipt> receipts)
+{
+    state::Requests requests{.type = 0};
+    for (const auto& receipt : receipts)
+    {
+        for (const auto& log : receipt.logs)
+        {
+            if (log.addr == DEPOSIT_CONTRACT_ADDRESS)
+            {
+                constexpr auto pubkey_offset = 32 * 5 + 32;
+                constexpr auto withdrawal_credentials_offset = pubkey_offset + 64 + 32;
+                constexpr auto amount_offset = withdrawal_credentials_offset + 32 + 32;
+                constexpr auto signature_offset = amount_offset + 32 + 32;
+                constexpr auto index_offset = signature_offset + 96 + 32;
+
+                assert(log.data.size() == index_offset + 32);
+
+                requests.data += log.data.substr(pubkey_offset, 48);
+                requests.data += log.data.substr(withdrawal_credentials_offset, 32);
+                requests.data += log.data.substr(amount_offset, 8);
+                requests.data += log.data.substr(signature_offset, 96);
+                requests.data += log.data.substr(index_offset, 8);
+            }
+        }
+    }
+    return requests;
+}
+
 TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockInfo& block,
     const state::BlockHashes& block_hashes, const std::vector<state::Transaction>& txs,
     evmc_revision rev, std::optional<int64_t> block_reward)
@@ -81,6 +114,11 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
                               state::RequestsList{});
 
     finalize(state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
+
+    auto requests =
+        (rev >= EVMC_PRAGUE ? state::RequestsList{collect_deposit_requests(receipts),
+                                  state::Requests{.type = 1}, state::Requests{.type = 2}} :
+                              state::RequestsList{});
 
     const auto bloom = compute_bloom_filter(receipts);
     return {std::move(receipts), std::move(rejected_txs), std::move(requests), cumulative_gas_used,
