@@ -364,8 +364,8 @@ jobs:
           command: >
             bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests
       - download_execution_spec_tests:
-          release: pectra-devnet-3@v1.5.0
-          fixtures_suffix: pectra-devnet-3
+          release: pectra-devnet-4@v1.0.1
+          fixtures_suffix: pectra-devnet-4
       - run:
           name: "Execution spec tests (develop, state_tests)"
           # Tests for in-development EVM revision currently passing.
