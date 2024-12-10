@@ -120,6 +120,7 @@ int main(int argc, const char* argv[])
         std::vector<state::Transaction> transactions;
         std::vector<state::TransactionReceipt> receipts;
         int64_t block_gas_left = block.gas_limit;
+        std::vector<state::Requests> requests;
 
         // Parse and execute transactions
         if (!txs_file.empty())
@@ -221,6 +222,16 @@ int main(int argc, const char* argv[])
                 }
             }
 
+            if (rev >= EVMC_PRAGUE)
+            {
+                requests.push_back(collect_deposit_requests(receipts));
+
+                auto sytem_call_requests =
+                    system_call_block_end(state, block, block_hashes, rev, vm);
+                requests.insert(
+                    requests.end(), sytem_call_requests.begin(), sytem_call_requests.end());
+            }
+
             test::finalize(
                 state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
 
@@ -245,14 +256,9 @@ int main(int argc, const char* argv[])
         {
             // EIP-7685: General purpose execution layer requests
             j_result["requests"] = json::json::array();
-            // TODO: actual requests should be used in the following lines, for now all empty.
-            const auto requests =
-                std::vector<state::Requests>{{.type = state::Requests::Type::deposit},
-                    {.type = state::Requests::Type::withdrawal},
-                    {.type = state::Requests::Type::consolidation}};
-            j_result["requests"][0] = "0x";
-            j_result["requests"][1] = "0x";
-            j_result["requests"][2] = "0x";
+            j_result["requests"][0] = hex0x(requests[0].data);
+            j_result["requests"][1] = hex0x(requests[1].data);
+            j_result["requests"][2] = hex0x(requests[2].data);
 
             auto requests_hash = calculate_requests_hash(requests);
 
