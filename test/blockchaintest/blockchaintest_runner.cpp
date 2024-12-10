@@ -11,7 +11,6 @@
 
 namespace evmone::test
 {
-
 struct RejectedTransaction
 {
     hash256 hash;
@@ -77,9 +76,9 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
     }
 
     auto requests =
-        (rev >= EVMC_PRAGUE ? std::vector<state::Requests>{{.type = state::Requests::Type::deposit},
-                                  {.type = state::Requests::Type::withdrawal},
-                                  {.type = state::Requests::Type::consolidation}} :
+        (rev >= EVMC_PRAGUE ? std::vector<state::Requests>{collect_deposit_requests(receipts),
+                                  state::Requests{.type = state::Requests::Type::withdrawal},
+                                  state::Requests{.type = state::Requests::Type::consolidation}} :
                               std::vector<state::Requests>{});
 
     finalize(state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
