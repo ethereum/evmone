@@ -63,6 +63,7 @@ TEST_F(state_transition, tx_blob_gas_price)
     tx.max_blob_gas_price = 1;
 
     block.excess_blob_gas = 0;
+    block.blob_base_fee = 1;
     block.blob_gas_used = 786432;
 
     pre.get(tx.sender).balance = 0x20000 + tx.gas_limit * tx.max_gas_price;

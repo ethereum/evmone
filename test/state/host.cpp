@@ -493,7 +493,7 @@ evmc_tx_context Host::get_tx_context() const noexcept
         m_block.prev_randao,
         0x01_bytes32,  // Chain ID is expected to be 1.
         uint256be{m_block.base_fee},
-        intx::be::store<uint256be>(compute_blob_gas_price(m_block.excess_blob_gas.value_or(0))),
+        intx::be::store<uint256be>(m_block.blob_base_fee.value_or(0)),
         m_tx.blob_hashes.data(),
         m_tx.blob_hashes.size(),
     };
