@@ -18,10 +18,16 @@ intx::uint256 compute_blob_gas_price(uint64_t excess_blob_gas) noexcept
         intx::uint256 i = 1;
         intx::uint256 output = 0;
         intx::uint256 numerator_accum = factor * denominator;
+        const intx::uint256 numerator256 = numerator;
         while (numerator_accum > 0)
         {
             output += numerator_accum;
-            numerator_accum = (numerator_accum * numerator) / (denominator * i);
+            // Ensure the multiplication won't overflow 256 bits.
+            if (const auto p = intx::umul(numerator_accum, numerator256);
+                p <= std::numeric_limits<intx::uint256>::max())
+                numerator_accum = intx::uint256(p) / (denominator * i);
+            else
+                return std::numeric_limits<intx::uint256>::max();
             i += 1;
         }
         return output / denominator;
