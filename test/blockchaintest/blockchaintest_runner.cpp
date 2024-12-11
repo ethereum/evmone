@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "../state/mpt_hash.hpp"
+#include "../state/requests.hpp"
 #include "../state/rlp.hpp"
 #include "../test/statetest/statetest.hpp"
 #include "blockchaintest.hpp"
@@ -22,6 +23,7 @@ struct TransitionResult
 {
     std::vector<state::TransactionReceipt> receipts;
     std::vector<RejectedTransaction> rejected;
+    std::vector<state::Requests> requests;
     int64_t gas_used;
     state::BloomFilter bloom;
 };
@@ -74,10 +76,17 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
         }
     }
 
+    auto requests =
+        (rev >= EVMC_PRAGUE ? std::vector<state::Requests>{{.type = state::Requests::Type::deposit},
+                                  {.type = state::Requests::Type::withdrawal},
+                                  {.type = state::Requests::Type::consolidation}} :
+                              std::vector<state::Requests>{});
+
     finalize(state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
 
     const auto bloom = compute_bloom_filter(receipts);
-    return {std::move(receipts), std::move(rejected_txs), cumulative_gas_used, bloom};
+    return {std::move(receipts), std::move(rejected_txs), std::move(requests), cumulative_gas_used,
+        bloom};
 }
 
 std::optional<int64_t> mining_reward(evmc_revision rev) noexcept
@@ -168,6 +177,11 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
                 test_block.expected_block_header.transactions_root);
             EXPECT_EQ(
                 state::mpt_hash(res.receipts), test_block.expected_block_header.receipts_root);
+            if (rev >= EVMC_PRAGUE)
+            {
+                EXPECT_EQ(calculate_requests_hash(res.requests),
+                    test_block.expected_block_header.requests_hash);
+            }
             EXPECT_EQ(res.gas_used, test_block.expected_block_header.gas_used);
             EXPECT_EQ(
                 bytes_view{res.bloom}, bytes_view{test_block.expected_block_header.logs_bloom});
