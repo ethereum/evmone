@@ -88,8 +88,11 @@ TEST(state_tx, validate_sender)
 
 TEST(state_tx, validate_blob_tx)
 {
-    const BlockInfo bi{
-        .gas_limit = 0x989680, .base_fee = 1, .excess_blob_gas = 0, .blob_gas_used = 786432};
+    const BlockInfo bi{.gas_limit = 0x989680,
+        .base_fee = 1,
+        .blob_gas_used = 786432,
+        .excess_blob_gas = 0,
+        .blob_base_fee = 1};
     Transaction tx{
         .type = Transaction::Type::blob,
         .gas_limit = 60000,

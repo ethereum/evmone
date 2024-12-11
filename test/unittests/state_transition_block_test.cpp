@@ -67,9 +67,14 @@ TEST_F(state_transition, eip7516_blob_base_fee)
     rev = EVMC_CANCUN;
 
     block.excess_blob_gas = 0xabcd00;
+    // 0x1d is the result of ref implementation in EIP-4844
+    static constexpr auto price = 0x1d;
+    block.blob_base_fee = price;
+    assert(state::compute_blob_gas_price(block.excess_blob_gas.value()) ==
+           block.blob_base_fee.value());
+
     tx.to = To;
     pre.insert(*tx.to, {.code = sstore(0x4a, OP_BLOBBASEFEE)});
 
-    // 0x1d is the result of ref implementation in EIP-4844
-    expect.post[To].storage[0x4a_bytes32] = 0x1d_bytes32;
+    expect.post[To].storage[0x4a_bytes32] = bytes32(price);
 }
