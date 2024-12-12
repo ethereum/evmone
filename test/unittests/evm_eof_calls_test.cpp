@@ -203,11 +203,12 @@ TEST_P(evm, extcall_new_account_creation_cost)
         EXPECT_EQ(call_msg.value.bytes[31], 0);
         EXPECT_EQ(call_msg.input_size, 0);
         EXPECT_GAS_USED(EVMC_SUCCESS, gas_before_call + call_msg.gas + 3 + 3 + 3 + 3 + 3);
-        ASSERT_EQ(host.recorded_account_accesses.size(), 4);
+        ASSERT_EQ(host.recorded_account_accesses.size(), 5);
         EXPECT_EQ(host.recorded_account_accesses[0], 0x00_address);   // EIP-2929 tweak
         EXPECT_EQ(host.recorded_account_accesses[1], msg.recipient);  // EIP-2929 tweak
-        EXPECT_EQ(host.recorded_account_accesses[2], call_dst);       // ?
-        EXPECT_EQ(host.recorded_account_accesses[3], call_dst);       // Call.
+        EXPECT_EQ(host.recorded_account_accesses[2], call_dst);       // EIP-2929 warm up call_dst
+        EXPECT_EQ(host.recorded_account_accesses[3], call_dst);       // EIP-7702 delegation check
+        EXPECT_EQ(host.recorded_account_accesses[4], call_dst);       // Call.
         host.recorded_account_accesses.clear();
         host.recorded_calls.clear();
     }
@@ -227,13 +228,14 @@ TEST_P(evm, extcall_new_account_creation_cost)
         EXPECT_EQ(call_msg.value.bytes[31], 1);
         EXPECT_EQ(call_msg.input_size, 0);
         EXPECT_GAS_USED(EVMC_SUCCESS, gas_before_call + call_msg.gas + 3 + 3 + 3 + 3 + 3);
-        ASSERT_EQ(host.recorded_account_accesses.size(), 6);
+        ASSERT_EQ(host.recorded_account_accesses.size(), 7);
         EXPECT_EQ(host.recorded_account_accesses[0], 0x00_address);   // EIP-2929 tweak
         EXPECT_EQ(host.recorded_account_accesses[1], msg.recipient);  // EIP-2929 tweak
-        EXPECT_EQ(host.recorded_account_accesses[2], call_dst);       // ?
-        EXPECT_EQ(host.recorded_account_accesses[3], call_dst);       // Account exist?.
-        EXPECT_EQ(host.recorded_account_accesses[4], msg.recipient);  // Balance.
-        EXPECT_EQ(host.recorded_account_accesses[5], call_dst);       // Call.
+        EXPECT_EQ(host.recorded_account_accesses[2], call_dst);       // EIP-2929 warm up call_dst
+        EXPECT_EQ(host.recorded_account_accesses[3], call_dst);       // EIP-7702 delegation check
+        EXPECT_EQ(host.recorded_account_accesses[4], call_dst);       // Account exist?.
+        EXPECT_EQ(host.recorded_account_accesses[5], msg.recipient);  // Balance.
+        EXPECT_EQ(host.recorded_account_accesses[6], call_dst);       // Call.
         host.recorded_account_accesses.clear();
         host.recorded_calls.clear();
     }

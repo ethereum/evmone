@@ -121,6 +121,47 @@ state::AccessList from_json<state::AccessList>(const json::json& j)
     return o;
 }
 
+template <>
+state::AuthorizationList from_json<state::AuthorizationList>(const json::json& j)
+{
+    state::AuthorizationList o;
+    for (const auto& a : j)
+    {
+        state::Authorization authorization{};
+        try
+        {
+            authorization.chain_id = from_json<uint64_t>(a.at("chainId"));
+        }
+        catch (const std::out_of_range&)
+        {
+            throw UnsupportedTestFeature("tests with out of range chainId are not supported");
+        }
+        authorization.addr = from_json<address>(a.at("address"));
+        try
+        {
+            authorization.nonce = from_json<uint64_t>(a.at("nonce"));
+        }
+        catch (const std::out_of_range&)
+        {
+            throw UnsupportedTestFeature("tests with out of range nonce are not supported");
+        }
+        if (a.contains("signer"))
+            authorization.signer = from_json<address>(a.at("signer"));
+        try
+        {
+            authorization.r = from_json<intx::uint256>(a.at("r"));
+            authorization.s = from_json<intx::uint256>(a.at("s"));
+        }
+        catch (const std::out_of_range&)
+        {
+            throw UnsupportedTestFeature("tests with out of range r and s are not supported");
+        }
+        authorization.v = from_json<intx::uint256>(a.at("v"));
+        o.emplace_back(authorization);
+    }
+    return o;
+}
+
 // Based on calculateEIP1559BaseFee from ethereum/retesteth
 inline uint64_t calculate_current_base_fee_eip1559(
     uint64_t parent_gas_used, uint64_t parent_gas_limit, uint64_t parent_base_fee)
@@ -340,6 +381,12 @@ static void from_json_tx_common(const json::json& j, state::Transaction& o)
         o.type = state::Transaction::Type::blob;
         for (const auto& hash : *it)
             o.blob_hashes.push_back(from_json<bytes32>(hash));
+    }
+    else if (const auto au_it = j.find("authorizationList"); au_it != j.end())
+    {
+        o.authorization_list = from_json<state::AuthorizationList>(*au_it);
+        if (o.type <= state::Transaction::Type::eip1559)
+            o.type = state::Transaction::Type::set_code;
     }
 }
 

@@ -10,10 +10,19 @@
 #include <evmone/eof.hpp>
 #include <algorithm>
 
+using namespace intx;
+
 namespace evmone::state
 {
 namespace
 {
+constexpr auto SECP256K1N = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141_u256;
+constexpr auto SECP256K1N_OVER_2 = SECP256K1N / 2;
+// EIP-7702: The cost of authorization that sets delegation to an account that didn't exist before
+constexpr auto AUTHORIZATION_EMPTY_ACCOUNT_COST = 25000;
+// EIP-7702: The cost of authorization that sets delegation to an account that already exists
+constexpr auto AUTHORIZATION_BASE_COST = 12500;
+
 inline constexpr int64_t num_words(size_t size_in_bytes) noexcept
 {
     return static_cast<int64_t>((size_in_bytes + 31) / 32);
@@ -46,11 +55,13 @@ int64_t compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& tx) noex
     static constexpr auto create_tx_cost = 53000;
     static constexpr auto initcode_word_cost = 2;
     const auto is_create = !tx.to.has_value();  // Covers also EOF creation txs.
+    const auto auth_list_cost =
+        static_cast<int64_t>(tx.authorization_list.size()) * AUTHORIZATION_EMPTY_ACCOUNT_COST;
     const auto initcode_cost =
         is_create && rev >= EVMC_SHANGHAI ? initcode_word_cost * num_words(tx.data.size()) : 0;
     const auto tx_cost = is_create && rev >= EVMC_HOMESTEAD ? create_tx_cost : call_tx_cost;
     return tx_cost + compute_tx_data_cost(rev, tx.data) + compute_access_list_cost(tx.access_list) +
-           initcode_cost;
+           auth_list_cost + initcode_cost;
 }
 
 evmc_message build_message(
@@ -76,6 +87,11 @@ evmc_message build_message(
         .code_address = recipient,
         .code = nullptr,
         .code_size = 0};
+}
+
+constexpr bool is_code_delegated(bytes_view code) noexcept
+{
+    return code.starts_with(DELEGATION_MAGIC);
 }
 }  // namespace
 
@@ -107,8 +123,10 @@ StateDiff State::build_diff(evmc_revision rev) const
 
         // Output only the new code.
         // TODO: Output also the code hash. It will be needed for DB update and MPT hash.
-        if (m.just_created && !m.code.empty())
+        if ((m.just_created && !m.code.empty()) || m.code_changed)
             a.code = m.code;
+        if (m.code_changed && m.code.empty())
+            a.code_cleared = true;
 
         for (const auto& [k, v] : m.storage)
         {
@@ -320,12 +338,22 @@ std::variant<int64_t, std::error_code> validate_transaction(const StateView& sta
             return make_error_code(BLOB_GAS_LIMIT_EXCEEDED);
         break;
 
+    case Transaction::Type::set_code:
+        if (rev < EVMC_PRAGUE)
+            return make_error_code(TX_TYPE_NOT_SUPPORTED);
+        if (!tx.to.has_value())
+            return make_error_code(CREATE_SET_CODE_TX);
+        if (tx.authorization_list.empty())
+            return make_error_code(EMPTY_AUTHORIZATION_LIST);
+        break;
+
     default:;
     }
 
     switch (tx.type)
     {
     case Transaction::Type::blob:
+    case Transaction::Type::set_code:
     case Transaction::Type::eip1559:
         if (rev < EVMC_LONDON)
             return make_error_code(TX_TYPE_NOT_SUPPORTED);
@@ -355,7 +383,8 @@ std::variant<int64_t, std::error_code> validate_transaction(const StateView& sta
     const auto sender_acc = state_view.get_account(tx.sender).value_or(
         StateView::Account{.code_hash = Account::EMPTY_CODE_HASH});
 
-    if (sender_acc.code_hash != Account::EMPTY_CODE_HASH)
+    if (sender_acc.code_hash != Account::EMPTY_CODE_HASH &&
+        !is_code_delegated(state_view.get_account_code(tx.sender)))
         return make_error_code(SENDER_NOT_EOA);  // Origin must not be a contract (EIP-3607).
 
     if (sender_acc.nonce == Account::NonceMax)  // Nonce value limit (EIP-2681).
@@ -430,6 +459,80 @@ TransactionReceipt transition(const StateView& state_view, const BlockInfo& bloc
     assert(sender_acc.nonce < Account::NonceMax);  // Required for valid tx.
     ++sender_acc.nonce;                            // Bump sender nonce.
 
+    auto delegation_refund = 0;
+
+    for (const auto& auth : tx.authorization_list)
+    {
+        if (auth.chain_id != 0 && auth.chain_id != tx.chain_id)
+            continue;
+
+        if (auth.nonce == Account::NonceMax)
+            continue;
+
+        // Check if signer could be ecrecovered.
+        if (!auth.signer.has_value())
+            continue;
+
+        if (auth.s > SECP256K1N_OVER_2)
+            continue;
+
+        // Check if authority exists.
+        auto* authority_ptr = state.find(*auth.signer);
+        if (authority_ptr != nullptr && !authority_ptr->is_empty())
+        {
+            authority_ptr->access_status = EVMC_ACCESS_WARM;
+
+            // Skip if authority has non-delegated code.
+            if (authority_ptr->code_hash != Account::EMPTY_CODE_HASH &&
+                !is_code_delegated(state.get_code(*auth.signer)))
+                continue;
+
+            // Skip if authorization nonce is incorrect.
+            if (auth.nonce != authority_ptr->nonce)
+                continue;
+
+            // Refund if authority account creation is not needed.
+            static constexpr int64_t EXISTING_AUTHORITY_REFUND =
+                AUTHORIZATION_EMPTY_ACCOUNT_COST - AUTHORIZATION_BASE_COST;
+            delegation_refund += EXISTING_AUTHORITY_REFUND;
+        }
+        else
+        {
+            // Create authority account.
+            // It is still considered empty at this point until nonce increment, but already warm.
+            authority_ptr = &state.get_or_insert(
+                *auth.signer, {.erase_if_empty = true, .access_status = EVMC_ACCESS_WARM});
+
+            // Skip if authorization nonce is incorrect.
+            if (auth.nonce != 0)
+                continue;
+        }
+
+        if (auth.addr == address{})
+        {
+            if (authority_ptr->code_hash != Account::EMPTY_CODE_HASH)
+                authority_ptr->code_changed = true;
+            authority_ptr->code.clear();
+            authority_ptr->code_hash = Account::EMPTY_CODE_HASH;
+        }
+        else
+        {
+            bytes new_code(bytes(DELEGATION_MAGIC) + bytes(auth.addr));
+            if (authority_ptr->code != new_code)
+                authority_ptr->code_changed = true;
+            authority_ptr->code = std::move(new_code);
+
+            // TODO The hash of delegated accounts is not used anywhere,
+            // it is only important that it is not a hash of empty.
+            // We could avoid this hashing, if we found a way to not rely only on code_hash for
+            // emptiness checks.
+            // (e.g for emptiness check code_hash == EMPTY_CODE_HASH && !code_changed)
+            authority_ptr->code_hash = keccak256(authority_ptr->code);
+        }
+
+        ++authority_ptr->nonce;
+    }
+
     const auto base_fee = (rev >= EVMC_LONDON) ? block.base_fee : 0;
     assert(tx.max_gas_price >= base_fee);                   // Required for valid tx.
     assert(tx.max_gas_price >= tx.max_priority_gas_price);  // Required for valid tx.
@@ -466,13 +569,31 @@ TransactionReceipt transition(const StateView& state_view, const BlockInfo& bloc
     if (rev >= EVMC_SHANGHAI)
         host.access_account(block.coinbase);
 
-    const auto result = host.call(build_message(tx, execution_gas_limit, rev));
+    auto message = build_message(tx, execution_gas_limit, rev);
+    if (tx.to.has_value())
+    {
+        const auto code = state.get_code(*tx.to);
+        if (is_code_delegated(code))
+        {
+            assert(rev >= EVMC_PRAGUE);
+            assert(
+                code.size() == std::size(DELEGATION_MAGIC) + std::size(message.code_address.bytes));
+
+            // Copy delegate address from to_ptr->code to message.code_address.
+            std::copy_n(&code[std::size(DELEGATION_MAGIC)], std::size(message.code_address.bytes),
+                message.code_address.bytes);
+            message.flags |= EVMC_DELEGATED;
+            host.access_account(message.code_address);
+        }
+    }
+
+    const auto result = host.call(message);
 
     auto gas_used = tx.gas_limit - result.gas_left;
 
     const auto max_refund_quotient = rev >= EVMC_LONDON ? 5 : 2;
     const auto refund_limit = gas_used / max_refund_quotient;
-    const auto refund = std::min(result.gas_refund, refund_limit);
+    const auto refund = std::min(delegation_refund + result.gas_refund, refund_limit);
     gas_used -= refund;
     assert(gas_used > 0);
 
