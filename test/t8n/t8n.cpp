@@ -245,10 +245,9 @@ int main(int argc, const char* argv[])
             // EIP-7685: General purpose execution layer requests
             j_result["requests"] = json::json::array();
             // TODO: actual requests should be used in the following lines, for now all empty.
-            const auto requests =
-                std::vector<state::Requests>{{.type = state::Requests::Type::deposit},
-                    {.type = state::Requests::Type::withdrawal},
-                    {.type = state::Requests::Type::consolidation}};
+            const auto requests = std::vector{state::Requests(state::Requests::Type::deposit),
+                state::Requests(state::Requests::Type::withdrawal),
+                state::Requests(state::Requests::Type::consolidation)};
             j_result["requests"][0] = "0x";
             j_result["requests"][1] = "0x";
             j_result["requests"][2] = "0x";

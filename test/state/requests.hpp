@@ -37,6 +37,10 @@ struct Requests
     Type type = Type::deposit;
     /// Requests data - an opaque byte array, contains zero or more encoded request objects.
     evmc::bytes data;
+
+    explicit Requests(Type _type, evmc::bytes _data = {}) noexcept
+      : type(_type), data(std::move(_data))
+    {}
 };
 
 /// Calculate commitment value of block requests list
