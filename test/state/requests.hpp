@@ -5,6 +5,7 @@
 #pragma once
 
 #include "hash_utils.hpp"
+#include "transaction.hpp"
 #include <evmc/evmc.hpp>
 #include <span>
 #include <vector>
@@ -37,9 +38,15 @@ struct Requests
     Type type = Type::deposit;
     /// Requests data - an opaque byte array, contains zero or more encoded request objects.
     evmc::bytes data;
+
+    explicit Requests(Type _type, evmc::bytes _data = {}) noexcept
+      : type(_type), data(std::move(_data))
+    {}
 };
 
 /// Calculate commitment value of block requests list
 hash256 calculate_requests_hash(std::span<const Requests> requests_list);
 
+/// Construct requests object from logs of the deposit contract.
+Requests collect_deposit_requests(std::span<const TransactionReceipt> receipts);
 }  // namespace evmone::state

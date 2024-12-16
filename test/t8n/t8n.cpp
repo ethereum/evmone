@@ -119,6 +119,7 @@ int main(int argc, const char* argv[])
         std::vector<state::Transaction> transactions;
         std::vector<state::TransactionReceipt> receipts;
         int64_t block_gas_left = block.gas_limit;
+        std::vector<state::Requests> requests;
 
         // Parse and execute transactions
         if (!txs_file.empty())
@@ -220,6 +221,13 @@ int main(int argc, const char* argv[])
                 }
             }
 
+            if (rev >= EVMC_PRAGUE)
+            {
+                requests.emplace_back(collect_deposit_requests(receipts));
+                requests.emplace_back(state::Requests::Type::withdrawal);
+                requests.emplace_back(state::Requests::Type::consolidation);
+            }
+
             test::finalize(
                 state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
 
@@ -244,14 +252,8 @@ int main(int argc, const char* argv[])
         {
             // EIP-7685: General purpose execution layer requests
             j_result["requests"] = json::json::array();
-            // TODO: actual requests should be used in the following lines, for now all empty.
-            const auto requests =
-                std::vector<state::Requests>{{.type = state::Requests::Type::deposit},
-                    {.type = state::Requests::Type::withdrawal},
-                    {.type = state::Requests::Type::consolidation}};
-            j_result["requests"][0] = "0x";
-            j_result["requests"][1] = "0x";
-            j_result["requests"][2] = "0x";
+            for (size_t i = 0; i < requests.size(); ++i)
+                j_result["requests"][i] = hex0x(requests[i].data);
 
             auto requests_hash = calculate_requests_hash(requests);
 
