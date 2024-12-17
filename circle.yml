@@ -361,8 +361,11 @@ jobs:
       - run:
           name: "Execution spec tests (blockchain_tests)"
           working_directory: ~/build
+          # 4844 and 4788 temporarily turned off b/c they rely on blob features.
           command: >
-            bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests
+            bin/evmone-blockchaintest
+            --gtest_filter='*:-*eip4844*:*eip4788*'
+            ~/spec-tests/fixtures/blockchain_tests
       - download_execution_spec_tests:
           release: pectra-devnet-4@v1.0.1
           fixtures_suffix: pectra-devnet-4
@@ -402,8 +405,10 @@ jobs:
       - run:
           name: "EOF pre-release execution spec tests (blockchain_tests)"
           working_directory: ~/build
+          # 4844 and 4788 temporarily turned off b/c they rely on blob features.
           command: >
             bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests/osaka
+            --gtest_filter='*:-*stEIP4844*'
       - run:
           name: "EOF pre-release execution spec tests (eof_tests)"
           working_directory: ~/build
@@ -438,16 +443,18 @@ jobs:
       - run:
           name: "Blockchain tests (GeneralStateTests)"
           working_directory: ~/build
+          # 4844 and 4788 temporarily turned off b/c they rely on blob features.
           command: >
             bin/evmone-blockchaintest
-            --gtest_filter='*:-VMTests/vmPerformance.*:*.*Call50000_sha256:*.CALLBlake2f_MaxRounds'
+            --gtest_filter='*:-VMTests/vmPerformance.*:*.*Call50000_sha256:*.CALLBlake2f_MaxRounds:*eip4844*:*stEIP4844*:*eip4788*'
             ~/tests/BlockchainTests/GeneralStateTests
       - run:
           name: "Blockchain tests (ValidBlocks)"
           working_directory: ~/build
+          # 4844 and 4788 temporarily turned off b/c they rely on blob features.
           command: >
             bin/evmone-blockchaintest
-            --gtest_filter='*:-bcMultiChainTest.*:bcTotalDifficultyTest.*:bcForkStressTest.ForkStressTest:bcGasPricerTest.RPC_API_Test:bcValidBlockTest.SimpleTx3LowS'
+            --gtest_filter='*:-bcMultiChainTest.*:bcTotalDifficultyTest.*:bcForkStressTest.ForkStressTest:bcGasPricerTest.RPC_API_Test:bcValidBlockTest.SimpleTx3LowS:*bcEIP4844*'
             ~/tests/BlockchainTests/ValidBlocks
             ~/tests/LegacyTests/Cancun/BlockchainTests/ValidBlocks
       - collect_coverage_gcc
