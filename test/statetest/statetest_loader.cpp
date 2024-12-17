@@ -232,10 +232,7 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
     {
         const auto parent_excess_blob_gas = from_json<uint64_t>(*it);
         const auto parent_blob_gas_used = from_json<uint64_t>(j.at("parentBlobGasUsed"));
-        static constexpr uint64_t TARGET_BLOB_GAS_PER_BLOCK = 0x60000;
-        excess_blob_gas =
-            std::max(parent_excess_blob_gas + parent_blob_gas_used, TARGET_BLOB_GAS_PER_BLOCK) -
-            TARGET_BLOB_GAS_PER_BLOCK;
+        excess_blob_gas = state::calc_excess_blob_gas(parent_blob_gas_used, parent_excess_blob_gas);
     }
     else if (const auto it2 = j.find("currentExcessBlobGas"); it2 != j.end())
     {
@@ -254,8 +251,8 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
         .prev_randao = prev_randao,
         .parent_beacon_block_root = load_if_exists<hash256>(j, "parentBeaconBlockRoot"),
         .base_fee = base_fee,
+        .blob_gas_used = load_if_exists<uint64_t>(j, "blobGasUsed"),
         .excess_blob_gas = excess_blob_gas,
-        .blob_base_fee = state::compute_blob_gas_price(excess_blob_gas),
         .ommers = std::move(ommers),
         .withdrawals = std::move(withdrawals),
     };

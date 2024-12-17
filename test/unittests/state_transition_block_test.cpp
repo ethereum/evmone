@@ -66,9 +66,10 @@ TEST_F(state_transition, eip7516_blob_base_fee)
 {
     rev = EVMC_CANCUN;
 
-    block.blob_base_fee = 0xabcd;
+    block.excess_blob_gas = 0xabcd00;
     tx.to = To;
     pre.insert(*tx.to, {.code = sstore(0x4a, OP_BLOBBASEFEE)});
 
-    expect.post[To].storage[0x4a_bytes32] = 0xabcd_bytes32;
+    // 0x1d is the result of ref implementation in EIP-4844
+    expect.post[To].storage[0x4a_bytes32] = 0x1d_bytes32;
 }
