@@ -39,7 +39,8 @@ struct BlockHeader
     hash256 transactions_root;
     hash256 withdrawal_root;
     hash256 parent_beacon_block_root;
-    uint64_t excess_blob_gas;
+    std::optional<uint64_t> excess_blob_gas;
+    std::optional<uint64_t> blob_gas_used;
     hash256 requests_hash;
 };
 

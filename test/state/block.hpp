@@ -33,7 +33,7 @@ struct Withdrawal
 struct BlockInfo
 {
     /// Max amount of blob gas allowed in block. It's constant now but can be dynamic in the future.
-    static constexpr int64_t MAX_BLOB_GAS_PER_BLOCK = 786432;
+    static constexpr uint64_t MAX_BLOB_GAS_PER_BLOCK = 786432;
 
     int64_t number = 0;
     int64_t timestamp = 0;
@@ -49,13 +49,12 @@ struct BlockInfo
     /// The EIP-1559 base fee, since London.
     uint64_t base_fee = 0;
 
+    /// The "blob gas used" parameter from EIP-4844
+    std::optional<uint64_t> blob_gas_used;
+
     /// The "excess blob gas" parameter from EIP-4844
     /// for computing the blob gas price in the current block.
-    uint64_t excess_blob_gas = 0;
-
-    /// The blob gas price parameter from EIP-4844.
-    /// This value is not stored in block headers directly but computed from excess_blob_gas.
-    intx::uint256 blob_base_fee = 0;
+    std::optional<uint64_t> excess_blob_gas;
 
     std::vector<Ommer> ommers;
     std::vector<Withdrawal> withdrawals;
@@ -63,6 +62,10 @@ struct BlockInfo
 
 /// Computes the current blob gas price based on the excess blob gas.
 intx::uint256 compute_blob_gas_price(uint64_t excess_blob_gas) noexcept;
+
+/// Computes the current excess blob gas based on the parent.
+uint64_t calc_excess_blob_gas(
+    uint64_t parent_blob_gas_used, uint64_t parent_excess_blob_gas) noexcept;
 
 /// Defines how to RLP-encode a Withdrawal.
 [[nodiscard]] bytes rlp_encode(const Withdrawal& withdrawal);
