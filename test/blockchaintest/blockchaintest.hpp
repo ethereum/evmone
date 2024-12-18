@@ -47,6 +47,7 @@ struct TestBlock
 {
     state::BlockInfo block_info;
     std::vector<state::Transaction> transactions;
+    bool valid = true;
 
     BlockHeader expected_block_header;
 };

@@ -300,7 +300,8 @@ TestState from_json<TestState>(const json::json& j)
 /// Load common parts of Transaction or TestMultiTransaction.
 static void from_json_tx_common(const json::json& j, state::Transaction& o)
 {
-    o.sender = from_json<evmc::address>(j.at("sender"));
+    // `sender` is not provided for transactions in invalid blocks.
+    o.sender = load_if_exists<evmc::address>(j, "sender");
     o.nonce = from_json<uint64_t>(j.at("nonce"));
 
     if (const auto chain_id_it = j.find("chainId"); chain_id_it != j.end())
