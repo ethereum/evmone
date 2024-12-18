@@ -469,7 +469,7 @@ TEST_F(eof_validation, EOF1_rjump_invalid_destination)
 
     // To before code begin (offset = -13)
     add_test_case(
-        eof_bytecode(rjump(-13) + OP_STOP), EOFValidationError::invalid_rjump_destination);
+        eof_bytecode(rjump(-23) + OP_STOP), EOFValidationError::invalid_rjump_destination);
 
     // To after code end (offset = 2)
     add_test_case(eof_bytecode(rjump(2) + OP_STOP), EOFValidationError::invalid_rjump_destination);
@@ -505,7 +505,7 @@ TEST_F(eof_validation, EOF1_rjumpi_invalid_destination)
 
     // To before code begin (offset = -15)
     add_test_case(
-        eof_bytecode(rjumpi(-15, 0) + OP_STOP, 1), EOFValidationError::invalid_rjump_destination);
+        eof_bytecode(rjumpi(-25, 0) + OP_STOP, 1), EOFValidationError::invalid_rjump_destination);
 
     // To after code end (offset = 2)
     add_test_case(
@@ -539,8 +539,8 @@ TEST_F(eof_validation, EOF1_rjumpi_invalid_destination)
 
 TEST_F(eof_validation, EOF1_rjumpv_invalid_destination)
 {
-    // table = [-23] case = 0
-    add_test_case(eof_bytecode(rjumpv({-23}, 0) + push(1) + OP_STOP, 1),
+    // table = [-25] case = 0
+    add_test_case(eof_bytecode(rjumpv({-25}, 0) + push(1) + OP_STOP, 1),
         EOFValidationError::invalid_rjump_destination);
 
     // table = [-8] case = 0
@@ -560,8 +560,8 @@ TEST_F(eof_validation, EOF1_rjumpv_invalid_destination)
         EOFValidationError::invalid_rjump_destination);
 
 
-    // table = [0,3,-27] case = 2
-    add_test_case(eof_bytecode(rjumpv({0, 3, -27}, 2) + push(1) + OP_STOP + push(2) + OP_STOP, 1),
+    // table = [0,3,-30] case = 2
+    add_test_case(eof_bytecode(rjumpv({0, 3, -30}, 2) + push(1) + OP_STOP + push(2) + OP_STOP, 1),
         EOFValidationError::invalid_rjump_destination);
 
     // table = [0,3,-12] case = 2
