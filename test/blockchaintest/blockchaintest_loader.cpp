@@ -73,18 +73,6 @@ static TestBlock load_test_block(const json::json& j, evmc_revision rev)
         }
     }
 
-    if (const auto it = j.find("expectException"); it != j.end())
-    {
-        // TODO: Add support for invalid blocks.
-        throw UnsupportedTestFeature("tests with invalid blocks are not supported");
-    }
-
-    if (const auto it = j.find("transactionSequence"); it != j.end())
-    {
-        // TODO: Add support for invalid blocks.
-        throw UnsupportedTestFeature("tests with invalid transactions are not supported");
-    }
-
     if (const auto it = j.find("uncleHeaders"); it != j.end())
     {
         const auto current_block_number = tb.block_info.number;
@@ -124,7 +112,25 @@ BlockchainTest load_blockchain_test_case(const std::string& name, const json::js
     bt.rev = to_rev_schedule(j.at("network").get<std::string>());
 
     for (const auto& el : j.at("blocks"))
-        bt.test_blocks.emplace_back(load_test_block(el, bt.rev.get_revision(0)));
+    {
+        if (const auto it = el.find("expectException"); it != el.end())
+        {
+            // `rlp_decoded` holds the `FixtureBlock` element with the relevant block data for
+            // invalid blocks within a test. It should be a sibling element to `expectException`.
+
+            // TODO: Add support for invalidly rlp-encoded blocks, which do
+            // not have `rlp_decoded`.
+            if (!el.contains("rlp_decoded"))
+                throw UnsupportedTestFeature(
+                    "tests with invalidly rlp-encoded blocks are not supported");
+
+            auto test_block = load_test_block(el.at("rlp_decoded"), bt.rev.get_revision(0));
+            test_block.valid = false;
+            bt.test_blocks.emplace_back(test_block);
+        }
+        else
+            bt.test_blocks.emplace_back(load_test_block(el, bt.rev.get_revision(0)));
+    }
 
     bt.expectation.last_block_hash = from_json<hash256>(j.at("lastblockhash"));
 
