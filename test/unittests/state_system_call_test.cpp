@@ -24,7 +24,7 @@ protected:
 TEST_F(state_system_call, non_existient)
 {
     // Use MAX revision to invoke all activate system contracts.
-    system_call(state, {}, block_hashes, EVMC_MAX_REVISION, vm);
+    system_call_block_start(state, {}, block_hashes, EVMC_MAX_REVISION, vm);
 
     EXPECT_EQ(state.size(), 0) << "State must remain unchanged";
 }
@@ -35,7 +35,7 @@ TEST_F(state_system_call, beacon_roots)
     state.insert(
         BEACON_ROOTS_ADDRESS, {.code = sstore(OP_NUMBER, calldataload(0)) + sstore(0, OP_CALLER)});
 
-    system_call(state, block, block_hashes, EVMC_CANCUN, vm);
+    system_call_block_start(state, block, block_hashes, EVMC_CANCUN, vm);
 
     ASSERT_EQ(state.size(), 1);
     EXPECT_FALSE(state.contains(SYSTEM_ADDRESS));
@@ -56,7 +56,7 @@ TEST_F(state_system_call, history_storage)
     state.insert(HISTORY_STORAGE_ADDRESS,
         {.code = sstore(OP_NUMBER, calldataload(0)) + sstore(0, OP_CALLER)});
 
-    system_call(state, block, block_hashes, EVMC_PRAGUE, vm);
+    system_call_block_start(state, block, block_hashes, EVMC_PRAGUE, vm);
 
     ASSERT_EQ(state.size(), 1);
     EXPECT_FALSE(state.contains(SYSTEM_ADDRESS));

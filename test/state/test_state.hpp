@@ -91,8 +91,8 @@ void finalize(TestState& state, evmc_revision rev, const address& coinbase,
     std::optional<uint64_t> block_reward, std::span<const state::Ommer> ommers,
     std::span<const state::Withdrawal> withdrawals);
 
-/// Wrapping of state::system_call() which operates on TestState.
-void system_call(TestState& state, const state::BlockInfo& block,
+/// Wrapping of state::system_call_block_start() which operates on TestState.
+void system_call_block_start(TestState& state, const state::BlockInfo& block,
     const state::BlockHashes& block_hashes, evmc_revision rev, evmc::VM& vm);
 
 }  // namespace test

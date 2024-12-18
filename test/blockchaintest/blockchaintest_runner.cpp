@@ -37,7 +37,7 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
     evmc_revision rev, std::optional<int64_t> block_reward)
 {
     TestState block_state(state);
-    system_call(block_state, block, block_hashes, rev, vm);
+    system_call_block_start(block_state, block, block_hashes, rev, vm);
 
     std::vector<state::Log> txs_logs;
     int64_t block_gas_left = block.gas_limit;

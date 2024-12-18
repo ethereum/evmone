@@ -23,10 +23,11 @@ struct StateDiff;
 class BlockHashes;
 class StateView;
 
-/// Performs the system call: invokes system contracts.
+/// Performs the system call: invokes system contracts that have to be executed
+/// at the start of the block.
 ///
 /// Executes code of pre-defined accounts via pseudo-transaction from the system sender (0xff...fe).
 /// The sender's nonce is not increased.
-[[nodiscard]] StateDiff system_call(const StateView& state_view, const BlockInfo& block,
+[[nodiscard]] StateDiff system_call_block_start(const StateView& state_view, const BlockInfo& block,
     const BlockHashes& block_hashes, evmc_revision rev, evmc::VM& vm);
 }  // namespace evmone::state

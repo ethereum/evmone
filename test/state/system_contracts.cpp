@@ -21,7 +21,7 @@ struct SystemContract
 };
 
 /// Registered system contracts.
-constexpr std::array SYSTEM_CONTRACTS{
+constexpr std::array SYSTEM_CONTRACTS_BLOCK_START{
     SystemContract{EVMC_CANCUN, BEACON_ROOTS_ADDRESS,
         [](const BlockInfo& block, const BlockHashes&) noexcept {
             return block.parent_beacon_block_root;
@@ -32,17 +32,17 @@ constexpr std::array SYSTEM_CONTRACTS{
         }},
 };
 
-static_assert(std::ranges::is_sorted(SYSTEM_CONTRACTS,
+static_assert(std::ranges::is_sorted(SYSTEM_CONTRACTS_BLOCK_START,
                   [](const auto& a, const auto& b) noexcept { return a.since < b.since; }),
     "system contract entries must be ordered by revision");
 
 }  // namespace
 
-StateDiff system_call(const StateView& state_view, const BlockInfo& block,
+StateDiff system_call_block_start(const StateView& state_view, const BlockInfo& block,
     const BlockHashes& block_hashes, evmc_revision rev, evmc::VM& vm)
 {
     State state{state_view};
-    for (const auto& [since, addr, get_input] : SYSTEM_CONTRACTS)
+    for (const auto& [since, addr, get_input] : SYSTEM_CONTRACTS_BLOCK_START)
     {
         if (rev < since)
             break;  // Because entries are ordered, there are no other contracts for this revision.

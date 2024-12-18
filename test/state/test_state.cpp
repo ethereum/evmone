@@ -94,10 +94,10 @@ void finalize(TestState& state, evmc_revision rev, const address& coinbase,
     state.apply(diff);
 }
 
-void system_call(TestState& state, const state::BlockInfo& block,
+void system_call_block_start(TestState& state, const state::BlockInfo& block,
     const state::BlockHashes& block_hashes, evmc_revision rev, evmc::VM& vm)
 {
-    const auto diff = state::system_call(state, block, block_hashes, rev, vm);
+    const auto diff = state::system_call_block_start(state, block, block_hashes, rev, vm);
     state.apply(diff);
 }
 }  // namespace evmone::test
