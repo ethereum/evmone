@@ -7,6 +7,7 @@
 #include "../state/rlp.hpp"
 #include "../test/statetest/statetest.hpp"
 #include "blockchaintest.hpp"
+#include <evmone_precompiles/kzg.hpp>
 #include <gtest/gtest.h>
 
 namespace evmone::test
@@ -41,7 +42,7 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
 
     std::vector<state::Log> txs_logs;
     int64_t block_gas_left = block.gas_limit;
-    int64_t blob_gas_left = 0;
+    auto blob_gas_left = static_cast<int64_t>(block.blob_gas_used.value_or(0));
 
     std::vector<RejectedTransaction> rejected_txs;
     std::vector<state::TransactionReceipt> receipts;
@@ -74,7 +75,7 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
                 receipt.post_state = state::mpt_hash(block_state);
 
             block_gas_left -= receipt.gas_used;
-            blob_gas_left -= tx.blob_gas_used();
+            blob_gas_left -= static_cast<int64_t>(tx.blob_gas_used());
             receipts.emplace_back(std::move(receipt));
         }
     }
@@ -93,10 +94,33 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
         bloom, blob_gas_left, std::move(block_state)};
 }
 
-bool validate_block(evmc_revision, const TestBlock&, const BlockHeader&) noexcept
+bool validate_block(
+    evmc_revision rev, const TestBlock& test_block, const BlockHeader& parent_header) noexcept
 {
     // NOTE: includes only block validity unrelated to individual txs. See `apply_block`.
 
+    if (rev >= EVMC_CANCUN)
+    {
+        if (!test_block.block_info.excess_blob_gas.has_value() or
+            !test_block.block_info.blob_gas_used.has_value())
+            return false;
+
+        // Check that the excess blob gas was updated correctly.
+        if (*test_block.block_info.excess_blob_gas !=
+            state::calc_excess_blob_gas(
+                parent_header.blob_gas_used.value_or(0), parent_header.excess_blob_gas.value_or(0)))
+            return false;
+
+        // Ensure the total blob gas spent is at most equal to the limit
+        if (*test_block.block_info.blob_gas_used > state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK)
+            return false;
+    }
+    else
+    {
+        if (test_block.block_info.excess_blob_gas.has_value() or
+            test_block.block_info.blob_gas_used.has_value())
+            return false;
+    }
     return true;
 }
 
