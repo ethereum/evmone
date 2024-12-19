@@ -169,12 +169,6 @@ PrecompileAnalysis bls12_g1add_analyze(bytes_view, evmc_revision) noexcept
     return {BLS12_G1ADD_PRECOMPILE_GAS, BLS12_G1_POINT_SIZE};
 }
 
-PrecompileAnalysis bls12_g1mul_analyze(bytes_view, evmc_revision) noexcept
-{
-    static constexpr auto BLS12_G1MUL_PRECOMPILE_GAS = 12000;
-    return {BLS12_G1MUL_PRECOMPILE_GAS, 128};
-}
-
 PrecompileAnalysis bls12_g1msm_analyze(bytes_view input, evmc_revision) noexcept
 {
     static constexpr auto G1MUL_GAS_COST = 12000;
@@ -201,12 +195,6 @@ PrecompileAnalysis bls12_g2add_analyze(bytes_view, evmc_revision) noexcept
 {
     static constexpr auto BLS12_G2ADD_PRECOMPILE_GAS = 600;
     return {BLS12_G2ADD_PRECOMPILE_GAS, BLS12_G2_POINT_SIZE};
-}
-
-PrecompileAnalysis bls12_g2mul_analyze(bytes_view, evmc_revision) noexcept
-{
-    static constexpr auto BLS12_G2MUL_PRECOMPILE_GAS = 22500;
-    return {BLS12_G2MUL_PRECOMPILE_GAS, 256};
 }
 
 PrecompileAnalysis bls12_g2msm_analyze(bytes_view input, evmc_revision) noexcept
@@ -435,20 +423,6 @@ ExecutionResult bls12_g1add_execute(const uint8_t* input, size_t input_size, uin
     return {EVMC_SUCCESS, BLS12_G1_POINT_SIZE};
 }
 
-ExecutionResult bls12_g1mul_execute(const uint8_t* input, size_t input_size, uint8_t* output,
-    [[maybe_unused]] size_t output_size) noexcept
-{
-    if (input_size != 160)
-        return {EVMC_PRECOMPILE_FAILURE, 0};
-
-    assert(output_size == 128);
-
-    if (!crypto::bls::g1_mul(output, &output[64], input, &input[64], &input[128]))
-        return {EVMC_PRECOMPILE_FAILURE, 0};
-
-    return {EVMC_SUCCESS, 128};
-}
-
 ExecutionResult bls12_g1msm_execute(const uint8_t* input, size_t input_size, uint8_t* output,
     [[maybe_unused]] size_t output_size) noexcept
 {
@@ -475,20 +449,6 @@ ExecutionResult bls12_g2add_execute(const uint8_t* input, size_t input_size, uin
         return {EVMC_PRECOMPILE_FAILURE, 0};
 
     return {EVMC_SUCCESS, BLS12_G2_POINT_SIZE};
-}
-
-ExecutionResult bls12_g2mul_execute(const uint8_t* input, size_t input_size, uint8_t* output,
-    [[maybe_unused]] size_t output_size) noexcept
-{
-    if (input_size != 288)
-        return {EVMC_PRECOMPILE_FAILURE, 0};
-
-    assert(output_size == 256);
-
-    if (!crypto::bls::g2_mul(output, &output[128], input, &input[128], &input[256]))
-        return {EVMC_PRECOMPILE_FAILURE, 0};
-
-    return {EVMC_SUCCESS, 256};
 }
 
 ExecutionResult bls12_g2msm_execute(const uint8_t* input, size_t input_size, uint8_t* output,
@@ -569,10 +529,8 @@ inline constexpr auto traits = []() noexcept {
         {blake2bf_analyze, blake2bf_execute},
         {point_evaluation_analyze, point_evaluation_execute},
         {bls12_g1add_analyze, bls12_g1add_execute},
-        {bls12_g1mul_analyze, bls12_g1mul_execute},
         {bls12_g1msm_analyze, bls12_g1msm_execute},
         {bls12_g2add_analyze, bls12_g2add_execute},
-        {bls12_g2mul_analyze, bls12_g2mul_execute},
         {bls12_g2msm_analyze, bls12_g2msm_execute},
         {bls12_pairing_check_analyze, bls12_pairing_check_execute},
         {bls12_map_fp_to_g1_analyze, bls12_map_fp_to_g1_execute},
