@@ -138,7 +138,7 @@ int main(int argc, const char* argv[])
                 j_result["receipts"] = json::json::array();
                 j_result["rejected"] = json::json::array();
 
-                test::system_call(state, block, block_hashes, rev, vm);
+                test::system_call_block_start(state, block, block_hashes, rev, vm);
 
                 for (size_t i = 0; i < j_txs.size(); ++i)
                 {
@@ -224,8 +224,10 @@ int main(int argc, const char* argv[])
             if (rev >= EVMC_PRAGUE)
             {
                 requests.emplace_back(collect_deposit_requests(receipts));
-                requests.emplace_back(state::Requests::Type::withdrawal);
-                requests.emplace_back(state::Requests::Type::consolidation);
+
+                auto system_call_requests =
+                    system_call_block_end(state, block, block_hashes, rev, vm);
+                std::ranges::move(system_call_requests, std::back_inserter(requests));
             }
 
             test::finalize(
