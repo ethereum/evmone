@@ -4,45 +4,55 @@
 
 # Execute git only if the tool is available.
 if(GIT)
-    execute_process(
-        COMMAND ${GIT} describe --always --long --tags --first-parent --match=v* --abbrev=40 --dirty
-        WORKING_DIRECTORY ${SOURCE_DIR}
-        OUTPUT_VARIABLE gitinfo
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_VARIABLE error
-        ERROR_STRIP_TRAILING_WHITESPACE
-    )
-    if(error)
-        message(WARNING "Git ${error}")
+    if (GIT_DESCRIBE)
+        set(gitdescribe "${GIT_DESCRIBE}")
+    else()
+        execute_process(
+            COMMAND ${GIT} describe --always --long --tags --first-parent --match=v* --abbrev=40 --dirty
+            WORKING_DIRECTORY ${SOURCE_DIR}
+            OUTPUT_VARIABLE gitdescribe
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_VARIABLE error
+            ERROR_STRIP_TRAILING_WHITESPACE
+        )
+        if(error)
+            message(WARNING "Git ${error}")
+        endif()
     endif()
 
-    execute_process(
-        COMMAND ${GIT} rev-parse --abbrev-ref HEAD
-        WORKING_DIRECTORY ${SOURCE_DIR}
-        OUTPUT_VARIABLE gitbranch
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_VARIABLE error
-        ERROR_STRIP_TRAILING_WHITESPACE
-    )
-    if(error)
-        message(WARNING "Git ${error}")
+    if (GIT_BRANCH)
+        set(gitbranch "${GIT_BRANCH}")
     else()
-        set(gitinfo "${gitinfo}\n${gitbranch}")
+        execute_process(
+            COMMAND ${GIT} rev-parse --abbrev-ref HEAD
+            WORKING_DIRECTORY ${SOURCE_DIR}
+            OUTPUT_VARIABLE gitbranch
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_VARIABLE error
+            ERROR_STRIP_TRAILING_WHITESPACE
+        )
+        if(error)
+            message(WARNING "Git ${error}")
+        endif()
     endif()
 
-    execute_process(
-        COMMAND ${GIT} config --get remote.origin.url
-        WORKING_DIRECTORY ${SOURCE_DIR}
-        OUTPUT_VARIABLE gitorigin
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_VARIABLE error
-        ERROR_STRIP_TRAILING_WHITESPACE
-    )
-    if(error)
-        message(WARNING "Git ${error}")
+    if (GIT_ORIGIN_URL)
+        set(gitorigin "${GIT_ORIGIN_URL}")
     else()
-        set(gitinfo "${gitinfo}\n${gitorigin}\n")
+        execute_process(
+            COMMAND ${GIT} config --get remote.origin.url
+            WORKING_DIRECTORY ${SOURCE_DIR}
+            OUTPUT_VARIABLE gitorigin
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_VARIABLE error
+            ERROR_STRIP_TRAILING_WHITESPACE
+        )
+        if(error)
+            message(WARNING "Git ${error}")
+        endif()
     endif()
+
+    set(gitinfo "${gitdescribe}\n${gitbranch}\n${gitorigin}\n")
 endif()
 
 set(gitinfo_file ${OUTPUT_DIR}/gitinfo.txt)
