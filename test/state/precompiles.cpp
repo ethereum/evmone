@@ -443,20 +443,6 @@ ExecutionResult bls12_g1add_execute(const uint8_t* input, size_t input_size, uin
     return {EVMC_SUCCESS, 128};
 }
 
-ExecutionResult bls12_g1mul_execute(const uint8_t* input, size_t input_size, uint8_t* output,
-    [[maybe_unused]] size_t output_size) noexcept
-{
-    if (input_size != 160)
-        return {EVMC_PRECOMPILE_FAILURE, 0};
-
-    assert(output_size == 128);
-
-    if (!crypto::bls::g1_mul(output, &output[64], input, &input[64], &input[128]))
-        return {EVMC_PRECOMPILE_FAILURE, 0};
-
-    return {EVMC_SUCCESS, 128};
-}
-
 ExecutionResult bls12_g1msm_execute(const uint8_t* input, size_t input_size, uint8_t* output,
     [[maybe_unused]] size_t output_size) noexcept
 {
@@ -480,20 +466,6 @@ ExecutionResult bls12_g2add_execute(const uint8_t* input, size_t input_size, uin
     assert(output_size == 256);
 
     if (!crypto::bls::g2_add(output, &output[128], input, &input[128], &input[256], &input[384]))
-        return {EVMC_PRECOMPILE_FAILURE, 0};
-
-    return {EVMC_SUCCESS, 256};
-}
-
-ExecutionResult bls12_g2mul_execute(const uint8_t* input, size_t input_size, uint8_t* output,
-    [[maybe_unused]] size_t output_size) noexcept
-{
-    if (input_size != 288)
-        return {EVMC_PRECOMPILE_FAILURE, 0};
-
-    assert(output_size == 256);
-
-    if (!crypto::bls::g2_mul(output, &output[128], input, &input[128], &input[256]))
         return {EVMC_PRECOMPILE_FAILURE, 0};
 
     return {EVMC_SUCCESS, 256};
@@ -577,10 +549,8 @@ inline constexpr auto traits = []() noexcept {
         {blake2bf_analyze, blake2bf_execute},
         {point_evaluation_analyze, point_evaluation_execute},
         {bls12_g1add_analyze, bls12_g1add_execute},
-        {bls12_g1mul_analyze, bls12_g1mul_execute},
         {bls12_g1msm_analyze, bls12_g1msm_execute},
         {bls12_g2add_analyze, bls12_g2add_execute},
-        {bls12_g2mul_analyze, bls12_g2mul_execute},
         {bls12_g2msm_analyze, bls12_g2msm_execute},
         {bls12_pairing_check_analyze, bls12_pairing_check_execute},
         {bls12_map_fp_to_g1_analyze, bls12_map_fp_to_g1_execute},
