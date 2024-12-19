@@ -18,6 +18,9 @@ struct SystemContract
     evmc_revision since = EVMC_MAX_REVISION;  ///< EVM revision in which added.
     address addr;                             ///< Address of the system contract.
     GetInputFn* get_input = nullptr;          ///< How to get the input for the system call.
+    /// Type of requests returned by block end system call.
+    /// Ignored for block start system contracts.
+    Requests::Type request_type = Requests::Type::deposit;
 };
 
 /// Registered system contracts.
@@ -36,13 +39,32 @@ static_assert(std::ranges::is_sorted(SYSTEM_CONTRACTS_BLOCK_START,
                   [](const auto& a, const auto& b) noexcept { return a.since < b.since; }),
     "system contract entries must be ordered by revision");
 
-}  // namespace
+constexpr std::array SYSTEM_CONTRACTS_BLOCK_END{
+    SystemContract{
+        EVMC_PRAGUE,
+        WITHDRAWAL_REQUEST_ADDRESS,
+        nullptr,
+        Requests::Type::withdrawal,
+    },
+    SystemContract{
+        EVMC_PRAGUE,
+        CONSOLIDATION_REQUEST_ADDRESS,
+        nullptr,
+        Requests::Type::consolidation,
+    },
+};
 
-StateDiff system_call_block_start(const StateView& state_view, const BlockInfo& block,
-    const BlockHashes& block_hashes, evmc_revision rev, evmc::VM& vm)
+static_assert(std::ranges::is_sorted(SYSTEM_CONTRACTS_BLOCK_END,
+                  [](const auto& a, const auto& b) noexcept { return a.since < b.since; }),
+    "system contract entries must be ordered by revision");
+
+std::pair<StateDiff, std::vector<Requests>> system_call(
+    std::span<const SystemContract> system_contracts, const StateView& state_view,
+    const BlockInfo& block, const state::BlockHashes& block_hashes, evmc_revision rev, evmc::VM& vm)
 {
     State state{state_view};
-    for (const auto& [since, addr, get_input] : SYSTEM_CONTRACTS_BLOCK_START)
+    std::vector<Requests> requests;
+    for (const auto& [since, addr, get_input, request_type] : system_contracts)
     {
         if (rev < since)
             break;  // Because entries are ordered, there are no other contracts for this revision.
@@ -51,25 +73,52 @@ StateDiff system_call_block_start(const StateView& state_view, const BlockInfo& 
         // > if no code exists at [address], the call must fail silently.
         const auto code = state_view.get_account_code(addr);
         if (code.empty())
+        {
+            requests.emplace_back(request_type);
             continue;
+        }
 
-        const auto input = get_input(block, block_hashes);
+        bytes32 input32;
+        bytes_view input;
+        if (get_input != nullptr)
+        {
+            input32 = get_input(block, block_hashes);
+            input = input32;
+        }
 
         const evmc_message msg{
             .kind = EVMC_CALL,
             .gas = 30'000'000,
             .recipient = addr,
             .sender = SYSTEM_ADDRESS,
-            .input_data = input.bytes,
-            .input_size = std::size(input.bytes),
+            .input_data = input.data(),
+            .input_size = input.size(),
         };
 
         const Transaction empty_tx{};
         Host host{rev, vm, state, block, block_hashes, empty_tx};
-        [[maybe_unused]] const auto res = vm.execute(host, rev, msg, code.data(), code.size());
+        const auto res = vm.execute(host, rev, msg, code.data(), code.size());
         assert(res.status_code == EVMC_SUCCESS);
+        requests.emplace_back(request_type, bytes(res.output_data, res.output_size));
     }
+
     // TODO: Should we return empty diff if no system contracts?
-    return state.build_diff(rev);
+    return {state.build_diff(rev), requests};
+}
+}  // namespace
+
+StateDiff system_call_block_start(const StateView& state_view, const BlockInfo& block,
+    const BlockHashes& block_hashes, evmc_revision rev, evmc::VM& vm)
+{
+    // No requests are generated in block start system calls.
+    const auto [state_diff, _] =
+        system_call(SYSTEM_CONTRACTS_BLOCK_START, state_view, block, block_hashes, rev, vm);
+    return state_diff;
+}
+
+std::pair<StateDiff, std::vector<Requests>> system_call_block_end(const StateView& state_view,
+    const BlockInfo& block, const state::BlockHashes& block_hashes, evmc_revision rev, evmc::VM& vm)
+{
+    return system_call(SYSTEM_CONTRACTS_BLOCK_END, state_view, block, block_hashes, rev, vm);
 }
 }  // namespace evmone::state

@@ -5,6 +5,7 @@
 #include "../state/mpt_hash.hpp"
 #include "../state/requests.hpp"
 #include "../state/rlp.hpp"
+#include "../state/system_contracts.hpp"
 #include "../test/statetest/statetest.hpp"
 #include "blockchaintest.hpp"
 #include <gtest/gtest.h>
@@ -79,11 +80,12 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
         }
     }
 
-    auto requests =
-        (rev >= EVMC_PRAGUE ? std::vector{collect_deposit_requests(receipts),
-                                  state::Requests(state::Requests::Type::withdrawal),
-                                  state::Requests(state::Requests::Type::consolidation)} :
-                              std::vector<state::Requests>{});
+    std::vector<state::Requests> requests;
+    if (rev >= EVMC_PRAGUE)
+        requests.emplace_back(collect_deposit_requests(receipts));
+
+    auto system_call_requests = system_call_block_end(block_state, block, block_hashes, rev, vm);
+    std::ranges::move(system_call_requests, std::back_inserter(requests));
 
     finalize(block_state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
 
