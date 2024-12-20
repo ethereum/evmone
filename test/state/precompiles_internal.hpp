@@ -57,13 +57,9 @@ ExecutionResult point_evaluation_execute(
     const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
 ExecutionResult bls12_g1add_execute(
     const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
-ExecutionResult bls12_g1mul_execute(
-    const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
 ExecutionResult bls12_g1msm_execute(
     const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
 ExecutionResult bls12_g2add_execute(
-    const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
-ExecutionResult bls12_g2mul_execute(
     const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
 ExecutionResult bls12_g2msm_execute(
     const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept;
