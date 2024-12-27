@@ -111,3 +111,42 @@ TEST_F(state_transition, access_list_storage)
     expect.post[To].storage[0x02_bytes32] = 0x01_bytes32;
     expect.gas_used = 47506;  // Without access list: 45206
 }
+
+TEST_F(state_transition, tx_data_min_cost_exec_0)
+{
+    // In this test we bump the gas used to MIN_GAS by EIP-7623. Execution gas is 0.
+    rev = EVMC_PRAGUE;
+    tx.to = To;
+    tx.data = "0001"_hex;
+    static constexpr auto MIN_GAS = 40 + 10;
+
+    expect.gas_used = 21000 + MIN_GAS;
+}
+
+TEST_F(state_transition, tx_data_min_cost_exec_50)
+{
+    // In this test the MIN_GAS by EIP-7623 is equal to the execution gas (50).
+    rev = EVMC_PRAGUE;
+    tx.to = To;
+    tx.data = "0001"_hex;
+    static constexpr auto DATA_GAS = 16 + 4;
+    static constexpr auto MIN_GAS = 40 + 10;
+
+    pre[To] = {.code = (MIN_GAS - DATA_GAS) * OP_JUMPDEST};
+    expect.gas_used = 21000 + MIN_GAS;
+    expect.post[To].exists = true;
+}
+
+TEST_F(state_transition, tx_data_min_cost_exec_51)
+{
+    // In this test the execution gas (51) is above the MIN_GAS by EIP-7623.
+    rev = EVMC_PRAGUE;
+    tx.to = To;
+    tx.data = "0001"_hex;
+    static constexpr auto DATA_GAS = 16 + 4;
+    static constexpr auto MIN_GAS = 40 + 10;
+
+    pre[To] = {.code = (MIN_GAS - DATA_GAS + 1) * OP_JUMPDEST};
+    expect.gas_used = 21000 + MIN_GAS + 1;
+    expect.post[To].exists = true;
+}

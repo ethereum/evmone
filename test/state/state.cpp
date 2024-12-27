@@ -39,12 +39,20 @@ int64_t compute_access_list_cost(const AccessList& access_list) noexcept
     return cost;
 }
 
-int64_t compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& tx) noexcept
+struct TransactionCost
+{
+    int64_t intrinsic = 0;
+    int64_t min = 0;
+};
+
+/// Compute the transaction intrinsic gas 𝑔₀ (Yellow Paper, 6.2) and minimal gas (EIP-7623).
+TransactionCost compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& tx) noexcept
 {
     static constexpr auto TX_BASE_COST = 21000;
     static constexpr auto TX_CREATE_COST = 32000;
     static constexpr auto DATA_TOKEN_COST = 4;
     static constexpr auto INITCODE_WORD_COST = 2;
+    static constexpr auto TOTAL_COST_FLOOR_PER_TOKEN = 10;
 
     const auto is_create = !tx.to.has_value();  // Covers also EOF creation transactions.
 
@@ -60,7 +68,12 @@ int64_t compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& tx) noex
 
     const auto intrinsic_cost =
         TX_BASE_COST + create_cost + data_cost + access_list_cost + initcode_cost;
-    return intrinsic_cost;
+
+    // EIP-7623: Compute the minimum cost for the transaction by. If disabled, just use 0.
+    const auto min_cost =
+        rev >= EVMC_PRAGUE ? TX_BASE_COST + num_data_tokens * TOTAL_COST_FLOOR_PER_TOKEN : 0;
+
+    return {intrinsic_cost, min_cost};
 }
 
 evmc_message build_message(
@@ -402,12 +415,12 @@ std::variant<TransactionProperties, std::error_code> validate_transaction(
     if (sender_acc.balance < max_total_fee)
         return make_error_code(INSUFFICIENT_FUNDS);
 
-    const auto intrinsic_cost = compute_tx_intrinsic_cost(rev, tx);
-    if (tx.gas_limit < intrinsic_cost)
+    const auto [intrinsic_cost, min_cost] = compute_tx_intrinsic_cost(rev, tx);
+    if (tx.gas_limit < std::max(intrinsic_cost, min_cost))
         return make_error_code(INTRINSIC_GAS_TOO_LOW);
 
     const auto execution_gas_limit = tx.gas_limit - intrinsic_cost;
-    return TransactionProperties{execution_gas_limit};
+    return TransactionProperties{execution_gas_limit, min_cost};
 }
 
 StateDiff finalize(const StateView& state_view, evmc_revision rev, const address& coinbase,
@@ -496,6 +509,9 @@ TransactionReceipt transition(const StateView& state_view, const BlockInfo& bloc
     const auto refund = std::min(result.gas_refund, refund_limit);
     gas_used -= refund;
     assert(gas_used > 0);
+
+    // EIP-7623: The gas used by the transaction must be at least the min_gas_cost.
+    gas_used = std::max(gas_used, tx_props.min_gas_cost);
 
     sender_acc.balance += tx_max_cost - gas_used * effective_gas_price;
     state.touch(block.coinbase).balance += gas_used * priority_gas_price;
