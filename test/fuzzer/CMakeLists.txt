@@ -16,3 +16,20 @@ endif()
 
 add_executable(evmone-fuzzer fuzzer.cpp)
 target_link_libraries(evmone-fuzzer PRIVATE evmone evmone::testutils evmc::mocked_host)
+
+include(FetchContent)
+
+FetchContent_Declare(
+    glaze
+    GIT_REPOSITORY https://github.com/stephenberry/glaze.git
+    GIT_TAG main
+    GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(glaze)
+
+add_executable(evmone-fuzz)
+target_link_libraries(evmone-fuzz PRIVATE evmone evmone::state glaze::glaze)
+target_sources(
+    evmone-fuzz PRIVATE
+    fuzz.cpp
+)
