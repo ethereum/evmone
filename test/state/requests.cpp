@@ -24,10 +24,9 @@ hash256 calculate_requests_hash(std::span<const Requests> block_requests_list)
         //        if (requests.data.empty())
         //            continue;
 
-        const bytes requests_bytes = static_cast<uint8_t>(requests.type) + requests.data;
         hash256 requests_hash;
         crypto::sha256(reinterpret_cast<std::byte*>(requests_hash.bytes),
-            reinterpret_cast<const std::byte*>(requests_bytes.data()), requests_bytes.size());
+            reinterpret_cast<const std::byte*>(requests.raw_data.data()), requests.raw_data.size());
         requests_hash_list += requests_hash;
     }
 
@@ -78,11 +77,11 @@ Requests collect_deposit_requests(std::span<const TransactionReceipt> receipts)
                 // Index is padded to word boundary, so takes 32 bytes.
                 assert(log.data.size() == INDEX_OFFSET + 32);
 
-                requests.data.append(&log.data[PUBKEY_OFFSET], PUBKEY_SIZE);
-                requests.data.append(&log.data[WITHDRAWAL_CREDS_OFFSET], WITHDRAWAL_CREDS_SIZE);
-                requests.data.append(&log.data[AMOUNT_OFFSET], AMOUNT_SIZE);
-                requests.data.append(&log.data[SIGNATURE_OFFSET], SIGNATURE_SIZE);
-                requests.data.append(&log.data[INDEX_OFFSET], INDEX_SIZE);
+                requests.append({&log.data[PUBKEY_OFFSET], PUBKEY_SIZE});
+                requests.append({&log.data[WITHDRAWAL_CREDS_OFFSET], WITHDRAWAL_CREDS_SIZE});
+                requests.append({&log.data[AMOUNT_OFFSET], AMOUNT_SIZE});
+                requests.append({&log.data[SIGNATURE_OFFSET], SIGNATURE_SIZE});
+                requests.append({&log.data[INDEX_OFFSET], INDEX_SIZE});
             }
         }
     }

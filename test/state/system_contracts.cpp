@@ -99,7 +99,7 @@ std::pair<StateDiff, std::vector<Requests>> system_call(
         Host host{rev, vm, state, block, block_hashes, empty_tx};
         const auto res = vm.execute(host, rev, msg, code.data(), code.size());
         assert(res.status_code == EVMC_SUCCESS);
-        requests.emplace_back(request_type, bytes(res.output_data, res.output_size));
+        requests.emplace_back(request_type, bytes_view{res.output_data, res.output_size});
     }
 
     // TODO: Should we return empty diff if no system contracts?

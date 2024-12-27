@@ -34,14 +34,24 @@ struct Requests
         consolidation = 2,
     };
 
-    /// Requests type.
-    Type type = Type::deposit;
-    /// Requests data - an opaque byte array, contains zero or more encoded request objects.
-    evmc::bytes data;
+    /// Raw encoded data of requests object: first byte is type, the rest is request objects.
+    evmc::bytes raw_data;
 
-    explicit Requests(Type _type, evmc::bytes _data = {}) noexcept
-      : type(_type), data(std::move(_data))
-    {}
+    explicit Requests(Type _type, evmc::bytes_view data = {})
+    {
+        raw_data.reserve(1 + data.size());
+        raw_data += static_cast<uint8_t>(_type);
+        raw_data += data;
+    }
+
+    /// Requests type.
+    Type type() const noexcept { return static_cast<Type>(raw_data[0]); }
+
+    /// Requests data - an opaque byte array, contains zero or more encoded request objects.
+    evmc::bytes_view data() const noexcept { return {raw_data.data() + 1, raw_data.size() - 1}; }
+
+    /// Append data to requests object byte array.
+    void append(bytes_view data) { raw_data.append(data); }
 };
 
 /// Calculate commitment value of block requests list

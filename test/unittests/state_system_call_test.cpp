@@ -88,10 +88,10 @@ TEST_F(state_system_call, withdrawal)
     EXPECT_EQ(storage.at(0x01_bytes32), 0x01_bytes32);
 
     ASSERT_EQ(requests.size(), 2);
-    EXPECT_EQ(requests[0].type, Requests::Type::withdrawal);
-    EXPECT_EQ(requests[0].data, bytes(WITHDRAWAL_REQUEST));
-    EXPECT_EQ(requests[1].type, Requests::Type::consolidation);
-    EXPECT_TRUE(requests[1].data.empty());
+    EXPECT_EQ(requests[0].type(), Requests::Type::withdrawal);
+    EXPECT_EQ(requests[0].data(), bytes(WITHDRAWAL_REQUEST));
+    EXPECT_EQ(requests[1].type(), Requests::Type::consolidation);
+    EXPECT_TRUE(requests[1].data().empty());
 }
 
 TEST_F(state_system_call, consolidation)
@@ -112,8 +112,8 @@ TEST_F(state_system_call, consolidation)
     EXPECT_EQ(storage.at(0x01_bytes32), 0x01_bytes32);
 
     ASSERT_EQ(requests.size(), 2);
-    EXPECT_EQ(requests[0].type, Requests::Type::withdrawal);
-    EXPECT_TRUE(requests[0].data.empty());
-    EXPECT_EQ(requests[1].type, Requests::Type::consolidation);
-    EXPECT_EQ(requests[1].data, bytes(CONSOLIDATION_REQUEST));
+    EXPECT_EQ(requests[0].type(), Requests::Type::withdrawal);
+    EXPECT_TRUE(requests[0].data().empty());
+    EXPECT_EQ(requests[1].type(), Requests::Type::consolidation);
+    EXPECT_EQ(requests[1].data(), bytes(CONSOLIDATION_REQUEST));
 }

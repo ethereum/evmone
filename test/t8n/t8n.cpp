@@ -255,7 +255,7 @@ int main(int argc, const char* argv[])
             // EIP-7685: General purpose execution layer requests
             j_result["requests"] = json::json::array();
             for (size_t i = 0; i < requests.size(); ++i)
-                j_result["requests"][i] = hex0x(requests[i].data);
+                j_result["requests"][i] = hex0x(requests[i].data());
 
             auto requests_hash = calculate_requests_hash(requests);
 
