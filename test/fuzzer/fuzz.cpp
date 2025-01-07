@@ -22,10 +22,36 @@ struct Test
 };
 }  // namespace fzz
 
+static constexpr glz::opts OPTS{.null_terminated = false};
+
+
+extern "C" size_t LLVMFuzzerCustomMutator(
+    uint8_t* data, size_t size, size_t max_size, unsigned int seed)
+{
+    (void)seed;
+    const std::string_view buffer{reinterpret_cast<const char*>(data), size};
+
+    fzz::Test test;
+    const auto ec = glz::read<OPTS>(test, buffer);
+    if (!ec)
+    {
+        // mutate.
+    }
+
+    auto e = glz::write_json(test);
+    if (e.has_value())
+    {
+        auto s = e.value();
+        if (s.size() > max_size)
+            return 0;
+        std::memcpy(data, s.data(), s.size());
+        return s.size();
+    }
+    return 0;
+}
+
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noexcept
 {
-    static constexpr glz::opts OPTS{.null_terminated = false};
-
     const std::string_view buffer{reinterpret_cast<const char*>(data), data_size};
 
     fzz::Test test;
