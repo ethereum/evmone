@@ -4,13 +4,32 @@
 
 extern "C" size_t LLVMFuzzerMutate(uint8_t* data, size_t size, size_t max_size) noexcept;
 
+namespace glz::detail
+{
+template <>
+struct from<JSON, evmc::address>
+{
+    template <auto Opts>
+    static void op(evmc::address& addr, auto&&... args)
+    {
+        char buffer[40];
+        std::string_view str{buffer, sizeof(buffer)};
+        read<JSON>::op<Opts>(str, args...);
+        addr = evmc::from_hex<evmc::address>(str).value();
+    }
+};
 
 template <>
-struct glz::meta<evmc::address>
+struct to<JSON, evmc::address>
 {
-    using T = evmc::address;
-    static constexpr auto value = object(&T::bytes);
+    template <auto Opts>
+    static void op(const evmc::address& addr, auto&&... args) noexcept
+    {
+        const auto str = evmc::hex(addr);
+        write<JSON>::op<Opts>(str, args...);
+    }
 };
+}  // namespace glz::detail
 
 namespace fzz
 {
