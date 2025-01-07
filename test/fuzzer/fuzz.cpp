@@ -22,7 +22,7 @@ struct Test
 };
 }  // namespace fzz
 
-static constexpr glz::opts OPTS{.null_terminated = false};
+static constexpr glz::opts OPTS{};
 
 
 extern "C" size_t LLVMFuzzerCustomMutator(
@@ -41,10 +41,10 @@ extern "C" size_t LLVMFuzzerCustomMutator(
     auto e = glz::write_json(test);
     if (e.has_value())
     {
-        auto s = e.value();
-        if (s.size() > max_size)
+        const auto& s = e.value();
+        if (s.size() + 1 > max_size)
             return 0;
-        std::memcpy(data, s.data(), s.size());
+        std::memcpy(data, s.c_str(), s.size() + 1);
         return s.size();
     }
     return 0;
