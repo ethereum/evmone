@@ -4,12 +4,21 @@
 
 extern "C" size_t LLVMFuzzerMutate(uint8_t* data, size_t size, size_t max_size) noexcept;
 
+
+template <>
+struct glz::meta<evmc::address>
+{
+    using T = evmc::address;
+    static constexpr auto value = object(&T::bytes);
+};
+
 namespace fzz
 {
 using RNG = std::minstd_rand;
 
 struct Account
 {
+    evmc::address addr;
     uint32_t nonce = 0;
     uint32_t balance = 0;
     std::string code;
@@ -30,6 +39,11 @@ struct Test
 void mutate(std::integral auto& value, RNG&)
 {
     LLVMFuzzerMutate(reinterpret_cast<uint8_t*>(&value), sizeof(value), sizeof(value));
+}
+
+void mutate(evmc::address& value, RNG&)
+{
+    LLVMFuzzerMutate(value.bytes, sizeof(value), sizeof(value));
 }
 
 template <typename T>
