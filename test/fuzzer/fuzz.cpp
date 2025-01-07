@@ -18,7 +18,6 @@ using RNG = std::minstd_rand;
 
 struct Account
 {
-    evmc::address addr;
     uint32_t nonce = 0;
     uint32_t balance = 0;
     std::string code;
@@ -32,7 +31,7 @@ struct Tx
 
 struct Test
 {
-    std::vector<Account> state;
+    std::unordered_map<evmc::address, Account> state;
     Tx tx;
 };
 
@@ -53,6 +52,20 @@ void mutate(std::vector<T>& v, RNG& rng)
     if (index == v.size())
         v.emplace_back();
     mutate(v[index], rng);
+}
+
+template <typename K, typename V>
+void mutate(std::unordered_map<K, V>& v, RNG& rng)
+{
+    const auto index = rng() % (v.size() + 1);
+    if (index == v.size())
+        v.emplace();  // TODO: loop until successful insertion.
+    else
+    {
+        auto it = v.begin();
+        std::advance(it, index);
+        mutate(it->second, rng);
+    }
 }
 
 void mutate(std::string& value, RNG&)
