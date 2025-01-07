@@ -1,5 +1,7 @@
 #include "../state/state.hpp"
 #include <glaze/glaze.hpp>
+
+#include <iostream>
 #include <random>
 
 extern "C" size_t LLVMFuzzerMutate(uint8_t* data, size_t size, size_t max_size) noexcept;
@@ -42,15 +44,23 @@ struct Account
     std::string code;
 };
 
+struct Block
+{
+    uint32_t gas_limit = 0;
+};
+
 struct Tx
 {
     uint8_t to = 0;
+    uint32_t gas_limit = 0;
+    evmc::address sender;
     std::string data;
 };
 
 struct Test
 {
     std::unordered_map<evmc::address, Account> state;
+    Block block;
     Tx tx;
 };
 
@@ -112,6 +122,82 @@ void mutate(T& value, RNG& rng)
         ++c;
     });
 }
+
+class StateView : public evmone::state::StateView
+{
+    const Test& test_;
+
+public:
+    StateView(const Test& test) : test_{test} {}
+
+    std::optional<Account> get_account(const evmc::address& addr) const noexcept override
+    {
+        const auto it = test_.state.find(addr);
+        if (it == test_.state.end())
+            return std::nullopt;
+        const auto& t = it->second;
+        StateView::Account a{.nonce = t.nonce, .balance = t.balance};
+        return a;
+    }
+
+    evmc::bytes get_account_code(const evmc::address& addr) const noexcept override
+    {
+        const auto it = test_.state.find(addr);
+        if (it == test_.state.end())
+            return {};
+        const auto& str_code = it->second.code;
+        return evmc::bytes(str_code.begin(), str_code.end());
+    }
+
+    evmc::bytes32 get_storage(
+        const evmc::address& addr, const evmc::bytes32& key) const noexcept override
+    {
+        (void)addr;
+        (void)key;
+        return {};
+    }
+};
+
+void execute(const Test& test)
+{
+    const StateView state_view{test};
+
+    evmone::state::BlockInfo block;
+    block.gas_limit = test.block.gas_limit;
+
+    evmone::state::Transaction tx;
+    if (test.tx.to < test.state.size())
+    {
+        auto it = test.state.begin();
+        std::advance(it, test.tx.to);
+        tx.to = it->first;
+    }
+    tx.data = evmone::bytes{test.tx.data.begin(), test.tx.data.end()};
+    tx.gas_limit = test.tx.gas_limit;
+
+    const auto res = evmone::state::validate_transaction(
+        state_view, block, tx, EVMC_LATEST_STABLE_REVISION, 1'000'000, 0);
+
+    if (std::holds_alternative<std::error_code>(res))
+    {
+        const auto ec = std::get<std::error_code>(res);
+        switch (ec.value())
+        {
+            using namespace evmone::state;
+        case INTRINSIC_GAS_TOO_LOW:
+        case SENDER_NOT_EOA:
+        case GAS_LIMIT_REACHED:
+            break;
+        case INSUFFICIENT_FUNDS:
+            assert(false && "INSUFFICIENT_FUNDS");
+            break;
+        default:
+            std::cerr << "new error: " << ec.message() << '\n';
+            break;
+        }
+    }
+}
+
 }  // namespace fzz
 
 static constexpr glz::opts OPTS{.null_terminated = false};
@@ -151,10 +237,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
     if (ec)
         return -1;
 
-    evmone::state::Transaction tx;
-    tx.data = evmone::bytes{test.tx.data.begin(), test.tx.data.end()};
-
-    // evmone::state::validate_transaction()
+    fzz::execute(test);
 
     return 0;
 }
