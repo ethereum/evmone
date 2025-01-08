@@ -146,10 +146,10 @@ add_test(
 )
 string(
     JOIN ".*" EXPECTED_OUT
-    # empty requests list of exactly 3 elements (withdrawals, deposits, consolidations)
-    [=["requests": \[[^],]*"0x",[^],]*"0x",[^],]*"0x"[^,]*\]]=]
+    # empty requests list
+    [=["requests": \[\]]=]
     # requests hash should be present
-    [=["requestsHash": "0x6036c41849da9c076ed79654d434017387a88fb833c2856b32e18218b3341c5f"]=]
+    [=["requestsHash": "0xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"]=]
 )
 set_tests_properties(
     ${PREFIX}/${TEST_CASE}/out.json PROPERTIES
