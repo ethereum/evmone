@@ -1,4 +1,6 @@
 #include "../state/state.hpp"
+#include "evmone/evmone.h"
+
 #include <glaze/glaze.hpp>
 
 #include <iostream>
@@ -52,8 +54,8 @@ struct Block
 struct Tx
 {
     uint8_t to = 0;
+    uint8_t sender = 0;
     uint32_t gas_limit = 0;
-    evmc::address sender;
     std::string data;
 };
 
@@ -88,7 +90,11 @@ void mutate(std::unordered_map<K, V>& v, RNG& rng)
 {
     const auto index = rng() % (v.size() + 1);
     if (index == v.size())
-        v.emplace();  // TODO: loop until successful insertion.
+    {
+        evmc::address new_addr;
+        mutate(new_addr, rng);
+        v.emplace(new_addr, V{});
+    }
     else
     {
         auto it = v.begin();
@@ -158,6 +164,20 @@ public:
     }
 };
 
+class BlockHashes : public evmone::state::BlockHashes
+{
+public:
+    evmc::bytes32 get_block_hash(int64_t block_number) const noexcept override
+    {
+        (void)block_number;
+        return {};
+    }
+};
+
+
+static auto vm = evmc::VM{evmc_create_evmone()};
+
+
 void execute(const Test& test)
 {
     const StateView state_view{test};
@@ -171,6 +191,12 @@ void execute(const Test& test)
         auto it = test.state.begin();
         std::advance(it, test.tx.to);
         tx.to = it->first;
+    }
+    if (test.tx.sender < test.state.size())
+    {
+        auto it = test.state.begin();
+        std::advance(it, test.tx.sender);
+        tx.sender = it->first;
     }
     tx.data = evmone::bytes{test.tx.data.begin(), test.tx.data.end()};
     tx.gas_limit = test.tx.gas_limit;
@@ -195,7 +221,13 @@ void execute(const Test& test)
             std::cerr << "new error: " << ec.message() << '\n';
             break;
         }
+        return;
     }
+
+    const auto execution_gas_limit = std::get<int64_t>(res);
+    BlockHashes block_hashes;
+    evmone::state::transition(
+        state_view, block, block_hashes, tx, EVMC_LATEST_STABLE_REVISION, vm, execution_gas_limit);
 }
 
 }  // namespace fzz
@@ -215,17 +247,30 @@ extern "C" size_t LLVMFuzzerCustomMutator(
     {
         fzz::mutate(test, rng);
     }
+    else
+    {
+        const auto descriptive_error = glz::format_error(ec, buffer);
+        std::cerr << "JSON read error: " << descriptive_error << '\n';
+        std::cerr << buffer << '\n';
+        __builtin_trap();
+    }
 
     auto e = glz::write_json(test);
     if (e.has_value())
     {
         const auto& s = e.value();
         if (s.size() + 1 > max_size)
+        {
+            // std::cerr << "too big\n";
             return 0;
+        }
         std::memcpy(data, s.c_str(), s.size() + 1);
         return s.size();
     }
-    return 0;
+
+    const auto descriptive_error = glz::format_error(e.error(), buffer);
+    std::cerr << "JSON write error: " << descriptive_error << '\n';
+    __builtin_trap();
 }
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noexcept
