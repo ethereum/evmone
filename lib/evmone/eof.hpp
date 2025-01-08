@@ -115,11 +115,10 @@ struct EOF1Header
     }
 
     /// A helper to check whether the container has data section body size equal to declare size.
+    /// Containers with truncated data section cannot be init-containers.
     [[nodiscard]] bool has_full_data(size_t container_size) const noexcept
     {
-        // Containers with truncated data section cannot be initcontainers.
-        const auto truncated_data = static_cast<size_t>(data_offset + data_size) > container_size;
-        return !truncated_data;
+        return size_t{data_offset} + data_size <= container_size;
     }
 
     /// A helper to extract reference to a specific container section.
