@@ -63,6 +63,13 @@ struct Transaction
     uint8_t v = 0;
 };
 
+/// Transaction properties computed during the validation needed for the execution.
+struct TransactionProperties
+{
+    /// The amount of gas provided to the EVM for the transaction execution.
+    int64_t execution_gas_limit = 0;
+};
+
 struct Log
 {
     address addr;

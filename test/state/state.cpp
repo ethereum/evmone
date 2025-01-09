@@ -297,9 +297,9 @@ void State::rollback(size_t checkpoint)
 
 /// Validates transaction and computes its execution gas limit (the amount of gas provided to EVM).
 /// @return  Execution gas limit or transaction validation error.
-std::variant<int64_t, std::error_code> validate_transaction(const StateView& state_view,
-    const BlockInfo& block, const Transaction& tx, evmc_revision rev, int64_t block_gas_left,
-    int64_t blob_gas_left) noexcept
+std::variant<TransactionProperties, std::error_code> validate_transaction(
+    const StateView& state_view, const BlockInfo& block, const Transaction& tx, evmc_revision rev,
+    int64_t block_gas_left, int64_t blob_gas_left) noexcept
 {
     switch (tx.type)
     {
@@ -386,11 +386,13 @@ std::variant<int64_t, std::error_code> validate_transaction(const StateView& sta
     if (sender_acc.balance < max_total_fee)
         return make_error_code(INSUFFICIENT_FUNDS);
 
-    const auto execution_gas_limit = tx.gas_limit - compute_tx_intrinsic_cost(rev, tx);
-    if (execution_gas_limit < 0)
+    const auto intrinsic_cost = compute_tx_intrinsic_cost(rev, tx);
+
+    if (tx.gas_limit < intrinsic_cost)
         return make_error_code(INTRINSIC_GAS_TOO_LOW);
 
-    return execution_gas_limit;
+    const auto execution_gas_limit = tx.gas_limit - intrinsic_cost;
+    return TransactionProperties{execution_gas_limit};
 }
 
 StateDiff finalize(const StateView& state_view, evmc_revision rev, const address& coinbase,
@@ -422,7 +424,7 @@ StateDiff finalize(const StateView& state_view, evmc_revision rev, const address
 
 TransactionReceipt transition(const StateView& state_view, const BlockInfo& block,
     const BlockHashes& block_hashes, const Transaction& tx, evmc_revision rev, evmc::VM& vm,
-    int64_t execution_gas_limit)
+    const TransactionProperties& tx_props)
 {
     State state{state_view};
 
@@ -466,7 +468,7 @@ TransactionReceipt transition(const StateView& state_view, const BlockInfo& bloc
     if (rev >= EVMC_SHANGHAI)
         host.access_account(block.coinbase);
 
-    const auto result = host.call(build_message(tx, execution_gas_limit, rev));
+    const auto result = host.call(build_message(tx, tx_props.execution_gas_limit, rev));
 
     auto gas_used = tx.gas_limit - result.gas_left;
 

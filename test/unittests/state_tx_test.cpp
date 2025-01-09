@@ -146,8 +146,9 @@ TEST(state_tx, validate_blob_tx)
                   .message(),
         make_error_code(ErrorCode::BLOB_GAS_LIMIT_EXCEEDED).message());
 
-    EXPECT_EQ(std::get<int64_t>(validate_transaction(
-                  state, bi, tx, EVMC_CANCUN, 60000, BlockInfo::MAX_BLOB_GAS_PER_BLOCK)),
+    EXPECT_EQ(std::get<TransactionProperties>(validate_transaction(state, bi, tx, EVMC_CANCUN,
+                                                  60000, BlockInfo::MAX_BLOB_GAS_PER_BLOCK))
+                  .execution_gas_limit,
         39000);
 
     tx.blob_hashes[0] = 0x0200000000000000000000000000000000000000000000000000000000000001_bytes32;

@@ -75,13 +75,13 @@ bytes32 TestBlockHashes::get_block_hash(int64_t block_number) const noexcept
     const state::Transaction& tx, evmc_revision rev, evmc::VM& vm, int64_t block_gas_left,
     int64_t blob_gas_left)
 {
-    const auto execution_gas_or_error =
+    const auto tx_props_or_error =
         state::validate_transaction(state, block, tx, rev, block_gas_left, blob_gas_left);
-    if (const auto err = get_if<std::error_code>(&execution_gas_or_error))
+    if (const auto err = get_if<std::error_code>(&tx_props_or_error))
         return *err;
 
-    auto receipt = state::transition(
-        state, block, block_hashes, tx, rev, vm, get<int64_t>(execution_gas_or_error));
+    auto receipt = state::transition(state, block, block_hashes, tx, rev, vm,
+        get<state::TransactionProperties>(tx_props_or_error));
     state.apply(receipt.state_diff);
     return receipt;
 }
