@@ -122,7 +122,7 @@ state::AccessList from_json<state::AccessList>(const json::json& j)
 }
 
 // Based on calculateEIP1559BaseFee from ethereum/retesteth
-inline uint64_t calculate_current_base_fee_eip1559(
+static uint64_t calculate_current_base_fee_eip1559(
     uint64_t parent_gas_used, uint64_t parent_gas_limit, uint64_t parent_base_fee)
 {
     // TODO: Make sure that 64-bit precision is good enough.

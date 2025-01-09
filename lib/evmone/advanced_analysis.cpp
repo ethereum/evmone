@@ -9,7 +9,7 @@ namespace evmone::advanced
 {
 /// Clamps x to the max value of To type.
 template <typename To, typename T>
-inline constexpr To clamp(T x) noexcept
+static constexpr To clamp(T x) noexcept
 {
     constexpr auto max = std::numeric_limits<To>::max();
     return x <= max ? static_cast<To>(x) : max;
@@ -219,7 +219,7 @@ AdvancedCodeAnalysis analyze(evmc_revision rev, bytes_view code) noexcept
 
     assert(analysis.instrs.size() <= max_instrs_size);
 
-    // Make sure the push_values has not been reallocated. Otherwise iterators are invalid.
+    // Make sure the push_values has not been reallocated. Otherwise, iterators are invalid.
     assert(analysis.push_values.size() <= max_args_storage_size);
 
     return analysis;
