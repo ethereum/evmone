@@ -488,11 +488,6 @@ TransactionReceipt transition(const StateView& state_view, const BlockInfo& bloc
             // Skip if authorization nonce is incorrect.
             if (auth.nonce != authority_ptr->nonce)
                 continue;
-
-            // Refund if authority account creation is not needed.
-            static constexpr int64_t EXISTING_AUTHORITY_REFUND =
-                AUTHORIZATION_EMPTY_ACCOUNT_COST - AUTHORIZATION_BASE_COST;
-            delegation_refund += EXISTING_AUTHORITY_REFUND;
         }
         else
         {
@@ -504,6 +499,16 @@ TransactionReceipt transition(const StateView& state_view, const BlockInfo& bloc
             // Skip if authorization nonce is incorrect.
             if (auth.nonce != 0)
                 continue;
+        }
+
+        // Refund if authority account creation is not needed,
+        // i.e. if it had non-empty balance, nonce, code or storage.
+        if (authority_ptr != nullptr &&
+            (!authority_ptr->is_empty() || authority_ptr->has_initial_storage))
+        {
+            static constexpr int64_t EXISTING_AUTHORITY_REFUND =
+                AUTHORIZATION_EMPTY_ACCOUNT_COST - AUTHORIZATION_BASE_COST;
+            delegation_refund += EXISTING_AUTHORITY_REFUND;
         }
 
         authority_ptr->code.reserve(std::size(DELEGATION_MAGIC) + std::size(auth.addr.bytes));
