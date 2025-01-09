@@ -142,12 +142,12 @@ public:
 /// @return Transaction receipt with state diff.
 TransactionReceipt transition(const StateView& state, const BlockInfo& block,
     const BlockHashes& block_hashes, const Transaction& tx, evmc_revision rev, evmc::VM& vm,
-    int64_t execution_gas_limit);
+    const TransactionProperties& tx_props);
 
 /// Validate a transaction.
 ///
 /// @return Computed execution gas limit or validation error.
-[[nodiscard]] std::variant<int64_t, std::error_code> validate_transaction(
+[[nodiscard]] std::variant<TransactionProperties, std::error_code> validate_transaction(
     const StateView& state_view, const BlockInfo& block, const Transaction& tx, evmc_revision rev,
     int64_t block_gas_left, int64_t blob_gas_left) noexcept;
 }  // namespace evmone::state
