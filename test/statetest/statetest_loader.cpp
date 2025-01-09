@@ -342,6 +342,10 @@ static void from_json_tx_common(const json::json& j, state::Transaction& o)
         for (const auto& hash : *it)
             o.blob_hashes.push_back(from_json<bytes32>(hash));
     }
+    else if (const auto au_it = j.find("authorizationList"); au_it != j.end())
+    {
+        o.type = state::Transaction::Type::set_code;
+    }
 }
 
 template <>
