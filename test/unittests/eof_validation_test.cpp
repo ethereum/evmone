@@ -743,17 +743,15 @@ TEST_F(eof_validation, multiple_code_sections_headers)
         EOFValidationError::data_section_missing);
 }
 
-TEST_F(eof_validation, EOF1_dataloadn_truncated)
+TEST_F(eof_validation, dataloadn)
 {
+    // Truncated DATALOADN
     add_test_case("EF0001 010004 0200010001 040000 00 00800000 D1",
         EOFValidationError::truncated_instruction);
 
     add_test_case("EF0001 010004 0200010002 040000 00 00800000 D100",
         EOFValidationError::truncated_instruction);
-}
 
-TEST_F(eof_validation, dataloadn)
-{
     // DATALOADN{0}
     add_test_case(eof_bytecode(dataloadn(0) + OP_POP + OP_STOP, 1)
                       .data("0000000000000000111111111111111122222222222222223333333333333333"),
