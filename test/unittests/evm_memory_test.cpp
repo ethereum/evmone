@@ -113,7 +113,7 @@ struct memory_access_opcode
 };
 
 
-memory_access_opcode memory_access_opcodes[] = {
+static constexpr memory_access_opcode memory_access_opcodes[] = {
     {OP_KECCAK256, 0, 1},
     {OP_CALLDATACOPY, 0, 2},
     {OP_CODECOPY, 0, 2},
@@ -148,7 +148,7 @@ struct
 {
     uint256 index;
     uint256 size;
-} memory_access_test_cases[] = {
+} static constexpr memory_access_test_cases[] = {
     {0, 0x100000000},
     {0, 0x10000000000000000_u256},
     {0, 0x100000000000000000000000000000000_u256},

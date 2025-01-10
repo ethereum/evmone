@@ -149,7 +149,7 @@ TEST_P(evm, log)
 {
     for (auto op : {OP_LOG0, OP_LOG1, OP_LOG2, OP_LOG3, OP_LOG4})
     {
-        const auto n = op - OP_LOG0;
+        const uint8_t n = op - OP_LOG0;
         const auto code =
             push(1) + push(2) + push(3) + push(4) + mstore8(2, 0x77) + push(2) + push(2) + op;
         host.recorded_logs.clear();
@@ -161,7 +161,7 @@ TEST_P(evm, log)
         EXPECT_EQ(last_log.data[0], 0x77);
         EXPECT_EQ(last_log.data[1], 0);
         ASSERT_EQ(last_log.topics.size(), n);
-        for (size_t i = 0; i < static_cast<size_t>(n); ++i)
+        for (size_t i = 0; i < n; ++i)
         {
             EXPECT_EQ(last_log.topics[i].bytes[31], 4 - i);
         }
