@@ -54,7 +54,7 @@ void register_test_files(const fs::path& root, evmc::VM& vm)
             std::back_inserter(test_files), [](const fs::directory_entry& entry) {
                 return entry.is_regular_file() && entry.path().extension() == ".json";
             });
-        std::sort(test_files.begin(), test_files.end());
+        std::ranges::sort(test_files);
 
         for (const auto& p : test_files)
             register_test(fs::relative(p, root).parent_path().string(), p, vm);

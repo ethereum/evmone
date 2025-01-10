@@ -58,7 +58,7 @@ BloomFilter bloom_filter_from_bytes(const bytes_view& data) noexcept
 {
     assert(data.size() == 256);
     BloomFilter res;
-    std::copy(std::begin(data), std::end(data), std::begin(res.bytes));
+    std::ranges::copy(data, res.bytes);
     return res;
 }
 
