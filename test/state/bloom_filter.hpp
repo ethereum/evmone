@@ -18,7 +18,7 @@ struct BloomFilter
     uint8_t bytes[256] = {};
 
     /// Implicit operator converting to bytes_view.
-    inline constexpr operator bytes_view() const noexcept { return {bytes, sizeof(bytes)}; }
+    constexpr operator bytes_view() const noexcept { return {bytes, sizeof(bytes)}; }
 };
 
 /// Computes combined bloom fitter for set of logs.

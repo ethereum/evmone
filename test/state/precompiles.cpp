@@ -32,13 +32,13 @@ namespace
 {
 constexpr auto GasCostMax = std::numeric_limits<int64_t>::max();
 
-inline constexpr int64_t num_words(size_t size_in_bytes) noexcept
+constexpr int64_t num_words(size_t size_in_bytes) noexcept
 {
     return static_cast<int64_t>((size_in_bytes + 31) / 32);
 }
 
 template <int BaseCost, int WordCost>
-inline constexpr int64_t cost_per_input_word(size_t input_size) noexcept
+constexpr int64_t cost_per_input_word(size_t input_size) noexcept
 {
     return BaseCost + WordCost * num_words(input_size);
 }

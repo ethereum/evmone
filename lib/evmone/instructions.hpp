@@ -58,13 +58,13 @@ constexpr auto word_size = 32;
 
 /// Returns number of words what would fit to provided number of bytes,
 /// i.e. it rounds up the number bytes to number of words.
-inline constexpr int64_t num_words(uint64_t size_in_bytes) noexcept
+constexpr int64_t num_words(uint64_t size_in_bytes) noexcept
 {
     return static_cast<int64_t>((size_in_bytes + (word_size - 1)) / word_size);
 }
 
 /// Computes gas cost of copying the given amount of bytes to/from EVM memory.
-inline constexpr int64_t copy_cost(uint64_t size_in_bytes) noexcept
+constexpr int64_t copy_cost(uint64_t size_in_bytes) noexcept
 {
     constexpr auto WordCopyCost = 3;
     return num_words(size_in_bytes) * WordCopyCost;

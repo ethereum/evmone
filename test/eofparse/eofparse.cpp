@@ -10,7 +10,7 @@
 
 namespace
 {
-inline constexpr bool isalnum(char ch) noexcept
+constexpr bool isalnum(char ch) noexcept
 {
     return (ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z');
 }

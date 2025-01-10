@@ -7,7 +7,7 @@
 namespace stdx
 {
 template <typename EnumT>
-inline constexpr auto to_underlying(EnumT e) noexcept
+constexpr auto to_underlying(EnumT e) noexcept
 {
     return static_cast<std::underlying_type_t<EnumT>>(e);
 }
