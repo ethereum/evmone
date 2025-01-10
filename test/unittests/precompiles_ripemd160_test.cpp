@@ -9,7 +9,7 @@
 
 using evmone::crypto::ripemd160;
 
-inline std::string hex(std::span<const std::byte> x)
+static std::string hex(std::span<const std::byte> x)
 {
     return evmc::hex({reinterpret_cast<const unsigned char*>(x.data()), x.size()});
 }

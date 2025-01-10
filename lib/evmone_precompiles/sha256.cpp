@@ -135,7 +135,7 @@ static bool calc_chunk(uint8_t chunk[CHUNK_SIZE], struct BufferState* state)
     return true;
 }
 
-[[gnu::always_inline, msvc::forceinline]] inline void sha_256_implementation(
+[[gnu::always_inline, msvc::forceinline]] static void sha_256_implementation(
     uint32_t h[8], const std::byte* input, size_t len)
 {
     /*

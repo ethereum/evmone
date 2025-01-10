@@ -115,7 +115,7 @@ struct CustomStruct
     bytes b;
 };
 
-inline bytes rlp_encode(const CustomStruct& t)
+static bytes rlp_encode(const CustomStruct& t)
 {
     return rlp::encode_tuple(t.a, t.b);
 }
@@ -156,7 +156,7 @@ TEST(state_rlp, encode_uint64)
     EXPECT_EQ(rlp::encode(uint64_t{0xffffffffffffffff}), "88ffffffffffffffff"_hex);
 }
 
-inline bytes to_significant_be_bytes(uint64_t x)
+static bytes to_significant_be_bytes(uint64_t x)
 {
     const auto byte_width = (std::bit_width(x) + 7) / 8;
     const auto leading_zero_bits = std::countl_zero(x) & ~7;  // Leading bits rounded down to 8x.
@@ -169,7 +169,7 @@ inline bytes to_significant_be_bytes(uint64_t x)
 
 /// The "custom" implementation of RLP encoding of uint64. It trims leading zero bytes and
 /// manually constructs bytes with variadic-length encoding.
-inline bytes rlp_encode_uint64(uint64_t x)
+static bytes rlp_encode_uint64(uint64_t x)
 {
     static constexpr uint8_t ShortBase = 0x80;
     if (x < ShortBase)  // Single-byte encoding.
