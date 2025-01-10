@@ -16,6 +16,34 @@ constexpr auto EXTCALL_ABORT = 2;
 
 namespace evmone::instr::core
 {
+namespace
+{
+/// Get target address of a code executing instruction.
+///
+/// Returns EIP-7702 delegate address if addr is delegated, or addr itself otherwise.
+/// Applies gas charge for accessing delegate account and may fail with out of gas.
+inline std::variant<evmc::address, Result> get_target_address(
+    const evmc::address& addr, int64_t& gas_left, ExecutionState& state) noexcept
+{
+    if (state.rev < EVMC_PRAGUE)
+        return addr;
+
+    const auto delegate_addr = state.host.get_delegate_address(addr);
+    if (delegate_addr == evmc::address{})
+        return addr;
+
+    const auto delegate_account_access_cost =
+        (state.host.access_account(delegate_addr) == EVMC_ACCESS_COLD ?
+                instr::cold_account_access_cost :
+                instr::warm_storage_read_cost);
+
+    if ((gas_left -= delegate_account_access_cost) < 0)
+        return Result{EVMC_OUT_OF_GAS, gas_left};
+
+    return delegate_addr;
+}
+}  // namespace
+
 /// Converts an opcode to matching EVMC call kind.
 consteval evmc_call_kind to_call_kind(Opcode op) noexcept
 {
@@ -66,6 +94,12 @@ Result call_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noexce
             return {EVMC_OUT_OF_GAS, gas_left};
     }
 
+    const auto target_addr_or_result = get_target_address(dst, gas_left, state);
+    if (const auto* result = std::get_if<Result>(&target_addr_or_result))
+        return *result;
+
+    const auto& code_addr = std::get<evmc::address>(target_addr_or_result);
+
     if (!check_memory(gas_left, state.memory, input_offset_u256, input_size_u256))
         return {EVMC_OUT_OF_GAS, gas_left};
 
@@ -81,7 +115,7 @@ Result call_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noexce
     msg.flags = (Op == OP_STATICCALL) ? uint32_t{EVMC_STATIC} : state.msg->flags;
     msg.depth = state.msg->depth + 1;
     msg.recipient = (Op == OP_CALL || Op == OP_STATICCALL) ? dst : state.msg->recipient;
-    msg.code_address = dst;
+    msg.code_address = code_addr;
     msg.sender = (Op == OP_DELEGATECALL) ? state.msg->sender : state.msg->recipient;
     msg.value =
         (Op == OP_DELEGATECALL) ? state.msg->value : intx::be::store<evmc::uint256be>(value);
@@ -177,6 +211,12 @@ Result extcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
             return {EVMC_OUT_OF_GAS, gas_left};
     }
 
+    const auto target_addr_or_result = get_target_address(dst, gas_left, state);
+    if (const auto* result = std::get_if<Result>(&target_addr_or_result))
+        return *result;
+
+    const auto& code_addr = std::get<evmc::address>(target_addr_or_result);
+
     if (!check_memory(gas_left, state.memory, input_offset_u256, input_size_u256))
         return {EVMC_OUT_OF_GAS, gas_left};
 
@@ -187,7 +227,7 @@ Result extcall_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noe
     msg.flags = (Op == OP_EXTSTATICCALL) ? uint32_t{EVMC_STATIC} : state.msg->flags;
     msg.depth = state.msg->depth + 1;
     msg.recipient = (Op != OP_EXTDELEGATECALL) ? dst : state.msg->recipient;
-    msg.code_address = dst;
+    msg.code_address = code_addr;
     msg.sender = (Op == OP_EXTDELEGATECALL) ? state.msg->sender : state.msg->recipient;
     msg.value =
         (Op == OP_EXTDELEGATECALL) ? state.msg->value : intx::be::store<evmc::uint256be>(value);
