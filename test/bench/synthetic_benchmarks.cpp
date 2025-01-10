@@ -60,13 +60,9 @@ struct CodeParams
 {
     Opcode opcode;
     Mode mode;
-};
 
-/// The less-than comparison operator. Needed for std::map.
-[[maybe_unused]] inline constexpr bool operator<(const CodeParams& a, const CodeParams& b) noexcept
-{
-    return std::tuple(a.opcode, a.mode) < std::tuple(b.opcode, b.mode);
-}
+    friend auto operator<=>(const CodeParams&, const CodeParams&) = default;
+};
 
 std::string to_string(const CodeParams& params)
 {
