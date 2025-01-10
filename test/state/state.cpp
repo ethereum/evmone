@@ -14,7 +14,7 @@ namespace evmone::state
 {
 namespace
 {
-inline constexpr int64_t num_words(size_t size_in_bytes) noexcept
+constexpr int64_t num_words(size_t size_in_bytes) noexcept
 {
     return static_cast<int64_t>((size_in_bytes + 31) / 32);
 }

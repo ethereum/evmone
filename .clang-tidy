@@ -67,8 +67,6 @@ Checks:
   - "-readability-magic-numbers"
   - "-readability-named-parameter"
   - "-readability-qualified-auto"
-  # TODO: Check if removing inline affects clang optimized builds.
-  - "-readability-redundant-inline-specifier"
   - "-readability-uppercase-literal-suffix"
 
 CheckOptions:
