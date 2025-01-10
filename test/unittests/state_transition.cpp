@@ -85,7 +85,7 @@ void state_transition::TearDown()
         }
         // Update default expectations - valid transaction means coinbase exists unless explicitly
         // requested otherwise
-        if (expect.post.find(Coinbase) == expect.post.end())
+        if (!expect.post.contains(Coinbase))
             expect.post[Coinbase].exists = true;
     }
 

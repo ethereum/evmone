@@ -574,7 +574,7 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
         i = next;
     }
 
-    const auto max_stack_height_it = std::max_element(stack_heights.begin(), stack_heights.end(),
+    const auto max_stack_height_it = std::ranges::max_element(stack_heights,
         [](StackHeightRange lhs, StackHeightRange rhs) noexcept { return lhs.max < rhs.max; });
     return max_stack_height_it->max;
 }
@@ -670,8 +670,7 @@ EOFValidationError validate_eof1(
                 return EOFValidationError::invalid_max_stack_height;
         }
 
-        if (std::find(visited_code_sections.begin(), visited_code_sections.end(), false) !=
-            visited_code_sections.end())
+        if (std::ranges::find(visited_code_sections, false) != visited_code_sections.end())
             return EOFValidationError::unreachable_code_sections;
 
         // Check if truncated data section is allowed.
