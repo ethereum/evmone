@@ -17,6 +17,7 @@ add_library(evmone
     baseline_instruction_table.cpp
     baseline_instruction_table.hpp
     constants.hpp
+    delegation.hpp
     eof.cpp
     eof.hpp
     instructions.hpp
