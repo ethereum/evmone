@@ -601,7 +601,18 @@ TransactionReceipt transition(const StateView& state_view, const BlockInfo& bloc
     if (rev >= EVMC_SHANGHAI)
         host.access_account(block.coinbase);
 
-    const auto result = host.call(build_message(tx, tx_props.execution_gas_limit, rev));
+    auto message = build_message(tx, tx_props.execution_gas_limit, rev);
+    if (tx.to.has_value())
+    {
+        if (const auto delegate = host.get_delegate_address(*tx.to))
+        {
+            message.code_address = delegate;
+            message.flags |= EVMC_DELEGATED;
+            host.access_account(message.code_address);
+        }
+    }
+
+    const auto result = host.call(message);
 
     auto gas_used = tx.gas_limit - result.gas_left;
 
