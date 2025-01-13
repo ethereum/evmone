@@ -92,8 +92,6 @@ private:
 public:
     evmc_access_status access_account(const address& addr) noexcept override;
 
-    address get_delegate_address(const address& addr) const noexcept override;
-
 private:
     evmc_access_status access_storage(const address& addr, const bytes32& key) noexcept override;
 

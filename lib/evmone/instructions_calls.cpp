@@ -2,6 +2,7 @@
 // Copyright 2019 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+#include "delegation.hpp"
 #include "eof.hpp"
 #include "instructions.hpp"
 
@@ -28,19 +29,19 @@ inline std::variant<evmc::address, Result> get_target_address(
     if (state.rev < EVMC_PRAGUE)
         return addr;
 
-    const auto delegate_addr = state.host.get_delegate_address(addr);
-    if (delegate_addr == evmc::address{})
+    const auto delegate_addr = get_delegate_address(addr, state.host);
+    if (!delegate_addr)
         return addr;
 
     const auto delegate_account_access_cost =
-        (state.host.access_account(delegate_addr) == EVMC_ACCESS_COLD ?
+        (state.host.access_account(*delegate_addr) == EVMC_ACCESS_COLD ?
                 instr::cold_account_access_cost :
                 instr::warm_storage_read_cost);
 
     if ((gas_left -= delegate_account_access_cost) < 0)
         return Result{EVMC_OUT_OF_GAS, gas_left};
 
-    return delegate_addr;
+    return *delegate_addr;
 }
 }  // namespace
 

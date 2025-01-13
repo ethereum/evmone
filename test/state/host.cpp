@@ -552,17 +552,4 @@ void Host::set_transient_storage(
     m_state.journal_transient_storage_change(addr, key, slot);
     slot = value;
 }
-
-address Host::get_delegate_address(const address& addr) const noexcept
-{
-    const auto raw_code = m_state.get_code(addr);
-
-    if (!is_code_delegated(raw_code))
-        return {};
-
-    address delegate;
-    assert(raw_code.size() == std::size(DELEGATION_MAGIC) + sizeof(delegate));
-    std::copy_n(&raw_code[std::size(DELEGATION_MAGIC)], sizeof(delegate), delegate.bytes);
-    return delegate;
-}
 }  // namespace evmone::state

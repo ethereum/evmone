@@ -7,6 +7,7 @@
 #include "host.hpp"
 #include "state_view.hpp"
 #include <evmone/constants.hpp>
+#include <evmone/delegation.hpp>
 #include <evmone/eof.hpp>
 #include <algorithm>
 
@@ -604,9 +605,9 @@ TransactionReceipt transition(const StateView& state_view, const BlockInfo& bloc
     auto message = build_message(tx, tx_props.execution_gas_limit, rev);
     if (tx.to.has_value())
     {
-        if (const auto delegate = host.get_delegate_address(*tx.to))
+        if (const auto delegate = get_delegate_address(*tx.to, host))
         {
-            message.code_address = delegate;
+            message.code_address = *delegate;
             message.flags |= EVMC_DELEGATED;
             host.access_account(message.code_address);
         }
