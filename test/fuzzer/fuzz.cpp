@@ -61,7 +61,7 @@ struct Tx
 
 struct Test
 {
-    std::unordered_map<std::string, Account> state;
+    std::unordered_map<evmc::address, Account> state;
     Block block;
     Tx tx;
 };
@@ -74,16 +74,6 @@ void mutate(std::integral auto& value, RNG&)
 void mutate(evmc::address& value, RNG&)
 {
     LLVMFuzzerMutate(value.bytes, sizeof(value), sizeof(value));
-}
-
-void mutate(std::string& value, RNG&)
-{
-    const auto cur_size = value.size();
-    const auto max_size = std::max(cur_size * 4 / 3, 1uz);
-    value.resize(max_size);
-    const auto new_size =
-        LLVMFuzzerMutate(reinterpret_cast<uint8_t*>(value.data()), cur_size, max_size);
-    value.resize(new_size);
 }
 
 template <typename T>
@@ -101,7 +91,7 @@ void mutate(std::unordered_map<K, V>& v, RNG& rng)
     const auto index = rng() % (v.size() + 1);
     if (index == v.size())
     {
-        K new_addr;
+        evmc::address new_addr;
         mutate(new_addr, rng);
         v.emplace(new_addr, V{});
     }
@@ -111,6 +101,16 @@ void mutate(std::unordered_map<K, V>& v, RNG& rng)
         std::advance(it, index);
         mutate(it->second, rng);
     }
+}
+
+void mutate(std::string& value, RNG&)
+{
+    const auto cur_size = value.size();
+    const auto max_size = std::max(cur_size * 4 / 3, 1uz);
+    value.resize(max_size);
+    const auto new_size =
+        LLVMFuzzerMutate(reinterpret_cast<uint8_t*>(value.data()), cur_size, max_size);
+    value.resize(new_size);
 }
 
 template <typename T>
@@ -138,7 +138,7 @@ public:
 
     std::optional<Account> get_account(const evmc::address& addr) const noexcept override
     {
-        const auto it = test_.state.find(hex(addr));
+        const auto it = test_.state.find(addr);
         if (it == test_.state.end())
             return std::nullopt;
         const auto& t = it->second;
@@ -148,7 +148,7 @@ public:
 
     evmc::bytes get_account_code(const evmc::address& addr) const noexcept override
     {
-        const auto it = test_.state.find(hex(addr));
+        const auto it = test_.state.find(addr);
         if (it == test_.state.end())
             return {};
         const auto& str_code = it->second.code;
@@ -190,17 +190,13 @@ void execute(const Test& test)
     {
         auto it = test.state.begin();
         std::advance(it, test.tx.to);
-        evmc::address a;
-        std::memcpy(a.bytes, it->first.data(), std::min(sizeof(a), it->first.size()));
-        tx.to = a;
+        tx.to = it->first;
     }
     if (test.tx.sender < test.state.size())
     {
         auto it = test.state.begin();
         std::advance(it, test.tx.sender);
-        evmc::address a;
-        std::memcpy(a.bytes, it->first.data(), std::min(sizeof(a), it->first.size()));
-        tx.sender = a;
+        tx.sender = it->first;
     }
     tx.data = evmone::bytes{
         reinterpret_cast<const unsigned char*>(test.tx.data.data()), test.tx.data.size()};
