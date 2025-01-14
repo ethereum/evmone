@@ -65,14 +65,25 @@ int main()
 
     "syntax_error_1"_test = [] {
         static constexpr glz::opts OPTS{.null_terminated = false};
-        std::string buf =
-            R"({"state":{"\\"0000000000000000000000000000000000000000\\"":{"nonce":0,"balance":0,"code":""}},"block":{"gas_limit":4},"tx":{"to":1,"sender":1,"gas_limit":524288,"data":"_"}})";
+        std::string expected_buf =
+            R"({"state":{"\"0000000000000000000000000000000000000000\"":{"nonce":0,"balance":0,"code":""}},"block":{"gas_limit":4},"tx":{"to":1,"sender":1,"gas_limit":524288,"data":"_"}})";
 
         fzz::Test t;
+        t.state[{}] = {};
+        t.block.gas_limit = 4;
+        t.tx.to = 1;
+        t.tx.sender = 1;
+        t.tx.gas_limit = 524288;
+        t.tx.data = "_";
+        auto e = glz::write_json(t);
+        expect(e.has_value());
+        auto buf = e.value();
+        expect(buf == expected_buf);
+
         const auto ec = glz::read<OPTS>(t, buf);
         const auto descriptive_error = glz::format_error(ec, buf);
-        std::cerr << "JSON read error: " << descriptive_error << '\n';
-        std::cerr << buf << '\n';
+        // std::cerr << "JSON read error: " << descriptive_error << '\n';
+        // std::cerr << buf << '\n';
         expect(!ec);
     };
 
