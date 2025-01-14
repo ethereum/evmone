@@ -89,18 +89,18 @@ template <typename K, typename V>
 void mutate(std::unordered_map<K, V>& v, RNG& rng)
 {
     const auto index = rng() % (v.size() + 1);
+    auto it = v.begin();
     if (index == v.size())
     {
-        evmc::address new_addr;
-        mutate(new_addr, rng);
-        v.emplace(new_addr, V{});
+        K new_key;
+        mutate(new_key, rng);
+        std::tie(it, std::ignore) = v.emplace(new_key, V{});
     }
     else
     {
-        auto it = v.begin();
         std::advance(it, index);
-        mutate(it->second, rng);
     }
+    mutate(it->second, rng);
 }
 
 void mutate(std::string& value, RNG&)
