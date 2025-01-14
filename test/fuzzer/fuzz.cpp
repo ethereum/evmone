@@ -33,6 +33,30 @@ struct to<JSON, evmc::address>
         write<JSON>::op<Opts>(str, args...);
     }
 };
+
+template <>
+struct from<JSON, evmc::bytes32>
+{
+    template <auto Opts>
+    static void op(evmc::bytes32& v, auto&&... args)
+    {
+        char buffer[40];
+        std::string_view str{buffer, sizeof(buffer)};
+        read<JSON>::op<Opts>(str, args...);
+        v = evmc::from_hex<evmc::bytes32>(str).value();
+    }
+};
+
+template <>
+struct to<JSON, evmc::bytes32>
+{
+    template <auto Opts>
+    static void op(const evmc::bytes32& v, auto&&... args) noexcept
+    {
+        const auto str = evmc::hex(v);
+        write<JSON>::op<Opts>(str, args...);
+    }
+};
 }  // namespace glz::detail
 
 namespace fzz
@@ -44,6 +68,7 @@ struct Account
     uint32_t nonce = 0;
     uint32_t balance = 0;
     std::string code;
+    std::unordered_map<evmc::bytes32, evmc::bytes32> storage;
 };
 
 struct Block
@@ -72,6 +97,11 @@ void mutate(std::integral auto& value, RNG&)
 }
 
 void mutate(evmc::address& value, RNG&)
+{
+    LLVMFuzzerMutate(value.bytes, sizeof(value), sizeof(value));
+}
+
+void mutate(evmc::bytes32& value, RNG&)
 {
     LLVMFuzzerMutate(value.bytes, sizeof(value), sizeof(value));
 }
@@ -177,9 +207,14 @@ public:
     evmc::bytes32 get_storage(
         const evmc::address& addr, const evmc::bytes32& key) const noexcept override
     {
-        (void)addr;
-        (void)key;
-        return {};
+        const auto it = test_.state.find(addr);
+        if (it == test_.state.end())
+            return {};
+        const auto& storage = it->second.storage;
+        const auto it2 = storage.find(key);
+        if (it2 == storage.end())
+            return {};
+        return it2->second;
     }
 };
 
