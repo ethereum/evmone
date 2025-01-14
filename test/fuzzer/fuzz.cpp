@@ -142,7 +142,7 @@ void mutate(std::string& value, RNG&)
     if (bytes.has_value())
     {
         const auto cur_size = bytes->size();
-        const auto max_size = std::max(cur_size * 4 / 3, 1uz);
+        const auto max_size = std::max(cur_size * 4 / 3, 4uz);
         bytes->resize(max_size);
         const auto new_size = LLVMFuzzerMutate(bytes->data(), cur_size, max_size);
         bytes->resize(new_size);
@@ -151,7 +151,7 @@ void mutate(std::string& value, RNG&)
     }
 
     const auto cur_size = value.size();
-    const auto max_size = std::max(cur_size * 4 / 3, 1uz);
+    const auto max_size = std::max(cur_size * 4 / 3, 4uz);
     value.resize(max_size);
     const auto new_size =
         LLVMFuzzerMutate(reinterpret_cast<uint8_t*>(value.data()), cur_size, max_size);
