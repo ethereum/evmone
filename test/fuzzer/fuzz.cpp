@@ -152,7 +152,7 @@ public:
         if (it == test_.state.end())
             return {};
         const auto& str_code = it->second.code;
-        return evmc::bytes(str_code.begin(), str_code.end());
+        return evmc::bytes(reinterpret_cast<const uint8_t*>(str_code.data()), str_code.size());
     }
 
     evmc::bytes32 get_storage(
@@ -202,7 +202,8 @@ void execute(const Test& test)
         std::memcpy(a.bytes, it->first.data(), std::min(sizeof(a), it->first.size()));
         tx.sender = a;
     }
-    tx.data = evmone::bytes{test.tx.data.begin(), test.tx.data.end()};
+    tx.data = evmone::bytes{
+        reinterpret_cast<const unsigned char*>(test.tx.data.data()), test.tx.data.size()};
     tx.gas_limit = test.tx.gas_limit;
 
     const auto res = evmone::state::validate_transaction(
