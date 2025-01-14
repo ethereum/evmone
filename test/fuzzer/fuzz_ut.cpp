@@ -2,89 +2,25 @@
 #include <glaze/glaze.hpp>
 #include <boost/ut.hpp>
 
-namespace glz::detail
-{
-template <>
-struct from<JSON, evmc::address>
-{
-    template <auto Opts>
-    static void op(evmc::address& addr, auto&&... args)
-    {
-        char buffer[40];
-        std::string_view str{buffer, sizeof(buffer)};
-        read<JSON>::op<Opts>(str, args...);
-        addr = evmc::from_hex<evmc::address>(str).value();
-    }
-};
-
-template <>
-struct to<JSON, evmc::address>
-{
-    template <auto Opts>
-    static void op(const evmc::address& addr, auto&&... args) noexcept
-    {
-        const auto str = evmc::hex(addr);
-        write<JSON>::op<Opts>(str, args...);
-    }
-};
-}  // namespace glz::detail
-
-namespace fzz
-{
-struct Account
-{
-    uint32_t nonce = 0;
-    uint32_t balance = 0;
-    std::string code;
-};
-
-struct Block
-{
-    uint32_t gas_limit = 0;
-};
-
-struct Tx
-{
-    uint8_t to = 0;
-    uint8_t sender = 0;
-    uint32_t gas_limit = 0;
-    std::string data;
-};
-
 struct Test
 {
-    std::unordered_map<evmc::address, Account> state;
-    Block block;
-    Tx tx;
+    std::unordered_map<std::string, unsigned> s;
 };
-}  // namespace fzz
 
 int main()
 {
     using namespace boost::ut;
 
-    "syntax_error_1"_test = [] {
-        static constexpr glz::opts OPTS{.null_terminated = false};
-        std::string expected_buf =
-            R"({"state":{"\"0000000000000000000000000000000000000000\"":{"nonce":0,"balance":0,"code":""}},"block":{"gas_limit":4},"tx":{"to":1,"sender":1,"gas_limit":524288,"data":"_"}})";
+    "escape_control_characters"_test = [] {
+        Test t;
+        t.s["\001"] = 0;
+        std::string buf;
+        const auto write_ec = glz::write_json(t, buf);
+        expect(!write_ec);
+        expect(buf != "{\"s\":{\"\001\":0}}") << buf;
 
-        fzz::Test t;
-        t.state[{}] = {};
-        t.block.gas_limit = 4;
-        t.tx.to = 1;
-        t.tx.sender = 1;
-        t.tx.gas_limit = 524288;
-        t.tx.data = "_";
-        auto e = glz::write_json(t);
-        expect(e.has_value());
-        auto buf = e.value();
-        expect(buf == expected_buf);
-
-        const auto ec = glz::read<OPTS>(t, buf);
-        const auto descriptive_error = glz::format_error(ec, buf);
-        // std::cerr << "JSON read error: " << descriptive_error << '\n';
-        // std::cerr << buf << '\n';
-        expect(!ec);
+        const auto read_ec = glz::read_json(t, buf);
+        expect(!read_ec) << glz::format_error(read_ec, buf);
     };
 
     return 0;
