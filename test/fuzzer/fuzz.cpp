@@ -105,6 +105,21 @@ void mutate(std::unordered_map<K, V>& v, RNG& rng)
 
 void mutate(std::string& value, RNG&)
 {
+    // We cannot treat strings as raw bytes because glaze don't properly escape control characters.
+    // So let's use hex for now. Maybe this is not an issue in binary formats.
+
+    auto bytes = evmc::from_hex(value);
+    if (bytes.has_value())
+    {
+        const auto cur_size = bytes->size();
+        const auto max_size = std::max(cur_size * 4 / 3, 1uz);
+        bytes->resize(max_size);
+        const auto new_size = LLVMFuzzerMutate(bytes->data(), cur_size, max_size);
+        bytes->resize(new_size);
+        value = evmc::hex(*bytes);
+        return;
+    }
+
     const auto cur_size = value.size();
     const auto max_size = std::max(cur_size * 4 / 3, 1uz);
     value.resize(max_size);
