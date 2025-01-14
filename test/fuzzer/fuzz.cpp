@@ -158,6 +158,10 @@ public:
             return std::nullopt;
         const auto& t = it->second;
         StateView::Account a{.nonce = t.nonce, .balance = t.balance};
+
+        if (t.code.empty())
+            a.code_hash = evmone::state::Account::EMPTY_CODE_HASH;
+
         return a;
     }
 
@@ -228,6 +232,7 @@ void execute(const Test& test)
         case INTRINSIC_GAS_TOO_LOW:
         case SENDER_NOT_EOA:
         case GAS_LIMIT_REACHED:
+        case NONCE_TOO_LOW:
             break;
         case INSUFFICIENT_FUNDS:
             assert(false && "INSUFFICIENT_FUNDS");
