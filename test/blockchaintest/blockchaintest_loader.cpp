@@ -22,7 +22,7 @@ template <typename T>
 std::optional<T> load_optional(const json::json& j, std::string_view key)
 {
     if (const auto it = j.find(key); it != j.end())
-        return std::optional(from_json<T>(*it));
+        return from_json<T>(*it);
     return std::nullopt;
 }
 }  // namespace
@@ -73,10 +73,10 @@ static TestBlock load_test_block(const json::json& j, evmc_revision rev)
         tb.block_info.blob_gas_used = tb.expected_block_header.blob_gas_used;
         tb.block_info.excess_blob_gas = tb.expected_block_header.excess_blob_gas;
 
-        tb.block_info.blob_base_fee = tb.block_info.excess_blob_gas.has_value() ?
-                                          std::optional(state::compute_blob_gas_price(
-                                              tb.block_info.excess_blob_gas.value())) :
-                                          std::nullopt;
+        tb.block_info.blob_base_fee =
+            tb.block_info.excess_blob_gas.has_value() ?
+                std::optional(state::compute_blob_gas_price(*tb.block_info.excess_blob_gas)) :
+                std::nullopt;
 
         // Override prev_randao with difficulty pre-Merge
         if (rev < EVMC_PARIS)

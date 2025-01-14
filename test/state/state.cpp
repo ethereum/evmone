@@ -311,7 +311,8 @@ std::variant<TransactionProperties, std::error_code> validate_transaction(
         if (tx.blob_hashes.empty())
             return make_error_code(EMPTY_BLOB_HASHES_LIST);
 
-        if (tx.max_blob_gas_price < block.blob_base_fee.value())
+        assert(block.blob_base_fee.has_value());
+        if (tx.max_blob_gas_price < *block.blob_base_fee)
             return make_error_code(FEE_CAP_LESS_THEN_BLOCKS);
 
         if (std::ranges::any_of(tx.blob_hashes, [](const auto& h) { return h.bytes[0] != 0x01; }))
@@ -453,9 +454,11 @@ TransactionReceipt transition(const StateView& state_view, const BlockInfo& bloc
     {
         // This uint64 * uint256 cannot overflow, because tx.blob_gas_used has limits enforced
         // before this stage.
-        const auto blob_fee = tx.blob_gas_used() * block.blob_base_fee.value();
+        assert(block.blob_base_fee.has_value());
+        const auto blob_fee = intx::umul(intx::uint256(tx.blob_gas_used()), *block.blob_base_fee);
+        assert(blob_fee <= std::numeric_limits<intx::uint256>::max());
         assert(sender_acc.balance >= blob_fee);  // Required for valid tx.
-        sender_acc.balance -= blob_fee;
+        sender_acc.balance -= intx::uint256(blob_fee);
     }
 
     Host host{rev, vm, state, block, block_hashes, tx};

@@ -8,7 +8,6 @@
 #include "../state/system_contracts.hpp"
 #include "../test/statetest/statetest.hpp"
 #include "blockchaintest.hpp"
-#include <evmone_precompiles/kzg.hpp>
 #include <gtest/gtest.h>
 
 namespace evmone::test
@@ -103,7 +102,8 @@ bool validate_block(
 
     if (rev >= EVMC_CANCUN)
     {
-        if (!test_block.block_info.excess_blob_gas.has_value() or
+        // `excess_blob_gas` and `blob_gas_used` mandatory after Cancun and invalid before.
+        if (!test_block.block_info.excess_blob_gas.has_value() ||
             !test_block.block_info.blob_gas_used.has_value())
             return false;
 
@@ -119,7 +119,7 @@ bool validate_block(
     }
     else
     {
-        if (test_block.block_info.excess_blob_gas.has_value() or
+        if (test_block.block_info.excess_blob_gas.has_value() ||
             test_block.block_info.blob_gas_used.has_value())
             return false;
     }

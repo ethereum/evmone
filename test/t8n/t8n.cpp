@@ -249,7 +249,7 @@ int main(int argc, const char* argv[])
             j_result["blobGasUsed"] = hex0x(
                 static_cast<int64_t>(state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK) - blob_gas_left);
             if (block.excess_blob_gas.has_value())
-                j_result["currentExcessBlobGas"] = hex0x(block.excess_blob_gas.value());
+                j_result["currentExcessBlobGas"] = hex0x(*block.excess_blob_gas);
         }
         if (rev >= EVMC_PRAGUE)
         {

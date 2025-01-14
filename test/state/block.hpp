@@ -56,7 +56,7 @@ struct BlockInfo
     /// for computing the blob gas price in the current block.
     std::optional<uint64_t> excess_blob_gas;
 
-    /// Blob gas price from EIP-4844, computed from excess_blob_gas
+    /// Blob gas price from EIP-4844, computed from excess_blob_gas.
     std::optional<intx::uint256> blob_base_fee;
 
     std::vector<Ommer> ommers;
@@ -66,7 +66,7 @@ struct BlockInfo
 /// Computes the current blob gas price based on the excess blob gas.
 intx::uint256 compute_blob_gas_price(uint64_t excess_blob_gas) noexcept;
 
-/// Computes the current excess blob gas based on the parent.
+/// Computes the current excess blob gas based on parameters of the parent block.
 uint64_t calc_excess_blob_gas(
     uint64_t parent_blob_gas_used, uint64_t parent_excess_blob_gas) noexcept;
 
