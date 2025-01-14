@@ -19,7 +19,7 @@ struct from<JSON, evmc::address>
         char buffer[40];
         std::string_view str{buffer, sizeof(buffer)};
         read<JSON>::op<Opts>(str, args...);
-        addr = evmc::from_hex<evmc::address>(str).value();
+        addr = *evmc::from_hex<evmc::address>(str);
     }
 };
 
@@ -43,7 +43,7 @@ struct from<JSON, evmc::bytes32>
         char buffer[40];
         std::string_view str{buffer, sizeof(buffer)};
         read<JSON>::op<Opts>(str, args...);
-        v = evmc::from_hex<evmc::bytes32>(str).value();
+        v = *evmc::from_hex<evmc::bytes32>(str);
     }
 };
 
