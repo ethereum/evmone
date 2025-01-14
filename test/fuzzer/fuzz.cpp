@@ -16,10 +16,12 @@ struct from<JSON, evmc::address>
     template <auto Opts>
     static void op(evmc::address& addr, auto&&... args)
     {
-        char buffer[40];
+        char buffer[sizeof(evmc::address) * 2];
         std::string_view str{buffer, sizeof(buffer)};
         read<JSON>::op<Opts>(str, args...);
-        addr = *evmc::from_hex<evmc::address>(str);
+        auto tmp = evmc::from_hex<evmc::address>(str);
+        assert(tmp.has_value());
+        addr = tmp.value();
     }
 };
 
@@ -40,10 +42,16 @@ struct from<JSON, evmc::bytes32>
     template <auto Opts>
     static void op(evmc::bytes32& v, auto&&... args)
     {
-        char buffer[40];
+        char buffer[sizeof(evmc::bytes32) * 2];
         std::string_view str{buffer, sizeof(buffer)};
         read<JSON>::op<Opts>(str, args...);
-        v = *evmc::from_hex<evmc::bytes32>(str);
+        auto tmp = evmc::from_hex<evmc::bytes32>(str);
+        if (!tmp.has_value())
+        {
+            std::cerr << "BBBBBBBBBBBBBBBBBBBB32 " << str << std::endl;
+        }
+        assert(tmp.has_value());
+        v = tmp.value();
     }
 };
 
