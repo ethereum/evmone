@@ -222,6 +222,16 @@ void state_transition::export_state_test(
         }
     }
 
+    if (tx.type == Transaction::Type::blob)
+    {
+        jtx["maxFeePerBlobGas"] = hex0x(tx.max_blob_gas_price);
+        jtx["blobVersionedHashes"] = json::json::array();
+        for (const auto& blob_hash : tx.blob_hashes)
+        {
+            jtx["blobVersionedHashes"].emplace_back(hex0x(blob_hash));
+        }
+    }
+
     auto& jpost = jt["post"][to_test_fork_name(rev)][0];
     jpost["indexes"] = {{"data", 0}, {"gas", 0}, {"value", 0}};
     jpost["hash"] = hex0x(mpt_hash(post));
