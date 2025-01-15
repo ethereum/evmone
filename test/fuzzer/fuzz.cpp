@@ -299,6 +299,10 @@ void execute(const Test& test)
 static constexpr glz::opts OPTS{
     .null_terminated = false,
     .error_on_unknown_keys = false,
+
+    // Require the input to be minified. This is supposed to make the reading faster, but looks like
+    // it makes it slower. Investigate later.
+    .minified = true,
 };
 
 
@@ -354,6 +358,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
         case glz::error_code::unexpected_end:
         case glz::error_code::expected_quote:
         case glz::error_code::end_reached:
+        case glz::error_code::expected_brace:  // minified
+        case glz::error_code::expected_colon:  // minified
+        case glz::error_code::expected_comma:  // minified
             return -1;
         default:
             std::cerr << "JSON read error: " << glz::format_error(ec, buffer) << '\n';
