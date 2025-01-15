@@ -43,18 +43,20 @@ struct to<JSON, evmc::address>
 template <>
 struct from<JSON, evmc::bytes32>
 {
-    template <auto Opts>
-    static void op(evmc::bytes32& v, auto&&... args)
+    template <auto Opts, is_context Ctx>
+    static void op(evmc::bytes32& v, Ctx&& ctx, auto&&... args)
     {
-        // Convert a hex string to bytes. It can happen that the input is truncated probably
-        // because glaze can receive truncated file, and it will call this function while parsing.
-        // In this case we should rather return a syntax error, but I don't know how to do it.
+        // Convert a hex string to bytes.
         char buffer[sizeof(evmc::bytes32) * 2]{};
         std::string_view str{buffer, sizeof(buffer)};
-        read<JSON>::op<Opts>(str, args...);
+        read<JSON>::op<Opts>(str, ctx, args...);
         const auto tmp = evmc::from_hex<evmc::bytes32>(str);
-        assert(tmp.has_value());
-        v = *tmp;
+
+        // This can be invalid hex string (e.g. truncated by -max_len).
+        if (tmp.has_value())
+            v = *tmp;
+        else
+            ctx.error = error_code::elements_not_convertible_to_design;
     }
 };
 
@@ -313,18 +315,27 @@ extern "C" size_t LLVMFuzzerCustomMutator(
     const std::string_view buffer{reinterpret_cast<const char*>(data), size};
 
     fzz::Test test;
-    const auto ec = glz::read<OPTS>(test, buffer);
-    if (!ec)
+    if (const auto ec = glz::read<OPTS>(test, buffer))
     {
-        fzz::mutate(test, rng);
+        switch (ec.ec)
+        {
+            // Expected errors:
+        case glz::error_code::no_read_input:
+        case glz::error_code::unexpected_end:
+        case glz::error_code::expected_quote:
+        case glz::error_code::end_reached:
+        case glz::error_code::expected_brace:  // minified
+        case glz::error_code::expected_colon:  // minified
+        case glz::error_code::expected_comma:  // minified
+        case glz::error_code::elements_not_convertible_to_design:
+            return 0;
+        default:
+            std::cerr << "JSON read error: " << glz::format_error(ec, buffer) << '\n';
+            __builtin_trap();
+        }
     }
-    else
-    {
-        const auto descriptive_error = glz::format_error(ec, buffer);
-        std::cerr << "JSON read error: " << descriptive_error << '\n';
-        std::cerr << buffer << '\n';
-        __builtin_trap();
-    }
+
+    fzz::mutate(test, rng);
 
     std::string out;
     if (const auto write_ec = glz::write<OPTS>(test, out))
@@ -361,6 +372,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
         case glz::error_code::expected_brace:  // minified
         case glz::error_code::expected_colon:  // minified
         case glz::error_code::expected_comma:  // minified
+        case glz::error_code::elements_not_convertible_to_design:
             return -1;
         default:
             std::cerr << "JSON read error: " << glz::format_error(ec, buffer) << '\n';
