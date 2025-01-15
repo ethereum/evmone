@@ -317,22 +317,19 @@ extern "C" size_t LLVMFuzzerCustomMutator(
         __builtin_trap();
     }
 
-    auto e = glz::write_json(test);
-    if (e.has_value())
+    std::string out;
+    if (const auto write_ec = glz::write<OPTS>(test, out))
     {
-        const auto& s = e.value();
-        if (s.size() + 1 > max_size)
-        {
-            // std::cerr << "too big\n";
-            return 0;
-        }
-        std::memcpy(data, s.c_str(), s.size() + 1);
-        return s.size();
+        std::cerr << "JSON write error: " << glz::format_error(write_ec, out) << '\n';
+        __builtin_trap();
     }
-
-    const auto descriptive_error = glz::format_error(e.error(), buffer);
-    std::cerr << "JSON write error: " << descriptive_error << '\n';
-    __builtin_trap();
+    if (out.size() + 1 > max_size)
+    {
+        // std::cerr << "too big\n";
+        return 0;
+    }
+    std::memcpy(data, out.c_str(), out.size() + 1);
+    return out.size();
 }
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noexcept
