@@ -8,6 +8,10 @@
 
 extern "C" size_t LLVMFuzzerMutate(uint8_t* data, size_t size, size_t max_size) noexcept;
 
+using namespace evmc::literals;
+
+static constexpr auto SENDER = 0xe100713FC15400D1e94096a545879E7c6407001e_address;
+
 namespace glz::detail
 {
 template <>
@@ -86,7 +90,10 @@ struct Block
 struct Tx
 {
     uint8_t to = 0;
-    uint8_t sender = 0;
+
+    // We use fixed sender to make sure it is EOA and has private key.
+    // uint8_t sender = 0;
+
     uint32_t gas_limit = 0;
     std::string data;
 };
@@ -253,12 +260,7 @@ void execute(const Test& test)
         std::advance(it, test.tx.to);
         tx.to = it->first;
     }
-    if (test.tx.sender < test.state.size())
-    {
-        auto it = test.state.begin();
-        std::advance(it, test.tx.sender);
-        tx.sender = it->first;
-    }
+    tx.sender = SENDER;
     tx.data = *evmc::from_hex(test.tx.data);
     tx.gas_limit = test.tx.gas_limit;
 
@@ -294,7 +296,10 @@ void execute(const Test& test)
 
 }  // namespace fzz
 
-static constexpr glz::opts OPTS{.null_terminated = false};
+static constexpr glz::opts OPTS{
+    .null_terminated = false,
+    .error_on_unknown_keys = false,
+};
 
 
 extern "C" size_t LLVMFuzzerCustomMutator(
@@ -334,12 +339,31 @@ extern "C" size_t LLVMFuzzerCustomMutator(
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noexcept
 {
+    if (data_size == 0)
+        return -1;
+
     const std::string_view buffer{reinterpret_cast<const char*>(data), data_size};
 
     fzz::Test test;
-    const auto ec = glz::read<OPTS>(test, buffer);
-    if (ec)
-        return -1;
+    if (const auto ec = glz::read<OPTS>(test, buffer))
+    {
+        switch (ec.ec)
+        {
+            // Expected errors:
+        case glz::error_code::no_read_input:
+        case glz::error_code::unexpected_end:
+        case glz::error_code::expected_quote:
+        case glz::error_code::end_reached:
+            return -1;
+        default:
+            std::cerr << "JSON read error: " << glz::format_error(ec, buffer) << '\n';
+            __builtin_trap();
+        }
+    }
+
+    // Add/update fixed SENDER to the state.
+    auto& sender = test.state[SENDER];
+    sender.balance += 1'000'000;
 
     fzz::execute(test);
 
