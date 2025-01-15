@@ -16,12 +16,12 @@ struct from<JSON, evmc::address>
     template <auto Opts>
     static void op(evmc::address& addr, auto&&... args)
     {
-        char buffer[sizeof(evmc::address) * 2];
+        char buffer[sizeof(evmc::address) * 2]{};
         std::string_view str{buffer, sizeof(buffer)};
         read<JSON>::op<Opts>(str, args...);
-        auto tmp = evmc::from_hex<evmc::address>(str);
+        const auto tmp = evmc::from_hex<evmc::address>(str);
         assert(tmp.has_value());
-        addr = tmp.value();
+        addr = *tmp;
     }
 };
 
@@ -42,16 +42,15 @@ struct from<JSON, evmc::bytes32>
     template <auto Opts>
     static void op(evmc::bytes32& v, auto&&... args)
     {
-        char buffer[sizeof(evmc::bytes32) * 2];
+        // Convert a hex string to bytes. It can happen that the input is truncated probably
+        // because glaze can receive truncated file, and it will call this function while parsing.
+        // In this case we should rather return a syntax error, but I don't know how to do it.
+        char buffer[sizeof(evmc::bytes32) * 2]{};
         std::string_view str{buffer, sizeof(buffer)};
         read<JSON>::op<Opts>(str, args...);
-        auto tmp = evmc::from_hex<evmc::bytes32>(str);
-        if (!tmp.has_value())
-        {
-            std::cerr << "BBBBBBBBBBBBBBBBBBBB32 " << str << std::endl;
-        }
+        const auto tmp = evmc::from_hex<evmc::bytes32>(str);
         assert(tmp.has_value());
-        v = tmp.value();
+        v = *tmp;
     }
 };
 
