@@ -17,15 +17,19 @@ namespace glz::detail
 template <>
 struct from<JSON, evmc::address>
 {
-    template <auto Opts>
-    static void op(evmc::address& addr, auto&&... args)
+    template <auto Opts, is_context Ctx>
+    static void op(evmc::address& v, Ctx&& ctx, auto&&... args)
     {
         char buffer[sizeof(evmc::address) * 2]{};
         std::string_view str{buffer, sizeof(buffer)};
-        read<JSON>::op<Opts>(str, args...);
+        read<JSON>::op<Opts>(str, ctx, args...);
         const auto tmp = evmc::from_hex<evmc::address>(str);
-        assert(tmp.has_value());
-        addr = *tmp;
+
+        // This can be invalid hex string (e.g. truncated by -max_len).
+        if (tmp.has_value())
+            v = *tmp;
+        else
+            ctx.error = error_code::elements_not_convertible_to_design;
     }
 };
 
@@ -86,7 +90,10 @@ struct Account
 
 struct Block
 {
+    uint32_t number = 0;
+    uint32_t timestamp = 0;
     uint32_t gas_limit = 0;
+    evmc::address coinbase;
 };
 
 struct Tx
@@ -253,7 +260,10 @@ void execute(const Test& test)
     const StateView state_view{test};
 
     evmone::state::BlockInfo block;
+    block.number = test.block.number;
+    block.timestamp = test.block.timestamp;
     block.gas_limit = test.block.gas_limit;
+    block.coinbase = test.block.coinbase;
 
     evmone::state::Transaction tx;
     if (test.tx.to < test.state.size())
