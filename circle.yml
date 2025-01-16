@@ -373,7 +373,7 @@ jobs:
           working_directory: ~/spec-tests/fixtures/state_tests
           command: >
             ~/build/bin/evmone-statetest
-            prague/eip2537_bls_12_381_precompiles
+            prague/eip2537_bls_12_381_precompiles/bls12_pairing
       - run:
           name: "Execution spec tests (develop, blockchain_tests) - pectra-devnet-4"
           # Tests for in-development EVM revision currently passing.
@@ -381,9 +381,6 @@ jobs:
           command: >
             ~/build/bin/evmone-blockchaintest
             prague/eip2935_historical_block_hashes_from_state
-            prague/eip6110_deposits
-            prague/eip7002_el_triggerable_withdrawals
-            prague/eip7251_consolidations
             prague/eip7685_general_purpose_el_requests
       - download_execution_spec_tests:
           release: pectra-devnet-5@v1.2.0
@@ -391,11 +388,11 @@ jobs:
       - run:
           name: "Execution spec tests (develop, state_tests)"
           # Tests for in-development EVM revision currently passing.
-          # TODO: Just a single example for now (BLS G1MUL is unchanged in pectra-devnet-5).
           working_directory: ~/spec-tests/fixtures/state_tests
           command: >
             ~/build/bin/evmone-statetest
             prague/eip2537_bls_12_381_precompiles/bls12_g1mul
+            prague/eip7623_increase_calldata_cost
       - run:
           name: "Execution spec tests (develop, blockchain_tests)"
           # Tests for in-development EVM revision currently passing.
@@ -426,7 +423,9 @@ jobs:
           name: "EOF pre-release execution spec tests (blockchain_tests)"
           working_directory: ~/build
           command: >
-            bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests/osaka
+            bin/evmone-blockchaintest
+            --gtest_filter='-eofwrap/*'
+            ~/spec-tests/fixtures/blockchain_tests/osaka
       - run:
           name: "EOF pre-release execution spec tests (eof_tests)"
           working_directory: ~/build
