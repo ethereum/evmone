@@ -162,7 +162,7 @@ TEST(state_tx, validate_blob_tx)
         make_error_code(ErrorCode::INVALID_BLOB_HASH_VERSION).message());
 }
 
-TEST(state_tx, validate_data)
+TEST(state_tx, validate_eof_create_transaction)
 {
     const BlockInfo bi{.gas_limit = 0x989680,
         .coinbase = 0x01_address,
@@ -188,4 +188,35 @@ TEST(state_tx, validate_data)
         state, bi, tx, EVMC_CANCUN, 60000, BlockInfo::MAX_BLOB_GAS_PER_BLOCK)));
     ASSERT_FALSE(holds_alternative<std::error_code>(validate_transaction(
         state, bi, tx, EVMC_PRAGUE, 60000, BlockInfo::MAX_BLOB_GAS_PER_BLOCK)));
+}
+
+TEST(state_tx, validate_tx_data_cost)
+{
+    // This test checks the transactions data cost calculation for different EVM revisions.
+
+    const BlockInfo block{.gas_limit = 1'000'000, .base_fee = 1};
+    Transaction tx{
+        .data = "aa00bb00cc"_hex,
+        .gas_limit = block.gas_limit,
+        .max_gas_price = block.base_fee,
+        .to = 0x00_address,
+    };
+    const TestState state{{tx.sender, {.nonce = 0, .balance = 1000000}}};
+
+    const auto get_props = [&](evmc_revision rev) {
+        const auto res = validate_transaction(state, block, tx, rev, block.gas_limit, 0);
+        EXPECT_TRUE(holds_alternative<TransactionProperties>(res));
+        if (holds_alternative<TransactionProperties>(res))
+            return get<TransactionProperties>(res);
+        return TransactionProperties{};
+    };
+    const auto from_data_cost = [&](int64_t nonzero_cost, int64_t zero_cost) {
+        // The counts for the zero/nonzero bytes are taken from the test tx.data input.
+        return tx.gas_limit - (21000 + 3 * nonzero_cost + 2 * zero_cost);
+    };
+
+    EXPECT_EQ(get_props(EVMC_PETERSBURG).execution_gas_limit, from_data_cost(68, 4));
+    EXPECT_EQ(get_props(EVMC_ISTANBUL).execution_gas_limit, from_data_cost(16, 4));
+    EXPECT_EQ(get_props(EVMC_CANCUN).execution_gas_limit, from_data_cost(16, 4));
+    EXPECT_EQ(get_props(EVMC_PRAGUE).execution_gas_limit, from_data_cost(16, 4));
 }
