@@ -19,38 +19,48 @@ constexpr int64_t num_words(size_t size_in_bytes) noexcept
     return static_cast<int64_t>((size_in_bytes + 31) / 32);
 }
 
-int64_t compute_tx_data_cost(evmc_revision rev, bytes_view data) noexcept
+size_t compute_tx_data_tokens(evmc_revision rev, bytes_view data) noexcept
 {
-    constexpr int64_t zero_byte_cost = 4;
-    const int64_t nonzero_byte_cost = rev >= EVMC_ISTANBUL ? 16 : 68;
-    int64_t cost = 0;
-    for (const auto b : data)
-        cost += (b == 0) ? zero_byte_cost : nonzero_byte_cost;
-    return cost;
+    const auto num_zero_bytes = static_cast<size_t>(std::ranges::count(data, 0));
+    const auto num_nonzero_bytes = data.size() - num_zero_bytes;
+
+    const size_t nonzero_byte_multiplier = rev >= EVMC_ISTANBUL ? 4 : 17;
+    return (nonzero_byte_multiplier * num_nonzero_bytes) + num_zero_bytes;
 }
 
 int64_t compute_access_list_cost(const AccessList& access_list) noexcept
 {
-    static constexpr auto storage_key_cost = 1900;
-    static constexpr auto address_cost = 2400;
+    static constexpr auto ADDRESS_COST = 2400;
+    static constexpr auto STORAGE_KEY_COST = 1900;
 
     int64_t cost = 0;
-    for (const auto& a : access_list)
-        cost += address_cost + static_cast<int64_t>(a.second.size()) * storage_key_cost;
+    for (const auto& [_, keys] : access_list)
+        cost += ADDRESS_COST + static_cast<int64_t>(keys.size()) * STORAGE_KEY_COST;
     return cost;
 }
 
 int64_t compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& tx) noexcept
 {
-    static constexpr auto call_tx_cost = 21000;
-    static constexpr auto create_tx_cost = 53000;
-    static constexpr auto initcode_word_cost = 2;
-    const auto is_create = !tx.to.has_value();  // Covers also EOF creation txs.
+    static constexpr auto TX_BASE_COST = 21000;
+    static constexpr auto TX_CREATE_COST = 32000;
+    static constexpr auto DATA_TOKEN_COST = 4;
+    static constexpr auto INITCODE_WORD_COST = 2;
+
+    const auto is_create = !tx.to.has_value();  // Covers also EOF creation transactions.
+
+    const auto create_cost = (is_create && rev >= EVMC_HOMESTEAD) ? TX_CREATE_COST : 0;
+
+    const auto num_data_tokens = static_cast<int64_t>(compute_tx_data_tokens(rev, tx.data));
+    const auto data_cost = num_data_tokens * DATA_TOKEN_COST;
+
+    const auto access_list_cost = compute_access_list_cost(tx.access_list);
+
     const auto initcode_cost =
-        is_create && rev >= EVMC_SHANGHAI ? initcode_word_cost * num_words(tx.data.size()) : 0;
-    const auto tx_cost = is_create && rev >= EVMC_HOMESTEAD ? create_tx_cost : call_tx_cost;
-    return tx_cost + compute_tx_data_cost(rev, tx.data) + compute_access_list_cost(tx.access_list) +
-           initcode_cost;
+        (is_create && rev >= EVMC_SHANGHAI) ? INITCODE_WORD_COST * num_words(tx.data.size()) : 0;
+
+    const auto intrinsic_cost =
+        TX_BASE_COST + create_cost + data_cost + access_list_cost + initcode_cost;
+    return intrinsic_cost;
 }
 
 evmc_message build_message(
@@ -393,7 +403,6 @@ std::variant<TransactionProperties, std::error_code> validate_transaction(
         return make_error_code(INSUFFICIENT_FUNDS);
 
     const auto intrinsic_cost = compute_tx_intrinsic_cost(rev, tx);
-
     if (tx.gas_limit < intrinsic_cost)
         return make_error_code(INTRINSIC_GAS_TOO_LOW);
 
