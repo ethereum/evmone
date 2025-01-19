@@ -108,6 +108,9 @@ struct Tx
 
     uint32_t gas_limit = 0;
     std::string data;
+    uint64_t max_gas_price = 0;
+    uint64_t max_priority_gas_price = 0;
+    uint64_t max_blob_gas_price = 0;
 };
 
 struct Test
