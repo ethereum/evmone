@@ -101,6 +101,7 @@ struct Block
 
 struct Tx
 {
+    evmone::state::Transaction::Type type = evmone::state::Transaction::Type::legacy;
     uint8_t to = 0;
 
     // We use fixed sender to make sure it is EOA and has private key.
@@ -111,6 +112,11 @@ struct Tx
     uint64_t max_gas_price = 0;
     uint64_t max_priority_gas_price = 0;
     uint64_t max_blob_gas_price = 0;
+    evmc::bytes32 value;
+    uint64_t chain_id;
+    uint64_t nonce;
+    std::vector<evmc::bytes32> blob_hashes;
+    // TODO: Add access list.
 };
 
 struct Test
@@ -119,6 +125,11 @@ struct Test
     Block block;
     Tx tx;
 };
+
+void mutate(evmone::state::Transaction::Type& type, RNG&)
+{
+    type = static_cast<evmone::state::Transaction::Type>((std::to_underlying(type) + 1) % 4);
+}
 
 void mutate(std::integral auto& value, RNG&)
 {
@@ -284,6 +295,13 @@ void execute(const Test& test)
     tx.sender = SENDER;
     tx.data = *evmc::from_hex(test.tx.data);
     tx.gas_limit = test.tx.gas_limit;
+    tx.max_gas_price = test.tx.max_gas_price;
+    tx.max_priority_gas_price = test.tx.max_priority_gas_price;
+    tx.max_blob_gas_price = test.tx.max_blob_gas_price;
+    tx.value = intx::be::load<intx::uint256>(test.tx.value);
+    tx.chain_id = test.tx.chain_id;
+    tx.nonce = test.tx.nonce;
+    tx.blob_hashes = test.tx.blob_hashes;
 
     const auto res = evmone::state::validate_transaction(
         state_view, block, tx, EVMC_LATEST_STABLE_REVISION, 1'000'000, 0);
@@ -298,10 +316,9 @@ void execute(const Test& test)
         case SENDER_NOT_EOA:
         case GAS_LIMIT_REACHED:
         case NONCE_TOO_LOW:
+        case NONCE_TOO_HIGH:
         case FEE_CAP_LESS_THEN_BLOCKS:
-            break;
         case INSUFFICIENT_FUNDS:
-            assert(false && "INSUFFICIENT_FUNDS");
             break;
         default:
             std::cerr << "new error: " << ec.message() << '\n';
@@ -403,6 +420,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
     // Add/update fixed SENDER to the state.
     auto& sender = test.state[SENDER];
     sender.balance += 1'000'000;
+
+    // Validate the test.
+    if (test.tx.max_priority_gas_price > test.tx.max_gas_price)
+        return -1;
 
     fzz::execute(test);
 
