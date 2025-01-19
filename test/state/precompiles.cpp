@@ -428,7 +428,8 @@ ExecutionResult bls12_g1mul_execute(const uint8_t* input, size_t input_size, uin
 
     assert(output_size == 128);
 
-    if (!crypto::bls::g1_mul(output, &output[64], input, &input[64], &input[128]))
+    // Pass the input to MSM for cross-check. They are ABI equivalent.
+    if (!crypto::bls::g1_msm(output, &output[64], input, input_size))
         return {EVMC_PRECOMPILE_FAILURE, 0};
 
     return {EVMC_SUCCESS, 128};
@@ -441,6 +442,13 @@ ExecutionResult bls12_g1msm_execute(const uint8_t* input, size_t input_size, uin
         return {EVMC_PRECOMPILE_FAILURE, 0};
 
     assert(output_size == 128);
+
+    // For single input pass it to the simpler single-point multiplication.
+    if (input_size == 160)
+    {
+        if (!crypto::bls::g1_mul(output, &output[64], input, &input[64], &input[128]))
+            return {EVMC_PRECOMPILE_FAILURE, 0};
+    }
 
     if (!crypto::bls::g1_msm(output, &output[64], input, input_size))
         return {EVMC_PRECOMPILE_FAILURE, 0};
@@ -470,7 +478,8 @@ ExecutionResult bls12_g2mul_execute(const uint8_t* input, size_t input_size, uin
 
     assert(output_size == 256);
 
-    if (!crypto::bls::g2_mul(output, &output[128], input, &input[128], &input[256]))
+    // Pass the input to MSM for cross-check. They are ABI equivalent.
+    if (!crypto::bls::g2_msm(output, &output[128], input, input_size))
         return {EVMC_PRECOMPILE_FAILURE, 0};
 
     return {EVMC_SUCCESS, 256};
@@ -483,6 +492,13 @@ ExecutionResult bls12_g2msm_execute(const uint8_t* input, size_t input_size, uin
         return {EVMC_PRECOMPILE_FAILURE, 0};
 
     assert(output_size == 256);
+
+    // For single input pass it to the simpler single-point multiplication.
+    if (input_size == 288)
+    {
+        if (!crypto::bls::g2_mul(output, &output[128], input, &input[128], &input[256]))
+            return {EVMC_PRECOMPILE_FAILURE, 0};
+    }
 
     if (!crypto::bls::g2_msm(output, &output[128], input, input_size))
         return {EVMC_PRECOMPILE_FAILURE, 0};
