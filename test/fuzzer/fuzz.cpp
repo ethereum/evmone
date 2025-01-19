@@ -94,6 +94,9 @@ struct Block
     uint32_t timestamp = 0;
     uint32_t gas_limit = 0;
     evmc::address coinbase;
+    evmc::bytes32 prev_randao;
+    uint64_t base_fee = 0;
+    uint64_t blob_base_fee = 0;
 };
 
 struct Tx
@@ -264,6 +267,9 @@ void execute(const Test& test)
     block.timestamp = test.block.timestamp;
     block.gas_limit = test.block.gas_limit;
     block.coinbase = test.block.coinbase;
+    block.prev_randao = test.block.prev_randao;
+    block.base_fee = test.block.base_fee;
+    block.blob_base_fee = test.block.blob_base_fee;
 
     evmone::state::Transaction tx;
     if (test.tx.to < test.state.size())
@@ -289,6 +295,7 @@ void execute(const Test& test)
         case SENDER_NOT_EOA:
         case GAS_LIMIT_REACHED:
         case NONCE_TOO_LOW:
+        case FEE_CAP_LESS_THEN_BLOCKS:
             break;
         case INSUFFICIENT_FUNDS:
             assert(false && "INSUFFICIENT_FUNDS");
