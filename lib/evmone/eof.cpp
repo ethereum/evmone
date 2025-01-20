@@ -27,7 +27,8 @@ constexpr uint8_t TYPE_SECTION = 0x01;
 constexpr uint8_t CODE_SECTION = 0x02;
 constexpr uint8_t CONTAINER_SECTION = 0x03;
 constexpr uint8_t DATA_SECTION = 0x04;
-constexpr uint8_t MAX_SECTION = DATA_SECTION;
+constexpr uint8_t METADATA_SECTION = 0x05;
+constexpr uint8_t MAX_SECTION = METADATA_SECTION;
 constexpr auto CODE_SECTION_NUMBER_LIMIT = 1024;
 constexpr auto CONTAINER_SECTION_NUMBER_LIMIT = 256;
 constexpr auto MAX_STACK_HEIGHT = 0x03FF;
@@ -43,6 +44,7 @@ size_t eof_header_size(const EOFSectionHeaders& headers) noexcept
     const auto non_code_section_count = 2;  // type section and data section
     const auto code_section_count = headers[CODE_SECTION].size();
     const auto container_section_count = headers[CONTAINER_SECTION].size();
+    const auto metadata_section_count = headers[METADATA_SECTION].size();
 
     constexpr auto non_code_section_header_size = 3;  // (SECTION_ID + SIZE) per each section
     constexpr auto section_size_size = 2;
@@ -55,6 +57,10 @@ size_t eof_header_size(const EOFSectionHeaders& headers) noexcept
     if (container_section_count != 0)
     {
         header_size += sizeof(CONTAINER_SECTION) + 2 + container_section_count * section_size_size;
+    }
+    if (metadata_section_count != 0)
+    {
+        header_size += sizeof(METADATA_SECTION) + 2;
     }
     return header_size;
 }
@@ -102,6 +108,8 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
 
             // Skip optional sections.
             if (section_id != expected_section_id && expected_section_id == CONTAINER_SECTION)
+                expected_section_id = METADATA_SECTION;
+            if (section_id != expected_section_id && expected_section_id == METADATA_SECTION)
                 expected_section_id = DATA_SECTION;
 
             if (section_id != expected_section_id)
@@ -144,10 +152,14 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
                     return EOFValidationError::zero_section_size;
                 if (section_num > CONTAINER_SECTION_NUMBER_LIMIT)
                     return EOFValidationError::too_many_container_sections;
-                expected_section_id = DATA_SECTION;
+                expected_section_id = METADATA_SECTION;
                 state = State::section_size;
                 break;
             }
+            case METADATA_SECTION:
+                expected_section_id = DATA_SECTION;
+                state = State::section_size;
+                break;
             default:
                 assert(false);
             }
@@ -170,7 +182,7 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
                     section_headers[section_id].emplace_back(section_size);
                 }
             }
-            else  // TYPES_SECTION or DATA_SECTION
+            else  // TYPES_SECTION or DATA_SECTION or METADATA_SECTION
             {
                 if (it >= container_end - 1)
                     return EOFValidationError::incomplete_section_size;
@@ -198,7 +210,9 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
         std::accumulate(
             section_headers[CODE_SECTION].begin(), section_headers[CODE_SECTION].end(), 0) +
         std::accumulate(section_headers[CONTAINER_SECTION].begin(),
-            section_headers[CONTAINER_SECTION].end(), 0);
+            section_headers[CONTAINER_SECTION].end(), 0) +
+        (section_headers[METADATA_SECTION].size() == 1 ? section_headers[METADATA_SECTION].front() :
+                                                         0);
     const auto remaining_container_size = container_end - it;
     // Only data section may be truncated, so remaining_container size must be at least
     // declared_size_without_data
@@ -714,12 +728,14 @@ size_t EOF1Header::data_size_position() const noexcept
 {
     const auto num_code_sections = code_sizes.size();
     const auto num_container_sections = container_sizes.size();
+    const auto has_metadata_section = metadata_size != 0;
     return std::size(EOF_MAGIC) + 1 +   // magic + version
            3 +                          // type section kind + size
            3 + 2 * num_code_sections +  // code sections kind + count + sizes
            // container sections kind + count + sizes
            (num_container_sections != 0 ? 3 + 2 * num_container_sections : 0) +
-           1;  // data section kind
+           // metadata section kind + size
+           (has_metadata_section ? 3 : 0) + 1;  // data section kind
 }
 
 bool is_eof_container(bytes_view container) noexcept
@@ -782,6 +798,13 @@ std::variant<EOF1Header, EOFValidationError> validate_header(
     }
 
     assert(offset <= std::numeric_limits<uint16_t>::max());
+
+    const uint16_t metadata_size = section_headers[METADATA_SECTION].size() == 1 ?
+                                       section_headers[METADATA_SECTION].front() :
+                                       0;
+    offset += metadata_size;
+
+    assert(offset <= std::numeric_limits<uint16_t>::max());
     const auto data_offset = static_cast<uint16_t>(offset);
 
     return EOF1Header{
@@ -791,6 +814,7 @@ std::variant<EOF1Header, EOFValidationError> validate_header(
         .code_offsets = code_offsets,
         .data_size = data_size,
         .data_offset = data_offset,
+        .metadata_size = metadata_size,
         .container_sizes = container_sizes,
         .container_offsets = container_offsets,
     };
@@ -847,7 +871,10 @@ EOF1Header read_valid_eof1_header(bytes_view container)
         container_offset += container_size;
     }
 
-    header.data_offset = static_cast<uint16_t>(container_offset);
+    if (section_headers[METADATA_SECTION].size() == 1)
+        header.metadata_size = section_headers[METADATA_SECTION][0];
+
+    header.data_offset = static_cast<uint16_t>(container_offset) + header.metadata_size;
 
     return header;
 }

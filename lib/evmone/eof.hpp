@@ -81,6 +81,8 @@ struct EOF1Header
     uint16_t data_size = 0;
     /// Offset of data container section start.
     uint16_t data_offset = 0;
+    /// Size of the (optional) metadata section
+    uint16_t metadata_size = 0;
     /// Size of every container section.
     std::vector<uint16_t> container_sizes;
     /// Offset of every container section start;
