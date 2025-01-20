@@ -305,7 +305,7 @@ void execute(const Test& test)
     tx.blob_hashes = test.tx.blob_hashes;
 
     const auto res = evmone::state::validate_transaction(
-        state_view, block, tx, EVMC_LATEST_STABLE_REVISION, 1'000'000, 0);
+        state_view, block, tx, EVMC_LATEST_STABLE_REVISION, 1'000'000, 786431);
 
     if (std::holds_alternative<std::error_code>(res))
     {
