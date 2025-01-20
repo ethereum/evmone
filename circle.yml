@@ -365,17 +365,6 @@ jobs:
           command: >
             bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests
       - download_execution_spec_tests:
-          release: pectra-devnet-4@v1.0.1
-          fixtures_suffix: pectra-devnet-4
-      - run:
-          name: "Execution spec tests (develop, blockchain_tests) - pectra-devnet-4"
-          # Tests for in-development EVM revision currently passing.
-          working_directory: ~/spec-tests/fixtures/blockchain_tests
-          command: >
-            ~/build/bin/evmone-blockchaintest
-            prague/eip2935_historical_block_hashes_from_state
-            prague/eip7685_general_purpose_el_requests
-      - download_execution_spec_tests:
           release: pectra-devnet-5@v1.2.0
           fixtures_suffix: pectra-devnet-5
       - run:
@@ -412,13 +401,14 @@ jobs:
           working_directory: ~/build
           command: >
             bin/evmone-statetest ~/spec-tests/fixtures/state_tests/osaka
-      - run:
-          name: "EOF pre-release execution spec tests (blockchain_tests)"
-          working_directory: ~/build
-          command: >
-            bin/evmone-blockchaintest
-            --gtest_filter='-eofwrap/*'
-            ~/spec-tests/fixtures/blockchain_tests/osaka
+      # TODO: EOF blockchain tests are not yet compatible with pectra-devnet-5.
+      # - run:
+      #     name: "EOF pre-release execution spec tests (blockchain_tests)"
+      #     working_directory: ~/build
+      #     command: >
+      #       bin/evmone-blockchaintest
+      #       --gtest_filter='-eofwrap/*'
+      #       ~/spec-tests/fixtures/blockchain_tests/osaka
       - run:
           name: "EOF pre-release execution spec tests (eof_tests)"
           working_directory: ~/build
