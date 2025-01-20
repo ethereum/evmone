@@ -279,7 +279,8 @@ void execute(const Test& test)
     evmone::state::BlockInfo block;
     block.number = test.block.number;
     block.timestamp = test.block.timestamp;
-    block.gas_limit = test.block.gas_limit;
+    // Limit gas to avoid long execution times.
+    block.gas_limit = std::min(test.block.gas_limit, 5'000'000u);
     block.coinbase = test.block.coinbase;
     block.prev_randao = test.block.prev_randao;
     block.base_fee = test.block.base_fee;
@@ -305,7 +306,7 @@ void execute(const Test& test)
     tx.blob_hashes = test.tx.blob_hashes;
 
     const auto res = evmone::state::validate_transaction(
-        state_view, block, tx, EVMC_LATEST_STABLE_REVISION, 1'000'000, 786431);
+        state_view, block, tx, EVMC_LATEST_STABLE_REVISION, block.gas_limit, 786431);
 
     if (std::holds_alternative<std::error_code>(res))
     {
