@@ -72,6 +72,9 @@ struct TransactionProperties
 {
     /// The amount of gas provided to the EVM for the transaction execution.
     int64_t execution_gas_limit = 0;
+
+    /// The minimal amount of gas the transaction must use.
+    int64_t min_gas_cost = 0;
 };
 
 struct Log

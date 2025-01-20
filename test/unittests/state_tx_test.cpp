@@ -219,4 +219,9 @@ TEST(state_tx, validate_tx_data_cost)
     EXPECT_EQ(get_props(EVMC_ISTANBUL).execution_gas_limit, from_data_cost(16, 4));
     EXPECT_EQ(get_props(EVMC_CANCUN).execution_gas_limit, from_data_cost(16, 4));
     EXPECT_EQ(get_props(EVMC_PRAGUE).execution_gas_limit, from_data_cost(16, 4));
+
+    EXPECT_EQ(get_props(EVMC_PETERSBURG).min_gas_cost, 0);
+    EXPECT_EQ(get_props(EVMC_ISTANBUL).min_gas_cost, 0);
+    EXPECT_EQ(get_props(EVMC_CANCUN).min_gas_cost, 0);
+    EXPECT_EQ(get_props(EVMC_PRAGUE).min_gas_cost, 21000 + (4 * 3 + 2) * 10);
 }
