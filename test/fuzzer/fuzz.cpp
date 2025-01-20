@@ -327,10 +327,10 @@ void execute(const Test& test)
         return;
     }
 
-    const auto execution_gas_limit = std::get<int64_t>(res);
+    const auto tx_props = std::get<evmone::state::TransactionProperties>(res);
     BlockHashes block_hashes;
     evmone::state::transition(
-        state_view, block, block_hashes, tx, EVMC_LATEST_STABLE_REVISION, vm, execution_gas_limit);
+        state_view, block, block_hashes, tx, EVMC_LATEST_STABLE_REVISION, vm, tx_props);
 }
 
 }  // namespace fzz
