@@ -378,11 +378,13 @@ jobs:
       - run:
           name: "Execution spec tests (develop, blockchain_tests)"
           # Tests for in-development EVM revision currently passing.
-          # TODO: Just a single example that happens to work.
           working_directory: ~/spec-tests/fixtures/blockchain_tests
           command: >
             ~/build/bin/evmone-blockchaintest
-            prague/eip2537_bls_12_381_precompiles/bls12_precompiles_before_fork
+            --gtest_filter='-*block_hashes.block_hashes_history'
+            prague/eip2537_bls_12_381_precompiles
+            prague/eip2935_historical_block_hashes_from_state
+            prague/eip6110_deposits
       - collect_coverage_gcc
       - upload_coverage:
           flags: execution_spec_tests

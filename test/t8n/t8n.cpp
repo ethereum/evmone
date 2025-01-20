@@ -255,8 +255,12 @@ int main(int argc, const char* argv[])
         {
             // EIP-7685: General purpose execution layer requests
             j_result["requests"] = json::json::array();
-            for (size_t i = 0; i < requests.size(); ++i)
-                j_result["requests"][i] = hex0x(requests[i].data());
+            for (const auto& r : requests)
+            {
+                if (!r.data().empty())
+                    // Only report non-empty requests. Include the leading type byte.
+                    j_result["requests"].emplace_back(hex0x(r.raw_data));
+            }
 
             auto requests_hash = calculate_requests_hash(requests);
 

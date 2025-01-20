@@ -20,9 +20,8 @@ hash256 calculate_requests_hash(std::span<const Requests> block_requests_list)
 
     for (const auto& requests : block_requests_list)
     {
-        // TODO recent change in the spec, uncomment for devnet-5
-        //        if (requests.data.empty())
-        //            continue;
+        if (requests.data().empty())
+            continue;  // Skip empty requests.
 
         hash256 requests_hash;
         crypto::sha256(reinterpret_cast<std::byte*>(requests_hash.bytes),
