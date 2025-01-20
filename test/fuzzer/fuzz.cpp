@@ -286,6 +286,7 @@ void execute(const Test& test)
     block.blob_base_fee = test.block.blob_base_fee;
 
     evmone::state::Transaction tx;
+    tx.type = test.tx.type;
     if (test.tx.to < test.state.size())
     {
         auto it = test.state.begin();
@@ -319,6 +320,9 @@ void execute(const Test& test)
         case NONCE_TOO_HIGH:
         case FEE_CAP_LESS_THEN_BLOCKS:
         case INSUFFICIENT_FUNDS:
+        case CREATE_BLOB_TX:
+        case EMPTY_BLOB_HASHES_LIST:
+        case INVALID_BLOB_HASH_VERSION:
             break;
         default:
             std::cerr << "new error: " << ec.message() << '\n';
