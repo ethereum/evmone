@@ -214,6 +214,10 @@ void execute(const Test& test)
         case CREATE_BLOB_TX:
         case EMPTY_BLOB_HASHES_LIST:
         case INVALID_BLOB_HASH_VERSION:
+        case TIP_GT_FEE_CAP:
+            break;
+        case BLOB_GAS_LIMIT_EXCEEDED:
+            assert(false && "BLOB_GAS_LIMIT_EXCEEDED");
             break;
         default:
             std::cerr << "new error: " << ec.message() << '\n';
@@ -318,7 +322,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
     sender.balance += 1'000'000;
 
     // Validate the test.
-    if (test.tx.max_priority_gas_price > test.tx.max_gas_price)
+    if (test.tx.type <= evmone::state::Transaction::Type::eip1559 &&
+        test.tx.max_priority_gas_price != test.tx.max_gas_price)
         return -1;
 
     fzz::execute(test);
