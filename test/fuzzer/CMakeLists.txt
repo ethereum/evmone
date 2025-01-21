@@ -40,4 +40,5 @@ target_link_options(evmone-fuzz PRIVATE -fsanitize=fuzzer)
 target_sources(
     evmone-fuzz PRIVATE
     fuzz.cpp
+    fuzz_types.hpp
 )
