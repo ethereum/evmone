@@ -37,6 +37,7 @@ target_link_libraries(evmone-fuzzer PRIVATE evmone evmone::testutils evmc::mocke
 add_executable(evmone-fuzz)
 target_link_libraries(evmone-fuzz PRIVATE evmone evmone::state glaze::glaze)
 target_link_options(evmone-fuzz PRIVATE -fsanitize=fuzzer)
+target_precompile_headers(evmone-fuzz PRIVATE <glaze/glaze.hpp>)
 target_sources(
     evmone-fuzz PRIVATE
     fuzz.cpp
