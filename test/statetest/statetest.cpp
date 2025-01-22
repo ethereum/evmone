@@ -16,12 +16,14 @@ namespace
 class StateTest : public testing::Test
 {
     fs::path m_json_test_file;
+    std::optional<std::string> m_filter;
     evmc::VM& m_vm;
     bool m_trace = false;
 
 public:
-    explicit StateTest(fs::path json_test_file, evmc::VM& vm, bool trace) noexcept
-      : m_json_test_file{std::move(json_test_file)}, m_vm{vm}, m_trace{trace}
+    explicit StateTest(fs::path json_test_file, const std::optional<std::string>& filter,
+        evmc::VM& vm, bool trace) noexcept
+      : m_json_test_file{std::move(json_test_file)}, m_filter{filter}, m_vm{vm}, m_trace{trace}
     {}
 
     void TestBody() final
@@ -29,18 +31,25 @@ public:
         std::ifstream f{m_json_test_file};
         const auto tests = evmone::test::load_state_tests(f);
         for (const auto& test : tests)
+        {
+            if (m_filter.has_value() && test.name.find(*m_filter) == std::string::npos)
+                continue;
             evmone::test::run_state_test(test, m_vm, m_trace);
+        }
     }
 };
 
-void register_test(const std::string& suite_name, const fs::path& file, evmc::VM& vm, bool trace)
+void register_test(const std::string& suite_name, const fs::path& file,
+    const std::optional<std::string>& filter, evmc::VM& vm, bool trace)
 {
     testing::RegisterTest(suite_name.c_str(), file.stem().string().c_str(), nullptr, nullptr,
-        file.string().c_str(), 0,
-        [file, &vm, trace]() -> testing::Test* { return new StateTest(file, vm, trace); });
+        file.string().c_str(), 0, [file, filter, &vm, trace]() -> testing::Test* {
+            return new StateTest(file, filter, vm, trace);
+        });
 }
 
-void register_test_files(const fs::path& root, evmc::VM& vm, bool trace)
+void register_test_files(
+    const fs::path& root, const std::optional<std::string>& filter, evmc::VM& vm, bool trace)
 {
     if (is_directory(root))
     {
@@ -52,11 +61,11 @@ void register_test_files(const fs::path& root, evmc::VM& vm, bool trace)
         std::ranges::sort(test_files);
 
         for (const auto& p : test_files)
-            register_test(fs::relative(p, root).parent_path().string(), p, vm, trace);
+            register_test(fs::relative(p, root).parent_path().string(), p, filter, vm, trace);
     }
     else  // Treat as a file.
     {
-        register_test(root.parent_path().string(), root, vm, trace);
+        register_test(root.parent_path().string(), root, filter, vm, trace);
     }
 }
 }  // namespace
@@ -88,6 +97,10 @@ int main(int argc, char* argv[])
             ->required()
             ->check(CLI::ExistingPath);
 
+        std::optional<std::string> filter;
+        app.add_option("-k", filter,
+            "Test name filter. Run only tests with names containing the specified string.");
+
         bool trace = false;
         bool trace_summary = false;
         const auto trace_opt = app.add_flag("--trace", trace, "Enable EVM tracing");
@@ -105,7 +118,7 @@ int main(int argc, char* argv[])
         }
 
         for (const auto& p : paths)
-            register_test_files(p, vm, trace || trace_summary);
+            register_test_files(p, filter, vm, trace || trace_summary);
 
         return RUN_ALL_TESTS();
     }

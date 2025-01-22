@@ -9,6 +9,7 @@ set(TESTS1 ${CMAKE_CURRENT_SOURCE_DIR}/tests1)
 set(TESTS2 ${CMAKE_CURRENT_SOURCE_DIR}/tests2)
 set(TESTS_EOF ${CMAKE_CURRENT_SOURCE_DIR}/eof)
 set(TESTS_TX ${CMAKE_CURRENT_SOURCE_DIR}/tx)
+set(TESTS_FILTER ${CMAKE_CURRENT_SOURCE_DIR}/filter)
 
 add_test(
     NAME ${PREFIX}/no_arguments
@@ -125,4 +126,13 @@ add_test(
 set_tests_properties(
     ${PREFIX}/tx_invalid_nonce PROPERTIES
     PASS_REGULAR_EXPRESSION "unexpected invalid transaction: nonce too high"
+)
+
+add_test(
+    NAME ${PREFIX}/filter
+    COMMAND evmone-statetest ${TESTS_FILTER}/one_failing_of_two.json -k passing_test_case
+)
+set_tests_properties(
+    ${PREFIX}/filter PROPERTIES
+    FAIL_REGULAR_EXPRESSION "failing_test_case"
 )
