@@ -11,7 +11,6 @@ using namespace evmc::literals;
 static constexpr auto SENDER = 0xe100713FC15400D1e94096a545879E7c6407001e_address;
 
 
-
 namespace fzz
 {
 using RNG = std::minstd_rand;
@@ -320,6 +319,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
     // Add/update fixed SENDER to the state.
     auto& sender = test.state[SENDER];
     sender.balance += 1'000'000;
+
+    // Focus on blob transactions.
+    // if (test.tx.type != evmone::state::Transaction::Type::blob)
+        // return -1;
 
     // Validate the test.
     if (test.tx.type <= evmone::state::Transaction::Type::eip1559 &&
