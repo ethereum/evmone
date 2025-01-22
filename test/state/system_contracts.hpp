@@ -20,10 +20,10 @@ constexpr auto BEACON_ROOTS_ADDRESS = 0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02
 constexpr auto HISTORY_STORAGE_ADDRESS = 0x0F792be4B0c0cb4DAE440Ef133E90C0eCD48CCCC_address;
 
 /// The address of the system contract processing EL-triggerable withdrawals (EIP-7002).
-constexpr auto WITHDRAWAL_REQUEST_ADDRESS = 0x09Fc772D0857550724b07B850a4323f39112aAaA_address;
+constexpr auto WITHDRAWAL_REQUEST_ADDRESS = 0x0c15F14308530b7CDB8460094BbB9cC28b9AaaAA_address;
 
 /// The address of the system contract processing consolidations (EIP-7251).
-constexpr auto CONSOLIDATION_REQUEST_ADDRESS = 0x01aBEa29659e5e97C95107F20bb753cD3e09bBBb_address;
+constexpr auto CONSOLIDATION_REQUEST_ADDRESS = 0x00431F263cE400f4455c2dCf564e53007Ca4bbBb_address;
 
 struct BlockInfo;
 struct StateDiff;
