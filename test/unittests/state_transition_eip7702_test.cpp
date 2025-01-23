@@ -72,7 +72,7 @@ TEST_F(state_transition, eip7702_extcodesize)
 
     expect.post[callee].exists = true;
     expect.post[delegate].exists = true;
-    expect.post[To].storage[0x01_bytes32] = 0x02_bytes32;
+    expect.post[To].storage[0x01_bytes32] = 0x17_bytes32;
 }
 
 TEST_F(state_transition, eip7702_extcodehash_delegation_to_empty)
@@ -87,8 +87,7 @@ TEST_F(state_transition, eip7702_extcodehash_delegation_to_empty)
 
     expect.post[callee].exists = true;
     expect.post[delegate].exists = false;
-    expect.post[To].storage[0x00_bytes32] =
-        0xeadcdba66a79ab5dce91622d1d75c8cff5cff0b96944c3bf1072cd08ce018329_bytes32;
+    expect.post[To].storage[0x00_bytes32] = keccak256(bytes{0xef, 0x01, 0x00} + hex(delegate));
     expect.post[To].storage[0x01_bytes32] = 0x01_bytes32;
 }
 
