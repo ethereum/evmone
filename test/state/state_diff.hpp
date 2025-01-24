@@ -30,8 +30,8 @@ struct StateDiff
         /// TODO: Currently it is not guaranteed the value is different from the initial one.
         uint256 balance;
 
-        /// New account code. If empty, it means the code has not changed.
-        bytes code;
+        /// New or modified account code. If bytes are empty, it means the code has been cleared.
+        std::optional<bytes> code;
 
         /// The list of the account's storage modifications: key => new value.
         /// The value 0 means the storage entry is deleted.

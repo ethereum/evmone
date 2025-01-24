@@ -130,7 +130,7 @@ StateDiff State::build_diff(evmc_revision rev) const
 
         // Output only the new code.
         // TODO: Output also the code hash. It will be needed for DB update and MPT hash.
-        if (m.just_created && !m.code.empty())
+        if (m.code_changed)
             a.code = m.code;
 
         for (const auto& [k, v] : m.storage)

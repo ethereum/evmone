@@ -34,8 +34,8 @@ void TestState::apply(const state::StateDiff& diff)
         auto& a = (*this)[m.addr];
         a.nonce = m.nonce;
         a.balance = m.balance;
-        if (!m.code.empty())
-            a.code = m.code;  // TODO: Consider taking rvalue ref to avoid code copy.
+        if (m.code.has_value())
+            a.code = *m.code;  // TODO: Consider taking rvalue ref to avoid code copy.
         for (const auto& [k, v] : m.modified_storage)
         {
             if (v)
