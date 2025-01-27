@@ -54,11 +54,11 @@ struct StateTransitionTest
 
         evmc_revision rev;
         std::vector<Expectation> expectations;
+        state::BlockInfo block;
     };
 
     std::string name;
     TestState pre_state;
-    state::BlockInfo block;
     TestBlockHashes block_hashes;
     TestMultiTransaction multi_tx;
     std::vector<Case> cases;
@@ -83,8 +83,7 @@ hash256 from_json<hash256>(const json::json& j);
 template <>
 bytes from_json<bytes>(const json::json& j);
 
-template <>
-state::BlockInfo from_json<state::BlockInfo>(const json::json& j);
+state::BlockInfo from_json_with_rev(const json::json& j, evmc_revision rev);
 
 template <>
 TestBlockHashes from_json<TestBlockHashes>(const json::json& j);

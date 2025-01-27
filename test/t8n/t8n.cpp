@@ -88,7 +88,7 @@ int main(int argc, const char* argv[])
         if (!env_file.empty())
         {
             const auto j = json::json::parse(std::ifstream{env_file});
-            block = from_json<state::BlockInfo>(j);
+            block = from_json_with_rev(j, rev);
             block_hashes = from_json<TestBlockHashes>(j);
         }
 

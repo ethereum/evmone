@@ -117,7 +117,9 @@ TEST(statetest_loader, load_minimal_test)
                 "value": null,
                 "nonce" : "0"
             },
-            "post": {},
+            "post": {
+                "Cancun": []
+            },
             "env": {
                 "currentNumber": "0",
                 "currentTimestamp": "0",
@@ -129,12 +131,12 @@ TEST(statetest_loader, load_minimal_test)
     const auto st = std::move(load_state_tests(s).at(0));
     // TODO: should add some comparison operator to State, BlockInfo, AccessList
     EXPECT_EQ(st.pre_state.size(), 0);
-    EXPECT_EQ(st.block.number, 0);
-    EXPECT_EQ(st.block.timestamp, 0);
-    EXPECT_EQ(st.block.gas_limit, 0);
-    EXPECT_EQ(st.block.coinbase, address{});
-    EXPECT_EQ(st.block.prev_randao, bytes32{});
-    EXPECT_EQ(st.block.base_fee, 0);
+    EXPECT_EQ(st.cases[0].block.number, 0);
+    EXPECT_EQ(st.cases[0].block.timestamp, 0);
+    EXPECT_EQ(st.cases[0].block.gas_limit, 0);
+    EXPECT_EQ(st.cases[0].block.coinbase, address{});
+    EXPECT_EQ(st.cases[0].block.prev_randao, bytes32{});
+    EXPECT_EQ(st.cases[0].block.base_fee, 0);
     EXPECT_EQ(st.multi_tx.type, test::TestMultiTransaction::Type::legacy);
     EXPECT_EQ(st.multi_tx.data, bytes{});
     EXPECT_EQ(st.multi_tx.gas_limit, 0);
@@ -155,7 +157,8 @@ TEST(statetest_loader, load_minimal_test)
     EXPECT_EQ(st.multi_tx.gas_limits.size(), 1);
     EXPECT_EQ(st.multi_tx.gas_limits[0], 0);
     EXPECT_EQ(st.multi_tx.values.size(), 0);
-    EXPECT_EQ(st.cases.size(), 0);
+    EXPECT_EQ(st.cases.size(), 1);
+    EXPECT_EQ(st.cases[0].expectations.size(), 0);
     EXPECT_EQ(st.input_labels.size(), 0);
 }
 
