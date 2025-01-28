@@ -307,8 +307,9 @@ TEST_F(eof_validation, EOF1_undefined_opcodes)
             opcode == OP_SWAPN || opcode == OP_EXCHANGE || opcode == OP_RJUMP ||
             opcode == OP_RJUMPI || opcode == OP_CALLF || opcode == OP_RJUMPV ||
             opcode == OP_DATALOADN || opcode == OP_JUMPF || opcode == OP_EOFCREATE ||
-            opcode == OP_RETURNCONTRACT || opcode == OP_ADDMODX || opcode == OP_SUBMODX ||
-            opcode == OP_MULMODX)
+            opcode == OP_RETURNCONTRACT || opcode == OP_SETUPX || opcode == OP_ADDMODX ||
+            opcode == OP_SUBMODX || opcode == OP_MULMODX || opcode == OP_LOADX ||
+            opcode == OP_STOREX)
             continue;
         // These opcodes are deprecated since Osaka.
         // gas_cost table current implementation does not allow to undef instructions.

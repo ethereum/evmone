@@ -152,6 +152,7 @@ TYPED_TEST(evmmax_test, mul)
 
 namespace
 {
+using namespace evmone::test;
 template <typename UintT>
 inline bytecode create_test_bytecode()
 {
@@ -169,7 +170,7 @@ TEST_P(evm, exec_bn254_test)
     if (evm::is_advanced())
         return;
 
-    evm::rev = EVMC_PRAGUE;  /// TODO: Use EVMC_EVMMAX
+    evm::rev = EVMC_OSAKA;  /// TODO: Use EVMC_EVMMAX
 
     const ModA<uint256, BN254Mod> m;
 
@@ -203,7 +204,7 @@ TEST_P(evm, exec_bls_test)
     if (evm::is_advanced())
         return;
 
-    evm::rev = EVMC_PRAGUE;  /// TODO: Use EVMC_EVMMAX
+    evm::rev = EVMC_OSAKA;  /// TODO: Use EVMC_EVMMAX
 
     const ModA<uint384, BLS12384Mod> m;
 
@@ -239,7 +240,7 @@ TEST_P(evm, exec_invalid_test)
     if (evm::is_advanced())
         return;
 
-    evm::rev = EVMC_PRAGUE;  /// TODO: Use EVMC_EVMMAX
+    evm::rev = EVMC_OSAKA;  /// TODO: Use EVMC_EVMMAX
 
     {
         // Even modulus

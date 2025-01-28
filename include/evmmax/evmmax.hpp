@@ -82,7 +82,9 @@ public:
 
     void clear() noexcept;
 
+    EVMMAXState& operator=(EVMMAXState&&) noexcept;
     explicit EVMMAXState() noexcept;
+    explicit EVMMAXState(EVMMAXState&&) noexcept;
     virtual ~EVMMAXState();
 };
 

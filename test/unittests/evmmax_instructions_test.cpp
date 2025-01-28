@@ -10,6 +10,7 @@
 using namespace intx;
 using namespace evmmax;
 using namespace evmc::literals;
+using namespace evmone::test;
 using evmone::test::evm;
 
 TEST_P(evm, evmmax_32bytes_modulus_test)
@@ -17,7 +18,7 @@ TEST_P(evm, evmmax_32bytes_modulus_test)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;  /// TODO: Use EVMC_EVMMAX
+    rev = EVMC_OSAKA;  /// TODO: Use EVMC_EVMMAX
     // Modulus == 7
     auto code = mstore(0, 0x07);
     // 3 values slots
@@ -54,7 +55,7 @@ TEST_P(evm, evmmax_1byte_modulus_test)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;  /// TODO: Use EVMC_EVMMAX
+    rev = EVMC_OSAKA;  /// TODO: Use EVMC_EVMMAX
     // Modulus == 7
     auto code = mstore8(0, 0x07);
     // 3 values slots
@@ -93,7 +94,7 @@ TEST_P(evm, evmmax_2byte_modulus_test)
     if (is_advanced())
         return;
 
-    rev = EVMC_PRAGUE;  /// TODO: Use EVMC_EVMMAX
+    rev = EVMC_OSAKA;  /// TODO: Use EVMC_EVMMAX
     // Modulus == 263 (0x0107)
     auto code = mstore8(0, 0x01);
     code += mstore8(1, 0x07);

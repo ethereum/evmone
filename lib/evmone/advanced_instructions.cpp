@@ -99,8 +99,8 @@ template <Opcode Op, code_iterator CoreFn(StackTop, ExecutionState&, code_iterat
                          int64_t&) noexcept = core::impl<Op>>
 inline code_iterator impl(AdvancedExecutionState& state, code_iterator pos) noexcept
 {
-    const auto new_pos = CoreFn(state.stack.top_item, state, pos, state.gas_left);
-    state.stack.top_item += instr::traits[Op].stack_height_change;
+    const auto new_pos = CoreFn(state.stack, state, pos, state.gas_left);
+    state.adjust_stack_size(instr::traits[Op].stack_height_change);
     return new_pos;
 }
 /// @}
