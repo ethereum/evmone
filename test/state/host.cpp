@@ -377,26 +377,30 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
                    evmc::Result{EVMC_FAILURE};
     }
 
-    if (!code.empty() && code[0] == 0xEF)
+    if (!code.empty())
     {
-        if (m_rev >= EVMC_OSAKA)
+        if (code[0] == 0xEF)
         {
-            // Only EOFCREATE/EOF-creation-tx is allowed to deploy code starting with EF.
-            // It must be valid EOF, which was validated before execution.
-            if (msg.kind != EVMC_EOFCREATE)
+            if (m_rev >= EVMC_OSAKA)
+            {
+                // Only EOFCREATE/EOF-creation-tx is allowed to deploy code starting with EF.
+                // It must be valid EOF, which was validated before execution.
+                if (msg.kind != EVMC_EOFCREATE)
+                    return evmc::Result{EVMC_CONTRACT_VALIDATION_FAILURE};
+                assert(validate_eof(m_rev, ContainerKind::runtime, code) ==
+                       EOFValidationError::success);
+            }
+            else if (m_rev >= EVMC_LONDON)
+            {
+                // EIP-3541: Reject EF code.
                 return evmc::Result{EVMC_CONTRACT_VALIDATION_FAILURE};
-            assert(
-                validate_eof(m_rev, ContainerKind::runtime, code) == EOFValidationError::success);
+            }
         }
-        else if (m_rev >= EVMC_LONDON)
-        {
-            // EIP-3541: Reject EF code.
-            return evmc::Result{EVMC_CONTRACT_VALIDATION_FAILURE};
-        }
-    }
 
-    new_acc->code_hash = keccak256(code);
-    new_acc->code = code;
+        new_acc->code_hash = keccak256(code);
+        new_acc->code = code;
+        new_acc->code_changed = true;
+    }
 
     return evmc::Result{result.status_code, gas_left, result.gas_refund, msg.recipient};
 }
