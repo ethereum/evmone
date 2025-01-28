@@ -159,6 +159,13 @@ enum Opcode : uint8_t
     OP_LOG3 = 0xa3,
     OP_LOG4 = 0xa4,
 
+    OP_SETUPX = 0xc0,
+    OP_LOADX = 0xc1,
+    OP_STOREX = 0xc2,
+    OP_ADDMODX = 0xc3,
+    OP_SUBMODX = 0xc4,
+    OP_MULMODX = 0xc5,
+
     OP_DATALOAD = 0xd0,
     OP_DATALOADN = 0xd1,
     OP_DATASIZE = 0xd2,
