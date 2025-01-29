@@ -109,12 +109,12 @@ bool validate_block(
 
         // Check that the excess blob gas was updated correctly.
         if (*test_block.block_info.excess_blob_gas !=
-            state::calc_excess_blob_gas(
-                parent_header.blob_gas_used.value_or(0), parent_header.excess_blob_gas.value_or(0)))
+            state::calc_excess_blob_gas(rev, parent_header.blob_gas_used.value_or(0),
+                parent_header.excess_blob_gas.value_or(0)))
             return false;
 
         // Ensure the total blob gas spent is at most equal to the limit
-        if (*test_block.block_info.blob_gas_used > state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK)
+        if (*test_block.block_info.blob_gas_used > state::max_blob_gas_per_block(rev))
             return false;
     }
     else

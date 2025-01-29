@@ -88,7 +88,7 @@ int main(int argc, const char* argv[])
         if (!env_file.empty())
         {
             const auto j = json::json::parse(std::ifstream{env_file});
-            block = from_json<state::BlockInfo>(j);
+            block = from_json_with_rev(j, rev);
             block_hashes = from_json<TestBlockHashes>(j);
         }
 
@@ -115,7 +115,7 @@ int main(int argc, const char* argv[])
             j_result["currentBaseFee"] = hex0x(block.base_fee);
 
         int64_t cumulative_gas_used = 0;
-        auto blob_gas_left = static_cast<int64_t>(state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK);
+        auto blob_gas_left = static_cast<int64_t>(state::max_blob_gas_per_block(rev));
         std::vector<state::Transaction> transactions;
         std::vector<state::TransactionReceipt> receipts;
         int64_t block_gas_left = block.gas_limit;
@@ -246,8 +246,8 @@ int main(int argc, const char* argv[])
         j_result["gasUsed"] = hex0x(cumulative_gas_used);
         if (rev >= EVMC_CANCUN)
         {
-            j_result["blobGasUsed"] = hex0x(
-                static_cast<int64_t>(state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK) - blob_gas_left);
+            j_result["blobGasUsed"] =
+                hex0x(static_cast<int64_t>(state::max_blob_gas_per_block(rev)) - blob_gas_left);
             if (block.excess_blob_gas.has_value())
                 j_result["currentExcessBlobGas"] = hex0x(*block.excess_blob_gas);
         }

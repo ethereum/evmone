@@ -7,9 +7,22 @@
 
 namespace evmone::state
 {
-static constexpr uint64_t TARGET_BLOB_GAS_PER_BLOCK = 393216;
+static constexpr uint64_t TARGET_BLOB_GAS_PER_BLOCK_CANCUN = 393216;
+static constexpr uint64_t TARGET_BLOB_GAS_PER_BLOCK_PRAGUE = 786432;
 
-intx::uint256 compute_blob_gas_price(uint64_t excess_blob_gas) noexcept
+static constexpr uint64_t MAX_BLOB_GAS_PER_BLOCK_CANCUN = 786432;
+static constexpr uint64_t MAX_BLOB_GAS_PER_BLOCK_PRAGUE = 1179648;
+
+static constexpr uint64_t BLOB_GASPRICE_UPDATE_FRACTION_CANCUN = 3338477;
+static constexpr uint64_t BLOB_GASPRICE_UPDATE_FRACTION_PRAGUE = 5007716;
+
+uint64_t max_blob_gas_per_block(evmc_revision rev) noexcept
+{
+    return rev >= EVMC_PRAGUE ? MAX_BLOB_GAS_PER_BLOCK_PRAGUE : MAX_BLOB_GAS_PER_BLOCK_CANCUN;
+}
+
+
+intx::uint256 compute_blob_gas_price(evmc_revision rev, uint64_t excess_blob_gas) noexcept
 {
     /// A helper function approximating `factor * e ** (numerator / denominator)`.
     /// https://eips.ethereum.org/EIPS/eip-4844#helpers
@@ -34,17 +47,21 @@ intx::uint256 compute_blob_gas_price(uint64_t excess_blob_gas) noexcept
     };
 
     static constexpr auto MIN_BLOB_GASPRICE = 1;
-    static constexpr auto BLOB_GASPRICE_UPDATE_FRACTION = 3338477;
-    return fake_exponential(MIN_BLOB_GASPRICE, excess_blob_gas, BLOB_GASPRICE_UPDATE_FRACTION);
+    const uint64_t blob_gasprice_update_fraction = rev >= EVMC_PRAGUE ?
+                                                       BLOB_GASPRICE_UPDATE_FRACTION_PRAGUE :
+                                                       BLOB_GASPRICE_UPDATE_FRACTION_CANCUN;
+    return fake_exponential(MIN_BLOB_GASPRICE, excess_blob_gas, blob_gasprice_update_fraction);
 }
 
 uint64_t calc_excess_blob_gas(
-    uint64_t parent_blob_gas_used, uint64_t parent_excess_blob_gas) noexcept
+    evmc_revision rev, uint64_t parent_blob_gas_used, uint64_t parent_excess_blob_gas) noexcept
 {
-    if (parent_excess_blob_gas + parent_blob_gas_used < TARGET_BLOB_GAS_PER_BLOCK)
+    const auto target_blob_gas_per_block =
+        rev >= EVMC_PRAGUE ? TARGET_BLOB_GAS_PER_BLOCK_PRAGUE : TARGET_BLOB_GAS_PER_BLOCK_CANCUN;
+    if (parent_excess_blob_gas + parent_blob_gas_used < target_blob_gas_per_block)
         return 0;
     else
-        return parent_excess_blob_gas + parent_blob_gas_used - TARGET_BLOB_GAS_PER_BLOCK;
+        return parent_excess_blob_gas + parent_blob_gas_used - target_blob_gas_per_block;
 }
 
 [[nodiscard]] bytes rlp_encode(const Withdrawal& withdrawal)

@@ -167,8 +167,7 @@ state::Withdrawal from_json<state::Withdrawal>(const json::json& j)
         from_json<evmc::address>(j.at("address")), from_json<uint64_t>(j.at("amount"))};
 }
 
-template <>
-state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
+state::BlockInfo from_json_with_rev(const json::json& j, evmc_revision rev)
 {
     evmc::bytes32 prev_randao;
     int64_t current_difficulty = 0;
@@ -232,7 +231,8 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
     {
         const auto parent_excess_blob_gas = from_json<uint64_t>(*it);
         const auto parent_blob_gas_used = from_json<uint64_t>(j.at("parentBlobGasUsed"));
-        excess_blob_gas = state::calc_excess_blob_gas(parent_blob_gas_used, parent_excess_blob_gas);
+        excess_blob_gas =
+            state::calc_excess_blob_gas(rev, parent_blob_gas_used, parent_excess_blob_gas);
     }
     else if (const auto it2 = j.find("currentExcessBlobGas"); it2 != j.end())
     {
@@ -253,7 +253,7 @@ state::BlockInfo from_json<state::BlockInfo>(const json::json& j)
         .base_fee = base_fee,
         .blob_gas_used = load_if_exists<uint64_t>(j, "blobGasUsed"),
         .excess_blob_gas = excess_blob_gas,
-        .blob_base_fee = state::compute_blob_gas_price(excess_blob_gas),
+        .blob_base_fee = state::compute_blob_gas_price(rev, excess_blob_gas),
         .ommers = std::move(ommers),
         .withdrawals = std::move(withdrawals),
     };
@@ -431,7 +431,6 @@ static void from_json(const json::json& j_t, StateTransitionTest& o)
 
     o.multi_tx = j_t.at("transaction").get<TestMultiTransaction>();
 
-    o.block = from_json<state::BlockInfo>(j_t.at("env"));
     o.block_hashes = from_json<TestBlockHashes>(j_t.at("env"));
 
     if (const auto info_it = j_t.find("_info"); info_it != j_t.end())
@@ -452,7 +451,8 @@ static void from_json(const json::json& j_t, StateTransitionTest& o)
     {
         // TODO(c++20): Use emplace_back with aggregate initialization.
         o.cases.push_back({to_rev(rev_name),
-            expectations.get<std::vector<StateTransitionTest::Case::Expectation>>()});
+            expectations.get<std::vector<StateTransitionTest::Case::Expectation>>(),
+            from_json_with_rev(j_t.at("env"), to_rev(rev_name))});
     }
 }
 

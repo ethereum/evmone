@@ -102,20 +102,23 @@ TEST(state_tx, validate_blob_tx)
     };
     const TestState state{{tx.sender, {.nonce = 0, .balance = 1000000}}};
 
-    EXPECT_EQ(std::get<std::error_code>(validate_transaction(state, bi, tx, EVMC_SHANGHAI, 60000,
-                                            BlockInfo::MAX_BLOB_GAS_PER_BLOCK))
-                  .message(),
+    EXPECT_EQ(
+        std::get<std::error_code>(validate_transaction(state, bi, tx, EVMC_SHANGHAI, 60000,
+                                      static_cast<int64_t>(max_blob_gas_per_block(EVMC_CANCUN))))
+            .message(),
         make_error_code(ErrorCode::TX_TYPE_NOT_SUPPORTED).message());
 
-    EXPECT_EQ(std::get<std::error_code>(validate_transaction(state, bi, tx, EVMC_CANCUN, 60000,
-                                            BlockInfo::MAX_BLOB_GAS_PER_BLOCK))
-                  .message(),
+    EXPECT_EQ(
+        std::get<std::error_code>(validate_transaction(state, bi, tx, EVMC_CANCUN, 60000,
+                                      static_cast<int64_t>(max_blob_gas_per_block(EVMC_CANCUN))))
+            .message(),
         make_error_code(ErrorCode::CREATE_BLOB_TX).message());
 
     tx.to = 0x01_address;
-    EXPECT_EQ(std::get<std::error_code>(validate_transaction(state, bi, tx, EVMC_CANCUN, 60000,
-                                            BlockInfo::MAX_BLOB_GAS_PER_BLOCK))
-                  .message(),
+    EXPECT_EQ(
+        std::get<std::error_code>(validate_transaction(state, bi, tx, EVMC_CANCUN, 60000,
+                                      static_cast<int64_t>(max_blob_gas_per_block(EVMC_CANCUN))))
+            .message(),
         make_error_code(ErrorCode::EMPTY_BLOB_HASHES_LIST).message());
 
     tx.blob_hashes.push_back(
@@ -131,34 +134,39 @@ TEST(state_tx, validate_blob_tx)
     tx.blob_hashes.push_back(
         0x0100000000000000000000000000000000000000000000000000000000000006_bytes32);
 
-    EXPECT_EQ(std::get<std::error_code>(validate_transaction(state, bi, tx, EVMC_CANCUN, 60000,
-                                            BlockInfo::MAX_BLOB_GAS_PER_BLOCK))
-                  .message(),
+    EXPECT_EQ(
+        std::get<std::error_code>(validate_transaction(state, bi, tx, EVMC_CANCUN, 60000,
+                                      static_cast<int64_t>(max_blob_gas_per_block(EVMC_CANCUN))))
+            .message(),
         make_error_code(ErrorCode::FEE_CAP_LESS_THEN_BLOCKS).message());
 
     tx.max_blob_gas_price = 1;
     tx.blob_hashes.push_back(
         0x0100000000000000000000000000000000000000000000000000000000000007_bytes32);
-    EXPECT_EQ(std::get<std::error_code>(validate_transaction(state, bi, tx, EVMC_CANCUN, 60000,
-                                            BlockInfo::MAX_BLOB_GAS_PER_BLOCK))
-                  .message(),
+    EXPECT_EQ(
+        std::get<std::error_code>(validate_transaction(state, bi, tx, EVMC_CANCUN, 60000,
+                                      static_cast<int64_t>(max_blob_gas_per_block(EVMC_CANCUN))))
+            .message(),
         make_error_code(ErrorCode::BLOB_GAS_LIMIT_EXCEEDED).message());
 
     tx.blob_hashes.pop_back();
-    EXPECT_EQ(std::get<std::error_code>(validate_transaction(state, bi, tx, EVMC_CANCUN, 60000,
-                                            BlockInfo::MAX_BLOB_GAS_PER_BLOCK - 1))
+    EXPECT_EQ(std::get<std::error_code>(
+                  validate_transaction(state, bi, tx, EVMC_CANCUN, 60000,
+                      static_cast<int64_t>(max_blob_gas_per_block(EVMC_CANCUN)) - 1))
                   .message(),
         make_error_code(ErrorCode::BLOB_GAS_LIMIT_EXCEEDED).message());
 
-    EXPECT_EQ(std::get<TransactionProperties>(validate_transaction(state, bi, tx, EVMC_CANCUN,
-                                                  60000, BlockInfo::MAX_BLOB_GAS_PER_BLOCK))
+    EXPECT_EQ(std::get<TransactionProperties>(
+                  validate_transaction(state, bi, tx, EVMC_CANCUN, 60000,
+                      static_cast<int64_t>(max_blob_gas_per_block(EVMC_CANCUN))))
                   .execution_gas_limit,
         39000);
 
     tx.blob_hashes[0] = 0x0200000000000000000000000000000000000000000000000000000000000001_bytes32;
-    EXPECT_EQ(std::get<std::error_code>(validate_transaction(state, bi, tx, EVMC_CANCUN, 60000,
-                                            BlockInfo::MAX_BLOB_GAS_PER_BLOCK))
-                  .message(),
+    EXPECT_EQ(
+        std::get<std::error_code>(validate_transaction(state, bi, tx, EVMC_CANCUN, 60000,
+                                      static_cast<int64_t>(max_blob_gas_per_block(EVMC_CANCUN))))
+            .message(),
         make_error_code(ErrorCode::INVALID_BLOB_HASH_VERSION).message());
 }
 
@@ -184,10 +192,10 @@ TEST(state_tx, validate_eof_create_transaction)
     };
     const TestState state{{tx.sender, {.nonce = 1, .balance = 0xe8d4a51000}}};
 
-    ASSERT_FALSE(holds_alternative<std::error_code>(validate_transaction(
-        state, bi, tx, EVMC_CANCUN, 60000, BlockInfo::MAX_BLOB_GAS_PER_BLOCK)));
-    ASSERT_FALSE(holds_alternative<std::error_code>(validate_transaction(
-        state, bi, tx, EVMC_PRAGUE, 60000, BlockInfo::MAX_BLOB_GAS_PER_BLOCK)));
+    ASSERT_FALSE(holds_alternative<std::error_code>(validate_transaction(state, bi, tx, EVMC_CANCUN,
+        60000, static_cast<int64_t>(max_blob_gas_per_block(EVMC_CANCUN)))));
+    ASSERT_FALSE(holds_alternative<std::error_code>(validate_transaction(state, bi, tx, EVMC_PRAGUE,
+        60000, static_cast<int64_t>(max_blob_gas_per_block(EVMC_CANCUN)))));
 }
 
 TEST(state_tx, validate_tx_data_cost)
