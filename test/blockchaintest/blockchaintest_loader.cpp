@@ -54,7 +54,7 @@ BlockHeader from_json<BlockHeader>(const json::json& j)
     };
 }
 
-static TestBlock load_test_block(const json::json& j, evmc_revision rev)
+static TestBlock load_test_block(const json::json& j, const RevisionSchedule& rev_schedule)
 {
     using namespace state;
     TestBlock tb;
@@ -64,6 +64,9 @@ static TestBlock load_test_block(const json::json& j, evmc_revision rev)
         tb.expected_block_header = from_json<BlockHeader>(*it);
         tb.block_info.number = tb.expected_block_header.block_number;
         tb.block_info.timestamp = tb.expected_block_header.timestamp;
+
+        const auto rev = rev_schedule.get_revision(tb.block_info.timestamp);
+
         tb.block_info.gas_limit = tb.expected_block_header.gas_limit;
         tb.block_info.coinbase = tb.expected_block_header.coinbase;
         tb.block_info.difficulty = tb.expected_block_header.difficulty;
@@ -75,7 +78,7 @@ static TestBlock load_test_block(const json::json& j, evmc_revision rev)
 
         tb.block_info.blob_base_fee =
             tb.block_info.excess_blob_gas.has_value() ?
-                std::optional(state::compute_blob_gas_price(*tb.block_info.excess_blob_gas)) :
+                std::optional(state::compute_blob_gas_price(rev, *tb.block_info.excess_blob_gas)) :
                 std::nullopt;
 
         // Override prev_randao with difficulty pre-Merge
@@ -137,12 +140,12 @@ BlockchainTest load_blockchain_test_case(const std::string& name, const json::js
                 throw UnsupportedTestFeature(
                     "tests with invalidly rlp-encoded blocks are not supported");
 
-            auto test_block = load_test_block(el.at("rlp_decoded"), bt.rev.get_revision(0));
+            auto test_block = load_test_block(el.at("rlp_decoded"), bt.rev);
             test_block.valid = false;
             bt.test_blocks.emplace_back(test_block);
         }
         else
-            bt.test_blocks.emplace_back(load_test_block(el, bt.rev.get_revision(0)));
+            bt.test_blocks.emplace_back(load_test_block(el, bt.rev));
     }
 
     bt.expectation.last_block_hash = from_json<hash256>(j.at("lastblockhash"));

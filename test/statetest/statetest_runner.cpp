@@ -35,7 +35,7 @@ void run_state_test(const StateTransitionTest& test, evmc::VM& vm, bool trace_su
             auto state = test.pre_state;
 
             const auto res = test::transition(state, test.block, test.block_hashes, tx, rev, vm,
-                test.block.gas_limit, state::BlockInfo::MAX_BLOB_GAS_PER_BLOCK);
+                test.block.gas_limit, static_cast<int64_t>(state::max_blob_gas_per_block(rev)));
 
             // Finalize block with reward 0.
             test::finalize(state, rev, test.block.coinbase, 0, {}, {});
