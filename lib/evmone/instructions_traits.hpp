@@ -412,9 +412,9 @@ constexpr inline std::array<Traits, 256> traits = []() noexcept {
     table[OP_LOG4] = {"LOG4", 0, false, 6, -6, EVMC_FRONTIER, REV_EOF1};
 
     table[OP_SETUPX] = {"SETUPX", 0, false, 3, -3, EVMC_EVMMAX, EVMC_EVMMAX};
-    table[OP_ADDMODX] = {"ADDMODX", 3, false, 0, 0, EVMC_EVMMAX, EVMC_EVMMAX};
-    table[OP_SUBMODX] = {"SUBMODX", 3, false, 0, 0, EVMC_EVMMAX, EVMC_EVMMAX};
-    table[OP_MULMODX] = {"MULMODX", 3, false, 0, 0, EVMC_EVMMAX, EVMC_EVMMAX};
+    table[OP_ADDMODX] = {"ADDMODX", 7, false, 0, 0, EVMC_EVMMAX, EVMC_EVMMAX};
+    table[OP_SUBMODX] = {"SUBMODX", 7, false, 0, 0, EVMC_EVMMAX, EVMC_EVMMAX};
+    table[OP_MULMODX] = {"MULMODX", 7, false, 0, 0, EVMC_EVMMAX, EVMC_EVMMAX};
     table[OP_LOADX] = {"LOADX", 0, false, 3, -3, EVMC_EVMMAX, EVMC_EVMMAX};
     table[OP_STOREX] = {"STOREX", 0, false, 3, -3, EVMC_EVMMAX, EVMC_EVMMAX};
 
