@@ -468,6 +468,57 @@ inline bytecode blobhash(bytecode index)
     return index + OP_BLOBHASH;
 }
 
+inline bytecode setmodx(bytecode num_val_slots, bytecode mod_size, bytecode mod_offset)
+{
+    return num_val_slots + mod_size + mod_offset + OP_SETUPX;
+}
+
+inline bytecode storex(bytecode num_vals, bytecode val_offset, bytecode val_slot)
+{
+    return num_vals + val_offset + val_slot + OP_STOREX;
+}
+
+inline bytecode loadx(bytecode num_vals, bytecode val_idx, bytecode mem_offset)
+{
+    return num_vals + val_idx + mem_offset + OP_LOADX;
+}
+
+inline bytecode addmodx(uint8_t dst_idx, uint8_t dst_stride, uint8_t x_idx, uint8_t x_stride,
+    uint8_t y_idx, uint8_t y_stride, uint8_t count)
+{
+    return hex(OP_ADDMODX) + hex(dst_idx) + hex(dst_stride) + hex(x_idx) + hex(x_stride) +
+           hex(y_idx) + hex(y_stride) + hex(count);
+}
+
+inline bytecode submodx(uint8_t dst_idx, uint8_t dst_stride, uint8_t x_idx, uint8_t x_stride,
+    uint8_t y_idx, uint8_t y_stride, uint8_t count)
+{
+    return hex(OP_SUBMODX) + hex(dst_idx) + hex(dst_stride) + hex(x_idx) + hex(x_stride) +
+           hex(y_idx) + hex(y_stride) + hex(count);
+}
+
+inline bytecode mulmodx(uint8_t dst_idx, uint8_t dst_stride, uint8_t x_idx, uint8_t x_stride,
+    uint8_t y_idx, uint8_t y_stride, uint8_t count)
+{
+    return hex(OP_MULMODX) + hex(dst_idx) + hex(dst_stride) + hex(x_idx) + hex(x_stride) +
+           hex(y_idx) + hex(y_stride) + hex(count);
+}
+
+inline bytecode addmodx(uint8_t dst_idx, uint8_t x_idx, uint8_t y_idx)
+{
+    return addmodx(dst_idx, 0, x_idx, 0, y_idx, 0, 1);
+}
+
+inline bytecode submodx(uint8_t dst_idx, uint8_t x_idx, uint8_t y_idx)
+{
+    return submodx(dst_idx, 0, x_idx, 0, y_idx, 0, 1);
+}
+
+inline bytecode mulmodx(uint8_t dst_idx, uint8_t x_idx, uint8_t y_idx)
+{
+    return mulmodx(dst_idx, 0, x_idx, 0, y_idx, 0, 1);
+}
+
 template <Opcode kind>
 struct call_instruction
 {
