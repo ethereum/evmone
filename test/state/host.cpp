@@ -120,7 +120,8 @@ bytes32 Host::get_code_hash(const address& addr) const noexcept
 
     // Load code and check if not EOF.
     // TODO: Optimize the second account lookup here.
-    if (is_eof_container(m_state.get_code(addr)))
+    const auto code = m_state.get_code(addr);
+    if (is_eof_container(code))
         return EOF_CODE_HASH_SENTINEL;
 
     return acc->code_hash;
@@ -439,7 +440,7 @@ evmc::Result Host::execute_message(const evmc_message& msg) noexcept
         }
     }
 
-    if (is_precompile(m_rev, msg.code_address))
+    if (is_precompile(m_rev, msg.code_address) && (msg.flags & EVMC_DELEGATED) == 0)
         return call_precompile(m_rev, msg);
 
     // TODO: get_code() performs the account lookup. Add a way to get an account with code?

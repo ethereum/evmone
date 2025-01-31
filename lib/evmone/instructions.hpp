@@ -4,6 +4,7 @@
 #pragma once
 
 #include "baseline.hpp"
+#include "constants.hpp"
 #include "eof.hpp"
 #include "execution_state.hpp"
 #include "instructions_traits.hpp"
