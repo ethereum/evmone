@@ -180,6 +180,18 @@ void state_transition::export_state_test(
     jenv["currentCoinbase"] = hex0x(block.coinbase);
     jenv["currentBaseFee"] = hex0x(block.base_fee);
     jenv["currentRandom"] = hex0x(block.prev_randao);
+    if (!block.withdrawals.empty())
+    {
+        auto& jwithdrawals = jenv["withdrawals"] = json::json::array();
+        for (const auto& withdrawal : block.withdrawals)
+        {
+            auto& jwithdrawal = jwithdrawals.emplace_back(json::json::object());
+            jwithdrawal["index"] = hex0x(withdrawal.index);
+            jwithdrawal["validatorIndex"] = hex0x(withdrawal.validator_index);
+            jwithdrawal["address"] = hex0x(withdrawal.recipient);
+            jwithdrawal["amount"] = hex0x(withdrawal.amount_in_gwei);
+        }
+    }
 
     jt["pre"] = to_json(pre);
 
