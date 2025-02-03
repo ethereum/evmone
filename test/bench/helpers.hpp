@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
+#include "test/state/host.hpp"
 #include "test/utils/utils.hpp"
 #include <benchmark/benchmark.h>
 #include <evmc/evmc.hpp>
@@ -17,7 +18,7 @@ namespace evmone::test
 {
 extern std::map<std::string_view, evmc::VM> registered_vms;
 
-constexpr auto default_revision = EVMC_ISTANBUL;
+constexpr auto default_revision = EVMC_PRAGUE;
 constexpr auto default_gas_limit = std::numeric_limits<int64_t>::max();
 
 
@@ -102,7 +103,10 @@ inline void bench_execute(benchmark::State& state, evmc::VM& vm, bytes_view code
     constexpr auto gas_limit = default_gas_limit;
 
     const auto analysis = analyse_fn(rev, code);
-    evmc::MockedHost host;
+    state::State ss;
+    state::BlockInfo blockInfo = {.gas_limit = gas_limit};
+    state::Transaction tx = {.gas_limit = gas_limit};
+    state::Host host{rev, vm, ss, blockInfo, tx};
     ExecutionStateT exec_state;
     evmc_message msg{};
     msg.kind = EVMC_CALL;
