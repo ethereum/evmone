@@ -74,6 +74,18 @@ struct from<JSON, evmc::address>
 };
 
 template <>
+struct from<BEVE, evmc::address>
+{
+    template <auto Opts>
+    static void op(evmc::address& v, auto&&... args)
+    {
+        std::array<uint8_t, 20> a{};
+        read<BEVE>::op<Opts>(a, args...);
+        v = std::bit_cast<evmc::address>(a);
+    }
+};
+
+template <>
 struct to<JSON, evmc::address>
 {
     template <auto Opts>
@@ -81,6 +93,17 @@ struct to<JSON, evmc::address>
     {
         const auto str = evmc::hex(addr);
         write<JSON>::op<Opts>(str, args...);
+    }
+};
+
+template <>
+struct to<BEVE, evmc::address>
+{
+    template <auto Opts>
+    static void op(const evmc::address& addr, auto&&... args) noexcept
+    {
+        const auto a = std::bit_cast<std::array<uint8_t, 20>>(addr);
+        write<BEVE>::op<Opts>(a, args...);
     }
 };
 
@@ -105,6 +128,18 @@ struct from<JSON, evmc::bytes32>
 };
 
 template <>
+struct from<BEVE, evmc::bytes32>
+{
+    template <auto Opts>
+    static void op(evmc::bytes32& v, auto&&... args)
+    {
+        std::array<uint8_t, 32> a{};
+        read<BEVE>::op<Opts>(a, args...);
+        v = std::bit_cast<evmc::bytes32>(a);
+    }
+};
+
+template <>
 struct to<JSON, evmc::bytes32>
 {
     template <auto Opts>
@@ -112,6 +147,17 @@ struct to<JSON, evmc::bytes32>
     {
         const auto str = evmc::hex(v);
         write<JSON>::op<Opts>(str, args...);
+    }
+};
+
+template <>
+struct to<BEVE, evmc::bytes32>
+{
+    template <auto Opts>
+    static void op(const evmc::bytes32& v, auto&&... args) noexcept
+    {
+        const auto a = std::bit_cast<std::array<uint8_t, 32>>(v);
+        write<BEVE>::op<Opts>(a, args...);
     }
 };
 }  // namespace glz::detail
