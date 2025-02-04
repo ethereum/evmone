@@ -1241,11 +1241,11 @@ TEST_F(eof_validation, jumpf_to_nonreturning)
 
     // Exactly required inputs on stack at JUMPF
     add_test_case(eof_bytecode(3 * OP_PUSH0 + jumpf(1), 3).code(OP_STOP, 3, 0x80, 3),
-        EOFValidationError::success);
+        EOFValidationError::unused_input);
 
     // Extra items on stack at JUMPF
     add_test_case(eof_bytecode(4 * OP_PUSH0 + jumpf(1), 4).code(OP_STOP, 3, 0x80, 3),
-        EOFValidationError::success);
+        EOFValidationError::unused_input);
 
     // Not enough inputs on stack at JUMPF
     add_test_case(eof_bytecode(2 * OP_PUSH0 + jumpf(1), 2).code(OP_STOP, 3, 0x80, 3),
@@ -1266,7 +1266,7 @@ TEST_F(eof_validation, jumpf_to_nonreturning_variable_stack)
 
     // JUMPF from [1, 3] stack to non-returning function with 1 inputs
     add_test_case(eof_bytecode(varstack + jumpf(1), 3).code(Opcode{OP_INVALID}, 1, 0x80, 1),
-        EOFValidationError::success);
+        EOFValidationError::unused_input);
 
     // JUMPF from [1, 3] stack to non-returning function with 0 inputs
     add_test_case(eof_bytecode(varstack + jumpf(1), 3).code(Opcode{OP_INVALID}, 0, 0x80, 0),
@@ -1324,7 +1324,7 @@ TEST_F(eof_validation, jumpf_stack_overflow_variable_stack)
 TEST_F(eof_validation, jumpf_with_inputs_stack_overflow)
 {
     add_test_case(eof_bytecode(1023 * push0() + jumpf(1), 1023).code(push0() + OP_STOP, 2, 0x80, 3),
-        EOFValidationError::success);
+        EOFValidationError::unused_input);
 
     add_test_case(
         eof_bytecode(1023 * push0() + jumpf(1), 1023).code(push0() + push0() + OP_STOP, 2, 0x80, 4),
@@ -1340,7 +1340,7 @@ TEST_F(eof_validation, jumpf_with_inputs_stack_overflow_variable_stack)
     // JUMPF from [1021, 1023] stack to 2 inputs and 3 max stack
     add_test_case(eof_bytecode(varstack + 1020 * push0() + jumpf(1), 1023)
                       .code(push0() + OP_STOP, 2, 0x80, 3),
-        EOFValidationError::success);
+        EOFValidationError::unused_input);
 
     // JUMPF from [1021, 1023] stack to 2 inputs and 6 max stack - min and max stack overflow
     add_test_case(eof_bytecode(varstack + 1020 * push0() + jumpf(1), 1023)

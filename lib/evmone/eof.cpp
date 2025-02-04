@@ -424,6 +424,7 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
     const auto type = header.get_type(container, func_index);
     std::vector<StackHeightRange> stack_heights(code.size());
     stack_heights[0] = {type.inputs, type.inputs};
+    bool stack_bottom_reached = false;
 
     for (size_t i = 0; i < code.size();)
     {
@@ -500,6 +501,8 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
 
         if (stack_height.min < stack_height_required)
             return EOFValidationError::stack_underflow;
+        else if (stack_height.min == stack_height_required)
+            stack_bottom_reached = true;
 
         const StackHeightRange next_stack_height{
             stack_height.min + stack_height_change, stack_height.max + stack_height_change};
@@ -573,6 +576,9 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
 
         i = next;
     }
+
+    if (!stack_bottom_reached)
+        return EOFValidationError::unused_input;
 
     const auto max_stack_height_it = std::ranges::max_element(stack_heights,
         [](StackHeightRange lhs, StackHeightRange rhs) noexcept { return lhs.max < rhs.max; });
@@ -975,6 +981,8 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "container_size_above_limit";
     case EOFValidationError::unreferenced_subcontainer:
         return "unreferenced_subcontainer";
+    case EOFValidationError::unused_input:
+        return "unused_input";
     case EOFValidationError::impossible:
         return "impossible";
     }
