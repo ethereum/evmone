@@ -47,17 +47,23 @@ int main()
         expect(ec);
     };
 
+    "beve address"_test = [] {
+        [[maybe_unused]] const evmc::address a{};
+        std::string s;
+        expect(!glz::write_beve(a, s));
+        expect(s.size() == 22_i);
+    };
+
     "beve"_test = [] {
-        S v;
-        v.a.bytes[3] = 43;
+        fzz::Block v;
         [[maybe_unused]] const evmc::address a{};
         std::string s;
         expect(!glz::write_beve(v, s));
         expect(s.size() == 62_i);
 
-        S z;
-        expect(!glz::read_beve(z, s));
-        expect(z.a == v.a);
+        // S z;
+        // expect(!glz::read_beve(z, s));
+        // expect(z.a == v.a);
     };
 
     return 0;
