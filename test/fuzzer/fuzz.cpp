@@ -227,8 +227,14 @@ void execute(const Test& test)
 
     const auto tx_props = std::get<evmone::state::TransactionProperties>(res);
     BlockHashes block_hashes;
-    evmone::state::transition(
+    const auto receipt = evmone::state::transition(
         state_view, block, block_hashes, tx, EVMC_LATEST_STABLE_REVISION, vm, tx_props);
+
+    if (receipt.status == EVMC_SUCCESS)
+    {
+        for (const auto& m : receipt.state_diff.modified_accounts)
+            assert(m.modified_storage.size() <= 50);
+    }
 }
 
 }  // namespace fzz
