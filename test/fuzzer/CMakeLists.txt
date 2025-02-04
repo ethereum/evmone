@@ -42,4 +42,6 @@ target_sources(
     evmone-fuzz PRIVATE
     fuzz.cpp
     fuzz_types.hpp
+    format.cpp
+    format.hpp
 )

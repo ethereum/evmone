@@ -1,3 +1,4 @@
+#include "format.hpp"
 #include "fuzz_types.hpp"
 #include <evmone/evmone.h>
 
@@ -243,58 +244,15 @@ void execute(const Test& test)
 
 }  // namespace fzz
 
-static constexpr glz::opts OPTS{
-    .null_terminated = false,
-    .error_on_unknown_keys = false,
-
-    // Require the input to be minified. This is supposed to make the reading faster, but looks like
-    // it makes it slower. Investigate later.
-    .minified = true,
-};
-
-
 extern "C" size_t LLVMFuzzerCustomMutator(
     uint8_t* data, size_t size, size_t max_size, uint32_t seed)
 {
-    fzz::RNG rng{seed};
-    const std::string_view buffer{reinterpret_cast<const char*>(data), size};
-
-    fzz::Test test;
-    if (const auto ec = glz::read<OPTS>(test, buffer))
-    {
-        switch (ec.ec)
-        {
-            // Expected errors:
-        case glz::error_code::no_read_input:
-        case glz::error_code::unexpected_end:
-        case glz::error_code::expected_quote:
-        case glz::error_code::end_reached:
-        case glz::error_code::expected_brace:  // minified
-        case glz::error_code::expected_colon:  // minified
-        case glz::error_code::expected_comma:  // minified
-        case glz::error_code::elements_not_convertible_to_design:
-            return 0;
-        default:
-            std::cerr << "JSON read error: " << glz::format_error(ec, buffer) << '\n';
-            __builtin_trap();
-        }
-    }
-
-    fzz::mutate(test, rng);
-
-    std::string out;
-    if (const auto write_ec = glz::write<OPTS>(test, out))
-    {
-        std::cerr << "JSON write error: " << glz::format_error(write_ec, out) << '\n';
-        __builtin_trap();
-    }
-    if (out.size() + 1 > max_size)
-    {
-        // std::cerr << "too big\n";
+    auto test = fzz::deserialize({data, size});
+    if (!test)
         return 0;
-    }
-    std::memcpy(data, out.c_str(), out.size() + 1);
-    return out.size();
+    fzz::RNG rng{seed};
+    fzz::mutate(*test, rng);
+    return fzz::serialize(*test, {data, max_size});
 }
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noexcept
@@ -304,26 +262,11 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
 
     const std::string_view buffer{reinterpret_cast<const char*>(data), data_size};
 
-    fzz::Test test;
-    if (const auto ec = glz::read<OPTS>(test, buffer))
-    {
-        switch (ec.ec)
-        {
-            // Expected errors:
-        case glz::error_code::no_read_input:
-        case glz::error_code::unexpected_end:
-        case glz::error_code::expected_quote:
-        case glz::error_code::end_reached:
-        case glz::error_code::expected_brace:  // minified
-        case glz::error_code::expected_colon:  // minified
-        case glz::error_code::expected_comma:  // minified
-        case glz::error_code::elements_not_convertible_to_design:
-            return -1;
-        default:
-            std::cerr << "JSON read error: " << glz::format_error(ec, buffer) << '\n';
-            __builtin_trap();
-        }
-    }
+    auto test_opt = fzz::deserialize({data, data_size});
+    if (!test_opt)
+        return -1;
+
+    auto& test = *test_opt;
 
     // Add/update fixed SENDER to the state.
     auto& sender = test.state[SENDER];
@@ -331,7 +274,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
 
     // Focus on blob transactions.
     // if (test.tx.type != evmone::state::Transaction::Type::blob)
-        // return -1;
+    // return -1;
 
     // Validate the test.
     if (test.tx.type <= evmone::state::Transaction::Type::eip1559 &&
