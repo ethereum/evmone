@@ -12,64 +12,7 @@ struct S
 {
     evmc::address a;
     evmc::bytes32 b;
-
-    // void read_a(const std::string& s) {
-    //     assert(s.size() == 20);
-    //     std::memcpy(a.bytes, s.data(), 20);
-    // }
-    //
-    // std::array<uint8_t, 20> write_a() {
-    //     return std::bit_cast<std::array<uint8_t, 20>>(a);
-    // }
 };
-
-// template <>
-// struct glz::meta<S> {
-//     static constexpr auto value = object("a", custom<&S::read_a, &S::write_a>);
-// };
-
-namespace glz::detail
-{
-template <>
-struct from<BEVE, evmc::address>
-{
-    template <auto Opts>
-    static void op(evmc::address& v, auto&&... args)
-    {
-        read<JSON>::op<Opts>(v.bytes, args...);
-    }
-};
-
-template <>
-struct to<BEVE, evmc::address>
-{
-    template <auto Opts>
-    static void op(const evmc::address& v, auto&&... args) noexcept
-    {
-        write<JSON>::op<Opts>(v.bytes, args...);
-    }
-};
-
-template <>
-struct from<BEVE, evmc::bytes32>
-{
-    template <auto Opts>
-    static void op(evmc::bytes32& v, auto&&... args)
-    {
-        read<JSON>::op<Opts>(v.bytes, args...);
-    }
-};
-
-template <>
-struct to<BEVE, evmc::bytes32>
-{
-    template <auto Opts>
-    static void op(const evmc::bytes32& v, auto&&... args) noexcept
-    {
-        write<JSON>::op<Opts>(v.bytes, args...);
-    }
-};
-}
 
 int main()
 {
@@ -110,7 +53,7 @@ int main()
         [[maybe_unused]] const evmc::address a{};
         std::string s;
         expect(!glz::write_beve(v, s));
-        expect(s.size() == 113_i);
+        expect(s.size() == 62_i);
 
         S z;
         expect(!glz::read_beve(z, s));
