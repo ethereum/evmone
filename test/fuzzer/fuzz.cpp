@@ -234,7 +234,6 @@ void execute(const Test& test)
 }  // namespace fzz
 
 static constexpr glz::opts OPTS{
-    .format = glz::BEVE,
     .null_terminated = false,
     .error_on_unknown_keys = false,
 
