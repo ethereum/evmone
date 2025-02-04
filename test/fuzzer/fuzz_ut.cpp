@@ -1,4 +1,5 @@
-// #include "fuzz_types.hpp"
+#include "fuzz_types.hpp"
+#include <glaze/beve.hpp>
 #include <glaze/json.hpp>
 #include <boost/ut.hpp>
 
@@ -6,6 +7,48 @@ struct Test
 {
     std::unordered_map<std::string, unsigned> s;
 };
+
+struct S
+{
+    evmc::address a;
+
+    // void read_a(const std::string& s) {
+    //     assert(s.size() == 20);
+    //     std::memcpy(a.bytes, s.data(), 20);
+    // }
+    //
+    // std::array<uint8_t, 20> write_a() {
+    //     return std::bit_cast<std::array<uint8_t, 20>>(a);
+    // }
+};
+
+// template <>
+// struct glz::meta<S> {
+//     static constexpr auto value = object("a", custom<&S::read_a, &S::write_a>);
+// };
+
+namespace glz::detail
+{
+template <>
+struct from<BEVE, evmc::address>
+{
+    template <auto Opts>
+    static void op(evmc::address& v, auto&&... args)
+    {
+        read<JSON>::op<Opts>(v.bytes, args...);
+    }
+};
+
+template <>
+struct to<BEVE, evmc::address>
+{
+    template <auto Opts>
+    static void op(const evmc::address& v, auto&&... args) noexcept
+    {
+        write<JSON>::op<Opts>(v.bytes, args...);
+    }
+};
+}
 
 int main()
 {
@@ -38,6 +81,19 @@ int main()
         struct {} t;
         const auto ec = glz::read<OPTS>(t, buf);
         expect(ec);
+    };
+
+    "beve"_test = [] {
+        S v;
+        v.a.bytes[3] = 43;
+        [[maybe_unused]] const evmc::address a{};
+        std::string s;
+        expect(!glz::write_beve(v, s));
+        expect(s.size() == 46_i);
+
+        S z;
+        expect(!glz::read_beve(z, s));
+        expect(z.a == v.a);
     };
 
     return 0;
