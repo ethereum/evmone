@@ -239,8 +239,7 @@ static constexpr glz::opts OPTS{
 
     // Require the input to be minified. This is supposed to make the reading faster, but looks like
     // it makes it slower. Investigate later.
-    // true caused ASan failure, see https://github.com/stephenberry/glaze/issues/1573.
-    .minified = false,
+    .minified = true,
 };
 
 
