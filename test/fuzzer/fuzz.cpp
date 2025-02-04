@@ -160,6 +160,7 @@ public:
 
 static auto vm = evmc::VM{evmc_create_evmone()};
 
+extern "C" [[gnu::noinline]] void FOCUS_STATE_MOD() {}
 
 void execute(const Test& test)
 {
@@ -233,7 +234,10 @@ void execute(const Test& test)
     if (receipt.status == EVMC_SUCCESS)
     {
         for (const auto& m : receipt.state_diff.modified_accounts)
+        {
+            FOCUS_STATE_MOD();
             assert(m.modified_storage.size() <= 50);
+        }
     }
 }
 
