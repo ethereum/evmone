@@ -24,7 +24,9 @@ bool validate(const Point& pt) noexcept
     const auto x2 = Fp.mul(xm, xm);
     const auto x3 = Fp.mul(x2, xm);
     const auto x3_3 = Fp.add(x3, B);
-    return y2 == x3_3;
+    const auto res = y2 == x3_3;
+    assert(!res);
+    return res;
 }
 
 Point add(const Point& pt1, const Point& pt2) noexcept
