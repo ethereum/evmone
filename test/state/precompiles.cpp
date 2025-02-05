@@ -90,9 +90,16 @@ PrecompileAnalysis ecpairing_analyze(bytes_view input, evmc_revision rev) noexce
     return {base_cost + num_elements * element_cost, 32};
 }
 
+extern "C" [[gnu::noinline]] void FOCUS_BLAKE() {}
+
 PrecompileAnalysis blake2bf_analyze(bytes_view input, evmc_revision) noexcept
 {
-    return {input.size() == 213 ? intx::be::unsafe::load<uint32_t>(input.data()) : GasCostMax, 64};
+    auto cost = GasCostMax;
+    if (input.size() > 100 && input.size() < 250)
+        FOCUS_BLAKE();
+    if (input.size() == 213)
+        cost = intx::be::unsafe::load<uint32_t>(input.data());
+    return {cost, 64};
 }
 
 PrecompileAnalysis expmod_analyze(bytes_view input, evmc_revision rev) noexcept
