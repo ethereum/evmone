@@ -77,6 +77,7 @@ constexpr void validate_traits_of() noexcept
     constexpr auto expected_rev = get_revision_defined_in(Op);
     constexpr auto since =
         tr.since.has_value() ?
+            // NOLINTNEXTLINE(readability-avoid-nested-conditional-operator)
             tr.eof_since.has_value() ? std::min(*tr.since, *tr.eof_since) : *tr.since :
             tr.eof_since;
     static_assert(since.has_value() ? *since == expected_rev : expected_rev == unspecified);

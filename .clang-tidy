@@ -52,6 +52,8 @@ Checks:
   - "modernize-*"
   - "-modernize-avoid-c-arrays"
   - "-modernize-use-nodiscard"
+  # Designated initializers are nice, but should not be used all the time.
+  - "-modernize-use-designated-initializers"
   - "-modernize-use-trailing-return-type"
   - "performance-*"
   - "-performance-enum-size"
@@ -68,6 +70,8 @@ Checks:
   - "-readability-named-parameter"
   - "-readability-qualified-auto"
   - "-readability-uppercase-literal-suffix"
+  # This is too noisy about multiplication and addition precedence.
+  - "-readability-math-missing-parentheses"
 
 CheckOptions:
   readability-identifier-naming.ClassCase: CamelCase

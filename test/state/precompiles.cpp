@@ -92,6 +92,7 @@ PrecompileAnalysis ecpairing_analyze(bytes_view input, evmc_revision rev) noexce
 
 PrecompileAnalysis blake2bf_analyze(bytes_view input, evmc_revision) noexcept
 {
+    // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
     return {input.size() == 213 ? intx::be::unsafe::load<uint32_t>(input.data()) : GasCostMax, 64};
 }
 
@@ -103,6 +104,7 @@ PrecompileAnalysis expmod_analyze(bytes_view input, evmc_revision rev) noexcept
     const int64_t min_gas = (rev >= EVMC_BERLIN) ? 200 : 0;
 
     uint8_t input_header[input_header_required_size]{};
+    // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
     std::copy_n(input.data(), std::min(input.size(), input_header_required_size), input_header);
 
     const auto base_len = be::unsafe::load<uint256>(&input_header[0]);

@@ -665,6 +665,9 @@ EOFValidationError validate_eof1(
                 header.get_code(container, code_idx), code_idx, header, container);
             if (const auto* error = std::get_if<EOFValidationError>(&msh_or_error))
                 return *error;
+            // TODO(clang-tidy): Too restrictive, see
+            //   https://github.com/llvm/llvm-project/issues/120867.
+            // NOLINTNEXTLINE(modernize-use-integer-sign-comparison)
             if (std::get<int32_t>(msh_or_error) !=
                 header.get_type(container, code_idx).max_stack_height)
                 return EOFValidationError::invalid_max_stack_height;

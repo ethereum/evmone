@@ -85,7 +85,7 @@ evmc_message build_message(
         rev >= EVMC_OSAKA && !tx.to.has_value() && is_eof_container(tx.data);
 
     return {.kind = is_legacy_eof_create ? EVMC_EOFCREATE :
-                    tx.to.has_value()    ? EVMC_CALL :
+                    tx.to.has_value()    ? EVMC_CALL : // NOLINT(readability-avoid-nested-conditional-operator)
                                            EVMC_CREATE,
         .flags = 0,
         .depth = 0,
