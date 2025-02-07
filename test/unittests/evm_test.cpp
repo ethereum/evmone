@@ -378,6 +378,7 @@ TEST_P(evm, signextend_fuzzing)
             input[63] = e;
             execute(code, {input, 64});
             ASSERT_EQ(output.size(), sizeof(uint256));
+            // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
             const auto out = be::unsafe::load<uint256>(output.data());
             const auto expected = signextend_reference(be::unsafe::load<uint256>(input), e);
             ASSERT_EQ(out, expected);

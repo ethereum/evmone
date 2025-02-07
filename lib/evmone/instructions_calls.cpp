@@ -17,6 +17,7 @@ constexpr auto EXTCALL_ABORT = 2;
 namespace evmone::instr::core
 {
 /// Converts an opcode to matching EVMC call kind.
+/// NOLINTNEXTLINE(misc-use-internal-linkage) fixed in clang-tidy 20.
 consteval evmc_call_kind to_call_kind(Opcode op) noexcept
 {
     switch (op)

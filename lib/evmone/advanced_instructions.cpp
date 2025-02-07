@@ -6,6 +6,9 @@
 #include "instructions.hpp"
 #include "instructions_traits.hpp"
 
+// TODO: This warning suppression may be lifted, but the situation in this file is complicated.
+// NOLINTBEGIN(misc-use-internal-linkage)
+
 namespace evmone::advanced
 {
 namespace instr
@@ -347,3 +350,5 @@ EVMC_EXPORT const OpTable& get_op_table(evmc_revision rev) noexcept
     return op_tables[rev];
 }
 }  // namespace evmone::advanced
+
+// NOLINTEND(misc-use-internal-linkage)
