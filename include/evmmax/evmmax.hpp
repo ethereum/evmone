@@ -3,10 +3,90 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
+#include <evmc/evmc.hpp>
 #include <intx/intx.hpp>
+#include <memory>
 
 namespace evmmax
 {
+
+using intx::uint256;
+
+struct EXMMAXModStateInterface;
+
+/// Ephemeral EVMMAX (EVM Modular Arithmetic Extensions) state
+class EVMMAXState
+{
+    struct OpcodesGasCost
+    {
+        int64_t addmodx = 0;
+        int64_t mulmodx = 0;
+    };
+
+    OpcodesGasCost current_gas_cost;
+
+    std::unique_ptr<EXMMAXModStateInterface> active_mod;  ///< Current active modulus
+
+public:
+    /// Create new modulus and activates it. In case the modulus already exists, activates it.
+    /// Deducts gas accordingly.
+    ///
+    /// \param gas_left Amount of gas before calling. Is modified by `setupx`
+    /// \param mod_ptr Modulus big endian value memory pointer
+    /// \param mod_size Modulus size in bytes
+    /// \param vals_used Number of needed value slots
+    /// \return Status code.
+    [[nodiscard]] evmc_status_code setupx(
+        int64_t& gas_left, const uint8_t* mod_ptr, size_t mod_size, size_t vals_used) noexcept;
+
+    /// Loads EVMMAX values into EVM memory. Deducts gas accordingly.
+    /// Converts to the Montgomery form
+    [[nodiscard]] evmc_status_code loadx(
+        int64_t& gas_left, uint8_t* out_ptr, size_t val_idx, size_t num_vals) noexcept;
+
+    /// Stores EVM memory into EVMMAX value slots. Deducts gas accordingly.
+    /// Converts from the Montgomery form
+    [[nodiscard]] evmc_status_code storex(
+        int64_t& gas_left, const uint8_t* in_ptr, size_t dst_val_idx, size_t num_vals) noexcept;
+
+    /// Computes modular addition. Deducts gas accordingly. Operates on active modulus.
+    ///
+    /// (x + y) % active_modulus.
+    /// Gets inputs from values slots under indexes `x_idx` and `y_idx`.
+    /// Saves result in value slot under index `dst_idx`
+    [[nodiscard]] evmc_status_code addmodx(
+        int64_t& gas_left, size_t dst_idx, size_t x_idx, size_t y_idx) noexcept;
+
+    /// Computes modular subtraction. Deducts gas accordingly. Operates on active modulus.
+    ///
+    /// (x - y) % active_modulus.
+    /// Gets inputs from values slots under indexes `x_idx` and `y_idx`.
+    /// Saves result in value slot under index `dst_idx`
+    [[nodiscard]] evmc_status_code submodx(
+        int64_t& gas_left, size_t dst_idx, size_t x_idx, size_t y_idx) noexcept;
+
+    /// Computes modular multiplication. Deducts gas accordingly. Operates on active modulus.
+    ///
+    /// (x * y) % active_modulus.
+    /// Gets inputs from values slots under indexes `x_idx` and `y_idx`.
+    /// Saves result in value slot under index `dst_idx`
+    [[nodiscard]] evmc_status_code mulmodx(
+        int64_t& gas_left, size_t dst_idx, size_t x_idx, size_t y_idx) noexcept;
+
+    /// Checks that there exists an active modulus
+    [[nodiscard]] bool is_activated() const noexcept;
+
+    /// Returns active modulus size multiplier.
+    /// Size (expressed in multiples of 8 bytes) needed to represent modulus.
+    [[nodiscard]] size_t active_mod_value_size_multiplier() const noexcept;
+
+    void clear() noexcept;
+
+    EVMMAXState& operator=(EVMMAXState&&) noexcept;
+    explicit EVMMAXState() noexcept;
+    explicit EVMMAXState(EVMMAXState&&) noexcept;
+    virtual ~EVMMAXState();
+};
 
 /// The modular arithmetic operations for EVMMAX (EVM Modular Arithmetic Extensions).
 template <typename UintT>
