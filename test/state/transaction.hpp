@@ -14,6 +14,20 @@ namespace evmone::state
 {
 using AccessList = std::vector<std::pair<address, std::vector<bytes32>>>;
 
+struct Authorization
+{
+    intx::uint256 chain_id;
+    address addr;
+    uint64_t nonce = 0;
+    /// Signer is empty if it cannot be ecrecovered from r, s, v.
+    std::optional<address> signer;
+    intx::uint256 r;
+    intx::uint256 s;
+    intx::uint256 v;
+};
+
+using AuthorizationList = std::vector<Authorization>;
+
 struct Transaction
 {
     /// The type of the transaction.
@@ -65,6 +79,7 @@ struct Transaction
     intx::uint256 r;
     intx::uint256 s;
     uint8_t v = 0;
+    AuthorizationList authorization_list;
 };
 
 /// Transaction properties computed during the validation needed for the execution.
