@@ -10,6 +10,8 @@ std::optional<evmc::address> get_delegate_address(
     const evmc::HostInterface& host, const evmc::address& addr) noexcept
 {
     // Load the code prefix up to the delegation designation size.
+    // The HostInterface::copy_code() copies up to the addr's code size
+    // and returns the number of bytes copied.
     uint8_t designation_buffer[std::size(DELEGATION_MAGIC) + sizeof(evmc::address)];
     const auto size = host.copy_code(addr, 0, designation_buffer, std::size(designation_buffer));
     const bytes_view designation{designation_buffer, size};
