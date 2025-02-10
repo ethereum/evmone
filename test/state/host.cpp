@@ -440,7 +440,8 @@ evmc::Result Host::execute_message(const evmc_message& msg) noexcept
         }
     }
 
-    if (is_precompile(m_rev, msg.code_address))
+    // Calls to precompile address via EIP-7702 delegation execute empty code instead of precompile.
+    if ((msg.flags & EVMC_DELEGATED) == 0 && is_precompile(m_rev, msg.code_address))
         return call_precompile(m_rev, msg);
 
     // TODO: get_code() performs the account lookup. Add a way to get an account with code?
