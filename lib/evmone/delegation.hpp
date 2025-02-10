@@ -20,4 +20,8 @@ inline constexpr bool is_code_delegated(bytes_view code) noexcept
 {
     return code.starts_with(DELEGATION_MAGIC);
 }
+
+/// Get EIP-7702 delegate address from the code of addr, if it is delegated.
+std::optional<evmc::address> get_delegate_address(
+    const evmc::HostInterface& host, const evmc::address& addr) noexcept;
 }  // namespace evmone
