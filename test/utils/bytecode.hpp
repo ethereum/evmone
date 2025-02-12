@@ -433,6 +433,11 @@ inline bytecode returndatacopy(bytecode dst, bytecode src, bytecode size)
     return std::move(size) + std::move(src) + std::move(dst) + OP_RETURNDATACOPY;
 }
 
+inline bytecode datacopy(bytecode dst, bytecode src, bytecode size)
+{
+    return std::move(size) + std::move(src) + std::move(dst) + OP_DATACOPY;
+}
+
 inline bytecode sstore(bytecode index, bytecode value)
 {
     return value + index + OP_SSTORE;
