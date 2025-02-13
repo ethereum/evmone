@@ -121,6 +121,26 @@ state::AccessList from_json<state::AccessList>(const json::json& j)
     return o;
 }
 
+template <>
+state::AuthorizationList from_json<state::AuthorizationList>(const json::json& j)
+{
+    state::AuthorizationList o;
+    for (const auto& a : j)
+    {
+        state::Authorization authorization{};
+        authorization.chain_id = from_json<uint256>(a.at("chainId"));
+        authorization.addr = from_json<address>(a.at("address"));
+        authorization.nonce = from_json<uint64_t>(a.at("nonce"));
+        if (a.contains("signer"))
+            authorization.signer = from_json<address>(a["signer"]);
+        authorization.r = from_json<uint256>(a.at("r"));
+        authorization.s = from_json<uint256>(a.at("s"));
+        authorization.v = from_json<uint256>(a.at("v"));
+        o.emplace_back(authorization);
+    }
+    return o;
+}
+
 // Based on calculateEIP1559BaseFee from ethereum/retesteth
 static uint64_t calculate_current_base_fee_eip1559(
     uint64_t parent_gas_used, uint64_t parent_gas_limit, uint64_t parent_base_fee)
@@ -343,6 +363,7 @@ static void from_json_tx_common(const json::json& j, state::Transaction& o)
     else if (const auto au_it = j.find("authorizationList"); au_it != j.end())
     {
         o.type = state::Transaction::Type::set_code;
+        o.authorization_list = from_json<state::AuthorizationList>(*au_it);
     }
 }
 

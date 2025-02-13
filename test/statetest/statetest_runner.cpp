@@ -23,13 +23,6 @@ void run_state_test(const StateTransitionTest& test, evmc::VM& vm, bool trace_su
             // if (case_index != 3)
             //     continue;
 
-            if (test.multi_tx.type == state::Transaction::Type::set_code)
-            {
-                // FIXME: Remove this once EIP-7702 is implemented.
-                std::cout << "WARNING: test case with set_code transaction (type 4) skipped\n";
-                continue;
-            }
-
             const auto& expected = cases[case_index];
             const auto tx = test.multi_tx.get(expected.indexes);
             auto state = test.pre_state;
