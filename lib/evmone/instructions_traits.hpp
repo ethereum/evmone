@@ -196,6 +196,9 @@ constexpr inline GasCostTable gas_costs = []() noexcept {
 
     table[EVMC_EXPERIMENTAL] = table[EVMC_OSAKA];
 
+    for (auto op = size_t{OP_PUSH1}; op <= OP_PUSH32; ++op)
+        table[EVMC_EXPERIMENTAL][op] = 1;
+
     table[EVMC_EVMMAX][OP_SETUPX] = 1;
     table[EVMC_EVMMAX][OP_ADDMODX] = 0;
     table[EVMC_EVMMAX][OP_SUBMODX] = 0;

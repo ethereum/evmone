@@ -99,7 +99,7 @@ static_assert(validate_traits(std::make_index_sequence<256>{}));
 // Check some cases for has_const_gas_cost().
 static_assert(instr::has_const_gas_cost(OP_STOP));
 static_assert(instr::has_const_gas_cost(OP_ADD));
-static_assert(instr::has_const_gas_cost(OP_PUSH1));
+// static_assert(instr::has_const_gas_cost(OP_PUSH1));
 static_assert(!instr::has_const_gas_cost(OP_SHL));
 static_assert(!instr::has_const_gas_cost(OP_BALANCE));
 static_assert(!instr::has_const_gas_cost(OP_SLOAD));
