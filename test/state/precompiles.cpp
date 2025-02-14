@@ -348,6 +348,55 @@ ExecutionResult ecmul_execute(const uint8_t* input, size_t input_size, uint8_t* 
         return {EVMC_PRECOMPILE_FAILURE, 0};
 }
 
+ExecutionResult ecpairing_execute(const uint8_t* input, size_t input_size, uint8_t* output,
+    [[maybe_unused]] size_t output_size) noexcept
+{
+    assert(output_size >= 32);
+
+    static constexpr size_t PAIR_SIZE = 192;
+
+    if (input_size % PAIR_SIZE != 0)
+        return {EVMC_PRECOMPILE_FAILURE, 0};
+
+    if (const auto n_pairs = input_size / PAIR_SIZE; n_pairs > 0)
+    {
+        std::vector<std::pair<evmmax::bn254::Point, evmmax::bn254::ExtPoint>> pairs;
+        pairs.reserve(n_pairs);
+        auto input_idx = input;
+        for (size_t i = 0; i < n_pairs; ++i)
+        {
+            const evmmax::bn254::Point p{
+                intx::be::unsafe::load<intx::uint256>(input_idx),
+                intx::be::unsafe::load<intx::uint256>(input_idx + 32),
+            };
+
+            const evmmax::bn254::ExtPoint q{
+                {intx::be::unsafe::load<intx::uint256>(input_idx + 96),
+                    intx::be::unsafe::load<intx::uint256>(input_idx + 64)},
+                {intx::be::unsafe::load<intx::uint256>(input_idx + 160),
+                    intx::be::unsafe::load<intx::uint256>(input_idx + 128)},
+            };
+            pairs.emplace_back(p, q);
+            input_idx += PAIR_SIZE;
+        }
+
+        const auto res = evmmax::bn254::pairing_check(pairs);
+
+        if (res.has_value())
+        {
+            intx::be::unsafe::store(output, res.value() ? intx::uint256{1} : intx::uint256{0});
+            return {EVMC_SUCCESS, 64};
+        }
+        else
+            return {EVMC_PRECOMPILE_FAILURE, 0};
+    }
+    else
+    {
+        intx::be::unsafe::store(output, intx::uint256{1});
+        return {EVMC_SUCCESS, 32};
+    }
+}
+
 ExecutionResult identity_execute(const uint8_t* input, size_t input_size, uint8_t* output,
     [[maybe_unused]] size_t output_size) noexcept
 {
@@ -527,7 +576,7 @@ inline constexpr auto traits = []() noexcept {
         {expmod_analyze, expmod_stub},
         {ecadd_analyze, ecadd_execute},
         {ecmul_analyze, ecmul_execute},
-        {ecpairing_analyze, ecpairing_stub},
+        {ecpairing_analyze, ecpairing_execute},
         {blake2bf_analyze, blake2bf_execute},
         {point_evaluation_analyze, point_evaluation_execute},
         {bls12_g1add_analyze, bls12_g1add_execute},
@@ -545,7 +594,7 @@ inline constexpr auto traits = []() noexcept {
     tbl[static_cast<size_t>(PrecompileId::expmod)].execute = silkpre_expmod_execute;
     // tbl[static_cast<size_t>(PrecompileId::ecadd)].execute = silkpre_ecadd_execute;
     // tbl[static_cast<size_t>(PrecompileId::ecmul)].execute = silkpre_ecmul_execute;
-    tbl[static_cast<size_t>(PrecompileId::ecpairing)].execute = silkpre_ecpairing_execute;
+    // tbl[static_cast<size_t>(PrecompileId::ecpairing)].execute = silkpre_ecpairing_execute;
     // tbl[static_cast<size_t>(PrecompileId::blake2bf)].execute = silkpre_blake2bf_execute;
 #endif
     return tbl;
