@@ -509,38 +509,20 @@ void validate_state(const TestState& state, evmc_revision rev)
             !acc.storage.empty())
             throw std::invalid_argument("empty account with non-empty storage at " + hex0x(addr));
 
-        if (is_code_delegated(acc.code))
+        if (rev >= EVMC_PRAGUE && is_code_delegated(acc.code) &&
+            acc.code.size() != std::size(DELEGATION_MAGIC) + sizeof(evmc::address))
         {
-            if (rev >= EVMC_PRAGUE)
-            {
-                if (acc.code.size() != std::size(DELEGATION_MAGIC) + sizeof(evmc::address))
-                {
-                    throw std::invalid_argument(
-                        "EIP-7702 delegation designator at " + hex0x(addr) + " has invalid size");
-                }
-            }
-            else
-            {
-                throw std::invalid_argument(
-                    "unexpected code with EIP-7702 delegation prefix at " + hex0x(addr));
-            }
+            throw std::invalid_argument(
+                "EIP-7702 delegation designator at " + hex0x(addr) + " has invalid size");
         }
 
-        if (is_eof_container(acc.code))
+        if (rev >= EVMC_OSAKA && is_eof_container(acc.code))
         {
-            if (rev >= EVMC_OSAKA)
+            if (const auto result = validate_eof(rev, ContainerKind::runtime, acc.code);
+                result != EOFValidationError::success)
             {
-                if (const auto result = validate_eof(rev, ContainerKind::runtime, acc.code);
-                    result != EOFValidationError::success)
-                {
-                    throw std::invalid_argument(
-                        "EOF container at " + hex0x(addr) +
-                        " is invalid: " + std::string(get_error_message(result)));
-                }
-            }
-            else
-            {
-                throw std::invalid_argument("unexpected code with EOF prefix at " + hex0x(addr));
+                throw std::invalid_argument("EOF container at " + hex0x(addr) + " is invalid: " +
+                                            std::string(get_error_message(result)));
             }
         }
 
