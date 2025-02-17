@@ -188,3 +188,45 @@ TEST(statetest_loader, validate_state_zero_storage_slot)
             "storage entry "
             "0x0000000000000000000000000000000000000000000000000000000000000001"));
 }
+
+TEST(statetest_loader, validate_state_unexpected_ef_prefix)
+{
+    TestState state{{0xadd4_address, {.code = "EF00"_hex}}};
+    EXPECT_THAT([&] { validate_state(state, EVMC_LONDON); },
+        ThrowsMessage<std::invalid_argument>(
+            "unexpected code starting with 0xEF at 0x000000000000000000000000000000000000add4"));
+}
+
+TEST(statetest_loader, validate_state_invalid_delegation_size)
+{
+    TestState state{{0xadd4_address, {.code = "EF010000"_hex}}};
+    EXPECT_THAT([&] { validate_state(state, EVMC_PRAGUE); },
+        ThrowsMessage<std::invalid_argument>(
+            "EIP-7702 delegation designator at 0x000000000000000000000000000000000000add4 has "
+            "invalid size"));
+}
+
+TEST(statetest_loader, validate_state_unexpected_delegation)
+{
+    TestState state{
+        {0xadd4_address, {.code = "EF01000000000000000000000000000000000000000001"_hex}}};
+    EXPECT_THAT([&] { validate_state(state, EVMC_CANCUN); },
+        ThrowsMessage<std::invalid_argument>(
+            "unexpected code starting with 0xEF at 0x000000000000000000000000000000000000add4"));
+}
+
+TEST(statetest_loader, validate_empty_account_with_storage)
+{
+    TestState state{{0xadd4_address, {.storage = {{0x01_bytes32, 0x01_bytes32}}}}};
+    EXPECT_THAT([&] { validate_state(state, EVMC_CANCUN); },
+        ThrowsMessage<std::invalid_argument>(
+            "empty account with non-empty storage at 0x000000000000000000000000000000000000add4"));
+}
+
+TEST(statetest_loader, validate_code_at_precompile_address)
+{
+    TestState state{{0x0a_address, {.code = "00"_hex}}};
+    EXPECT_THAT([&] { validate_state(state, EVMC_CANCUN); },
+        ThrowsMessage<std::invalid_argument>(
+            "unexpected code at precompile address 0x000000000000000000000000000000000000000a"));
+}
