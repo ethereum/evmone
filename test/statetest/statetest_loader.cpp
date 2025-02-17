@@ -498,6 +498,13 @@ void validate_state(const TestState& state, evmc_revision rev)
 {
     for (const auto& [addr, acc] : state)
     {
+        const bool allowedEF = (rev >= EVMC_PRAGUE && is_code_delegated(acc.code)) ||
+                               (rev >= EVMC_OSAKA && is_eof_container(acc.code)) ||
+                               // exceptions to EIP-3541 rule existing on Mainnet
+                               acc.code == "EF"_hex || acc.code == "EFF09f918bf09f9fa9"_hex;
+        if (rev >= EVMC_LONDON && !allowedEF && !acc.code.empty() && acc.code[0] == 0xEF)
+            throw std::invalid_argument("unexpected code starting with 0xEF at " + hex0x(addr));
+
         if (rev >= EVMC_PARIS && acc.code.empty() && acc.balance == 0 && acc.nonce == 0 &&
             !acc.storage.empty())
             throw std::invalid_argument("empty account with non-empty storage at " + hex0x(addr));
