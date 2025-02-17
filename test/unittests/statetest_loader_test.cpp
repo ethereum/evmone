@@ -176,13 +176,13 @@ TEST(statetest_loader, validate_state_unexpected_eof)
     TestState state{{0xadd4_address, {.code = "EF00"_hex}}};
     EXPECT_THAT([&] { validate_state(state, EVMC_CANCUN); },
         ThrowsMessage<std::invalid_argument>(
-            "unexpected code with EOF prefix at 0x000000000000000000000000000000000000add4"));
+            "unexpected code starting with 0xEF at 0x000000000000000000000000000000000000add4"));
 }
 
 TEST(statetest_loader, validate_state_zero_storage_slot)
 {
     TestState state{{0xadd4_address, {.storage = {{0x01_bytes32, 0x00_bytes32}}}}};
-    EXPECT_THAT([&] { validate_state(state, EVMC_PRAGUE); },
+    EXPECT_THAT([&] { validate_state(state, EVMC_LONDON); },
         ThrowsMessage<std::invalid_argument>(
             "account 0x000000000000000000000000000000000000add4 contains invalid zero-value "
             "storage entry "
