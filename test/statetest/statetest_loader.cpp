@@ -498,8 +498,9 @@ void validate_state(const TestState& state, evmc_revision rev)
 {
     for (const auto& [addr, acc] : state)
     {
-        // TODO: Check for empty accounts after Paris.
-        //       https://github.com/ethereum/tests/issues/1331
+        if (rev >= EVMC_PARIS && acc.code.empty() && acc.balance == 0 && acc.nonce == 0 &&
+            !acc.storage.empty())
+            throw std::invalid_argument("empty account with non-empty storage at " + hex0x(addr));
 
         if (is_code_delegated(acc.code))
         {
