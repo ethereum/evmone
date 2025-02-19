@@ -353,7 +353,7 @@ jobs:
     steps:
       - build
       - download_execution_spec_tests:
-          release: v3.0.0
+          release: v4.0.0
       - run:
           name: "Execution spec tests (state_tests)"
           working_directory: ~/build
@@ -365,8 +365,8 @@ jobs:
           command: >
             bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests
       - download_execution_spec_tests:
-          release: pectra-devnet-6@v1.0.0
-          fixtures_suffix: pectra-devnet-6
+          release: v4.0.0
+          fixtures_suffix: develop
       - run:
           name: "Execution spec tests (develop, state_tests)"
           # Tests for in-development EVM revision currently passing.
