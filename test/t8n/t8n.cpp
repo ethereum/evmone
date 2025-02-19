@@ -36,6 +36,7 @@ int main(int argc, const char* argv[])
     std::optional<uint64_t> block_reward;
     uint64_t chain_id = 0;
     bool trace = false;
+    bool pre_state_only = false;
 
     try
     {
@@ -65,14 +66,19 @@ int main(int argc, const char* argv[])
                 output_result_file = argv[i];
             else if (arg == "--output.alloc" && ++i < argc)
                 output_alloc_file = argv[i];
-            else if (arg == "--state.reward" && ++i < argc && argv[i] != "-1"sv)
-                block_reward = intx::from_string<uint64_t>(argv[i]);
             else if (arg == "--state.chainid" && ++i < argc)
                 chain_id = intx::from_string<uint64_t>(argv[i]);
             else if (arg == "--output.body" && ++i < argc)
                 output_body_file = argv[i];
             else if (arg == "--trace")
                 trace = true;
+            else if (arg == "--state.reward" && ++i < argc)
+            {
+                if (argv[i] == "-1"sv)  // Hack to compute the root hash of the pre-state.
+                    pre_state_only = true;
+                else
+                    block_reward = intx::from_string<uint64_t>(argv[i]);
+            }
         }
 
         state::BlockInfo block;
@@ -138,7 +144,8 @@ int main(int argc, const char* argv[])
                 j_result["receipts"] = json::json::array();
                 j_result["rejected"] = json::json::array();
 
-                test::system_call_block_start(state, block, block_hashes, rev, vm);
+                if (!pre_state_only)
+                    test::system_call_block_start(state, block, block_hashes, rev, vm);
 
                 for (size_t i = 0; i < j_txs.size(); ++i)
                 {
@@ -221,7 +228,7 @@ int main(int argc, const char* argv[])
                 }
             }
 
-            if (rev >= EVMC_PRAGUE)
+            if (!pre_state_only && rev >= EVMC_PRAGUE)
             {
                 requests.emplace_back(collect_deposit_requests(receipts));
 
