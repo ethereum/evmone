@@ -205,10 +205,6 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
     if (remaining_container_size < section_bodies_without_data)
         return EOFValidationError::invalid_section_bodies_size;
 
-    if (section_headers[TYPE_SECTION][0] !=
-        section_headers[CODE_SECTION].size() * EOF1Header::TYPE_ENTRY_SIZE)
-        return EOFValidationError::invalid_type_section_size;
-
     return section_headers;
 }
 
