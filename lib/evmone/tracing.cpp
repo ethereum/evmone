@@ -124,6 +124,13 @@ class InstructionTracer : public Tracer
         m_out << R"(,"refund":)" << std::dec << state.gas_refund;
         m_out << R"(,"opName":")" << get_name(opcode) << '"';
 
+        //        if (state.evmmax_state.is_activated())
+        //        {
+        //            m_out << R"(,"evmmax":")" << std::endl;
+        //            m_out << "";
+        //            state.evmmax_state.print_state(m_out);
+        //        }
+
         m_out << "}\n";
     }
 

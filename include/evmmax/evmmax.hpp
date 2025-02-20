@@ -72,6 +72,8 @@ public:
     /// Size (expressed in multiples of 8 bytes) needed to represent modulus.
     [[nodiscard]] size_t active_mod_value_size_multiplier() const noexcept;
 
+    void print_state(std::ostream& out) const noexcept;
+
     void clear() noexcept;
 
     EVMMAXState& operator=(EVMMAXState&&) noexcept;

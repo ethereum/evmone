@@ -208,7 +208,7 @@ struct EXMMAXModState : public EXMMAXModStateInterface
         }
         out << "}\n";
     }
-
+    
     [[nodiscard]] size_t num_values() const noexcept override { return values.size(); }
     [[nodiscard]] size_t value_size_multiplier() const noexcept override { return value_size_mult; }
 };
