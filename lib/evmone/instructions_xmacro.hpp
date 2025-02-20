@@ -236,12 +236,12 @@
     ON_OPCODE_UNDEFINED(0xbe)                                 \
     ON_OPCODE_UNDEFINED(0xbf)                                 \
                                                               \
-    ON_OPCODE_UNDEFINED(0xc0)                                 \
-    ON_OPCODE_UNDEFINED(0xc1)                                 \
-    ON_OPCODE_UNDEFINED(0xc2)                                 \
-    ON_OPCODE_UNDEFINED(0xc3)                                 \
-    ON_OPCODE_UNDEFINED(0xc4)                                 \
-    ON_OPCODE_UNDEFINED(0xc5)                                 \
+    ON_OPCODE_IDENTIFIER(OP_SETUPX, setmodx)                  \
+    ON_OPCODE_IDENTIFIER(OP_LOADX, loadx)                     \
+    ON_OPCODE_IDENTIFIER(OP_STOREX, storex)                   \
+    ON_OPCODE_IDENTIFIER(OP_ADDMODX, addmodx)                 \
+    ON_OPCODE_IDENTIFIER(OP_SUBMODX, submodx)                 \
+    ON_OPCODE_IDENTIFIER(OP_MULMODX, mulmodx)                 \
     ON_OPCODE_UNDEFINED(0xc6)                                 \
     ON_OPCODE_UNDEFINED(0xc7)                                 \
     ON_OPCODE_UNDEFINED(0xc8)                                 \
