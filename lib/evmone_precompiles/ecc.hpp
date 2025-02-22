@@ -91,6 +91,43 @@ inline Point<IntT> to_affine(const ModArith<IntT>& s, const ProjPoint<IntT>& p) 
     return {s.from_mont(s.mul(p.x, z_inv)), s.from_mont(s.mul(p.y, z_inv))};
 }
 
+/// Adds two elliptic curve points in affine coordinates
+/// and returns the result in affine coordinates.
+template <typename IntT>
+Point<IntT> add(const ModArith<IntT>& m, const Point<IntT>& p, const Point<IntT>& q) noexcept
+{
+    if (p.is_inf())
+        return q;
+    if (q.is_inf())
+        return p;
+
+    const auto x1 = m.to_mont(p.x);
+    const auto y1 = m.to_mont(p.y);
+    const auto x2 = m.to_mont(q.x);
+    const auto y2 = m.to_mont(q.y);
+
+    // Use classic formula for point addition.
+    // https://en.wikipedia.org/wiki/Elliptic_curve_point_multiplication#Point_operations
+
+    auto dx = m.sub(x2, x1);
+    auto dy = m.sub(y2, y1);
+    if (dx == 0)
+    {
+        if (dy != 0)    // For opposite points
+            return {};  // return the point at infinity.
+
+        // For coincident points find the slope of the tangent line.
+        const auto xx = m.mul(x1, x1);
+        dy = m.add(m.add(xx, xx), xx);
+        dx = m.add(y1, y1);
+    }
+    const auto slope = m.mul(dy, m.inv(dx));
+
+    const auto xr = m.sub(m.sub(m.mul(slope, slope), x1), x2);
+    const auto yr = m.sub(m.mul(m.sub(x1, xr), slope), y1);
+    return {m.from_mont(xr), m.from_mont(yr)};
+}
+
 template <typename IntT, int A = 0>
 ProjPoint<IntT> add(const evmmax::ModArith<IntT>& s, const ProjPoint<IntT>& p,
     const ProjPoint<IntT>& q, const IntT& b3) noexcept
