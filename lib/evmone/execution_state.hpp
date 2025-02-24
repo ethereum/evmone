@@ -172,6 +172,7 @@ public:
 
 private:
     evmc_tx_context m_tx = {};
+    std::optional<std::unordered_map<evmc::bytes32, bytes_view>> m_initcodes;
 
 public:
     /// Pointer to code analysis.
@@ -214,6 +215,7 @@ public:
         output_size = 0;
         deploy_container = {};
         m_tx = {};
+        m_initcodes.reset();
         call_stack = {};
     }
 
@@ -224,6 +226,26 @@ public:
         if (INTX_UNLIKELY(m_tx.block_timestamp == 0))
             m_tx = host.get_tx_context();
         return m_tx;
+    }
+
+    /// Get initcode by its hash from transaction initcodes.
+    ///
+    /// Returns empty bytes_view if no such initcode was found.
+    [[nodiscard]] bytes_view get_tx_initcode_by_hash(const evmc_bytes32& hash) noexcept
+    {
+        if (!m_initcodes.has_value())
+        {
+            m_initcodes.emplace();
+            const auto& tx_context = get_tx_context();
+            for (size_t i = 0; i < tx_context.initcodes_count; ++i)
+            {
+                const auto& initcode = tx_context.initcodes[i];
+                m_initcodes->insert({initcode.hash, {initcode.code, initcode.code_size}});
+            }
+        }
+
+        const auto it = m_initcodes->find(hash);
+        return it != m_initcodes->end() ? it->second : bytes_view{};
     }
 };
 }  // namespace evmone
