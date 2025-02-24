@@ -116,6 +116,7 @@ class InstructionTracer : public Tracer
         // Full memory can be dumped as evmc::hex({state.memory.data(), state.memory.size()}),
         // but this should not be done by default. Adding --tracing=+memory option would be nice.
         m_out << R"(,"memSize":)" << std::dec << state.memory.size();
+        m_out << R"(,"memory":)" << evmc::hex({state.memory.data(), state.memory.size()});
 
         output_stack(stack_top, stack_height);
         if (!state.return_data.empty())
@@ -124,12 +125,12 @@ class InstructionTracer : public Tracer
         m_out << R"(,"refund":)" << std::dec << state.gas_refund;
         m_out << R"(,"opName":")" << get_name(opcode) << '"';
 
-        //        if (state.evmmax_state.is_activated())
-        //        {
-        //            m_out << R"(,"evmmax":")" << std::endl;
-        //            m_out << "";
-        //            state.evmmax_state.print_state(m_out);
-        //        }
+        if (state.evmmax_state.is_activated())
+        {
+            m_out << R"(,"evmmax":")" << std::endl;
+            m_out << "";
+            state.evmmax_state.print_state(m_out);
+        }
 
         m_out << "}\n";
     }
