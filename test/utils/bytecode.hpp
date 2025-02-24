@@ -343,6 +343,12 @@ inline bytecode rjumpi(int16_t offset, bytecode condition)
     return condition + (OP_RJUMPI + big_endian(offset));
 }
 
+inline bytecode rjumpi(bytecode body, bytecode condition)
+{
+    assert(body.size() < std::numeric_limits<int16_t>::max());
+    return condition + (OP_RJUMPI + big_endian(static_cast<int16_t>(body.size())));
+}
+
 inline bytecode rjumpv(const std::initializer_list<int16_t> offsets, bytecode condition)
 {
     assert(offsets.size() > 0);
@@ -355,6 +361,42 @@ inline bytecode rjumpv(const std::initializer_list<int16_t> offsets, bytecode co
 inline bytecode dataloadn(uint16_t index)
 {
     return OP_DATALOADN + big_endian(index);
+}
+
+inline bytecode lt(bytecode lhs, bytecode rhs)
+{
+    return lhs + rhs + OP_LT;
+}
+
+inline bytecode gt(bytecode lhs, bytecode rhs)
+{
+    return lhs + rhs + OP_GT;
+}
+
+inline bytecode or_(bytecode lhs, bytecode rhs)
+{
+    return lhs + rhs + OP_OR;
+}
+
+inline bytecode mod_(bytecode num, bytecode den)
+{
+    return num + den + OP_MOD;
+}
+
+inline bytecode div(bytecode num, bytecode den)
+{
+    return num + den + OP_DIV;
+}
+
+inline bytecode for_(bytecode init, bytecode iter, bytecode condition, bytecode body)
+{
+    bytecode ret;
+    ret += init;
+    const auto loob_beg_pos = ret.size();
+    ret += rjumpi(body, condition) + iter;
+    ret += rjump(static_cast<int16_t>(-(ret.size() - loob_beg_pos)));
+
+    return ret;
 }
 
 inline bytecode callf(uint16_t target)
