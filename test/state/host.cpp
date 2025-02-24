@@ -228,6 +228,20 @@ address compute_create2_address(
     return addr;
 }
 
+address compute_eofcreate_address(const address& sender, const bytes32& salt) noexcept
+{
+    uint8_t buffer[1 + sizeof(sender) + sizeof(salt)];
+    static_assert(std::size(buffer) == 53);
+    auto it = std::begin(buffer);
+    *it++ = 0xff;
+    it = std::copy_n(sender.bytes, sizeof(sender), it);
+    std::copy_n(salt.bytes, sizeof(salt), it);
+    const auto base_hash = keccak256({buffer, std::size(buffer)});
+    address addr;
+    std::copy_n(&base_hash.bytes[sizeof(base_hash) - sizeof(addr)], sizeof(addr), addr.bytes);
+    return addr;
+}
+
 std::optional<evmc_message> Host::prepare_message(evmc_message msg) noexcept
 {
     if (msg.depth == 0 || msg.kind == EVMC_CREATE || msg.kind == EVMC_CREATE2 ||
@@ -297,11 +311,7 @@ std::optional<evmc_message> Host::prepare_message(evmc_message msg) noexcept
                 }
                 // EOFCREATE
                 else
-                {
-                    const bytes_view initcontainer{msg.code, msg.code_size};
-                    msg.recipient =
-                        compute_create2_address(msg.sender, msg.create2_salt, initcontainer);
-                }
+                    msg.recipient = compute_eofcreate_address(msg.sender, msg.create2_salt);
             }
 
             // By EIP-2929, the access to new created address is never reverted.
