@@ -24,6 +24,8 @@ constexpr auto SECP256K1N_OVER_2 = evmmax::secp256k1::Order / 2;
 constexpr auto AUTHORIZATION_EMPTY_ACCOUNT_COST = 25000;
 /// EIP-7702: The cost of authorization that sets delegation to an account that already exists.
 constexpr auto AUTHORIZATION_BASE_COST = 12500;
+///
+constexpr auto MAX_INITCODE_COUNT = 256;
 
 constexpr int64_t num_words(size_t size_in_bytes) noexcept
 {
@@ -37,6 +39,14 @@ size_t compute_tx_data_tokens(evmc_revision rev, bytes_view data) noexcept
 
     const size_t nonzero_byte_multiplier = rev >= EVMC_ISTANBUL ? 4 : 17;
     return (nonzero_byte_multiplier * num_nonzero_bytes) + num_zero_bytes;
+}
+
+size_t compute_tx_initcode_tokens(evmc_revision rev, std::span<const bytes> initcodes) noexcept
+{
+    size_t sum = 0;
+    for (const auto& initcode : initcodes)
+        sum += compute_tx_data_tokens(rev, initcode);
+    return sum;
 }
 
 int64_t compute_access_list_cost(const AccessList& access_list) noexcept
@@ -70,7 +80,10 @@ TransactionCost compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& 
     const auto create_cost = (is_create && rev >= EVMC_HOMESTEAD) ? TX_CREATE_COST : 0;
 
     const auto num_data_tokens = static_cast<int64_t>(compute_tx_data_tokens(rev, tx.data));
-    const auto data_cost = num_data_tokens * DATA_TOKEN_COST;
+    const auto num_initcode_tokens =
+        static_cast<int64_t>(compute_tx_initcode_tokens(rev, tx.initcodes));
+    const auto num_tokens = num_data_tokens + num_initcode_tokens;
+    const auto data_cost = num_tokens * DATA_TOKEN_COST;
 
     const auto access_list_cost = compute_access_list_cost(tx.access_list);
 
@@ -85,7 +98,7 @@ TransactionCost compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& 
 
     // EIP-7623: Compute the minimum cost for the transaction by. If disabled, just use 0.
     const auto min_cost =
-        rev >= EVMC_PRAGUE ? TX_BASE_COST + num_data_tokens * TOTAL_COST_FLOOR_PER_TOKEN : 0;
+        rev >= EVMC_PRAGUE ? TX_BASE_COST + num_tokens * TOTAL_COST_FLOOR_PER_TOKEN : 0;
 
     return {intrinsic_cost, min_cost};
 }
@@ -450,11 +463,27 @@ std::variant<TransactionProperties, std::error_code> validate_transaction(
             return make_error_code(EMPTY_AUTHORIZATION_LIST);
         break;
 
+    case Transaction::Type::initcodes:
+        if (rev < EVMC_OSAKA)
+            return make_error_code(TX_TYPE_NOT_SUPPORTED);
+        if (tx.initcodes.size() > MAX_INITCODE_COUNT)
+            return make_error_code(INIT_CODE_COUNT_LIMIT_EXCEEDED);
+        if (tx.initcodes.empty())
+            return make_error_code(INIT_CODE_COUNT_ZERO);
+        if (std::any_of(tx.initcodes.begin(), tx.initcodes.end(),
+                [](const bytes& v) { return v.size() > MAX_INITCODE_SIZE; }))
+            return make_error_code(INIT_CODE_SIZE_LIMIT_EXCEEDED);
+        if (std::any_of(
+                tx.initcodes.begin(), tx.initcodes.end(), [](const bytes& v) { return v.empty(); }))
+            return make_error_code(INIT_CODE_EMPTY);
+        break;
+
     default:;
     }
 
     switch (tx.type)  // Validate the "regular" transaction type hierarchy.
     {
+    case Transaction::Type::initcodes:
     case Transaction::Type::set_code:
     case Transaction::Type::blob:
     case Transaction::Type::eip1559:
