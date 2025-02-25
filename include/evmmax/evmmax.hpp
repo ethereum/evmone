@@ -128,5 +128,71 @@ public:
         const auto s = d.value + mod;
         return (d.carry) ? s : d.value;
     }
+
+    /// Compute the modular inversion of the x in Montgomery form. The result is in Montgomery form.
+    /// If x is not invertible, the result is 0.
+    constexpr UintT inv(const UintT& x) const noexcept
+    {
+        assert((mod & 1) == 1);
+        assert(mod >= 3);
+
+        // Precompute inverse of 2 modulo mod: inv2 * 2 % mod == 1.
+        // The 1/2 is inexact division which can be fixed by adding "0" to the numerator
+        // and making it even: (mod + 1) / 2. To avoid potential overflow of (1 + mod)
+        // we rewrite it further to (mod - 1 + 2) / 2 = (mod - 1) / 2 + 1 = ⌊mod / 2⌋ + 1.
+        const auto inv2 = (mod >> 1) + 1;
+
+        // Use extended binary Euclidean algorithm. This evolves variables a and b until a is 0.
+        // Then GCD(x, mod) is in b. If GCD(x, mod) == 1 then the inversion exists and is in v.
+        // This follows the classic algorithm (Algorithm 1) presented in
+        // "Optimized Binary GCD for Modular Inversion".
+        // https://eprint.iacr.org/2020/972.pdf#algorithm.1
+        // TODO: The same paper has additional optimizations that could be applied.
+        UintT a = x;
+        UintT b = mod;
+
+        // Bézout's coefficients are originally initialized to 1 and 0. But because the input x
+        // is in Montgomery form XR the algorithm would compute X⁻¹R⁻¹. To get the expected X⁻¹R,
+        // we need to multiply the result by R². We can achieve the same effect "for free"
+        // by initializing u to R² instead of 1.
+        UintT u = m_r_squared;
+        UintT v = 0;
+
+        while (a != 0)
+        {
+            if ((a & 1) != 0)
+            {
+                // if a is odd update it to a - b.
+                if (const auto [d, less] = subc(a, b); less)
+                {
+                    // swap a and b in case a < b.
+                    b = a;
+                    a = -d;
+
+                    using namespace std;
+                    swap(u, v);
+                }
+                else
+                {
+                    a = d;
+                }
+                u = sub(u, v);
+            }
+
+            // Compute a / 2 % mod, a is even so division is exact and can be computed as ⌊a / 2⌋.
+            a >>= 1;
+
+            // Compute u / 2 % mod. If u is even this can be computed as ⌊u / 2⌋.
+            // Otherwise, (u - 1 + 1) / 2 = ⌊u / 2⌋ + (1 / 2 % mod).
+            const auto u_odd = (u & 1) != 0;
+            u >>= 1;
+            if (u_odd)
+                u += inv2;  // if u is odd add back ½ % mod.
+        }
+
+        if (b != 1)
+            return 0;  // not invertible
+        return v;
+    }
 };
 }  // namespace evmmax
