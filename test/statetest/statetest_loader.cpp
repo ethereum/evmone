@@ -5,6 +5,8 @@
 #include "../utils/stdx/utility.hpp"
 #include "../utils/utils.hpp"
 #include "statetest.hpp"
+
+#include <evmone/delegation.hpp>
 #include <evmone/eof.hpp>
 #include <nlohmann/json.hpp>
 
@@ -498,6 +500,24 @@ void validate_state(const TestState& state, evmc_revision rev)
     {
         // TODO: Check for empty accounts after Paris.
         //       https://github.com/ethereum/tests/issues/1331
+
+        if (is_code_delegated(acc.code))
+        {
+            if (rev >= EVMC_PRAGUE)
+            {
+                if (acc.code.size() != std::size(DELEGATION_MAGIC) + sizeof(evmc::address))
+                {
+                    throw std::invalid_argument(
+                        "EIP-7702 delegation designator at " + hex0x(addr) + " has invalid size");
+                }
+            }
+            else
+            {
+                throw std::invalid_argument(
+                    "unexpected code with EIP-7702 delegation prefix at " + hex0x(addr));
+            }
+        }
+
         if (is_eof_container(acc.code))
         {
             if (rev >= EVMC_OSAKA)
