@@ -83,12 +83,11 @@ inline ProjPoint<IntT> to_proj(const ModArith<IntT>& s, const Point<IntT>& p) no
 
 /// Converts a projected point to an affine point.
 template <typename IntT>
-inline Point<IntT> to_affine(
-    const ModArith<IntT>& s, InvFn<IntT> inv, const ProjPoint<IntT>& p) noexcept
+inline Point<IntT> to_affine(const ModArith<IntT>& s, const ProjPoint<IntT>& p) noexcept
 {
     // FIXME: Split to_affine() and to/from_mont(). This is not good idea.
     // FIXME: Add tests for inf.
-    const auto z_inv = inv(s, p.z);
+    const auto z_inv = s.inv(p.z);
     return {s.from_mont(s.mul(p.x, z_inv)), s.from_mont(s.mul(p.y, z_inv))};
 }
 

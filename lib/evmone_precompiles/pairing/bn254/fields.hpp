@@ -113,7 +113,7 @@ constexpr Fq12 multiply(const Fq12& a, const Fq12& b)
 /// Inverses the base field element
 inline Fq inverse(const Fq& x)
 {
-    return Fq(field_inv(BaseFieldConfig::MOD_ARITH, x.value()));
+    return Fq(BaseFieldConfig::MOD_ARITH.inv(x.value()));
 }
 
 /// Inverses the Fq^2 field element

@@ -148,15 +148,3 @@ TEST(evmmax, bn254_pt_add)
         EXPECT_EQ(add(a, b), e);
     }
 }
-
-TEST(evmmax, inv_1)
-{
-    const evmmax::ModArith<uint256> m{evmmax::bn254::FieldPrime};
-
-    const auto a =
-        m.to_mont(0x6e140df17432311190232a91a38daed3ee9ed7f038645dd0278da7ca6e497de_u256);
-
-    const auto a_inv = field_inv(m, a);
-    const auto p = m.mul(a, a_inv);
-    EXPECT_EQ(m.from_mont(p), 1);
-}

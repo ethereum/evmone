@@ -31,7 +31,7 @@ class evmmax_test : public testing::Test
 
 using test_types = testing::Types<ModA<uint256, P23>, ModA<uint256, BN254Mod>,
     ModA<uint256, Secp256k1Mod>, ModA<uint256, M256>, ModA<uint384, BLS12384Mod>>;
-TYPED_TEST_SUITE(evmmax_test, test_types, testing::internal::DefaultNameGenerator);
+TYPED_TEST_SUITE(evmmax_test, test_types);
 
 TYPED_TEST(evmmax_test, to_from_mont)
 {
@@ -145,5 +145,25 @@ TYPED_TEST(evmmax_test, mul)
             const auto p = m.from_mont(pm);
             EXPECT_EQ(p, expected);
         }
+    }
+}
+
+TYPED_TEST(evmmax_test, inv)
+{
+    const TypeParam m;
+    for (const auto& x : get_test_values(m))
+    {
+        const auto xm = m.to_mont(x);
+        const auto xm_inv = m.inv(xm);
+        if (xm_inv == 0)  // not invertible
+        {
+            if (m.mod != M256)  // mod is prime
+            {
+                EXPECT_EQ(x, 0);
+            }
+            continue;
+        }
+        const auto pm = m.mul(xm, xm_inv);
+        EXPECT_EQ(m.from_mont(pm), 1);
     }
 }
