@@ -35,11 +35,15 @@ object "expmod" {
         let mod_offset_in_mem := add(exp_offset_in_mem, exp_len)
         calldatacopy(mod_offset_in_mem, mod_offset_in_calldata, mod_len)
 
-        if and(1, calldataload(sub(calldatasize(), 32))) // modulus is odd
+        // modulus is odd or power of two
+        if or(and(1, calldataload(sub(calldatasize(), 32)), is_power_of_two(mod_offset_in_mem, mod_len)))
         {
             let res_ptr := calc_odd_modulus(base_offset_in_mem, base_len, exp_offset_in_mem, exp_len, mod_offset_in_mem, mod_len)
             return(res_ptr, mod_len)
         }
+        // modulus is even TODO:
+
+
 
         function allocate(_size) -> ptr
         {
@@ -65,6 +69,27 @@ object "expmod" {
             storex(1, ptr, 1)
         }
 
+        function is_power_of_two(_mem_offset, _mem_len) -> ret
+        {
+            let num_words := div(_mem_len, 32)
+
+            ret := 0
+            for { let i := 0 } lt(i, num_words) { i := add(i, 1) }
+            {
+                 let word := mload(add(_mem_offset, mul(i, 32)))
+                 if (word)
+                 {
+                    if (ret || and(word, sub(word, 1)))
+                    {
+                        ret := 0
+                        leave
+                    }
+
+                    ret := 1
+                 }
+            }
+        }
+
         function calc_odd_modulus(_base_mem_offset, _base_len, _exp_mem_offset, _exp_len, _mod_mem_offset, _mod_len) -> ptr
         {
             setmodx(_mod_mem_offset, _mod_len, 256)
@@ -78,7 +103,7 @@ object "expmod" {
             {
                 let e := mload(add(_exp_mem_offset, mul(i, 32)))
                 let mask := shl(255, 1)
-                for { let j := 0 } mask { mask := shr(1, mask) }
+                for {} mask { mask := shr(1, mask) }
                 {
                     mulmodx(1, 0, 1, 0, 1, 0, 1)
                     if and(mask, e)
