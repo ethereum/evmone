@@ -78,7 +78,7 @@ option(EVMONE_PRECOMPILES_GMP "Enable precompiles implementations via the GMP/MP
 if(EVMONE_PRECOMPILES_GMP)
     find_package(GMP REQUIRED)
     target_link_libraries(evmone-state PRIVATE GMP::gmp)
-    target_compile_definitions(evmone-state PRIVATE EVMONE_PRECOMPILES_GMP=1)
+    target_compile_definitions(evmone-state PUBLIC EVMONE_PRECOMPILES_GMP=1)
     target_sources(
         evmone-state PRIVATE
         precompiles_gmp.hpp
