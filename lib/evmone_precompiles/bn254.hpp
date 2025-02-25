@@ -24,12 +24,6 @@ using ExtPoint = ecc::Point<std::pair<uint256, uint256>>;
 /// Returns true if y^2 == x^3 + 3. Input is converted to the Montgomery form.
 bool validate(const Point& pt) noexcept;
 
-/// Modular inversion for bn254 prime field.
-///
-/// Computes 1/x mod P modular inversion by computing modular exponentiation x^(P-2),
-/// where P is ::FieldPrime.
-uint256 field_inv(const ModArith<uint256>& m, const uint256& x) noexcept;
-
 /// Addition in bn254 curve group.
 ///
 /// Computes P ⊕ Q for two points in affine coordinates on the bn254 curve,
