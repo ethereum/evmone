@@ -330,6 +330,7 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
     table[OP_ADDMODX] = op_undefined;
     table[OP_SUBMODX] = op_undefined;
     table[OP_MULMODX] = op_undefined;
+    table[OP_INVMODX] = op_undefined;
 
     return table;
 }();

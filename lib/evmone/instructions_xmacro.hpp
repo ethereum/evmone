@@ -242,7 +242,7 @@
     ON_OPCODE_IDENTIFIER(OP_ADDMODX, addmodx)                 \
     ON_OPCODE_IDENTIFIER(OP_SUBMODX, submodx)                 \
     ON_OPCODE_IDENTIFIER(OP_MULMODX, mulmodx)                 \
-    ON_OPCODE_UNDEFINED(0xc6)                                 \
+    ON_OPCODE_IDENTIFIER(OP_INVMODX, invmodx)                 \
     ON_OPCODE_UNDEFINED(0xc7)                                 \
     ON_OPCODE_UNDEFINED(0xc8)                                 \
     ON_OPCODE_UNDEFINED(0xc9)                                 \

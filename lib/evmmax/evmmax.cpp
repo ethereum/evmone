@@ -20,6 +20,8 @@ struct EXMMAXModStateInterface
         size_t x_stride, size_t y_idx, size_t y_stride, size_t count) noexcept = 0;
     [[nodiscard]] virtual bool mulmodx(size_t dst_idx, size_t dst_stride, size_t x_idx,
         size_t x_stride, size_t y_idx, size_t y_stride, size_t count) noexcept = 0;
+    [[nodiscard]] virtual bool invmodx(size_t dst_idx, size_t dst_stride, size_t x_idx,
+        size_t x_stride, size_t count) noexcept = 0;
     virtual void print(std::ostream& out) noexcept = 0;
 
     [[nodiscard]] virtual size_t value_size_multiplier() const noexcept = 0;
@@ -76,11 +78,13 @@ struct EXMMAXModState : public EXMMAXModStateInterface
     std::optional<ModArith<UintT>> arith;
     const size_t value_size_mult;
     const UintT mod_mask;
+    const size_t k;
 
     explicit EXMMAXModState(const UintT& mod, size_t mod_size, size_t vals_used) noexcept
       : arith(mod & UintT{1} ? std::make_optional(ModArith<UintT>(mod)) : std::nullopt),
         value_size_mult((mod_size + 7) / 8),
-        mod_mask(mod - 1)
+        mod_mask(mod - 1),
+        k(UintT::num_bits - clz(mod))
     {
         values.resize(vals_used);
     }
@@ -195,6 +199,40 @@ struct EXMMAXModState : public EXMMAXModStateInterface
         }
     }
 
+    [[nodiscard]] bool invmodx(size_t dst_idx, size_t dst_stride, size_t x_idx, size_t x_stride,
+        size_t count) noexcept override
+    {
+        if (arith.has_value())
+        {
+            assert(false);  // TODO: Implement
+            return false;
+        }
+        else
+        {
+            if (std::max(dst_idx + dst_stride * (count - 1), x_idx + x_stride * (count - 1)) >=
+                values.size())
+            {
+                return false;
+            }
+
+
+            for (size_t j = 0; j < count; ++j)
+            {
+                UintT b{1};
+                UintT res;
+                for (size_t i = 0; i < k; ++i)
+                {
+                    UintT t = b & UintT{1};
+                    b = (b - values[x_idx + j * x_stride] * t) >> 1;
+                    res += t << i;
+                }
+                values[dst_idx + j * dst_stride] = res;
+            }
+
+            return true;
+        }
+    }
+
     void print(std::ostream& out) noexcept override
     {
         out << "{ \n";
@@ -208,7 +246,7 @@ struct EXMMAXModState : public EXMMAXModStateInterface
         }
         out << "}\n";
     }
-    
+
     [[nodiscard]] size_t num_values() const noexcept override { return values.size(); }
     [[nodiscard]] size_t value_size_multiplier() const noexcept override { return value_size_mult; }
 };
@@ -360,6 +398,19 @@ struct EXMMAXModState : public EXMMAXModStateInterface
     return active_mod->mulmodx(dst_idx, dst_stride, x_idx, x_stride, y_idx, y_stride, count) ?
                EVMC_SUCCESS :
                EVMC_FAILURE;
+}
+
+[[nodiscard]] evmc_status_code EVMMAXState::invmodx(int64_t& gas_left, size_t dst_idx,
+    size_t dst_stride, size_t x_idx, size_t x_stride, size_t count) noexcept
+{
+    if (!is_activated())
+        return EVMC_FAILURE;
+
+    if ((gas_left -= 10 * current_gas_cost.mulmodx * static_cast<int64_t>(count)) < 0)
+        return EVMC_OUT_OF_GAS;
+
+    return active_mod->invmodx(dst_idx, dst_stride, x_idx, x_stride, count) ? EVMC_SUCCESS :
+                                                                              EVMC_FAILURE;
 }
 
 [[nodiscard]] size_t EVMMAXState::active_mod_value_size_multiplier() const noexcept

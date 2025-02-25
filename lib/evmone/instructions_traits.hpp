@@ -200,6 +200,7 @@ constexpr inline GasCostTable gas_costs = []() noexcept {
     table[EVMC_EVMMAX][OP_ADDMODX] = 0;
     table[EVMC_EVMMAX][OP_SUBMODX] = 0;
     table[EVMC_EVMMAX][OP_MULMODX] = 0;
+    table[EVMC_EVMMAX][OP_INVMODX] = 0;
     table[EVMC_EVMMAX][OP_LOADX] = 1;
     table[EVMC_EVMMAX][OP_STOREX] = 1;
 
@@ -417,6 +418,7 @@ constexpr inline std::array<Traits, 256> traits = []() noexcept {
     table[OP_ADDMODX] = {"ADDMODX", 7, false, 0, 0, EVMC_EVMMAX, EVMC_EVMMAX};
     table[OP_SUBMODX] = {"SUBMODX", 7, false, 0, 0, EVMC_EVMMAX, EVMC_EVMMAX};
     table[OP_MULMODX] = {"MULMODX", 7, false, 0, 0, EVMC_EVMMAX, EVMC_EVMMAX};
+    table[OP_INVMODX] = {"INVMODX", 5, false, 0, 0, EVMC_EVMMAX, EVMC_EVMMAX};
     table[OP_LOADX] = {"LOADX", 0, false, 3, -3, EVMC_EVMMAX, EVMC_EVMMAX};
     table[OP_STOREX] = {"STOREX", 0, false, 3, -3, EVMC_EVMMAX, EVMC_EVMMAX};
 

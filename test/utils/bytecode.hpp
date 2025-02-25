@@ -504,6 +504,13 @@ inline bytecode mulmodx(uint8_t dst_idx, uint8_t dst_stride, uint8_t x_idx, uint
            hex(y_idx) + hex(y_stride) + hex(count);
 }
 
+inline bytecode invmodx(
+    uint8_t dst_idx, uint8_t dst_stride, uint8_t x_idx, uint8_t x_stride, uint8_t count)
+{
+    return hex(OP_INVMODX) + hex(dst_idx) + hex(dst_stride) + hex(x_idx) + hex(x_stride) +
+           hex(count);
+}
+
 inline bytecode addmodx(uint8_t dst_idx, uint8_t x_idx, uint8_t y_idx)
 {
     return addmodx(dst_idx, 0, x_idx, 0, y_idx, 0, 1);

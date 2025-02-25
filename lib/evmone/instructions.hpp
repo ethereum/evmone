@@ -1381,6 +1381,24 @@ inline code_iterator mulmodx(
         return nullptr;
 }
 
+inline code_iterator invmodx(
+    StackTop /*stack*/, ExecutionState& state, code_iterator pos, int64_t& gas_left) noexcept
+{
+    const auto dst_idx = pos[1];
+    const auto dst_stride = pos[2];
+    const auto x_idx = pos[3];
+    const auto x_stride = pos[4];
+    const auto count = pos[5];
+
+    state.status =
+        state.evmmax_state.invmodx(gas_left, dst_idx, dst_stride, x_idx, x_stride, count);
+    if (state.status == EVMC_SUCCESS)
+        return pos + 6;
+    else
+        return nullptr;
+}
+
+
 /// Maps an opcode to the instruction implementation.
 ///
 /// The set of template specializations which map opcodes `Op` to the function

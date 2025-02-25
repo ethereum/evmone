@@ -165,6 +165,7 @@ enum Opcode : uint8_t
     OP_ADDMODX = 0xc3,
     OP_SUBMODX = 0xc4,
     OP_MULMODX = 0xc5,
+    OP_INVMODX = 0xc6,
 
     OP_DATALOAD = 0xd0,
     OP_DATALOADN = 0xd1,

@@ -65,6 +65,9 @@ public:
     [[nodiscard]] evmc_status_code mulmodx(int64_t& gas_left, size_t dst_idx, size_t dst_stride,
         size_t x_idx, size_t x_stride, size_t y_idx, size_t y_stride, size_t count) noexcept;
 
+    [[nodiscard]] evmc_status_code invmodx(int64_t& gas_left, size_t dst_idx, size_t dst_stride,
+        size_t x_idx, size_t x_stride, size_t count) noexcept;
+
     /// Checks that there exists an active modulus
     [[nodiscard]] bool is_activated() const noexcept;
 
