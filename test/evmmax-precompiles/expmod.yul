@@ -21,29 +21,134 @@ object "expmod" {
             revert(0, 0)
         }
 
-        let data := allocate(add(add(base_len, exp_len), mod_len))
+        let base_len_rounded := div(add(base_len, 31), 32)
+        let mod_len_rounded := div(add(mod_len, 31), 32)
+        let exp_len_rounded := div(add(exp_len, 31), 32)
+
+        let base_len_rem := mod(base_len, 32)
+        let mod_len_rem := mod(mod_len, 32)
+        let exp_len_rem := mod(exp_len, 32)
+
+        let data := allocate(add(add(base_len_rounded, mod_len_rounded), exp_len_rounded))
 
         let base_offset_in_calldata := 96
-        let base_offset_in_mem := data
+        let base_offset_in_mem := add(data, sub(32, base_len_rem))
         calldatacopy(base_offset_in_mem, base_offset_in_calldata, base_len)
 
+        base_offset_in_mem := data
+
         let exp_offset_in_calldata := add(base_offset_in_calldata, base_len)
-        let exp_offset_in_mem := add(base_offset_in_mem, base_len)
+        let exp_offset_in_mem := add(add(base_offset_in_mem, base_len), sub(32, exp_len_rem))
         calldatacopy(exp_offset_in_mem, exp_offset_in_calldata, exp_len)
 
+        exp_offset_in_mem := add(base_offset_in_mem, base_len)
+
         let mod_offset_in_calldata := add(exp_offset_in_calldata, exp_len)
-        let mod_offset_in_mem := add(exp_offset_in_mem, exp_len)
+        let mod_offset_in_mem := add(add(exp_offset_in_mem, exp_len), sub(32, mod_len_rem))
         calldatacopy(mod_offset_in_mem, mod_offset_in_calldata, mod_len)
 
+        mod_offset_in_mem := add(exp_offset_in_mem, exp_len)
+
         // modulus is odd or power of two
-        if or(and(1, calldataload(sub(calldatasize(), 32)), is_power_of_two(mod_offset_in_mem, mod_len)))
+        if or(and(1, calldataload(sub(calldatasize(), 32))), is_power_of_two(mod_offset_in_mem, mod_len_rounded))
         {
-            let res_ptr := calc_odd_modulus(base_offset_in_mem, base_len, exp_offset_in_mem, exp_len, mod_offset_in_mem, mod_len)
+            let res_ptr := calc_odd_modulus(base_offset_in_mem, base_len_rounded, exp_offset_in_mem, exp_len_rounded, mod_offset_in_mem, mod_len_rounded)
             return(res_ptr, mod_len)
         }
-        // modulus is even TODO:
 
+        let N_offset, N_size, K_offset, K_size := decompose_to_odd_and_pow2(mod_offset_in_mem, mod_len_rounded)
 
+        let res_N := calc_odd_modulus(base_offset_in_mem, base_len_rounded, exp_offset_in_mem, exp_len_rounded, N_offset, N_size)
+        let res_K := calc_odd_modulus(base_offset_in_mem, base_len_rounded, exp_offset_in_mem, exp_len_rounded, K_offset, K_size)
+
+        storex(3, N_offset, 1)
+        invmodx(0, 0, 3, 0, 1)
+        storex(1, res_N, 1)
+        storex(2, res_K, 1)
+
+        submodx(2, 0, 2, 0, 1, 0, 1)
+        mulmodx(2, 0, 2, 0, 0, 0, 1)
+        mulmodx(2, 0, 2, 0, 1, 0, 1)
+        mulmodx(2, 0, 2, 0, 3, 0, 1)
+
+        loadx(mod_offset_in_mem, 2, 1)
+        return(mod_offset_in_mem, mod_len)
+
+        function decompose_to_odd_and_pow2(_mem_offset, _mem_len) -> _N_offset, _N_size, _K_offset, _K_size
+        {
+            let mod_tailing_zeros := ctz(_mem_offset, _mem_len)
+
+            _N_offset := _mem_offset
+            _N_size := _mem_len
+
+            shr_mem(_mem_offset, _mem_len, mod_tailing_zeros)
+            _K_offset, _K_size := one_to_pow2(mod_tailing_zeros)
+        }
+
+        function shr_mem(_mem_offset, _mem_len, shift)
+        {
+            if mod(_mem_len, 32)
+            {
+                revert(0, 0)
+            }
+
+            let num_words := div(_mem_len, 32)
+            let carry := 0
+
+            for { let i := 0 } lt(i, num_words) { i := add(i, 1) }
+            {
+                let word := mload(add(_mem_offset, mul(i, 32)))
+                mstore(add(_mem_offset, mul(i, 32)), or(shr(shift, word), carry))
+                carry := shl(sub(256, shift), word)
+            }
+        }
+
+        function one_to_pow2(k) -> mem_ptr, mem_len
+        {
+            let num_words := div(add(k, 255), 256)
+            mem_len := mul(num_words, 32)
+            mem_ptr := allocate(mem_len)
+            let word_index := div(k, 256)
+            let shift := mod(k, 256)
+            let word := shl(shift, 1)
+
+            mstore(sub(add(mem_ptr, mem_len), mul(add(word_index, 1), 32)), word)
+        }
+
+        function ctz(_mem_offset, _mem_len) -> ret
+        {
+            if mod(_mem_len, 32)
+            {
+                revert(0, 0)
+            }
+
+            let num_words := div(_mem_len, 32)
+
+            let num_bits := mul(_mem_len, 8)
+            for { let i := 0 } lt(i, num_words) { i := add(i, 1) }
+            {
+                let word := mload(add(_mem_offset, mul(i, 32)))
+                if word
+                {
+                    ret := mul(256, sub(num_words, add(1, i)))
+                    ret := add(ret, ctz_word(word))
+                }
+            }
+        }
+
+        function ctz_word(v) -> ret
+        {
+            ret := 0
+            for { let i := 0 } lt(i, 256) { i := add(i, 1) }
+            {
+                if and(v, 1)
+                {
+                    leave
+                }
+                v := shr(1, v)
+                ret := add(ret, 1)
+            }
+        }
 
         function allocate(_size) -> ptr
         {
@@ -77,9 +182,9 @@ object "expmod" {
             for { let i := 0 } lt(i, num_words) { i := add(i, 1) }
             {
                  let word := mload(add(_mem_offset, mul(i, 32)))
-                 if (word)
+                 if word
                  {
-                    if (ret || and(word, sub(word, 1)))
+                    if or(ret, and(word, sub(word, 1)))
                     {
                         ret := 0
                         leave
