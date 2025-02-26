@@ -21,45 +21,60 @@ object "expmod" {
             revert(0, 0)
         }
 
-        let base_len_rounded := div(add(base_len, 31), 32)
-        let mod_len_rounded := div(add(mod_len, 31), 32)
-        let exp_len_rounded := div(add(exp_len, 31), 32)
+        let padded_base_len := mul(div(add(base_len, 31), 32), 32)
+        let padded_mod_len := mul(div(add(mod_len, 31), 32), 32)
+        let padded_exp_len := mul(div(add(exp_len, 31), 32), 32)
 
         let base_len_rem := mod(base_len, 32)
         let mod_len_rem := mod(mod_len, 32)
         let exp_len_rem := mod(exp_len, 32)
 
-        let data := allocate(add(add(base_len_rounded, mod_len_rounded), exp_len_rounded))
+        let data := allocate(add(add(padded_base_len, padded_mod_len), padded_exp_len))
 
         let base_offset_in_calldata := 96
-        let base_offset_in_mem := add(data, sub(32, base_len_rem))
+        let base_offset_in_mem := data
+        if base_len_rem
+        {
+            base_offset_in_mem := add(base_offset_in_mem, sub(32, base_len_rem))
+        }
+
         calldatacopy(base_offset_in_mem, base_offset_in_calldata, base_len)
 
         base_offset_in_mem := data
 
         let exp_offset_in_calldata := add(base_offset_in_calldata, base_len)
-        let exp_offset_in_mem := add(add(base_offset_in_mem, base_len), sub(32, exp_len_rem))
+        let exp_offset_in_mem := add(base_offset_in_mem, base_len)
+        if exp_len_rem
+        {
+            exp_offset_in_mem := add(exp_offset_in_mem, sub(32, exp_len_rem))
+        }
+
         calldatacopy(exp_offset_in_mem, exp_offset_in_calldata, exp_len)
 
         exp_offset_in_mem := add(base_offset_in_mem, base_len)
 
         let mod_offset_in_calldata := add(exp_offset_in_calldata, exp_len)
-        let mod_offset_in_mem := add(add(exp_offset_in_mem, exp_len), sub(32, mod_len_rem))
+        let mod_offset_in_mem := add(exp_offset_in_mem, exp_len)
+        if mod_len_rem
+        {
+            mod_offset_in_mem := add(mod_offset_in_mem, sub(32, mod_len_rem))
+        }
         calldatacopy(mod_offset_in_mem, mod_offset_in_calldata, mod_len)
 
         mod_offset_in_mem := add(exp_offset_in_mem, exp_len)
 
         // modulus is odd or power of two
-        if or(and(1, calldataload(sub(calldatasize(), 32))), is_power_of_two(mod_offset_in_mem, mod_len_rounded))
+        if or(and(1, calldataload(sub(cds, 32))), is_power_of_two(mod_offset_in_mem, padded_mod_len))
         {
-            let res_ptr := calc_odd_modulus(base_offset_in_mem, base_len_rounded, exp_offset_in_mem, exp_len_rounded, mod_offset_in_mem, mod_len_rounded)
+            let res_ptr := calc_odd_modulus(base_offset_in_mem, padded_base_len, exp_offset_in_mem, padded_exp_len, mod_offset_in_mem, padded_mod_len)
             return(res_ptr, mod_len)
         }
 
-        let N_offset, N_size, K_offset, K_size := decompose_to_odd_and_pow2(mod_offset_in_mem, mod_len_rounded)
+        let N_offset, N_size, K_offset, K_size := decompose_to_odd_and_pow2(mod_offset_in_mem, padded_mod_len)
+        let pow2_mem, pow2_size := one_to_pow2(255)
 
-        let res_N := calc_odd_modulus(base_offset_in_mem, base_len_rounded, exp_offset_in_mem, exp_len_rounded, N_offset, N_size)
-        let res_K := calc_odd_modulus(base_offset_in_mem, base_len_rounded, exp_offset_in_mem, exp_len_rounded, K_offset, K_size)
+        let res_N := calc_odd_modulus(base_offset_in_mem, padded_base_len, exp_offset_in_mem, padded_exp_len, N_offset, N_size)
+        let res_K := calc_odd_modulus(base_offset_in_mem, padded_base_len, exp_offset_in_mem, padded_exp_len, K_offset, K_size)
 
         storex(3, N_offset, 1)
         invmodx(0, 0, 3, 0, 1)
@@ -68,10 +83,19 @@ object "expmod" {
 
         submodx(2, 0, 2, 0, 1, 0, 1)
         mulmodx(2, 0, 2, 0, 0, 0, 1)
-        mulmodx(2, 0, 2, 0, 1, 0, 1)
-        mulmodx(2, 0, 2, 0, 3, 0, 1)
 
-        loadx(mod_offset_in_mem, 2, 1)
+        let tmp_mem := allocate(K_size)
+        loadx(tmp_mem, 2, 1)
+
+        setmodx(pow2_mem, pow2_size, 3)
+
+        storex(0, tmp_mem, 1) // (((x2 - x1) * N_inv) % K)
+        storex(1, res_N, 1) // x1
+        storex(2, N_offset, 1) // N
+        mulmodx(2, 0, 0, 0, 2, 0, 1)
+        addmodx(0, 0, 1, 0, 2, 0, 1)
+
+        loadx(mod_offset_in_mem, 0, 1)
         return(mod_offset_in_mem, mod_len)
 
         function decompose_to_odd_and_pow2(_mem_offset, _mem_len) -> _N_offset, _N_size, _K_offset, _K_size
