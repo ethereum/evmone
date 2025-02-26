@@ -269,6 +269,11 @@ struct EXMMAXModState : public EXMMAXModStateInterface
         return std::make_unique<EXMMAXModState<uint384>>(
             load<uint384>(mod_ptr, mod_size), mod_size, vals_used);
     }
+    else if (mod_size <= 64)
+    {
+        return std::make_unique<EXMMAXModState<uint512>>(
+            load<uint512>(mod_ptr, mod_size), mod_size, vals_used);
+    }
     else
         return nullptr;
 }
