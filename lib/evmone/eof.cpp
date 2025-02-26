@@ -541,8 +541,12 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
         {
             if (next >= code.size())
                 return EOFValidationError::no_terminating_instruction;
-            if (!visit_successor(i, next, next_stack_height))
-                return EOFValidationError::stack_height_mismatch;
+
+            // Visit the next instruction to update its stack height range.
+            // This is "forward" therefore always successful.
+            // TODO: Consider splitting visit_successor into visit_forward/visit_backward.
+            [[maybe_unused]] const auto r = visit_successor(i, next, next_stack_height);
+            assert(r);
         }
 
         // Validate non-fallthrough successors of relative jumps.
