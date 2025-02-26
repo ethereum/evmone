@@ -149,7 +149,7 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
                 break;
             }
             default:
-                assert(false);
+                intx::unreachable();
             }
             break;
         }
@@ -186,7 +186,7 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
             break;
         }
         case State::terminated:
-            return EOFValidationError::impossible;
+            intx::unreachable();
         }
     }
 
@@ -644,12 +644,10 @@ EOFValidationError validate_eof1(
             // Mark what instructions referenced which subcontainers.
             for (const auto& [index, opcode] : subcontainer_references)
             {
-                if (opcode == OP_EOFCREATE)
-                    subcontainer_referenced_by_eofcreate[index] = true;
-                else if (opcode == OP_RETURNCONTRACT)
-                    subcontainer_referenced_by_returncontract[index] = true;
-                else
-                    intx::unreachable();
+                assert(opcode == OP_EOFCREATE || opcode == OP_RETURNCONTRACT);
+                auto& set = (opcode == OP_EOFCREATE) ? subcontainer_referenced_by_eofcreate :
+                                                       subcontainer_referenced_by_returncontract;
+                set[index] = true;
             }
 
             // TODO(C++23): can use push_range()
@@ -978,8 +976,6 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "container_size_above_limit";
     case EOFValidationError::unreferenced_subcontainer:
         return "unreferenced_subcontainer";
-    case EOFValidationError::impossible:
-        return "impossible";
     }
     return "<unknown>";
 }
