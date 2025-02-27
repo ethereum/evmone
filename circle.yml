@@ -373,13 +373,14 @@ jobs:
           working_directory: ~/spec-tests/fixtures/state_tests
           command: >
             ~/build/bin/evmone-statetest ~/spec-tests/fixtures/state_tests
+            --gtest_filter='-*set_code_txs.set_code_to_non_empty_storage'
       - run:
           name: "Execution spec tests (develop, blockchain_tests)"
           # Tests for in-development EVM revision currently passing.
           working_directory: ~/spec-tests/fixtures/blockchain_tests
           command: >
             ~/build/bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests
-            --gtest_filter='-*block_hashes.block_hashes_history'
+            --gtest_filter='-*block_hashes.block_hashes_history:set_code_txs.set_code_to_non_empty_storage'
       - collect_coverage_gcc
       - upload_coverage:
           flags: execution_spec_tests

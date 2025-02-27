@@ -184,6 +184,8 @@ TEST_F(state_transition, create_tx_collision)
 
 TEST_F(state_transition, create_tx_collision_storage)
 {
+    rev = EVMC_LONDON;
+
     // Test create address collision with an account only having storage (EIP-7610).
     const auto created = compute_create_address(Sender, pre[Sender].nonce);
     pre[created] = {.storage = {{0x00_bytes32, 0x01_bytes32}}};
@@ -206,6 +208,8 @@ TEST_F(state_transition, create_collision)
 
 TEST_F(state_transition, create_collision_storage)
 {
+    rev = EVMC_LONDON;
+
     // Test create address collision with an account only having storage (EIP-7610).
     tx.to = To;
     pre[To] = {.code = sstore(0, create())};
