@@ -656,18 +656,14 @@ public:
     operator bytecode() const
     {
         bytecode code;
-        if constexpr (kind == OP_CREATE2)
-            code += m_salt;
-        else if constexpr (kind == OP_EOFCREATE || kind == OP_TXCREATE)
-            code += m_input_size + m_input + m_salt;
-
-        if constexpr (kind == OP_CREATE || kind == OP_CREATE2)
-            code += m_input_size + m_input;
-
-        code += m_value;
-
-        if constexpr (kind == OP_TXCREATE)
-            code += m_initcode_hash;
+        if constexpr (kind == OP_CREATE)
+            code += m_input_size + m_input + m_value;
+        else if constexpr (kind == OP_CREATE2)
+            code += m_salt + m_input_size + m_input + m_value;
+        else if constexpr (kind == OP_EOFCREATE)
+            code += m_value + m_input_size + m_input + m_salt;
+        else if constexpr (kind == OP_TXCREATE)
+            code += m_value + m_input_size + m_input + m_salt + m_initcode_hash;
 
         code += bytecode{kind};
         if constexpr (kind == OP_EOFCREATE)
