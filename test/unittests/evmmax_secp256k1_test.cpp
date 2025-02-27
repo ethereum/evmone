@@ -10,24 +10,6 @@ using namespace evmmax::secp256k1;
 using namespace evmc::literals;
 using namespace evmone::test;
 
-TEST(secp256k1, field_inv)
-{
-    const evmmax::ModArith m{FieldPrime};
-
-    for (const auto& t : std::array{
-             1_u256,
-             0x6e140df17432311190232a91a38daed3ee9ed7f038645dd0278da7ca6e497de_u256,
-             FieldPrime - 1,
-         })
-    {
-        ASSERT_LT(t, FieldPrime);
-        const auto a = m.to_mont(t);
-        const auto a_inv = field_inv(m, a);
-        const auto p = m.mul(a, a_inv);
-        EXPECT_EQ(m.from_mont(p), 1);
-    }
-}
-
 TEST(secp256k1, field_sqrt)
 {
     const evmmax::ModArith m{FieldPrime};
@@ -78,7 +60,7 @@ TEST(secp256k1, scalar_inv)
     {
         ASSERT_LT(t, Order);
         const auto a = n.to_mont(t);
-        const auto a_inv = scalar_inv(n, a);
+        const auto a_inv = n.inv(a);
         const auto p = n.mul(a, a_inv);
         EXPECT_EQ(n.from_mont(p), 1) << hex(t);
     }
@@ -164,7 +146,7 @@ TEST(evmmax, secp256k1_calculate_u1)
     const evmmax::ModArith m{evmmax::secp256k1::FieldPrime};
     const auto z_mont = m.to_mont(z);
     const auto r_mont = m.to_mont(r);
-    const auto r_inv = field_inv(m, r_mont);
+    const auto r_inv = m.inv(r_mont);
     const auto z_neg = m.sub(0, z_mont);
     const auto u1_mont = m.mul(z_neg, r_inv);
     const auto u1 = m.from_mont(u1_mont);
@@ -181,7 +163,7 @@ TEST(evmmax, secp256k1_calculate_u2)
     const evmmax::ModArith m{evmmax::secp256k1::FieldPrime};
     const auto s_mont = m.to_mont(s);
     const auto r_mont = m.to_mont(r);
-    const auto r_inv = field_inv(m, r_mont);
+    const auto r_inv = m.inv(r_mont);
     const auto u2_mont = m.mul(s_mont, r_inv);
     const auto u2 = m.from_mont(u2_mont);
     EXPECT_EQ(u2, expected);

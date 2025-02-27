@@ -22,13 +22,6 @@ inline constexpr auto Order =
 
 using Point = ecc::Point<uint256>;
 
-
-/// Modular inversion for secp256k1 prime field.
-///
-/// Computes 1/x mod P modular inversion by computing modular exponentiation x^(P-2),
-/// where P is ::FieldPrime.
-uint256 field_inv(const ModArith<uint256>& m, const uint256& x) noexcept;
-
 /// Square root for secp256k1 prime field.
 ///
 /// Computes √x mod P by computing modular exponentiation x^((P+1)/4),
@@ -36,12 +29,6 @@ uint256 field_inv(const ModArith<uint256>& m, const uint256& x) noexcept;
 ///
 /// @return Square root of x if it exists, std::nullopt otherwise.
 std::optional<uint256> field_sqrt(const ModArith<uint256>& m, const uint256& x) noexcept;
-
-/// Inversion modulo order of secp256k1.
-///
-/// Computes 1/x mod N modular inversion by computing modular exponentiation x^(N-2),
-/// where N is ::Order.
-uint256 scalar_inv(const ModArith<uint256>& m, const uint256& x) noexcept;
 
 /// Calculate y coordinate of a point having x coordinate and y parity.
 std::optional<uint256> calculate_y(
