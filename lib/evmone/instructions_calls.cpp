@@ -393,10 +393,10 @@ Result create_eof_impl(
 
     const auto initcode_hash =
         (Op == OP_TXCREATE) ? intx::be::store<evmc::bytes32>(stack.pop()) : evmc::bytes32{};
-    const auto endowment = stack.pop();
     const auto salt = stack.pop();
     const auto input_offset_u256 = stack.pop();
     const auto input_size_u256 = stack.pop();
+    const auto endowment = stack.pop();
 
     stack.push(0);  // Assume failure.
     state.return_data.clear();
