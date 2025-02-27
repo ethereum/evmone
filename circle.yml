@@ -391,21 +391,18 @@ jobs:
     steps:
       - build
       - download_execution_spec_tests:
-          release: eip7692@v2.1.0
+          release: eip7692@v2.2.0
           fixtures_suffix: eip7692
       - run:
           name: "EOF pre-release execution spec tests (state_tests)"
           working_directory: ~/build
           command: >
             bin/evmone-statetest ~/spec-tests/fixtures/state_tests/osaka
-      # TODO: EOF blockchain tests are not yet compatible with pectra-devnet-5.
-      # - run:
-      #     name: "EOF pre-release execution spec tests (blockchain_tests)"
-      #     working_directory: ~/build
-      #     command: >
-      #       bin/evmone-blockchaintest
-      #       --gtest_filter='-eofwrap/*'
-      #       ~/spec-tests/fixtures/blockchain_tests/osaka
+      - run:
+          name: "EOF pre-release execution spec tests (blockchain_tests)"
+          working_directory: ~/build
+          command: >
+            bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests/osaka
       - run:
           name: "EOF pre-release execution spec tests (eof_tests)"
           working_directory: ~/build
@@ -422,8 +419,7 @@ jobs:
     steps:
       - build
       - download_execution_tests:
-          # Latest commit from the main "develop" branch of ethereum/tests.
-          commit: 4c87ebbf024a3e9ec842bcce90564f629a3bcd82
+          rev: v16.0
       - run:
           name: "State tests"
           working_directory: ~/build
@@ -467,7 +463,7 @@ jobs:
           command: sudo apt-get -q update && sudo apt-get -qy install libgmp-dev
       - build
       - download_execution_tests:
-          rev: v14.1
+          rev: v16.0
           legacy: false
       - run:
           name: "State tests"
