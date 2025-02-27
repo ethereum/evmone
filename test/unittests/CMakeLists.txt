@@ -42,6 +42,7 @@ target_sources(
     evmmax_bn254_mul_test.cpp
     evmmax_bn254_pairing_test.cpp
     evmmax_test.cpp
+    evmmax_instructions_test.cpp
     evmmax_secp256k1_test.cpp
     evmone_test.cpp
     execution_state_test.cpp
@@ -86,7 +87,7 @@ target_sources(
     statetest_withdrawals_test.cpp
     tracing_test.cpp
 )
-target_link_libraries(evmone-unittests PRIVATE evmone evmone::evmmax evmone::experimental evmone::state evmone::statetestutils testutils evmc::instructions GTest::gtest GTest::gtest_main)
+target_link_libraries(evmone-unittests PRIVATE evmone evmone::evmmax evmone::experimental evmone::state evmone::statetestutils testutils evmc::instructions evmone-evmmax-precompiles GTest::gtest GTest::gtest_main)
 target_include_directories(evmone-unittests PRIVATE ${evmone_private_include_dir})
 target_compile_options(evmone-unittests PRIVATE
     # Disable false positive C4789
