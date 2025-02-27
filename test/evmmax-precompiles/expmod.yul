@@ -71,7 +71,7 @@ object "expmod" {
         }
 
         let N_offset, N_size, K_offset, K_size := decompose_to_odd_and_pow2(mod_offset_in_mem, padded_mod_len)
-        let pow2_mem, pow2_size := one_to_pow2(255)
+        //let pow2_mem, pow2_size := one_to_pow2(255)
 
         let res_N := calc_odd_modulus(base_offset_in_mem, padded_base_len, exp_offset_in_mem, padded_exp_len, N_offset, N_size)
         let res_K := calc_odd_modulus(base_offset_in_mem, padded_base_len, exp_offset_in_mem, padded_exp_len, K_offset, K_size)
@@ -87,6 +87,12 @@ object "expmod" {
         let tmp_mem := allocate(K_size)
         loadx(tmp_mem, 2, 1)
 
+        let pow2_mem, pow2_size := lowest_greater_pow2(mod_offset_in_mem, padded_mod_len)
+        if iszero(eq(pow2_size, K_size))
+        {
+            revert(0, 0)
+        }
+
         setmodx(pow2_mem, pow2_size, 3)
 
         storex(0, tmp_mem, 1) // (((x2 - x1) * N_inv) % K)
@@ -97,6 +103,22 @@ object "expmod" {
 
         loadx(mod_offset_in_mem, 0, 1)
         return(mod_offset_in_mem, mod_len)
+
+        function lowest_greater_pow2(_mem_offset, _mem_len) -> ret_offset, ret_len
+        {
+            let highest_word := mload(_mem_offset)
+            if and(highest_word, shl(255, 1))
+            {
+                ret_len := add(_mem_len, 32)
+                ret_offset := allocate(ret_len)
+                mstore(ret_offset, 1)
+                leave
+            }
+
+            ret_len := _mem_len
+            ret_offset := allocate(ret_len)
+            mstore(ret_offset, shl(255, 1))
+        }
 
         function decompose_to_odd_and_pow2(_mem_offset, _mem_len) -> _N_offset, _N_size, _K_offset, _K_size
         {
