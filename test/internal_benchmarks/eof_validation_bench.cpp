@@ -24,6 +24,23 @@ const bytes max_code_sections = [] {
     return eof_code_sections_1024;
 }();
 
+const bytes max_containers = [] {
+    bytecode code;
+    for (auto i = 0; i < 256; ++i)
+        code += eofcreate()
+                    .container(static_cast<uint8_t>(i))
+                    .input(push0(), push0())
+                    .salt(push0())
+                    .value(push0()) +
+                OP_POP;
+    code += bytecode{OP_STOP};
+
+    auto container = eof_bytecode(code, 4);
+    for (auto i = 0; i < 256; ++i)
+        container = container.container(eof_bytecode(OP_INVALID));
+    return container;
+}();
+
 const bytes max_nested_containers = [] {
     bytecode code{};
     bytecode nextcode = eof_bytecode(OP_INVALID);
@@ -185,6 +202,8 @@ void eof_validation(benchmark::State& state, evmone::ContainerKind kind, const b
 
 using enum evmone::ContainerKind;
 BENCHMARK_CAPTURE(eof_validation, max_code_sections, runtime, max_code_sections)
+    ->Unit(benchmark::kMicrosecond);
+BENCHMARK_CAPTURE(eof_validation, max_containers, runtime, max_containers)
     ->Unit(benchmark::kMicrosecond);
 BENCHMARK_CAPTURE(eof_validation, stack_height_max_span, runtime, stack_height_max_span)
     ->Unit(benchmark::kMicrosecond);
