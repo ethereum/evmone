@@ -1,108 +1,46 @@
 object "expmod" {
     code {
-        let cds := calldatasize()
-
-        if lt(cds, 96)
-        {
-            revert(0, 0)
-        }
-
-        let base_len := calldataload(0)
-        let exp_len := calldataload(32)
-        let mod_len := calldataload(64)
-
-        if iszero(eq(cds, add(96, add(add(base_len, exp_len), mod_len))))
-        {
-            revert(0, 0)
-        }
-
-        if mod(exp_len, 32)
-        {
-            revert(0, 0)
-        }
-
-        let padded_base_len := mul(div(add(base_len, 31), 32), 32)
-        let padded_mod_len := mul(div(add(mod_len, 31), 32), 32)
-        let padded_exp_len := mul(div(add(exp_len, 31), 32), 32)
-
-        let base_len_rem := mod(base_len, 32)
-        let mod_len_rem := mod(mod_len, 32)
-        let exp_len_rem := mod(exp_len, 32)
-
-        let data := allocate(add(add(padded_base_len, padded_mod_len), padded_exp_len))
-
-        let base_offset_in_calldata := 96
-        let base_offset_in_mem := data
-        if base_len_rem
-        {
-            base_offset_in_mem := add(base_offset_in_mem, sub(32, base_len_rem))
-        }
-
-        calldatacopy(base_offset_in_mem, base_offset_in_calldata, base_len)
-
-        base_offset_in_mem := data
-
-        let exp_offset_in_calldata := add(base_offset_in_calldata, base_len)
-        let exp_offset_in_mem := add(base_offset_in_mem, base_len)
-        if exp_len_rem
-        {
-            exp_offset_in_mem := add(exp_offset_in_mem, sub(32, exp_len_rem))
-        }
-
-        calldatacopy(exp_offset_in_mem, exp_offset_in_calldata, exp_len)
-
-        exp_offset_in_mem := add(base_offset_in_mem, base_len)
-
-        let mod_offset_in_calldata := add(exp_offset_in_calldata, exp_len)
-        let mod_offset_in_mem := add(exp_offset_in_mem, exp_len)
-        if mod_len_rem
-        {
-            mod_offset_in_mem := add(mod_offset_in_mem, sub(32, mod_len_rem))
-        }
-        calldatacopy(mod_offset_in_mem, mod_offset_in_calldata, mod_len)
-
-        mod_offset_in_mem := add(exp_offset_in_mem, exp_len)
+        let base_ptr, base_len, exp_ptr, exp_len, mod_ptr, mod_len := process_input_data()
 
         // modulus is odd or power of two
-        if or(and(1, calldataload(sub(cds, 32))), is_power_of_two(mod_offset_in_mem, padded_mod_len))
+        if or(and(1, calldataload(sub(calldatasize(), 32))), is_power_of_two(mod_ptr, mod_len))
         {
-            let res_ptr := calc_odd_modulus(base_offset_in_mem, padded_base_len, exp_offset_in_mem, padded_exp_len, mod_offset_in_mem, padded_mod_len)
+            let res_ptr := expmod_impl(base_ptr, base_len, exp_ptr, exp_len, mod_ptr, mod_len)
             return(res_ptr, mod_len)
         }
 
-        let N_offset, N_size, K_offset, K_size := decompose_to_odd_and_pow2(mod_offset_in_mem, padded_mod_len)
-        //let pow2_mem, pow2_size := one_to_pow2(255)
+        let even_mode_result := expmod_even_impl(base_ptr, base_len, exp_ptr, exp_len, mod_ptr, mod_len)
 
-        let res_N := calc_odd_modulus(base_offset_in_mem, padded_base_len, exp_offset_in_mem, padded_exp_len, N_offset, N_size)
-        let res_K := calc_odd_modulus(base_offset_in_mem, padded_base_len, exp_offset_in_mem, padded_exp_len, K_offset, K_size)
+        return(even_mode_result, mod_len)
 
-        storex(3, N_offset, 1)
-        invmodx(0, 0, 3, 0, 1)
-        storex(1, res_N, 1)
-        storex(2, res_K, 1)
-
-        submodx(2, 0, 2, 0, 1, 0, 1)
-        mulmodx(2, 0, 2, 0, 0, 0, 1)
-
-        let tmp_mem := allocate(K_size)
-        loadx(tmp_mem, 2, 1)
-
-        let pow2_mem, pow2_size := lowest_greater_pow2(mod_offset_in_mem, padded_mod_len)
-        if iszero(eq(pow2_size, K_size))
+        function process_input_data() -> _base_ptr, _base_len, _exp_ptr, _exp_len, _mod_ptr, _mod_len
         {
-            revert(0, 0)
+            let cds := calldatasize()
+
+            let base_calldata_len := calldataload(0)
+            let exp_calldata_len := calldataload(32)
+            let mod_calldata_len := calldataload(64)
+
+            _base_ptr, _base_len := copy_calldata_32_padded(96, base_calldata_len)
+            _exp_ptr, _exp_len := copy_calldata_32_padded(add(96, base_calldata_len), exp_calldata_len)
+            _mod_ptr, _mod_len := copy_calldata_32_padded(add(add(96, base_calldata_len), exp_calldata_len), mod_calldata_len)
         }
 
-        setmodx(pow2_mem, pow2_size, 3)
+        function copy_calldata_32_padded(_src_calldata_ptr, _src_len) -> _dst_ptr, _dst_len
+        {
+            let _len_rem := mod(_src_len, 32)
+            _dst_len := _src_len
+            let dst_ptr_offset := 0
+            if _len_rem
+            {
+                _dst_len := add(div(_src_len, 32), 1)
+                dst_ptr_offset := sub(32, _len_rem)
+            }
 
-        storex(0, tmp_mem, 1) // (((x2 - x1) * N_inv) % K)
-        storex(1, res_N, 1) // x1
-        storex(2, N_offset, 1) // N
-        mulmodx(2, 0, 0, 0, 2, 0, 1)
-        addmodx(0, 0, 1, 0, 2, 0, 1)
+            _dst_ptr := allocate(_dst_len)
 
-        loadx(mod_offset_in_mem, 0, 1)
-        return(mod_offset_in_mem, mod_len)
+            calldatacopy(add(_dst_ptr, dst_ptr_offset), _src_calldata_ptr, _src_len)
+        }
 
         function lowest_greater_pow2(_mem_offset, _mem_len) -> ret_offset, ret_len
         {
@@ -241,10 +179,10 @@ object "expmod" {
             }
         }
 
-        function calc_odd_modulus(_base_mem_offset, _base_len, _exp_mem_offset, _exp_len, _mod_mem_offset, _mod_len) -> ptr
+        function expmod_impl(_base_ptr, _base_len, _exp_ptr, _exp_len, _mod_ptr, _mod_len) -> ptr
         {
-            setmodx(_mod_mem_offset, _mod_len, 256)
-            storex(0, _base_mem_offset, 1)
+            setmodx(_mod_ptr, _mod_len, 256)
+            storex(0, _base_ptr, 1)
 
             init_one(_mod_len)
 
@@ -252,7 +190,7 @@ object "expmod" {
 
             for { let i := 0 } lt(i, exp_num_words) { i := add(i, 1) }
             {
-                let e := mload(add(_exp_mem_offset, mul(i, 32)))
+                let e := mload(add(_exp_ptr, mul(i, 32)))
                 let mask := shl(255, 1)
                 for {} mask { mask := shr(1, mask) }
                 {
@@ -266,6 +204,49 @@ object "expmod" {
 
             ptr := allocate(_mod_len)
             loadx(ptr, 1, 1)
+        }
+
+        function expmod_even_impl(_base_ptr, _base_len, _exp_ptr, _exp_len, _mod_ptr, _mod_len) -> res_ptr
+        {
+            let N_ptr, N_len, K_ptr, K_len := decompose_to_odd_and_pow2(_mod_ptr, _mod_len)
+
+            let x1_ptr := expmod_impl(_base_ptr, _base_len, _exp_ptr, _exp_len, N_ptr, N_len)
+            let x2_ptr := expmod_impl(_base_ptr, _base_len, _exp_ptr, _exp_len, K_ptr, K_len)
+
+            storex(3, N_ptr, 1)     // N^(-1) % 2^K
+            invmodx(0, 0, 3, 0, 1)
+
+            storex(1, x1_ptr, 1)
+            storex(2, x2_ptr, 1)
+
+            submodx(2, 0, 2, 0, 1, 0, 1)    // (x2 - x1) % 2^K
+            mulmodx(2, 0, 2, 0, 0, 0, 1)    // (x2 - x1) * N^(-1) % 2^K
+
+            let pow2_ptr, pow2_len := lowest_greater_pow2(_mod_ptr, _mod_len)   // modulus 2*L > input mod
+            if iszero(eq(pow2_len, K_len))
+            {
+                let x1_ext_ptr := allocate(pow2_len)
+                mcopy(x1_ext_ptr, x1_ptr, sub(pow2_len, N_len))
+                x1_ptr := x1_ext_ptr
+
+                let N_exp_ptr := allocate(pow2_len)
+                mcopy(N_exp_ptr, N_ptr, sub(pow2_len, N_len))
+                N_ptr := N_exp_ptr
+            }
+
+            let tmp_mem := allocate(pow2_len)  // load (x2 - x1) * N^(-1) % 2^K
+            loadx(add(tmp_mem, sub(pow2_len, K_len)), 2, 1)
+
+            setmodx(pow2_ptr, pow2_len, 3)
+
+            storex(0, tmp_mem, 1)           // (((x2 - x1) * N_inv) % K)
+            storex(1, x1_ptr, 1)            // x1
+            storex(2, N_ptr, 1)             // N
+            mulmodx(2, 0, 0, 0, 2, 0, 1)    // (((x2 - x1) * N_inv) % K) * N
+            addmodx(0, 0, 1, 0, 2, 0, 1)    // x1 + (((x2 - x1) * N_inv) % K) * N
+
+            res_ptr := allocate(_mod_len)
+            loadx(res_ptr, 0, 1)
         }
     }
 }
