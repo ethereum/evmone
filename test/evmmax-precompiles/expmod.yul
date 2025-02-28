@@ -60,7 +60,7 @@ object "expmod" {
 
         function decompose_to_odd_and_pow2(_mem_offset, _mem_len) -> _N_offset, _N_size, _K_offset, _K_size
         {
-            let mod_tailing_zeros := ctz(_mem_offset, _mem_len)
+            let mod_tailing_zeros := ctz_mem(_mem_offset, _mem_len)
 
             _N_offset := _mem_offset
             _N_size := _mem_len
@@ -99,7 +99,7 @@ object "expmod" {
             mstore(sub(add(mem_ptr, mem_len), mul(add(word_index, 1), 32)), word)
         }
 
-        function ctz(_mem_offset, _mem_len) -> ret
+        function ctz_mem(_mem_offset, _mem_len) -> ret
         {
             if mod(_mem_len, 32)
             {
@@ -109,51 +109,79 @@ object "expmod" {
             let num_words := div(_mem_len, 32)
 
             let num_bits := mul(_mem_len, 8)
+            let ptr := sub(add(_mem_offset, _mem_len), 32)
+            ret := 0
             for { let i := 0 } lt(i, num_words) { i := add(i, 1) }
             {
-                let word := mload(add(_mem_offset, mul(i, 32)))
-                if word
+                let word := mload(ptr)
+                if iszero(word)
                 {
-                    ret := mul(256, sub(num_words, add(1, i)))
-                    ret := add(ret, ctz_word(word))
+                    ret := add(ret, 256)
+                    ptr := sub(ptr, 32)
+                    continue
                 }
+
+                ret := add(ret, ctz(word))
+                leave
             }
         }
 
-        function ctz_word(v) -> ret
+        function clz_mem(_mem_offset, _mem_len) -> ret
         {
+            if mod(_mem_len, 32)
+            {
+                revert(0, 0)
+            }
+
+            let num_words := div(_mem_len, 32)
+
+            let num_bits := mul(_mem_len, 8)
+            let ptr := _mem_offset
             ret := 0
-            for { let i := 0 } lt(i, 256) { i := add(i, 1) }
+            for { let i := 0 } lt(i, num_words) { i := add(i, 1) }
             {
-                if and(v, 1)
+                let word := mload(ptr)
+                if iszero(word)
                 {
-                    leave
+                    ret := add(ret, 256)
+                    ptr := add(ptr, 32)
+                    continue
                 }
-                v := shr(1, v)
-                ret := add(ret, 1)
+
+                ret := add(ret, clz(word))
+                leave
             }
         }
 
-        function highest_bit(v, shift) -> ret
+        function ctz(x) -> n
         {
-            if iszero(shift)
+            if iszero(x)
             {
-                if v
-                {
-                    ret := 1
-                    leave
-                }
-                ret := 0
+                n := 256
                 leave
             }
 
-            if shr(shift, v)
+            x := and(x, sub(0, x))
+            n := sub(255, clz(x))
+        }
+
+        function clz(x) -> n
+        {
+            if iszero(x)
             {
-                ret := add(shift, highest_bit(shr(shift, v), shift))
+                n := 256
                 leave
             }
 
-            ret := highest_bit(v, div(shift, 2))
+            n := 0
+            if iszero(shr(128, x)) { n := add(n, 128) x := shl(128, x) }
+            if iszero(shr(192, x)) { n := add(n, 64) x := shl(64, x) }
+            if iszero(shr(224, x)) { n := add(n, 32) x := shl(32, x) }
+            if iszero(shr(240, x)) { n := add(n, 16) x := shl(16, x) }
+            if iszero(shr(248, x)) { n := add(n, 8) x := shl(8, x) }
+            if iszero(shr(252, x)) { n := add(n, 4) x := shl(4, x) }
+            if iszero(shr(254, x)) { n := add(n, 2) x := shl(2, x) }
+            if iszero(shr(255, x)) { n := add(n, 1) x := shl(1, x) }
         }
 
         function allocate(_size) -> ptr
@@ -210,11 +238,26 @@ object "expmod" {
 
             let exp_num_words := div(_exp_len, 32)
 
-            for { let i := 0 } lt(i, exp_num_words) { i := add(i, 1) }
+            let leading_zeros := clz_mem(_exp_ptr, _exp_len)
+
+            let fist_non_zero_word := div(leading_zeros, 256)
+
+            let fists_word := mload(add(_exp_ptr, mul(fist_non_zero_word, 32)))
+            let first_mask := shl(sub(255, clz(fists_word)), 1)
+
+            for {} first_mask { first_mask := shr(1, first_mask) }
+            {
+                mulmodx(1, 0, 1, 0, 1, 0, 1)
+                if and(first_mask, fists_word)
+                {
+                    mulmodx(1, 0, 1, 0, 0, 0, 1)
+                }
+            }
+
+            for { let i := add(fist_non_zero_word, 1) } lt(i, exp_num_words) { i := add(i, 1) }
             {
                 let e := mload(add(_exp_ptr, mul(i, 32)))
-
-                let mask := shl(highest_bit(e, 128), 1)
+                let mask := shl(255, 1)
 
                 for {} mask { mask := shr(1, mask) }
                 {
