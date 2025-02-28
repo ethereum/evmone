@@ -322,9 +322,39 @@ TEST(bls, map_fp2_to_g2)
     EXPECT_EQ(evmc::bytes_view(ry, sizeof ry), expected_y);
 }
 
+
+TEST(bls, pairing_input_test)
+{
+    // G1_1 + G1_2 == G1_3
+    {
+        const auto input = G1_1 + G1_2;
+
+        uint8_t r[128];
+        EXPECT_TRUE(evmone::crypto::bls::g1_add(
+            r, &r[64], input.data(), &input[64], &input[128], &input[192]));
+
+        EXPECT_EQ(evmc::bytes_view(r, 64), evmc::bytes_view(G1_3.data(), 64));
+        EXPECT_EQ(evmc::bytes_view(&r[64], 64), evmc::bytes_view(&G1_3[64], 64));
+    }
+
+    // G2_1 + G2_m1 == Inf => G2_1 = -G2_m1
+    {
+        const auto input = G2_1 + G2_m1;
+
+        uint8_t r[256];
+        EXPECT_TRUE(evmone::crypto::bls::g2_add(
+            r, &r[128], input.data(), &input[128], &input[256], &input[384]));
+
+        EXPECT_EQ(evmc::bytes_view(r, 128), evmc::bytes_view(G2_inf.data(), 128));
+        EXPECT_EQ(evmc::bytes_view(&r[128], 128), evmc::bytes_view(&G2_inf[128], 128));
+    }
+}
+
 TEST(bls, paring_check_three_pairs_correct)
 {
-    // proves e(1, 1) * e(x, 1) * e(y, -1) == 1, i.e. x + 1 = y
+    // G1_1 + G1_2 == G1_3 and G2_1 = -G2_m1 => e(G1_1, G2_1) * e(G1_2, G2_1) * e(G1_3, G2_m1)
+    // == e(G1_1, -G2_m1) * e(G1_2, -G2_m1) * e(G1_1 + G1_2, G2_m1) ==
+    // e(G1_1, G2_m1)^-1 * e(G1_2, G2_m1)^-1 * e(G1_1, G2_m1) * e(G1_2, G2_m1) == 1
     const auto input = (G1_1 + G2_1) + (G1_2 + G2_1) + (G1_3 + G2_m1);
     uint8_t r[32];
     EXPECT_TRUE(evmone::crypto::bls::pairing_check(r, input.data(), input.size()));
