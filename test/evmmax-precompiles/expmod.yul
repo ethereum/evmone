@@ -134,6 +134,28 @@ object "expmod" {
             }
         }
 
+        function highest_bit(v, shift) -> ret
+        {
+            if iszero(shift)
+            {
+                if v
+                {
+                    ret := 1
+                    leave
+                }
+                ret := 0
+                leave
+            }
+
+            if shr(shift, v)
+            {
+                ret := add(shift, highest_bit(shr(shift, v), shift))
+                leave
+            }
+
+            ret := highest_bit(v, div(shift, 2))
+        }
+
         function allocate(_size) -> ptr
         {
             ptr := mload(0x40)
@@ -191,7 +213,9 @@ object "expmod" {
             for { let i := 0 } lt(i, exp_num_words) { i := add(i, 1) }
             {
                 let e := mload(add(_exp_ptr, mul(i, 32)))
-                let mask := shl(255, 1)
+
+                let mask := shl(highest_bit(e, 128), 1)
+
                 for {} mask { mask := shr(1, mask) }
                 {
                     mulmodx(1, 0, 1, 0, 1, 0, 1)
