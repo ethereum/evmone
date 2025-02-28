@@ -390,7 +390,7 @@ TEST(bls, paring_check_two_pairs_g1_inf)
     const auto input = (G1_1 + G2_1) + (G1_inf + G2_1);
     uint8_t r[32];
     EXPECT_TRUE(evmone::crypto::bls::pairing_check(r, input.data(), input.size()));
-    EXPECT_EQ(evmc::bytes_view(r, sizeof r), RESULT_ONE);
+    EXPECT_EQ(evmc::bytes_view(r, sizeof r), RESULT_ZERO);
 }
 
 TEST(bls, paring_check_two_pairs_g2_inf)
@@ -398,5 +398,5 @@ TEST(bls, paring_check_two_pairs_g2_inf)
     const auto input = (G1_1 + G2_inf) + (G1_2 + G2_1);
     uint8_t r[32];
     EXPECT_TRUE(evmone::crypto::bls::pairing_check(r, input.data(), input.size()));
-    EXPECT_EQ(evmc::bytes_view(r, sizeof r), RESULT_ONE);
+    EXPECT_EQ(evmc::bytes_view(r, sizeof r), RESULT_ZERO);
 }
