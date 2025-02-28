@@ -4,11 +4,11 @@
 
 #include "precompiles.hpp"
 #include "precompiles_internal.hpp"
-#include "precompiles_stubs.hpp"
 #include <evmone_precompiles/blake2b.hpp>
 #include <evmone_precompiles/bls.hpp>
 #include <evmone_precompiles/bn254.hpp>
 #include <evmone_precompiles/kzg.hpp>
+#include <evmone_precompiles/modexp.hpp>
 #include <evmone_precompiles/ripemd160.hpp>
 #include <evmone_precompiles/secp256k1.hpp>
 #include <evmone_precompiles/sha256.hpp>
@@ -405,6 +405,55 @@ ExecutionResult identity_execute(const uint8_t* input, size_t input_size, uint8_
     return {EVMC_SUCCESS, input_size};
 }
 
+ExecutionResult expmod_execute(const uint8_t* input, size_t input_size, uint8_t* output,
+    [[maybe_unused]] size_t output_size) noexcept
+{
+    static constexpr size_t input_header_required_size = 3 * sizeof(intx::uint256);
+    uint8_t input_header[input_header_required_size]{};
+    std::copy_n(input, std::min(input_size, input_header_required_size), input_header);
+    const auto base_len = intx::be::unsafe::load<intx::uint256>(input_header);
+    const auto exp_len = intx::be::unsafe::load<intx::uint256>(&input_header[32]);
+    const auto mod_len = intx::be::unsafe::load<intx::uint256>(&input_header[64]);
+
+    // This is assured by the analysis.
+    assert(output_size == mod_len);
+
+    if (output_size == 0)
+    {
+        return {EVMC_SUCCESS, output_size};
+    }
+
+    // In this case the base, exp and modulus are 0. It means that the results is zero too.
+    if (input_size < input_header_required_size)
+    {
+        memset(output, 0, output_size);
+        return {EVMC_SUCCESS, output_size};
+    }
+
+    // Extend input to full size (input_header_required_size + base_len + exp_len + mod_len).
+    // Filled with zeros
+    const auto full_input_size =
+        input_header_required_size + static_cast<size_t>(base_len + exp_len + mod_len);
+    evmc::bytes full_input(full_input_size, 0);
+    std::copy_n(input, std::min(input_size, full_input_size), full_input.data());
+
+    evmone::crypto::modexp(output, output_size,
+        {
+            &full_input[input_header_required_size],
+            static_cast<size_t>(base_len),
+        },
+        {
+            &full_input[input_header_required_size + static_cast<size_t>(base_len)],
+            static_cast<size_t>(exp_len),
+        },
+        {
+            &full_input[input_header_required_size + static_cast<size_t>(base_len + exp_len)],
+            static_cast<size_t>(mod_len),
+        });
+
+    return {EVMC_SUCCESS, output_size};
+}
+
 ExecutionResult blake2bf_execute(const uint8_t* input, [[maybe_unused]] size_t input_size,
     uint8_t* output, [[maybe_unused]] size_t output_size) noexcept
 {
@@ -573,7 +622,7 @@ inline constexpr auto traits = []() noexcept {
         {sha256_analyze, sha256_execute},
         {ripemd160_analyze, ripemd160_execute},
         {identity_analyze, identity_execute},
-        {expmod_analyze, expmod_stub},
+        {expmod_analyze, expmod_execute},
         {ecadd_analyze, ecadd_execute},
         {ecmul_analyze, ecmul_execute},
         {ecpairing_analyze, ecpairing_execute},
