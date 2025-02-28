@@ -9,9 +9,9 @@ object "expmod" {
             return(res_ptr, mod_len)
         }
 
-        let even_mode_result := expmod_even_impl(base_ptr, base_len, exp_ptr, exp_len, mod_ptr, mod_len)
+        let even_mod_result := expmod_even_impl(base_ptr, base_len, exp_ptr, exp_len, mod_ptr, mod_len)
 
-        return(even_mode_result, mod_len)
+        return(even_mod_result, mod_len)
 
         function process_input_data() -> _base_ptr, _base_len, _exp_ptr, _exp_len, _mod_ptr, _mod_len
         {
