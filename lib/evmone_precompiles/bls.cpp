@@ -219,16 +219,16 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
             return false;
 
         // Point at infinity must be filtered out for BLST library.
-        if (blst_p1_affine_is_inf(&*p_affine))
-            continue;
+        if (!blst_p1_affine_is_inf(&*p_affine))
+        {
+            const auto& p = p1_affines.emplace_back(*p_affine);
+            p1_affine_ptrs.emplace_back(&p);
 
-        const auto& p = p1_affines.emplace_back(*p_affine);
-        p1_affine_ptrs.emplace_back(&p);
-
-        blst_scalar scalar;
-        blst_scalar_from_bendian(&scalar, &ptr[128]);
-        const auto& s = scalars.emplace_back(scalar);
-        scalars_ptrs.emplace_back(s.b);
+            blst_scalar scalar;
+            blst_scalar_from_bendian(&scalar, &ptr[128]);
+            const auto& s = scalars.emplace_back(scalar);
+            scalars_ptrs.emplace_back(s.b);
+        }
 
         ptr += SINGLE_ENTRY_SIZE;
     }
@@ -284,16 +284,16 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
             return false;
 
         // Point at infinity must be filtered out for BLST library.
-        if (blst_p2_affine_is_inf(&*p_affine))
-            continue;
+        if (!blst_p2_affine_is_inf(&*p_affine))
+        {
+            const auto& p = p2_affines.emplace_back(*p_affine);
+            p2_affine_ptrs.emplace_back(&p);
 
-        const auto& p = p2_affines.emplace_back(*p_affine);
-        p2_affine_ptrs.emplace_back(&p);
-
-        blst_scalar scalar;
-        blst_scalar_from_bendian(&scalar, &ptr[256]);
-        const auto& s = scalars.emplace_back(scalar);
-        scalars_ptrs.emplace_back(s.b);
+            blst_scalar scalar;
+            blst_scalar_from_bendian(&scalar, &ptr[256]);
+            const auto& s = scalars.emplace_back(scalar);
+            scalars_ptrs.emplace_back(s.b);
+        }
 
         ptr += SINGLE_ENTRY_SIZE;
     }
