@@ -11,6 +11,9 @@ namespace
 {
 /// The address of the deposit contract.
 constexpr auto DEPOSIT_CONTRACT_ADDRESS = 0x00000000219ab540356cBB839Cbe05303d7705Fa_address;
+/// The topic of deposit log of the deposit contract.
+constexpr auto DEPOSIT_TOPIC =
+    0x649bbc62d0e31342afea4e5cd82d4049e7e1ee912fc0889aa790803be39038c5_bytes32;
 }  // namespace
 
 hash256 calculate_requests_hash(std::span<const Requests> block_requests_list)
@@ -42,7 +45,8 @@ Requests collect_deposit_requests(std::span<const TransactionReceipt> receipts)
     {
         for (const auto& log : receipt.logs)
         {
-            if (log.addr == DEPOSIT_CONTRACT_ADDRESS)
+            assert(log.addr != DEPOSIT_CONTRACT_ADDRESS || !log.topics.empty());
+            if (log.addr == DEPOSIT_CONTRACT_ADDRESS && log.topics[0] == DEPOSIT_TOPIC)
             {
                 // Deposit log definition
                 // https://github.com/ethereum/consensus-specs/blob/dev/solidity_deposit_contract/deposit_contract.sol
