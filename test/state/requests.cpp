@@ -36,7 +36,9 @@ Requests collect_deposit_requests(std::span<const TransactionReceipt> receipts)
     {
         for (const auto& log : receipt.logs)
         {
-            if (log.addr == DEPOSIT_CONTRACT_ADDRESS)
+            assert(log.addr != DEPOSIT_CONTRACT_ADDRESS || !log.topics.empty());
+            if (log.addr == DEPOSIT_CONTRACT_ADDRESS &&
+                log.topics[0] == DEPOSIT_EVENT_SIGNATURE_HASH)
             {
                 // Deposit log definition
                 // https://github.com/ethereum/consensus-specs/blob/dev/solidity_deposit_contract/deposit_contract.sol
