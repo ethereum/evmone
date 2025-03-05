@@ -367,7 +367,6 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
 
     const auto npairs = size / PAIR_SIZE;
     auto ptr = _pairs;
-    auto has_inf = false;
     blst_fp12 acc = *blst_fp12_one();
 
     const auto Qlines = std::make_unique_for_overwrite<blst_fp6[]>(68);
@@ -388,10 +387,7 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
         if (!blst_p2_affine_in_g2(&*Q_affine))
             return false;
 
-        if (blst_p1_affine_is_inf(&*P_affine) || blst_p2_affine_is_inf(&*Q_affine))
-            has_inf = true;
-
-        if (!has_inf)
+        if (!blst_p1_affine_is_inf(&*P_affine) && !blst_p2_affine_is_inf(&*Q_affine))
         {
             blst_precompute_lines(Qlines.get(), &*Q_affine);
 
@@ -403,13 +399,8 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
         ptr += PAIR_SIZE;
     }
 
-    bool result = true;
-    if (!has_inf)  // if any point-at-infinity encountered the answer is 1, so skip final exp.
-    {
-        blst_final_exp(&acc, &acc);
-        result = blst_fp12_is_one(&acc);
-    }
-
+    blst_final_exp(&acc, &acc);
+    const auto result = blst_fp12_is_one(&acc);
     std::memset(_r, 0, 31);
     _r[31] = result ? 1 : 0;
     return true;
