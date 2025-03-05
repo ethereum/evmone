@@ -18,6 +18,7 @@ inline constexpr auto cold_sload_cost = 2100;
 inline constexpr auto cold_account_access_cost = 2600;
 inline constexpr auto warm_storage_read_cost = 100;
 
+constexpr auto EVMC_EVMMAX = EVMC_EXPERIMENTAL;
 /// Additional cold account access cost.
 ///
 /// The warm access cost is unconditionally applied for every account access instruction.
@@ -194,6 +195,16 @@ constexpr inline GasCostTable gas_costs = []() noexcept {
     table[EVMC_OSAKA][OP_RETURNCONTRACT] = 0;
 
     table[EVMC_EXPERIMENTAL] = table[EVMC_OSAKA];
+
+    for (auto op = size_t{OP_PUSH1}; op <= OP_PUSH32; ++op)
+        table[EVMC_EXPERIMENTAL][op] = 1;
+
+    table[EVMC_EVMMAX][OP_SETUPX] = 1;
+    table[EVMC_EVMMAX][OP_ADDMODX] = 0;
+    table[EVMC_EVMMAX][OP_SUBMODX] = 0;
+    table[EVMC_EVMMAX][OP_MULMODX] = 0;
+    table[EVMC_EVMMAX][OP_LOADX] = 1;
+    table[EVMC_EVMMAX][OP_STOREX] = 1;
 
     return table;
 }();
@@ -404,6 +415,13 @@ constexpr inline std::array<Traits, 256> traits = []() noexcept {
     table[OP_LOG2] = {"LOG2", 0, false, 4, -4, EVMC_FRONTIER, REV_EOF1};
     table[OP_LOG3] = {"LOG3", 0, false, 5, -5, EVMC_FRONTIER, REV_EOF1};
     table[OP_LOG4] = {"LOG4", 0, false, 6, -6, EVMC_FRONTIER, REV_EOF1};
+
+    table[OP_SETUPX] = {"SETUPX", 0, false, 3, -3, EVMC_EVMMAX, EVMC_EVMMAX};
+    table[OP_ADDMODX] = {"ADDMODX", 7, false, 0, 0, EVMC_EVMMAX, EVMC_EVMMAX};
+    table[OP_SUBMODX] = {"SUBMODX", 7, false, 0, 0, EVMC_EVMMAX, EVMC_EVMMAX};
+    table[OP_MULMODX] = {"MULMODX", 7, false, 0, 0, EVMC_EVMMAX, EVMC_EVMMAX};
+    table[OP_LOADX] = {"LOADX", 0, false, 3, -3, EVMC_EVMMAX, EVMC_EVMMAX};
+    table[OP_STOREX] = {"STOREX", 0, false, 3, -3, EVMC_EVMMAX, EVMC_EVMMAX};
 
     table[OP_DUPN] = {"DUPN", 1, false, 0, 1, {}, REV_EOF1};
     table[OP_SWAPN] = {"SWAPN", 1, false, 0, 0, {}, REV_EOF1};
