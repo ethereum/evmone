@@ -1162,7 +1162,7 @@ inline TermResult return_impl(StackTop stack, int64_t gas_left, ExecutionState& 
 inline constexpr auto return_ = return_impl<EVMC_SUCCESS>;
 inline constexpr auto revert = return_impl<EVMC_REVERT>;
 
-inline TermResult returncontract(
+inline TermResult returncode(
     StackTop stack, int64_t gas_left, ExecutionState& state, code_iterator pos) noexcept
 {
     const auto& offset = stack[0];

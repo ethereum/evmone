@@ -131,7 +131,7 @@ TEST_F(state_transition, eof_examples_creation_tx)
         //////////////////
         // Initcontainer
         //                        Code section: PUSH0 [aux data size], PUSH0 [aux data offset] and
-        //                                      RETURNCONTRACT first subcontainer
+        //                                      RETURNCODE first subcontainer
         //                                                               |
         //               Header: 1 code section 4 bytes long             |
         //               |                                               |
@@ -191,7 +191,7 @@ TEST_F(state_transition, eof_examples_eofcreate)
         //////////////////
         // Initcontainer
         //                    Code section: PUSH0 [aux data size], PUSH0 [aux data offset],
-        //                                  RETURNCONTRACT first subcontainer
+        //                                  RETURNCODE first subcontainer
         //                                                               |
         //               Header: 1 code section 4 bytes long             |
         //               |                                               |

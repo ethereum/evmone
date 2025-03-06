@@ -40,7 +40,7 @@ constexpr bool is_terminating(uint8_t op) noexcept
     case OP_RETURN:
     case OP_RETF:
     case OP_JUMPF:
-    case OP_RETURNCONTRACT:
+    case OP_RETURNCODE:
     case OP_REVERT:
     case OP_INVALID:
     case OP_SELFDESTRUCT:
@@ -63,7 +63,7 @@ constexpr void validate_traits_of() noexcept
     else if constexpr (Op == OP_RJUMPV)
         static_assert(tr.immediate_size == 1);
     else if constexpr (Op == OP_DUPN || Op == OP_SWAPN || Op == OP_EXCHANGE || Op == OP_EOFCREATE ||
-                       Op == OP_RETURNCONTRACT)
+                       Op == OP_RETURNCODE)
         static_assert(tr.immediate_size == 1);
     else if constexpr (Op == OP_DATALOADN)
         static_assert(tr.immediate_size == 2);
@@ -138,7 +138,7 @@ constexpr bool instruction_only_in_evmone(evmc_revision rev, Opcode op) noexcept
     case OP_EXTDELEGATECALL:
     case OP_EXTSTATICCALL:
     case OP_EOFCREATE:
-    case OP_RETURNCONTRACT:
+    case OP_RETURNCODE:
         return true;
     default:
         return false;

@@ -307,7 +307,7 @@ TEST_F(eof_validation, EOF1_undefined_opcodes)
             opcode == OP_SWAPN || opcode == OP_EXCHANGE || opcode == OP_RJUMP ||
             opcode == OP_RJUMPI || opcode == OP_CALLF || opcode == OP_RJUMPV ||
             opcode == OP_DATALOADN || opcode == OP_JUMPF || opcode == OP_EOFCREATE ||
-            opcode == OP_RETURNCONTRACT)
+            opcode == OP_RETURNCODE)
             continue;
         // These opcodes are deprecated since Osaka.
         // gas_cost table current implementation does not allow to undef instructions.
@@ -481,9 +481,8 @@ TEST_F(eof_validation, EOF1_rjump_invalid_destination)
             .container(embedded),
         EOFValidationError::invalid_rjump_destination);
 
-    // To RETURNCONTRACT immediate
-    add_test_case(
-        eof_bytecode(rjump(5) + 0 + 0 + OP_RETURNCONTRACT + Opcode{0}, 2).container(embedded),
+    // To RETURNCODE immediate
+    add_test_case(eof_bytecode(rjump(5) + 0 + 0 + OP_RETURNCODE + Opcode{0}, 2).container(embedded),
         ContainerKind::initcode, EOFValidationError::invalid_rjump_destination);
 }
 
@@ -521,9 +520,9 @@ TEST_F(eof_validation, EOF1_rjumpi_invalid_destination)
             .container(embedded),
         EOFValidationError::invalid_rjump_destination);
 
-    // To RETURNCONTRACT immediate
+    // To RETURNCODE immediate
     add_test_case(
-        eof_bytecode(rjumpi(5, 0) + 0 + 0 + OP_RETURNCONTRACT + Opcode{0}, 2).container(embedded),
+        eof_bytecode(rjumpi(5, 0) + 0 + 0 + OP_RETURNCODE + Opcode{0}, 2).container(embedded),
         ContainerKind::initcode, EOFValidationError::invalid_rjump_destination);
 }
 
@@ -578,9 +577,9 @@ TEST_F(eof_validation, EOF1_rjumpv_invalid_destination)
             .container(embedded),
         EOFValidationError::invalid_rjump_destination);
 
-    // To RETURNCONTRACT immediate
+    // To RETURNCODE immediate
     add_test_case(
-        eof_bytecode(rjumpv({5}, 0) + 0 + 0 + OP_RETURNCONTRACT + Opcode{0}, 2).container(embedded),
+        eof_bytecode(rjumpv({5}, 0) + 0 + 0 + OP_RETURNCODE + Opcode{0}, 2).container(embedded),
         ContainerKind::initcode, EOFValidationError::invalid_rjump_destination);
 }
 
@@ -945,12 +944,12 @@ TEST_F(eof_validation, EOF1_embedded_container)
     // no data section in container, but anticipated aux_data
     // data section is allowed to be truncated in runtime subcontainer
     add_test_case(
-        eof_bytecode(returncontract(0, 0, 2), 2).container(eof_bytecode(OP_INVALID).data("", 2)),
+        eof_bytecode(returncode(0, 0, 2), 2).container(eof_bytecode(OP_INVALID).data("", 2)),
         ContainerKind::initcode, EOFValidationError::success);
 
     // data section is allowed to be partially truncated in runtime subcontainer
     add_test_case(
-        eof_bytecode(returncontract(0, 0, 1), 2).container(eof_bytecode(OP_INVALID).data("aa", 2)),
+        eof_bytecode(returncode(0, 0, 1), 2).container(eof_bytecode(OP_INVALID).data("aa", 2)),
         ContainerKind::initcode, EOFValidationError::success);
 
     // with data section
@@ -1070,20 +1069,20 @@ TEST_F(eof_validation, EOF1_eofcreate_invalid)
         EOFValidationError::eofcreate_with_truncated_container);
 }
 
-TEST_F(eof_validation, EOF1_returncontract_valid)
+TEST_F(eof_validation, EOF1_returncode_valid)
 {
     // deploy_container_index = 0
     const auto embedded = eof_bytecode(bytecode{OP_INVALID});
-    add_test_case(eof_bytecode(returncontract(0, 0, 0), 2).container(embedded),
-        ContainerKind::initcode, EOFValidationError::success);
+    add_test_case(eof_bytecode(returncode(0, 0, 0), 2).container(embedded), ContainerKind::initcode,
+        EOFValidationError::success);
 
     // deploy_container_index = 0 from eofcreate
     add_test_case(eof_bytecode(eofcreate() + OP_STOP, 4)
-                      .container(eof_bytecode(returncontract(0, 0, 0), 2).container(embedded)),
+                      .container(eof_bytecode(returncode(0, 0, 0), 2).container(embedded)),
         EOFValidationError::success);
 
     // deploy_container_index = 0, 1
-    add_test_case(eof_bytecode(rjumpi(6, 0) + returncontract(0, 0, 0) + returncontract(1, 0, 0), 2)
+    add_test_case(eof_bytecode(rjumpi(6, 0) + returncode(0, 0, 0) + returncode(1, 0, 0), 2)
                       .container(embedded)
                       .container(embedded),
         ContainerKind::initcode, EOFValidationError::success);
@@ -1091,7 +1090,7 @@ TEST_F(eof_validation, EOF1_returncontract_valid)
     // deploy_container_index = 0..255
     bytecode code;
     for (auto i = 0; i < 256; ++i)
-        code += rjumpi(6, 0) + returncontract(static_cast<uint8_t>(i), 0, 0);
+        code += rjumpi(6, 0) + returncode(static_cast<uint8_t>(i), 0, 0);
     code += revert(0, 0);
     auto cont = eof_bytecode(code, 2);
     for (auto i = 0; i < 256; ++i)
@@ -1099,23 +1098,22 @@ TEST_F(eof_validation, EOF1_returncontract_valid)
     add_test_case(cont, ContainerKind::initcode, EOFValidationError::success);
 }
 
-TEST_F(eof_validation, EOF1_returncontract_invalid)
+TEST_F(eof_validation, EOF1_returncode_invalid)
 {
     // truncated immediate
     const auto embedded = eof_bytecode(bytecode{OP_INVALID});
-    add_test_case(eof_bytecode(bytecode(0) + 0 + OP_RETURNCONTRACT, 4).container(embedded),
+    add_test_case(eof_bytecode(bytecode(0) + 0 + OP_RETURNCODE, 4).container(embedded),
         ContainerKind::initcode, EOFValidationError::truncated_instruction);
 
     // referring to non-existent container section
-    add_test_case(
-        eof_bytecode(bytecode(0) + 0 + OP_RETURNCONTRACT + Opcode{1}, 4).container(embedded),
+    add_test_case(eof_bytecode(bytecode(0) + 0 + OP_RETURNCODE + Opcode{1}, 4).container(embedded),
         ContainerKind::initcode, EOFValidationError::invalid_container_section_index);
     add_test_case(
-        eof_bytecode(bytecode(0) + 0 + OP_RETURNCONTRACT + Opcode{0xff}, 4).container(embedded),
+        eof_bytecode(bytecode(0) + 0 + OP_RETURNCODE + Opcode{0xff}, 4).container(embedded),
         ContainerKind::initcode, EOFValidationError::invalid_container_section_index);
 
-    // Unreachable code after RETURNCONTRACT
-    add_test_case(eof_bytecode(bytecode(0) + 0 + OP_RETURNCONTRACT + Opcode{0} + revert(0, 0), 2)
+    // Unreachable code after RETURNCODE
+    add_test_case(eof_bytecode(bytecode(0) + 0 + OP_RETURNCODE + Opcode{0} + revert(0, 0), 2)
                       .container(embedded),
         ContainerKind::initcode, EOFValidationError::unreachable_instructions);
 }
@@ -1155,7 +1153,7 @@ TEST_F(eof_validation, max_nested_containers_eofcreate)
     add_test_case(code, EOFValidationError::success);
 }
 
-TEST_F(eof_validation, max_nested_containers_eofcreate_returncontract)
+TEST_F(eof_validation, max_nested_containers_eofcreate_returncode)
 {
     bytecode code{};
     bytecode nextcode = eof_bytecode(OP_INVALID);
@@ -1164,7 +1162,7 @@ TEST_F(eof_validation, max_nested_containers_eofcreate_returncontract)
         code = nextcode;
 
         const bytecode initcode =
-            eof_bytecode(push0() + push0() + OP_RETURNCONTRACT + Opcode{0}, 2).container(nextcode);
+            eof_bytecode(push0() + push0() + OP_RETURNCODE + Opcode{0}, 2).container(nextcode);
         if (initcode.size() >= std::numeric_limits<uint16_t>::max())
             break;
         nextcode = eof_bytecode(4 * push0() + OP_EOFCREATE + Opcode{0} + OP_INVALID, 4)
@@ -1178,13 +1176,13 @@ TEST_F(eof_validation, max_nested_containers_eofcreate_returncontract)
 // Rows are instructions referencing subcontainers or rules for top-level container.
 // Columns are instructions inside referenced subcontainer.
 //
-// |                              | STOP   | RETURN | REVERT | RETURNCONTRACT |
+// |                              | STOP   | RETURN | REVERT | RETURNCODE |
 // | ---------------------------- | ------ | ------ | ------ | -------------- |
 // | top-level initcode           | -      | -      | +      | +              |
 // | EOFCREATE                    | -      | -      | +      | +              |
 // | top-level runtime            | +      | +      | +      | -              |
-// | RETURNCONTRACT               | +      | +      | +      | -              |
-// | EOFCREATE and RETURNCONTRACT | -      | -      | +      | -              |
+// | RETURNCODE               | +      | +      | +      | -              |
+// | EOFCREATE and RETURNCODE | -      | -      | +      | -              |
 
 TEST_F(eof_validation, initcode_container_stop)
 {
@@ -1233,8 +1231,7 @@ TEST_F(eof_validation, runtime_container_stop)
 
     add_test_case(runtime_container, ContainerKind::runtime, EOFValidationError::success);
 
-    const auto initcontainer =
-        eof_bytecode(returncontract(0, 0, 0), 2).container(runtime_container);
+    const auto initcontainer = eof_bytecode(returncode(0, 0, 0), 2).container(runtime_container);
 
     add_test_case(initcontainer, ContainerKind::initcode, EOFValidationError::success);
 
@@ -1250,8 +1247,7 @@ TEST_F(eof_validation, runtime_container_return)
 
     add_test_case(runtime_container, ContainerKind::runtime, EOFValidationError::success);
 
-    const auto initcontainer =
-        eof_bytecode(returncontract(0, 0, 0), 2).container(runtime_container);
+    const auto initcontainer = eof_bytecode(returncode(0, 0, 0), 2).container(runtime_container);
 
     add_test_case(initcontainer, ContainerKind::initcode, EOFValidationError::success);
 
@@ -1267,8 +1263,7 @@ TEST_F(eof_validation, runtime_container_revert)
 
     add_test_case(runtime_container, ContainerKind::runtime, EOFValidationError::success);
 
-    const auto initcontainer =
-        eof_bytecode(returncontract(0, 0, 0), 2).container(runtime_container);
+    const auto initcontainer = eof_bytecode(returncode(0, 0, 0), 2).container(runtime_container);
 
     add_test_case(initcontainer, ContainerKind::initcode, EOFValidationError::success);
 
@@ -1278,16 +1273,15 @@ TEST_F(eof_validation, runtime_container_revert)
     add_test_case(factory_container, EOFValidationError::success);
 }
 
-TEST_F(eof_validation, runtime_container_returncontract)
+TEST_F(eof_validation, runtime_container_returncode)
 {
     const auto runtime_container =
-        eof_bytecode(returncontract(0, 0, 0), 2).container(eof_bytecode(OP_INVALID));
+        eof_bytecode(returncode(0, 0, 0), 2).container(eof_bytecode(OP_INVALID));
 
     add_test_case(
         runtime_container, ContainerKind::runtime, EOFValidationError::incompatible_container_kind);
 
-    const auto initcontainer =
-        eof_bytecode(returncontract(0, 0, 0), 2).container(runtime_container);
+    const auto initcontainer = eof_bytecode(returncode(0, 0, 0), 2).container(runtime_container);
 
     add_test_case(
         initcontainer, ContainerKind::initcode, EOFValidationError::incompatible_container_kind);
@@ -1298,10 +1292,10 @@ TEST_F(eof_validation, runtime_container_returncontract)
     add_test_case(factory_container, EOFValidationError::incompatible_container_kind);
 }
 
-TEST_F(eof_validation, eofcreate_stop_and_returncontract)
+TEST_F(eof_validation, eofcreate_stop_and_returncode)
 {
     const auto runtime_container = eof_bytecode(OP_INVALID);
-    const auto initcode = rjumpi(1, 0) + OP_STOP + returncontract(0, 0, 0);
+    const auto initcode = rjumpi(1, 0) + OP_STOP + returncode(0, 0, 0);
     const auto initcontainer = eof_bytecode(initcode, 2).container(runtime_container);
     const auto factory_code = eofcreate() + OP_STOP;
     const auto factory_container = eof_bytecode(factory_code, 4).container(initcontainer);
@@ -1309,10 +1303,10 @@ TEST_F(eof_validation, eofcreate_stop_and_returncontract)
     add_test_case(factory_container, EOFValidationError::incompatible_container_kind);
 }
 
-TEST_F(eof_validation, eofcreate_return_and_returncontract)
+TEST_F(eof_validation, eofcreate_return_and_returncode)
 {
     const auto runtime_container = eof_bytecode(OP_INVALID);
-    const auto initcode = rjumpi(5, 0) + ret(0, 0) + returncontract(0, 0, 0);
+    const auto initcode = rjumpi(5, 0) + ret(0, 0) + returncode(0, 0, 0);
     const auto initcontainer = eof_bytecode(initcode, 2).container(runtime_container);
     const auto factory_code = eofcreate() + OP_STOP;
     const auto factory_container = eof_bytecode(factory_code, 4).container(initcontainer);
@@ -1320,16 +1314,16 @@ TEST_F(eof_validation, eofcreate_return_and_returncontract)
     add_test_case(factory_container, EOFValidationError::incompatible_container_kind);
 }
 
-TEST_F(eof_validation, eofcreate_and_returncontract_targeting_same_container)
+TEST_F(eof_validation, eofcreate_and_returncode_targeting_same_container)
 {
     const auto runtime_container = eof_bytecode(OP_INVALID);
-    const auto initcode = eofcreate() + returncontract(0, 0, 0);
+    const auto initcode = eofcreate() + returncode(0, 0, 0);
     const auto initcontainer = eof_bytecode(initcode, 4).container(runtime_container);
 
     add_test_case(
         initcontainer, ContainerKind::initcode, EOFValidationError::ambiguous_container_kind);
 
-    const auto initcode2 = eofcreate() + eofcreate().container(1) + returncontract(1, 0, 0);
+    const auto initcode2 = eofcreate() + eofcreate().container(1) + returncode(1, 0, 0);
     const auto initcontainer2 =
         eof_bytecode(initcode, 4).container(runtime_container).container(runtime_container);
 
