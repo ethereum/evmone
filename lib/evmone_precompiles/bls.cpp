@@ -196,7 +196,7 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
 {
     constexpr auto SINGLE_ENTRY_SIZE = (64 * 2 + 32);
     assert(size % SINGLE_ENTRY_SIZE == 0);
-    auto npoints = size / SINGLE_ENTRY_SIZE;
+    const auto npoints = size / SINGLE_ENTRY_SIZE;
 
     std::vector<blst_p1_affine> p1_affines;
     std::vector<const blst_p1_affine*> p1_affine_ptrs;
@@ -208,8 +208,8 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
     scalars.reserve(npoints);
     scalars_ptrs.reserve(npoints);
 
-    auto ptr = _xycs;
-    for (size_t i = 0; i < npoints; ++i)
+    const auto end = _xycs + size;
+    for (auto ptr = _xycs; ptr != end; ptr += SINGLE_ENTRY_SIZE)
     {
         const auto p_affine = validate_p1(ptr, &ptr[64]);
         if (!p_affine.has_value())
@@ -219,34 +219,31 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
             return false;
 
         // Point at infinity must be filtered out for BLST library.
-        if (!blst_p1_affine_is_inf(&*p_affine))
-        {
-            const auto& p = p1_affines.emplace_back(*p_affine);
-            p1_affine_ptrs.emplace_back(&p);
+        if (blst_p1_affine_is_inf(&*p_affine))
+            continue;
 
-            blst_scalar scalar;
-            blst_scalar_from_bendian(&scalar, &ptr[128]);
-            const auto& s = scalars.emplace_back(scalar);
-            scalars_ptrs.emplace_back(s.b);
-        }
+        const auto& p = p1_affines.emplace_back(*p_affine);
+        p1_affine_ptrs.emplace_back(&p);
 
-        ptr += SINGLE_ENTRY_SIZE;
+        blst_scalar scalar;
+        blst_scalar_from_bendian(&scalar, &ptr[128]);
+        const auto& s = scalars.emplace_back(scalar);
+        scalars_ptrs.emplace_back(s.b);
     }
 
-    npoints = p1_affine_ptrs.size();
-
-    if (npoints == 0)
+    if (p1_affine_ptrs.empty())
     {
-        memset(_rx, 0, 64);
-        memset(_ry, 0, 64);
+        std::memset(_rx, 0, 64);
+        std::memset(_ry, 0, 64);
         return true;
     }
 
-    const auto scratch_size = blst_p1s_mult_pippenger_scratch_sizeof(npoints) / sizeof(limb_t);
+    const auto scratch_size =
+        blst_p1s_mult_pippenger_scratch_sizeof(p1_affine_ptrs.size()) / sizeof(limb_t);
     const auto scratch_space = std::make_unique_for_overwrite<limb_t[]>(scratch_size);
     blst_p1 out;
-    blst_p1s_mult_pippenger(
-        &out, p1_affine_ptrs.data(), npoints, scalars_ptrs.data(), 256, scratch_space.get());
+    blst_p1s_mult_pippenger(&out, p1_affine_ptrs.data(), p1_affine_ptrs.size(), scalars_ptrs.data(),
+        256, scratch_space.get());
 
     blst_p1_affine result;
     blst_p1_to_affine(&result, &out);
@@ -261,7 +258,7 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
 {
     constexpr auto SINGLE_ENTRY_SIZE = (128 * 2 + 32);
     assert(size % SINGLE_ENTRY_SIZE == 0);
-    auto npoints = size / SINGLE_ENTRY_SIZE;
+    const auto npoints = size / SINGLE_ENTRY_SIZE;
 
     std::vector<blst_p2_affine> p2_affines;
     std::vector<const blst_p2_affine*> p2_affine_ptrs;
@@ -273,8 +270,8 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
     scalars.reserve(npoints);
     scalars_ptrs.reserve(npoints);
 
-    auto ptr = _xycs;
-    for (size_t i = 0; i < npoints; ++i)
+    const auto end = _xycs + size;
+    for (auto ptr = _xycs; ptr != end; ptr += SINGLE_ENTRY_SIZE)
     {
         const auto p_affine = validate_p2(ptr, &ptr[128]);
         if (!p_affine.has_value())
@@ -284,34 +281,31 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
             return false;
 
         // Point at infinity must be filtered out for BLST library.
-        if (!blst_p2_affine_is_inf(&*p_affine))
-        {
-            const auto& p = p2_affines.emplace_back(*p_affine);
-            p2_affine_ptrs.emplace_back(&p);
+        if (blst_p2_affine_is_inf(&*p_affine))
+            continue;
 
-            blst_scalar scalar;
-            blst_scalar_from_bendian(&scalar, &ptr[256]);
-            const auto& s = scalars.emplace_back(scalar);
-            scalars_ptrs.emplace_back(s.b);
-        }
+        const auto& p = p2_affines.emplace_back(*p_affine);
+        p2_affine_ptrs.emplace_back(&p);
 
-        ptr += SINGLE_ENTRY_SIZE;
+        blst_scalar scalar;
+        blst_scalar_from_bendian(&scalar, &ptr[256]);
+        const auto& s = scalars.emplace_back(scalar);
+        scalars_ptrs.emplace_back(s.b);
     }
 
-    npoints = p2_affine_ptrs.size();
-
-    if (npoints == 0)
+    if (p2_affine_ptrs.empty())
     {
-        memset(_rx, 0, 128);
-        memset(_ry, 0, 128);
+        std::memset(_rx, 0, 128);
+        std::memset(_ry, 0, 128);
         return true;
     }
 
-    const auto scratch_size = blst_p2s_mult_pippenger_scratch_sizeof(npoints) / sizeof(limb_t);
+    const auto scratch_size =
+        blst_p2s_mult_pippenger_scratch_sizeof(p2_affine_ptrs.size()) / sizeof(limb_t);
     const auto scratch_space = std::make_unique_for_overwrite<limb_t[]>(scratch_size);
     blst_p2 out;
-    blst_p2s_mult_pippenger(
-        &out, p2_affine_ptrs.data(), npoints, scalars_ptrs.data(), 256, scratch_space.get());
+    blst_p2s_mult_pippenger(&out, p2_affine_ptrs.data(), p2_affine_ptrs.size(), scalars_ptrs.data(),
+        256, scratch_space.get());
 
     blst_p2_affine result;
     blst_p2_to_affine(&result, &out);
@@ -365,13 +359,11 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
     static constexpr auto PAIR_SIZE = P1_SIZE + P2_SIZE;
     assert(size % PAIR_SIZE == 0);
 
-    const auto npairs = size / PAIR_SIZE;
-    auto ptr = _pairs;
-    blst_fp12 acc = *blst_fp12_one();
-
     const auto Qlines = std::make_unique_for_overwrite<blst_fp6[]>(68);
 
-    for (size_t i = 0; i < npairs; ++i)
+    auto acc = *blst_fp12_one();
+    const auto pairs_end = _pairs + size;
+    for (auto ptr = _pairs; ptr != pairs_end; ptr += PAIR_SIZE)
     {
         const auto P_affine = validate_p1(ptr, &ptr[FP_SIZE]);
         if (!P_affine.has_value())
@@ -387,16 +379,15 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
         if (!blst_p2_affine_in_g2(&*Q_affine))
             return false;
 
-        if (!blst_p1_affine_is_inf(&*P_affine) && !blst_p2_affine_is_inf(&*Q_affine))
-        {
-            blst_precompute_lines(Qlines.get(), &*Q_affine);
+        // Skip a pair containing any point at infinity.
+        if (blst_p1_affine_is_inf(&*P_affine) || blst_p2_affine_is_inf(&*Q_affine))
+            continue;
 
-            blst_fp12 ml_res;
-            blst_miller_loop_lines(&ml_res, Qlines.get(), &*P_affine);
-            blst_fp12_mul(&acc, &acc, &ml_res);
-        }
+        blst_precompute_lines(Qlines.get(), &*Q_affine);
 
-        ptr += PAIR_SIZE;
+        blst_fp12 ml_res;
+        blst_miller_loop_lines(&ml_res, Qlines.get(), &*P_affine);
+        blst_fp12_mul(&acc, &acc, &ml_res);
     }
 
     blst_final_exp(&acc, &acc);
