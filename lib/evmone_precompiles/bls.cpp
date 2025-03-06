@@ -359,8 +359,6 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
     static constexpr auto PAIR_SIZE = P1_SIZE + P2_SIZE;
     assert(size % PAIR_SIZE == 0);
 
-    const auto Qlines = std::make_unique_for_overwrite<blst_fp6[]>(68);
-
     auto acc = *blst_fp12_one();
     const auto pairs_end = _pairs + size;
     for (auto ptr = _pairs; ptr != pairs_end; ptr += PAIR_SIZE)
@@ -383,10 +381,8 @@ void store(uint8_t _rx[128], const blst_fp2& _x) noexcept
         if (blst_p1_affine_is_inf(&*P_affine) || blst_p2_affine_is_inf(&*Q_affine))
             continue;
 
-        blst_precompute_lines(Qlines.get(), &*Q_affine);
-
         blst_fp12 ml_res;
-        blst_miller_loop_lines(&ml_res, Qlines.get(), &*P_affine);
+        blst_miller_loop(&ml_res, &*Q_affine, &*P_affine);
         blst_fp12_mul(&acc, &acc, &ml_res);
     }
 
