@@ -8,10 +8,14 @@
 #include "transaction.hpp"
 #include <evmc/evmc.hpp>
 #include <span>
-#include <vector>
 
 namespace evmone::state
 {
+/// The address of the deposit contract.
+///
+/// TODO: This address differs in different chains, so it should be configurable.
+constexpr auto DEPOSIT_CONTRACT_ADDRESS = 0x00000000219ab540356cBB839Cbe05303d7705Fa_address;
+
 /// `requests` object.
 ///
 /// Defined by EIP-7685: General purpose execution layer requests.
@@ -35,9 +39,9 @@ struct Requests
     };
 
     /// Raw encoded data of requests object: first byte is type, the rest is request objects.
-    evmc::bytes raw_data;
+    bytes raw_data;
 
-    explicit Requests(Type _type, evmc::bytes_view data = {})
+    explicit Requests(Type _type, bytes_view data = {})
     {
         raw_data.reserve(1 + data.size());
         raw_data += static_cast<uint8_t>(_type);
@@ -48,7 +52,7 @@ struct Requests
     Type type() const noexcept { return static_cast<Type>(raw_data[0]); }
 
     /// Requests data - an opaque byte array, contains zero or more encoded request objects.
-    evmc::bytes_view data() const noexcept { return {raw_data.data() + 1, raw_data.size() - 1}; }
+    bytes_view data() const noexcept { return {raw_data.data() + 1, raw_data.size() - 1}; }
 
     /// Append data to requests object byte array.
     void append(bytes_view data) { raw_data.append(data); }

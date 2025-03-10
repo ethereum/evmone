@@ -7,12 +7,6 @@
 
 namespace evmone::state
 {
-namespace
-{
-/// The address of the deposit contract.
-constexpr auto DEPOSIT_CONTRACT_ADDRESS = 0x00000000219ab540356cBB839Cbe05303d7705Fa_address;
-}  // namespace
-
 hash256 calculate_requests_hash(std::span<const Requests> block_requests_list)
 {
     bytes requests_hash_list;
