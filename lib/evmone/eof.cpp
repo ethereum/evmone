@@ -747,25 +747,23 @@ std::variant<EOF1Header, EOFValidationError> validate_header(
     // this allows us to cast `offset` to narrower integers.
     assert(container.size() <= MAX_INITCODE_SIZE);
 
-    const auto section_headers_or_error = validate_section_headers(container);
+    auto section_headers_or_error = validate_section_headers(container);
     if (const auto* error = std::get_if<EOFValidationError>(&section_headers_or_error))
         return *error;
 
-    const auto& section_headers = std::get<EOFSectionHeaders>(section_headers_or_error);
-    const auto& code_sizes = section_headers[CODE_SECTION];
-    const auto data_size = section_headers[DATA_SECTION][0];
+    auto& section_headers = std::get<EOFSectionHeaders>(section_headers_or_error);
+    auto& code_sizes = section_headers[CODE_SECTION];
 
     const auto header_size = eof_header_size(section_headers);
-
-    const auto type_section_offset = header_size;
-    const auto type_section_size = section_headers[TYPE_SECTION].front();
+    const auto type_section_size = section_headers[TYPE_SECTION][0];
 
     if (type_section_size != code_sizes.size() * EOF1Header::TYPE_ENTRY_SIZE)
         return EOFValidationError::invalid_type_section_size;
 
-    std::vector<uint16_t> code_offsets;
     auto offset = header_size + type_section_size;
 
+    std::vector<uint16_t> code_offsets;
+    code_offsets.reserve(code_sizes.size());
     for (const auto code_size : code_sizes)
     {
         assert(offset <= std::numeric_limits<uint16_t>::max());
@@ -773,8 +771,9 @@ std::variant<EOF1Header, EOFValidationError> validate_header(
         offset += code_size;
     }
 
-    const auto& container_sizes = section_headers[CONTAINER_SECTION];
+    auto& container_sizes = section_headers[CONTAINER_SECTION];
     std::vector<uint16_t> container_offsets;
+    container_offsets.reserve(container_sizes.size());
     for (const auto container_size : container_sizes)
     {
         assert(offset <= std::numeric_limits<uint16_t>::max());
@@ -782,18 +781,19 @@ std::variant<EOF1Header, EOFValidationError> validate_header(
         offset += container_size;
     }
 
+    const auto data_size = section_headers[DATA_SECTION][0];
     assert(offset <= std::numeric_limits<uint16_t>::max());
     const auto data_offset = static_cast<uint16_t>(offset);
 
     return EOF1Header{
         .version = container[2],
-        .type_section_offset = type_section_offset,
-        .code_sizes = code_sizes,
-        .code_offsets = code_offsets,
+        .type_section_offset = header_size,
+        .code_sizes = std::move(code_sizes),
+        .code_offsets = std::move(code_offsets),
         .data_size = data_size,
         .data_offset = data_offset,
-        .container_sizes = container_sizes,
-        .container_offsets = container_offsets,
+        .container_sizes = std::move(container_sizes),
+        .container_offsets = std::move(container_offsets),
     };
 }
 
