@@ -56,6 +56,7 @@ target_sources(
     precompiles_sha256_test.cpp
     state_block_test.cpp
     state_bloom_filter_test.cpp
+    state_deposit_requests_test.cpp
     state_difficulty_test.cpp
     state_mpt_hash_test.cpp
     state_mpt_test.cpp
