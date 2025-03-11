@@ -262,7 +262,7 @@ TEST_P(evm, eof_eofcreate)
         eof_bytecode(bytecode(OP_INVALID)).data(deploy_data, deploy_data_size);
 
     const auto init_code =
-        calldatacopy(0, 0, OP_CALLDATASIZE) + OP_CALLDATASIZE + 0 + OP_RETURNCONTRACT + Opcode{0};
+        calldatacopy(0, 0, OP_CALLDATASIZE) + OP_CALLDATASIZE + 0 + OP_RETURNCODE + Opcode{0};
     const auto init_container = eof_bytecode(init_code, 3).container(deploy_container);
 
     const auto create_code = calldatacopy(0, 0, OP_CALLDATASIZE) +
@@ -296,11 +296,11 @@ TEST_P(evm, eofcreate_undefined_in_legacy)
     EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
 }
 
-TEST_P(evm, returncontract_undefined_in_legacy)
+TEST_P(evm, returncode_undefined_in_legacy)
 {
     rev = EVMC_CANCUN;
     const auto code =
-        calldatacopy(0, 0, OP_CALLDATASIZE) + OP_CALLDATASIZE + 0 + OP_RETURNCONTRACT + Opcode{0};
+        calldatacopy(0, 0, OP_CALLDATASIZE) + OP_CALLDATASIZE + 0 + OP_RETURNCODE + Opcode{0};
 
     execute(code);
     EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);

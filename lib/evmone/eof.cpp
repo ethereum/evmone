@@ -307,13 +307,13 @@ std::variant<InstructionValidationResult, EOFValidationError> validate_instructi
                 return EOFValidationError::invalid_dataloadn_index;
             i += 2;
         }
-        else if (op == OP_EOFCREATE || op == OP_RETURNCONTRACT)
+        else if (op == OP_EOFCREATE || op == OP_RETURNCODE)
         {
             const auto container_idx = code[i + 1];
             if (container_idx >= header.container_sizes.size())
                 return EOFValidationError::invalid_container_section_index;
 
-            if (op == OP_RETURNCONTRACT)
+            if (op == OP_RETURNCODE)
             {
                 if (kind == ContainerKind::runtime)
                     return EOFValidationError::incompatible_container_kind;
@@ -619,7 +619,7 @@ EOFValidationError validate_eof1(
 
         const auto subcontainer_count = header.container_sizes.size();
         std::vector<bool> subcontainer_referenced_by_eofcreate(subcontainer_count, false);
-        std::vector<bool> subcontainer_referenced_by_returncontract(subcontainer_count, false);
+        std::vector<bool> subcontainer_referenced_by_returncode(subcontainer_count, false);
 
         while (!code_sections_queue.empty())
         {
@@ -644,9 +644,9 @@ EOFValidationError validate_eof1(
             // Mark what instructions referenced which subcontainers.
             for (const auto& [index, opcode] : subcontainer_references)
             {
-                assert(opcode == OP_EOFCREATE || opcode == OP_RETURNCONTRACT);
+                assert(opcode == OP_EOFCREATE || opcode == OP_RETURNCODE);
                 auto& set = (opcode == OP_EOFCREATE) ? subcontainer_referenced_by_eofcreate :
-                                                       subcontainer_referenced_by_returncontract;
+                                                       subcontainer_referenced_by_returncode;
                 set[index] = true;
             }
 
@@ -689,16 +689,16 @@ EOFValidationError validate_eof1(
             const bytes_view subcontainer{header.get_container(container, subcont_idx)};
 
             const bool eofcreate = subcontainer_referenced_by_eofcreate[subcont_idx];
-            const bool returncontract = subcontainer_referenced_by_returncontract[subcont_idx];
+            const bool returncode = subcontainer_referenced_by_returncode[subcont_idx];
 
-            if (eofcreate && returncontract)
+            if (eofcreate && returncode)
                 return EOFValidationError::ambiguous_container_kind;
-            if (!eofcreate && !returncontract)
+            if (!eofcreate && !returncode)
                 return EOFValidationError::unreferenced_subcontainer;
 
             const auto subcontainer_kind =
                 (eofcreate ? ContainerKind::initcode : ContainerKind::runtime);
-            assert(subcontainer_kind == ContainerKind::initcode || returncontract);
+            assert(subcontainer_kind == ContainerKind::initcode || returncode);
 
             container_queue.push({subcontainer, subcontainer_kind});
         }

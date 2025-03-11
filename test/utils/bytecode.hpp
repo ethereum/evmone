@@ -382,10 +382,10 @@ inline bytecode ret(bytecode c)
     return c + ret_top();
 }
 
-inline bytecode returncontract(
+inline bytecode returncode(
     uint8_t container_index, bytecode aux_data_offset, bytecode aux_data_size)
 {
-    return aux_data_size + aux_data_offset + OP_RETURNCONTRACT + bytecode{bytes{container_index}};
+    return aux_data_size + aux_data_offset + OP_RETURNCODE + bytecode{bytes{container_index}};
 }
 
 inline bytecode revert(bytecode index, bytecode size)
