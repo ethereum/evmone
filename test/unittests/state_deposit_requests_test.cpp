@@ -11,7 +11,8 @@ using namespace evmone::state;
 TEST(state_deposit_requests, collect_deposit_requests)
 {
     std::array receipts{
-        TransactionReceipt{.logs = {Log{.addr = DEPOSIT_CONTRACT_ADDRESS}}},
+        TransactionReceipt{.logs = {Log{.addr = DEPOSIT_CONTRACT_ADDRESS,
+                               .topics = {DEPOSIT_EVENT_SIGNATURE_HASH}}}},
     };
 
     auto& log_data = receipts[0].logs[0].data;
@@ -26,4 +27,18 @@ TEST(state_deposit_requests, collect_deposit_requests)
     EXPECT_EQ(requests.type(), Requests::Type::deposit);
     EXPECT_EQ(requests.data(),
         bytes(48, 0x01) + bytes(32, 0x02) + bytes(8, 0x03) + bytes(96, 0x04) + bytes(8, 0x05));
+}
+
+TEST(state_deposit_requests, collect_deposit_requests_skips_wrong_topic)
+{
+    constexpr auto DUMMPY_EVENT_SIGNATURE_HASH = 0xdeadbeef_bytes32;
+    const std::array receipts{
+        TransactionReceipt{.logs = {Log{.addr = DEPOSIT_CONTRACT_ADDRESS,
+                               .data = {0x01, 0x02, 0x03},
+                               .topics = {DUMMPY_EVENT_SIGNATURE_HASH}}}},
+    };
+
+    const auto requests = collect_deposit_requests(receipts);
+    EXPECT_EQ(requests.type(), Requests::Type::deposit);
+    EXPECT_TRUE(requests.data().empty());
 }

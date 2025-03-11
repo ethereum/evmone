@@ -16,6 +16,10 @@ namespace evmone::state
 /// TODO: This address differs in different chains, so it should be configurable.
 constexpr auto DEPOSIT_CONTRACT_ADDRESS = 0x00000000219ab540356cBB839Cbe05303d7705Fa_address;
 
+/// The topic of deposit log of the deposit contract.
+constexpr auto DEPOSIT_EVENT_SIGNATURE_HASH =
+    0x649bbc62d0e31342afea4e5cd82d4049e7e1ee912fc0889aa790803be39038c5_bytes32;
+
 /// `requests` object.
 ///
 /// Defined by EIP-7685: General purpose execution layer requests.
