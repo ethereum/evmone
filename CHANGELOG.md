@@ -5,6 +5,27 @@ Documentation of all notable changes to the **evmone** project.
 The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
+[0.14.1] — 2025-03-11
+
+### Fixed
+
+- Fixes and improvements to BLS precompiles ([EIP-2537]).
+  [#1155](https://github.com/ethereum/evmone/pull/1155)
+  [#1154](https://github.com/ethereum/evmone/pull/1154)
+  [#1150](https://github.com/ethereum/evmone/pull/1150)
+  [#1151](https://github.com/ethereum/evmone/pull/1151)
+  [#1148](https://github.com/ethereum/evmone/pull/1148)
+- Check for topic when parsing deposit contract logs ([EIP-6110]).
+  [#1152](https://github.com/ethereum/evmone/pull/1152)
+
+### Changed
+
+- Improvements to EOF validation.
+  [#1137](https://github.com/ethereum/evmone/pull/1137)
+  [#1144](https://github.com/ethereum/evmone/pull/1144)
+  [#1145](https://github.com/ethereum/evmone/pull/1145)
+  
+
 [0.14.0] — 2025-02-19
 
 ### Added
@@ -911,6 +932,7 @@ It delivers fully-compatible and high-speed EVM implementation.
 - Exposes [EVMC] 6 ABI.
 - The [intx 0.2.0](https://github.com/chfast/intx/releases/tag/v0.2.0) library is used for 256-bit precision arithmetic. 
 
+[0.14.1]: https://github.com/ethereum/evmone/releases/tag/v0.14.1
 [0.14.0]: https://github.com/ethereum/evmone/releases/tag/v0.14.0
 [0.13.0]: https://github.com/ethereum/evmone/releases/tag/v0.13.0
 [0.12.0]: https://github.com/ethereum/evmone/releases/tag/v0.12.0
