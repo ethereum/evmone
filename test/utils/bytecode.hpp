@@ -622,7 +622,7 @@ public:
     }
 
     template <Opcode k = kind>
-        requires(k == OP_CREATE2 || k == OP_EOFCREATE)
+        requires(k == OP_CREATE2 || k == OP_EOFCREATE || k == OP_TXCREATE)
     create_instruction& salt(bytecode salt)
     {
         m_salt = std::move(salt);
@@ -637,18 +637,29 @@ public:
         return *this;
     }
 
+    template <Opcode k = kind>
+        requires(k == OP_TXCREATE)
+    create_instruction& initcode(bytecode hash)
+    {
+        m_initcode_hash = std::move(hash);
+        return *this;
+    }
+
     operator bytecode() const
     {
         bytecode code;
         if constexpr (kind == OP_CREATE2)
             code += m_salt;
-        else if constexpr (kind == OP_EOFCREATE)
+        else if constexpr (kind == OP_EOFCREATE || kind == OP_TXCREATE)
             code += m_input_size + m_input + m_salt;
 
         if constexpr (kind == OP_CREATE || kind == OP_CREATE2)
             code += m_input_size + m_input;
 
         code += m_value;
+
+        if constexpr (kind == OP_TXCREATE)
+            code += m_initcode_hash;
 
         code += bytecode{kind};
         if constexpr (kind == OP_EOFCREATE)
@@ -670,6 +681,11 @@ inline auto create2()
 inline auto eofcreate()
 {
     return create_instruction<OP_EOFCREATE>{};
+}
+
+inline auto txcreate()
+{
+    return create_instruction<OP_TXCREATE>{};
 }
 
 inline std::string hex(Opcode opcode) noexcept
