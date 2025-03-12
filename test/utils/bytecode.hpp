@@ -144,7 +144,7 @@ private:
         // data header
         const auto data_size =
             (m_data_size == 0 ? static_cast<uint16_t>(m_data.size()) : m_data_size);
-        out += "04" + big_endian(data_size);
+        out += "ff" + big_endian(data_size);
         out += "00";  // terminator
 
         // types section

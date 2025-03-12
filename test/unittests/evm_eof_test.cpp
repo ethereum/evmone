@@ -35,7 +35,7 @@ TEST_P(evm, eof1_execution_with_data_section)
 TEST_P(evm, eof_data_only_contract)
 {
     rev = EVMC_OSAKA;
-    auto code = "EF0001 010004 020001 0001 04daaa 00 00800000 FE"_hex;
+    auto code = "EF0001 010004 020001 0001 FFdaaa 00 00800000 FE"_hex;
     const auto data_size_ptr = &code[code.find(0xda)];
 
     intx::be::unsafe::store(data_size_ptr, uint16_t{0});
