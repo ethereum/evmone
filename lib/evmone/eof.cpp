@@ -26,8 +26,12 @@ constexpr uint8_t TERMINATOR = 0x00;
 constexpr uint8_t TYPE_SECTION = 0x01;
 constexpr uint8_t CODE_SECTION = 0x02;
 constexpr uint8_t CONTAINER_SECTION = 0x03;
+// TODO: kind_data is now 0xff, but we're still using a 4-element array to hold
+// decoded header info about sections (EOFSectionHeaders). Refactor to not
+// depend on section kinds being contiguous.
+constexpr uint8_t DATA_SECTION_KIND = 0xff;
 constexpr uint8_t DATA_SECTION = 0x04;
-constexpr uint8_t MAX_SECTION = DATA_SECTION;
+constexpr uint8_t NUM_SECTIONS = DATA_SECTION;
 constexpr auto CODE_SECTION_NUMBER_LIMIT = 1024;
 constexpr auto CONTAINER_SECTION_NUMBER_LIMIT = 256;
 constexpr auto MAX_STACK_HEIGHT = 0x03FF;
@@ -36,7 +40,7 @@ constexpr auto REL_OFFSET_SIZE = sizeof(int16_t);
 constexpr auto STACK_SIZE_LIMIT = 1024;
 constexpr uint8_t NON_RETURNING_FUNCTION = 0x80;
 
-using EOFSectionHeaders = std::array<std::vector<uint16_t>, MAX_SECTION + 1>;
+using EOFSectionHeaders = std::array<std::vector<uint16_t>, NUM_SECTIONS + 1>;
 
 size_t eof_header_size(const EOFSectionHeaders& headers) noexcept
 {
@@ -99,6 +103,12 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
         case State::section_id:
         {
             section_id = *it++;
+            // kind_data is 0xff but we need to use a contiguous index until we refactor away
+            // the EOFSectionHeaders array type
+            if (section_id == DATA_SECTION_KIND)
+                section_id = DATA_SECTION;
+            else if (section_id == DATA_SECTION)
+                section_id = DATA_SECTION_KIND;
 
             // Skip optional sections.
             if (section_id != expected_section_id && expected_section_id == CONTAINER_SECTION)
@@ -804,7 +814,13 @@ EOF1Header read_valid_eof1_header(bytes_view container)
     auto it = container.begin() + std::size(EOF_MAGIC) + 1;  // MAGIC + VERSION
     while (*it != TERMINATOR)
     {
-        const auto section_id = *it++;
+        auto section_id = *it++;
+        // kind_data is 0xff but we need to use a contiguous index until we refactor away
+        // the EOFSectionHeaders array type
+        if (section_id == DATA_SECTION_KIND)
+            section_id = DATA_SECTION;
+        else if (section_id == DATA_SECTION)
+            section_id = DATA_SECTION_KIND;
         if (section_id == CODE_SECTION || section_id == CONTAINER_SECTION)
         {
             const auto code_section_num = read_uint16_be(it);
