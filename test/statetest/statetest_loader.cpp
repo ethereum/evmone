@@ -5,6 +5,9 @@
 #include "../utils/stdx/utility.hpp"
 #include "../utils/utils.hpp"
 #include "statetest.hpp"
+#include <test/state/precompiles.hpp>
+
+#include <evmone/delegation.hpp>
 #include <evmone/eof.hpp>
 #include <nlohmann/json.hpp>
 
@@ -496,23 +499,34 @@ void validate_state(const TestState& state, evmc_revision rev)
 {
     for (const auto& [addr, acc] : state)
     {
-        // TODO: Check for empty accounts after Paris.
-        //       https://github.com/ethereum/tests/issues/1331
-        if (is_eof_container(acc.code))
+        if (state::is_precompile(rev, addr) && !acc.code.empty())
+            throw std::invalid_argument("unexpected code at precompile address " + hex0x(addr));
+
+        const bool allowedEF = (rev >= EVMC_PRAGUE && is_code_delegated(acc.code)) ||
+                               (rev >= EVMC_OSAKA && is_eof_container(acc.code)) ||
+                               // exceptions to EIP-3541 rule existing on Mainnet
+                               acc.code == "EF"_hex || acc.code == "EFF09f918bf09f9fa9"_hex;
+        if (rev >= EVMC_LONDON && !allowedEF && !acc.code.empty() && acc.code[0] == 0xEF)
+            throw std::invalid_argument("unexpected code starting with 0xEF at " + hex0x(addr));
+
+        if (rev >= EVMC_PARIS && acc.code.empty() && acc.balance == 0 && acc.nonce == 0 &&
+            !acc.storage.empty())
+            throw std::invalid_argument("empty account with non-empty storage at " + hex0x(addr));
+
+        if (rev >= EVMC_PRAGUE && is_code_delegated(acc.code) &&
+            acc.code.size() != std::size(DELEGATION_MAGIC) + sizeof(evmc::address))
         {
-            if (rev >= EVMC_OSAKA)
+            throw std::invalid_argument(
+                "EIP-7702 delegation designator at " + hex0x(addr) + " has invalid size");
+        }
+
+        if (rev >= EVMC_OSAKA && is_eof_container(acc.code))
+        {
+            if (const auto result = validate_eof(rev, ContainerKind::runtime, acc.code);
+                result != EOFValidationError::success)
             {
-                if (const auto result = validate_eof(rev, ContainerKind::runtime, acc.code);
-                    result != EOFValidationError::success)
-                {
-                    throw std::invalid_argument(
-                        "EOF container at " + hex0x(addr) +
-                        " is invalid: " + std::string(get_error_message(result)));
-                }
-            }
-            else
-            {
-                throw std::invalid_argument("unexpected code with EOF prefix at " + hex0x(addr));
+                throw std::invalid_argument("EOF container at " + hex0x(addr) + " is invalid: " +
+                                            std::string(get_error_message(result)));
             }
         }
 
