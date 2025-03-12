@@ -423,7 +423,7 @@ jobs:
       - build
       - download_execution_tests:
           # Latest commit from the main "develop" branch of ethereum/tests.
-          commit: 4c87ebbf024a3e9ec842bcce90564f629a3bcd82
+          commit: d819e467cd1301a22f9acdeee26209c0a04695ad
       - run:
           name: "State tests"
           working_directory: ~/build
