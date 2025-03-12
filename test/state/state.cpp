@@ -136,14 +136,7 @@ int64_t process_authorization_list(
         // We apply the refund only if the account has existed before.
         // We detect "exists in the trie" by inspecting _empty_ property (EIP-161) because _empty_
         // implies an account doesn't exist in the state (EIP-7523).
-        //
-        // For completeness, we also consider _empty_ accounts in the state (they potentially may
-        // have non-empty storage) as existent and apply refund for those. The erase_if_empty
-        // indicates the account has been created as empty while processing this authorization list.
-        // TODO: Such accounts are against EIP-7523 and may happen only in testing environments.
-        const auto in_state_but_empty = authority.is_empty() && !authority.erase_if_empty;
-
-        if (!authority.is_empty() || in_state_but_empty)
+        if (!authority.is_empty())
         {
             static constexpr auto EXISTING_AUTHORITY_REFUND =
                 AUTHORIZATION_EMPTY_ACCOUNT_COST - AUTHORIZATION_BASE_COST;
