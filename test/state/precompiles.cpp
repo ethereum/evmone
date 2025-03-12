@@ -312,7 +312,11 @@ static ExecutionResult expmod_execute(
         return {EVMC_SUCCESS, output_size};
     }
 
+#ifdef EVMONE_PRECOMPILES_SILKPRE
+    return silkpre_expmod_execute(input, input_size, output, output_size);
+#else
     return expmod_stub(input, input_size, output, output_size);
+#endif
 }
 
 ExecutionResult ecadd_execute(const uint8_t* input, size_t input_size, uint8_t* output,
@@ -582,39 +586,26 @@ struct PrecompileTraits
     decltype(identity_execute)* execute = nullptr;
 };
 
-inline constexpr auto traits = []() noexcept {
-    std::array<PrecompileTraits, NumPrecompiles> tbl{{
-        {},  // undefined for 0
-        {ecrecover_analyze, ecrecover_execute},
-        {sha256_analyze, sha256_execute},
-        {ripemd160_analyze, ripemd160_execute},
-        {identity_analyze, identity_execute},
-        {expmod_analyze, expmod_execute},
-        {ecadd_analyze, ecadd_execute},
-        {ecmul_analyze, ecmul_execute},
-        {ecpairing_analyze, ecpairing_execute},
-        {blake2bf_analyze, blake2bf_execute},
-        {point_evaluation_analyze, point_evaluation_execute},
-        {bls12_g1add_analyze, bls12_g1add_execute},
-        {bls12_g1msm_analyze, bls12_g1msm_execute},
-        {bls12_g2add_analyze, bls12_g2add_execute},
-        {bls12_g2msm_analyze, bls12_g2msm_execute},
-        {bls12_pairing_check_analyze, bls12_pairing_check_execute},
-        {bls12_map_fp_to_g1_analyze, bls12_map_fp_to_g1_execute},
-        {bls12_map_fp2_to_g2_analyze, bls12_map_fp2_to_g2_execute},
-    }};
-#ifdef EVMONE_PRECOMPILES_SILKPRE
-    // tbl[static_cast<size_t>(PrecompileId::ecrecover)].execute = silkpre_ecrecover_execute;
-    // tbl[static_cast<size_t>(PrecompileId::sha256)].execute = silkpre_sha256_execute;
-    // tbl[static_cast<size_t>(PrecompileId::ripemd160)].execute = silkpre_ripemd160_execute;
-    tbl[static_cast<size_t>(PrecompileId::expmod)].execute = silkpre_expmod_execute;
-    // tbl[static_cast<size_t>(PrecompileId::ecadd)].execute = silkpre_ecadd_execute;
-    // tbl[static_cast<size_t>(PrecompileId::ecmul)].execute = silkpre_ecmul_execute;
-    // tbl[static_cast<size_t>(PrecompileId::ecpairing)].execute = silkpre_ecpairing_execute;
-    // tbl[static_cast<size_t>(PrecompileId::blake2bf)].execute = silkpre_blake2bf_execute;
-#endif
-    return tbl;
-}();
+inline constexpr std::array<PrecompileTraits, NumPrecompiles> traits{{
+    {},  // undefined for 0
+    {ecrecover_analyze, ecrecover_execute},
+    {sha256_analyze, sha256_execute},
+    {ripemd160_analyze, ripemd160_execute},
+    {identity_analyze, identity_execute},
+    {expmod_analyze, expmod_execute},
+    {ecadd_analyze, ecadd_execute},
+    {ecmul_analyze, ecmul_execute},
+    {ecpairing_analyze, ecpairing_execute},
+    {blake2bf_analyze, blake2bf_execute},
+    {point_evaluation_analyze, point_evaluation_execute},
+    {bls12_g1add_analyze, bls12_g1add_execute},
+    {bls12_g1msm_analyze, bls12_g1msm_execute},
+    {bls12_g2add_analyze, bls12_g2add_execute},
+    {bls12_g2msm_analyze, bls12_g2msm_execute},
+    {bls12_pairing_check_analyze, bls12_pairing_check_execute},
+    {bls12_map_fp_to_g1_analyze, bls12_map_fp_to_g1_execute},
+    {bls12_map_fp2_to_g2_analyze, bls12_map_fp2_to_g2_execute},
+}};
 }  // namespace
 
 bool is_precompile(evmc_revision rev, const evmc::address& addr) noexcept
