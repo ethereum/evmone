@@ -54,6 +54,7 @@ target_sources(
     precompiles_kzg_test.cpp
     precompiles_ripemd160_test.cpp
     precompiles_sha256_test.cpp
+    precompiles_expmod_test.cpp
     state_block_test.cpp
     state_bloom_filter_test.cpp
     state_deposit_requests_test.cpp
