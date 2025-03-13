@@ -14,17 +14,35 @@ UIntT modexp_odd(const UIntT& base, const evmc::bytes_view& exp, const UIntT& mo
 
     UIntT ret = arith.to_mont(UIntT{1});
     const auto base_mont = arith.to_mont(base);
-    // const auto base2 = arith.mul(base_mont, base_mont);
-    // const auto base3 = arith.mul(base_mont, base2);
+    const auto base2 = arith.mul(base_mont, base_mont);
+    const auto base3 = arith.mul(base_mont, base2);
 
     for (const auto e : exp)
     {
-        for (size_t i = 8; i != 0; --i)
+        for (size_t i = 8; i != 0; i -= 2)
         {
             ret = arith.mul(ret, ret);
-            const auto bit = e >> (i - 1) & 1;
-            if (bit != 0)
+            const auto bits = e >> (i - 2) & 0b11;
+            switch (bits)
+            {
+            case 0b00:
+                ret = arith.mul(ret, ret);
+                break;
+            case 0b01:
+                ret = arith.mul(ret, ret);
                 ret = arith.mul(ret, base_mont);
+                break;
+            case 0b10:
+                ret = arith.mul(ret, base_mont);
+                ret = arith.mul(ret, ret);
+                break;
+            case 0b11:
+                ret = arith.mul(ret, ret);
+                ret = arith.mul(ret, base3);
+                break;
+            default:
+                __builtin_unreachable();
+            }
         }
     }
 
