@@ -171,15 +171,15 @@ TEST_F(state_transition, eof_examples_eofcreate)
     const auto factory = bytecode(
         //////////////////
         // Factory container
-        //                    Code section: PUSH0 [input size], PUSH0 [input offset], PUSH1 [salt],
-        //                                  PUSH0 [endowment value],
+        //                    Code section: PUSH0 [endowment value], PUSH0 [input size],
+        //                                  PUSH0 [input offset], PUSH1 [salt],
         //                                  EOFCREATE from first subcontainer and STOP
         //                                                               |
         //               Header: 1 code section 8 bytes long             |
         //               |                                               |
         //    version    |                                 Header terminator
         //    |          |___________                      |             |____________________
-        "EF00 01 01 0004 02 0001 0008 03 0001 0030 04 0000 00 00 80 0004 5F 5F 60FF 5F EC00 00"
+        "EF00 01 01 0004 02 0001 0008 03 0001 0030 04 0000 00 00 80 0004 5F 5F 5F 60FF EC00 00"
         //       |‾‾‾‾‾‾              |‾‾‾‾‾‾‾‾‾‾‾ |‾‾‾‾‾‾    |‾‾‾‾‾‾‾‾‾
         //       |                    |            Header: data section 0 bytes long
         //       |                    |                       |
