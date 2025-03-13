@@ -299,14 +299,14 @@ ExecutionResult ripemd160_execute(const uint8_t* input, size_t input_size, uint8
     return {EVMC_SUCCESS, 32};
 }
 
-static ExecutionResult expmod_execute(
+ExecutionResult expmod_execute(
     const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept
 {
     static constexpr auto LEN_SIZE = sizeof(intx::uint256);
 
     // The output size equal to the modulus size.
     // Handle short incomplete input up front. The answer is 0 of the length of the modulus.
-    if (output_size == 0 || input_size < 3 * LEN_SIZE) [[unlikely]]
+    if (output_size == 0 || input_size <= 3 * LEN_SIZE) [[unlikely]]
     {
         std::fill_n(output, output_size, 0);
         return {EVMC_SUCCESS, output_size};
