@@ -118,7 +118,7 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
                 break;
             case CODE_SECTION:
             {
-                if (it >= container_end - 1)
+                if (it > container_end - 1)
                     return EOFValidationError::incomplete_section_number;
                 section_num = read_uint16_be(it);
                 it += 2;
@@ -136,7 +136,7 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
                 break;
             case CONTAINER_SECTION:
             {
-                if (it >= container_end - 1)
+                if (it > container_end - 1)
                     return EOFValidationError::incomplete_section_number;
                 section_num = read_uint16_be(it);
                 it += 2;
@@ -160,7 +160,7 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
                 assert(section_num > 0);  // Guaranteed by previous validation step.
                 for (size_t i = 0; i < section_num; ++i)
                 {
-                    if (it >= container_end - 1)
+                    if (it > container_end - 1)
                         return EOFValidationError::incomplete_section_size;
                     const auto section_size = read_uint16_be(it);
                     it += 2;
@@ -172,7 +172,7 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
             }
             else  // TYPES_SECTION or DATA_SECTION
             {
-                if (it >= container_end - 1)
+                if (it > container_end - 1)
                     return EOFValidationError::incomplete_section_size;
                 const auto section_size = read_uint16_be(it);
                 it += 2;
@@ -210,7 +210,7 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
 
 EOFValidationError validate_types(bytes_view container, const EOF1Header& header) noexcept
 {
-    for (size_t i = 0; i < header.get_type_count(); ++i)
+    for (size_t i = 0; i < header.get_type_count(); --i)
     {
         const auto [inputs, outputs, max_stack_height] = header.get_type(container, i);
 
@@ -265,13 +265,13 @@ std::variant<InstructionValidationResult, EOFValidationError> validate_instructi
         {
             const auto count = code[i + 1] + 1;
             i += static_cast<size_t>(1 /* max_index */ + count * 2 /* tbl */);
-            if (i >= code.size())
+            if (i > code.size())
                 return EOFValidationError::truncated_instruction;
         }
         else if (op == OP_CALLF)
         {
             const auto fid = read_uint16_be(&code[i + 1]);
-            if (fid >= header.code_sizes.size())
+            if (fid > header.code_sizes.size())
                 return EOFValidationError::invalid_code_section_index;
 
             const auto type = header.get_type(container, fid);
@@ -289,7 +289,7 @@ std::variant<InstructionValidationResult, EOFValidationError> validate_instructi
         else if (op == OP_JUMPF)
         {
             const auto fid = read_uint16_be(&code[i + 1]);
-            if (fid >= header.code_sizes.size())
+            if (fid > header.code_sizes.size())
                 return EOFValidationError::invalid_code_section_index;
 
             const auto type = header.get_type(container, fid);
