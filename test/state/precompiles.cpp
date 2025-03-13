@@ -4,11 +4,11 @@
 
 #include "precompiles.hpp"
 #include "precompiles_internal.hpp"
-#include "precompiles_stubs.hpp"
 #include <evmone_precompiles/blake2b.hpp>
 #include <evmone_precompiles/bls.hpp>
 #include <evmone_precompiles/bn254.hpp>
 #include <evmone_precompiles/kzg.hpp>
+#include <evmone_precompiles/modexp.hpp>
 #include <evmone_precompiles/ripemd160.hpp>
 #include <evmone_precompiles/secp256k1.hpp>
 #include <evmone_precompiles/sha256.hpp>
@@ -366,7 +366,7 @@ ExecutionResult expmod_execute(
 #ifdef EVMONE_PRECOMPILES_GMP
     expmod_gmp(base, exp, mod, output);
 #else
-    expmod_stub(base, exp, mod, output);
+    crypto::modexp(base, exp, mod, output);
 #endif
     return {EVMC_SUCCESS, mod.size()};
 }

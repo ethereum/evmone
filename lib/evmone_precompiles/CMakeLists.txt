@@ -20,6 +20,8 @@ target_sources(
     pairing/bn254/pairing.cpp
     pairing/bn254/utils.hpp
     pairing/field_template.hpp
+    modexp.hpp
+    modexp.cpp
     ripemd160.hpp
     ripemd160.cpp
     secp256k1.hpp
