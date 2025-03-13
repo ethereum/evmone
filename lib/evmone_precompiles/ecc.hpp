@@ -237,35 +237,18 @@ ProjPoint<IntT> dbl(
     return {x3, y3, z3};
 }
 
-template <typename IntT, int A = 0>
-ProjPoint<IntT> mul(const evmmax::ModArith<IntT>& s, const ProjPoint<IntT>& z, const IntT& c,
-    const IntT& b3) noexcept
+template <typename IntT>
+ProjPoint<IntT> mul(
+    const ModArith<IntT>& m, const ProjPoint<IntT>& p, const IntT& c, const IntT& b3) noexcept
 {
-    ProjPoint<IntT> p;
-    auto q = z;
-    auto first_significant_met = false;
-
-    for (int i = 255; i >= 0; --i)
+    ProjPoint<IntT> r;
+    const auto bit_width = sizeof(IntT) * 8 - intx::clz(c);
+    for (auto i = bit_width; i != 0; --i)
     {
-        const auto d = c & (IntT{1} << i);
-        if (d == 0)
-        {
-            if (first_significant_met)
-            {
-                q = ecc::add(s, p, q, b3);
-                p = ecc::dbl(s, p, b3);
-            }
-        }
-        else
-        {
-            p = ecc::add(s, p, q, b3);
-            q = ecc::dbl(s, q, b3);
-            first_significant_met = true;
-        }
+        r = ecc::dbl(m, r, b3);
+        if ((c & (IntT{1} << (i - 1))) != 0)  // if the i-th bit in the scalar is set
+            r = ecc::add(m, r, p, b3);
     }
-
-    return p;
+    return r;
 }
-
-
 }  // namespace evmmax::ecc
