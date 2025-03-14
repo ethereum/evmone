@@ -100,6 +100,11 @@ state::Transaction from_json<state::Transaction>(const json::json& j);
 /// Exports the State (accounts) to JSON format (aka pre/post/alloc state).
 json::json to_json(const TestState& state);
 
+/// Export the state test to JSON format.
+json::json to_state_test(std::string_view test_name, const state::BlockInfo& block,
+    state::Transaction& tx, const TestState& pre, evmc_revision rev,
+    const std::variant<state::TransactionReceipt, std::error_code>& res, const TestState& post);
+
 /// Returns the standardized error message for the transaction validation error.
 [[nodiscard]] std::string get_invalid_tx_message(state::ErrorCode errc) noexcept;
 
