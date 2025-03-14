@@ -216,9 +216,8 @@ TEST_F(state_transition, eof_examples_eofcreate)
                            .code = factory,
                        });
 
-    // Address of the newly created contract is calculated using the salt, initcontainer hash and
-    // deployer address.
-    expect.post[0x5ea44d9b32a04ae2c15fe4fa8ebf9a8a5a1e7e89_address].exists = true;
+    // Address of the newly created contract is calculated using the salt and deployer address.
+    expect.post[0x6cfd22c7735ba6079cde10e592763d5586032432_address].exists = true;
     expect.post[*tx.to].exists = true;
 }
 

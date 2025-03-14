@@ -23,9 +23,9 @@ using evmc::uint256be;
 /// @return              The address computed with the CREATE scheme.
 [[nodiscard]] address compute_create_address(const address& sender, uint64_t sender_nonce) noexcept;
 
-/// Computes the address of to-be-created contract with the CREATE2 / EOFCREATE scheme.
+/// Computes the address of to-be-created contract with the CREATE2 scheme.
 ///
-/// Computes the new account address for the contract creation context of the create instruction.
+/// Computes the new account address for the contract creation context of the CREATE2 instruction.
 ///
 /// @param sender        The address of the message sender.
 /// @param salt          The salt.
@@ -33,6 +33,16 @@ using evmc::uint256be;
 /// @return              The address computed with the scheme.
 [[nodiscard]] address compute_create2_address(
     const address& sender, const bytes32& salt, bytes_view init_code) noexcept;
+
+/// Computes the address of to-be-created contract with the EOFCREATE scheme.
+///
+/// Computes the new account address for the contract creation context of the EOFCREATE instruction.
+///
+/// @param sender        The address of the message sender.
+/// @param salt          The salt.
+/// @return              The address computed with the scheme.
+[[nodiscard]] address compute_eofcreate_address(
+    const address& sender, const bytes32& salt) noexcept;
 
 class Host : public evmc::Host
 {
