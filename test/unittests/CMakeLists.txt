@@ -80,6 +80,7 @@ target_sources(
     state_transition_txcreate_test.cpp
     state_transition_extcode_test.cpp
     state_transition_selfdestruct_test.cpp
+    state_transition_snippets_test.cpp
     state_transition_touch_test.cpp
     state_transition_trace_test.cpp
     state_transition_transient_storage_test.cpp
