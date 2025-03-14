@@ -26,8 +26,6 @@ target_sources(
     precompiles.hpp
     precompiles.cpp
     precompiles_internal.hpp
-    precompiles_stubs.hpp
-    precompiles_stubs.cpp
     requests.hpp
     requests.cpp
     rlp.hpp
@@ -42,6 +40,17 @@ target_sources(
     transaction.hpp
     transaction.cpp
 )
+
+find_package(OpenSSL COMPONENTS Crypto)
+if(OPENSSL_FOUND)
+    target_compile_definitions(evmone-state PUBLIC EVMONE_PRECOMPILES_OPENSSL=1)
+    target_link_libraries(evmone-state PRIVATE OpenSSL::Crypto)
+    target_sources(
+        evmone-state PRIVATE
+        precompiles_openssl.hpp
+        precompiles_openssl.cpp
+    )
+endif()
 
 option(EVMONE_PRECOMPILES_SILKPRE "Enable precompiles support via silkpre library" OFF)
 if(EVMONE_PRECOMPILES_SILKPRE)

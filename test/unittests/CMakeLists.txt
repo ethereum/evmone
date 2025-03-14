@@ -41,6 +41,7 @@ target_sources(
     evmmax_bn254_add_test.cpp
     evmmax_bn254_mul_test.cpp
     evmmax_bn254_pairing_test.cpp
+    evmmax_modexp.cpp
     evmmax_test.cpp
     evmmax_secp256k1_test.cpp
     evmone_test.cpp
@@ -54,6 +55,7 @@ target_sources(
     precompiles_kzg_test.cpp
     precompiles_ripemd160_test.cpp
     precompiles_sha256_test.cpp
+    precompiles_expmod_test.cpp
     state_block_test.cpp
     state_bloom_filter_test.cpp
     state_deposit_requests_test.cpp

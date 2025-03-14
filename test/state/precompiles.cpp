@@ -4,11 +4,11 @@
 
 #include "precompiles.hpp"
 #include "precompiles_internal.hpp"
-#include "precompiles_stubs.hpp"
 #include <evmone_precompiles/blake2b.hpp>
 #include <evmone_precompiles/bls.hpp>
 #include <evmone_precompiles/bn254.hpp>
 #include <evmone_precompiles/kzg.hpp>
+#include <evmone_precompiles/modexp.hpp>
 #include <evmone_precompiles/ripemd160.hpp>
 #include <evmone_precompiles/secp256k1.hpp>
 #include <evmone_precompiles/sha256.hpp>
@@ -18,6 +18,10 @@
 #include <cassert>
 #include <limits>
 #include <span>
+
+#ifdef EVMONE_PRECOMPILES_OPENSSL
+#include "precompiles_openssl.hpp"
+#endif
 
 #ifdef EVMONE_PRECOMPILES_SILKPRE
 #include "precompiles_silkpre.hpp"
@@ -299,24 +303,51 @@ ExecutionResult ripemd160_execute(const uint8_t* input, size_t input_size, uint8
     return {EVMC_SUCCESS, 32};
 }
 
-static ExecutionResult expmod_execute(
+ExecutionResult expmod_execute(
     const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept
 {
     static constexpr auto LEN_SIZE = sizeof(intx::uint256);
 
     // The output size equal to the modulus size.
     // Handle short incomplete input up front. The answer is 0 of the length of the modulus.
-    if (output_size == 0 || input_size < 3 * LEN_SIZE) [[unlikely]]
+    if (output_size == 0 || input_size <= 3 * LEN_SIZE) [[unlikely]]
     {
         std::fill_n(output, output_size, 0);
         return {EVMC_SUCCESS, output_size};
     }
 
-#ifdef EVMONE_PRECOMPILES_SILKPRE
-    return silkpre_expmod_execute(input, input_size, output, output_size);
-#else
-    return expmod_stub(input, input_size, output, output_size);
-#endif
+    static constexpr size_t input_header_required_size = 3 * LEN_SIZE;
+    uint8_t input_header[input_header_required_size]{};
+    std::copy_n(input, std::min(input_size, input_header_required_size), input_header);
+    const auto base_len = intx::be::unsafe::load<intx::uint256>(input_header);
+    const auto exp_len = intx::be::unsafe::load<intx::uint256>(&input_header[32]);
+    const auto mod_len = intx::be::unsafe::load<intx::uint256>(&input_header[64]);
+
+    // This is assured by the analysis.
+    assert(output_size == mod_len);
+
+    // Extend input to full size (input_header_required_size + base_len + exp_len + mod_len).
+    // Filled with zeros
+    const auto full_input_size =
+        input_header_required_size + static_cast<size_t>(base_len + exp_len + mod_len);
+    evmc::bytes full_input(full_input_size, 0);
+    std::copy_n(input, std::min(input_size, full_input_size), full_input.data());
+
+    evmone::crypto::modexp(output, output_size,
+        {
+            &full_input[input_header_required_size],
+            static_cast<size_t>(base_len),
+        },
+        {
+            &full_input[input_header_required_size + static_cast<size_t>(base_len)],
+            static_cast<size_t>(exp_len),
+        },
+        {
+            &full_input[input_header_required_size + static_cast<size_t>(base_len + exp_len)],
+            static_cast<size_t>(mod_len),
+        });
+
+    return {EVMC_SUCCESS, output_size};
 }
 
 ExecutionResult ecadd_execute(const uint8_t* input, size_t input_size, uint8_t* output,
