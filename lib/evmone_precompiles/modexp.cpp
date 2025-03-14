@@ -23,6 +23,9 @@ UIntT modexp_odd(const UIntT& base, const evmc::bytes_view& exp, const UIntT& mo
         {
             ret = arith.mul(ret, ret);
             const auto bits = e >> (i - 2) & 0b11;
+
+            const auto& x = bits == 0b11 ? base3 : base_mont;
+
             switch (bits)
             {
             case 0b00:
@@ -30,15 +33,15 @@ UIntT modexp_odd(const UIntT& base, const evmc::bytes_view& exp, const UIntT& mo
                 break;
             case 0b01:
                 ret = arith.mul(ret, ret);
-                ret = arith.mul(ret, base_mont);
+                ret = arith.mul(ret, x);
                 break;
             case 0b10:
-                ret = arith.mul(ret, base_mont);
+                ret = arith.mul(ret, x);
                 ret = arith.mul(ret, ret);
                 break;
             case 0b11:
                 ret = arith.mul(ret, ret);
-                ret = arith.mul(ret, base3);
+                ret = arith.mul(ret, x);
                 break;
             default:
                 __builtin_unreachable();
