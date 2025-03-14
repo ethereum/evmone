@@ -10,11 +10,11 @@ using namespace evmone::test;
 
 TEST_F(state_transition, block_apply_withdrawal)
 {
-    static constexpr auto withdrawal_address = 0x8888_address;
+    static constexpr auto WITHDRAWAL_ADDRESS = 0x8888_address;
 
-    block.withdrawals = {{0, 0, withdrawal_address, 3}};
+    block.withdrawals = {{0, 0, WITHDRAWAL_ADDRESS, 3}};
     tx.to = To;
-    expect.post[withdrawal_address].balance = intx::uint256{3} * 1'000'000'000;
+    expect.post[WITHDRAWAL_ADDRESS].balance = uint256{3} * 1'000'000'000;
 }
 
 TEST_F(state_transition, known_block_hash)
