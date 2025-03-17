@@ -1120,7 +1120,7 @@ TEST_F(state_transition, creation_tx_invalid_initcode_header)
 
     expect.post[Sender].nonce = pre.get(Sender).nonce + 1;
     expect.status = EVMC_FAILURE;
-    expect.gas_used = 53516;
+    expect.gas_used = 53524;
 }
 
 TEST_F(state_transition, creation_tx_invalid_initcode)
@@ -1136,7 +1136,7 @@ TEST_F(state_transition, creation_tx_invalid_initcode)
 
     expect.post[Sender].nonce = pre.get(Sender).nonce + 1;
     expect.status = EVMC_FAILURE;
-    expect.gas_used = 53516;
+    expect.gas_used = 53524;
 }
 
 TEST_F(state_transition, creation_tx_truncated_data_initcode)
@@ -1152,7 +1152,7 @@ TEST_F(state_transition, creation_tx_truncated_data_initcode)
 
     expect.post[Sender].nonce = pre.get(Sender).nonce + 1;
     expect.status = EVMC_FAILURE;
-    expect.gas_used = 53528;
+    expect.gas_used = 53536;
 }
 
 TEST_F(state_transition, creation_tx_invalid_deploycode)
@@ -1167,7 +1167,7 @@ TEST_F(state_transition, creation_tx_invalid_deploycode)
 
     expect.post[Sender].nonce = pre.get(Sender).nonce + 1;
     expect.status = EVMC_FAILURE;
-    expect.gas_used = 53528;
+    expect.gas_used = 53536;
 }
 
 TEST_F(state_transition, creation_tx_invalid_eof_version)
@@ -1185,5 +1185,5 @@ TEST_F(state_transition, creation_tx_invalid_eof_version)
 
     expect.post[Sender].nonce = pre.get(Sender).nonce + 1;
     expect.status = EVMC_FAILURE;
-    expect.gas_used = 53516;
+    expect.gas_used = 53524;
 }

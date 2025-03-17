@@ -93,6 +93,14 @@ inline bytes big_endian(T value)
     return {static_cast<uint8_t>(value >> 8), static_cast<uint8_t>(value)};
 }
 
+template <typename T>
+    requires(std::is_same_v<T, uint32_t>)
+inline bytes big_endian(T value)
+{
+    return {static_cast<uint8_t>(value >> 24), static_cast<uint8_t>(value >> 16),
+        static_cast<uint8_t>(value >> 8), static_cast<uint8_t>(value)};
+}
+
 struct eof_bytecode
 {
 private:
@@ -135,8 +143,8 @@ private:
             out += "03"_hex + big_endian(container_count);
             for (const auto& container : m_containers)
             {
-                assert(container.size() <= std::numeric_limits<uint16_t>::max());
-                const auto container_size = static_cast<uint16_t>(container.size());
+                assert(container.size() <= std::numeric_limits<uint32_t>::max());
+                const auto container_size = static_cast<uint32_t>(container.size());
                 out += big_endian(container_size);
             }
         }

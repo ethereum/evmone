@@ -280,7 +280,7 @@ std::optional<evmc_message> Host::prepare_message(evmc_message msg) noexcept
                         return {};  // Light early exception.
 
                     const auto container_size =
-                        static_cast<size_t>(header->data_offset + header->data_size);
+                        static_cast<size_t>(header->data_offset) + header->data_size;
                     // Follows from the header->can_init condition above.
                     assert(container_size <= msg.input_size);
 
