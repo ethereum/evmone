@@ -114,7 +114,7 @@ PrecompileAnalysis expmod_analyze(bytes_view input, evmc_revision rev) noexcept
     if (base_len == 0 && mod_len == 0)
         return {min_gas, 0};
 
-    static constexpr auto LEN_LIMIT = std::numeric_limits<size_t>::max();
+    static constexpr auto LEN_LIMIT = std::numeric_limits<uint32_t>::max();
     if (base_len > LEN_LIMIT || exp_len > LEN_LIMIT || mod_len > LEN_LIMIT)
         return {GasCostMax, 0};
 
