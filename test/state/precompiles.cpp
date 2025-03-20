@@ -405,7 +405,7 @@ ExecutionResult ecpairing_execute(const uint8_t* input, size_t input_size, uint8
         if (res.has_value())
         {
             intx::be::unsafe::store(output, res.value() ? intx::uint256{1} : intx::uint256{0});
-            return {EVMC_SUCCESS, 64};
+            return {EVMC_SUCCESS, 32};
         }
         else
             return {EVMC_PRECOMPILE_FAILURE, 0};
