@@ -5,6 +5,7 @@
 #include "evm_fixture.hpp"
 #include <evmmax/evmmax.hpp>
 #include <gtest/gtest.h>
+#include <test/evmmax-precompiles/poseidon.hpp>
 #include <array>
 
 using namespace intx;
@@ -130,4 +131,38 @@ TEST_P(evm, evmmax_2byte_modulus_test)
 
     ASSERT_EQ(result.output_size, 2);
     EXPECT_EQ(hex({result.output_data, result.output_size}), "0087");
+}
+
+
+TEST_P(evm, evmmax_poseidon_hash)
+{
+    if (is_advanced())
+        return;
+
+    rev = EVMC_EXPERIMENTAL;
+    // vm.set_option("histogram", "1");
+
+    for (const auto& code : {
+             create_poseidon_hash_bytecode(),
+             create_poseidon_hash_bytecode_datacopy(),
+             create_poseidon_hash_bytecode_vectorized(),
+             create_poseidon_hash_bytecode_vectorized_datacopy(),
+         })
+    {
+        // std::cout << hex(code) << std::endl;
+
+        //    vm.set_option("trace", "1");
+        uint8_t calldata[2 * sizeof(uint256)];
+        intx::be::unsafe::store(calldata, 2_u256);
+        intx::be::unsafe::store(&calldata[32], 1_u256);
+
+        // std::cout << hex({calldata, 64}) << std::endl;
+
+        execute(6000, code, {calldata, 64});
+        EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+
+        ASSERT_EQ(result.output_size, 32);
+        EXPECT_EQ(hex({result.output_data, result.output_size}),
+            "1576c555b70c9b778666e91d600fdc6d73f30aeed2f6adc5360d6a052259775a");
+    }
 }

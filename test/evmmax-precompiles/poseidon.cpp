@@ -231,7 +231,7 @@ bytecode create_poseidon_hash_bytecode()
     res += mstore(mem_ptr,
         push(21888242871839275222246405745257275088548364400416034343698204186575808495617_u256));
     const size_t mod_ptr = mem_ptr;
-    res += setmodx(21, 32, mod_ptr);
+    res += setmodx(21, 254, mod_ptr);
     mem_ptr += 32;
 
     // Store MDS matrix
@@ -349,7 +349,7 @@ bytecode create_poseidon_hash_bytecode_datacopy()
     res += mstore(mem_ptr,
         push(21888242871839275222246405745257275088548364400416034343698204186575808495617_u256));
     const size_t mod_ptr = mem_ptr;
-    res += setmodx(17, 32, mod_ptr);
+    res += setmodx(17, 254, mod_ptr);
     mem_ptr += 32;
 
     // Store MDS matrix
@@ -449,7 +449,7 @@ bytecode create_poseidon_hash_bytecode_vectorized()
     res += mstore(mem_ptr,
         push(21888242871839275222246405745257275088548364400416034343698204186575808495617_u256));
     const size_t mod_ptr = mem_ptr;
-    res += setmodx(17, 32, mod_ptr);
+    res += setmodx(17, 254, mod_ptr);
     mem_ptr += 32;
 
     // Store MDS matrix
@@ -562,7 +562,7 @@ bytecode create_poseidon_hash_bytecode_vectorized_datacopy()
     res += mstore(mem_ptr,
         push(21888242871839275222246405745257275088548364400416034343698204186575808495617_u256));
     const size_t mod_ptr = mem_ptr;
-    res += setmodx(17, 32, mod_ptr);
+    res += setmodx(17, 254, mod_ptr);
     mem_ptr += 32;
 
     // Store MDS matrix
