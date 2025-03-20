@@ -48,8 +48,8 @@ if(EVMONE_PRECOMPILES_SILKPRE)
     include(FetchContent)
     FetchContent_Declare(
         silkpre
-        GIT_REPOSITORY https://github.com/torquem-ch/silkpre
-        GIT_TAG 3322bb898ac9528fc2cf9a8df1e48360420d0c1a
+        GIT_REPOSITORY https://github.com/erigontech/silkpre
+        GIT_TAG f972090a41de75073f55e914bf0107838b4b86a4
         GIT_SHALLOW TRUE
     )
     set(BUILD_SHARED_LIBS_ORIG ${BUILD_SHARED_LIBS})
