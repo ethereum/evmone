@@ -488,6 +488,11 @@ inline bytecode loadx(bytecode num_vals, bytecode val_idx, bytecode mem_offset)
     return num_vals + val_idx + mem_offset + OP_LOADX;
 }
 
+inline bytecode log0(bytecode offset, bytecode size)
+{
+    return size + offset + OP_LOG0;
+}
+
 inline bytecode addmodx(uint8_t dst_idx, uint8_t dst_stride, uint8_t x_idx, uint8_t x_stride,
     uint8_t y_idx, uint8_t y_stride, uint8_t count)
 {
