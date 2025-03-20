@@ -33,6 +33,17 @@ inline uint16_t read_uint16_be(auto it) noexcept
     return static_cast<uint16_t>((h << 8) | l);
 }
 
+/// Loads big endian uint32_t from data. Unsafe.
+/// TODO: Move it to intx
+inline uint32_t read_uint32_be(auto it) noexcept
+{
+    const uint8_t b3 = *it++;
+    const uint8_t b2 = *it++;
+    const uint8_t b1 = *it++;
+    const uint8_t b0 = *it;
+    return static_cast<uint32_t>((b3 << 24) | (b2 << 16) | (b1 << 8) | b0);
+}
+
 using evmc::bytes;
 using evmc::bytes_view;
 using namespace evmc::literals;
@@ -80,11 +91,11 @@ struct EOF1Header
     /// @data_size.
     uint16_t data_size = 0;
     /// Offset of data container section start.
-    uint16_t data_offset = 0;
+    uint32_t data_offset = 0;
     /// Size of every container section.
-    std::vector<uint16_t> container_sizes;
+    std::vector<uint32_t> container_sizes;
     /// Offset of every container section start;
-    std::vector<uint16_t> container_offsets;
+    std::vector<uint32_t> container_offsets;
 
     /// A helper to extract reference to a specific type section.
     [[nodiscard]] EOFCodeType get_type(bytes_view container, size_t type_idx) const noexcept
