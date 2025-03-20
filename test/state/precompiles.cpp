@@ -100,12 +100,12 @@ PrecompileAnalysis expmod_analyze(bytes_view input, evmc_revision rev) noexcept
 {
     using namespace intx;
 
-    static constexpr size_t input_header_required_size = 3 * sizeof(uint256);
+    static constexpr size_t INPUT_HEADER_REQUIRED_SIZE = 3 * sizeof(uint256);
     const int64_t min_gas = (rev >= EVMC_BERLIN) ? 200 : 0;
 
-    uint8_t input_header[input_header_required_size]{};
+    uint8_t input_header[INPUT_HEADER_REQUIRED_SIZE]{};
     // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
-    std::copy_n(input.data(), std::min(input.size(), input_header_required_size), input_header);
+    std::copy_n(input.data(), std::min(input.size(), INPUT_HEADER_REQUIRED_SIZE), input_header);
 
     const auto base_len = be::unsafe::load<uint256>(&input_header[0]);
     const auto exp_len = be::unsafe::load<uint256>(&input_header[32]);
@@ -114,11 +114,11 @@ PrecompileAnalysis expmod_analyze(bytes_view input, evmc_revision rev) noexcept
     if (base_len == 0 && mod_len == 0)
         return {min_gas, 0};
 
-    static constexpr auto len_limit = std::numeric_limits<size_t>::max();
-    if (base_len > len_limit || exp_len > len_limit || mod_len > len_limit)
+    static constexpr auto LEN_LIMIT = std::numeric_limits<size_t>::max();
+    if (base_len > LEN_LIMIT || exp_len > LEN_LIMIT || mod_len > LEN_LIMIT)
         return {GasCostMax, 0};
 
-    auto adjusted_len = [input](size_t offset, size_t len) {
+    const auto adjusted_len = [input](size_t offset, size_t len) {
         const auto head_len = std::min(len, size_t{32});
         const auto head_explicit_len =
             std::max(std::min(offset + head_len, input.size()), offset) - offset;
@@ -140,13 +140,13 @@ PrecompileAnalysis expmod_analyze(bytes_view input, evmc_revision rev) noexcept
         return w * w;
     };
     static constexpr auto mult_complexity_eip198 = [](const uint256& x) noexcept {
-        const auto x2 = x * x;
+        const auto xx = x * x;
         if (x <= 64)
-            return x2;
+            return xx;
         else if (x <= 1024)
-            return (x2 >> 2) + 96 * x - 3072;
+            return (xx >> 2) + 96 * x - 3072;
         else
-            return (x2 >> 4) + 480 * x - 199680;
+            return (xx >> 4) + 480 * x - 199680;
     };
 
     const auto max_len = std::max(mod_len, base_len);
@@ -155,7 +155,7 @@ PrecompileAnalysis expmod_analyze(bytes_view input, evmc_revision rev) noexcept
     const auto gas = (rev >= EVMC_BERLIN) ?
                          mult_complexity_eip2565(max_len) * adjusted_exp_len / 3 :
                          mult_complexity_eip198(max_len) * adjusted_exp_len / 20;
-    return {std::max(min_gas, static_cast<int64_t>(std::min(gas, intx::uint256{GasCostMax}))),
+    return {std::max(min_gas, static_cast<int64_t>(std::min(gas, uint256{GasCostMax}))),
         static_cast<size_t>(mod_len)};
 }
 
