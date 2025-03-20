@@ -217,7 +217,7 @@ TEST_F(state_transition, eof_examples_eofcreate)
                        });
 
     // Address of the newly created contract is calculated using the salt and deployer address.
-    expect.post[0x6cfd22c7735ba6079cde10e592763d5586032432_address].exists = true;
+    expect.post[0x361420e1d38d81189bd5727c9b856fbc769ca413_address].exists = true;
     expect.post[*tx.to].exists = true;
 }
 
