@@ -1180,6 +1180,7 @@ TEST_F(eof_validation, max_nested_containers_eofcreate_returncode)
 // | ---------------------------- | ------ | ------ | ------ | -------------- |
 // | top-level initcode           | -      | -      | +      | +              |
 // | EOFCREATE                    | -      | -      | +      | +              |
+// | TXCREATE                     | -      | -      | +      | +              |
 // | top-level runtime            | +      | +      | +      | -              |
 // | RETURNCODE               | +      | +      | +      | -              |
 // | EOFCREATE and RETURNCODE | -      | -      | +      | -              |

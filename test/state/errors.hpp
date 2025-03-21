@@ -29,6 +29,9 @@ enum ErrorCode : int
     BLOB_GAS_LIMIT_EXCEEDED,
     CREATE_SET_CODE_TX,
     EMPTY_AUTHORIZATION_LIST,
+    INIT_CODE_EMPTY,
+    INIT_CODE_COUNT_LIMIT_EXCEEDED,
+    INIT_CODE_COUNT_ZERO,
     UNKNOWN_ERROR,
 };
 
@@ -79,6 +82,12 @@ inline const std::error_category& evmone_category() noexcept
                 return "set code transaction must not be a create transaction";
             case EMPTY_AUTHORIZATION_LIST:
                 return "empty authorization list";
+            case INIT_CODE_EMPTY:
+                return "initcode empty";
+            case INIT_CODE_COUNT_LIMIT_EXCEEDED:
+                return "max initcode count exceeded";
+            case INIT_CODE_COUNT_ZERO:
+                return "initcode list empty";
             case UNKNOWN_ERROR:
                 return "Unknown error";
             default:
