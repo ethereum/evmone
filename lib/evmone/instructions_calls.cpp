@@ -387,10 +387,10 @@ Result eofcreate(
     if (state.in_static_mode())
         return {EVMC_STATIC_MODE_VIOLATION, gas_left};
 
-    const auto endowment = stack.pop();
     const auto salt = stack.pop();
     const auto input_offset_u256 = stack.pop();
     const auto input_size_u256 = stack.pop();
+    const auto endowment = stack.pop();
 
     stack.push(0);  // Assume failure.
     state.return_data.clear();
