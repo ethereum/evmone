@@ -816,7 +816,7 @@ TEST_F(eof_validation, forwards_rjumpv_variable_stack)
 
 TEST_F(eof_validation, self_referencing_jumps)
 {
-    // rjumpf from stack 0 to stack 0
+    // rjump from stack 0 to stack 0
     add_test_case(eof_bytecode(rjump(-3)), EOFValidationError::success, "rjump");
 
     // rjumpi from stack 0 to stack 1
