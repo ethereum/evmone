@@ -22,7 +22,7 @@ Let's start by defining some basic and universal instructions' parameters.
    
 3. Stack height change.
 
-   This is difference of the stack height before and after the instruction 
+   This is the difference in stack height before and after the instruction 
    execution. Can be negative if the instruction pops more items than pushes.
    
 Examples:
@@ -152,7 +152,7 @@ by attaching the correction value to the mentioned instructions.
 
 ### Undefined instructions
 
-Undefined instructions have base gas cost 0 and not stack requirements.
+Undefined instructions have a base gas cost 0 and not stack requirements.
 
 
 
