@@ -25,7 +25,7 @@ TEST_F(state_transition, eof_examples_minimal)
         //               |                                  |
         //    version    |                    Header terminator
         //    |          |___________         |             |
-        "EF00 01 01 0004 02 0001 0001 04 0000 00 00 80 0000 00"
+        "EF00 01 01 0004 02 0001 0001 FF 0000 00 00 80 0000 00"
         //       |‾‾‾‾‾‾              |‾‾‾‾‾‾    |‾‾‾‾‾‾‾‾‾
         //       |                    Header: data section 0 bytes long
         //       |                               |
@@ -60,7 +60,7 @@ TEST_F(state_transition, eof_examples_static_relative_jump_loop)
         //               |                                  |
         //    version    |                    Header terminator
         //    |          |___________         |             |
-        "EF00 01 01 0004 02 0001 0003 04 0000 00 00 80 0000 E0FFFD"
+        "EF00 01 01 0004 02 0001 0003 FF 0000 00 00 80 0000 E0FFFD"
         //       |‾‾‾‾‾‾              |‾‾‾‾‾‾    |‾‾‾‾‾‾‾‾‾
         //       |                    Header: data section 0 bytes long
         //       |                               |
@@ -98,7 +98,7 @@ TEST_F(state_transition, eof_examples_callf)
         //               |                                                  |              |
         //    version    |                         Header terminator        |              |
         //    |          |________________         |                        |_____________ |
-        "EF00 01 01 0008 02 0002 0006 0001 04 0000 00 00 80 0001 01 01 0001 602A E30001 00 E4"
+        "EF00 01 01 0008 02 0002 0006 0001 FF 0000 00 00 80 0001 01 01 0001 602A E30001 00 E4"
         //       |‾‾‾‾‾‾                   |‾‾‾‾‾‾    |‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
         //       |                         Header: data section 0 bytes long
         //       |                                    |
@@ -137,7 +137,7 @@ TEST_F(state_transition, eof_examples_creation_tx)
         //               |                                               |
         //    version    |                                 Header terminator
         //    |          |___________                      |             |________
-        "EF00 01 01 0004 02 0001 0004 03 0001 0014 04 0000 00 00 80 0002 5F5F EE00"
+        "EF00 01 01 0004 02 0001 0004 03 0001 0014 FF 0000 00 00 80 0002 5F5F EE00"
         //       |‾‾‾‾‾‾              |‾‾‾‾‾‾‾‾‾‾‾ |‾‾‾‾‾‾    |‾‾‾‾‾‾‾‾‾
         //       |                    |            Header: data section 0 bytes long
         //       |                    |                       |
@@ -148,7 +148,7 @@ TEST_F(state_transition, eof_examples_creation_tx)
         //
         //////////////////
         // Deployed container (contract doing nothing, see Example 1)
-        "EF00 01 01 0004 02 0001 0001 04 0000 00 00 80 0000 00");
+        "EF00 01 01 0004 02 0001 0001 FF 0000 00 00 80 0000 00");
 
     // Put the initcontainer in the `data` field of the transaction, appending some calldata.
     tx.data = initcontainer + "ABCDEF";
@@ -179,7 +179,7 @@ TEST_F(state_transition, eof_examples_eofcreate)
         //               |                                               |
         //    version    |                                 Header terminator
         //    |          |___________                      |             |____________________
-        "EF00 01 01 0004 02 0001 0008 03 0001 0030 04 0000 00 00 80 0004 5F 5F 60FF 5F EC00 00"
+        "EF00 01 01 0004 02 0001 0008 03 0001 0030 FF 0000 00 00 80 0004 5F 5F 60FF 5F EC00 00"
         //       |‾‾‾‾‾‾              |‾‾‾‾‾‾‾‾‾‾‾ |‾‾‾‾‾‾    |‾‾‾‾‾‾‾‾‾
         //       |                    |            Header: data section 0 bytes long
         //       |                    |                       |
@@ -197,7 +197,7 @@ TEST_F(state_transition, eof_examples_eofcreate)
         //               |                                               |
         //    version    |                                 Header terminator
         //    |          |___________                      |             |_________
-        "EF00 01 01 0004 02 0001 0004 03 0001 0014 04 0000 00 00 80 0002 5F 5F EE00"
+        "EF00 01 01 0004 02 0001 0004 03 0001 0014 FF 0000 00 00 80 0002 5F 5F EE00"
         //       |‾‾‾‾‾‾              |‾‾‾‾‾‾‾‾‾‾‾ |‾‾‾‾‾‾    |‾‾‾‾‾‾‾‾‾
         //       |                    |            Header: data section 0 bytes long
         //       |                    |                       |
@@ -208,7 +208,7 @@ TEST_F(state_transition, eof_examples_eofcreate)
         //
         //////////////////
         // Deployed container (contract doing nothing, see Example 1)
-        "EF00 01 01 0004 02 0001 0001 04 0000 00 00 80 0000 00");
+        "EF00 01 01 0004 02 0001 0001 FF 0000 00 00 80 0000 00");
 
     // Tests the code is valid EOF and when called with initcodes creates a new contract.
     tx.to = To;
@@ -218,7 +218,7 @@ TEST_F(state_transition, eof_examples_eofcreate)
 
     // Address of the newly created contract is calculated using the salt, initcontainer hash and
     // deployer address.
-    expect.post[0x5ea44d9b32a04ae2c15fe4fa8ebf9a8a5a1e7e89_address].exists = true;
+    expect.post[0x36ebd01943666da3951a3e896f467dc3ea0183af_address].exists = true;
     expect.post[*tx.to].exists = true;
 }
 
@@ -238,7 +238,7 @@ TEST_F(state_transition, eof_examples_data)
         //               |                                  |
         //    version    |                    Header terminator       Data section
         //    |          |___________         |             |________ |_________________________________________________________________
-        "EF00 01 01 0004 02 0001 0004 04 0021 00 00 80 0001 D10000 00 454F462068617320736F6D65206772656174206578616D706C6573206865726521"
+        "EF00 01 01 0004 02 0001 0004 FF 0021 00 00 80 0001 D10000 00 454F462068617320736F6D65206772656174206578616D706C6573206865726521"
         //       |‾‾‾‾‾‾              |‾‾‾‾‾‾    |‾‾‾‾‾‾‾‾‾
         //       |                    Header: data section 33 bytes long
         //       |                               |
