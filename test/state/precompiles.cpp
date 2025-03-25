@@ -5,6 +5,7 @@
 #include "precompiles.hpp"
 #include "precompiles_internal.hpp"
 #include "precompiles_stubs.hpp"
+
 #include <evmone_precompiles/blake2b.hpp>
 #include <evmone_precompiles/bls.hpp>
 #include <evmone_precompiles/bn254.hpp>
@@ -12,11 +13,13 @@
 #include <evmone_precompiles/ripemd160.hpp>
 #include <evmone_precompiles/secp256k1.hpp>
 #include <evmone_precompiles/sha256.hpp>
+#include <gmp.h>
 #include <intx/intx.hpp>
 #include <array>
 #include <bit>
 #include <cassert>
 #include <limits>
+#include <memory>
 #include <span>
 
 #ifdef EVMONE_PRECOMPILES_SILKPRE
@@ -317,20 +320,46 @@ ExecutionResult expmod_execute(
     const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept
 {
     static constexpr auto LEN_SIZE = sizeof(intx::uint256);
+    static constexpr auto HEADER_SIZE = 3 * LEN_SIZE;
+    static constexpr auto LEN32_OFF = LEN_SIZE - sizeof(uint32_t);
 
     // The output size equal to the modulus size.
     // Handle short incomplete input up front. The answer is 0 of the length of the modulus.
-    if (output_size == 0 || input_size <= 3 * LEN_SIZE) [[unlikely]]
+    if (output_size == 0 || input_size <= HEADER_SIZE) [[unlikely]]
     {
         std::fill_n(output, output_size, 0);
         return {EVMC_SUCCESS, output_size};
     }
 
-#ifdef EVMONE_PRECOMPILES_SILKPRE
-    return silkpre_expmod_execute(input, input_size, output, output_size);
-#else
-    return expmod_stub(input, input_size, output, output_size);
-#endif
+    const auto base_len = intx::be::unsafe::load<uint32_t>(&input[LEN32_OFF]);
+    const auto exp_len = intx::be::unsafe::load<uint32_t>(&input[LEN_SIZE + LEN32_OFF]);
+    const auto mod_len = output_size;
+    assert(intx::be::unsafe::load<uint32_t>(&input[2 * LEN_SIZE + LEN32_OFF]) == output_size);
+
+    // FIXME: Don't copy full input, just modulus should be enough.
+    const auto input_padded = std::make_unique<uint8_t[]>(base_len + exp_len + mod_len);
+    std::copy_n(input + HEADER_SIZE, input_size - HEADER_SIZE, input_padded.get());
+
+    mpz_t base;
+    mpz_t exp;
+    mpz_t mod;
+    mpz_t result;
+    mpz_inits(base, exp, mod, result, nullptr);
+    mpz_import(base, base_len, 1, 1, 0, 0, &input_padded[0]);
+    mpz_import(exp, exp_len, 1, 1, 0, 0, &input_padded[base_len]);
+    mpz_import(mod, mod_len, 1, 1, 0, 0, &input_padded[base_len + exp_len]);
+
+    if (mpz_sgn(mod) != 0)
+        mpz_powm(result, base, exp, mod);
+
+    size_t export_size = 0;
+    mpz_export(output, &export_size, 1, 1, 0, 0, result);
+    assert(export_size <= output_size);
+    std::copy_backward(output, output + export_size, output + output_size);
+    std::fill_n(output, output_size - export_size, 0);
+
+    mpz_clears(base, exp, mod, result, nullptr);
+    return {EVMC_SUCCESS, output_size};
 }
 
 ExecutionResult ecadd_execute(const uint8_t* input, size_t input_size, uint8_t* output,
