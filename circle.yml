@@ -450,6 +450,29 @@ jobs:
       - upload_coverage:
           flags: ethereum_tests
 
+  precompiles-gmp:
+    executor: linux-gcc-latest
+    environment:
+      BUILD_TYPE: Coverage
+      CMAKE_OPTIONS: -DCMAKE_CXX_FLAGS=-Og -DEVMONE_PRECOMPILES_GMP=1
+    steps:
+      - run:
+          name: "Install GMP"
+          command: sudo apt-get -q update && sudo apt-get -qy install libgmp-dev
+      - build
+      - download_execution_spec_tests:
+          release: v4.1.0
+          fixtures_suffix: develop
+      - run:
+          name: "Execution spec tests (state_tests)"
+          working_directory: ~/spec-tests/fixtures/state_tests
+          command: >
+            ~/build/bin/evmone-statetest ~/spec-tests/fixtures/state_tests
+      - collect_coverage_gcc
+      - upload_coverage:
+          flags: eest_gmp
+
+
   precompiles-silkpre:
     executor: linux-gcc-latest
     environment:
@@ -675,6 +698,7 @@ workflows:
       - execution-spec-tests
       - eof-execution-spec-tests
       - ethereum-tests
+      - precompiles-gmp
       - precompiles-silkpre
       - cmake-min
       - gcc-min

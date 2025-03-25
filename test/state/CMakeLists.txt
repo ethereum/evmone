@@ -43,7 +43,7 @@ target_sources(
     transaction.cpp
 )
 
-option(EVMONE_PRECOMPILES_SILKPRE "Enable precompiles support via silkpre library" OFF)
+option(EVMONE_PRECOMPILES_SILKPRE "Enable precompiles from silkpre library (for benchmarking only)" OFF)
 if(EVMONE_PRECOMPILES_SILKPRE)
     include(FetchContent)
     FetchContent_Declare(
@@ -70,5 +70,18 @@ if(EVMONE_PRECOMPILES_SILKPRE)
         evmone-state PRIVATE
         precompiles_silkpre.hpp
         precompiles_silkpre.cpp
+    )
+endif()
+
+# This is done after Silkpre because it also tries to find GMP.
+option(EVMONE_PRECOMPILES_GMP "Enable precompiles implementations via the GMP/MPIR library" OFF)
+if(EVMONE_PRECOMPILES_GMP)
+    find_package(GMP REQUIRED)
+    target_link_libraries(evmone-state PRIVATE GMP::gmp)
+    target_compile_definitions(evmone-state PRIVATE EVMONE_PRECOMPILES_GMP=1)
+    target_sources(
+        evmone-state PRIVATE
+        precompiles_gmp.hpp
+        precompiles_gmp.cpp
     )
 endif()

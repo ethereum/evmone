@@ -19,8 +19,8 @@
 #include <limits>
 #include <span>
 
-#ifdef EVMONE_PRECOMPILES_SILKPRE
-#include "precompiles_silkpre.hpp"
+#ifdef EVMONE_PRECOMPILES_GMP
+#include "precompiles_gmp.hpp"
 #endif
 
 namespace evmone::state
@@ -363,16 +363,12 @@ ExecutionResult expmod_execute(
     const auto exp = payload.substr(base_len, exp_len);
     const auto mod = mod_requires_padding ? bytes_view{output, mod_len} : mod_explicit;
 
-#ifdef EVMONE_PRECOMPILES_SILKPRE
-    (void)base;
-    (void)exp;
-    (void)mod;
-    // For Silkpre use the raw input for compatibility.
-    return silkpre_expmod_execute(input, input_size, output, output_size);
+#ifdef EVMONE_PRECOMPILES_GMP
+    expmod_gmp(base, exp, mod, output);
 #else
     expmod_stub(base, exp, mod, output);
-    return {EVMC_SUCCESS, mod.size()};
 #endif
+    return {EVMC_SUCCESS, mod.size()};
 }
 
 ExecutionResult ecadd_execute(const uint8_t* input, size_t input_size, uint8_t* output,
