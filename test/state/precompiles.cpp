@@ -344,12 +344,16 @@ ExecutionResult expmod_execute(
     }
 
     const auto mod_off = base_len + exp_len;
-    const auto mod_requires_padding = (mod_len > payload.size());
+    assert(mod_off < payload.size());
+    const auto mod_requires_padding = (mod_off + mod_len > payload.size());
     if (mod_requires_padding)
     {
-        std::fill_n(output, output_size, 0);
-        std::copy(payload.begin() + mod_off, payload.end(), output);
+        const auto output_p = std::copy(&payload[mod_off], payload.data() + payload.size(), output);
+        std::fill(output_p, output + output_size, 0);
     }
+
+    const auto base_p = &payload[0];
+    const auto exp_p = &payload[base_len];
     const auto mod_p = mod_requires_padding ? output : &payload[mod_off];
 
     mpz_t base;
@@ -357,8 +361,8 @@ ExecutionResult expmod_execute(
     mpz_t mod;
     mpz_t result;
     mpz_inits(base, exp, mod, result, nullptr);
-    mpz_import(base, base_len, 1, 1, 0, 0, &payload[0]);
-    mpz_import(exp, exp_len, 1, 1, 0, 0, &payload[base_len]);
+    mpz_import(base, base_len, 1, 1, 0, 0, base_p);
+    mpz_import(exp, exp_len, 1, 1, 0, 0, exp_p);
     mpz_import(mod, mod_len, 1, 1, 0, 0, mod_p);
 
     if (mpz_sgn(mod) != 0)
