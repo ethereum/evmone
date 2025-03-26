@@ -336,18 +336,30 @@ ExecutionResult expmod_execute(
     const auto mod_len = output_size;
     assert(intx::be::unsafe::load<uint32_t>(&input[2 * LEN_SIZE + LEN32_OFF]) == output_size);
 
-    // FIXME: Don't copy full input, just modulus should be enough.
-    const auto input_padded = std::make_unique<uint8_t[]>(base_len + exp_len + mod_len);
-    std::copy_n(input + HEADER_SIZE, input_size - HEADER_SIZE, input_padded.get());
+    const std::span payload{input + HEADER_SIZE, input_size - HEADER_SIZE};
+    if (base_len >= payload.size() || exp_len >= payload.size())
+    {
+        std::fill_n(output, output_size, 0);
+        return {EVMC_SUCCESS, output_size};
+    }
+
+    const auto mod_off = base_len + exp_len;
+    const auto mod_requires_padding = (mod_len > payload.size());
+    if (mod_requires_padding)
+    {
+        std::fill_n(output, output_size, 0);
+        std::copy(payload.begin() + mod_off, payload.end(), output);
+    }
+    const auto mod_p = mod_requires_padding ? output : &payload[mod_off];
 
     mpz_t base;
     mpz_t exp;
     mpz_t mod;
     mpz_t result;
     mpz_inits(base, exp, mod, result, nullptr);
-    mpz_import(base, base_len, 1, 1, 0, 0, &input_padded[0]);
-    mpz_import(exp, exp_len, 1, 1, 0, 0, &input_padded[base_len]);
-    mpz_import(mod, mod_len, 1, 1, 0, 0, &input_padded[base_len + exp_len]);
+    mpz_import(base, base_len, 1, 1, 0, 0, &payload[0]);
+    mpz_import(exp, exp_len, 1, 1, 0, 0, &payload[base_len]);
+    mpz_import(mod, mod_len, 1, 1, 0, 0, mod_p);
 
     if (mpz_sgn(mod) != 0)
         mpz_powm(result, base, exp, mod);
