@@ -835,7 +835,7 @@ TEST_F(state_transition, txcreate_invalid_initcode)
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
-    expect.gas_used = 55748;
+    expect.gas_used = 55756;
 
     expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
@@ -863,7 +863,7 @@ TEST_F(state_transition, txcreate_truncated_data_initcode)
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
-    expect.gas_used = 55760;
+    expect.gas_used = 55768;
 
     expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
@@ -889,7 +889,7 @@ TEST_F(state_transition, txcreate_invalid_deploycode)
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
-    expect.gas_used = 55760;
+    expect.gas_used = 55768;
 
     expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
@@ -914,7 +914,7 @@ TEST_F(state_transition, txcreate_missing_initcontainer)
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
-    expect.gas_used = 55748;
+    expect.gas_used = 55756;
 
     expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
@@ -995,7 +995,7 @@ TEST_F(state_transition, txcreate_deploy_code_with_dataloadn_invalid)
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
-    expect.gas_used = 56024;
+    expect.gas_used = 56032;
 
     expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
@@ -1969,7 +1969,7 @@ TEST_F(state_transition, legacy_txcreate_invalid_initcode)
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_code});
 
-    expect.gas_used = 55748;
+    expect.gas_used = 55756;
 
     expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
@@ -1996,7 +1996,7 @@ TEST_F(state_transition, legacy_txcreate_truncated_data_initcode)
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_code});
 
-    expect.gas_used = 55760;
+    expect.gas_used = 55768;
 
     expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
@@ -2021,7 +2021,7 @@ TEST_F(state_transition, legacy_txcreate_invalid_deploycode)
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_code});
 
-    expect.gas_used = 55760;
+    expect.gas_used = 55768;
 
     expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
@@ -2045,7 +2045,7 @@ TEST_F(state_transition, legacy_txcreate_missing_initcontainer)
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_code});
 
-    expect.gas_used = 55748;
+    expect.gas_used = 55756;
 
     expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
@@ -2124,7 +2124,7 @@ TEST_F(state_transition, legacy_txcreate_deploy_code_with_dataloadn_invalid)
     tx.to = To;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_code});
 
-    expect.gas_used = 56024;
+    expect.gas_used = 56032;
 
     expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
