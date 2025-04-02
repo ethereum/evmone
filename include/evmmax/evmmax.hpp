@@ -19,11 +19,20 @@ class EVMMAXState
 {
     struct OpcodesGasCost
     {
-        int64_t addmodx = 0;
-        int64_t mulmodx = 0;
+    private:
+        int64_t addmodx;
+        int64_t mulmodx;
+
+    public:
+        explicit OpcodesGasCost(int64_t _addmodx, int64_t _mulmodx)
+          : addmodx(_addmodx), mulmodx(_mulmodx)
+        {}
+
+        int64_t calc_mul_gas_cost(uint8_t count) const { return (mulmodx * count + 999) / 1000; }
+        int64_t calc_add_gas_cost(uint8_t count) const { return (addmodx * count + 999) / 1000; }
     };
 
-    OpcodesGasCost current_gas_cost;
+    OpcodesGasCost current_gas_cost = OpcodesGasCost{0, 0};
 
     std::unique_ptr<EXMMAXModStateInterface> active_mod;  ///< Current active modulus
 

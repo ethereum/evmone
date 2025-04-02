@@ -200,11 +200,9 @@ struct EXMMAXModStateSmallValues : public EXMMAXModStateInterface
     [[nodiscard]] bool addmodx(size_t dst_idx, size_t dst_stride, size_t x_idx, size_t x_stride,
         size_t y_idx, size_t y_stride, size_t count) noexcept override
     {
-        //        if (std::max(dst_idx + dst_stride * (count - 1),
-        //                std::max(x_idx + x_stride * (count - 1), y_idx + y_stride * (count - 1)))
-        //                >=
-        //            values.size())
-        //            return false;
+        assert(std::max(dst_idx + dst_stride * (count - 1),
+                   std::max(x_idx + x_stride * (count - 1), y_idx + y_stride * (count - 1))) <
+               values.size());
 
         for (size_t i = 0; i < count; ++i)
         {
@@ -222,11 +220,9 @@ struct EXMMAXModStateSmallValues : public EXMMAXModStateInterface
     [[nodiscard]] bool submodx(size_t dst_idx, size_t dst_stride, size_t x_idx, size_t x_stride,
         size_t y_idx, size_t y_stride, size_t count) noexcept override
     {
-        //        if (std::max(dst_idx + dst_stride * (count - 1),
-        //                std::max(x_idx + x_stride * (count - 1), y_idx + y_stride * (count - 1)))
-        //                >=
-        //            values.size())
-        //            return false;
+        assert(std::max(dst_idx + dst_stride * (count - 1),
+                   std::max(x_idx + x_stride * (count - 1), y_idx + y_stride * (count - 1))) <
+               values.size());
 
         for (size_t i = 0; i < count; ++i)
         {
@@ -242,11 +238,9 @@ struct EXMMAXModStateSmallValues : public EXMMAXModStateInterface
     [[nodiscard]] bool mulmodx(size_t dst_idx, size_t dst_stride, size_t x_idx, size_t x_stride,
         size_t y_idx, size_t y_stride, size_t count) noexcept override
     {
-        //        if (std::max(dst_idx + dst_stride * (count - 1),
-        //                std::max(x_idx + x_stride * (count - 1), y_idx + y_stride * (count - 1)))
-        //                >=
-        //            values.size())
-        //            return false;
+        assert(std::max(dst_idx + dst_stride * (count - 1),
+                   std::max(x_idx + x_stride * (count - 1), y_idx + y_stride * (count - 1))) <
+               values.size());
 
         for (size_t i = 0; i < count; ++i)
         {
@@ -362,25 +356,32 @@ struct EXMMAXModStateSmallValues : public EXMMAXModStateInterface
     active_mod = create_mod_state(mod_ptr, mod_size, alloc_count);
     if (active_mod != nullptr)
     {
-        if (mod_size <= 192)
+        if (mod_size <= 32)
         {
-            current_gas_cost = {
-                .addmodx = 1,
-                .mulmodx = 1,
+            current_gas_cost = OpcodesGasCost{
+                50,
+                60,
+            };
+        }
+        else if (mod_size <= 192)
+        {
+            current_gas_cost = OpcodesGasCost{
+                1000,
+                1000,
             };
         }
         else if (mod_size <= 320)
         {
-            current_gas_cost = {
-                .addmodx = 1,
-                .mulmodx = 2,
+            current_gas_cost = OpcodesGasCost{
+                1000,
+                2000,
             };
         }
         else if (mod_size <= 384)
         {
-            current_gas_cost = {
-                .addmodx = 1,
-                .mulmodx = 3,
+            current_gas_cost = OpcodesGasCost{
+                1000,
+                3000,
             };
         }
         else
@@ -402,7 +403,7 @@ struct EXMMAXModStateSmallValues : public EXMMAXModStateInterface
     if (!is_activated())
         return EVMC_FAILURE;
 
-    if ((gas_left -= current_gas_cost.mulmodx * static_cast<int64_t>(num_vals)) < 0)
+    if ((gas_left -= current_gas_cost.calc_mul_gas_cost(static_cast<int64_t>(num_vals))) < 0)
         return EVMC_OUT_OF_GAS;
 
     return active_mod->loadx(out_ptr, val_idx, num_vals) ? EVMC_SUCCESS : EVMC_FAILURE;
@@ -414,7 +415,7 @@ struct EXMMAXModStateSmallValues : public EXMMAXModStateInterface
     if (!is_activated())
         return EVMC_FAILURE;
 
-    if ((gas_left -= current_gas_cost.mulmodx * static_cast<int64_t>(num_vals)) < 0)
+    if ((gas_left -= current_gas_cost.calc_mul_gas_cost(static_cast<int64_t>(num_vals))) < 0)
         return EVMC_OUT_OF_GAS;
 
     return active_mod->storex(in_ptr, dst_val_idx, num_vals) ? EVMC_SUCCESS : EVMC_FAILURE;
@@ -427,7 +428,7 @@ struct EXMMAXModStateSmallValues : public EXMMAXModStateInterface
     if (!is_activated())
         return EVMC_FAILURE;
 
-    if ((gas_left -= current_gas_cost.addmodx * static_cast<int64_t>(count)) < 0)
+    if ((gas_left -= current_gas_cost.calc_add_gas_cost(static_cast<int64_t>(count))) < 0)
         return EVMC_OUT_OF_GAS;
 
     return active_mod->addmodx(dst_idx, dst_stride, x_idx, x_stride, y_idx, y_stride, count) ?
@@ -442,7 +443,7 @@ struct EXMMAXModStateSmallValues : public EXMMAXModStateInterface
     if (!is_activated())
         return EVMC_FAILURE;
 
-    if ((gas_left -= current_gas_cost.addmodx * static_cast<int64_t>(count)) < 0)
+    if ((gas_left -= current_gas_cost.calc_add_gas_cost(static_cast<int64_t>(count))) < 0)
         return EVMC_OUT_OF_GAS;
 
     return active_mod->submodx(dst_idx, dst_stride, x_idx, x_stride, y_idx, y_stride, count) ?
@@ -457,7 +458,7 @@ struct EXMMAXModStateSmallValues : public EXMMAXModStateInterface
     if (!is_activated())
         return EVMC_FAILURE;
 
-    if ((gas_left -= current_gas_cost.mulmodx * static_cast<int64_t>(count)) < 0)
+    if ((gas_left -= current_gas_cost.calc_mul_gas_cost(static_cast<int64_t>(count))) < 0)
         return EVMC_OUT_OF_GAS;
 
     return active_mod->mulmodx(dst_idx, dst_stride, x_idx, x_stride, y_idx, y_stride, count) ?

@@ -356,3 +356,99 @@ TEST_P(evm, ntt_spread)
         EXPECT_EQ(hex({result.output_data, result.output_size}), hex({result_data, 2 * 4 * 8}));
     }
 }
+
+namespace
+{
+std::vector<bytecode> generate_random_bytecode()
+{
+    std::vector<bytecode> res;
+    res.reserve(6);
+
+    std::array<
+        std::function<bytecode(uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t)>, 3>
+        evmmax_opcodes = {
+            static_cast<bytecode (*)(
+                uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t)>(&addmodx),
+            static_cast<bytecode (*)(
+                uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t)>(&submodx),
+            static_cast<bytecode (*)(
+                uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t)>(&mulmodx),
+        };
+
+    for (const auto& op : evmmax_opcodes)
+    {
+        auto code = mstore8(0, push(12289_u256 >> 8)) + mstore8(1, push(12289_u256)) +
+                    setmodx(256, 14, 0) + mstore8(0, push(static_cast<uint8_t>(rand() % 0xff))) +
+                    mstore8(1, push(static_cast<uint8_t>(rand() % 0xff))) + storex(1, 0, 0) +
+                    addmodx(1, 1, 0, 0, 1, 1, 254);
+
+        for (size_t i = 0; i < 3000; ++i)
+        {
+            code += op(static_cast<uint8_t>(rand() % 0xff), 0, static_cast<uint8_t>(rand() % 0xff),
+                0, static_cast<uint8_t>(rand() % 0xff), 0, 1);
+        }
+
+        code += loadx(256, 0, 0);
+        code += ret(0, 256 * 2);
+
+        code = eof_bytecode(code, 3);
+
+        res.emplace_back(code);
+    }
+
+    for (const auto& op : evmmax_opcodes)
+    {
+        auto code = mstore8(0, push(12289_u256 >> 8)) + mstore8(1, push(12289_u256)) +
+                    setmodx(256, 14, 0) + mstore8(0, push(static_cast<uint8_t>(rand() % 0xff))) +
+                    mstore8(1, push(static_cast<uint8_t>(rand() % 0xff))) + storex(1, 0, 0) +
+                    addmodx(1, 1, 0, 0, 1, 1, 254);
+
+        for (size_t i = 0; i < 3000; ++i)
+        {
+            const auto dst_idx = static_cast<uint8_t>(rand() % 0xff);
+            const auto x_idx = static_cast<uint8_t>(rand() % 0xff);
+            const auto y_idx = static_cast<uint8_t>(rand() % 0xff);
+
+            const auto count = static_cast<uint8_t>(rand() % 32);
+
+            const auto dst_stride = static_cast<uint8_t>((255 - dst_idx) / count);
+            const auto x_stride = static_cast<uint8_t>((255 - x_idx) / count);
+            const auto y_stride = static_cast<uint8_t>((255 - y_idx) / count);
+
+            code += op(dst_idx, dst_stride, x_idx, x_stride, y_idx, y_stride, count);
+        }
+
+        code += loadx(256, 0, 0);
+        code += ret(0, 256 * 2);
+
+        code = eof_bytecode(code, 3);
+
+        res.emplace_back(code);
+    }
+
+    return res;
+}
+
+}  // namespace
+
+TEST_P(evm, evmmax_bench)
+{
+    {
+        if (is_advanced())
+            return;
+        rev = EVMC_EXPERIMENTAL;
+        vm.set_option("validate_eof", "1");
+
+        for (const auto& code : generate_random_bytecode())
+        {
+            std::cout << hex(code) << std::endl;
+            std::cout << code.size() << std::endl;
+
+            execute(50000, code);
+
+            // std::cout << hex({result.output_data, result.output_size}) << std::endl;
+
+            EXPECT_EQ(result.status_code, EVMC_SUCCESS);
+        }
+    }
+}
