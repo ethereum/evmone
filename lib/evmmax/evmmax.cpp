@@ -2,6 +2,8 @@
 // Copyright 2023 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+#pragma clang diagnostic ignored "-Wconversion"
+#include "fastmod.h"
 #include <assert.h>
 #include <evmmax/evmmax.hpp>
 
@@ -152,11 +154,17 @@ struct EXMMAXModStateSmallValues : public EXMMAXModStateInterface
     std::vector<UintT> values;
     const size_t value_size_in_bytes;
     const UintT mod;
+    uint64_t fast_mod;
 
     explicit EXMMAXModStateSmallValues(
         const UintT& _mod, size_t mod_size, size_t vals_used) noexcept
       : value_size_in_bytes((mod_size + 7) / 8), mod(_mod)
     {
+        if constexpr (std::is_same<UintT, uint32_t>::value)
+            fast_mod = fastmod::computeM_u32(mod);
+        else if constexpr (std::is_same<UintT, uint64_t>::value)
+            assert(false);
+
         values.resize(vals_used);
     }
 
@@ -181,7 +189,9 @@ struct EXMMAXModStateSmallValues : public EXMMAXModStateInterface
         for (unsigned i = 0; i < num_vals; ++i)
         {
             values[dst_val_idx + i] =
-                load<UintT>(in_ptr + value_size_in_bytes * i, value_size_in_bytes) % mod;
+                load<UintT>(in_ptr + value_size_in_bytes * i, value_size_in_bytes);
+
+            values[dst_val_idx + i] = fastmod::fastmod_u32(values[dst_val_idx + i], fast_mod, mod);
         }
 
         return true;
@@ -201,7 +211,9 @@ struct EXMMAXModStateSmallValues : public EXMMAXModStateInterface
             values[dst_idx + i * dst_stride] =
                 values[x_idx + i * x_stride] + values[y_idx + i * y_stride];
 
-            values[dst_idx + i * dst_stride] %= mod;
+            values[dst_idx + i * dst_stride] =
+                fastmod::fastmod_u32(values[dst_idx + i * dst_stride], fast_mod, mod);
+            // values[dst_idx + i * dst_stride] %= mod;
         }
 
         return true;
@@ -241,7 +253,9 @@ struct EXMMAXModStateSmallValues : public EXMMAXModStateInterface
             values[dst_idx + i * dst_stride] =
                 values[x_idx + i * x_stride] * values[y_idx + i * y_stride];
 
-            values[dst_idx + i * dst_stride] %= mod;
+            values[dst_idx + i * dst_stride] =
+                fastmod::fastmod_u32(values[dst_idx + i * dst_stride], fast_mod, mod);
+            // values[dst_idx + i * dst_stride] %= mod;
         }
 
         return true;
