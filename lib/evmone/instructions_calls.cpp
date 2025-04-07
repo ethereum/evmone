@@ -404,12 +404,6 @@ Result eofcreate(
     const auto& eof_header = state.analysis.baseline->eof_header();
     const auto initcontainer = eof_header.get_container(container, initcontainer_index);
 
-    // Charge for initcode hashing.
-    constexpr auto initcode_word_cost_hashing = 6;
-    const auto initcode_cost_hashing = num_words(initcontainer.size()) * initcode_word_cost_hashing;
-    if ((gas_left -= initcode_cost_hashing) < 0)
-        return {EVMC_OUT_OF_GAS, gas_left};
-
     const auto input_offset = static_cast<size_t>(input_offset_u256);
     const auto input_size = static_cast<size_t>(input_size_u256);
 
