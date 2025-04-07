@@ -58,12 +58,12 @@ static constexpr auto EOF_CODE_HASH_SENTINEL =
 
 struct EOFCodeType
 {
-    uint8_t inputs;             ///< Number of code inputs.
-    uint8_t outputs;            ///< Number of code outputs.
-    uint16_t max_stack_height;  ///< Maximum stack height reached in the code.
+    uint8_t inputs;               ///< Number of code inputs.
+    uint8_t outputs;              ///< Number of code outputs.
+    uint16_t max_stack_increase;  ///< Maximum stack height above the inputs reached in the code.
 
-    EOFCodeType(uint8_t inputs_, uint8_t outputs_, uint16_t max_stack_height_)
-      : inputs{inputs_}, outputs{outputs_}, max_stack_height{max_stack_height_}
+    EOFCodeType(uint8_t inputs_, uint8_t outputs_, uint16_t max_stack_increase_)
+      : inputs{inputs_}, outputs{outputs_}, max_stack_increase{max_stack_increase_}
     {}
 };
 
@@ -177,11 +177,11 @@ enum class EOFValidationError
     too_many_code_sections,
     invalid_type_section_size,
     invalid_first_section_type,
-    invalid_max_stack_height,
+    invalid_max_stack_increase,
     no_terminating_instruction,
     stack_height_mismatch,
     stack_higher_than_outputs_required,
-    max_stack_height_above_limit,
+    max_stack_increase_above_limit,
     inputs_outputs_num_above_limit,
     unreachable_instructions,
     stack_underflow,

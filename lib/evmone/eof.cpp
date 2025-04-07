@@ -31,7 +31,7 @@ constexpr auto CODE_SECTION_SIZE_SIZE = sizeof(uint16_t);
 constexpr auto CONTAINER_SECTION_SIZE_SIZE = sizeof(uint32_t);
 constexpr auto CODE_SECTION_NUMBER_LIMIT = 1024;
 constexpr auto CONTAINER_SECTION_NUMBER_LIMIT = 256;
-constexpr auto MAX_STACK_HEIGHT = 0x03FF;
+constexpr auto MAX_STACK_INCREASE_LIMIT = 0x03FF;
 constexpr auto OUTPUTS_INPUTS_NUMBER_LIMIT = 0x7F;
 constexpr auto REL_OFFSET_SIZE = sizeof(int16_t);
 constexpr auto STACK_SIZE_LIMIT = 1024;
@@ -237,7 +237,7 @@ EOFValidationError validate_types(bytes_view container, const EOF1Header& header
 {
     for (size_t i = 0; i < header.get_type_count(); ++i)
     {
-        const auto [inputs, outputs, max_stack_height] = header.get_type(container, i);
+        const auto [inputs, outputs, max_stack_increase] = header.get_type(container, i);
 
         // First type should be (0, 0x80)
         if (i == 0 && (inputs != 0 || outputs != NON_RETURNING_FUNCTION))
@@ -247,8 +247,8 @@ EOFValidationError validate_types(bytes_view container, const EOF1Header& header
             inputs > OUTPUTS_INPUTS_NUMBER_LIMIT)
             return EOFValidationError::inputs_outputs_num_above_limit;
 
-        if (max_stack_height > MAX_STACK_HEIGHT)
-            return EOFValidationError::max_stack_height_above_limit;
+        if (max_stack_increase > MAX_STACK_INCREASE_LIMIT)
+            return EOFValidationError::max_stack_increase_above_limit;
     }
 
     return EOFValidationError::success;
@@ -423,8 +423,11 @@ bool validate_rjump_destinations(bytes_view code) noexcept
     return true;
 }
 
+/// Validates stack height of the function.
+///
 /// Requires that the input is validated against truncation.
-std::variant<EOFValidationError, int32_t> validate_max_stack_height(
+/// Returns computed max stack increase or the validation error.
+std::variant<int32_t, EOFValidationError> validate_stack_height(
     bytes_view code, size_t func_index, const EOF1Header& header, bytes_view container)
 {
     // Special value used for detecting errors.
@@ -467,8 +470,7 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
             const auto callee_type = header.get_type(container, fid);
             stack_height_required = callee_type.inputs;
 
-            if (stack_height.max + callee_type.max_stack_height - stack_height_required >
-                STACK_SIZE_LIMIT)
+            if (stack_height.max + callee_type.max_stack_increase > STACK_SIZE_LIMIT)
                 return EOFValidationError::stack_overflow;
 
             // Instruction validation ensures target function is returning
@@ -480,8 +482,7 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
             const auto fid = read_uint16_be(&code[i + 1]);
             const auto callee_type = header.get_type(container, fid);
 
-            if (stack_height.max + callee_type.max_stack_height - callee_type.inputs >
-                STACK_SIZE_LIMIT)
+            if (stack_height.max + callee_type.max_stack_increase > STACK_SIZE_LIMIT)
                 return EOFValidationError::stack_overflow;
 
             if (callee_type.outputs == NON_RETURNING_FUNCTION)
@@ -601,7 +602,8 @@ std::variant<EOFValidationError, int32_t> validate_max_stack_height(
 
     const auto max_stack_height_it = std::ranges::max_element(stack_heights,
         [](StackHeightRange lhs, StackHeightRange rhs) noexcept { return lhs.max < rhs.max; });
-    return max_stack_height_it->max;
+    const auto max_stack_increase = max_stack_height_it->max - type.inputs;
+    return max_stack_increase;
 }
 
 EOFValidationError validate_eof1(
@@ -684,16 +686,16 @@ EOFValidationError validate_eof1(
                 return EOFValidationError::invalid_rjump_destination;
 
             // Validate stack
-            auto msh_or_error = validate_max_stack_height(
+            const auto shi_or_error = validate_stack_height(
                 header.get_code(container, code_idx), code_idx, header, container);
-            if (const auto* error = std::get_if<EOFValidationError>(&msh_or_error))
+            if (const auto* error = std::get_if<EOFValidationError>(&shi_or_error))
                 return *error;
             // TODO(clang-tidy): Too restrictive, see
             //   https://github.com/llvm/llvm-project/issues/120867.
             // NOLINTNEXTLINE(modernize-use-integer-sign-comparison)
-            if (std::get<int32_t>(msh_or_error) !=
-                header.get_type(container, code_idx).max_stack_height)
-                return EOFValidationError::invalid_max_stack_height;
+            if (std::get<int32_t>(shi_or_error) !=
+                header.get_type(container, code_idx).max_stack_increase)
+                return EOFValidationError::invalid_max_stack_increase;
         }
 
         if (std::ranges::find(visited_code_sections, false) != visited_code_sections.end())
@@ -975,10 +977,10 @@ std::string_view get_error_message(EOFValidationError err) noexcept
         return "invalid_type_section_size";
     case EOFValidationError::invalid_first_section_type:
         return "invalid_first_section_type";
-    case EOFValidationError::invalid_max_stack_height:
-        return "invalid_max_stack_height";
-    case EOFValidationError::max_stack_height_above_limit:
-        return "max_stack_height_above_limit";
+    case EOFValidationError::invalid_max_stack_increase:
+        return "invalid_max_stack_increase";
+    case EOFValidationError::max_stack_increase_above_limit:
+        return "max_stack_increase_above_limit";
     case EOFValidationError::inputs_outputs_num_above_limit:
         return "inputs_outputs_num_above_limit";
     case EOFValidationError::no_terminating_instruction:

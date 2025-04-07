@@ -98,16 +98,16 @@ TEST_F(state_transition, eof_examples_callf)
         //               |                                                  |              |
         //    version    |                         Header terminator        |              |
         //    |          |________________         |                        |_____________ |
-        "EF00 01 01 0008 02 0002 0006 0001 FF 0000 00 00 80 0001 01 01 0001 602A E30001 00 E4"
+        "EF00 01 01 0008 02 0002 0006 0001 FF 0000 00 00 80 0001 01 01 0000 602A E30001 00 E4"
         //       |‾‾‾‾‾‾                   |‾‾‾‾‾‾    |‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
         //       |                         Header: data section 0 bytes long
         //       |                                    |
         //       Header: types section 8 bytes long   |
         //                                            |
         //                                            Types section: first code section 0 inputs,
-        //                                            non-returning, max stack height 1;
+        //                                            non-returning, max stack increase 1;
         //                                            second code section 1 input,
-        //                                            1 output, max stack height 1
+        //                                            1 output, max stack increase 0
     );
 
     // Tests the code is valid EOF.
