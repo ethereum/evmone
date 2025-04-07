@@ -149,7 +149,7 @@ private:
 
         // types section
         for (const auto& type : m_types)
-            out += bytes{type.inputs, type.outputs} + big_endian(type.max_stack_height);
+            out += bytes{type.inputs, type.outputs} + big_endian(type.max_stack_increase);
         return out;
     }
 
@@ -161,7 +161,7 @@ public:
     auto& code(bytecode c, uint8_t inputs, uint8_t outputs, uint16_t max_stack_height)
     {
         m_codes.emplace_back(std::move(c));
-        m_types.emplace_back(inputs, outputs, max_stack_height);
+        m_types.emplace_back(inputs, outputs, max_stack_height - inputs);
         return *this;
     }
 

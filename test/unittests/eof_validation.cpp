@@ -53,10 +53,10 @@ std::string_view get_tests_error_message(EOFValidationError err) noexcept
         return "EOF_InvalidTypeSectionSize";
     case EOFValidationError::invalid_first_section_type:
         return "EOF_InvalidFirstSectionType";
-    case EOFValidationError::invalid_max_stack_height:
-        return "EOF_InvalidMaxStackHeight";
-    case EOFValidationError::max_stack_height_above_limit:
-        return "EOF_MaxStackHeightExceeded";
+    case EOFValidationError::invalid_max_stack_increase:
+        return "EOFException.INVALID_MAX_STACK_INCREASE";
+    case EOFValidationError::max_stack_increase_above_limit:
+        return "EOFException.MAX_STACK_INCREASE_ABOVE_LIMIT";
     case EOFValidationError::inputs_outputs_num_above_limit:
         return "EOF_InputsOutputsNumAboveLimit";
     case EOFValidationError::no_terminating_instruction:
