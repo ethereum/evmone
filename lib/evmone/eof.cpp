@@ -225,9 +225,11 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
         std::accumulate(section_headers.container_sizes.begin(),
             section_headers.container_sizes.end(), uint64_t{0});
     const auto remaining_container_size = static_cast<uint64_t>(container_end - it);
-    // Only data section may be truncated, so remaining_container size must be at least
-    // declared_size_without_data
+    // Only data section may be truncated, so remaining_container size must be in
+    // [declared_size_without_data, declared_size_without_data + declared_data_size]
     if (remaining_container_size < section_bodies_without_data)
+        return EOFValidationError::invalid_section_bodies_size;
+    if (remaining_container_size > section_bodies_without_data + section_headers.data_size)
         return EOFValidationError::invalid_section_bodies_size;
 
     return section_headers;
@@ -633,9 +635,6 @@ EOFValidationError validate_eof1(
             return *error;
 
         auto& header = std::get<EOF1Header>(error_or_header);
-
-        if (container.size() > static_cast<size_t>(header.data_offset) + header.data_size)
-            return EOFValidationError::invalid_section_bodies_size;
 
         if (const auto err = validate_types(container, header); err != EOFValidationError::success)
             return err;
