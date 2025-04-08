@@ -329,12 +329,12 @@ jobs:
 
   deploy:
     docker:
-      - image: circleci/golang
+      - image: cimg/go
     steps:
       - run:
           name: "Install GHR"
           command: |
-            GO111MODULE=on go get github.com/tcnksm/ghr@v0.12.1
+            go install github.com/tcnksm/ghr@v0.17.0
       - attach_workspace:
           at: ~/package
       - run:
