@@ -470,11 +470,10 @@ std::variant<TransactionProperties, std::error_code> validate_transaction(
             return make_error_code(INIT_CODE_COUNT_LIMIT_EXCEEDED);
         if (tx.initcodes.empty())
             return make_error_code(INIT_CODE_COUNT_ZERO);
-        if (std::any_of(tx.initcodes.begin(), tx.initcodes.end(),
-                [](const bytes& v) { return v.size() > MAX_INITCODE_SIZE; }))
+        if (std::ranges::any_of(
+                tx.initcodes, [](const bytes& v) { return v.size() > MAX_INITCODE_SIZE; }))
             return make_error_code(INIT_CODE_SIZE_LIMIT_EXCEEDED);
-        if (std::any_of(
-                tx.initcodes.begin(), tx.initcodes.end(), [](const bytes& v) { return v.empty(); }))
+        if (std::ranges::any_of(tx.initcodes, [](const bytes& v) { return v.empty(); }))
             return make_error_code(INIT_CODE_EMPTY);
         break;
 
