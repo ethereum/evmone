@@ -19,7 +19,8 @@ enum ErrorCode : int
     NONCE_TOO_HIGH,
     NONCE_TOO_LOW,
     TIP_GT_FEE_CAP,
-    FEE_CAP_LESS_THEN_BLOCKS,
+    FEE_CAP_LESS_THAN_BLOCKS,
+    BLOB_FEE_CAP_LESS_THAN_BLOCKS,
     GAS_LIMIT_REACHED,
     SENDER_NOT_EOA,
     INIT_CODE_SIZE_LIMIT_EXCEEDED,
@@ -59,8 +60,10 @@ inline const std::error_category& evmone_category() noexcept
                 return "nonce too low";
             case TIP_GT_FEE_CAP:
                 return "max priority fee per gas higher than max fee per gas";
-            case FEE_CAP_LESS_THEN_BLOCKS:
+            case FEE_CAP_LESS_THAN_BLOCKS:
                 return "max fee per gas less than block base fee";
+            case BLOB_FEE_CAP_LESS_THAN_BLOCKS:
+                return "max blob fee per gas less than block base fee";
             case GAS_LIMIT_REACHED:
                 return "gas limit reached";
             case SENDER_NOT_EOA:

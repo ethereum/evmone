@@ -27,7 +27,7 @@ namespace evmone::test
         return "TR_NonceTooLow";
     case TIP_GT_FEE_CAP:
         return "TR_TipGtFeeCap";
-    case FEE_CAP_LESS_THEN_BLOCKS:
+    case FEE_CAP_LESS_THAN_BLOCKS:
         return "TR_FeeCapLessThanBlocks";
     case GAS_LIMIT_REACHED:
         return "TR_GasLimitReached";

@@ -114,7 +114,8 @@ TEST(state_tx, validate_blob_tx)
             validate_transaction(state, block, tx, EVMC_CANCUN, block.gas_limit, g));
     };
 
-    EXPECT_EQ(expect_error(blob_gas_limit), make_error_code(ErrorCode::FEE_CAP_LESS_THEN_BLOCKS));
+    EXPECT_EQ(
+        expect_error(blob_gas_limit), make_error_code(ErrorCode::BLOB_FEE_CAP_LESS_THAN_BLOCKS));
 
     tx.max_blob_gas_price = 1;
     tx.blob_hashes.push_back(
