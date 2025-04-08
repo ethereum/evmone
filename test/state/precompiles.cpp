@@ -337,14 +337,13 @@ ExecutionResult expmod_execute(
     assert(intx::be::unsafe::load<uint32_t>(&input[2 * LEN_SIZE + LEN32_OFF]) == output_size);
 
     const std::span payload{input + HEADER_SIZE, input_size - HEADER_SIZE};
-    if (base_len >= payload.size() || exp_len >= payload.size())
+    const auto mod_off = base_len + exp_len;  // Cannot overflow if gas cost computed before.
+    if (mod_off >= payload.size())
     {
         std::fill_n(output, output_size, 0);
         return {EVMC_SUCCESS, output_size};
     }
 
-    const auto mod_off = base_len + exp_len;
-    assert(mod_off < payload.size());
     const auto mod_requires_padding = (mod_off + mod_len > payload.size());
     if (mod_requires_padding)
     {
