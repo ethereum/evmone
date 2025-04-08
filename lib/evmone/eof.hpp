@@ -10,7 +10,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <string_view>
-#include <variant>
 #include <vector>
 
 namespace evmone
@@ -212,10 +211,6 @@ enum class ContainerKind : uint8_t
 /// Determines the EOF version of the container by inspecting container's EOF prefix.
 /// If the prefix is missing or invalid, 0 is returned meaning legacy code.
 [[nodiscard]] uint8_t get_eof_version(bytes_view container) noexcept;
-
-/// Validates the header and returns its representation if successful.
-[[nodiscard]] EVMC_EXPORT std::variant<EOF1Header, EOFValidationError> validate_header(
-    evmc_revision rev, bytes_view container) noexcept;
 
 /// Validates whether given container is a valid EOF according to the rules of given revision.
 [[nodiscard]] EVMC_EXPORT EOFValidationError validate_eof(

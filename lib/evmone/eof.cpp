@@ -16,6 +16,7 @@
 #include <numeric>
 #include <queue>
 #include <unordered_set>
+#include <variant>
 #include <vector>
 
 namespace evmone
@@ -233,6 +234,74 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
         return EOFValidationError::invalid_section_bodies_size;
 
     return section_headers;
+}
+
+std::variant<EOF1Header, EOFValidationError> validate_header(
+    evmc_revision rev, bytes_view container) noexcept
+{
+    if (!is_eof_container(container))
+        return EOFValidationError::invalid_prefix;
+
+    const auto version = get_eof_version(container);
+    if (version != 1)
+        return EOFValidationError::eof_version_unknown;
+
+    if (rev < EVMC_OSAKA)
+        return EOFValidationError::eof_version_unknown;
+
+    // `offset` variable handled below is known to not be greater than the container size, as
+    // checked in `validate_section_headers`. Combined with the requirement for the container
+    // size to not exceed MAX_INITCODE_SIZE (checked before `validate-header` is called),
+    // this allows us to cast `offset` to narrower integers.
+    assert(container.size() <= MAX_INITCODE_SIZE);
+
+    auto section_headers_or_error = validate_section_headers(container);
+    if (const auto* error = std::get_if<EOFValidationError>(&section_headers_or_error))
+        return *error;
+
+    auto& section_headers = std::get<EOFSectionHeaders>(section_headers_or_error);
+
+    const auto header_size = eof_header_size(section_headers);
+
+    const auto type_section_offset = header_size;
+
+    if (section_headers.type_size !=
+        section_headers.code_sizes.size() * EOF1Header::TYPE_ENTRY_SIZE)
+        return EOFValidationError::invalid_type_section_size;
+
+    auto offset = header_size + section_headers.type_size;
+
+    std::vector<uint16_t> code_offsets;
+    code_offsets.reserve(section_headers.code_sizes.size());
+    for (const auto code_size : section_headers.code_sizes)
+    {
+        assert(offset <= std::numeric_limits<uint16_t>::max());
+        code_offsets.emplace_back(static_cast<uint16_t>(offset));
+        offset += code_size;
+    }
+
+    std::vector<uint32_t> container_offsets;
+    container_offsets.reserve(section_headers.container_sizes.size());
+    for (const auto container_size : section_headers.container_sizes)
+    {
+        assert(offset <= std::numeric_limits<uint32_t>::max());
+        container_offsets.emplace_back(static_cast<uint32_t>(offset));
+        offset += container_size;
+    }
+
+    assert(offset <= std::numeric_limits<uint32_t>::max());
+    const auto data_offset = static_cast<uint32_t>(offset);
+
+    return EOF1Header{
+        .version = container[2],
+        .type_section_offset = type_section_offset,
+        .code_sizes = std::move(section_headers.code_sizes),
+        .code_offsets = std::move(code_offsets),
+        .data_size = section_headers.data_size,
+        .data_offset = data_offset,
+        .container_sizes = std::move(section_headers.container_sizes),
+        .container_offsets = std::move(container_offsets),
+    };
 }
 
 EOFValidationError validate_types(bytes_view container, const EOF1Header& header) noexcept
@@ -753,74 +822,6 @@ size_t EOF1Header::data_size_position() const noexcept
 bool is_eof_container(bytes_view container) noexcept
 {
     return container.starts_with(EOF_MAGIC);
-}
-
-std::variant<EOF1Header, EOFValidationError> validate_header(
-    evmc_revision rev, bytes_view container) noexcept
-{
-    if (!is_eof_container(container))
-        return EOFValidationError::invalid_prefix;
-
-    const auto version = get_eof_version(container);
-    if (version != 1)
-        return EOFValidationError::eof_version_unknown;
-
-    if (rev < EVMC_OSAKA)
-        return EOFValidationError::eof_version_unknown;
-
-    // `offset` variable handled below is known to not be greater than the container size, as
-    // checked in `validate_section_headers`. Combined with the requirement for the container
-    // size to not exceed MAX_INITCODE_SIZE (checked before `validate-header` is called),
-    // this allows us to cast `offset` to narrower integers.
-    assert(container.size() <= MAX_INITCODE_SIZE);
-
-    auto section_headers_or_error = validate_section_headers(container);
-    if (const auto* error = std::get_if<EOFValidationError>(&section_headers_or_error))
-        return *error;
-
-    auto& section_headers = std::get<EOFSectionHeaders>(section_headers_or_error);
-
-    const auto header_size = eof_header_size(section_headers);
-
-    const auto type_section_offset = header_size;
-
-    if (section_headers.type_size !=
-        section_headers.code_sizes.size() * EOF1Header::TYPE_ENTRY_SIZE)
-        return EOFValidationError::invalid_type_section_size;
-
-    auto offset = header_size + section_headers.type_size;
-
-    std::vector<uint16_t> code_offsets;
-    code_offsets.reserve(section_headers.code_sizes.size());
-    for (const auto code_size : section_headers.code_sizes)
-    {
-        assert(offset <= std::numeric_limits<uint16_t>::max());
-        code_offsets.emplace_back(static_cast<uint16_t>(offset));
-        offset += code_size;
-    }
-
-    std::vector<uint32_t> container_offsets;
-    container_offsets.reserve(section_headers.container_sizes.size());
-    for (const auto container_size : section_headers.container_sizes)
-    {
-        assert(offset <= std::numeric_limits<uint32_t>::max());
-        container_offsets.emplace_back(static_cast<uint32_t>(offset));
-        offset += container_size;
-    }
-
-    assert(offset <= std::numeric_limits<uint32_t>::max());
-    const auto data_offset = static_cast<uint32_t>(offset);
-
-    return EOF1Header{
-        .version = container[2],
-        .type_section_offset = type_section_offset,
-        .code_sizes = std::move(section_headers.code_sizes),
-        .code_offsets = std::move(code_offsets),
-        .data_size = section_headers.data_size,
-        .data_offset = data_offset,
-        .container_sizes = std::move(section_headers.container_sizes),
-        .container_offsets = std::move(container_offsets),
-    };
 }
 
 /// This function expects the prefix and version to be valid, as it ignores it.
