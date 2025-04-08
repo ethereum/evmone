@@ -5,6 +5,43 @@ Documentation of all notable changes to the **evmone** project.
 The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
+[0.15.0] — 2025-04-08
+
+### Changed
+
+- EOF:
+  The is the final version compatible with [EOF devnet-0](https://notes.ethereum.org/@ethpandaops/eof-devnet-0).
+  - Rename RETURNCONTRACT to RETURNCODE
+    [#1153](https://github.com/ethereum/evmone/pull/1153)
+  - Optimize allocations when validating the header
+    [#1160](https://github.com/ethereum/evmone/pull/1160)
+- EVMMAX:
+  - evmmax: Add inversion method
+    [#1142](https://github.com/ethereum/evmone/pull/1142)
+  - evmmax: Use inv() instead of generated addchains
+    [#1143](https://github.com/ethereum/evmone/pull/1143)
+- Precompiles:
+  - Handle trivial inputs to the expmod precompile
+    [#1163](https://github.com/ethereum/evmone/pull/1163)
+  - Use classic EC point add formula for BN precompiles
+    [#1165](https://github.com/ethereum/evmone/pull/1165)
+  - Optimize EC point multiplication for BN precompiles
+    [#1166](https://github.com/ethereum/evmone/pull/1166)
+  - Refactor the BN254 ecpairing precompile
+    [#1175](https://github.com/ethereum/evmone/pull/1175)
+- EIP-7702: Remove the check for empty in-state accounts
+  [#1141](https://github.com/ethereum/evmone/pull/1141)
+- Add prestate validation checks to the state test loader
+  [#1134](https://github.com/ethereum/evmone/pull/1134)
+- Upgrade the silkpre dependency
+  [#1173](https://github.com/ethereum/evmone/pull/1173)
+
+### Fixed
+
+- Fix incorrect output size in the BN254 ecpairing precompile
+  [#1174](https://github.com/ethereum/evmone/pull/1174)
+
+
 [0.14.1] — 2025-03-11
 
 ### Fixed
@@ -932,6 +969,7 @@ It delivers fully-compatible and high-speed EVM implementation.
 - Exposes [EVMC] 6 ABI.
 - The [intx 0.2.0](https://github.com/chfast/intx/releases/tag/v0.2.0) library is used for 256-bit precision arithmetic. 
 
+[0.15.0]: https://github.com/ethereum/evmone/releases/tag/v0.15.0
 [0.14.1]: https://github.com/ethereum/evmone/releases/tag/v0.14.1
 [0.14.0]: https://github.com/ethereum/evmone/releases/tag/v0.14.0
 [0.13.0]: https://github.com/ethereum/evmone/releases/tag/v0.13.0
