@@ -75,7 +75,7 @@ TransactionCost compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& 
     static constexpr auto INITCODE_WORD_COST = 2;
     static constexpr auto TOTAL_COST_FLOOR_PER_TOKEN = 10;
 
-    const auto is_create = !tx.to.has_value();  // Covers also EOF creation transactions.
+    const auto is_create = !tx.to.has_value();
 
     const auto create_cost = (is_create && rev >= EVMC_HOMESTEAD) ? TX_CREATE_COST : 0;
 
@@ -186,17 +186,12 @@ int64_t process_authorization_list(
     return delegation_refund;
 }
 
-evmc_message build_message(
-    const Transaction& tx, int64_t execution_gas_limit, evmc_revision rev) noexcept
+evmc_message build_message(const Transaction& tx, int64_t execution_gas_limit) noexcept
 {
     const auto recipient = tx.to.has_value() ? *tx.to : evmc::address{};
 
-    const auto is_legacy_eof_create =
-        rev >= EVMC_OSAKA && !tx.to.has_value() && is_eof_container(tx.data);
-
-    return {.kind = is_legacy_eof_create ? EVMC_EOFCREATE :
-                    tx.to.has_value()    ? EVMC_CALL : // NOLINT(readability-avoid-nested-conditional-operator)
-                                           EVMC_CREATE,
+    return {
+        .kind = tx.to.has_value() ? EVMC_CALL : EVMC_CREATE,
         .flags = 0,
         .depth = 0,
         .gas = execution_gas_limit,
@@ -208,7 +203,8 @@ evmc_message build_message(
         .create2_salt = {},
         .code_address = recipient,
         .code = nullptr,
-        .code_size = 0};
+        .code_size = 0,
+    };
 }
 }  // namespace
 
@@ -531,6 +527,9 @@ std::variant<TransactionProperties, std::error_code> validate_transaction(
     if (rev >= EVMC_SHANGHAI && !tx.to.has_value() && tx.data.size() > MAX_INITCODE_SIZE)
         return make_error_code(INIT_CODE_SIZE_LIMIT_EXCEEDED);
 
+    if (rev >= EVMC_OSAKA && !tx.to.has_value() && is_eof_container(tx.data))
+        return make_error_code(EOF_CREATION_TRANSACTION);
+
     // Compute and check if sender has enough balance for the theoretical maximum transaction cost.
     // Note this is different from tx_max_cost computed with effective gas price later.
     // The computation cannot overflow if done with 512-bit precision.
@@ -634,7 +633,7 @@ TransactionReceipt transition(const StateView& state_view, const BlockInfo& bloc
     if (rev >= EVMC_SHANGHAI)
         host.access_account(block.coinbase);
 
-    auto message = build_message(tx, tx_props.execution_gas_limit, rev);
+    auto message = build_message(tx, tx_props.execution_gas_limit);
     if (tx.to.has_value())
     {
         if (const auto delegate = get_delegate_address(host, *tx.to))

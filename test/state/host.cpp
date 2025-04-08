@@ -277,42 +277,9 @@ std::optional<evmc_message> Host::prepare_message(evmc_message msg) noexcept
             }
             else
             {
-                assert(msg.kind == EVMC_EOFCREATE);
-                const bytes_view input = {msg.input_data, msg.input_size};
-
-                // Indicator of an EOF creation tx - EVMC_EOFCREATE at depth 0.
-                if (msg.depth == 0)
-                {
-                    // Assert this is a legacy EOF creation tx.
-                    assert(is_eof_container(input));
-                    const auto header_or_error = validate_header(m_rev, input);
-
-                    const auto* header = std::get_if<EOF1Header>(&header_or_error);
-                    if (header == nullptr)
-                        return {};  // Light early exception.
-
-                    if (!header->has_full_data(msg.input_size))
-                        return {};  // Light early exception.
-
-                    const auto container_size =
-                        static_cast<size_t>(header->data_offset) + header->data_size;
-                    // Follows from the header->can_init condition above.
-                    assert(container_size <= msg.input_size);
-
-                    msg.code = msg.input_data;
-                    msg.code_size = container_size;
-                    msg.input_data = msg.input_data + container_size;
-                    msg.input_size = msg.input_size - container_size;
-
-                    if (validate_eof(m_rev, ContainerKind::initcode, {msg.code, msg.code_size}) !=
-                        EOFValidationError::success)
-                        return {};  // Light early exception.
-
-                    msg.recipient = compute_create_address(msg.sender, creation_sender_nonce);
-                }
                 // EOFCREATE or TXCREATE
-                else
-                    msg.recipient = compute_eofcreate_address(msg.sender, msg.create2_salt);
+                assert(msg.kind == EVMC_EOFCREATE);
+                msg.recipient = compute_eofcreate_address(msg.sender, msg.create2_salt);
             }
 
             // By EIP-2929, the access to new created address is never reverted.
@@ -395,7 +362,7 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
         {
             if (m_rev >= EVMC_OSAKA)
             {
-                // Only EOFCREATE/TXCREATE/EOF-creation-tx is allowed to deploy code starting with
+                // Only EOFCREATE/TXCREATE is allowed to deploy code starting with
                 // EF. It must be valid EOF, which was validated before execution.
                 if (msg.kind != EVMC_EOFCREATE)
                     return evmc::Result{EVMC_CONTRACT_VALIDATION_FAILURE};
