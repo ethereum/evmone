@@ -80,3 +80,21 @@ TEST(expmod, test_inputs)
         EXPECT_GT(gas_cost, 1'000'000'000);
     }
 }
+
+
+TEST(expmod, test_execute_inputs)
+{
+    static const std::vector<std::string> inputs{
+        // clang-format off
+        "0000000000000000000000000000000000000000000000000000000000000010 0000000000000000000000000000000000000000000000000000000000000010 0000000000000000000000000000000000000000000000000000000000000001 0000000000000000000000000000000001",
+        // clang-format on
+    };
+    for (const auto& input_hex : inputs)
+    {
+        const auto input = evmc::from_spaced_hex(input_hex).value();
+        const auto [gas_cost, max_output_size] = evmone::state::expmod_analyze(input, EVMC_PRAGUE);
+        EXPECT_LT(gas_cost, 30'000'000);
+        auto output = std::make_unique_for_overwrite<uint8_t[]>(max_output_size);
+        evmone::state::expmod_execute(input.data(), input.size(), output.get(), max_output_size);
+    }
+}
