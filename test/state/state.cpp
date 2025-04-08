@@ -433,7 +433,7 @@ std::variant<TransactionProperties, std::error_code> validate_transaction(
 
         assert(block.blob_base_fee.has_value());
         if (tx.max_blob_gas_price < *block.blob_base_fee)
-            return make_error_code(FEE_CAP_LESS_THEN_BLOCKS);
+            return make_error_code(BLOB_FEE_CAP_LESS_THAN_BLOCKS);
 
         if (std::ranges::any_of(tx.blob_hashes, [](const auto& h) { return h.bytes[0] != 0x01; }))
             return make_error_code(INVALID_BLOB_HASH_VERSION);
@@ -479,7 +479,7 @@ std::variant<TransactionProperties, std::error_code> validate_transaction(
         return make_error_code(GAS_LIMIT_REACHED);
 
     if (tx.max_gas_price < block.base_fee)
-        return make_error_code(FEE_CAP_LESS_THEN_BLOCKS);
+        return make_error_code(FEE_CAP_LESS_THAN_BLOCKS);
 
     // We need some information about the sender so lookup the account in the state.
     // TODO: During transaction execution this account will be also needed, so we may pass it along.
