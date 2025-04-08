@@ -8,52 +8,51 @@
 #include <test/state/precompiles_internal.hpp>
 #include <test/utils/utils.hpp>
 
-struct TestCase
-{
-    std::string base;
-    std::string exp;
-    std::string mod;
-    std::string expected_result;
-};
-
-/// Test vectors for expmod precompile.
-/// TODO: Currently limited to what expmod_stub can handle, but more can be added along the proper
-///   implementation, e.g. {"03", "1c93", "61", "5f"}.
-static const std::vector<TestCase> test_cases{
-    {"", "", "", ""},
-    {"", "", "00", "00"},
-    {"02", "01", "03", "02"},
-    {
-        "03",
-        "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2e",
-        "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f",
-        "0000000000000000000000000000000000000000000000000000000000000001",
-    },
-};
-
 TEST(expmod, test_vectors)
 {
-    for (const auto& [base, exp, mod, expected_result] : test_cases)
+    struct TestCase
     {
-        const auto base_bytes = *evmc::from_hex(base);
-        const auto exp_bytes = *evmc::from_hex(exp);
-        const auto mod_bytes = *evmc::from_hex(mod);
-        const auto expected_result_bytes = *evmc::from_hex(expected_result);
+        std::string_view base_hex;
+        std::string_view exp_hex;
+        std::string_view mod_hex;
+        std::string_view expected_result_hex;
+    };
+
+    /// Test vectors for expmod precompile.
+    const std::vector<TestCase> test_cases{
+        {"", "", "", ""},
+        {"", "", "00", "00"},
+        {"02", "01", "03", "02"},
+        {"03", "1c93", "61", "5f"},
+        {
+            "03",
+            "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2e",
+            "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f",
+            "0000000000000000000000000000000000000000000000000000000000000001",
+        },
+    };
+
+    for (const auto& [base_hex, exp_hex, mod_hex, expected_result_hex] : test_cases)
+    {
+        const auto base = *evmc::from_hex(base_hex);
+        const auto exp = *evmc::from_hex(exp_hex);
+        const auto mod = *evmc::from_hex(mod_hex);
+        const auto expected_result = *evmc::from_hex(expected_result_hex);
 
         evmc::bytes input(3 * 32, 0);
-        input[31] = static_cast<uint8_t>(base_bytes.size());
-        input[32 + 31] = static_cast<uint8_t>(exp_bytes.size());
-        input[64 + 31] = static_cast<uint8_t>(mod_bytes.size());
-        input += base_bytes;
-        input += exp_bytes;
-        input += mod_bytes;
+        input[31] = static_cast<uint8_t>(base.size());
+        input[32 + 31] = static_cast<uint8_t>(exp.size());
+        input[64 + 31] = static_cast<uint8_t>(mod.size());
+        input += base;
+        input += exp;
+        input += mod;
 
-        evmc::bytes result(expected_result_bytes.size(), 0xfe);
-        const auto r =
+        evmc::bytes result(expected_result.size(), 0xfe);
+        const auto [status, output_size] =
             evmone::state::expmod_execute(input.data(), input.size(), result.data(), result.size());
-        EXPECT_EQ(r.status_code, EVMC_SUCCESS);
-        EXPECT_EQ(r.output_size, expected_result_bytes.size());
-        EXPECT_EQ(hex(result), expected_result);
+        EXPECT_EQ(status, EVMC_SUCCESS);
+        EXPECT_EQ(output_size, expected_result.size());
+        EXPECT_EQ(hex(result), expected_result_hex);
     }
 }
 
@@ -85,5 +84,45 @@ TEST(expmod, analysis_oog)
         const auto input = evmc::from_spaced_hex(input_hex).value();
         const auto [gas_cost, max_output_size] = evmone::state::expmod_analyze(input, EVMC_PRAGUE);
         EXPECT_GT(gas_cost, GAS_LIMIT);
+    }
+}
+
+TEST(expmod, incomplete_inputs)
+{
+    struct TestCase
+    {
+        std::string_view input_hex;
+        std::string_view expected_result_hex;
+    };
+
+    // Tests for expmod with raw and incomplete inputs (requires padding input with zero bytes).
+    static constexpr auto GAS_LIMIT = 100'000'000;
+    const std::vector<TestCase> inputs{
+        // clang-format off
+        {"", ""},
+        {"0000000000000000000000000000000000000000000000000000000000000001 0000000000000000000000000000000000000000000000000000000000000001 0000000000000000000000000000000000000000000000000000000000000001", "00"},
+        {"0000000000000000000000000000000000000000000000000000000000000001 0000000000000000000000000000000000000000000000000000000000000001 0000000000000000000000000000000000000000000000000000000000000001 ba ee", "00"},
+        {"0000000000000000000000000000000000000000000000000000000000000001 0000000000000000000000000000000000000000000000000000000000000001 0000000000000000000000000000000000000000000000000000000000000002 ba ee d0", "9000"},
+        {"0000000000000000000000000000000000000000000000000000000000000001 0000000000000000000000000000000000000000000000000000000000000001 0000000000000000000000000000000000000000000000000000000000000003 ba ee d000", "100000"},
+        {"0000000000000000000000000000000000000000000000000000000000000001 0000000000000000000000000000000000000000000000000000000000000001 0000000000000000000000000000000000000000000000000000000000000003 ba ee d001", "789700"},
+        {"0000000000000000000000000000000000000000000000000000000000000001 0000000000000000000000000000000000000000000000000000000000000001 0000000000000000000000000000000000000000000000000000000000000003 ba ee 00d0", "009000"},
+        {"0000000000000000000000000000000000000000000000000000000000000001 0000000000000000000000000000000000000000000000000000000000000001 0000000000000000000000000000000000000000000000000000000000000003 ba ee 0000", "000000"},
+        {"0000000000000000000000000000000000000000000000000000000000000001 0000000000000000000000000000000000000000000000000000000000000001 0000000000000000000000000000000000000000000000000000000000000003 ba ee 000000 fe", "000000"},
+        {"0000000000000000000000000000000000000000000000000000000000000010 0000000000000000000000000000000000000000000000000000000000000010 0000000000000000000000000000000000000000000000000000000000000001 0000000000000000000000000000000001", "00"},
+        {"000000000000000000000000000000000000000000000000000000000000ffff 0000000000000000000000000000000000000000000000000000000000000001 0000000000000000000000000000000000000000000000000000000000000001 80", "00"},
+        // clang-format on
+    };
+
+    for (const auto& [input_hex, expected_result_hex] : inputs)
+    {
+        const auto input = evmc::from_spaced_hex(input_hex).value();
+        const auto [gas_cost, max_output_size] = evmone::state::expmod_analyze(input, EVMC_PRAGUE);
+        EXPECT_LT(gas_cost, GAS_LIMIT);
+        auto output = std::make_unique_for_overwrite<uint8_t[]>(max_output_size);
+        const auto [status, output_size] = evmone::state::expmod_execute(
+            input.data(), input.size(), output.get(), max_output_size);
+        EXPECT_EQ(status, EVMC_SUCCESS);
+        const auto result_hex = evmc::hex({output.get(), output_size});
+        EXPECT_EQ(result_hex, expected_result_hex);
     }
 }

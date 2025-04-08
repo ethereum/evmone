@@ -317,19 +317,61 @@ ExecutionResult expmod_execute(
     const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept
 {
     static constexpr auto LEN_SIZE = sizeof(intx::uint256);
+    static constexpr auto HEADER_SIZE = 3 * LEN_SIZE;
+    static constexpr auto LEN32_OFF = LEN_SIZE - sizeof(uint32_t);
 
     // The output size equal to the modulus size.
+    const auto mod_len = output_size;
+
     // Handle short incomplete input up front. The answer is 0 of the length of the modulus.
-    if (output_size == 0 || input_size <= 3 * LEN_SIZE) [[unlikely]]
+    if (input_size <= HEADER_SIZE) [[unlikely]]
     {
         std::fill_n(output, output_size, 0);
         return {EVMC_SUCCESS, output_size};
     }
 
+    const auto base_len = intx::be::unsafe::load<uint32_t>(&input[LEN32_OFF]);
+    const auto exp_len = intx::be::unsafe::load<uint32_t>(&input[LEN_SIZE + LEN32_OFF]);
+    assert(intx::be::unsafe::load<uint32_t>(&input[2 * LEN_SIZE + LEN32_OFF]) == mod_len);
+
+    const bytes_view payload{input + HEADER_SIZE, input_size - HEADER_SIZE};
+    const size_t mod_off = base_len + exp_len;  // Cannot overflow if gas cost computed before.
+    const auto mod_explicit = payload.substr(std::min(mod_off, payload.size()), mod_len);
+
+    // Handle the mod being zero early.
+    // This serves two purposes:
+    // - bigint libraries don't like zero modulus because division by 0 is not well-defined,
+    // - having non-zero modulus guarantees that base and exp aren't out-of-bounds.
+    if (mod_explicit.find_first_not_of(uint8_t{0}) == bytes_view::npos) [[unlikely]]
+    {
+        // The modulus is zero, so the result is zero.
+        std::fill_n(output, output_size, 0);
+        return {EVMC_SUCCESS, output_size};
+    }
+
+    const auto mod_requires_padding = mod_explicit.size() != mod_len;
+    if (mod_requires_padding) [[unlikely]]
+    {
+        // The modulus is the last argument and some of its bytes may be missing and be implicitly
+        // zero. In this case, copy the explicit modulus bytes to the output buffer and pad the rest
+        // with zeroes. The output buffer is guaranteed to have exactly the modulus size.
+        const auto [_, output_p] = std::ranges::copy(mod_explicit, output);
+        std::fill(output_p, output + output_size, 0);
+    }
+
+    const auto base = payload.substr(0, base_len);
+    const auto exp = payload.substr(base_len, exp_len);
+    const auto mod = mod_requires_padding ? bytes_view{output, mod_len} : mod_explicit;
+
 #ifdef EVMONE_PRECOMPILES_SILKPRE
+    (void)base;
+    (void)exp;
+    (void)mod;
+    // For Silkpre use the raw input for compatibility.
     return silkpre_expmod_execute(input, input_size, output, output_size);
 #else
-    return expmod_stub(input, input_size, output, output_size);
+    expmod_stub(base, exp, mod, output);
+    return {EVMC_SUCCESS, mod.size()};
 #endif
 }
 

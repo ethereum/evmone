@@ -7,6 +7,9 @@
 
 namespace evmone::state
 {
-ExecutionResult expmod_stub(
-    const uint8_t* input, size_t input_size, uint8_t* output, size_t max_output_size) noexcept;
+using evmc::bytes;
+using evmc::bytes_view;
+
+/// Executes the expmod precompile for trivial and pre-defined inputs.
+void expmod_stub(bytes_view base, bytes_view exp, bytes_view mod, uint8_t* output) noexcept;
 }  // namespace evmone::state
