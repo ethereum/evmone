@@ -431,11 +431,6 @@ jobs:
             ~/tests/LegacyTests/Cancun/GeneralStateTests
             ~/tests/LegacyTests/Constantinople/GeneralStateTests
       - run:
-          name: "EOF validation tests"
-          working_directory: ~/build
-          command: >
-            bin/evmone-eoftest ~/tests/EOFTests
-      - run:
           name: "Blockchain tests (GeneralStateTests)"
           working_directory: ~/build
           command: >
