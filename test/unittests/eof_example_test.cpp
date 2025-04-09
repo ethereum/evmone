@@ -132,18 +132,18 @@ TEST_F(state_transition, eof_examples_creation_tx)
         // Initcontainer
         //                        Code section: PUSH0 [aux data size], PUSH0 [aux data offset] and
         //                                      RETURNCODE first subcontainer
-        //                                                               |
-        //               Header: 1 code section 4 bytes long             |
-        //               |                                               |
-        //    version    |                                 Header terminator
-        //    |          |___________                      |             |________
-        "EF00 01 01 0004 02 0001 0004 03 0001 0014 FF 0000 00 00 80 0002 5F5F EE00"
-        //       |‾‾‾‾‾‾              |‾‾‾‾‾‾‾‾‾‾‾ |‾‾‾‾‾‾    |‾‾‾‾‾‾‾‾‾
-        //       |                    |            Header: data section 0 bytes long
-        //       |                    |                       |
-        //       Header: types section 4 bytes long           Types section: first code section
-        //                            |                       0 inputs, non-returning,
-        //                            |                       max stack height 2
+        //                                                                   |
+        //               Header: 1 code section 4 bytes long                 |
+        //               |                                                   |
+        //    version    |                                     Header terminator
+        //    |          |___________                          |             |________
+        "EF00 01 01 0004 02 0001 0004 03 0001 00000014 FF 0000 00 00 80 0002 5F5F EE00"
+        //       |‾‾‾‾‾‾              |‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾ |‾‾‾‾‾‾    |‾‾‾‾‾‾‾‾‾
+        //       |                    |                Header: data section 0 bytes long
+        //       |                    |                           |
+        //       Header: types section 4 bytes long               Types section: first code section
+        //                            |                           0 inputs, non-returning,
+        //                            |                           max stack height 2
         //       Header: 1 subcontainer 20 bytes long
         //
         //////////////////
@@ -171,39 +171,39 @@ TEST_F(state_transition, eof_examples_eofcreate)
     const auto factory = bytecode(
         //////////////////
         // Factory container
-        //                    Code section: PUSH0 [endowment value], PUSH0 [input size],
-        //                                  PUSH0 [input offset], PUSH1 [salt],
+        //                    Code section: PUSH0 [input size], PUSH0 [input offset], PUSH1 [salt],
+        //                                  PUSH0 [endowment value],
         //                                  EOFCREATE from first subcontainer and STOP
-        //                                                               |
-        //               Header: 1 code section 8 bytes long             |
-        //               |                                               |
-        //    version    |                                 Header terminator
-        //    |          |___________                      |             |____________________
-        "EF00 01 01 0004 02 0001 0008 03 0001 0030 FF 0000 00 00 80 0004 5F 5F 5F 60FF EC00 00"
-        //       |‾‾‾‾‾‾              |‾‾‾‾‾‾‾‾‾‾‾ |‾‾‾‾‾‾    |‾‾‾‾‾‾‾‾‾
-        //       |                    |            Header: data section 0 bytes long
-        //       |                    |                       |
-        //       Header: types section 4 bytes long           Types section: first code section
-        //                            |                       0 inputs, non-returning,
-        //                            |                       max stack height 4
-        //       Header: 1 subcontainer 48 bytes long
+        //                                                                   |
+        //               Header: 1 code section 8 bytes long                 |
+        //               |                                                   |
+        //    version    |                                     Header terminator
+        //    |          |___________                          |             |____________________
+        "EF00 01 01 0004 02 0001 0008 03 0001 00000032 FF 0000 00 00 80 0004 5F 5F 60FF 5F EC00 00"
+        //       |‾‾‾‾‾‾              |‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾ |‾‾‾‾‾‾    |‾‾‾‾‾‾‾‾‾
+        //       |                    |                Header: data section 0 bytes long
+        //       |                    |                           |
+        //       Header: types section 4 bytes long               Types section: first code section
+        //                            |                           0 inputs, non-returning,
+        //                            |                           max stack height 4
+        //       Header: 1 subcontainer 50 bytes long
         //
         //////////////////
         // Initcontainer
         //                    Code section: PUSH0 [aux data size], PUSH0 [aux data offset],
         //                                  RETURNCODE first subcontainer
-        //                                                               |
-        //               Header: 1 code section 4 bytes long             |
-        //               |                                               |
-        //    version    |                                 Header terminator
-        //    |          |___________                      |             |_________
-        "EF00 01 01 0004 02 0001 0004 03 0001 0014 FF 0000 00 00 80 0002 5F 5F EE00"
-        //       |‾‾‾‾‾‾              |‾‾‾‾‾‾‾‾‾‾‾ |‾‾‾‾‾‾    |‾‾‾‾‾‾‾‾‾
-        //       |                    |            Header: data section 0 bytes long
-        //       |                    |                       |
-        //       Header: types section 4 bytes long           Types section: first code section
-        //                            |                       0 inputs, non-returning,
-        //                            |                       max stack height 2
+        //                                                                   |
+        //               Header: 1 code section 4 bytes long                 |
+        //               |                                                   |
+        //    version    |                                     Header terminator
+        //    |          |___________                          |             |_________
+        "EF00 01 01 0004 02 0001 0004 03 0001 00000014 FF 0000 00 00 80 0002 5F 5F EE00"
+        //       |‾‾‾‾‾‾              |‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾ |‾‾‾‾‾‾    |‾‾‾‾‾‾‾‾‾
+        //       |                    |                Header: data section 0 bytes long
+        //       |                    |                           |
+        //       Header: types section 4 bytes long               Types section: first code section
+        //                            |                           0 inputs, non-returning,
+        //                            |                           max stack height 2
         //       Header: 1 subcontainer 20 bytes long
         //
         //////////////////
@@ -217,7 +217,7 @@ TEST_F(state_transition, eof_examples_eofcreate)
                        });
 
     // Address of the newly created contract is calculated using the salt and deployer address.
-    expect.post[0x361420e1d38d81189bd5727c9b856fbc769ca413_address].exists = true;
+    expect.post[0xa36d08aa64ae9bcf54b8d880838a077090eca26e_address].exists = true;
     expect.post[*tx.to].exists = true;
 }
 
