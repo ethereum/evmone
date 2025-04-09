@@ -26,12 +26,9 @@ constexpr uint8_t TERMINATOR = 0x00;
 constexpr uint8_t TYPE_SECTION = 0x01;
 constexpr uint8_t CODE_SECTION = 0x02;
 constexpr uint8_t CONTAINER_SECTION = 0x03;
-// TODO: kind_data is now 0xff, but we're still using a 4-element array to hold
-// decoded header info about sections (EOFSectionHeaders). Refactor to not
-// depend on section kinds being contiguous.
-constexpr uint8_t DATA_SECTION_KIND = 0xff;
-constexpr uint8_t DATA_SECTION = 0x04;
-constexpr uint8_t NUM_SECTIONS = DATA_SECTION;
+constexpr uint8_t DATA_SECTION = 0xff;
+constexpr auto CODE_SECTION_SIZE_SIZE = sizeof(uint16_t);
+constexpr auto CONTAINER_SECTION_SIZE_SIZE = sizeof(uint32_t);
 constexpr auto CODE_SECTION_NUMBER_LIMIT = 1024;
 constexpr auto CONTAINER_SECTION_NUMBER_LIMIT = 256;
 constexpr auto MAX_STACK_HEIGHT = 0x03FF;
@@ -40,25 +37,31 @@ constexpr auto REL_OFFSET_SIZE = sizeof(int16_t);
 constexpr auto STACK_SIZE_LIMIT = 1024;
 constexpr uint8_t NON_RETURNING_FUNCTION = 0x80;
 
-using EOFSectionHeaders = std::array<std::vector<uint16_t>, NUM_SECTIONS + 1>;
+struct EOFSectionHeaders
+{
+    uint16_t type_size = 0;
+    uint16_t data_size = 0;
+    std::vector<uint16_t> code_sizes;
+    std::vector<uint32_t> container_sizes;
+};
 
 size_t eof_header_size(const EOFSectionHeaders& headers) noexcept
 {
     const auto non_code_section_count = 2;  // type section and data section
-    const auto code_section_count = headers[CODE_SECTION].size();
-    const auto container_section_count = headers[CONTAINER_SECTION].size();
+    const auto code_section_count = headers.code_sizes.size();
+    const auto container_section_count = headers.container_sizes.size();
 
     constexpr auto non_code_section_header_size = 3;  // (SECTION_ID + SIZE) per each section
-    constexpr auto section_size_size = 2;
 
     auto header_size = std::size(EOF_MAGIC) + 1 +  // 1 version byte
                        non_code_section_count * non_code_section_header_size +
-                       sizeof(CODE_SECTION) + 2 + code_section_count * section_size_size +
+                       sizeof(CODE_SECTION) + 2 + code_section_count * CODE_SECTION_SIZE_SIZE +
                        sizeof(TERMINATOR);
 
     if (container_section_count != 0)
     {
-        header_size += sizeof(CONTAINER_SECTION) + 2 + container_section_count * section_size_size;
+        header_size +=
+            sizeof(CONTAINER_SECTION) + 2 + container_section_count * CONTAINER_SECTION_SIZE_SIZE;
     }
     return header_size;
 }
@@ -92,7 +95,7 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
     auto state = State::section_id;
     uint8_t section_id = 0;
     uint16_t section_num = 0;
-    EOFSectionHeaders section_headers{};
+    EOFSectionHeaders section_headers;
     const auto container_end = container.end();
     auto it = container.begin() + std::size(EOF_MAGIC) + 1;  // MAGIC + VERSION
     uint8_t expected_section_id = TYPE_SECTION;
@@ -103,12 +106,6 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
         case State::section_id:
         {
             section_id = *it++;
-            // kind_data is 0xff but we need to use a contiguous index until we refactor away
-            // the EOFSectionHeaders array type
-            if (section_id == DATA_SECTION_KIND)
-                section_id = DATA_SECTION;
-            else if (section_id == DATA_SECTION)
-                section_id = DATA_SECTION_KIND;
 
             // Skip optional sections.
             if (section_id != expected_section_id && expected_section_id == CONTAINER_SECTION)
@@ -165,7 +162,7 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
         }
         case State::section_size:
         {
-            if (section_id == CODE_SECTION || section_id == CONTAINER_SECTION)
+            if (section_id == CODE_SECTION)
             {
                 assert(section_num > 0);  // Guaranteed by previous validation step.
                 for (size_t i = 0; i < section_num; ++i)
@@ -177,7 +174,22 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
                     if (section_size == 0)
                         return EOFValidationError::zero_section_size;
 
-                    section_headers[section_id].emplace_back(section_size);
+                    section_headers.code_sizes.emplace_back(section_size);
+                }
+            }
+            else if (section_id == CONTAINER_SECTION)
+            {
+                assert(section_num > 0);  // Guaranteed by previous validation step.
+                for (size_t i = 0; i < section_num; ++i)
+                {
+                    if (it >= container_end - 3)
+                        return EOFValidationError::incomplete_section_size;
+                    const auto section_size = read_uint32_be(it);
+                    it += 4;
+                    if (section_size == 0)
+                        return EOFValidationError::zero_section_size;
+
+                    section_headers.container_sizes.emplace_back(section_size);
                 }
             }
             else  // TYPES_SECTION or DATA_SECTION
@@ -189,7 +201,10 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
                 if (section_size == 0 && section_id != DATA_SECTION)
                     return EOFValidationError::zero_section_size;
 
-                section_headers[section_id].emplace_back(section_size);
+                if (section_id == TYPE_SECTION)
+                    section_headers.type_size = section_size;
+                else
+                    section_headers.data_size = section_size;
             }
 
             state = State::section_id;
@@ -204,12 +219,12 @@ std::variant<EOFSectionHeaders, EOFValidationError> validate_section_headers(byt
         return EOFValidationError::section_headers_not_terminated;
 
     const auto section_bodies_without_data =
-        section_headers[TYPE_SECTION].front() +
+        static_cast<uint64_t>(section_headers.type_size) +
         std::accumulate(
-            section_headers[CODE_SECTION].begin(), section_headers[CODE_SECTION].end(), 0) +
-        std::accumulate(section_headers[CONTAINER_SECTION].begin(),
-            section_headers[CONTAINER_SECTION].end(), 0);
-    const auto remaining_container_size = container_end - it;
+            section_headers.code_sizes.begin(), section_headers.code_sizes.end(), uint64_t{0}) +
+        std::accumulate(section_headers.container_sizes.begin(),
+            section_headers.container_sizes.end(), uint64_t{0});
+    const auto remaining_container_size = static_cast<uint64_t>(container_end - it);
     // Only data section may be truncated, so remaining_container size must be at least
     // declared_size_without_data
     if (remaining_container_size < section_bodies_without_data)
@@ -725,11 +740,12 @@ size_t EOF1Header::data_size_position() const noexcept
 {
     const auto num_code_sections = code_sizes.size();
     const auto num_container_sections = container_sizes.size();
-    return std::size(EOF_MAGIC) + 1 +   // magic + version
-           3 +                          // type section kind + size
-           3 + 2 * num_code_sections +  // code sections kind + count + sizes
+    return std::size(EOF_MAGIC) + 1 +                        // magic + version
+           3 +                                               // type section kind + size
+           3 + CODE_SECTION_SIZE_SIZE * num_code_sections +  // code sections kind + count + sizes
            // container sections kind + count + sizes
-           (num_container_sections != 0 ? 3 + 2 * num_container_sections : 0) +
+           (num_container_sections != 0 ? 3 + CONTAINER_SECTION_SIZE_SIZE * num_container_sections :
+                                          0) +
            1;  // data section kind
 }
 
@@ -762,47 +778,46 @@ std::variant<EOF1Header, EOFValidationError> validate_header(
         return *error;
 
     auto& section_headers = std::get<EOFSectionHeaders>(section_headers_or_error);
-    auto& code_sizes = section_headers[CODE_SECTION];
 
     const auto header_size = eof_header_size(section_headers);
-    const auto type_section_size = section_headers[TYPE_SECTION][0];
 
-    if (type_section_size != code_sizes.size() * EOF1Header::TYPE_ENTRY_SIZE)
+    const auto type_section_offset = header_size;
+
+    if (section_headers.type_size !=
+        section_headers.code_sizes.size() * EOF1Header::TYPE_ENTRY_SIZE)
         return EOFValidationError::invalid_type_section_size;
 
-    auto offset = header_size + type_section_size;
+    auto offset = header_size + section_headers.type_size;
 
     std::vector<uint16_t> code_offsets;
-    code_offsets.reserve(code_sizes.size());
-    for (const auto code_size : code_sizes)
+    code_offsets.reserve(section_headers.code_sizes.size());
+    for (const auto code_size : section_headers.code_sizes)
     {
         assert(offset <= std::numeric_limits<uint16_t>::max());
         code_offsets.emplace_back(static_cast<uint16_t>(offset));
         offset += code_size;
     }
 
-    auto& container_sizes = section_headers[CONTAINER_SECTION];
-    std::vector<uint16_t> container_offsets;
-    container_offsets.reserve(container_sizes.size());
-    for (const auto container_size : container_sizes)
+    std::vector<uint32_t> container_offsets;
+    container_offsets.reserve(section_headers.container_sizes.size());
+    for (const auto container_size : section_headers.container_sizes)
     {
-        assert(offset <= std::numeric_limits<uint16_t>::max());
-        container_offsets.emplace_back(static_cast<uint16_t>(offset));
+        assert(offset <= std::numeric_limits<uint32_t>::max());
+        container_offsets.emplace_back(static_cast<uint32_t>(offset));
         offset += container_size;
     }
 
-    const auto data_size = section_headers[DATA_SECTION][0];
-    assert(offset <= std::numeric_limits<uint16_t>::max());
-    const auto data_offset = static_cast<uint16_t>(offset);
+    assert(offset <= std::numeric_limits<uint32_t>::max());
+    const auto data_offset = static_cast<uint32_t>(offset);
 
     return EOF1Header{
         .version = container[2],
-        .type_section_offset = header_size,
-        .code_sizes = std::move(code_sizes),
+        .type_section_offset = type_section_offset,
+        .code_sizes = std::move(section_headers.code_sizes),
         .code_offsets = std::move(code_offsets),
-        .data_size = data_size,
+        .data_size = section_headers.data_size,
         .data_offset = data_offset,
-        .container_sizes = std::move(container_sizes),
+        .container_sizes = std::move(section_headers.container_sizes),
         .container_offsets = std::move(container_offsets),
     };
 }
@@ -815,13 +830,8 @@ EOF1Header read_valid_eof1_header(bytes_view container)
     while (*it != TERMINATOR)
     {
         auto section_id = *it++;
-        // kind_data is 0xff but we need to use a contiguous index until we refactor away
-        // the EOFSectionHeaders array type
-        if (section_id == DATA_SECTION_KIND)
-            section_id = DATA_SECTION;
-        else if (section_id == DATA_SECTION)
-            section_id = DATA_SECTION_KIND;
-        if (section_id == CODE_SECTION || section_id == CONTAINER_SECTION)
+
+        if (section_id == CODE_SECTION)
         {
             const auto code_section_num = read_uint16_be(it);
             it += 2;
@@ -829,14 +839,31 @@ EOF1Header read_valid_eof1_header(bytes_view container)
             {
                 const auto section_size = read_uint16_be(it);
                 it += 2;
-                section_headers[section_id].emplace_back(section_size);
+                section_headers.code_sizes.emplace_back(section_size);
+            }
+        }
+        else if (section_id == CONTAINER_SECTION)
+        {
+            const auto code_section_num = read_uint16_be(it);
+            it += 2;
+            for (uint16_t i = 0; i < code_section_num; ++i)
+            {
+                const auto section_size = read_uint32_be(it);
+                it += 4;
+                section_headers.container_sizes.emplace_back(section_size);
             }
         }
         else
         {
             const auto section_size = read_uint16_be(it);
             it += 2;
-            section_headers[section_id].emplace_back(section_size);
+            if (section_id == TYPE_SECTION)
+                section_headers.type_size = section_size;
+            else
+            {
+                assert(section_id == DATA_SECTION);
+                section_headers.data_size = section_size;
+            }
         }
     }
     const auto header_size = eof_header_size(section_headers);
@@ -845,8 +872,8 @@ EOF1Header read_valid_eof1_header(bytes_view container)
     header.version = container[2];
     header.type_section_offset = header_size;
 
-    header.code_sizes = section_headers[CODE_SECTION];
-    auto code_offset = header_size + section_headers[TYPE_SECTION][0];
+    header.code_sizes = std::move(section_headers.code_sizes);
+    auto code_offset = header_size + section_headers.type_size;
     for (const auto code_size : header.code_sizes)
     {
         assert(code_offset <= std::numeric_limits<uint16_t>::max());
@@ -854,9 +881,9 @@ EOF1Header read_valid_eof1_header(bytes_view container)
         code_offset += code_size;
     }
 
-    header.data_size = section_headers[DATA_SECTION][0];
+    header.data_size = section_headers.data_size;
 
-    header.container_sizes = section_headers[CONTAINER_SECTION];
+    header.container_sizes = std::move(section_headers.container_sizes);
     auto container_offset = code_offset;
     for (const auto container_size : header.container_sizes)
     {
