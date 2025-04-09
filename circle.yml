@@ -398,18 +398,19 @@ jobs:
           working_directory: ~/build
           command: >
             bin/evmone-statetest ~/spec-tests/fixtures/state_tests/osaka
-            --gtest_filter='-eip7692_eof_v1/eip7620_eof_create*'
+            --gtest_filter='-eip7692_eof_v1*'
       - run:
           name: "EOF pre-release execution spec tests (blockchain_tests)"
           working_directory: ~/build
           command: >
             bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests/osaka
-            --gtest_filter='-eip7692_eof_v1/eip7620_eof_create*'
+            --gtest_filter='-eip7692_eof_v1*:eofwrap*'
       - run:
           name: "EOF pre-release execution spec tests (eof_tests)"
           working_directory: ~/build
           command: >
-            bin/evmone-eoftest ~/spec-tests/fixtures/eof_tests 
+            bin/evmone-eoftest ~/spec-tests/fixtures/eof_tests
+            --gtest_filter="-osaka/eip7692*"
       - collect_coverage_gcc
       - upload_coverage:
           flags: eof_execution_spec_tests
