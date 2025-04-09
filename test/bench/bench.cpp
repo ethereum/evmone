@@ -50,7 +50,14 @@ std::vector<BenchmarkCase::Input> load_inputs(const StateTransitionTest& state_t
     std::vector<BenchmarkCase::Input> inputs;
     inputs.reserve(state_test.multi_tx.inputs.size());
     for (size_t i = 0; i < state_test.multi_tx.inputs.size(); ++i)
-        inputs.emplace_back(state_test.input_labels.at(i), state_test.multi_tx.inputs[i]);
+    {
+        const auto it = state_test.input_labels.find(i);
+        if (it != state_test.input_labels.end())
+            inputs.emplace_back(it->second, state_test.multi_tx.inputs[i]);
+        else
+            inputs.emplace_back(std::to_string(i), state_test.multi_tx.inputs[i]);
+    }
+
     return inputs;
 }
 
