@@ -16,7 +16,8 @@ namespace evmone::state
 
 [[nodiscard]] bytes rlp_encode(const Transaction& tx)
 {
-    assert(tx.type <= Transaction::Type::set_code);
+    // There is no Transaction::Type 5 - reserved for Authorization List encoding in EIP-7702.
+    assert(tx.type <= Transaction::Type::initcodes && stdx::to_underlying(tx.type) != 5);
 
     // TODO: Refactor this function. For all type of transactions most of the code is similar.
     if (tx.type == Transaction::Type::legacy)
