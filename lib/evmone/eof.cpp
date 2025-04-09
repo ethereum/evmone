@@ -27,6 +27,8 @@ constexpr uint8_t TYPE_SECTION = 0x01;
 constexpr uint8_t CODE_SECTION = 0x02;
 constexpr uint8_t CONTAINER_SECTION = 0x03;
 constexpr uint8_t DATA_SECTION = 0xff;
+constexpr auto CODE_SECTION_SIZE_SIZE = sizeof(uint16_t);
+constexpr auto CONTAINER_SECTION_SIZE_SIZE = sizeof(uint32_t);
 constexpr auto CODE_SECTION_NUMBER_LIMIT = 1024;
 constexpr auto CONTAINER_SECTION_NUMBER_LIMIT = 256;
 constexpr auto MAX_STACK_HEIGHT = 0x03FF;
@@ -50,18 +52,16 @@ size_t eof_header_size(const EOFSectionHeaders& headers) noexcept
     const auto container_section_count = headers.container_sizes.size();
 
     constexpr auto non_code_section_header_size = 3;  // (SECTION_ID + SIZE) per each section
-    constexpr auto code_section_size_size = 2;
 
     auto header_size = std::size(EOF_MAGIC) + 1 +  // 1 version byte
                        non_code_section_count * non_code_section_header_size +
-                       sizeof(CODE_SECTION) + 2 + code_section_count * code_section_size_size +
+                       sizeof(CODE_SECTION) + 2 + code_section_count * CODE_SECTION_SIZE_SIZE +
                        sizeof(TERMINATOR);
 
     if (container_section_count != 0)
     {
-        constexpr auto container_section_size_size = 4;
         header_size +=
-            sizeof(CONTAINER_SECTION) + 2 + container_section_count * container_section_size_size;
+            sizeof(CONTAINER_SECTION) + 2 + container_section_count * CONTAINER_SECTION_SIZE_SIZE;
     }
     return header_size;
 }
@@ -740,11 +740,12 @@ size_t EOF1Header::data_size_position() const noexcept
 {
     const auto num_code_sections = code_sizes.size();
     const auto num_container_sections = container_sizes.size();
-    return std::size(EOF_MAGIC) + 1 +   // magic + version
-           3 +                          // type section kind + size
-           3 + 2 * num_code_sections +  // code sections kind + count + sizes
+    return std::size(EOF_MAGIC) + 1 +                        // magic + version
+           3 +                                               // type section kind + size
+           3 + CODE_SECTION_SIZE_SIZE * num_code_sections +  // code sections kind + count + sizes
            // container sections kind + count + sizes
-           (num_container_sections != 0 ? 3 + 4 * num_container_sections : 0) +
+           (num_container_sections != 0 ? 3 + CONTAINER_SECTION_SIZE_SIZE * num_container_sections :
+                                          0) +
            1;  // data section kind
 }
 
