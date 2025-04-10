@@ -4,10 +4,37 @@
 
 #include "blake2b.hpp"
 #include <array>
-#include <bit>
 
 namespace evmone::crypto
 {
+namespace
+{
+[[gnu::always_inline]]
+inline uint64_t rotr(uint64_t x, unsigned r) noexcept
+{
+    return (x >> r) | (x << (64 - r));
+}
+
+/// Mixing Function G.
+/// https://datatracker.ietf.org/doc/html/rfc7693#section-3.1
+///
+/// The G primitive function mixes two input words, "x" and "y", into
+/// four words indexed by "a", "b", "c", and "d" in the working vector v[0..15].
+[[gnu::always_inline, clang::no_sanitize("coverage"), clang::no_sanitize("undefined")]]
+void g(uint64_t v[16], size_t a, size_t b, size_t c, size_t d, uint64_t x, uint64_t y) noexcept
+{
+    v[a] = v[a] + v[b] + x;
+    v[d] = rotr(v[d] ^ v[a], 32);
+    v[c] = v[c] + v[d];
+    v[b] = rotr(v[b] ^ v[c], 24);
+    v[a] = v[a] + v[b] + y;
+    v[d] = rotr(v[d] ^ v[a], 16);
+    v[c] = v[c] + v[d];
+    v[b] = rotr(v[b] ^ v[c], 63);
+}
+}  // namespace
+
+[[clang::no_sanitize("undefined")]]
 void blake2b_compress(
     uint32_t rounds, uint64_t h[8], const uint64_t m[16], const uint64_t t[2], bool last) noexcept
 {
@@ -26,22 +53,6 @@ void blake2b_compress(
         {10, 2, 8, 4, 7, 6, 1, 5, 15, 11, 9, 14, 3, 12, 13, 0},
     };
 
-    // Mixing Function G.
-    // https://datatracker.ietf.org/doc/html/rfc7693#section-3.1
-    //
-    // The G primitive function mixes two input words, "x" and "y", into
-    // four words indexed by "a", "b", "c", and "d" in the working vector v[0..15].
-    static constexpr auto g = [](uint64_t v[16], size_t a, size_t b, size_t c, size_t d, uint64_t x,
-                                  uint64_t y) noexcept {
-        v[a] = v[a] + v[b] + x;
-        v[d] = std::rotr(v[d] ^ v[a], 32);
-        v[c] = v[c] + v[d];
-        v[b] = std::rotr(v[b] ^ v[c], 24);
-        v[a] = v[a] + v[b] + y;
-        v[d] = std::rotr(v[d] ^ v[a], 16);
-        v[c] = v[c] + v[d];
-        v[b] = std::rotr(v[b] ^ v[c], 63);
-    };
 
     // Initialize local work vector v[0..15].
     uint64_t v[16]{h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7],  // First half from state.

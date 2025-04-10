@@ -79,3 +79,14 @@ TEST(blake2b_compress, null_input)
     // For null input you get the IV as the result.
     EXPECT_EQ(h, blake2b_iv);
 }
+
+TEST(blake2b_compress, big_rounds)
+{
+    static constexpr uint32_t ROUNDS = 10'000'000;
+    uint64_t h[8]{};
+    const uint64_t t[2]{};
+    const uint64_t m[16]{};
+    blake2b_compress(ROUNDS, h, m, t, false);
+    EXPECT_EQ(h[0], 0xb6e24bc8cf57cc7a);
+    EXPECT_EQ(h[7], 0x130a505b44404122);
+}
