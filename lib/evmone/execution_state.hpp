@@ -173,6 +173,7 @@ public:
 private:
     evmc_tx_context m_tx = {};
     std::optional<std::unordered_map<evmc::bytes32, bytes_view>> m_initcodes;
+    std::unordered_map<evmc::bytes32, bool> m_initcodes_validity;
 
 public:
     /// Pointer to code analysis.
@@ -216,6 +217,7 @@ public:
         deploy_container = {};
         m_tx = {};
         m_initcodes.reset();
+        m_initcodes_validity.clear();
         call_stack = {};
     }
 
@@ -246,6 +248,17 @@ public:
 
         const auto it = m_initcodes->find(hash);
         return it != m_initcodes->end() ? it->second : bytes_view{};
+    }
+
+    [[nodiscard]] std::optional<bool> get_initcode_validity(const evmc_bytes32& hash) noexcept
+    {
+        const auto it = m_initcodes_validity.find(hash);
+        return (it != m_initcodes_validity.end() ? std::optional{it->second} : std::nullopt);
+    }
+
+    void set_initcode_validity(const evmc_bytes32& hash, bool is_valid)
+    {
+        m_initcodes_validity[hash] = is_valid;
     }
 };
 }  // namespace evmone
