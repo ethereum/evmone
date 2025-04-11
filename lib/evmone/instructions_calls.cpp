@@ -424,14 +424,20 @@ Result create_eof_impl(
     }
     else
     {
-        initcontainer = state.get_tx_initcode_by_hash(initcode_hash);
-        // In case initcode was not found, empty bytes_view was returned.
-        // Transaction initcodes are not allowed to be empty.
-        if (initcontainer.empty())
+        auto* tx_initcode = state.get_tx_initcode_by_hash(initcode_hash);
+        // In case initcode was not found, nullptr was returned.
+        if (tx_initcode == nullptr)
             return {EVMC_SUCCESS, gas_left};  // "Light" failure
+        initcontainer = tx_initcode->code;
 
-        const auto error_subcont = validate_eof(state.rev, ContainerKind::initcode, initcontainer);
-        if (error_subcont != EOFValidationError::success)
+        if (!tx_initcode->is_valid.has_value())
+        {
+            const auto error_subcont =
+                validate_eof(state.rev, ContainerKind::initcode, initcontainer);
+            tx_initcode->is_valid = (error_subcont == EOFValidationError::success);
+        }
+
+        if (!*tx_initcode->is_valid)
             return {EVMC_SUCCESS, gas_left};  // "Light" failure.
     }
 
