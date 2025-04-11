@@ -356,19 +356,8 @@ jobs:
     steps:
       - build
       - download_execution_spec_tests:
-          release: v4.1.0
-      - run:
-          name: "Execution spec tests (state_tests)"
-          working_directory: ~/build
-          command: >
-            bin/evmone-statetest ~/spec-tests/fixtures/state_tests
-      - run:
-          name: "Execution spec tests (blockchain_tests)"
-          working_directory: ~/build
-          command: >
-            bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests
-      - download_execution_spec_tests:
-          release: v4.1.0
+          release: v4.3.0
+          # develop includes stable
           fixtures_suffix: develop
       - run:
           name: "Execution spec tests (develop, state_tests)"
@@ -379,6 +368,7 @@ jobs:
       - run:
           name: "Execution spec tests (develop, blockchain_tests)"
           # Tests for in-development EVM revision currently passing.
+          # - The block_hashes_history test is disabled because it takes too long.
           working_directory: ~/spec-tests/fixtures/blockchain_tests
           command: >
             ~/build/bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests
