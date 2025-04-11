@@ -678,19 +678,19 @@ TEST_F(eof_validation, max_stack_height)
         EOFValidationError::success);
 
     add_test_case(eof_bytecode(1024 * push(1) + OP_STOP, 1024),
-        EOFValidationError::max_stack_height_above_limit);
+        EOFValidationError::max_stack_increase_above_limit);
 
     add_test_case(eof_bytecode(0x400 * push(1) + callf(1) + 0x400 * OP_POP + OP_STOP, 1024)
                       .code(OP_RETF, 0, 0, 0),
-        EOFValidationError::max_stack_height_above_limit);
+        EOFValidationError::max_stack_increase_above_limit);
 
     add_test_case(eof_bytecode(callf(1) + OP_STOP, 0)
                       .code(0x400 * push(1) + 0x400 * OP_POP + OP_RETF, 0, 0, 1023),
-        EOFValidationError::invalid_max_stack_height);
+        EOFValidationError::invalid_max_stack_increase);
 
     add_test_case(eof_bytecode(1024 * push(1) + callf(1) + 1024 * OP_POP + OP_STOP, 1023)
                       .code(OP_RETF, 0, 0, 0),
-        EOFValidationError::invalid_max_stack_height);
+        EOFValidationError::invalid_max_stack_increase);
 
     add_test_case(eof_bytecode(rjumpi(2, 0) + 1 + OP_STOP, 1), EOFValidationError::success);
 

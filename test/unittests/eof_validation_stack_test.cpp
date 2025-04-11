@@ -76,7 +76,7 @@ TEST_F(eof_validation, stack_range_maximally_broad)
     add_test_case(eof_bytecode(code, 1023), EOFValidationError::success, "valid_1023_rjumpis");
 
     code = rjumpi(offset, OP_PUSH0) + OP_PUSH0 + code;
-    add_test_case(eof_bytecode(code, 1023), EOFValidationError::invalid_max_stack_height,
+    add_test_case(eof_bytecode(code, 1023), EOFValidationError::invalid_max_stack_increase,
         "invalid_1024_rjumpis");
 }
 
@@ -882,7 +882,7 @@ TEST_F(eof_validation, underflow_variable_stack)
     // JUMPF to returning function - neither min nor max enough for 5 inputs
     add_test_case(eof_bytecode(callf(1) + OP_STOP, 3)
                       .code(varstack + jumpf(2), 0, 3, 3)
-                      .code(bytecode{OP_POP} + OP_POP + OP_RETF, 5, 3, 3),
+                      .code(bytecode{OP_POP} + OP_POP + OP_RETF, 5, 3, 5),
         EOFValidationError::stack_underflow);
 
     // JUMPF to non-returning function - [1, 3] stack - neither min nor max enough for 5 inputs
@@ -1181,7 +1181,7 @@ TEST_F(eof_validation, jumpf_to_returning_variable_stack)
     // JUMPF from [1, 3] stack to function with 5 inputs
     add_test_case(eof_bytecode(callf(1) + OP_STOP, 3)
                       .code(varstack + jumpf(2), 0, 3, 3)
-                      .code(push0() + OP_RETF, 5, 3, 3),
+                      .code(push0() + OP_RETF, 5, 3, 5),
         EOFValidationError::stack_underflow);
 
     // JUMPF from [1, 3] stack to function with 3 inputs
