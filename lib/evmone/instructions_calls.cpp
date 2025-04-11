@@ -435,8 +435,18 @@ Result create_eof_impl(
 
     if constexpr (Op == OP_TXCREATE)
     {
-        const auto error_subcont = validate_eof(state.rev, ContainerKind::initcode, initcontainer);
-        if (error_subcont != EOFValidationError::success)
+        const auto validity = state.get_initcode_validity(initcode_hash);
+        bool is_valid = false;
+        if (validity.has_value())
+            is_valid = *validity;
+        else
+        {
+            const auto error_subcont =
+                validate_eof(state.rev, ContainerKind::initcode, initcontainer);
+            is_valid = (error_subcont == EOFValidationError::success);
+            state.set_initcode_validity(initcode_hash, is_valid);
+        }
+        if (!is_valid)
             return {EVMC_SUCCESS, gas_left};  // "Light" failure.
     }
 
