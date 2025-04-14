@@ -162,14 +162,14 @@ private:
     }
 
 public:
-    explicit eof_bytecode(bytecode code, uint16_t max_stack_height = 0)
-      : m_codes{std::move(code)}, m_types{{0, 0x80, max_stack_height}}
+    explicit eof_bytecode(bytecode code, uint16_t max_stack_increase = 0)
+      : m_codes{std::move(code)}, m_types{{0, 0x80, max_stack_increase}}
     {}
 
-    auto& code(bytecode c, uint8_t inputs, uint8_t outputs, uint16_t max_stack_height)
+    auto& code(bytecode c, uint8_t inputs, uint8_t outputs, uint16_t max_stack_increase = 0)
     {
         m_codes.emplace_back(std::move(c));
-        m_types.emplace_back(inputs, outputs, max_stack_height - inputs);
+        m_types.emplace_back(inputs, outputs, max_stack_increase);
         return *this;
     }
 

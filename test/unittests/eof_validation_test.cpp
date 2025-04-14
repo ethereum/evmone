@@ -70,13 +70,13 @@ TEST_F(eof_validation, minimal_valid_EOF1_multiple_code_sections)
 {
     add_test_case("EF0001 010008 02000200010001 00  00800000 00800000  FE FE",
         EOFValidationError::data_section_missing, "no_data_section");
-    add_test_case(eof_bytecode(jumpf(1)).code(OP_INVALID, 0, 0x80, 0).data("DA"),
+    add_test_case(eof_bytecode(jumpf(1)).code(OP_INVALID, 0, 0x80).data("DA"),
         EOFValidationError::success, "with_data_section");
 
     add_test_case(eof_bytecode(OP_PUSH0 + callf(1) + OP_STOP, 1)
-                      .code(OP_POP + callf(2) + OP_POP + OP_RETF, 1, 0, 1)
+                      .code(OP_POP + callf(2) + OP_POP + OP_RETF, 1, 0)
                       .code(dup1(OP_ADDRESS) + callf(3) + OP_POP + OP_POP + OP_RETF, 0, 1, 3)
-                      .code(bytecode{OP_DUP1} + OP_RETF, 2, 3, 3),
+                      .code(bytecode{OP_DUP1} + OP_RETF, 2, 3, 1),
         EOFValidationError::success, "non_void_input_output");
 }
 
@@ -190,7 +190,7 @@ TEST_F(eof_validation, EOF1_truncated_section)
 
 TEST_F(eof_validation, EOF1_code_section_offset)
 {
-    const auto eof = eof_bytecode(jumpf(1)).code(OP_INVALID, 0, 0x80, 0).data("00000000");
+    const auto eof = eof_bytecode(jumpf(1)).code(OP_INVALID, 0, 0x80).data("00000000");
     add_test_case(eof, EOFValidationError::success);
 
     const auto header = read_valid_eof1_header(bytecode(eof));
@@ -278,16 +278,16 @@ TEST_F(eof_validation, EOF1_too_many_code_sections)
     auto eof_code_sections_1023 = eof_bytecode(jumpf(1));
     for (int i = 1; i < 1022; ++i)
         eof_code_sections_1023 =
-            eof_code_sections_1023.code(jumpf(static_cast<uint16_t>(i + 1)), 0, 0x80, 0);
+            eof_code_sections_1023.code(jumpf(static_cast<uint16_t>(i + 1)), 0, 0x80);
 
     auto eof_code_sections_1024 = eof_code_sections_1023;
-    eof_code_sections_1023 = eof_code_sections_1023.code(OP_STOP, 0, 0x80, 0);
-    eof_code_sections_1024 = eof_code_sections_1024.code(jumpf(1023), 0, 0x80, 0);
+    eof_code_sections_1023 = eof_code_sections_1023.code(OP_STOP, 0, 0x80);
+    eof_code_sections_1024 = eof_code_sections_1024.code(jumpf(1023), 0, 0x80);
 
     auto eof_code_sections_1025 = eof_code_sections_1024;
-    eof_code_sections_1024 = eof_code_sections_1024.code(OP_STOP, 0, 0x80, 0);
+    eof_code_sections_1024 = eof_code_sections_1024.code(OP_STOP, 0, 0x80);
     eof_code_sections_1025 =
-        eof_code_sections_1025.code(jumpf(1024), 0, 0x80, 0).code(OP_STOP, 0, 0x80, 0);
+        eof_code_sections_1025.code(jumpf(1024), 0, 0x80).code(OP_STOP, 0, 0x80);
 
     add_test_case(eof_code_sections_1023, EOFValidationError::success, "valid_1023");
     add_test_case(eof_code_sections_1024, EOFValidationError::success, "valid_1024");
@@ -325,7 +325,7 @@ TEST_F(eof_validation, EOF1_undefined_opcodes)
         if (opcode == OP_RETF)
         {
             // RETF can be tested in 2nd code section.
-            add_test_case(eof_bytecode(callf(1) + OP_STOP).code(OP_RETF, 0, 0, 0), expected);
+            add_test_case(eof_bytecode(callf(1) + OP_STOP).code(OP_RETF, 0, 0), expected);
         }
         else
         {
@@ -645,11 +645,10 @@ TEST_F(eof_validation, deprecated_instructions)
 
 TEST_F(eof_validation, max_arguments_count)
 {
-    add_test_case(
-        eof_bytecode(127 * push0() + callf(1) + OP_STOP, 127).code(OP_RETF, 127, 127, 127),
+    add_test_case(eof_bytecode(127 * push0() + callf(1) + OP_STOP, 127).code(OP_RETF, 127, 127),
         EOFValidationError::success);
 
-    add_test_case(eof_bytecode(callf(1) + OP_STOP, 0).code(OP_RETF, 128, 128, 128),
+    add_test_case(eof_bytecode(callf(1) + OP_STOP, 0).code(OP_RETF, 128, 128),
         EOFValidationError::inputs_outputs_num_above_limit);
 
     add_test_case(eof_bytecode(callf(1) + OP_STOP, 127).code(127 * push(1) + OP_RETF, 0, 127, 127),
@@ -658,12 +657,12 @@ TEST_F(eof_validation, max_arguments_count)
     add_test_case(eof_bytecode(callf(1) + OP_STOP, 129).code(129 * push(1) + OP_RETF, 0, 129, 129),
         EOFValidationError::inputs_outputs_num_above_limit);
 
-    add_test_case(eof_bytecode(127 * push0() + callf(1) + OP_STOP, 127)
-                      .code(127 * OP_POP + OP_RETF, 127, 0, 127),
+    add_test_case(
+        eof_bytecode(127 * push0() + callf(1) + OP_STOP, 127).code(127 * OP_POP + OP_RETF, 127, 0),
         EOFValidationError::success);
 
-    add_test_case(eof_bytecode(128 * push(1) + callf(1) + OP_STOP, 128)
-                      .code(128 * OP_POP + OP_RETF, 128, 0, 128),
+    add_test_case(
+        eof_bytecode(128 * push(1) + callf(1) + OP_STOP, 128).code(128 * OP_POP + OP_RETF, 128, 0),
         EOFValidationError::inputs_outputs_num_above_limit);
 }
 
@@ -673,23 +672,23 @@ TEST_F(eof_validation, max_stack_height)
                       .code(0x3FF * push(1) + 0x3FF * OP_POP + OP_RETF, 0, 0, 1023),
         EOFValidationError::success);
 
-    add_test_case(eof_bytecode(1023 * push(1) + 1023 * OP_POP + callf(1) + OP_STOP, 1023)
-                      .code(OP_RETF, 0, 0, 0),
+    add_test_case(
+        eof_bytecode(1023 * push(1) + 1023 * OP_POP + callf(1) + OP_STOP, 1023).code(OP_RETF, 0, 0),
         EOFValidationError::success);
 
     add_test_case(eof_bytecode(1024 * push(1) + OP_STOP, 1024),
         EOFValidationError::max_stack_increase_above_limit);
 
     add_test_case(eof_bytecode(0x400 * push(1) + callf(1) + 0x400 * OP_POP + OP_STOP, 1024)
-                      .code(OP_RETF, 0, 0, 0),
+                      .code(OP_RETF, 0, 0),
         EOFValidationError::max_stack_increase_above_limit);
 
     add_test_case(eof_bytecode(callf(1) + OP_STOP, 0)
                       .code(0x400 * push(1) + 0x400 * OP_POP + OP_RETF, 0, 0, 1023),
         EOFValidationError::invalid_max_stack_increase);
 
-    add_test_case(eof_bytecode(1024 * push(1) + callf(1) + 1024 * OP_POP + OP_STOP, 1023)
-                      .code(OP_RETF, 0, 0, 0),
+    add_test_case(
+        eof_bytecode(1024 * push(1) + callf(1) + 1024 * OP_POP + OP_STOP, 1023).code(OP_RETF, 0, 0),
         EOFValidationError::invalid_max_stack_increase);
 
     add_test_case(eof_bytecode(rjumpi(2, 0) + 1 + OP_STOP, 1), EOFValidationError::success);
@@ -790,48 +789,48 @@ TEST_F(eof_validation, non_returning_status)
     // Non-returning with no JUMPF and no RETF
     add_test_case(eof_bytecode(OP_STOP), EOFValidationError::success);
     // Non-returning with JUMPF
-    add_test_case(eof_bytecode(jumpf(1)).code(OP_STOP, 0, 0x80, 0), EOFValidationError::success);
+    add_test_case(eof_bytecode(jumpf(1)).code(OP_STOP, 0, 0x80), EOFValidationError::success);
 
     // Returning with RETF
     add_test_case(
-        eof_bytecode(callf(1) + OP_STOP).code(OP_RETF, 0, 0, 0), EOFValidationError::success);
+        eof_bytecode(callf(1) + OP_STOP).code(OP_RETF, 0, 0), EOFValidationError::success);
     // Returning with JUMPF
-    add_test_case(eof_bytecode(callf(1) + OP_STOP).code(jumpf(2), 0, 0, 0).code(OP_RETF, 0, 0, 0),
+    add_test_case(eof_bytecode(callf(1) + OP_STOP).code(jumpf(2), 0, 0).code(OP_RETF, 0, 0),
         EOFValidationError::success);
     // Returning with JUMPF to returning and RETF
     add_test_case(eof_bytecode(OP_PUSH0 + callf(1) + OP_STOP, 1)
-                      .code(bytecode{OP_RJUMPI} + "0001" + OP_RETF + jumpf(2), 1, 0, 1)
-                      .code(OP_RETF, 0, 0, 0),
+                      .code(bytecode{OP_RJUMPI} + "0001" + OP_RETF + jumpf(2), 1, 0)
+                      .code(OP_RETF, 0, 0),
         EOFValidationError::success);
     // Returning with JUMPF to non-returning and RETF
     add_test_case(eof_bytecode(OP_PUSH0 + callf(1) + OP_STOP, 1)
-                      .code(bytecode{OP_RJUMPI} + "0001" + OP_RETF + jumpf(0), 1, 0, 1),
+                      .code(bytecode{OP_RJUMPI} + "0001" + OP_RETF + jumpf(0), 1, 0),
         EOFValidationError::success);
 
     // Invalid with RETF
-    add_test_case(eof_bytecode(jumpf(1)).code(OP_RETF, 0, 0x80, 0),
+    add_test_case(eof_bytecode(jumpf(1)).code(OP_RETF, 0, 0x80),
         EOFValidationError::invalid_non_returning_flag);
     add_test_case(eof_bytecode(OP_RETF), EOFValidationError::invalid_non_returning_flag);
     // Invalid with JUMPF to returning
-    add_test_case(eof_bytecode(jumpf(1)).code(jumpf(2), 0, 0x80, 0).code(OP_RETF, 0, 0, 0),
+    add_test_case(eof_bytecode(jumpf(1)).code(jumpf(2), 0, 0x80).code(OP_RETF, 0, 0),
         EOFValidationError::invalid_non_returning_flag);
     // Invalid with JUMPF to non-returning
-    add_test_case(eof_bytecode(jumpf(1)).code(jumpf(0), 0, 0, 0),
+    add_test_case(eof_bytecode(jumpf(1)).code(jumpf(0), 0, 0),
         EOFValidationError::invalid_non_returning_flag);
     // Invalid with JUMPF to returning and RETF
     add_test_case(eof_bytecode(OP_PUSH0 + jumpf(1), 1)
-                      .code(bytecode{OP_RJUMPI} + "0001" + OP_RETF + jumpf(2), 1, 0x80, 1)
-                      .code(OP_RETF, 0, 0, 0),
+                      .code(bytecode{OP_RJUMPI} + "0001" + OP_RETF + jumpf(2), 1, 0x80)
+                      .code(OP_RETF, 0, 0),
         EOFValidationError::invalid_non_returning_flag);
     // Invalid with JUMPF to non-returning and RETF
     add_test_case(eof_bytecode(OP_PUSH0 + jumpf(1), 1)
-                      .code(bytecode{OP_RJUMPI} + "0001" + OP_RETF + jumpf(0), 1, 0x80, 1),
+                      .code(bytecode{OP_RJUMPI} + "0001" + OP_RETF + jumpf(0), 1, 0x80),
         EOFValidationError::invalid_non_returning_flag);
 
     // Circular JUMPF: can be both returning and non-returning
-    add_test_case(eof_bytecode(jumpf(1)).code(jumpf(2), 0, 0x80, 0).code(jumpf(1), 0, 0x80, 0),
+    add_test_case(eof_bytecode(jumpf(1)).code(jumpf(2), 0, 0x80).code(jumpf(1), 0, 0x80),
         EOFValidationError::success);
-    add_test_case(eof_bytecode(callf(1) + OP_STOP).code(jumpf(2), 0, 0, 0).code(jumpf(1), 0, 0, 0),
+    add_test_case(eof_bytecode(callf(1) + OP_STOP).code(jumpf(2), 0, 0).code(jumpf(1), 0, 0),
         EOFValidationError::success);
 }
 
@@ -839,14 +838,14 @@ TEST_F(eof_validation, callf_into_nonreturning)
 {
     // function 0: (0, non-returning) : CALLF{1} STOP
     // function 2: (1, non-returning) : STOP
-    add_test_case(eof_bytecode(callf(1) + OP_STOP).code(OP_STOP, 0, 0x80, 0),
+    add_test_case(eof_bytecode(callf(1) + OP_STOP).code(OP_STOP, 0, 0x80),
         EOFValidationError::callf_to_non_returning_function);
 }
 
 TEST_F(eof_validation, jumpf_equal_outputs)
 {
     add_test_case(eof_bytecode(callf(1) + OP_STOP, 3)
-                      .code(jumpf(2), 0, 3, 0)
+                      .code(jumpf(2), 0, 3)
                       .code(3 * OP_PUSH0 + OP_RETF, 0, 3, 3),
         EOFValidationError::success);
 }
@@ -862,7 +861,7 @@ TEST_F(eof_validation, jumpf_compatible_outputs)
 TEST_F(eof_validation, jumpf_incompatible_outputs)
 {
     const auto code = eof_bytecode(callf(1) + OP_STOP, 3)
-                          .code(jumpf(2), 0, 3, 0)
+                          .code(jumpf(2), 0, 3)
                           .code(5 * OP_PUSH0 + OP_RETF, 0, 5, 3);
 
     add_test_case(code, EOFValidationError::jumpf_destination_incompatible_outputs);
@@ -870,47 +869,47 @@ TEST_F(eof_validation, jumpf_incompatible_outputs)
 
 TEST_F(eof_validation, unreachable_code_sections)
 {
-    add_test_case(eof_bytecode(OP_INVALID).code(OP_INVALID, 0, 0x80, 0),
+    add_test_case(eof_bytecode(OP_INVALID).code(OP_INVALID, 0, 0x80),
         EOFValidationError::unreachable_code_sections);
 
     add_test_case(eof_bytecode(callf(1) + OP_STOP, 0)
-                      .code(bytecode{"5B"} + OP_RETF, 0, 0, 0)
-                      .code(bytecode{"FE"}, 0, 0x80, 0),
+                      .code(bytecode{"5B"} + OP_RETF, 0, 0)
+                      .code(bytecode{"FE"}, 0, 0x80),
         EOFValidationError::unreachable_code_sections);
 
 
     add_test_case(eof_bytecode(callf(2) + OP_STOP, 0)
-                      .code(bytecode{"FE"}, 0, 0x80, 0)
-                      .code(bytecode{"5B"} + OP_RETF, 0, 0, 0),
+                      .code(bytecode{"FE"}, 0, 0x80)
+                      .code(bytecode{"5B"} + OP_RETF, 0, 0),
         EOFValidationError::unreachable_code_sections);
 
     add_test_case(eof_bytecode(callf(3) + OP_STOP, 0)
-                      .code(bytecode{"FE"}, 0, 0x80, 0)
-                      .code(bytecode{"5B"} + OP_RETF, 0, 0, 0)
-                      .code(callf(2) + OP_RETF, 0, 0, 0),
+                      .code(bytecode{"FE"}, 0, 0x80)
+                      .code(bytecode{"5B"} + OP_RETF, 0, 0)
+                      .code(callf(2) + OP_RETF, 0, 0),
         EOFValidationError::unreachable_code_sections);
 
-    add_test_case(eof_bytecode(jumpf(0)).code(jumpf(1), 0, 0x80, 0),
+    add_test_case(eof_bytecode(jumpf(0)).code(jumpf(1), 0, 0x80),
         EOFValidationError::unreachable_code_sections);
 
     add_test_case(eof_bytecode(jumpf(1))
-                      .code(bytecode{OP_STOP}, 0, 0x80, 0)
-                      .code(bytecode{"5B"} + OP_RETF, 0, 0, 0),
+                      .code(bytecode{OP_STOP}, 0, 0x80)
+                      .code(bytecode{"5B"} + OP_RETF, 0, 0),
         EOFValidationError::unreachable_code_sections);
 
     {
-        auto code_sections_256_err_001 = eof_bytecode(jumpf(1)).code(jumpf(1), 0, 0x80, 0);
-        auto code_sections_256_err_254 = eof_bytecode(jumpf(1)).code(jumpf(2), 0, 0x80, 0);
+        auto code_sections_256_err_001 = eof_bytecode(jumpf(1)).code(jumpf(1), 0, 0x80);
+        auto code_sections_256_err_254 = eof_bytecode(jumpf(1)).code(jumpf(2), 0, 0x80);
         for (int i = 2; i < 254; ++i)
         {
-            code_sections_256_err_001.code(jumpf(static_cast<uint16_t>(i + 1)), 0, 0x80, 0);
-            code_sections_256_err_254.code(jumpf(static_cast<uint16_t>(i + 1)), 0, 0x80, 0);
+            code_sections_256_err_001.code(jumpf(static_cast<uint16_t>(i + 1)), 0, 0x80);
+            code_sections_256_err_254.code(jumpf(static_cast<uint16_t>(i + 1)), 0, 0x80);
         }
 
-        code_sections_256_err_001.code(jumpf(255), 0, 0x80, 0)
-            .code(3 * bytecode{"5B"} + OP_STOP, 0, 0x80, 0);
-        code_sections_256_err_254.code(jumpf(254), 0, 0x80, 0)
-            .code(3 * bytecode{"5B"} + OP_STOP, 0, 0x80, 0);
+        code_sections_256_err_001.code(jumpf(255), 0, 0x80)
+            .code(3 * bytecode{"5B"} + OP_STOP, 0, 0x80);
+        code_sections_256_err_254.code(jumpf(254), 0, 0x80)
+            .code(3 * bytecode{"5B"} + OP_STOP, 0, 0x80);
 
         // Code Section 1 calls itself instead of code section 2, leaving code section 2 unreachable
         add_test_case(code_sections_256_err_001, EOFValidationError::unreachable_code_sections);
@@ -921,16 +920,16 @@ TEST_F(eof_validation, unreachable_code_sections)
 
         // Code Section 0 calls section 1, which calls itself, leaving section
         // 2 unreachable
-        add_test_case(eof_bytecode(jumpf(1)).code(jumpf(1), 0, 0x80, 0).code(jumpf(2), 0, 0x80, 0),
+        add_test_case(eof_bytecode(jumpf(1)).code(jumpf(1), 0, 0x80).code(jumpf(2), 0, 0x80),
             EOFValidationError::unreachable_code_sections);
 
         // Code Section 0 calls section 1, which calls section 2, section 3 and
         // 4 call each other but are not reachable from section 0
         add_test_case(eof_bytecode(jumpf(1))
-                          .code(jumpf(2), 0, 0x80, 0)
-                          .code(OP_INVALID, 0, 0x80, 0)
-                          .code(jumpf(4), 0, 0x80, 0)
-                          .code(jumpf(3), 0, 0x80, 0),
+                          .code(jumpf(2), 0, 0x80)
+                          .code(OP_INVALID, 0, 0x80)
+                          .code(jumpf(4), 0, 0x80)
+                          .code(jumpf(3), 0, 0x80),
             EOFValidationError::unreachable_code_sections);
     }
 }
@@ -1144,15 +1143,15 @@ TEST_F(eof_validation, EOF1_unreferenced_subcontainer_invalid)
 
 TEST_F(eof_validation, EOF1_subcontainer_containing_unreachable_code_sections)
 {
-    const auto embedded_1 = eof_bytecode(OP_INVALID).code(OP_INVALID, 0, 0x80, 0);
+    const auto embedded_1 = eof_bytecode(OP_INVALID).code(OP_INVALID, 0, 0x80);
     add_test_case(eof_bytecode(eofcreate() + OP_STOP, 4).container(embedded_1),
         EOFValidationError::unreachable_code_sections);
 
     const auto embedded_2 = eof_bytecode(jumpf(1))
-                                .code(jumpf(2), 0, 0x80, 0)
-                                .code(OP_INVALID, 0, 0x80, 0)
-                                .code(jumpf(4), 0, 0x80, 0)
-                                .code(jumpf(3), 0, 0x80, 0);
+                                .code(jumpf(2), 0, 0x80)
+                                .code(OP_INVALID, 0, 0x80)
+                                .code(jumpf(4), 0, 0x80)
+                                .code(jumpf(3), 0, 0x80);
     add_test_case(eof_bytecode(eofcreate() + OP_STOP, 4).container(embedded_2),
         EOFValidationError::unreachable_code_sections);
 }
