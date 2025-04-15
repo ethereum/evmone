@@ -1170,6 +1170,70 @@ TEST_F(state_transition, txcreate_from_blob_tx)
     expect.post[*tx.to].storage[0x01_bytes32] = 0x01_bytes32;
 }
 
+TEST_F(state_transition, txcreate_loop_valid)
+{
+    rev = EVMC_OSAKA;
+    block.gas_limit = 30'000'000;
+    tx.gas_limit = block.gas_limit;
+    pre.get(tx.sender).balance = tx.gas_limit * tx.max_gas_price + tx.value + 1;
+
+    const auto deploy_container = eof_bytecode(bytecode(OP_INVALID));
+
+    const auto init_code = returncode(0, 0, 0);
+    const bytecode init_container = eof_bytecode(init_code, 2).container(deploy_container);
+
+    tx.type = Transaction::Type::initcodes;
+    tx.initcodes.push_back(init_container);
+
+    constexpr auto iterations = 800;
+    const auto initcode_hash = keccak256(init_container);
+    const auto factory_code =
+        push0() +                                             // initial salt
+        push(1) + OP_ADD +                                    // increment salt
+        OP_DUP1 + push(iterations + 1) + rjumpi(45, OP_EQ) +  // if (salt == iterations + 1) break;
+        txcreate().value(0).initcode(initcode_hash).input(0, 0).salt(OP_DUP4) + OP_POP +
+        rjump(-56) + OP_STOP;
+    const auto factory_container = eof_bytecode(factory_code, 6);
+
+    tx.to = To;
+    pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
+
+    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + iterations;
+    for (uint16_t salt = 1; salt <= iterations; ++salt)
+    {
+        const auto create_address = compute_eofcreate_address(*tx.to, bytes32{salt});
+        expect.post[create_address].code = deploy_container;
+        expect.post[create_address].nonce = 1;
+    }
+}
+
+TEST_F(state_transition, txcreate_loop_invalid)
+{
+    rev = EVMC_OSAKA;
+    block.gas_limit = 30'000'000;
+    tx.gas_limit = block.gas_limit;
+    pre.get(tx.sender).balance = tx.gas_limit * tx.max_gas_price + tx.value + 1;
+
+    const bytecode init_container = OP_STOP;  // invalid EOF
+
+    tx.type = Transaction::Type::initcodes;
+    tx.initcodes.push_back(init_container);
+
+    constexpr auto iterations = 900;
+    const auto initcode_hash = keccak256(init_container);
+    const auto factory_code =
+        push0() +                                             // initial salt
+        push(1) + OP_ADD +                                    // increment salt
+        OP_DUP1 + push(iterations + 1) + rjumpi(45, OP_EQ) +  // if (salt == iterations + 1) break;
+        txcreate().value(0).initcode(initcode_hash).input(0, 0).salt(OP_DUP4) + OP_POP +
+        rjump(-56) + OP_STOP;
+    const auto factory_container = eof_bytecode(factory_code, 6);
+
+    tx.to = To;
+    pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
+
+    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;
+}
 
 TEST_F(state_transition, legacy_txcreate_empty_auxdata)
 {
@@ -2289,4 +2353,68 @@ TEST_F(state_transition, legacy_txcreate_from_blob_tx)
     expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;  // CREATE caller's nonce must not be bumped
     expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;  // CREATE must fail
     expect.post[*tx.to].storage[0x01_bytes32] = 0x01_bytes32;
+}
+
+TEST_F(state_transition, legacy_txcreate_loop_valid)
+{
+    rev = EVMC_OSAKA;
+    block.gas_limit = 30'000'000;
+    tx.gas_limit = block.gas_limit;
+    pre.get(tx.sender).balance = tx.gas_limit * tx.max_gas_price + tx.value + 1;
+
+    const auto deploy_container = eof_bytecode(bytecode(OP_INVALID));
+
+    const auto init_code = returncode(0, 0, 0);
+    const bytecode init_container = eof_bytecode(init_code, 2).container(deploy_container);
+
+    tx.type = Transaction::Type::initcodes;
+    tx.initcodes.push_back(init_container);
+
+    constexpr auto iterations = 800;
+    const auto initcode_hash = keccak256(init_container);
+    const auto factory_code =
+        push0() +                                            // initial salt
+        OP_JUMPDEST + push(1) + OP_ADD +                     // increment salt
+        OP_DUP1 + push(iterations + 1) + jumpi(58, OP_EQ) +  // if (salt == iterations + 1) break;
+        txcreate().value(0).initcode(initcode_hash).input(0, 0).salt(OP_DUP4) + OP_POP + jump(1) +
+        OP_JUMPDEST + OP_STOP;
+
+    tx.to = To;
+    pre.insert(*tx.to, {.nonce = 1, .code = factory_code});
+
+    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + iterations;
+    for (uint16_t salt = 1; salt <= iterations; ++salt)
+    {
+        const auto create_address = compute_eofcreate_address(*tx.to, bytes32{salt});
+        expect.post[create_address].code = deploy_container;
+        expect.post[create_address].nonce = 1;
+    }
+}
+
+TEST_F(state_transition, legacy_txcreate_loop_invalid)
+{
+    rev = EVMC_OSAKA;
+    block.gas_limit = 30'000'000;
+    tx.gas_limit = block.gas_limit;
+    pre.get(tx.sender).balance = tx.gas_limit * tx.max_gas_price + tx.value + 1;
+
+    const bytecode init_container = OP_STOP;  // invalid EOF
+
+    tx.type = Transaction::Type::initcodes;
+    tx.initcodes.push_back(init_container);
+
+    constexpr auto iterations = 900;
+    const auto initcode_hash = keccak256(init_container);
+    const auto factory_code =
+        push0() +                                             // initial salt
+        push(1) + OP_ADD +                                    // increment salt
+        OP_DUP1 + push(iterations + 1) + rjumpi(45, OP_EQ) +  // if (salt == iterations + 1) break;
+        txcreate().value(0).initcode(initcode_hash).input(0, 0).salt(OP_DUP4) + OP_POP +
+        rjump(-56) + OP_STOP;
+    const auto factory_container = eof_bytecode(factory_code, 6);
+
+    tx.to = To;
+    pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
+
+    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;
 }
