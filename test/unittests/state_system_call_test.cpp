@@ -77,7 +77,9 @@ TEST_F(state_system_call, withdrawal)
     state.insert(WITHDRAWAL_REQUEST_ADDRESS,
         {.code = mstore(0, WITHDRAWAL_REQUEST) + sstore(1, 1) + ret(0, 32)});
 
-    const auto requests = system_call_block_end(state, block, block_hashes, EVMC_PRAGUE, vm);
+    const auto r = system_call_block_end(state, block, block_hashes, EVMC_PRAGUE, vm);
+    ASSERT_TRUE(r.has_value());
+    const auto& requests = *r;
 
     ASSERT_EQ(state.size(), 1);
     EXPECT_FALSE(state.contains(SYSTEM_ADDRESS));
@@ -101,7 +103,9 @@ TEST_F(state_system_call, consolidation)
     state.insert(CONSOLIDATION_REQUEST_ADDRESS,
         {.code = mstore(0, CONSOLIDATION_REQUEST) + sstore(1, 1) + ret(0, 32)});
 
-    const auto requests = system_call_block_end(state, block, block_hashes, EVMC_PRAGUE, vm);
+    const auto r = system_call_block_end(state, block, block_hashes, EVMC_PRAGUE, vm);
+    ASSERT_TRUE(r.has_value());
+    const auto& requests = *r;
 
     ASSERT_EQ(state.size(), 1);
     EXPECT_FALSE(state.contains(SYSTEM_ADDRESS));

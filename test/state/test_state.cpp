@@ -101,11 +101,14 @@ void system_call_block_start(TestState& state, const state::BlockInfo& block,
     state.apply(diff);
 }
 
-std::vector<state::Requests> system_call_block_end(TestState& state, const state::BlockInfo& block,
-    const state::BlockHashes& block_hashes, evmc_revision rev, evmc::VM& vm)
+std::optional<std::vector<state::Requests>> system_call_block_end(TestState& state,
+    const state::BlockInfo& block, const state::BlockHashes& block_hashes, evmc_revision rev,
+    evmc::VM& vm)
 {
-    const auto [diff, requests] = state::system_call_block_end(state, block, block_hashes, rev, vm);
-    state.apply(diff);
-    return requests;
+    const auto r = state::system_call_block_end(state, block, block_hashes, rev, vm);
+    if (!r.has_value())
+        return std::nullopt;
+    state.apply(r->first);
+    return r->second;
 }
 }  // namespace evmone::test

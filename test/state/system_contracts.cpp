@@ -58,7 +58,7 @@ static_assert(std::ranges::is_sorted(SYSTEM_CONTRACTS_BLOCK_END,
                   [](const auto& a, const auto& b) noexcept { return a.since < b.since; }),
     "system contract entries must be ordered by revision");
 
-std::pair<StateDiff, std::vector<Requests>> system_call(
+std::optional<std::pair<StateDiff, std::vector<Requests>>> system_call(
     std::span<const SystemContract> system_contracts, const StateView& state_view,
     const BlockInfo& block, const state::BlockHashes& block_hashes, evmc_revision rev, evmc::VM& vm)
 {
@@ -98,12 +98,13 @@ std::pair<StateDiff, std::vector<Requests>> system_call(
         const Transaction empty_tx{};
         Host host{rev, vm, state, block, block_hashes, empty_tx};
         const auto res = vm.execute(host, rev, msg, code.data(), code.size());
-        assert(res.status_code == EVMC_SUCCESS);
+        if (res.status_code != EVMC_SUCCESS)
+            return std::nullopt;
         requests.emplace_back(request_type, bytes_view{res.output_data, res.output_size});
     }
 
     // TODO: Should we return empty diff if no system contracts?
-    return {state.build_diff(rev), requests};
+    return std::pair{state.build_diff(rev), std::move(requests)};
 }
 }  // namespace
 
@@ -111,12 +112,13 @@ StateDiff system_call_block_start(const StateView& state_view, const BlockInfo& 
     const BlockHashes& block_hashes, evmc_revision rev, evmc::VM& vm)
 {
     // No requests are generated in block start system calls.
-    const auto [state_diff, _] =
+    const auto r =
         system_call(SYSTEM_CONTRACTS_BLOCK_START, state_view, block, block_hashes, rev, vm);
-    return state_diff;
+    assert(r.has_value());  // Block start system contracts should always succeed.
+    return r->first;
 }
 
-std::pair<StateDiff, std::vector<Requests>> system_call_block_end(const StateView& state_view,
+std::optional<std::pair<StateDiff, std::vector<Requests>>> system_call_block_end(const StateView& state_view,
     const BlockInfo& block, const state::BlockHashes& block_hashes, evmc_revision rev, evmc::VM& vm)
 {
     return system_call(SYSTEM_CONTRACTS_BLOCK_END, state_view, block, block_hashes, rev, vm);
