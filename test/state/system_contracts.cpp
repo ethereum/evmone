@@ -106,8 +106,8 @@ StateDiff system_call_block_start(const StateView& state_view, const BlockInfo& 
     return state.build_diff(rev);
 }
 
-RequestsResult system_call_block_end(const StateView& state_view, const BlockInfo& block,
-    const BlockHashes& block_hashes, evmc_revision rev, evmc::VM& vm)
+std::optional<RequestsResult> system_call_block_end(const StateView& state_view,
+    const BlockInfo& block, const BlockHashes& block_hashes, evmc_revision rev, evmc::VM& vm)
 {
     State state{state_view};
     std::vector<Requests> requests;
@@ -118,12 +118,13 @@ RequestsResult system_call_block_end(const StateView& state_view, const BlockInf
 
         const auto code = state_view.get_account_code(addr);
         if (code.empty())
-            continue;
+            return std::nullopt;
 
         const auto res = execute_system_call(state, block, block_hashes, rev, vm, addr, code, {});
-        assert(res.status_code == EVMC_SUCCESS);
+        if (res.status_code != EVMC_SUCCESS)
+            return std::nullopt;
         requests.emplace_back(request_type, bytes_view{res.output_data, res.output_size});
     }
-    return {state.build_diff(rev), requests};
+    return RequestsResult{state.build_diff(rev), requests};
 }
 }  // namespace evmone::state

@@ -230,11 +230,11 @@ int main(int argc, const char* argv[])
 
             if (!pre_state_only && rev >= EVMC_PRAGUE)
             {
+                // TODO: Report invalid block if system contracts execution fails.
                 requests.emplace_back(collect_deposit_requests(receipts));
-
-                auto system_call_requests =
-                    system_call_block_end(state, block, block_hashes, rev, vm);
-                std::ranges::move(system_call_requests, std::back_inserter(requests));
+                auto requests_result = system_call_block_end(state, block, block_hashes, rev, vm);
+                if (requests_result.has_value())
+                    std::ranges::move(*requests_result, std::back_inserter(requests));
             }
 
             test::finalize(

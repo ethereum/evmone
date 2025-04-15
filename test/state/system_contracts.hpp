@@ -49,7 +49,7 @@ struct RequestsResult
 ///
 /// Executes code of pre-defined accounts via pseudo-transaction from the system sender (0xff...fe).
 /// The sender's nonce is not increased.
-[[nodiscard]] RequestsResult system_call_block_end(const StateView& state_view,
-    const BlockInfo& block, const state::BlockHashes& block_hashes, evmc_revision rev,
-    evmc::VM& vm);
+/// @return The collected requests and state diff or std::nullopt if the execution has failed.
+[[nodiscard]] std::optional<RequestsResult> system_call_block_end(const StateView& state_view,
+    const BlockInfo& block, const BlockHashes& block_hashes, evmc_revision rev, evmc::VM& vm);
 }  // namespace evmone::state

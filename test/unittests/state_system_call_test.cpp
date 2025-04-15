@@ -77,39 +77,51 @@ TEST_F(state_system_call, withdrawal)
     state.insert(WITHDRAWAL_REQUEST_ADDRESS,
         {.code = mstore(0, WITHDRAWAL_REQUEST) + sstore(1, 1) + ret(0, 32)});
 
-    const auto requests = system_call_block_end(state, block, block_hashes, EVMC_PRAGUE, vm);
+    // The consolidation system contract must not be empty and should not fail.
+    state[CONSOLIDATION_REQUEST_ADDRESS].code = bytecode{OP_STOP};
 
-    ASSERT_EQ(state.size(), 1);
+    const auto r = system_call_block_end(state, block, block_hashes, EVMC_PRAGUE, vm);
+    ASSERT_TRUE(r.has_value());
+    const auto& requests = *r;
+
     EXPECT_FALSE(state.contains(SYSTEM_ADDRESS));
-    EXPECT_EQ(state.at(WITHDRAWAL_REQUEST_ADDRESS).nonce, 0);
-    EXPECT_EQ(state.at(WITHDRAWAL_REQUEST_ADDRESS).balance, 0);
-    const auto& storage = state.at(WITHDRAWAL_REQUEST_ADDRESS).storage;
-    ASSERT_EQ(storage.size(), 1);
-    EXPECT_EQ(storage.at(0x01_bytes32), 0x01_bytes32);
+    const auto& c = state.at(WITHDRAWAL_REQUEST_ADDRESS);
+    EXPECT_EQ(c.nonce, 0);
+    EXPECT_EQ(c.balance, 0);
+    ASSERT_EQ(c.storage.size(), 1);
+    EXPECT_EQ(c.storage.at(0x01_bytes32), 0x01_bytes32);
 
-    ASSERT_EQ(requests.size(), 1);
+    ASSERT_EQ(requests.size(), 2);
     EXPECT_EQ(requests[0].type(), Requests::Type::withdrawal);
     EXPECT_EQ(requests[0].data(), bytes(WITHDRAWAL_REQUEST));
+    EXPECT_EQ(requests[1].type(), Requests::Type::consolidation);
+    EXPECT_EQ(requests[1].data(), bytes());
 }
 
 TEST_F(state_system_call, consolidation)
 {
     static constexpr auto CONSOLIDATION_REQUEST = 0x0123456789_bytes32;
     const BlockInfo block{.number = 1};
-    state.insert(CONSOLIDATION_REQUEST_ADDRESS,
-        {.code = mstore(0, CONSOLIDATION_REQUEST) + sstore(1, 1) + ret(0, 32)});
+    state[CONSOLIDATION_REQUEST_ADDRESS].code =
+        mstore(0, CONSOLIDATION_REQUEST) + sstore(1, 1) + ret(0, 32);
 
-    const auto requests = system_call_block_end(state, block, block_hashes, EVMC_PRAGUE, vm);
+    // The withdrawal system contract must not be empty and should not fail.
+    state[WITHDRAWAL_REQUEST_ADDRESS].code = bytecode{OP_STOP};
 
-    ASSERT_EQ(state.size(), 1);
+    const auto r = system_call_block_end(state, block, block_hashes, EVMC_PRAGUE, vm);
+    ASSERT_TRUE(r.has_value());
+    const auto& requests = *r;
+
     EXPECT_FALSE(state.contains(SYSTEM_ADDRESS));
-    EXPECT_EQ(state.at(CONSOLIDATION_REQUEST_ADDRESS).nonce, 0);
-    EXPECT_EQ(state.at(CONSOLIDATION_REQUEST_ADDRESS).balance, 0);
-    const auto& storage = state.at(CONSOLIDATION_REQUEST_ADDRESS).storage;
-    ASSERT_EQ(storage.size(), 1);
-    EXPECT_EQ(storage.at(0x01_bytes32), 0x01_bytes32);
+    const auto& c = state.at(CONSOLIDATION_REQUEST_ADDRESS);
+    EXPECT_EQ(c.nonce, 0);
+    EXPECT_EQ(c.balance, 0);
+    ASSERT_EQ(c.storage.size(), 1);
+    EXPECT_EQ(c.storage.at(0x01_bytes32), 0x01_bytes32);
 
-    ASSERT_EQ(requests.size(), 1);
-    EXPECT_EQ(requests[0].type(), Requests::Type::consolidation);
-    EXPECT_EQ(requests[0].data(), bytes(CONSOLIDATION_REQUEST));
+    ASSERT_EQ(requests.size(), 2);
+    EXPECT_EQ(requests[0].type(), Requests::Type::withdrawal);
+    EXPECT_EQ(requests[0].data(), bytes());
+    EXPECT_EQ(requests[1].type(), Requests::Type::consolidation);
+    EXPECT_EQ(requests[1].data(), bytes(CONSOLIDATION_REQUEST));
 }
