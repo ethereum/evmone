@@ -145,6 +145,15 @@ public:
     void clear() noexcept { m_size = 0; }
 };
 
+/// Initcode read from Initcode Transaction (EIP-7873).
+struct TransactionInitcode
+{
+    /// Initcode bytes.
+    bytes_view code;
+    /// Result of initcode validation, if it was validated.
+    /// std::nullopt if initcode was not validated yet.
+    std::optional<bool> is_valid;
+};
 
 /// Generic execution state for generic instructions implementations.
 // NOLINTNEXTLINE(clang-analyzer-optin.performance.Padding)
@@ -172,7 +181,7 @@ public:
 
 private:
     evmc_tx_context m_tx = {};
-    std::optional<std::unordered_map<evmc::bytes32, bytes_view>> m_initcodes;
+    std::optional<std::unordered_map<evmc::bytes32, TransactionInitcode>> m_initcodes;
 
 public:
     /// Pointer to code analysis.
@@ -230,8 +239,8 @@ public:
 
     /// Get initcode by its hash from transaction initcodes.
     ///
-    /// Returns empty bytes_view if no such initcode was found.
-    [[nodiscard]] bytes_view get_tx_initcode_by_hash(const evmc_bytes32& hash) noexcept
+    /// Returns nullptr if no such initcode was found.
+    [[nodiscard]] TransactionInitcode* get_tx_initcode_by_hash(const evmc_bytes32& hash)
     {
         if (!m_initcodes.has_value())
         {
@@ -240,12 +249,13 @@ public:
             for (size_t i = 0; i < tx_context.initcodes_count; ++i)
             {
                 const auto& initcode = tx_context.initcodes[i];
-                m_initcodes->insert({initcode.hash, {initcode.code, initcode.code_size}});
+                m_initcodes->insert({initcode.hash,
+                    {.code = {initcode.code, initcode.code_size}, .is_valid = std::nullopt}});
             }
         }
 
         const auto it = m_initcodes->find(hash);
-        return it != m_initcodes->end() ? it->second : bytes_view{};
+        return it != m_initcodes->end() ? &it->second : nullptr;
     }
 };
 }  // namespace evmone

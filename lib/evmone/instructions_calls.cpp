@@ -404,27 +404,8 @@ Result create_eof_impl(
     if (!check_memory(gas_left, state.memory, input_offset_u256, input_size_u256))
         return {EVMC_OUT_OF_GAS, gas_left};
 
-    bytes_view initcontainer;
-    if constexpr (Op == OP_EOFCREATE)
-    {
-        const auto initcontainer_index = pos[1];
-        pos += 2;
-        const auto& container = state.original_code;
-        const auto& eof_header = state.analysis.baseline->eof_header();
-        initcontainer = eof_header.get_container(container, initcontainer_index);
-    }
-    else
-    {
-        pos += 1;
-        initcontainer = state.get_tx_initcode_by_hash(initcode_hash);
-        // In case initcode was not found, empty bytes_view was returned.
-        // Transaction initcodes are not allowed to be empty.
-        if (initcontainer.empty())
-            return {EVMC_SUCCESS, gas_left};  // "Light" failure
-    }
-
-    const auto input_offset = static_cast<size_t>(input_offset_u256);
-    const auto input_size = static_cast<size_t>(input_size_u256);
+    constexpr auto pos_advance = (Op == OP_EOFCREATE ? 2 : 1);
+    pos += pos_advance;
 
     if (state.msg->depth >= 1024)
         return {EVMC_SUCCESS, gas_left};  // "Light" failure.
@@ -433,12 +414,35 @@ Result create_eof_impl(
         intx::be::load<uint256>(state.host.get_balance(state.msg->recipient)) < endowment)
         return {EVMC_SUCCESS, gas_left};  // "Light" failure.
 
-    if constexpr (Op == OP_TXCREATE)
+    bytes_view initcontainer;
+    if constexpr (Op == OP_EOFCREATE)
     {
-        const auto error_subcont = validate_eof(state.rev, ContainerKind::initcode, initcontainer);
-        if (error_subcont != EOFValidationError::success)
+        const auto initcontainer_index = pos[-1];
+        const auto& container = state.original_code;
+        const auto& eof_header = state.analysis.baseline->eof_header();
+        initcontainer = eof_header.get_container(container, initcontainer_index);
+    }
+    else
+    {
+        auto* tx_initcode = state.get_tx_initcode_by_hash(initcode_hash);
+        // In case initcode was not found, nullptr was returned.
+        if (tx_initcode == nullptr)
+            return {EVMC_SUCCESS, gas_left};  // "Light" failure
+        initcontainer = tx_initcode->code;
+
+        if (!tx_initcode->is_valid.has_value())
+        {
+            const auto error_subcont =
+                validate_eof(state.rev, ContainerKind::initcode, initcontainer);
+            tx_initcode->is_valid = (error_subcont == EOFValidationError::success);
+        }
+
+        if (!*tx_initcode->is_valid)
             return {EVMC_SUCCESS, gas_left};  // "Light" failure.
     }
+
+    const auto input_offset = static_cast<size_t>(input_offset_u256);
+    const auto input_size = static_cast<size_t>(input_size_u256);
 
     evmc_message msg{.kind = to_call_kind(Op)};
     msg.gas = gas_left - gas_left / 64;
