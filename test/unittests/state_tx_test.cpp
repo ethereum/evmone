@@ -153,10 +153,8 @@ TEST(state_tx, validate_eof_create_transaction)
         validate_transaction(state, block, tx, EVMC_CANCUN, 60000, 0)));
     EXPECT_FALSE(holds_alternative<std::error_code>(
         validate_transaction(state, block, tx, EVMC_PRAGUE, 60000, 0)));
-    EXPECT_EQ(
-        std::get<std::error_code>(validate_transaction(state, block, tx, EVMC_OSAKA, 60000, 0))
-            .message(),
-        "EOF initcode in creation transaction");
+    EXPECT_FALSE(holds_alternative<std::error_code>(
+        validate_transaction(state, block, tx, EVMC_OSAKA, 60000, 0)));
 }
 
 TEST(state_tx, validate_tx_data_cost)

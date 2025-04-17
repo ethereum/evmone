@@ -527,9 +527,6 @@ std::variant<TransactionProperties, std::error_code> validate_transaction(
     if (rev >= EVMC_SHANGHAI && !tx.to.has_value() && tx.data.size() > MAX_INITCODE_SIZE)
         return make_error_code(INIT_CODE_SIZE_LIMIT_EXCEEDED);
 
-    if (rev >= EVMC_OSAKA && !tx.to.has_value() && is_eof_container(tx.data))
-        return make_error_code(EOF_CREATION_TRANSACTION);
-
     // Compute and check if sender has enough balance for the theoretical maximum transaction cost.
     // Note this is different from tx_max_cost computed with effective gas price later.
     // The computation cannot overflow if done with 512-bit precision.
