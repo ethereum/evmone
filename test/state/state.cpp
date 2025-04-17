@@ -18,7 +18,7 @@ namespace evmone::state
 {
 namespace
 {
-/// Secp256k1's N/2 is the upper bound of the signature's s value.
+/// Secp256k1's N/2 is the upper bound of the signature's value.
 constexpr auto SECP256K1N_OVER_2 = evmmax::secp256k1::Order / 2;
 /// EIP-7702: The cost of authorization that sets delegation to an account that didn't exist before.
 constexpr auto AUTHORIZATION_EMPTY_ACCOUNT_COST = 25000;
