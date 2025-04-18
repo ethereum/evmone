@@ -29,6 +29,7 @@ struct TransitionResult
     state::BloomFilter bloom;
     int64_t blob_gas_left;
     TestState block_state;
+    bool system_contracts_valid = true;
 };
 
 namespace
@@ -84,15 +85,17 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
     if (rev >= EVMC_PRAGUE)
         requests.emplace_back(collect_deposit_requests(receipts));
 
-    auto system_call_requests = system_call_block_end(block_state, block, block_hashes, rev, vm);
-    std::ranges::move(system_call_requests, std::back_inserter(requests));
+    auto r = system_call_block_end(block_state, block, block_hashes, rev, vm);
+    const auto system_contracts_valid = r.has_value();
+    if (system_contracts_valid)
+        std::ranges::move(*r, std::back_inserter(requests));
 
     finalize(block_state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
 
     const auto bloom = compute_bloom_filter(receipts);
 
     return {std::move(receipts), std::move(rejected_txs), std::move(requests), cumulative_gas_used,
-        bloom, blob_gas_left, std::move(block_state)};
+        bloom, blob_gas_left, std::move(block_state), system_contracts_valid};
 }
 
 bool validate_block(
