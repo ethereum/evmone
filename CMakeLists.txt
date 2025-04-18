@@ -69,6 +69,10 @@ if(CABLE_COMPILER_GNULIKE)
         $<$<CXX_COMPILER_ID:Clang,AppleClang>:-Wunreachable-code-aggressive>
     )
 
+    # The -mtune=generic does not work well yet in current compilers.
+    # Pick a good baseline for tuning.
+    cable_add_cxx_compiler_flag_if_supported(-mtune=haswell)
+
     if(CABLE_COMPILER_CLANG)
         set(CMAKE_CXX_FLAGS_COVERAGE "-fprofile-instr-generate -fcoverage-mapping")
     elseif(CABLE_COMPILER_GNU)
