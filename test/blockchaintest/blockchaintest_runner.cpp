@@ -84,7 +84,12 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
         std::vector<state::Requests> collected;
 
         if (rev >= EVMC_PRAGUE)
-            collected.emplace_back(collect_deposit_requests(receipts));
+        {
+            auto opt_deposits = collect_deposit_requests(receipts);
+            if (!opt_deposits.has_value())
+                return std::nullopt;
+            collected.emplace_back(std::move(*opt_deposits));
+        }
 
         auto requests_result = system_call_block_end(block_state, block, block_hashes, rev, vm);
         if (!requests_result.has_value())

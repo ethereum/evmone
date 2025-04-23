@@ -23,7 +23,7 @@ TEST(state_deposit_requests, collect_deposit_requests)
     log_data.replace(13 * 32, 96, 96, 0x04);  // signature
     log_data.replace(17 * 32, 8, 8, 0x05);    // index
 
-    const auto requests = collect_deposit_requests(receipts);
+    const auto requests = collect_deposit_requests(receipts).value();
     EXPECT_EQ(requests.type(), Requests::Type::deposit);
     EXPECT_EQ(requests.data(),
         bytes(48, 0x01) + bytes(32, 0x02) + bytes(8, 0x03) + bytes(96, 0x04) + bytes(8, 0x05));
@@ -38,7 +38,7 @@ TEST(state_deposit_requests, collect_deposit_requests_skips_wrong_topic)
                                .topics = {DUMMPY_EVENT_SIGNATURE_HASH}}}},
     };
 
-    const auto requests = collect_deposit_requests(receipts);
+    const auto requests = collect_deposit_requests(receipts).value();
     EXPECT_EQ(requests.type(), Requests::Type::deposit);
     EXPECT_TRUE(requests.data().empty());
 }
