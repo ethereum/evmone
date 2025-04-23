@@ -17,6 +17,8 @@ inline constexpr auto FieldPrime =
     0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47_u256;
 
 using Point = ecc::Point<uint256>;
+/// Note that real part of G2 value goes first and imaginary part is the second. i.e (a + b*i)
+/// The pairing check precompile EVM ABI presumes that imaginary part goes first.
 using ExtPoint = ecc::Point<std::pair<uint256, uint256>>;
 
 /// Validates that point is from the bn254 curve group
