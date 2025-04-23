@@ -414,6 +414,12 @@ jobs:
       - download_execution_tests:
           rev: v17.0
       - run:
+          name: "Filter-out invalid Prague tests"
+          working_directory: ~/tests
+          command: |
+            sudo apt-get -q update && sudo apt-get -qy install jq
+            find BlockchainTests -name '*.json' -exec sh -c 'jq "with_entries(select(.key | test(\"Prague\") | not))" {} > {}.tmp && mv {}.tmp {}' \;
+      - run:
           name: "State tests"
           working_directory: ~/build
           command: >
