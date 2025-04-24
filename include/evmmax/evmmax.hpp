@@ -53,6 +53,15 @@ private:
         return {p[1], p[0]};
     }
 
+    static constexpr std::tuple<bool, uint64_t, uint64_t> addmul2(
+        uint64_t t, uint64_t a, uint64_t b, bool c1, uint64_t c0) noexcept
+    {
+        const auto p = intx::umul(a, b);
+        const auto p2 = addc(p, p);
+        const auto p3 = p2.value + t + intx::uint128{c0, uint64_t{c1}};
+        return {p2.carry, p3[1], p3[0]};
+    }
+
 public:
     constexpr explicit ModArith(const UintT& modulus) noexcept
       : mod{modulus},
@@ -120,18 +129,20 @@ public:
         intx::uint<UintT::num_bits + 64> t;
         for (size_t i = 0; i != S; ++i)
         {
-            uint64_t c = 0;
-            for (size_t j = 0; j != S; ++j)
-                std::tie(c, t[j]) = addmul(t[j], x[j], x[i], c);
-            auto tmp = intx::addc(t[S], c);
+            uint64_t c0 = 0;
+            bool c1 = false;
+            std::tie(c0, t[i]) = addmul(t[i], x[i], x[i], c0);
+            for (size_t j = i + 1; j < S; ++j)
+                std::tie(c1, c0, t[j]) = addmul2(t[j], x[j], x[i], c1, c0);
+            auto tmp = intx::addc(t[S], c0);
             t[S] = tmp.value;
-            const auto d = tmp.carry;  // TODO: Carry is 0 for sparse modulus.
+            const bool d = c1 | tmp.carry;  // TODO: Carry is 0 for sparse modulus.
 
             const auto m = t[0] * m_mod_inv;
-            std::tie(c, std::ignore) = addmul(t[0], m, mod[0], 0);
+            std::tie(c0, std::ignore) = addmul(t[0], m, mod[0], 0);
             for (size_t j = 1; j != S; ++j)
-                std::tie(c, t[j - 1]) = addmul(t[j], m, mod[j], c);
-            tmp = intx::addc(t[S], c);
+                std::tie(c0, t[j - 1]) = addmul(t[j], m, mod[j], c0);
+            tmp = intx::addc(t[S], c0);
             t[S - 1] = tmp.value;
             t[S] = d + tmp.carry;  // TODO: Carry is 0 for sparse modulus.
         }
