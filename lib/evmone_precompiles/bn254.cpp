@@ -40,7 +40,8 @@ Point mul(const Point& pt, const uint256& c) noexcept
     if (c == 0)
         return {};
 
-    const auto pr = ecc::mul(Fp, ecc::to_proj(Fp, pt), c, B3);
+    const Point p_mont{Fp.to_mont(pt.x), Fp.to_mont(pt.y)};
+    const auto pr = ecc::mul(Fp, p_mont, c, B3);
 
     return ecc::to_affine(Fp, pr);
 }

@@ -192,6 +192,62 @@ ProjPoint<IntT> add(const evmmax::ModArith<IntT>& s, const ProjPoint<IntT>& p,
     return {x3, y3, z3};
 }
 
+template <typename IntT, int A = 0>
+ProjPoint<IntT> add(const ModArith<IntT>& s, const ProjPoint<IntT>& p, const Point<IntT>& q,
+    const IntT& b3) noexcept
+{
+    (void)s;
+    static_assert(A == 0, "point addition procedure is simplified for a = 0");
+
+    // Joost Renes and Craig Costello and Lejla Batina
+    // "Complete addition formulas for prime order elliptic curves"
+    // Cryptology ePrint Archive, Paper 2015/1060
+    // https://eprint.iacr.org/2015/1060
+    // Algorithm 8.
+
+    const auto& x1 = p.x;
+    const auto& y1 = p.y;
+    const auto& z1 = p.z;
+    const auto& x2 = q.x;
+    const auto& y2 = q.y;
+    IntT x3;
+    IntT y3;
+    IntT z3;
+    IntT t0;
+    IntT t1;
+    IntT t2;
+    IntT t3;
+    IntT t4;
+
+    t0 = s.mul(x1, x2);
+    t1 = s.mul(y1, y2);
+    t3 = s.add(x2, y2);
+    t4 = s.add(x1, y1);
+    t3 = s.mul(t3, t4);
+    t4 = s.add(t0, t1);
+    t3 = s.sub(t3, t4);
+    t4 = s.mul(y2, z1);
+    t4 = s.add(t4, y1);
+    y3 = s.mul(x2, z1);
+    y3 = s.add(y3, x1);
+    x3 = s.add(t0, t0);
+    t0 = s.add(x3, t0);
+    t2 = s.mul(b3, z1);
+    z3 = s.add(t1, t2);
+    t1 = s.sub(t1, t2);
+    y3 = s.mul(b3, y3);
+    x3 = s.mul(t4, y3);
+    t2 = s.mul(t3, t1);
+    x3 = s.sub(t2, x3);
+    y3 = s.mul(y3, t0);
+    t1 = s.mul(t1, z3);
+    y3 = s.add(t1, y3);
+    t0 = s.mul(t0, t3);
+    z3 = s.mul(z3, t4);
+    z3 = s.add(z3, t0);
+
+    return {x3, y3, z3};
+}
 
 template <typename IntT, int A = 0>
 ProjPoint<IntT> dbl(
@@ -239,7 +295,7 @@ ProjPoint<IntT> dbl(
 
 template <typename IntT>
 ProjPoint<IntT> mul(
-    const ModArith<IntT>& m, const ProjPoint<IntT>& p, const IntT& c, const IntT& b3) noexcept
+    const ModArith<IntT>& m, const Point<IntT>& p, const IntT& c, const IntT& b3) noexcept
 {
     ProjPoint<IntT> r;
     const auto bit_width = sizeof(IntT) * 8 - intx::clz(c);
