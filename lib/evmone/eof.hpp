@@ -203,7 +203,7 @@ enum class EOFValidationError
 
 enum class ContainerKind : uint8_t
 {
-    /// Container that uses RETURNCODE. Can be used by EOFCREATE/TXCREATE/Creation transaction.
+    /// Container that uses RETURNCODE. Can be used by EOFCREATE/TXCREATE.
     initcode,
     /// Container that uses STOP/RETURN. Can be returned by RETURNCODE.
     runtime,
