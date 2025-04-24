@@ -5,6 +5,7 @@
 #include "delegation.hpp"
 #include "eof.hpp"
 #include "instructions.hpp"
+#include <variant>
 
 constexpr int64_t MIN_RETAINED_GAS = 5000;
 constexpr int64_t MIN_CALLEE_GAS = 2300;
