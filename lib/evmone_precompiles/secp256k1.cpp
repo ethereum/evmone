@@ -21,7 +21,7 @@ std::optional<uint256> calculate_y(
     const ModArith<uint256>& m, const uint256& x, bool y_parity) noexcept
 {
     // Calculate sqrt(x^3 + 7)
-    const auto x3 = m.mul(m.mul(x, x), x);
+    const auto x3 = m.mul(m.sqr(x), x);
     const auto y = field_sqrt(m, m.add(x3, B));
     if (!y.has_value())
         return std::nullopt;
@@ -180,107 +180,107 @@ std::optional<uint256> field_sqrt(const ModArith<uint256>& m, const uint256& x) 
 
 
     // Step 1: z = x^0x2
-    z = m.mul(x, x);
+    z = m.sqr(x);
 
     // Step 2: z = x^0x3
     z = m.mul(x, z);
 
     // Step 4: t0 = x^0xc
-    t0 = m.mul(z, z);
+    t0 = m.sqr(z);
     for (int i = 1; i < 2; ++i)
-        t0 = m.mul(t0, t0);
+        t0 = m.sqr(t0);
 
     // Step 5: t0 = x^0xf
     t0 = m.mul(z, t0);
 
     // Step 6: t1 = x^0x1e
-    t1 = m.mul(t0, t0);
+    t1 = m.sqr(t0);
 
     // Step 7: t2 = x^0x1f
     t2 = m.mul(x, t1);
 
     // Step 9: t1 = x^0x7c
-    t1 = m.mul(t2, t2);
+    t1 = m.sqr(t2);
     for (int i = 1; i < 2; ++i)
-        t1 = m.mul(t1, t1);
+        t1 = m.sqr(t1);
 
     // Step 10: t1 = x^0x7f
     t1 = m.mul(z, t1);
 
     // Step 14: t3 = x^0x7f0
-    t3 = m.mul(t1, t1);
+    t3 = m.sqr(t1);
     for (int i = 1; i < 4; ++i)
-        t3 = m.mul(t3, t3);
+        t3 = m.sqr(t3);
 
     // Step 15: t0 = x^0x7ff
     t0 = m.mul(t0, t3);
 
     // Step 26: t3 = x^0x3ff800
-    t3 = m.mul(t0, t0);
+    t3 = m.sqr(t0);
     for (int i = 1; i < 11; ++i)
-        t3 = m.mul(t3, t3);
+        t3 = m.sqr(t3);
 
     // Step 27: t0 = x^0x3fffff
     t0 = m.mul(t0, t3);
 
     // Step 32: t3 = x^0x7ffffe0
-    t3 = m.mul(t0, t0);
+    t3 = m.sqr(t0);
     for (int i = 1; i < 5; ++i)
-        t3 = m.mul(t3, t3);
+        t3 = m.sqr(t3);
 
     // Step 33: t2 = x^0x7ffffff
     t2 = m.mul(t2, t3);
 
     // Step 60: t3 = x^0x3ffffff8000000
-    t3 = m.mul(t2, t2);
+    t3 = m.sqr(t2);
     for (int i = 1; i < 27; ++i)
-        t3 = m.mul(t3, t3);
+        t3 = m.sqr(t3);
 
     // Step 61: t2 = x^0x3fffffffffffff
     t2 = m.mul(t2, t3);
 
     // Step 115: t3 = x^0xfffffffffffffc0000000000000
-    t3 = m.mul(t2, t2);
+    t3 = m.sqr(t2);
     for (int i = 1; i < 54; ++i)
-        t3 = m.mul(t3, t3);
+        t3 = m.sqr(t3);
 
     // Step 116: t2 = x^0xfffffffffffffffffffffffffff
     t2 = m.mul(t2, t3);
 
     // Step 224: t3 = x^0xfffffffffffffffffffffffffff000000000000000000000000000
-    t3 = m.mul(t2, t2);
+    t3 = m.sqr(t2);
     for (int i = 1; i < 108; ++i)
-        t3 = m.mul(t3, t3);
+        t3 = m.sqr(t3);
 
     // Step 225: t2 = x^0xffffffffffffffffffffffffffffffffffffffffffffffffffffff
     t2 = m.mul(t2, t3);
 
     // Step 232: t2 = x^0x7fffffffffffffffffffffffffffffffffffffffffffffffffffff80
     for (int i = 0; i < 7; ++i)
-        t2 = m.mul(t2, t2);
+        t2 = m.sqr(t2);
 
     // Step 233: t1 = x^0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffff
     t1 = m.mul(t1, t2);
 
     // Step 256: t1 = x^0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffff800000
     for (int i = 0; i < 23; ++i)
-        t1 = m.mul(t1, t1);
+        t1 = m.sqr(t1);
 
     // Step 257: t0 = x^0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffbfffff
     t0 = m.mul(t0, t1);
 
     // Step 263: t0 = x^0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc0
     for (int i = 0; i < 6; ++i)
-        t0 = m.mul(t0, t0);
+        t0 = m.sqr(t0);
 
     // Step 264: z = x^0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc3
     z = m.mul(z, t0);
 
     // Step 266: z = x^0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffbfffff0c
     for (int i = 0; i < 2; ++i)
-        z = m.mul(z, z);
+        z = m.sqr(z);
 
-    if (m.mul(z, z) != x)
+    if (m.sqr(z) != x)
         return std::nullopt;  // Computed value is not the square root.
 
     return z;

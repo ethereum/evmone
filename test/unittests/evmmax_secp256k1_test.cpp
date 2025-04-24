@@ -31,7 +31,7 @@ TEST(secp256k1, field_sqrt)
          })
     {
         const auto a = m.to_mont(t);
-        const auto a2 = m.mul(a, a);
+        const auto a2 = m.sqr(a);
         const auto a2_sqrt = field_sqrt(m, a2);
         ASSERT_TRUE(a2_sqrt.has_value()) << to_string(t);
         EXPECT_TRUE(a2_sqrt == a || a2_sqrt == m.sub(0, a)) << to_string(t);

@@ -54,6 +54,8 @@ public:
     friend constexpr BaseFieldElem operator*(
         const BaseFieldElem& e1, const BaseFieldElem& e2) noexcept
     {
+        if (&e1 == &e2)
+            return BaseFieldElem(Fp.sqr(e1.m_value));
         return BaseFieldElem(Fp.mul(e1.m_value, e2.m_value));
     }
 

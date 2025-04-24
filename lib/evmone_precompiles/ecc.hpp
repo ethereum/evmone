@@ -117,13 +117,13 @@ Point<IntT> add(const ModArith<IntT>& m, const Point<IntT>& p, const Point<IntT>
             return {};  // return the point at infinity.
 
         // For coincident points find the slope of the tangent line.
-        const auto xx = m.mul(x1, x1);
+        const auto xx = m.sqr(x1);
         dy = m.add(m.add(xx, xx), xx);
         dx = m.add(y1, y1);
     }
     const auto slope = m.mul(dy, m.inv(dx));
 
-    const auto xr = m.sub(m.sub(m.mul(slope, slope), x1), x2);
+    const auto xr = m.sub(m.sub(m.sqr(slope), x1), x2);
     const auto yr = m.sub(m.mul(m.sub(x1, xr), slope), y1);
     return {m.from_mont(xr), m.from_mont(yr)};
 }
@@ -271,12 +271,12 @@ ProjPoint<IntT> dbl(
     IntT t1;
     IntT t2;
 
-    t0 = s.mul(y, y);    // 1
+    t0 = s.sqr(y);       // 1
     z3 = s.add(t0, t0);  // 2
     z3 = s.add(z3, z3);  // 3
     z3 = s.add(z3, z3);  // 4
     t1 = s.mul(y, z);    // 5
-    t2 = s.mul(z, z);    // 6
+    t2 = s.sqr(z);       // 6
     t2 = s.mul(b3, t2);  // 7
     x3 = s.mul(t2, z3);  // 8
     y3 = s.add(t0, t2);  // 9

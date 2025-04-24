@@ -79,6 +79,8 @@ public:
     /// The result (abR) is in Montgomery form.
     constexpr UintT mul(const UintT& x, const UintT& y) const noexcept
     {
+        assert(&x != &y);
+
         // Coarsely Integrated Operand Scanning (CIOS) Method
         // Based on 2.3.2 from
         // High-Speed Algorithms & Architectures For Number-Theoretic Cryptosystems
@@ -92,6 +94,35 @@ public:
             uint64_t c = 0;
             for (size_t j = 0; j != S; ++j)
                 std::tie(c, t[j]) = addmul(t[j], x[j], y[i], c);
+            auto tmp = intx::addc(t[S], c);
+            t[S] = tmp.value;
+            const auto d = tmp.carry;  // TODO: Carry is 0 for sparse modulus.
+
+            const auto m = t[0] * m_mod_inv;
+            std::tie(c, std::ignore) = addmul(t[0], m, mod[0], 0);
+            for (size_t j = 1; j != S; ++j)
+                std::tie(c, t[j - 1]) = addmul(t[j], m, mod[j], c);
+            tmp = intx::addc(t[S], c);
+            t[S - 1] = tmp.value;
+            t[S] = d + tmp.carry;  // TODO: Carry is 0 for sparse modulus.
+        }
+
+        if (t >= mod)
+            t -= mod;
+
+        return static_cast<UintT>(t);
+    }
+
+    constexpr UintT sqr(const UintT& x) const noexcept
+    {
+        constexpr auto S = UintT::num_words;  // TODO(C++23): Make it static
+
+        intx::uint<UintT::num_bits + 64> t;
+        for (size_t i = 0; i != S; ++i)
+        {
+            uint64_t c = 0;
+            for (size_t j = 0; j != S; ++j)
+                std::tie(c, t[j]) = addmul(t[j], x[j], x[i], c);
             auto tmp = intx::addc(t[S], c);
             t[S] = tmp.value;
             const auto d = tmp.carry;  // TODO: Carry is 0 for sparse modulus.
