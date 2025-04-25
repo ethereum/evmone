@@ -41,7 +41,7 @@ private:
     static constexpr UintT compute_r_squared(const UintT& mod) noexcept
     {
         // R is 2^num_bits, R² is 2^(2*num_bits) and needs 2*num_bits+1 bits to represent,
-        // rounded to 2*num_bits+64) for intx requirements.
+        // rounded to (2*num_bits+64) for intx requirements.
         constexpr auto r2 = intx::uint<UintT::num_bits * 2 + 64>{1} << (UintT::num_bits * 2);
         return intx::udivrem(r2, mod).rem;
     }
