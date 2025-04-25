@@ -55,7 +55,7 @@ Point mul(const Point& p, const uint256& c) noexcept
         return {0, 0};
 
     const Point p_mont{Fp.to_mont(p.x), Fp.to_mont(p.y)};
-    const auto r = ecc::mul(Fp, p_mont, c, B3);
+    const auto r = ecc::mul(Fp, p_mont, c);
     return ecc::to_affine(Fp, r);
 }
 
@@ -118,9 +118,9 @@ std::optional<Point> secp256k1_ecdsa_recover(
     // 6. Calculate public key point Q.
     const auto R = Point{Fp.to_mont(r), Fp.to_mont(y)};
     const auto pG = Point{Fp.to_mont(G.x), Fp.to_mont(G.y)};
-    const auto T1 = ecc::mul(Fp, pG, u1, B3);
-    const auto T2 = ecc::mul(Fp, R, u2, B3);
-    const auto pQ = ecc::add(Fp, T1, T2, B3);
+    const auto T1 = ecc::mul(Fp, pG, u1);
+    const auto T2 = ecc::mul(Fp, R, u2);
+    const auto pQ = ecc::add(Fp, T1, T2);
 
     const auto Q = ecc::to_affine(Fp, pQ);
 

@@ -91,6 +91,18 @@ inline Point<IntT> to_affine(const ModArith<IntT>& s, const ProjPoint<IntT>& p) 
     return {s.from_mont(s.mul(p.x, z_inv)), s.from_mont(s.mul(p.y, z_inv))};
 }
 
+/// Converts a Jacobian point to an affine point.
+template <typename IntT>
+Point<IntT> to_affine(const ModArith<IntT>& m, const JacPoint<IntT>& p) noexcept
+{
+    // FIXME: Split to_affine() and to/from_mont(). This is not good idea.
+    // FIXME: Add tests for inf.
+    const auto z_inv = m.inv(p.z);
+    const auto zz_inv = m.mul(z_inv, z_inv);
+    const auto zzz_inv = m.mul(zz_inv, z_inv);
+    return {m.from_mont(m.mul(p.x, zz_inv)), m.from_mont(m.mul(p.y, zzz_inv))};
+}
+
 /// Adds two elliptic curve points in affine coordinates
 /// and returns the result in affine coordinates.
 template <typename IntT>
@@ -191,6 +203,97 @@ ProjPoint<IntT> add(const evmmax::ModArith<IntT>& s, const ProjPoint<IntT>& p,
 
     return {x3, y3, z3};
 }
+
+template <typename IntT, int A = 0>
+JacPoint<IntT> add(
+    const ModArith<IntT>& m, const JacPoint<IntT>& p, const JacPoint<IntT>& q) noexcept
+{
+    static_assert(A == 0, "point addition procedure is simplified for a = 0");
+
+    if (p.z == 0)
+        return q;
+    if (q.z == 0)
+        return p;
+
+    /*
+    Z1Z1 = Z12
+    Z2Z2 = Z22
+    U1 = X1*Z2Z2
+    U2 = X2*Z1Z1
+    S1 = Y1*Z2*Z2Z2
+    S2 = Y2*Z1*Z1Z1
+    H = U2-U1
+    HH = H2
+    HHH = H*HH
+    r = S2-S1
+    V = U1*HH
+    X3 = r2-HHH-2*V
+    Y3 = r*(V-X3)-S1*HHH
+    Z3 = Z1*Z2*H
+    */
+
+    const auto& [x1, y1, z1] = p;
+    const auto& [x2, y2, z2] = q;
+
+    const auto z1z1 = m.mul(z1, z1);
+    const auto z2z2 = m.mul(z2, z2);
+    const auto u1 = m.mul(x1, z2z2);
+    const auto u2 = m.mul(x2, z1z1);
+    const auto s1 = m.mul(m.mul(y1, z2), z2z2);
+    const auto s2 = m.mul(m.mul(y2, z1), z1z1);
+    const auto h = m.sub(u2, u1);
+    const auto hh = m.mul(h, h);
+    const auto hhh = m.mul(h, hh);
+    const auto r = m.sub(s2, s1);
+    const auto v = m.mul(u1, hh);
+    const auto x3 = m.sub(m.sub(m.mul(r, r), hhh), m.add(v, v));
+    const auto y3 = m.sub(m.mul(r, m.sub(v, x3)), m.mul(s1, hhh));
+    const auto z3 = m.mul(m.mul(z1, z2), h);
+
+    return {x3, y3, z3};
+}
+
+template <typename IntT, int A = 0>
+JacPoint<IntT> dbl(const ModArith<IntT>& m, const JacPoint<IntT>& p) noexcept
+{
+    static_assert(A == 0, "point addition procedure is simplified for a = 0");
+
+    if (p.z == 0)
+        return p;
+
+    /*
+        A = X12
+      B = Y12
+      C = B2
+      D = 2*((X1+B)2-A-C)
+      E = 3*A
+      F = E2
+      X3 = F-2*D
+      Y3 = E*(D-X3)-8*C
+      Z3 = 2*Y1*Z1
+ */
+
+    const auto& [x1, y1, z1] = p;
+
+    const auto a = m.mul(x1, x1);
+    const auto b = m.mul(y1, y1);
+    const auto c = m.mul(b, b);
+    const auto x1_add_b = m.add(x1, b);
+    const auto d0 = m.sub(m.sub(m.mul(x1_add_b, x1_add_b), a), c);
+    const auto d = m.add(d0, d0);
+    const auto e = m.add(m.add(a, a), a);
+    const auto f = m.mul(e, e);
+    const auto x3 = m.sub(f, m.add(d, d));
+    const auto c2 = m.add(c, c);
+    const auto c4 = m.add(c2, c2);
+    const auto c8 = m.add(c4, c4);
+    const auto y3 = m.sub(m.mul(e, m.sub(d, x3)), c8);
+    const auto y1z1 = m.sub(y1, z1);
+    const auto z3 = m.add(y1z1, y1z1);
+
+    return {x3, y3, z3};
+}
+
 
 template <typename IntT, int A = 0>
 ProjPoint<IntT> add(const ModArith<IntT>& s, const ProjPoint<IntT>& p, const Point<IntT>& q,
@@ -294,16 +397,18 @@ ProjPoint<IntT> dbl(
 }
 
 template <typename IntT>
-ProjPoint<IntT> mul(
-    const ModArith<IntT>& m, const Point<IntT>& p, const IntT& c, const IntT& b3) noexcept
+JacPoint<IntT> mul(const ModArith<IntT>& m, const Point<IntT>& p, const IntT& c) noexcept
 {
-    ProjPoint<IntT> r;
+    // assert(c < m.mod);
+
+    JacPoint<IntT> r;
+    const auto jp = JacPoint<IntT>{p.x, p.y, 1};
     const auto bit_width = sizeof(IntT) * 8 - intx::clz(c);
     for (auto i = bit_width; i != 0; --i)
     {
-        r = ecc::dbl(m, r, b3);
+        r = ecc::dbl(m, r);
         if ((c & (IntT{1} << (i - 1))) != 0)  // if the i-th bit in the scalar is set
-            r = ecc::add(m, r, p, b3);
+            r = ecc::add(m, r, jp);
     }
     return r;
 }

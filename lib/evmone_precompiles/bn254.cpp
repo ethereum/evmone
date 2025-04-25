@@ -10,7 +10,7 @@ namespace
 {
 constexpr ModArith Fp{FieldPrime};
 constexpr auto B = Fp.to_mont(3);
-constexpr auto B3 = Fp.to_mont(3 * 3);
+// constexpr auto B3 = Fp.to_mont(3 * 3);
 }  // namespace
 
 bool validate(const Point& pt) noexcept
@@ -41,7 +41,7 @@ Point mul(const Point& pt, const uint256& c) noexcept
         return {};
 
     const Point p_mont{Fp.to_mont(pt.x), Fp.to_mont(pt.y)};
-    const auto pr = ecc::mul(Fp, p_mont, c, B3);
+    const auto pr = ecc::mul(Fp, p_mont, c);
 
     return ecc::to_affine(Fp, pr);
 }
