@@ -56,7 +56,7 @@ AdvancedCodeAnalysis analyze(evmc_revision rev, bytes_view code) noexcept
     analysis.instrs.emplace_back(opx_beginblock_fn);
     auto block = BlockAnalysis{0};
 
-    // TODO: Iterators are not used here because because push_end may point way outside of code
+    // TODO: Iterators are not used here because push_end may point way outside of code
     //       and this is not allowed and MSVC will detect it with instrumented iterators.
     const auto code_begin = code.data();
     const auto code_end = code_begin + code.size();
