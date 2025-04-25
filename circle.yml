@@ -87,7 +87,10 @@ commands:
           name: "Install RISC-V Toolchain"
           working_directory: /usr/local
           command: |
-            curl -L https://github.com/riscv-collab/riscv-gnu-toolchain/releases/download/2023.07.07/riscv32-glibc-ubuntu-22.04-llvm-nightly-2023.07.07-nightly.tar.gz | sudo tar -xz
+            curl -L https://github.com/riscv-collab/riscv-gnu-toolchain/releases/download/2025.01.20/riscv32-glibc-ubuntu-24.04-llvm-nightly-2025.01.20-nightly.tar.xz > /tmp/riscv.tar.xz 
+            sudo cmake -E tar xJ /tmp/riscv.tar.xz
+            # Fixup misplaced libunwind.
+            (cd riscv/sysroot/lib && sudo ln -s ../../lib/riscv32-unknown-linux-gnu/libunwind.so.1)
 
   checkout_submodules:
     steps:
@@ -661,6 +664,7 @@ jobs:
       - install_riscv_toolchain
       - build
       - test
+      - package
 
 
 
