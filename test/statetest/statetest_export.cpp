@@ -49,8 +49,6 @@ namespace evmone::test
         return "TR_BLOBVERSION_INVALID";
     case BLOB_GAS_LIMIT_EXCEEDED:
         return "TR_BLOBLIST_OVERSIZE";
-    case EOF_CREATION_TRANSACTION:
-        return "EOFException.EOFCreationTransaction";
     case UNKNOWN_ERROR:
         return "Unknown error";
     default:

@@ -21,8 +21,11 @@ TEST_F(state_transition, create_tx_with_eof_initcode)
     const bytecode init_container = eof_bytecode(ret(0, 1));
 
     tx.data = init_container;
+    const auto create_address = compute_create_address(tx.sender, pre.get(tx.sender).nonce);
 
-    expect.tx_error = EOF_CREATION_TRANSACTION;
+    expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
+    expect.status = EVMC_FAILURE;
+    expect.post[create_address].exists = false;
 }
 
 TEST_F(state_transition, create_with_eof_initcode)
