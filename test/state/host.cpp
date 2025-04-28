@@ -329,7 +329,7 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
         // b/c it will default to running `initcode` as an EOF container. At the same time setting
         // the execution mode (legacy vs EOF) deeper down based on `msg.kind` seems awkward.
         // NOTE: EOF initcode is also not allowed in CREATE/CREATE2, but that is blocked
-        // earlier on opcode level.
+        // earlier on the opcode level.
         if (is_eof_container(initcode))
             return evmc::Result{EVMC_FAILURE};
     }
