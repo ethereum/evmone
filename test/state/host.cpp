@@ -322,12 +322,14 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
     const auto initcode = (msg.kind == EVMC_EOFCREATE ? bytes_view{msg.code, msg.code_size} :
                                                         bytes_view{msg.input_data, msg.input_size});
 
-    if (m_rev >= EVMC_OSAKA && msg.kind != EVMC_EOFCREATE)
+    if (m_rev >= EVMC_OSAKA && msg.kind != EVMC_EOFCREATE && msg.depth == 0)
     {
-        // EOF initcode is not allowed for legacy creation
-        // We cannot let the EVM handle that on the initial `EF` invalid instruction, b/c it
-        // will default to running `initcode` as an EOF container. At the same time setting the
-        // execution mode (legacy vs EOF) deeper down based on `msg.kind` seems awkward.
+        // EOF initcode is not allowed for legacy creation tx
+        // We cannot let the EVM handle that on the initial `EF` invalid instruction,
+        // b/c it will default to running `initcode` as an EOF container. At the same time setting
+        // the execution mode (legacy vs EOF) deeper down based on `msg.kind` seems awkward.
+        // NOTE: EOF initcode is also not allowed in CREATE/CREATE2, but that is blocked
+        // earlier on opcode level.
         if (is_eof_container(initcode))
             return evmc::Result{EVMC_FAILURE};
     }

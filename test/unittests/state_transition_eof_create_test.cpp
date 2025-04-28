@@ -35,7 +35,7 @@ TEST_F(state_transition, create_with_eof_initcode)
     tx.gas_limit = block.gas_limit;
     pre.get(tx.sender).balance = tx.gas_limit * tx.max_gas_price + tx.value + 1;
 
-    const bytecode init_container = eof_bytecode(ret(0, 1));
+    const bytecode init_container = eof_bytecode(OP_INVALID);
     const auto factory_code =
         mstore(0, push(init_container)) +
         // init_container will be left-padded in memory to 32 bytes
@@ -45,12 +45,9 @@ TEST_F(state_transition, create_with_eof_initcode)
 
     pre.insert(*tx.to, {.nonce = 1, .code = factory_code});
 
-    const auto create_address = compute_create_address(*tx.to, pre.get(*tx.to).nonce);
-
-    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
+    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;
     expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
     expect.post[*tx.to].storage[0x01_bytes32] = 0x01_bytes32;
-    expect.post[create_address].exists = false;
 }
 
 TEST_F(state_transition, create_with_eof_initcode_cancun)
@@ -82,7 +79,7 @@ TEST_F(state_transition, create2_with_eof_initcode)
     tx.gas_limit = block.gas_limit;
     pre.get(tx.sender).balance = tx.gas_limit * tx.max_gas_price + tx.value + 1;
 
-    const bytecode init_container = eof_bytecode(ret(0, 1));
+    const bytecode init_container = eof_bytecode(OP_INVALID);
     const auto factory_code =
         mstore(0, push(init_container)) +
         // init_container will be left-padded in memory to 32 bytes
@@ -93,12 +90,9 @@ TEST_F(state_transition, create2_with_eof_initcode)
 
     pre.insert(*tx.to, {.nonce = 1, .code = factory_code});
 
-    const auto create_address = compute_create_address(*tx.to, pre.get(*tx.to).nonce);
-
-    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce + 1;
+    expect.post[*tx.to].nonce = pre.get(*tx.to).nonce;
     expect.post[*tx.to].storage[0x00_bytes32] = 0x00_bytes32;
     expect.post[*tx.to].storage[0x01_bytes32] = 0x01_bytes32;
-    expect.post[create_address].exists = false;
 }
 
 TEST_F(state_transition, create2_with_eof_initcode_cancun)
