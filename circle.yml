@@ -391,26 +391,23 @@ jobs:
     steps:
       - build
       - download_execution_spec_tests:
-          release: eip7692@v2.3.0
+          release: v4.3.0
           fixtures_suffix: eip7692
       - run:
           name: "EOF pre-release execution spec tests (state_tests)"
           working_directory: ~/build
           command: >
-            bin/evmone-statetest ~/spec-tests/fixtures/state_tests/osaka
-            --gtest_filter='-eip7692_eof_v1*'
+            bin/evmone-statetest ~/spec-tests/fixtures/state_tests/
       - run:
           name: "EOF pre-release execution spec tests (blockchain_tests)"
           working_directory: ~/build
           command: >
-            bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests/osaka
-            --gtest_filter='-eip7692_eof_v1*:eofwrap*'
+            bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests/
       - run:
           name: "EOF pre-release execution spec tests (eof_tests)"
           working_directory: ~/build
           command: >
             bin/evmone-eoftest ~/spec-tests/fixtures/eof_tests
-            --gtest_filter="-osaka/eip7692*"
       - collect_coverage_gcc
       - upload_coverage:
           flags: eof_execution_spec_tests
