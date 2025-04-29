@@ -73,10 +73,7 @@ std::pair<StateDiff, std::vector<Requests>> system_call(
         // > if no code exists at [address], the call must fail silently.
         const auto code = state_view.get_account_code(addr);
         if (code.empty())
-        {
-            requests.emplace_back(request_type);
             continue;
-        }
 
         bytes32 input32;
         bytes_view input;
