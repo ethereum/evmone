@@ -38,12 +38,18 @@ class StateView;
 [[nodiscard]] StateDiff system_call_block_start(const StateView& state_view, const BlockInfo& block,
     const BlockHashes& block_hashes, evmc_revision rev, evmc::VM& vm);
 
+struct RequestsResult
+{
+    StateDiff state_diff;            ///< State diff of the system contracts execution.
+    std::vector<Requests> requests;  ///< Collected requests.
+};
+
 /// Performs the system call: invokes system contracts that have to be executed
 /// at the end of the block.
 ///
 /// Executes code of pre-defined accounts via pseudo-transaction from the system sender (0xff...fe).
 /// The sender's nonce is not increased.
-[[nodiscard]] std::pair<StateDiff, std::vector<Requests>> system_call_block_end(
-    const StateView& state_view, const BlockInfo& block, const state::BlockHashes& block_hashes,
-    evmc_revision rev, evmc::VM& vm);
+[[nodiscard]] RequestsResult system_call_block_end(const StateView& state_view,
+    const BlockInfo& block, const state::BlockHashes& block_hashes, evmc_revision rev,
+    evmc::VM& vm);
 }  // namespace evmone::state
