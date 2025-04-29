@@ -288,7 +288,7 @@ JacPoint<IntT> dbl(const ModArith<IntT>& m, const JacPoint<IntT>& p) noexcept
     const auto c4 = m.add(c2, c2);
     const auto c8 = m.add(c4, c4);
     const auto y3 = m.sub(m.mul(e, m.sub(d, x3)), c8);
-    const auto y1z1 = m.sub(y1, z1);
+    const auto y1z1 = m.mul(y1, z1);
     const auto z3 = m.add(y1z1, y1z1);
 
     return {x3, y3, z3};
