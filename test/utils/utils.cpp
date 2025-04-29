@@ -44,6 +44,10 @@ evmc_revision to_rev(std::string_view s)
 
 RevisionSchedule to_rev_schedule(std::string_view s)
 {
+    if (s == "BerlinToLondonAt5")
+        return {EVMC_BERLIN, EVMC_LONDON, 5};
+    if (s == "ParisToShanghaiAtTime15k")
+        return {EVMC_PARIS, EVMC_SHANGHAI, 15'000};
     if (s == "ShanghaiToCancunAtTime15k")
         return {EVMC_SHANGHAI, EVMC_CANCUN, 15'000};
     if (s == "CancunToPragueAtTime15k")
