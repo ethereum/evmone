@@ -24,7 +24,7 @@ struct TransitionResult
 {
     std::vector<state::TransactionReceipt> receipts;
     std::vector<RejectedTransaction> rejected;
-    std::vector<state::Requests> requests;
+    std::optional<std::vector<state::Requests>> requests;
     int64_t gas_used;
     state::BloomFilter bloom;
     int64_t blob_gas_left;
@@ -80,12 +80,24 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
         }
     }
 
-    std::vector<state::Requests> requests;
-    if (rev >= EVMC_PRAGUE)
-        requests.emplace_back(collect_deposit_requests(receipts));
+    auto requests = [&]() -> std::optional<std::vector<state::Requests>> {
+        std::vector<state::Requests> collected;
 
-    auto system_call_requests = system_call_block_end(block_state, block, block_hashes, rev, vm);
-    std::ranges::move(system_call_requests, std::back_inserter(requests));
+        if (rev >= EVMC_PRAGUE)
+        {
+            auto opt_deposits = collect_deposit_requests(receipts);
+            if (!opt_deposits.has_value())
+                return std::nullopt;
+            collected.emplace_back(std::move(*opt_deposits));
+        }
+
+        auto requests_result = system_call_block_end(block_state, block, block_hashes, rev, vm);
+        if (!requests_result.has_value())
+            return std::nullopt;
+        std::ranges::move(*requests_result, std::back_inserter(collected));
+
+        return collected;
+    }();
 
     finalize(block_state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
 
@@ -207,6 +219,8 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
                 const auto res = apply_block(
                     state, vm, bi, block_hashes, test_block.transactions, rev, mining_reward(rev));
 
+                ASSERT_TRUE(res.requests.has_value());
+
                 block_hashes[test_block.expected_block_header.block_number] =
                     test_block.expected_block_header.hash;
                 state = res.block_state;
@@ -230,7 +244,7 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
                     state::mpt_hash(res.receipts), test_block.expected_block_header.receipts_root);
                 if (rev >= EVMC_PRAGUE)
                 {
-                    EXPECT_EQ(calculate_requests_hash(res.requests),
+                    EXPECT_EQ(calculate_requests_hash(*res.requests),
                         test_block.expected_block_header.requests_hash);
                 }
                 EXPECT_EQ(res.gas_used, test_block.expected_block_header.gas_used);
@@ -244,6 +258,8 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
 
                 const auto res = apply_block(
                     state, vm, bi, block_hashes, test_block.transactions, rev, mining_reward(rev));
+                if (!res.requests.has_value())
+                    continue;
                 if (!res.rejected.empty())
                     continue;
                 if (res.blob_gas_left != 0)
@@ -260,7 +276,7 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
                     continue;
                 if (state::mpt_hash(res.receipts) != test_block.expected_block_header.receipts_root)
                     continue;
-                if (rev >= EVMC_PRAGUE && calculate_requests_hash(res.requests) !=
+                if (rev >= EVMC_PRAGUE && calculate_requests_hash(*res.requests) !=
                                               test_block.expected_block_header.requests_hash)
                     continue;
                 if (res.gas_used != test_block.expected_block_header.gas_used)
@@ -271,7 +287,7 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
 
                 EXPECT_TRUE(false) << "Expected block to be invalid but resulted valid";
 
-                // Apply the resulting state in order to continue testing expectations, even if
+                // Apply the resulting state to continue testing expectations, even if
                 // the test already has gone into failed state here.
                 block_hashes[test_block.expected_block_header.block_number] =
                     test_block.expected_block_header.hash;

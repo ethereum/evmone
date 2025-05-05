@@ -65,6 +65,8 @@ struct Requests
 /// Calculate commitment value of block requests list
 hash256 calculate_requests_hash(std::span<const Requests> requests_list);
 
-/// Construct requests object from logs of the deposit contract.
-Requests collect_deposit_requests(std::span<const TransactionReceipt> receipts);
+/// Construct a requests object from logs of the deposit contract.
+///
+/// @return The collected deposit requests or std::nullopt if the collection has failed.
+std::optional<Requests> collect_deposit_requests(std::span<const TransactionReceipt> receipts);
 }  // namespace evmone::state
