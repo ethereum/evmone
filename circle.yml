@@ -356,7 +356,7 @@ jobs:
     steps:
       - build
       - download_execution_spec_tests:
-          release: v4.3.0
+          release: v4.4.0
           # develop includes stable
           fixtures_suffix: develop
       - run:
@@ -384,7 +384,7 @@ jobs:
     steps:
       - build
       - download_execution_spec_tests:
-          release: v4.3.0
+          release: v4.4.0
           fixtures_suffix: eip7692
       - run:
           name: "EOF pre-release execution spec tests (state_tests)"
