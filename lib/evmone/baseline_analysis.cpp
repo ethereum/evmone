@@ -16,21 +16,24 @@ static_assert(!std::is_copy_assignable_v<CodeAnalysis>);
 
 namespace
 {
-CodeAnalysis::JumpdestMap analyze_jumpdests(bytes_view code)
+std::unique_ptr<BitsetSpan::word_type[]> analyze_jumpdests(bytes_view code)
 {
     // To find if op is any PUSH opcode (OP_PUSH1 <= op <= OP_PUSH32)
     // it can be noticed that OP_PUSH32 is INT8_MAX (0x7f) therefore
     // static_cast<int8_t>(op) <= OP_PUSH32 is always true and can be skipped.
     static_assert(OP_PUSH32 == std::numeric_limits<int8_t>::max());
 
-    CodeAnalysis::JumpdestMap map(code.size());  // Allocate and init bitmap with zeros.
+    auto map = std::make_unique<BitsetSpan::word_type[]>(
+        (code.size() + sizeof(BitsetSpan::word_type) - 1) /
+        sizeof(BitsetSpan::word_type));  // Allocate and init bitmap with zeros.
+    BitsetSpan s{map.get()};
     for (size_t i = 0; i < code.size(); ++i)
     {
         const auto op = code[i];
         if (static_cast<int8_t>(op) >= OP_PUSH1)  // If any PUSH opcode (see explanation above).
             i += op - size_t{OP_PUSH1 - 1};       // Skip PUSH data.
         else if (INTX_UNLIKELY(op == OP_JUMPDEST))
-            map[i] = true;
+            s.set(i);
     }
 
     return map;
