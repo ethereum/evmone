@@ -54,16 +54,15 @@ private:
     /// If not nullptr the executable_code must point to it.
     std::unique_ptr<uint8_t[]> m_padded_code;
 
-    std::unique_ptr<BitsetSpan::word_type[]> m_jumpdest_bitset;
+    BitsetSpan m_jumpdest_bitset{nullptr};
 
 public:
     /// Constructor for legacy code.
-    CodeAnalysis(std::unique_ptr<uint8_t[]> padded_code, size_t code_size,
-        std::unique_ptr<BitsetSpan::word_type[]> map)
+    CodeAnalysis(std::unique_ptr<uint8_t[]> padded_code, size_t code_size, BitsetSpan map)
       : m_raw_code{padded_code.get(), code_size},
         m_executable_code{padded_code.get(), code_size},
         m_padded_code{std::move(padded_code)},
-        m_jumpdest_bitset{std::move(map)}
+        m_jumpdest_bitset{map}
     {}
 
     /// Constructor for EOF.
@@ -88,7 +87,7 @@ public:
     {
         if (position >= m_raw_code.size())
             return false;
-        return BitsetSpan{m_jumpdest_bitset.get()}.test(static_cast<size_t>(position));
+        return m_jumpdest_bitset.test(static_cast<size_t>(position));
     }
 };
 
