@@ -42,7 +42,8 @@ namespace
 // std::unique_ptr<uint8_t[]> pad_code(bytes_view code)
 // {
 //     // We need at most 33 bytes of code padding: 32 for possible missing all data bytes of PUSH32
-//     // at the very end of the code; and one more byte for STOP to guarantee there is a terminating
+//     // at the very end of the code; and one more byte for STOP to guarantee there is a
+//     terminating
 //     // instruction at the code end.
 //     constexpr auto padding = 32 + 1;
 //
@@ -52,19 +53,18 @@ namespace
 //     return padded_code;
 // }
 
-
 CodeAnalysis analyze_legacy(bytes_view code)
 {
     const auto padded_code_size = code.size() + 33;
     const auto aligned_code_size = (padded_code_size + 7) / 8 * 8;
-    const auto bitset_size = (code.size() + 7) / 8 * 8;
-    const auto total_size = padded_code_size + bitset_size;
+    const auto bitset_words = (code.size() + 63) / 64;
+    const auto total_size = aligned_code_size + bitset_words * 8;
 
     auto d = std::make_unique_for_overwrite<uint8_t[]>(total_size);
     std::ranges::copy(code, d.get());
     std::fill_n(&d[code.size()], total_size - code.size(), 0);
 
-    auto m = new (&d[aligned_code_size]) BitsetSpan::word_type[bitset_size / 8];
+    auto m = new (&d[aligned_code_size]) BitsetSpan::word_type[bitset_words];
     BitsetSpan s{m};
 
     for (size_t i = 0; i < code.size(); ++i)
