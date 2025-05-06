@@ -49,6 +49,7 @@ target_sources(
     exportable_fixture.cpp
     instructions_test.cpp
     jumpdest_analysis_test.cpp
+    lru_cache_test.cpp
     precompiles_blake2b_test.cpp
     precompiles_bls_test.cpp
     precompiles_bn254_test.cpp
