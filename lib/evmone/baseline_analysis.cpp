@@ -16,49 +16,37 @@ static_assert(!std::is_copy_assignable_v<CodeAnalysis>);
 
 namespace
 {
-// std::unique_ptr<BitsetSpan::word_type[]> analyze_jumpdests(bytes_view code)
-// {
-//     // To find if op is any PUSH opcode (OP_PUSH1 <= op <= OP_PUSH32)
-//     // it can be noticed that OP_PUSH32 is INT8_MAX (0x7f) therefore
-//     // static_cast<int8_t>(op) <= OP_PUSH32 is always true and can be skipped.
-//     static_assert(OP_PUSH32 == std::numeric_limits<int8_t>::max());
-//
-//     auto map = std::make_unique<BitsetSpan::word_type[]>(
-//         (code.size() + sizeof(BitsetSpan::word_type) - 1) /
-//         sizeof(BitsetSpan::word_type));  // Allocate and init bitmap with zeros.
-//     BitsetSpan s{map.get()};
-//     for (size_t i = 0; i < code.size(); ++i)
-//     {
-//         const auto op = code[i];
-//         if (static_cast<int8_t>(op) >= OP_PUSH1)  // If any PUSH opcode (see explanation above).
-//             i += op - size_t{OP_PUSH1 - 1};       // Skip PUSH data.
-//         else if (INTX_UNLIKELY(op == OP_JUMPDEST))
-//             s.set(i);
-//     }
-//
-//     return map;
-// }
+void analyze_jumpdests(BitsetSpan map, bytes_view code) noexcept
+{
+    // To find if op is any PUSH opcode (OP_PUSH1 <= op <= OP_PUSH32)
+    // it can be noticed that OP_PUSH32 is INT8_MAX (0x7f) therefore,
+    // static_cast<int8_t>(op) <= OP_PUSH32 is always true and can be skipped.
+    static_assert(OP_PUSH32 == std::numeric_limits<int8_t>::max());
 
-// std::unique_ptr<uint8_t[]> pad_code(bytes_view code)
-// {
-//     // We need at most 33 bytes of code padding: 32 for possible missing all data bytes of PUSH32
-//     // at the very end of the code; and one more byte for STOP to guarantee there is a
-//     terminating
-//     // instruction at the code end.
-//     constexpr auto padding = 32 + 1;
-//
-//     auto padded_code = std::make_unique_for_overwrite<uint8_t[]>(code.size() + padding);
-//     std::ranges::copy(code, padded_code.get());
-//     std::fill_n(&padded_code[code.size()], padding, uint8_t{OP_STOP});
-//     return padded_code;
-// }
+    for (size_t i = 0; i < code.size(); ++i)
+    {
+        const auto op = code[i];
+        if (static_cast<int8_t>(op) >= OP_PUSH1)  // If any PUSH opcode (see explanation above).
+            i += op - size_t{OP_PUSH1 - 1};       // Skip PUSH data.
+        else if (INTX_UNLIKELY(op == OP_JUMPDEST))
+            map.set(i);
+    }
+}
 
 CodeAnalysis analyze_legacy(bytes_view code)
 {
-    const auto padded_code_size = code.size() + 33;
-    const auto aligned_code_size = (padded_code_size + 7) / 8 * 8;
-    const auto bitset_words = (code.size() + 63) / 64;
-    const auto total_size = aligned_code_size + bitset_words * 8;
+    // We need at most 33 bytes of code padding: 32 for possible missing all data bytes of
+    // the PUSH32 at the code end; and one more byte for STOP to guarantee there is a terminating
+    // instruction at the code end.
+    static constexpr auto PADDING = 32 + 1;
+
+    static constexpr auto BITSET_ALIGNMENT = alignof(BitsetSpan::word_type);
+
+    const auto padded_code_size = code.size() + PADDING;
+    const auto aligned_code_size =
+        (padded_code_size + (BITSET_ALIGNMENT - 1)) / BITSET_ALIGNMENT * BITSET_ALIGNMENT;
+    const auto bitset_words = (code.size() + (BitsetSpan::WORD_BITS)) / BitsetSpan::WORD_BITS;
+    const auto total_size = aligned_code_size + bitset_words * sizeof(BitsetSpan::word_type);
 
     auto d = std::make_unique_for_overwrite<uint8_t[]>(total_size);
     std::ranges::copy(code, d.get());
@@ -67,16 +55,8 @@ CodeAnalysis analyze_legacy(bytes_view code)
     auto m = new (&d[aligned_code_size]) BitsetSpan::word_type[bitset_words];
     BitsetSpan s{m};
 
-    for (size_t i = 0; i < code.size(); ++i)
-    {
-        const auto op = code[i];
-        if (static_cast<int8_t>(op) >= OP_PUSH1)  // If any PUSH opcode (see explanation above).
-            i += op - size_t{OP_PUSH1 - 1};       // Skip PUSH data.
-        else if (INTX_UNLIKELY(op == OP_JUMPDEST))
-            s.set(i);
-    }
+    analyze_jumpdests(s, code);
 
-    // TODO: The padded code buffer and jumpdest bitmap can be created with single allocation.
     return {std::move(d), code.size(), s};
 }
 
