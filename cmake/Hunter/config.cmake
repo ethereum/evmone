@@ -22,3 +22,10 @@ hunter_config(
     URL https://github.com/chfast/intx/archive/v0.12.1.tar.gz
     SHA1 b2465f217b0289c36579668537df4ce2f84547f0
 )
+
+hunter_config(
+    benchmark
+    VERSION 1.9.3
+    URL https://github.com/google/benchmark/archive/v1.9.3.tar.gz
+    SHA1 65aeb420ce456fefca0429d1886e83ed3c88e4e7
+)
