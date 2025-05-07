@@ -7,7 +7,6 @@
 #include <evmc/evmc.h>
 #include <evmc/utils.h>
 #include <memory>
-#include <vector>
 
 namespace evmone
 {
@@ -32,7 +31,7 @@ struct BitsetSpan
         return (m_array[word_index] & bit_mask) != 0;
     }
 
-    void set(size_t index) noexcept
+    void set(size_t index) const noexcept
     {
         const auto word_index = index / WORD_BITS;
         const auto bit_index = index % WORD_BITS;
