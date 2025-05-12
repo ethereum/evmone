@@ -4,7 +4,7 @@
 
 add_library(evmmax INTERFACE)
 add_library(evmone::evmmax ALIAS evmmax)
-target_compile_features(evmmax INTERFACE cxx_std_20)
+target_compile_features(evmmax INTERFACE cxx_std_23)
 target_include_directories(evmmax INTERFACE ${PROJECT_SOURCE_DIR}/include)
 target_link_libraries(evmmax INTERFACE intx::intx)
 
