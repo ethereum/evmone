@@ -60,7 +60,7 @@ TEST(kzg, verify_proof_constant)
 
     // Commitment for f(x) = 1 is [1]₁, i.e. the G1 generator point.
     std::byte c[48]{};
-    intx::be::store(reinterpret_cast<uint8_t(&)[sizeof(c)]>(c), G1_GENERATOR_X);
+    intx::be::unsafe::store(reinterpret_cast<uint8_t*>(c), G1_GENERATOR_X);
     c[0] |= std::byte{0x80};  // flag of the point compressed form.
 
     const auto hash = versioned_hash(c);
