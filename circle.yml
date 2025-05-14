@@ -441,7 +441,7 @@ jobs:
           working_directory: ~/build
           command: >
             bin/evmone-blockchaintest
-            --gtest_filter='*:-bc4895-withdrawals.*:bcEIP1559.badUncles:bcMultiChainTest.UncleFromSideChain:bcStateTests.RefundOverflow*:bcUncleTest.UncleIsBrother'
+            --gtest_filter='*:-bc4895-withdrawals.*:bcMultiChainTest.UncleFromSideChain:bcStateTests.RefundOverflow*'
             ~/tests/BlockchainTests/InvalidBlocks
       - collect_coverage_gcc
       - upload_coverage:

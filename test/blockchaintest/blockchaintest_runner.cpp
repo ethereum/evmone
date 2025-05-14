@@ -129,6 +129,9 @@ bool validate_block(
     if (test_block.block_info.gas_limit < 5000)
         return false;
 
+    if (rev >= EVMC_PARIS && !test_block.block_info.ommers.empty())
+        return false;
+
     if (rev >= EVMC_LONDON)
     {
         const auto calculated_base_fee = state::calc_base_fee(
