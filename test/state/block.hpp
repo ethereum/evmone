@@ -61,6 +61,10 @@ struct BlockInfo
     std::vector<Withdrawal> withdrawals;
 };
 
+/// Base fee per gas for the block.
+uint64_t calc_base_fee(
+    int64_t parent_gas_limit, int64_t parent_gas_used, uint64_t parent_base_fee) noexcept;
+
 /// Max amount of blob gas allowed in block.
 uint64_t max_blob_gas_per_block(evmc_revision rev) noexcept;
 

@@ -129,6 +129,14 @@ bool validate_block(
     if (test_block.block_info.gas_limit < 5000)
         return false;
 
+    if (rev >= EVMC_LONDON)
+    {
+        const auto calculated_base_fee = state::calc_base_fee(
+            parent_header.gas_limit, parent_header.gas_used, parent_header.base_fee_per_gas);
+        if (test_block.block_info.base_fee != calculated_base_fee)
+            return false;
+    }
+
     if (rev >= EVMC_CANCUN)
     {
         // `excess_blob_gas` and `blob_gas_used` mandatory after Cancun and invalid before.
