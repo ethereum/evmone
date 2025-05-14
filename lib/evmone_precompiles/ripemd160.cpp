@@ -7,6 +7,7 @@
 #include <array>
 #include <bit>
 #include <cstdint>
+#include <type_traits>
 #include <utility>
 
 #if defined(_LIBCPP_VERSION) && _LIBCPP_VERSION < 180000

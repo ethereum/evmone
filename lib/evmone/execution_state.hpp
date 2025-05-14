@@ -5,6 +5,7 @@
 
 #include <evmc/evmc.hpp>
 #include <intx/intx.hpp>
+#include <exception>
 #include <memory>
 #include <string>
 #include <vector>
