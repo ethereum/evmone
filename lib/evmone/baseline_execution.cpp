@@ -94,15 +94,15 @@ struct Position
 /// Helpers for invoking instruction implementations of different signatures.
 /// @{
 [[release_inline]] inline code_iterator invoke(void (*instr_fn)(StackTop) noexcept, Position pos,
-    int64_t& /*gas*/, ExecutionState& /*state*/) noexcept
+    const uint256* /*stack_bottom*/, int64_t& /*gas*/, ExecutionState& /*state*/) noexcept
 {
     instr_fn(pos.stack_end);
     return pos.code_it + 1;
 }
 
 [[release_inline]] inline code_iterator invoke(
-    Result (*instr_fn)(StackTop, int64_t, ExecutionState&) noexcept, Position pos, int64_t& gas,
-    ExecutionState& state) noexcept
+    Result (*instr_fn)(StackTop, int64_t, ExecutionState&) noexcept, Position pos,
+    const uint256* /*stack_bottom*/, int64_t& gas, ExecutionState& state) noexcept
 {
     const auto o = instr_fn(pos.stack_end, gas, state);
     gas = o.gas_left;
@@ -115,7 +115,7 @@ struct Position
 }
 
 [[release_inline]] inline code_iterator invoke(void (*instr_fn)(StackTop, ExecutionState&) noexcept,
-    Position pos, int64_t& /*gas*/, ExecutionState& state) noexcept
+    Position pos, const uint256* /*stack_bottom*/, int64_t& /*gas*/, ExecutionState& state) noexcept
 {
     instr_fn(pos.stack_end, state);
     return pos.code_it + 1;
@@ -123,21 +123,21 @@ struct Position
 
 [[release_inline]] inline code_iterator invoke(
     code_iterator (*instr_fn)(StackTop, ExecutionState&, code_iterator) noexcept, Position pos,
-    int64_t& /*gas*/, ExecutionState& state) noexcept
+    const uint256* /*stack_bottom*/, int64_t& /*gas*/, ExecutionState& state) noexcept
 {
     return instr_fn(pos.stack_end, state, pos.code_it);
 }
 
 [[release_inline]] inline code_iterator invoke(
-    code_iterator (*instr_fn)(StackTop, code_iterator) noexcept, Position pos, int64_t& /*gas*/,
-    ExecutionState& /*state*/) noexcept
+    code_iterator (*instr_fn)(StackTop, code_iterator) noexcept, Position pos,
+    const uint256* /*stack_bottom*/, int64_t& /*gas*/, ExecutionState& /*state*/) noexcept
 {
     return instr_fn(pos.stack_end, pos.code_it);
 }
 
 [[release_inline]] inline code_iterator invoke(
-    TermResult (*instr_fn)(StackTop, int64_t, ExecutionState&) noexcept, Position pos, int64_t& gas,
-    ExecutionState& state) noexcept
+    TermResult (*instr_fn)(StackTop, int64_t, ExecutionState&) noexcept, Position pos,
+    const uint256* /*stack_bottom*/, int64_t& gas, ExecutionState& state) noexcept
 {
     const auto result = instr_fn(pos.stack_end, gas, state);
     gas = result.gas_left;
@@ -147,7 +147,7 @@ struct Position
 
 [[release_inline]] inline code_iterator invoke(
     Result (*instr_fn)(StackTop, int64_t, ExecutionState&, code_iterator&) noexcept, Position pos,
-    int64_t& gas, ExecutionState& state) noexcept
+    const uint256* /*stack_bottom*/, int64_t& gas, ExecutionState& state) noexcept
 {
     const auto result = instr_fn(pos.stack_end, gas, state, pos.code_it);
     gas = result.gas_left;
@@ -160,8 +160,22 @@ struct Position
 }
 
 [[release_inline]] inline code_iterator invoke(
+    Result (*instr_fn)(StackTop, const uint256*, int64_t, code_iterator&) noexcept, Position pos,
+    const uint256* stack_bottom, int64_t& gas, ExecutionState& state) noexcept
+{
+    const auto result = instr_fn(pos.stack_end, stack_bottom, gas, pos.code_it);
+    gas = result.gas_left;
+    if (result.status != EVMC_SUCCESS)
+    {
+        state.status = result.status;
+        return nullptr;
+    }
+    return pos.code_it;
+}
+
+[[release_inline]] inline code_iterator invoke(
     TermResult (*instr_fn)(StackTop, int64_t, ExecutionState&, code_iterator) noexcept,
-    Position pos, int64_t& gas, ExecutionState& state) noexcept
+    Position pos, const uint256* /*stack_bottom*/, int64_t& gas, ExecutionState& state) noexcept
 {
     const auto result = instr_fn(pos.stack_end, gas, state, pos.code_it);
     gas = result.gas_left;
@@ -180,7 +194,7 @@ template <Opcode Op>
         state.status = status;
         return {nullptr, pos.stack_end};
     }
-    const auto new_pos = invoke(instr::core::impl<Op>, pos, gas, state);
+    const auto new_pos = invoke(instr::core::impl<Op>, pos, stack_bottom, gas, state);
     const auto new_stack_top = pos.stack_end + instr::traits[Op].stack_height_change;
     return {new_pos, new_stack_top};
 }

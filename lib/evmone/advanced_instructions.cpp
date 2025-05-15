@@ -74,6 +74,15 @@ inline Result impl(AdvancedExecutionState& state, code_iterator pos) noexcept
 }
 
 template <Opcode Op,
+    Result CoreFn(StackTop, const uint256*, int64_t, code_iterator&) noexcept = core::impl<Op>>
+inline Result impl(AdvancedExecutionState& state, code_iterator pos) noexcept
+{
+    // Stack height adjustment may be omitted.
+    // FIXME: sending stack bottom as nullptr - revisit
+    return CoreFn(state.stack, nullptr, state.gas_left, pos);
+}
+
+template <Opcode Op,
     TermResult CoreFn(StackTop, int64_t, ExecutionState&, code_iterator) noexcept = core::impl<Op>>
 inline TermResult impl(AdvancedExecutionState& state, code_iterator pos) noexcept
 {
@@ -312,6 +321,7 @@ constexpr std::array<instruction_exec_fn, 256> instruction_implementations = [](
     table[OP_DUPN] = op_undefined;
     table[OP_SWAPN] = op_undefined;
     table[OP_EXCHANGE] = op_undefined;
+    table[OP_SWAPN2] = op_undefined;
     table[OP_EOFCREATE] = op_undefined;
     table[OP_TXCREATE] = op_undefined;
     table[OP_RETURNCODE] = op_undefined;

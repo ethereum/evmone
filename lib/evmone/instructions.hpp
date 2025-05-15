@@ -961,6 +961,23 @@ inline code_iterator swapn(StackTop stack, code_iterator pos) noexcept
     return pos + 2;
 }
 
+inline Result swapn2(
+    StackTop stack, const uint256* stack_bottom, int64_t gas_left, code_iterator& pos) noexcept
+{
+    const auto next_byte = intx::be::unsafe::load<uint8_t>(pos + 1);
+    if (INTX_UNLIKELY(next_byte != 0x60))
+        // FIXME: proper error
+        return {EVMC_OUT_OF_GAS, gas_left};
+    const auto min_offset = pos[2] + 1;
+    if (INTX_UNLIKELY(stack.end() <= stack_bottom + min_offset))
+        return {EVMC_STACK_UNDERFLOW, gas_left};
+
+    // TODO: This may not be optimal, see instr::core::swap().
+    std::swap(stack.top(), stack[pos[2] + 1]);
+    pos += 3;
+    return {EVMC_SUCCESS, gas_left};
+}
+
 inline code_iterator exchange(StackTop stack, code_iterator pos) noexcept
 {
     const auto n = (pos[1] >> 4) + 1;

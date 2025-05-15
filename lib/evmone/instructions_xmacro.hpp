@@ -280,7 +280,7 @@
     ON_OPCODE_IDENTIFIER(OP_SWAPN, swapn)                     \
     ON_OPCODE_IDENTIFIER(OP_EXCHANGE, exchange)               \
     ON_OPCODE_UNDEFINED(0xe9)                                 \
-    ON_OPCODE_UNDEFINED(0xea)                                 \
+    ON_OPCODE_IDENTIFIER(OP_SWAPN2, swapn2)                   \
     ON_OPCODE_UNDEFINED(0xeb)                                 \
     ON_OPCODE_IDENTIFIER(OP_EOFCREATE, eofcreate)             \
     ON_OPCODE_IDENTIFIER(OP_TXCREATE, txcreate)               \
