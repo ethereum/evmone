@@ -36,6 +36,7 @@ struct BlockInfo
     int64_t timestamp = 0;
     int64_t parent_timestamp = 0;
     int64_t gas_limit = 0;
+    int64_t gas_used = 0;
     address coinbase;
     int64_t difficulty = 0;
     int64_t parent_difficulty = 0;
@@ -59,6 +60,10 @@ struct BlockInfo
     std::vector<Ommer> ommers;
     std::vector<Withdrawal> withdrawals;
 };
+
+/// Base fee per gas for the block.
+uint64_t calc_base_fee(
+    int64_t parent_gas_limit, int64_t parent_gas_used, uint64_t parent_base_fee) noexcept;
 
 /// Max amount of blob gas allowed in block.
 uint64_t max_blob_gas_per_block(evmc_revision rev) noexcept;

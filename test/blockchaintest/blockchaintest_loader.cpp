@@ -68,6 +68,7 @@ static TestBlock load_test_block(const json::json& j, const RevisionSchedule& re
         const auto rev = rev_schedule.get_revision(tb.block_info.timestamp);
 
         tb.block_info.gas_limit = tb.expected_block_header.gas_limit;
+        tb.block_info.gas_used = tb.expected_block_header.gas_used;
         tb.block_info.coinbase = tb.expected_block_header.coinbase;
         tb.block_info.difficulty = tb.expected_block_header.difficulty;
         tb.block_info.prev_randao = tb.expected_block_header.prev_randao;

@@ -7,6 +7,9 @@
 
 namespace evmone::state
 {
+static constexpr auto GAS_LIMIT_ELASTICITY_MULTIPLIER = 2;
+static constexpr auto BASE_FEE_MAX_CHANGE_DENOMINATOR = 8;
+
 static constexpr uint64_t TARGET_BLOB_GAS_PER_BLOCK_CANCUN = 393216;
 static constexpr uint64_t TARGET_BLOB_GAS_PER_BLOCK_PRAGUE = 786432;
 
@@ -15,6 +18,34 @@ static constexpr uint64_t MAX_BLOB_GAS_PER_BLOCK_PRAGUE = 1179648;
 
 static constexpr uint64_t BLOB_GASPRICE_UPDATE_FRACTION_CANCUN = 3338477;
 static constexpr uint64_t BLOB_GASPRICE_UPDATE_FRACTION_PRAGUE = 5007716;
+
+uint64_t calc_base_fee(
+    int64_t parent_gas_limit, int64_t parent_gas_used, uint64_t parent_base_fee) noexcept
+{
+    auto parent_gas_target = parent_gas_limit / GAS_LIMIT_ELASTICITY_MULTIPLIER;
+
+    // Special logic for block activating EIP-1559 is not implemented, because test don't cover it.
+    if (parent_gas_used == parent_gas_target)
+    {
+        return parent_base_fee;
+    }
+    else if (parent_gas_used > parent_gas_target)
+    {
+        const auto gas_used_delta = parent_gas_used - parent_gas_target;
+        const auto base_fee_delta =
+            std::max(intx::uint256{parent_base_fee} * gas_used_delta / parent_gas_target /
+                         BASE_FEE_MAX_CHANGE_DENOMINATOR,
+                intx::uint256{1});
+        return parent_base_fee + static_cast<uint64_t>(base_fee_delta);
+    }
+    else
+    {
+        const auto gas_used_delta = parent_gas_target - parent_gas_used;
+        const auto base_fee_delta = intx::uint256{parent_base_fee} * gas_used_delta /
+                                    parent_gas_target / BASE_FEE_MAX_CHANGE_DENOMINATOR;
+        return parent_base_fee - static_cast<uint64_t>(base_fee_delta);
+    }
+}
 
 uint64_t max_blob_gas_per_block(evmc_revision rev) noexcept
 {
