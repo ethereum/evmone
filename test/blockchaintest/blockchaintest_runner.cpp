@@ -112,6 +112,23 @@ bool validate_block(
 {
     // NOTE: includes only block validity unrelated to individual txs. See `apply_block`.
 
+    if (test_block.block_info.gas_used > test_block.block_info.gas_limit)
+        return false;
+
+    // Some tests have gas limit at INT64_MAX, so we cast to uint64_t to avoid overflow.
+    const auto parent_header_gas_limit_u64 = static_cast<uint64_t>(parent_header.gas_limit);
+    const auto test_block_gas_limit_u64 = static_cast<uint64_t>(test_block.block_info.gas_limit);
+    if (test_block_gas_limit_u64 >=
+        parent_header_gas_limit_u64 + parent_header_gas_limit_u64 / 1024)
+        return false;
+    if (test_block_gas_limit_u64 <=
+        parent_header_gas_limit_u64 - parent_header_gas_limit_u64 / 1024)
+        return false;
+
+    // Block gas limit minimum from Yellow Paper.
+    if (test_block.block_info.gas_limit < 5000)
+        return false;
+
     if (rev >= EVMC_CANCUN)
     {
         // `excess_blob_gas` and `blob_gas_used` mandatory after Cancun and invalid before.

@@ -36,6 +36,7 @@ struct BlockInfo
     int64_t timestamp = 0;
     int64_t parent_timestamp = 0;
     int64_t gas_limit = 0;
+    int64_t gas_used = 0;
     address coinbase;
     int64_t difficulty = 0;
     int64_t parent_difficulty = 0;
