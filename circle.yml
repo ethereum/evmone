@@ -356,7 +356,7 @@ jobs:
     steps:
       - build
       - download_execution_spec_tests:
-          release: v4.4.0
+          release: v4.5.0
           # develop includes stable
           fixtures_suffix: develop
       - run:
@@ -412,13 +412,7 @@ jobs:
     steps:
       - build
       - download_execution_tests:
-          rev: v17.0
-      - run:
-          name: "Filter-out invalid Prague tests"
-          working_directory: ~/tests
-          command: |
-            sudo apt-get -q update && sudo apt-get -qy install jq
-            find BlockchainTests -name '*.json' -exec sh -c 'jq "with_entries(select(.key | test(\"Prague\") | not))" {} > {}.tmp && mv {}.tmp {}' \;
+          rev: v17.1
       - run:
           name: "State tests"
           working_directory: ~/build
