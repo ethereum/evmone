@@ -560,11 +560,9 @@ jobs:
 
   clang-latest-coverage:
     executor: linux-clang-latest
-    resource_class: small
     environment:
-      CMAKE_BUILD_PARALLEL_LEVEL: 2
+      CMAKE_BUILD_PARALLEL_LEVEL: 4
       BUILD_TYPE: Coverage
-      TESTS_FILTER: unittests|integration
     steps:
       - build
       - test
@@ -572,13 +570,12 @@ jobs:
           name: "Coverage report"
           working_directory: ~/build
           command: |
-            ARGS='lib/libevmone.so -Xdemangler llvm-cxxfilt -instr-profile=evmone.profdata -ignore-filename-regex=include/evmc'
-            SHOW_ARGS='-format=html -show-branches=count -show-regions -show-expansions'
+            OBJECTS="-object bin/evmone-unittests -object bin/evmone-statetest -object bin/evmone-blockchaintest -object bin/evmone-t8n"
+            ARGS="lib/libevmone.so $OBJECTS -Xdemangler llvm-cxxfilt -instr-profile=evmone.profdata -ignore-filename-regex=include/evmc"
             
             mkdir ~/coverage
             llvm-profdata merge -sparse *.profraw -o evmone.profdata
-            llvm-cov show $ARGS $SHOW_ARGS > ~/coverage/full.html
-            llvm-cov show $ARGS $SHOW_ARGS -region-coverage-lt=100 > ~/coverage/missing.html
+            llvm-cov show $ARGS -format=html -show-directory-coverage -show-line-counts-or-regions -o ~/coverage/html
 
             llvm-cov report $ARGS > ~/coverage/report.txt
             llvm-cov report $ARGS -use-color
