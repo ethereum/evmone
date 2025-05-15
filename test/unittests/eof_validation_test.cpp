@@ -311,11 +311,12 @@ TEST_F(eof_validation, EOF1_undefined_opcodes)
             continue;
         // These opcodes are deprecated since Osaka.
         // gas_cost table current implementation does not allow to undef instructions.
-        if (opcode == OP_JUMP || opcode == OP_JUMPI || opcode == OP_PC || opcode == OP_CALLCODE ||
-            opcode == OP_SELFDESTRUCT || opcode == OP_CALL || opcode == OP_STATICCALL ||
-            opcode == OP_DELEGATECALL || opcode == OP_CREATE || opcode == OP_CREATE2 ||
-            opcode == OP_CODESIZE || opcode == OP_CODECOPY || opcode == OP_EXTCODESIZE ||
-            opcode == OP_EXTCODECOPY || opcode == OP_EXTCODEHASH || opcode == OP_GAS)
+        if (opcode == OP_SWAPN2 || opcode == OP_JUMP || opcode == OP_JUMPI || opcode == OP_PC ||
+            opcode == OP_CALLCODE || opcode == OP_SELFDESTRUCT || opcode == OP_CALL ||
+            opcode == OP_STATICCALL || opcode == OP_DELEGATECALL || opcode == OP_CREATE ||
+            opcode == OP_CREATE2 || opcode == OP_CODESIZE || opcode == OP_CODECOPY ||
+            opcode == OP_EXTCODESIZE || opcode == OP_EXTCODECOPY || opcode == OP_EXTCODEHASH ||
+            opcode == OP_GAS)
             continue;
 
         const auto expected = (gas_table[opcode] == evmone::instr::undefined ?
