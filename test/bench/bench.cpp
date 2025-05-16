@@ -260,7 +260,7 @@ std::tuple<int, std::vector<BenchmarkCase>> parseargs(int argc, char** argv)
 
 int main(int argc, char** argv)
 {
-    // MaybeReenterWithoutASLR(argc, argv);
+    MaybeReenterWithoutASLR(argc, argv);
 
     using namespace evmone::test;
     try
