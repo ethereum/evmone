@@ -883,32 +883,36 @@ inline uint64_t load_partial_push_data<4>(code_iterator pos) noexcept
 /// PUSH instruction implementation.
 /// @tparam Len The number of push data bytes, e.g. PUSH3 is push<3>.
 ///
-/// It assumes that at lest 32 bytes of data are available so code padding is required.
+/// It assumes that at least 32 bytes of data are available, so code padding is required.
 template <size_t Len>
 inline code_iterator push(StackTop stack, ExecutionState& /*state*/, code_iterator pos) noexcept
 {
-    constexpr auto num_full_words = Len / sizeof(uint64_t);
-    constexpr auto num_partial_bytes = Len % sizeof(uint64_t);
-    auto data = pos + 1;
+    using word_type = uint256::word_type;
+    static constexpr auto NUM_FULL_WORDS = Len / sizeof(word_type);
+    static constexpr auto NUM_PARTIAL_BYTES = Len % sizeof(word_type);
 
-    stack.push(0);
+    stack.push({});
     auto& r = stack.top();
+    pos += 1;  // Skip the opcode.
 
-    // Load top partial word.
-    if constexpr (num_partial_bytes != 0)
+    // Load the top partial word.
+    if constexpr (NUM_PARTIAL_BYTES != 0)
     {
-        r[num_full_words] = load_partial_push_data<num_partial_bytes>(data);
-        data += num_partial_bytes;
+        r[NUM_FULL_WORDS] = load_partial_push_data<NUM_PARTIAL_BYTES>(pos);
+        pos += NUM_PARTIAL_BYTES;
     }
 
     // Load full words.
-    for (size_t i = 0; i < num_full_words; ++i)
+    if constexpr (NUM_FULL_WORDS != 0)
     {
-        r[num_full_words - 1 - i] = intx::be::unsafe::load<uint64_t>(data);
-        data += sizeof(uint64_t);
+        for (size_t i = 0; i < NUM_FULL_WORDS; ++i)
+        {
+            r[NUM_FULL_WORDS - 1 - i] = intx::be::unsafe::load<word_type>(pos);
+            pos += sizeof(word_type);
+        }
     }
 
-    return pos + (Len + 1);
+    return pos;
 }
 
 /// DUP instruction implementation.
