@@ -649,12 +649,7 @@ inline constexpr std::array<PrecompileTraits, NumPrecompiles> traits{{
 
 bool is_precompile(evmc_revision rev, const evmc::address& addr) noexcept
 {
-    // Define compile-time constant,
-    // TODO(clang18): workaround for Clang Analyzer bug, fixed in clang 18.
-    //                https://github.com/llvm/llvm-project/issues/59493.
-    static constexpr evmc::address address_boundary{stdx::to_underlying(PrecompileId::latest)};
-
-    if (evmc::is_zero(addr) || addr > address_boundary)
+    if (evmc::is_zero(addr) || addr > evmc::address{stdx::to_underlying(PrecompileId::latest)})
         return false;
 
     const auto id = addr.bytes[19];
