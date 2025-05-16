@@ -36,7 +36,7 @@ void MaybeReenterWithoutASLR(int /*argc*/, char** argv)
     // Try to change the personality to disable ASLR.
     const auto proposed_personality =
         get_as_unsigned(curr_personality) | ADDR_NO_RANDOMIZE;
-    const auto prev_personality = personality(proposed_personality);
+    const auto prev_personality = personality(ADDR_NO_RANDOMIZE);
 
     // Have we failed to change the personality? That may happen.
     if (prev_personality == -1)
