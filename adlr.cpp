@@ -46,20 +46,9 @@ void MaybeReenterWithoutASLR(int /*argc*/, char** argv)
         return;
     }
 
-    // // If ASLR is already disabled, we have nothing more to do.
-    // if (get_as_unsigned(prev_personality) & ADDR_NO_RANDOMIZE)
-    // {
-    //     std::puts("ADLR disabled 2");
-    //     return;
-    // }
-
-    // Check if flag applied.
     const auto new_personality = personality(0xffffffff);
-    if ((get_as_unsigned(new_personality) & ADDR_NO_RANDOMIZE) == 0)
-    {
-        std::puts("setting ADLR failed");
+    if (get_as_unsigned(new_personality) != proposed_personality)
         return;
-    }
 
     std::puts("reexecuting");
     execv(argv[0], argv);
