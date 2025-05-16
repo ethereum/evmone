@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
+#include "test/state/host.hpp"
+#include "test/state/test_state.hpp"
 #include "test/utils/utils.hpp"
 #include <benchmark/benchmark.h>
 #include <evmc/evmc.hpp>
@@ -17,7 +19,7 @@ namespace evmone::test
 {
 extern std::map<std::string_view, evmc::VM> registered_vms;
 
-constexpr auto default_revision = EVMC_ISTANBUL;
+constexpr auto default_revision = EVMC_PRAGUE;
 constexpr auto default_gas_limit = std::numeric_limits<int64_t>::max();
 
 
@@ -102,7 +104,11 @@ inline void bench_execute(benchmark::State& state, evmc::VM& vm, bytes_view code
     constexpr auto gas_limit = default_gas_limit;
 
     const auto analysis = analyse_fn(rev, code);
-    evmc::MockedHost host;
+    state::State ss(TestState{});
+    state::BlockInfo blockInfo = {.gas_limit = gas_limit};
+    state::Transaction tx = {.gas_limit = gas_limit};
+    TestBlockHashes block_hashes;
+    state::Host host{rev, vm, ss, blockInfo, block_hashes, tx};
     ExecutionStateT exec_state;
     evmc_message msg{};
     msg.kind = EVMC_CALL;
@@ -145,12 +151,33 @@ inline void bench_execute(benchmark::State& state, evmc::VM& vm, bytes_view code
     state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
 }
 
+inline void bench_transition(benchmark::State& state, evmc::VM& vm, const state::Transaction& tx,
+    const TestState& pre_state, const state::BlockInfo& block_info,
+    const state::BlockHashes& block_hashes, evmc_revision rev) noexcept
+{
+    auto total_gas_used = int64_t{0};
+    auto iteration_gas_used = int64_t{0};
+    for (auto _ : state)
+    {
+        const auto tx_props_or_error = state::validate_transaction(pre_state, block_info, tx, rev,
+            block_info.gas_limit, static_cast<int64_t>(state::max_blob_gas_per_block(rev)));
+        if (const auto err = get_if<std::error_code>(&tx_props_or_error))
+        {
+            state.SkipWithError("failure: " + err->message());
+            return;
+        }
 
-constexpr auto bench_advanced_execute = bench_execute<advanced::AdvancedExecutionState,
-    advanced::AdvancedCodeAnalysis, advanced_execute, advanced_analyse>;
+        auto receipt = state::transition(pre_state, block_info, block_hashes, tx, rev, vm,
+            get<state::TransactionProperties>(tx_props_or_error));
 
-constexpr auto bench_baseline_execute =
-    bench_execute<ExecutionState, baseline::CodeAnalysis, baseline_execute, baseline_analyse>;
+        iteration_gas_used = receipt.gas_used;
+        total_gas_used += iteration_gas_used;
+    }
+
+    using benchmark::Counter;
+    state.counters["gas_used"] = Counter(static_cast<double>(iteration_gas_used));
+    state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
+}
 
 inline void bench_evmc_execute(benchmark::State& state, evmc::VM& vm, bytes_view code,
     bytes_view input = {}, bytes_view expected_output = {})
