@@ -76,8 +76,6 @@ public:
 /// The MPT Node.
 ///
 /// The implementation is based on StackTrie from go-ethereum.
-// TODO(clang-tidy-17): bug https://github.com/llvm/llvm-project/issues/50006
-// NOLINTNEXTLINE(bugprone-reserved-identifier)
 class MPTNode
 {
     static constexpr size_t num_children = 16;

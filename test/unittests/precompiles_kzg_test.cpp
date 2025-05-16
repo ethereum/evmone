@@ -14,12 +14,6 @@ using namespace evmone::crypto;
 
 namespace
 {
-// TODO(intx): Add ""_u384.
-consteval auto operator""_u384(const char* s)
-{
-    return intx::from_string<intx::uint384>(s);
-}
-
 constexpr auto G1_GENERATOR_X =
     0x17F1D3A73197D7942695638C4FA9AC0FC3688C4F9774B905A14E3A3F171BAC586C55E83FF97A1AEFFB3AF00ADB22C6BB_u384;
 constexpr std::byte ZERO32[32]{};
