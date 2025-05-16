@@ -21,7 +21,9 @@ class StackTop
     uint256* m_end;  ///< Pointer to the stack end (1 slot above the stack top item).
 
 public:
-    explicit(false) StackTop(uint256* end) noexcept : m_end{end} {}
+    explicit(false) StackTop(uint256* end) noexcept
+      : m_end{std::assume_aligned<sizeof(uint256)>(end)}
+    {}
 
     /// Returns the pointer to the stack end (the stack slot above the top item).
     [[nodiscard]] uint256* end() noexcept { return m_end; }
