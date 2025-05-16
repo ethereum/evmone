@@ -230,7 +230,7 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
         for (size_t i = 0; i < c.test_blocks.size(); ++i)
         {
             const auto& test_block = c.test_blocks[i];
-            auto bi = test_block.block_info;
+            const auto& bi = test_block.block_info;
 
             const auto rev = c.rev.get_revision(bi.timestamp);
 
