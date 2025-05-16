@@ -33,7 +33,7 @@ struct TransitionResult
 
 namespace
 {
-TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockInfo& block,
+TransitionResult apply_block(const TestState& state, evmc::VM& vm, const state::BlockInfo& block,
     const state::BlockHashes& block_hashes, const std::vector<state::Transaction>& txs,
     evmc_revision rev, std::optional<int64_t> block_reward)
 {
