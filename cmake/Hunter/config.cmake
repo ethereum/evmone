@@ -22,3 +22,15 @@ hunter_config(
     URL https://github.com/chfast/intx/archive/v0.13.0.tar.gz
     SHA1 3e868e3018fe9f2b2f067442c879e4f312d2d707
 )
+
+# Propagate BENCHMARK_ENABLE_LIBPFM to google/benchmark.
+# https://github.com/google/benchmark/blob/v1.9.3/CMakeLists.txt#L42
+option(BENCHMARK_ENABLE_LIBPFM "Enable performance counters provided by libpfm" OFF)
+
+hunter_config(
+    benchmark
+    VERSION 1.9.3
+    CMAKE_ARGS BENCHMARK_ENABLE_LIBPFM=${BENCHMARK_ENABLE_LIBPFM}
+    URL https://github.com/google/benchmark/archive/f921cfb4af82aa9dac72a909b764153789499d6b.tar.gz
+    SHA1 e558b2695f9b9f765a3aa4062eb5861a764f5c28
+)

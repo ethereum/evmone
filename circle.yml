@@ -536,6 +536,7 @@ jobs:
     executor: linux-gcc-multilib
     environment:
       TOOLCHAIN: cxx17-32bit
+      TESTS_FILTER: evmone/bench
     steps:
       - build
       - test
