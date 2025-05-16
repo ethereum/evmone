@@ -153,6 +153,12 @@ commands:
     description: "Build"
     steps:
       - checkout
+      - run:
+          name: "Debug ADLR"
+          command: |
+            cc --version
+            cc -m32 adlr.cpp 
+            ./a.out
       - checkout_submodules
       - run:
           name: "Environment"
