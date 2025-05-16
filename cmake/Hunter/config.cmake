@@ -31,6 +31,6 @@ hunter_config(
     benchmark
     VERSION 1.9.3
     CMAKE_ARGS BENCHMARK_ENABLE_LIBPFM=${BENCHMARK_ENABLE_LIBPFM}
-    URL https://github.com/google/benchmark/archive/v1.9.3.tar.gz
-    SHA1 65aeb420ce456fefca0429d1886e83ed3c88e4e7
+    URL https://github.com/google/benchmark/archive/f921cfb4af82aa9dac72a909b764153789499d6b.tar.gz
+    SHA1 e558b2695f9b9f765a3aa4062eb5861a764f5c28
 )
