@@ -136,6 +136,14 @@ bool validate_block(
     if (rev >= EVMC_PARIS && !test_block.block_info.ommers.empty())
         return false;
 
+
+    for (const auto& ommer : test_block.block_info.ommers)
+    {
+        // Check that ommer block number difference with current block is within allowed range.
+        // https://github.com/ethereum/execution-specs/blob/ee73be5c4d83a2e3c358bd14990878002e52ba9e/src/ethereum/gray_glacier/fork.py#L623
+        if (ommer.delta < 1 || ommer.delta > 6)
+            return false;
+    }
     if (rev >= EVMC_LONDON)
     {
         const auto calculated_base_fee = state::calc_base_fee(

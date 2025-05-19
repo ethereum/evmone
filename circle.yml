@@ -441,7 +441,7 @@ jobs:
           working_directory: ~/build
           command: >
             bin/evmone-blockchaintest
-            --gtest_filter='*:-bc4895-withdrawals.*:bcUncleHeaderValidity.incorrectUncleNumber*:bcUncleTest.*:bcInvalidHeaderTest.badTimestamp'
+            --gtest_filter='*:-bc4895-withdrawals.*:bcInvalidHeaderTest.badTimestamp'
             ~/tests/BlockchainTests/InvalidBlocks
             ~/tests/LegacyTests/Cancun/BlockchainTests/InvalidBlocks
       - collect_coverage_gcc
