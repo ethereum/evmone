@@ -144,6 +144,10 @@ bool validate_block(
         if (ommer.delta < 1 || ommer.delta > 6)
             return false;
     }
+
+    if (test_block.block_info.timestamp <= parent_header->timestamp)
+        return false;
+
     if (rev >= EVMC_LONDON)
     {
         const auto calculated_base_fee = state::calc_base_fee(
