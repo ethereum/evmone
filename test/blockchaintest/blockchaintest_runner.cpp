@@ -229,14 +229,16 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
         TestBlockHashes block_hashes{
             {c.genesis_block_header.block_number, c.genesis_block_header.hash}};
 
-        struct HeaderAndState
+        struct BlockData
         {
             const BlockHeader* header;
             TestState post_state;
+            intx::uint256 total_difficulty;
         };
-        std::unordered_map<hash256, HeaderAndState> block_data{
-            {{c.genesis_block_header.hash, {&c.genesis_block_header, c.pre_state}}}};
-        const auto* latest_state = &c.pre_state;
+        std::unordered_map<hash256, BlockData> block_data{{{c.genesis_block_header.hash,
+            {&c.genesis_block_header, c.pre_state, c.genesis_block_header.difficulty}}}};
+        const auto* canonical_state = &c.pre_state;
+        intx::uint256 max_total_difficulty = c.genesis_block_header.difficulty;
 
         for (size_t i = 0; i < c.test_blocks.size(); ++i)
         {
@@ -269,18 +271,22 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
                 block_hashes[test_block.expected_block_header.block_number] =
                     test_block.expected_block_header.hash;
                 const auto [inserted_it, _] = block_data.insert({test_block.block_info.hash,
-                    {&test_block.expected_block_header, std::move(res.block_state)}});
-                // Note: Tests with reorgs are not supported,
-                // we consider the latest seen state to be the canonical one.
-                latest_state = &inserted_it->second.post_state;
+                    {&test_block.expected_block_header, std::move(res.block_state),
+                        parent_data_it->second.total_difficulty +
+                            test_block.block_info.difficulty}});
+                if (inserted_it->second.total_difficulty >= max_total_difficulty)
+                {
+                    canonical_state = &inserted_it->second.post_state;
+                    max_total_difficulty = inserted_it->second.total_difficulty;
+                }
 
                 EXPECT_TRUE(res.rejected.empty())
                     << "Invalid transaction in block expected to be valid";
                 EXPECT_TRUE(res.blob_gas_left == 0)
                     << "Transactions used more or less blob gas than expected in block header";
 
-                EXPECT_EQ(
-                    state::mpt_hash(*latest_state), test_block.expected_block_header.state_root);
+                EXPECT_EQ(state::mpt_hash(inserted_it->second.post_state),
+                    test_block.expected_block_header.state_root);
 
                 if (rev >= EVMC_SHANGHAI)
                 {
@@ -346,9 +352,9 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
             std::holds_alternative<TestState>(c.expectation.post_state) ?
                 state::mpt_hash(std::get<TestState>(c.expectation.post_state)) :
                 std::get<hash256>(c.expectation.post_state);
-        EXPECT_EQ(state::mpt_hash(*latest_state), expected_post_hash)
+        EXPECT_EQ(state::mpt_hash(*canonical_state), expected_post_hash)
             << "Result state:\n"
-            << print_state(*latest_state)
+            << print_state(*canonical_state)
             << (std::holds_alternative<TestState>(c.expectation.post_state) ?
                        "\n\nExpected state:\n" +
                            print_state(std::get<TestState>(c.expectation.post_state)) :
