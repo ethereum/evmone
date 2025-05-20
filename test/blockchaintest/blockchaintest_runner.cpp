@@ -33,7 +33,7 @@ struct TransitionResult
 
 namespace
 {
-TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockInfo& block,
+TransitionResult apply_block(const TestState& state, evmc::VM& vm, const state::BlockInfo& block,
     const state::BlockHashes& block_hashes, const std::vector<state::Transaction>& txs,
     evmc_revision rev, std::optional<int64_t> block_reward)
 {
@@ -108,15 +108,19 @@ TransitionResult apply_block(TestState& state, evmc::VM& vm, const state::BlockI
 }
 
 bool validate_block(
-    evmc_revision rev, const TestBlock& test_block, const BlockHeader& parent_header) noexcept
+    evmc_revision rev, const TestBlock& test_block, const BlockHeader* parent_header) noexcept
 {
     // NOTE: includes only block validity unrelated to individual txs. See `apply_block`.
+
+    // Fail if parent header was not found.
+    if (parent_header == nullptr)
+        return false;
 
     if (test_block.block_info.gas_used > test_block.block_info.gas_limit)
         return false;
 
     // Some tests have gas limit at INT64_MAX, so we cast to uint64_t to avoid overflow.
-    const auto parent_header_gas_limit_u64 = static_cast<uint64_t>(parent_header.gas_limit);
+    const auto parent_header_gas_limit_u64 = static_cast<uint64_t>(parent_header->gas_limit);
     const auto test_block_gas_limit_u64 = static_cast<uint64_t>(test_block.block_info.gas_limit);
     if (test_block_gas_limit_u64 >=
         parent_header_gas_limit_u64 + parent_header_gas_limit_u64 / 1024)
@@ -135,7 +139,7 @@ bool validate_block(
     if (rev >= EVMC_LONDON)
     {
         const auto calculated_base_fee = state::calc_base_fee(
-            parent_header.gas_limit, parent_header.gas_used, parent_header.base_fee_per_gas);
+            parent_header->gas_limit, parent_header->gas_used, parent_header->base_fee_per_gas);
         if (test_block.block_info.base_fee != calculated_base_fee)
             return false;
     }
@@ -149,8 +153,8 @@ bool validate_block(
 
         // Check that the excess blob gas was updated correctly.
         if (*test_block.block_info.excess_blob_gas !=
-            state::calc_excess_blob_gas(rev, parent_header.blob_gas_used.value_or(0),
-                parent_header.excess_blob_gas.value_or(0)))
+            state::calc_excess_blob_gas(rev, parent_header->blob_gas_used.value_or(0),
+                parent_header->excess_blob_gas.value_or(0)))
             return false;
 
         // Ensure the total blob gas spent is at most equal to the limit
@@ -222,15 +226,28 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
                 bytes32{});
         EXPECT_EQ(c.genesis_block_header.logs_bloom, bytes_view{state::BloomFilter{}});
 
-        auto state = c.pre_state;
-
         TestBlockHashes block_hashes{
             {c.genesis_block_header.block_number, c.genesis_block_header.hash}};
-        const auto* parent_header = &c.genesis_block_header;
+
+        struct BlockData
+        {
+            const BlockHeader* header;
+            TestState post_state;
+            intx::uint256 total_difficulty;
+        };
+        std::unordered_map<hash256, BlockData> block_data{{{c.genesis_block_header.hash,
+            {&c.genesis_block_header, c.pre_state, c.genesis_block_header.difficulty}}}};
+        const auto* canonical_state = &c.pre_state;
+        intx::uint256 max_total_difficulty = c.genesis_block_header.difficulty;
+
         for (size_t i = 0; i < c.test_blocks.size(); ++i)
         {
             const auto& test_block = c.test_blocks[i];
-            auto bi = test_block.block_info;
+            const auto& bi = test_block.block_info;
+
+            const auto parent_data_it = block_data.find(test_block.block_info.parent_hash);
+            const auto* parent_header =
+                parent_data_it != block_data.end() ? parent_data_it->second.header : nullptr;
 
             const auto rev = c.rev.get_revision(bi.timestamp);
 
@@ -239,24 +256,37 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
 
             if (test_block.valid)
             {
-                EXPECT_TRUE(validate_block(rev, test_block, *parent_header))
+                ASSERT_TRUE(validate_block(rev, test_block, parent_header))
                     << "Expected block to be valid (validate_block)";
 
-                const auto res = apply_block(
-                    state, vm, bi, block_hashes, test_block.transactions, rev, mining_reward(rev));
+                // Block being valid guarantees its parent was found.
+                assert(parent_data_it != block_data.end());
+                const auto& pre_state = parent_data_it->second.post_state;
+
+                auto res = apply_block(pre_state, vm, bi, block_hashes, test_block.transactions,
+                    rev, mining_reward(rev));
 
                 ASSERT_TRUE(res.requests.has_value());
 
                 block_hashes[test_block.expected_block_header.block_number] =
                     test_block.expected_block_header.hash;
-                state = res.block_state;
+                const auto [inserted_it, _] = block_data.insert({test_block.block_info.hash,
+                    {&test_block.expected_block_header, std::move(res.block_state),
+                        parent_data_it->second.total_difficulty +
+                            test_block.block_info.difficulty}});
+                if (inserted_it->second.total_difficulty >= max_total_difficulty)
+                {
+                    canonical_state = &inserted_it->second.post_state;
+                    max_total_difficulty = inserted_it->second.total_difficulty;
+                }
 
                 EXPECT_TRUE(res.rejected.empty())
                     << "Invalid transaction in block expected to be valid";
                 EXPECT_TRUE(res.blob_gas_left == 0)
                     << "Transactions used more or less blob gas than expected in block header";
 
-                EXPECT_EQ(state::mpt_hash(state), test_block.expected_block_header.state_root);
+                EXPECT_EQ(state::mpt_hash(inserted_it->second.post_state),
+                    test_block.expected_block_header.state_root);
 
                 if (rev >= EVMC_SHANGHAI)
                 {
@@ -276,16 +306,18 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
                 EXPECT_EQ(res.gas_used, test_block.expected_block_header.gas_used);
                 EXPECT_EQ(
                     bytes_view{res.bloom}, bytes_view{test_block.expected_block_header.logs_bloom});
-
-                parent_header = &test_block.expected_block_header;
             }
             else
             {
-                if (!validate_block(rev, test_block, *parent_header))
+                if (!validate_block(rev, test_block, parent_header))
                     continue;
 
-                const auto res = apply_block(
-                    state, vm, bi, block_hashes, test_block.transactions, rev, mining_reward(rev));
+                // Block being valid guarantees its parent was found.
+                assert(parent_data_it != block_data.end());
+                const auto& pre_state = parent_data_it->second.post_state;
+
+                const auto res = apply_block(pre_state, vm, bi, block_hashes,
+                    test_block.transactions, rev, mining_reward(rev));
                 if (!res.requests.has_value())
                     continue;
                 if (!res.rejected.empty())
@@ -314,21 +346,15 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
                     continue;
 
                 EXPECT_TRUE(false) << "Expected block to be invalid but resulted valid";
-
-                // Apply the resulting state to continue testing expectations, even if
-                // the test already has gone into failed state here.
-                block_hashes[test_block.expected_block_header.block_number] =
-                    test_block.expected_block_header.hash;
-                state = res.block_state;
             }
         }
         const auto expected_post_hash =
             std::holds_alternative<TestState>(c.expectation.post_state) ?
                 state::mpt_hash(std::get<TestState>(c.expectation.post_state)) :
                 std::get<hash256>(c.expectation.post_state);
-        EXPECT_EQ(state::mpt_hash(state), expected_post_hash)
+        EXPECT_EQ(state::mpt_hash(*canonical_state), expected_post_hash)
             << "Result state:\n"
-            << print_state(state)
+            << print_state(*canonical_state)
             << (std::holds_alternative<TestState>(c.expectation.post_state) ?
                        "\n\nExpected state:\n" +
                            print_state(std::get<TestState>(c.expectation.post_state)) :

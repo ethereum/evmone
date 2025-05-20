@@ -433,7 +433,7 @@ jobs:
           working_directory: ~/build
           command: >
             bin/evmone-blockchaintest
-            --gtest_filter='*:-bcMultiChainTest.*:bcTotalDifficultyTest.*:bcForkStressTest.ForkStressTest:bcGasPricerTest.RPC_API_Test:bcValidBlockTest.SimpleTx3LowS'
+            --gtest_filter='*:-bcValidBlockTest.SimpleTx3LowS'
             ~/tests/BlockchainTests/ValidBlocks
             ~/tests/LegacyTests/Cancun/BlockchainTests/ValidBlocks
       - run:
@@ -441,8 +441,9 @@ jobs:
           working_directory: ~/build
           command: >
             bin/evmone-blockchaintest
-            --gtest_filter='*:-bc4895-withdrawals.*:bcMultiChainTest.UncleFromSideChain:bcStateTests.RefundOverflow*'
+            --gtest_filter='*:-bc4895-withdrawals.*:bcUncleHeaderValidity.incorrectUncleNumber*:bcUncleTest.*:bcInvalidHeaderTest.badTimestamp'
             ~/tests/BlockchainTests/InvalidBlocks
+            ~/tests/LegacyTests/Cancun/BlockchainTests/InvalidBlocks
       - collect_coverage_gcc
       - upload_coverage:
           flags: ethereum_tests
