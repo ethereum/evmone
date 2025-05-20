@@ -145,7 +145,9 @@ bool validate_block(
             return false;
     }
 
-    if (test_block.block_info.timestamp <= parent_header->timestamp)
+    // FIXME: Some tests have timestamp not fitting into int64_t, type has to be uint64_t.
+    if (static_cast<uint64_t>(test_block.block_info.timestamp) <=
+        static_cast<uint64_t>(parent_header->timestamp))
         return false;
 
     if (rev >= EVMC_LONDON)
