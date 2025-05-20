@@ -14,7 +14,7 @@ Created by members of the [Ipsilon] (ex-[Ewasm]) team, the project aims for clea
 that can be imported as an execution module by Ethereum Client projects. 
 The codebase of _evmone_ is optimized to provide fast and efficient execution of EVM smart contracts.
 
-### Characteristic of evmone
+### Characteristics of evmone
 
 1. Exposes the [EVMC] API.
 2. Requires C++20 standard.
@@ -27,7 +27,7 @@ The codebase of _evmone_ is optimized to provide fast and efficient execution of
 
 ### Baseline Interpreter
 
-1. Provides relatively straight-forward but efficient EVM implementation.
+1. Provides relatively straightforward but efficient EVM implementation.
 2. Performs only minimalistic `JUMPDEST` analysis.
 
 ### Advanced Interpreter
@@ -83,7 +83,7 @@ To build the evmone EVMC module (shared library), test, and benchmark:
    ```
 
 
-3. Run the unit tests or benchmarking tool:
+4. Run the unit tests or benchmarking tool:
    ```
    build/bin/evmone-unittests
    build/bin/evmone-bench test/evm-benchmarks/benchmarks
