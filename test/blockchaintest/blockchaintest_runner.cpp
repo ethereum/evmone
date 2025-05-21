@@ -181,6 +181,15 @@ bool validate_block(
             test_block.block_info.blob_gas_used.has_value())
             return false;
     }
+
+    // Block is invalid if some of the withdrawal fields failed to be parsed.
+    if (!std::ranges::all_of(
+            test_block.block_info.withdrawals, [](const auto& withdrawal) noexcept {
+                return withdrawal.index.has_value() && withdrawal.validator_index.has_value() &&
+                       withdrawal.amount_in_gwei.has_value();
+            }))
+        return false;
+
     return true;
 }
 

@@ -25,6 +25,23 @@ T load_if_exists(const json::json& j, std::string_view key)
         return from_json<T>(*it);
     return {};
 }
+
+template <typename T>
+std::optional<T> from_json_optional(const json::json& j)
+{
+    try
+    {
+        return from_json<T>(j);
+    }
+    catch (const std::out_of_range&)
+    {
+        return std::nullopt;
+    }
+    catch (const std::invalid_argument&)
+    {
+        return std::nullopt;
+    }
+}
 }  // namespace
 
 template <>
@@ -85,7 +102,10 @@ bytes from_json<bytes>(const json::json& j)
 template <>
 address from_json<address>(const json::json& j)
 {
-    return evmc::from_hex<address>(j.get<std::string>()).value();
+    const auto v = evmc::from_hex<address>(j.get<std::string>());
+    if (!v.has_value())
+        throw std::invalid_argument("from_json<address>: must be hexadecimal string");
+    return *v;
 }
 
 template <>
@@ -186,8 +206,10 @@ static uint64_t calculate_current_base_fee_eip1559(
 template <>
 state::Withdrawal from_json<state::Withdrawal>(const json::json& j)
 {
-    return {from_json<uint64_t>(j.at("index")), from_json<uint64_t>(j.at("validatorIndex")),
-        from_json<evmc::address>(j.at("address")), from_json<uint64_t>(j.at("amount"))};
+    // index, validatorIndex, amount don't fit in uint64_t in some invalid blocks tests.
+    return {from_json_optional<uint64_t>(j.at("index")),
+        from_json_optional<uint64_t>(j.at("validatorIndex")), from_json<address>(j.at("address")),
+        from_json_optional<uint64_t>(j.at("amount"))};
 }
 
 state::BlockInfo from_json_with_rev(const json::json& j, evmc_revision rev)

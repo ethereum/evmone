@@ -18,15 +18,16 @@ struct Ommer
 
 struct Withdrawal
 {
-    uint64_t index = 0;
-    uint64_t validator_index = 0;
+    std::optional<uint64_t> index;
+    std::optional<uint64_t> validator_index;
     address recipient;
-    uint64_t amount_in_gwei = 0;  ///< The amount is denominated in gwei.
+    std::optional<uint64_t> amount_in_gwei;  ///< The amount is denominated in gwei.
 
     /// Returns withdrawal amount in wei.
     [[nodiscard]] intx::uint256 get_amount() const noexcept
     {
-        return intx::uint256{amount_in_gwei} * 1'000'000'000;
+        assert(amount_in_gwei.has_value());
+        return intx::uint256{*amount_in_gwei} * 1'000'000'000;
     }
 };
 
