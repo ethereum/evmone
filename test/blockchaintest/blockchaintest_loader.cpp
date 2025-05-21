@@ -103,10 +103,21 @@ static TestBlock load_test_block(const json::json& j, const RevisionSchedule& re
         }
     }
 
-    if (auto it = j.find("withdrawals"); it != j.end())
+    if (const auto withdrawals_it = j.find("withdrawals"); withdrawals_it != j.end())
     {
-        for (const auto& withdrawal : *it)
-            tb.block_info.withdrawals.emplace_back(from_json<Withdrawal>(withdrawal));
+        try
+        {
+            for (const auto& withdrawal : *withdrawals_it)
+                tb.block_info.withdrawals.push_back(from_json<state::Withdrawal>(withdrawal));
+        }
+        catch (const std::out_of_range&)
+        {
+            tb.withdrawals_parse_success = false;
+        }
+        catch (const std::invalid_argument&)
+        {
+            tb.withdrawals_parse_success = false;
+        }
     }
 
     if (auto it = j.find("transactions"); it != j.end())
