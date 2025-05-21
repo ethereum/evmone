@@ -181,6 +181,11 @@ bool validate_block(
             test_block.block_info.blob_gas_used.has_value())
             return false;
     }
+
+    // Block is invalid if some of the withdrawal fields failed to be parsed.
+    if (!test_block.withdrawals_parse_success)
+        return false;
+
     return true;
 }
 
