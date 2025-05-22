@@ -18,16 +18,15 @@ struct Ommer
 
 struct Withdrawal
 {
-    std::optional<uint64_t> index;
-    std::optional<uint64_t> validator_index;
+    uint64_t index = 0;
+    uint64_t validator_index = 0;
     address recipient;
-    std::optional<uint64_t> amount_in_gwei;  ///< The amount is denominated in gwei.
+    uint64_t amount_in_gwei = 0;  ///< The amount is denominated in gwei.
 
     /// Returns withdrawal amount in wei.
     [[nodiscard]] intx::uint256 get_amount() const noexcept
     {
-        assert(amount_in_gwei.has_value());
-        return intx::uint256{*amount_in_gwei} * 1'000'000'000;
+        return intx::uint256{amount_in_gwei} * 1'000'000'000;
     }
 };
 
@@ -61,7 +60,8 @@ struct BlockInfo
     std::optional<intx::uint256> blob_base_fee;
 
     std::vector<Ommer> ommers;
-    std::vector<Withdrawal> withdrawals;
+    // If withdrawals failed to be parsed, the optional will be empty.
+    std::optional<std::vector<Withdrawal>> withdrawals;
 };
 
 /// Base fee per gas for the block.

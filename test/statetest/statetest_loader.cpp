@@ -206,10 +206,8 @@ static uint64_t calculate_current_base_fee_eip1559(
 template <>
 state::Withdrawal from_json<state::Withdrawal>(const json::json& j)
 {
-    // index, validatorIndex, amount don't fit in uint64_t in some invalid blocks tests.
-    return {from_json_optional<uint64_t>(j.at("index")),
-        from_json_optional<uint64_t>(j.at("validatorIndex")), from_json<address>(j.at("address")),
-        from_json_optional<uint64_t>(j.at("amount"))};
+    return {from_json<uint64_t>(j.at("index")), from_json<uint64_t>(j.at("validatorIndex")),
+        from_json<address>(j.at("address")), from_json<uint64_t>(j.at("amount"))};
 }
 
 state::BlockInfo from_json_with_rev(const json::json& j, evmc_revision rev)
@@ -249,11 +247,22 @@ state::BlockInfo from_json_with_rev(const json::json& j, evmc_revision rev)
             from_json<uint64_t>(j.at("parentBaseFee")));
     }
 
-    std::vector<state::Withdrawal> withdrawals;
+    std::optional<std::vector<state::Withdrawal>> withdrawals = std::vector<state::Withdrawal>{};
     if (const auto withdrawals_it = j.find("withdrawals"); withdrawals_it != j.end())
     {
-        for (const auto& withdrawal : *withdrawals_it)
-            withdrawals.push_back(from_json<state::Withdrawal>(withdrawal));
+        try
+        {
+            for (const auto& withdrawal : *withdrawals_it)
+                withdrawals->push_back(from_json<state::Withdrawal>(withdrawal));
+        }
+        catch (const std::out_of_range&)
+        {
+            withdrawals = std::nullopt;
+        }
+        catch (const std::invalid_argument&)
+        {
+            withdrawals = std::nullopt;
+        }
     }
 
     std::vector<state::Ommer> ommers;

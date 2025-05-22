@@ -97,11 +97,7 @@ uint64_t calc_excess_blob_gas(
 
 [[nodiscard]] bytes rlp_encode(const Withdrawal& withdrawal)
 {
-    assert(withdrawal.index.has_value());
-    assert(withdrawal.validator_index.has_value());
-    assert(withdrawal.amount_in_gwei.has_value());
-
-    return rlp::encode_tuple(*withdrawal.index, *withdrawal.validator_index, withdrawal.recipient,
-        *withdrawal.amount_in_gwei);
+    return rlp::encode_tuple(withdrawal.index, withdrawal.validator_index, withdrawal.recipient,
+        withdrawal.amount_in_gwei);
 }
 }  // namespace evmone::state

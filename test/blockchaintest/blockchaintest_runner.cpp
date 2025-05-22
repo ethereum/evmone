@@ -99,7 +99,8 @@ TransitionResult apply_block(const TestState& state, evmc::VM& vm, const state::
         return collected;
     }();
 
-    finalize(block_state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
+    assert(block.withdrawals.has_value());
+    finalize(block_state, rev, block.coinbase, block_reward, block.ommers, *block.withdrawals);
 
     const auto bloom = compute_bloom_filter(receipts);
 
@@ -183,11 +184,7 @@ bool validate_block(
     }
 
     // Block is invalid if some of the withdrawal fields failed to be parsed.
-    if (!std::ranges::all_of(
-            test_block.block_info.withdrawals, [](const auto& withdrawal) noexcept {
-                return withdrawal.index.has_value() && withdrawal.validator_index.has_value() &&
-                       withdrawal.amount_in_gwei.has_value();
-            }))
+    if (!test_block.block_info.withdrawals.has_value())
         return false;
 
     return true;
@@ -313,7 +310,8 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
 
                 if (rev >= EVMC_SHANGHAI)
                 {
-                    EXPECT_EQ(state::mpt_hash(test_block.block_info.withdrawals),
+                    assert(test_block.block_info.withdrawals.has_value());
+                    EXPECT_EQ(state::mpt_hash(*test_block.block_info.withdrawals),
                         test_block.expected_block_header.withdrawal_root);
                 }
 
@@ -351,9 +349,13 @@ void run_blockchain_tests(std::span<const BlockchainTest> tests, evmc::VM& vm)
                 if (state::mpt_hash(res.block_state) != test_block.expected_block_header.state_root)
                     continue;
 
-                if (rev >= EVMC_SHANGHAI && state::mpt_hash(test_block.block_info.withdrawals) !=
-                                                test_block.expected_block_header.withdrawal_root)
-                    continue;
+                if (rev >= EVMC_SHANGHAI)
+                {
+                    assert(test_block.block_info.withdrawals.has_value());
+                    if (state::mpt_hash(*test_block.block_info.withdrawals) !=
+                        test_block.expected_block_header.withdrawal_root)
+                        continue;
+                }
                 if (state::mpt_hash(test_block.transactions) !=
                     test_block.expected_block_header.transactions_root)
                     continue;
