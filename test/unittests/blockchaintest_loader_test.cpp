@@ -154,7 +154,7 @@ TEST(json_loader, blockchain_test)
     EXPECT_EQ(btt[0].test_blocks[0].block_info.ommers[0].beneficiary,
         0xb94f5374fce5ed0000000097c15331677e6ebf0b_address);
     EXPECT_EQ(btt[0].test_blocks[0].block_info.ommers[0].delta, 2);
-    const auto& withdrawals = *btt[0].test_blocks[0].block_info.withdrawals;
+    const auto& withdrawals = btt[0].test_blocks[0].block_info.withdrawals;
     EXPECT_EQ(withdrawals.size(), 1);
     EXPECT_EQ(withdrawals[0].recipient, 0xc000000000000000000000000000000000000001_address);
     EXPECT_EQ(withdrawals[0].amount_in_gwei, 0x0186a0);

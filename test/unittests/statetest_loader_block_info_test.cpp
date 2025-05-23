@@ -193,7 +193,7 @@ TEST(statetest_loader, block_info_withdrawals)
     EXPECT_EQ(bi.base_fee, 7);
     EXPECT_EQ(bi.timestamp, 0);
     EXPECT_EQ(bi.number, 0);
-    const auto& withdrawals = *bi.withdrawals;
+    const auto& withdrawals = bi.withdrawals;
     EXPECT_EQ(withdrawals.size(), 2);
     EXPECT_EQ(withdrawals[0].recipient, 0x0000000000000000000000000000000000000100_address);
     EXPECT_EQ(withdrawals[0].get_amount(), intx::uint256{0x800000000} * 1'000'000'000);
@@ -231,7 +231,7 @@ TEST(statetest_loader, block_info_ommers)
     EXPECT_EQ(bi.base_fee, 7);
     EXPECT_EQ(bi.timestamp, 0);
     EXPECT_EQ(bi.number, 0);
-    EXPECT_EQ(bi.withdrawals->size(), 0);
+    EXPECT_EQ(bi.withdrawals.size(), 0);
     EXPECT_EQ(bi.ommers.size(), 2);
     EXPECT_EQ(bi.ommers[0].beneficiary, 0x0000000000000000000000000000000000000100_address);
     EXPECT_EQ(bi.ommers[0].delta, 1);

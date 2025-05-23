@@ -48,6 +48,7 @@ struct TestBlock
 {
     state::BlockInfo block_info;
     std::vector<state::Transaction> transactions;
+    bool withdrawals_parse_success = true;
     bool valid = true;
 
     BlockHeader expected_block_header;

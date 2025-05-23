@@ -60,8 +60,7 @@ struct BlockInfo
     std::optional<intx::uint256> blob_base_fee;
 
     std::vector<Ommer> ommers;
-    // If withdrawals failed to be parsed, the optional will be empty.
-    std::optional<std::vector<Withdrawal>> withdrawals;
+    std::vector<Withdrawal> withdrawals;
 };
 
 /// Base fee per gas for the block.

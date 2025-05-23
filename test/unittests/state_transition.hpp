@@ -71,11 +71,12 @@ protected:
 
     evmc_revision rev = EVMC_SHANGHAI;
     uint64_t block_reward = 0;
-    BlockInfo block{.number = 1,  // Some EVMs don't like blocks with number 0.
+    BlockInfo block{
+        .number = 1,  // Some EVMs don't like blocks with number 0.
         .gas_limit = 1'000'000,
         .coinbase = Coinbase,
         .base_fee = 999,
-        .withdrawals = std::vector<Withdrawal>{}};
+    };
     TestBlockHashes block_hashes;
     Transaction tx{
         // The default type corresponds to the default `rev` and majority of tests.

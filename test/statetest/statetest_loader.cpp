@@ -25,23 +25,6 @@ T load_if_exists(const json::json& j, std::string_view key)
         return from_json<T>(*it);
     return {};
 }
-
-template <typename T>
-std::optional<T> from_json_optional(const json::json& j)
-{
-    try
-    {
-        return from_json<T>(j);
-    }
-    catch (const std::out_of_range&)
-    {
-        return std::nullopt;
-    }
-    catch (const std::invalid_argument&)
-    {
-        return std::nullopt;
-    }
-}
 }  // namespace
 
 template <>
@@ -247,22 +230,11 @@ state::BlockInfo from_json_with_rev(const json::json& j, evmc_revision rev)
             from_json<uint64_t>(j.at("parentBaseFee")));
     }
 
-    std::optional<std::vector<state::Withdrawal>> withdrawals = std::vector<state::Withdrawal>{};
+    std::vector<state::Withdrawal> withdrawals;
     if (const auto withdrawals_it = j.find("withdrawals"); withdrawals_it != j.end())
     {
-        try
-        {
-            for (const auto& withdrawal : *withdrawals_it)
-                withdrawals->push_back(from_json<state::Withdrawal>(withdrawal));
-        }
-        catch (const std::out_of_range&)
-        {
-            withdrawals = std::nullopt;
-        }
-        catch (const std::invalid_argument&)
-        {
-            withdrawals = std::nullopt;
-        }
+        for (const auto& withdrawal : *withdrawals_it)
+            withdrawals.push_back(from_json<state::Withdrawal>(withdrawal));
     }
 
     std::vector<state::Ommer> ommers;

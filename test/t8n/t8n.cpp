@@ -239,9 +239,8 @@ int main(int argc, const char* argv[])
                     std::ranges::move(*requests_result, std::back_inserter(requests));
             }
 
-            assert(block.withdrawals.has_value());
             test::finalize(
-                state, rev, block.coinbase, block_reward, block.ommers, *block.withdrawals);
+                state, rev, block.coinbase, block_reward, block.ommers, block.withdrawals);
 
             j_result["logsHash"] = hex0x(logs_hash(txs_logs));
             j_result["stateRoot"] = hex0x(state::mpt_hash(state));
@@ -250,10 +249,7 @@ int main(int argc, const char* argv[])
         j_result["logsBloom"] = hex0x(compute_bloom_filter(receipts));
         j_result["receiptsRoot"] = hex0x(state::mpt_hash(receipts));
         if (rev >= EVMC_SHANGHAI)
-        {
-            assert(block.withdrawals.has_value());
-            j_result["withdrawalsRoot"] = hex0x(state::mpt_hash(*block.withdrawals));
-        }
+            j_result["withdrawalsRoot"] = hex0x(state::mpt_hash(block.withdrawals));
 
         j_result["txRoot"] = hex0x(state::mpt_hash(transactions));
         j_result["gasUsed"] = hex0x(cumulative_gas_used);
