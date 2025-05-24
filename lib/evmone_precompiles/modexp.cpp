@@ -144,19 +144,12 @@ UIntT load_from_bytes(const evmc::bytes_view& data)
 
 namespace evmone::crypto
 {
-bool modexp(uint8_t* output, size_t output_size, const evmc::bytes_view& base,
-    const evmc::bytes_view& exp, const evmc::bytes_view& mod)
+bool modexp(const evmc::bytes_view& base,
+    const evmc::bytes_view& exp, const evmc::bytes_view& mod, uint8_t* output)
 {
     constexpr auto MAX_INPUT_SIZE = 1024;
     if (base.size() > MAX_INPUT_SIZE || exp.size() > MAX_INPUT_SIZE || mod.size() > MAX_INPUT_SIZE)
         return false;
-
-    // mod is zero
-    if (mod.find_first_not_of(uint8_t{0}) == std::string::npos)
-    {
-        memset(output, 0, output_size);
-        return true;
-    }
 
     const auto size = std::max(mod.size(), base.size());
 
@@ -198,7 +191,7 @@ bool modexp(uint8_t* output, size_t output_size, const evmc::bytes_view& base,
                                   load_from_bytes<intx::uint<8192>>(mod)));
     }
 
-    memcpy(output, &res_bytes[res_bytes.size() - output_size], output_size);
+    memcpy(output, &res_bytes[res_bytes.size() - mod.size()], mod.size());
     return true;
 }
 
