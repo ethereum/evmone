@@ -1,6 +1,5 @@
 #include "modexp.hpp"
 #include <evmmax/evmmax.hpp>
-
 #include <bit>
 
 using namespace intx;
@@ -8,7 +7,7 @@ using namespace intx;
 namespace
 {
 template <typename UIntT>
-UIntT modexp_odd(const UIntT& base, const evmc::bytes_view& exp, const UIntT& mod)
+UIntT modexp_odd(const UIntT& base, evmc::bytes_view exp, const UIntT& mod)
 {
     const evmmax::ModArith<UIntT> arith(mod);
 
@@ -53,7 +52,7 @@ UIntT modexp_odd(const UIntT& base, const evmc::bytes_view& exp, const UIntT& mo
 }
 
 template <typename UIntT>
-UIntT modexp_pow_of_two(const UIntT& base, const evmc::bytes_view& exp, const UIntT& mod)
+UIntT modexp_pow_of_two(const UIntT& base, evmc::bytes_view exp, const UIntT& mod)
 {
     const auto nlz = clz(mod);
 
@@ -116,7 +115,7 @@ UIntT modinv_2k(const UIntT& x, size_t k)
 }
 
 template <typename UIntT>
-UIntT modexp_impl(const UIntT& base, const evmc::bytes_view& exp, const UIntT& mod)
+UIntT modexp_impl(const UIntT& base, evmc::bytes_view exp, const UIntT& mod)
 {
     // is odd
     if ((mod & UIntT{1}) == UIntT{1})
@@ -144,7 +143,7 @@ UIntT modexp_impl(const UIntT& base, const evmc::bytes_view& exp, const UIntT& m
 }
 
 template <typename UIntT>
-UIntT load_from_bytes(const evmc::bytes_view& data)
+UIntT load_from_bytes(evmc::bytes_view data)
 {
     constexpr auto num_bytes = UIntT::num_words * sizeof(typename UIntT::word_type);
     assert(data.size() <= num_bytes);
@@ -165,51 +164,42 @@ UIntT load_from_bytes(const evmc::bytes_view& data)
 
 namespace evmone::crypto
 {
-bool modexp(const evmc::bytes_view& base,
-    const evmc::bytes_view& exp, const evmc::bytes_view& mod, uint8_t* output)
+bool modexp(evmc::bytes_view base, evmc::bytes_view exp, evmc::bytes_view mod, uint8_t* output)
 {
-    constexpr auto MAX_INPUT_SIZE = 1024;
+    static constexpr auto MAX_INPUT_SIZE = 1024;
     if (base.size() > MAX_INPUT_SIZE || exp.size() > MAX_INPUT_SIZE || mod.size() > MAX_INPUT_SIZE)
         return false;
 
     const auto size = std::max(mod.size(), base.size());
 
-    evmc::bytes res_bytes;
+    uint8_t res_bytes[MAX_INPUT_SIZE];
     if (size <= 32)
     {
-        res_bytes.resize(32);
-        intx::be::unsafe::store(res_bytes.data(),
+        be::unsafe::store(res_bytes,
             modexp_impl(load_from_bytes<uint256>(base), exp, load_from_bytes<uint256>(mod)));
     }
     else if (size <= 64)
     {
-        res_bytes.resize(64);
-        intx::be::unsafe::store(res_bytes.data(),
+        be::unsafe::store(res_bytes,
             modexp_impl(load_from_bytes<uint512>(base), exp, load_from_bytes<uint512>(mod)));
     }
     else if (size <= 128)
     {
-        res_bytes.resize(128);
-        intx::be::unsafe::store(
-            res_bytes.data(), modexp_impl(load_from_bytes<intx::uint<1024>>(base), exp,
-                                  load_from_bytes<intx::uint<1024>>(mod)));
+        be::unsafe::store(res_bytes, modexp_impl(load_from_bytes<intx::uint<1024>>(base), exp,
+                                         load_from_bytes<intx::uint<1024>>(mod)));
     }
     else if (size <= 256)
     {
-        res_bytes.resize(256);
-        intx::be::unsafe::store(
-            res_bytes.data(), modexp_impl(load_from_bytes<intx::uint<2048>>(base), exp,
-                                  load_from_bytes<intx::uint<2048>>(mod)));
+        be::unsafe::store(res_bytes, modexp_impl(load_from_bytes<intx::uint<2048>>(base), exp,
+                                         load_from_bytes<intx::uint<2048>>(mod)));
     }
     else
     {
-        res_bytes.resize(1024);
-        intx::be::unsafe::store(
-            res_bytes.data(), modexp_impl(load_from_bytes<intx::uint<8192>>(base), exp,
-                                  load_from_bytes<intx::uint<8192>>(mod)));
+        be::unsafe::store(res_bytes, modexp_impl(load_from_bytes<intx::uint<8192>>(base), exp,
+                                         load_from_bytes<intx::uint<8192>>(mod)));
     }
 
-    memcpy(output, &res_bytes[res_bytes.size() - mod.size()], mod.size());
+    std::copy_n(&res_bytes[size - mod.size()], mod.size(), output);
     return true;
 }
 
