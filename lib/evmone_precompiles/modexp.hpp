@@ -8,6 +8,6 @@
 
 namespace evmone::crypto
 {
-bool modexp(uint8_t* output, size_t output_size, const evmc::bytes_view& base,
-    const evmc::bytes_view& exp, const evmc::bytes_view& mod);
+bool modexp(const evmc::bytes_view& base, const evmc::bytes_view& exp, const evmc::bytes_view& mod,
+    uint8_t* output);
 }
