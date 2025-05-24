@@ -153,8 +153,6 @@ bool modexp(const evmc::bytes_view& base,
 
     const auto size = std::max(mod.size(), base.size());
 
-    assert(output_size >= mod.size());
-
     evmc::bytes res_bytes;
     if (size <= 32)
     {
@@ -184,7 +182,6 @@ bool modexp(const evmc::bytes_view& base,
     }
     else
     {
-        assert(output_size <= 1024);
         res_bytes.resize(1024);
         intx::be::unsafe::store(
             res_bytes.data(), modexp_impl(load_from_bytes<intx::uint<8192>>(base), exp,
