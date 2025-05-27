@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "precompiles.hpp"
+
+#include "precompiles_gmp.hpp"
 #include "precompiles_internal.hpp"
 #include <evmone_precompiles/blake2b.hpp>
 #include <evmone_precompiles/bls.hpp>
@@ -16,6 +18,7 @@
 #include <array>
 #include <bit>
 #include <cassert>
+#include <iostream>
 #include <limits>
 #include <span>
 
@@ -352,7 +355,7 @@ ExecutionResult expmod_execute(
     const auto mod_requires_padding = mod_explicit.size() != mod_len;
     if (mod_requires_padding) [[unlikely]]
     {
-        // The modulus is the last argument and some of its bytes may be missing and be implicitly
+        // The modulus is the last argument, and some of its bytes may be missing and be implicitly
         // zero. In this case, copy the explicit modulus bytes to the output buffer and pad the rest
         // with zeroes. The output buffer is guaranteed to have exactly the modulus size.
         const auto [_, output_p] = std::ranges::copy(mod_explicit, output);
@@ -363,11 +366,24 @@ ExecutionResult expmod_execute(
     const auto exp = payload.substr(base_len, exp_len);
     const auto mod = mod_requires_padding ? bytes_view{output, mod_len} : mod_explicit;
 
-#ifdef EVMONE_PRECOMPILES_GMP
+    uint8_t evmone_output[1024];  // Use a separate buffer not to overwrite the truncated mod.
+    const auto in_range = crypto::modexp(base, exp, mod, evmone_output);
+    if (in_range)
+    {
+        uint8_t gmp_output[1024];
+        expmod_gmp(base, exp, mod, gmp_output);
+        if (std::memcmp(evmone_output, gmp_output, mod_len) != 0)
+        {
+            std::cerr << "modexp output mismatch"
+                      << "\n  evmone: " << evmc::hex({output, mod_len})
+                      << "\n  gmp:    " << evmc::hex({gmp_output, mod_len}) << '\n';
+            assert(false);
+        }
+        std::copy_n(evmone_output, mod_len, output);
+        return {EVMC_SUCCESS, mod_len};
+    }
+
     expmod_gmp(base, exp, mod, output);
-#else
-    crypto::modexp(base, exp, mod, output);
-#endif
     return {EVMC_SUCCESS, mod.size()};
 }
 
