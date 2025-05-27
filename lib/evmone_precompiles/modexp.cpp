@@ -1,11 +1,20 @@
 #include "modexp.hpp"
 #include <evmmax/evmmax.hpp>
 #include <bit>
+#include <span>
 
 using namespace intx;
 
 namespace
 {
+template <unsigned N>
+void trunc(std::span<uint8_t> dst, const intx::uint<N>& x) noexcept
+{
+    assert(dst.size() <= N / 8);  // destination must be smaller than the source value
+    const auto d = to_big_endian(x);
+    std::copy_n(&as_bytes(d)[sizeof(d) - dst.size()], dst.size(), dst.begin());
+}
+
 template <typename UIntT>
 UIntT modexp_odd(const UIntT& base, evmc::bytes_view exp, const UIntT& mod)
 {
@@ -172,34 +181,32 @@ bool modexp(evmc::bytes_view base, evmc::bytes_view exp, evmc::bytes_view mod, u
 
     const auto size = std::max(mod.size(), base.size());
 
-    uint8_t res_bytes[MAX_INPUT_SIZE];
+    intx::uint<MAX_INPUT_SIZE * 8> max_res;
     if (size <= 32)
     {
-        be::unsafe::store(res_bytes,
-            modexp_impl(load_from_bytes<uint256>(base), exp, load_from_bytes<uint256>(mod)));
+        max_res = modexp_impl(load_from_bytes<uint256>(base), exp, load_from_bytes<uint256>(mod));
     }
     else if (size <= 64)
     {
-        be::unsafe::store(res_bytes,
-            modexp_impl(load_from_bytes<uint512>(base), exp, load_from_bytes<uint512>(mod)));
+        max_res = modexp_impl(load_from_bytes<uint512>(base), exp, load_from_bytes<uint512>(mod));
     }
     else if (size <= 128)
     {
-        be::unsafe::store(res_bytes, modexp_impl(load_from_bytes<intx::uint<1024>>(base), exp,
-                                         load_from_bytes<intx::uint<1024>>(mod)));
+        max_res = modexp_impl(
+            load_from_bytes<intx::uint<1024>>(base), exp, load_from_bytes<intx::uint<1024>>(mod));
     }
     else if (size <= 256)
     {
-        be::unsafe::store(res_bytes, modexp_impl(load_from_bytes<intx::uint<2048>>(base), exp,
-                                         load_from_bytes<intx::uint<2048>>(mod)));
+        max_res = modexp_impl(
+            load_from_bytes<intx::uint<2048>>(base), exp, load_from_bytes<intx::uint<2048>>(mod));
     }
     else
     {
-        be::unsafe::store(res_bytes, modexp_impl(load_from_bytes<intx::uint<8192>>(base), exp,
-                                         load_from_bytes<intx::uint<8192>>(mod)));
+        max_res = modexp_impl(load_from_bytes<intx::uint<MAX_INPUT_SIZE * 8>>(base), exp,
+            load_from_bytes<intx::uint<MAX_INPUT_SIZE * 8>>(mod));
     }
 
-    std::copy_n(&res_bytes[size - mod.size()], mod.size(), output);
+    trunc(std::span{output, mod.size()}, max_res);
     return true;
 }
 
