@@ -44,25 +44,21 @@ UIntT modexp_pow_of_two(const UIntT& base, evmc::bytes_view exp, const UIntT& mo
 {
     // FIXME: It should compute the value correctly for mod == 1, just checking if covered by tests.
     assert(mod != 1);
-    const auto mod_mask = mod - 1;
     UIntT ret = 1;
     for (auto e : exp)
     {
         unsigned char mask = 0x80;
         while (mask != 0)
         {
-            ret = ret * ret;
-            ret &= mod_mask;
+            ret *= ret;
             if ((mask & e) != 0)
-            {
-                ret = ret * base;
-                ret &= mod_mask;
-            }
-
+                ret *= base;
             mask >>= 1;
         }
     }
 
+    const auto mod_mask = mod - 1;
+    ret &= mod_mask;
     return ret;
 }
 
