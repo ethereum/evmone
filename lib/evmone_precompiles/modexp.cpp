@@ -42,10 +42,10 @@ UIntT modexp_odd(const UIntT& base, evmc::bytes_view exp, const UIntT& mod)
 template <typename UIntT>
 UIntT modexp_pow_of_two(const UIntT& base, evmc::bytes_view exp, const UIntT& mod)
 {
-    const auto nlz = clz(mod);
-
-    const UIntT mod_mask = std::numeric_limits<UIntT>::max() >> (nlz + 1);
-    UIntT ret = UIntT{1};
+    // FIXME: It should compute the value correctly for mod == 1, just checking if covered by tests.
+    assert(mod != 1);
+    const auto mod_mask = mod - 1;
+    UIntT ret = 1;
     for (auto e : exp)
     {
         unsigned char mask = 0x80;
@@ -105,6 +105,8 @@ UIntT modinv_2k(const UIntT& x, size_t k)
 template <typename UIntT>
 UIntT modexp_impl(const UIntT& base, evmc::bytes_view exp, const UIntT& mod)
 {
+    // FIXME: We should strip leading 0 bits/bytes of exp. The gas cost model requires it.
+
     // is odd
     if ((mod & UIntT{1}) == UIntT{1})
     {
