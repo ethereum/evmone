@@ -33,6 +33,8 @@ namespace
 {
 constexpr auto GasCostMax = std::numeric_limits<int64_t>::max();
 
+constexpr auto MODEXP_LEN_LIMIT_EIP7823 = 1024;
+
 constexpr auto BLS12_SCALAR_SIZE = 32;
 constexpr auto BLS12_FIELD_ELEMENT_SIZE = 64;
 constexpr auto BLS12_G1_POINT_SIZE = 2 * BLS12_FIELD_ELEMENT_SIZE;
@@ -100,7 +102,7 @@ PrecompileAnalysis expmod_analyze(bytes_view input, evmc_revision rev) noexcept
 {
     using namespace intx;
 
-    const auto calc_adjusted_exp_len = [input](size_t offset, uint32_t len) noexcept {
+    const auto calc_adjusted_exp_len = [input, rev](size_t offset, uint32_t len) noexcept {
         const auto head_len = std::min(size_t{len}, size_t{32});
         const auto head_explicit_bytes =
             offset < input.size() ?
@@ -116,9 +118,18 @@ PrecompileAnalysis expmod_analyze(bytes_view input, evmc_revision rev) noexcept
 
         const auto tail_len = len - head_len;
         const auto head_bits = std::max(exp_bit_width, size_t{1}) - 1;
-        return std::max(8 * uint64_t{tail_len} + uint64_t{head_bits}, uint64_t{1});
+        const uint64_t factor = rev < EVMC_OSAKA ? 8 : 16;
+        return std::max(factor * uint64_t{tail_len} + uint64_t{head_bits}, uint64_t{1});
     };
 
+    static constexpr auto calc_mult_complexity_eip7883 = [](uint32_t max_len) noexcept {
+        // With EIP-7823 the computation never overflows.
+        assert(max_len <= MODEXP_LEN_LIMIT_EIP7823);
+        const auto num_words = (max_len + 7) / 8;
+        const auto num_words_squared = num_words * num_words;
+        const auto mult_complexity = max_len <= 32 ? num_words_squared : num_words_squared * 2;
+        return uint64_t{mult_complexity};
+    };
     static constexpr auto calc_mult_complexity_eip2565 = [](uint32_t max_len) noexcept {
         const auto num_words = (uint64_t{max_len} + 7) / 8;
         return num_words * num_words;  // max value: 0x04000000'00000000
@@ -140,7 +151,9 @@ PrecompileAnalysis expmod_analyze(bytes_view input, evmc_revision rev) noexcept
         uint64_t (*calc_mult_complexity)(uint32_t max_len) noexcept;
     };
     const auto& [min_gas, final_divisor, calc_mult_complexity] = [rev]() noexcept -> Params {
-        if (rev >= EVMC_BERLIN)
+        if (rev >= EVMC_OSAKA)
+            return {500, 3, calc_mult_complexity_eip7883};
+        else if (rev >= EVMC_BERLIN)
             return {200, 3, calc_mult_complexity_eip2565};
         else  // Byzantium
             return {0, 20, calc_mult_complexity_eip198};
@@ -158,8 +171,9 @@ PrecompileAnalysis expmod_analyze(bytes_view input, evmc_revision rev) noexcept
     if (base_len256 == 0 && mod_len256 == 0)
         return {min_gas, 0};
 
-    static constexpr auto LEN_LIMIT = std::numeric_limits<uint32_t>::max();
-    if (base_len256 > LEN_LIMIT || exp_len256 > LEN_LIMIT || mod_len256 > LEN_LIMIT)
+    const auto len_limit =
+        rev < EVMC_OSAKA ? std::numeric_limits<uint32_t>::max() : MODEXP_LEN_LIMIT_EIP7823;
+    if (base_len256 > len_limit || exp_len256 > len_limit || mod_len256 > len_limit)
         return {GasCostMax, 0};
 
     const auto base_len = static_cast<uint32_t>(base_len256);
