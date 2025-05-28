@@ -12,7 +12,7 @@ TEST_P(evm, dupn)
     if (evm::is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
 
     auto pushes = bytecode{};
     for (uint64_t i = 1; i <= 20; ++i)
@@ -37,7 +37,7 @@ TEST_P(evm, swapn)
     if (evm::is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
 
     auto pushes = bytecode{};
     for (uint64_t i = 1; i <= 20; ++i)
@@ -74,7 +74,7 @@ TEST_P(evm, dupn_full_stack)
     if (evm::is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     auto full_stack_code = bytecode{};
     for (uint64_t i = 1022; i >= 1; --i)
         full_stack_code += push(i);
@@ -98,7 +98,7 @@ TEST_P(evm, swapn_full_stack)
     if (evm::is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     auto full_stack_code = bytecode{};
     for (uint64_t i = 1023; i >= 1; --i)
         full_stack_code += push(i);
@@ -126,7 +126,7 @@ TEST_P(evm, dupn_dup_consistency)
     if (evm::is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     auto pushes = bytecode{};
     for (uint64_t i = 32; i >= 1; --i)
         pushes += push(i);
@@ -154,7 +154,7 @@ TEST_P(evm, swapn_swap_consistency)
     if (evm::is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     auto pushes = bytecode{};
     for (uint64_t i = 32; i >= 1; --i)
         pushes += push(i);
@@ -178,7 +178,7 @@ TEST_P(evm, swapn_swap_consistency)
 
 TEST_P(evm, dupn_swapn_undefined_in_legacy)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
 
     execute(push(1) + push(2) + OP_SWAPN + "00");
     EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);

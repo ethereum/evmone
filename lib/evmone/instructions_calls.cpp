@@ -360,7 +360,7 @@ Result create_impl(StackTop stack, int64_t gas_left, ExecutionState& state) noex
         msg.input_data = &state.memory[init_code_offset];
         msg.input_size = init_code_size;
 
-        if (state.rev >= EVMC_OSAKA)
+        if (state.rev >= EVMC_EXPERIMENTAL)
         {
             // EOF initcode is not allowed for legacy creation
             if (is_eof_container({msg.input_data, msg.input_size}))

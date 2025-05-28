@@ -17,7 +17,7 @@ TEST_F(state_transition, eof_examples_minimal)
     //
     // A minimal valid EOF container doing nothing.
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
 
     const auto eof_code = bytecode(
         //                                                  Code section: STOP
@@ -50,7 +50,7 @@ TEST_F(state_transition, eof_examples_static_relative_jump_loop)
     //
     // EOF container looping infinitely using the static relative jump instruction RJUMP.
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
 
     const auto eof_code = bytecode(
         //                                                  Code section: RJUMP back to start (-3)
@@ -87,7 +87,7 @@ TEST_F(state_transition, eof_examples_callf)
     // EOF container with two code sections, one calling the other passing a single argument on the
     // stack and retrieving the same single value back from the stack on return.
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
 
     const auto eof_code = bytecode(
         //                                                   First code section: PUSH1(0x2A),
@@ -126,7 +126,7 @@ TEST_F(state_transition, eof_examples_eofcreate)
     // A factory contract with an EOFCREATE instruction is being called in order
     // to deploy its subcontainer as a new EOF contract.
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
 
     const auto factory = bytecode(
         //////////////////
@@ -187,7 +187,7 @@ TEST_F(state_transition, eof_examples_data)
     //
     // A basic EOF contract with a data section being used to load a byte of data onto the stack.
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
 
     // clang-format off
     const auto eof_code = bytecode(

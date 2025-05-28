@@ -16,7 +16,7 @@ constexpr bytes32 Salt{0xff};
 
 TEST_F(state_transition, create_tx_with_eof_initcode)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
 
     const bytecode init_container = eof_bytecode(ret(0, 1));
 
@@ -30,7 +30,7 @@ TEST_F(state_transition, create_tx_with_eof_initcode)
 
 TEST_F(state_transition, create_with_eof_initcode)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     block.gas_limit = 10'000'000;
     tx.gas_limit = block.gas_limit;
     pre.get(tx.sender).balance = tx.gas_limit * tx.max_gas_price + tx.value + 1;
@@ -74,7 +74,7 @@ TEST_F(state_transition, create_with_eof_initcode_cancun)
 
 TEST_F(state_transition, create2_with_eof_initcode)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     block.gas_limit = 10'000'000;
     tx.gas_limit = block.gas_limit;
     pre.get(tx.sender).balance = tx.gas_limit * tx.max_gas_price + tx.value + 1;
@@ -120,7 +120,7 @@ TEST_F(state_transition, create2_with_eof_initcode_cancun)
 
 TEST_F(state_transition, creation_tx_deploying_eof)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
 
     const bytecode deploy_container = eof_bytecode(bytecode(OP_INVALID));
     const auto init_code = mstore(0, push(deploy_container)) +
@@ -137,7 +137,7 @@ TEST_F(state_transition, creation_tx_deploying_eof)
 
 TEST_F(state_transition, create_deploying_eof)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     block.gas_limit = 10'000'000;
     tx.gas_limit = block.gas_limit;
     pre.get(tx.sender).balance = tx.gas_limit * tx.max_gas_price + tx.value + 1;
@@ -163,7 +163,7 @@ TEST_F(state_transition, create_deploying_eof)
 
 TEST_F(state_transition, create2_deploying_eof)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     block.gas_limit = 10'000'000;
     tx.gas_limit = block.gas_limit;
     pre.get(tx.sender).balance = tx.gas_limit * tx.max_gas_price + tx.value + 1;
@@ -190,7 +190,7 @@ TEST_F(state_transition, create2_deploying_eof)
 
 TEST_F(state_transition, eofcreate_empty_auxdata)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     const auto deploy_data = "abcdef"_hex;
     const auto deploy_container = eof_bytecode(bytecode(OP_INVALID)).data(deploy_data);
 
@@ -212,7 +212,7 @@ TEST_F(state_transition, eofcreate_empty_auxdata)
 
 TEST_F(state_transition, eofcreate_auxdata_equal_to_declared)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     const auto deploy_data = "abcdef"_hex;
     const auto aux_data = "aabbccddeeff"_hex;
     const auto deploy_data_size = static_cast<uint16_t>(deploy_data.size() + aux_data.size());
@@ -243,7 +243,7 @@ TEST_F(state_transition, eofcreate_auxdata_equal_to_declared)
 
 TEST_F(state_transition, eofcreate_auxdata_longer_than_declared)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     const auto deploy_data = "abcdef"_hex;
     const auto aux_data1 = "aabbccdd"_hex;
     const auto aux_data2 = "eeff"_hex;
@@ -276,7 +276,7 @@ TEST_F(state_transition, eofcreate_auxdata_longer_than_declared)
 
 TEST_F(state_transition, eofcreate_auxdata_shorter_than_declared)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     const auto deploy_data = "abcdef"_hex;
     const auto aux_data = "aabbccddeeff"_hex;
     const auto deploy_data_size = static_cast<uint16_t>(deploy_data.size() + aux_data.size() + 1);
@@ -303,7 +303,7 @@ TEST_F(state_transition, eofcreate_auxdata_shorter_than_declared)
 
 TEST_F(state_transition, eofcreate_dataloadn_referring_to_auxdata)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     const auto deploy_data = bytes(64, 0);
     const auto aux_data = bytes(32, 0);
     const auto deploy_data_size = static_cast<uint16_t>(deploy_data.size() + aux_data.size());
@@ -334,7 +334,7 @@ TEST_F(state_transition, eofcreate_dataloadn_referring_to_auxdata)
 
 TEST_F(state_transition, eofcreate_with_auxdata_and_subcontainer)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     const auto deploy_data = "abcdef"_hex;
     const auto aux_data = "aabbccddeeff"_hex;
     const auto deploy_data_size = static_cast<uint16_t>(deploy_data.size() + aux_data.size());
@@ -371,7 +371,7 @@ TEST_F(state_transition, eofcreate_with_auxdata_and_subcontainer)
 
 TEST_F(state_transition, eofcreate_revert_empty_returndata)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     const auto init_code = revert(0, 0);
     const auto init_container = eof_bytecode(init_code, 2);
 
@@ -391,7 +391,7 @@ TEST_F(state_transition, eofcreate_revert_empty_returndata)
 
 TEST_F(state_transition, eofcreate_revert_non_empty_returndata)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     const auto init_code = mstore8(0, 0xaa) + revert(0, 1);
     const auto init_container = eof_bytecode(init_code, 2);
 
@@ -411,7 +411,7 @@ TEST_F(state_transition, eofcreate_revert_non_empty_returndata)
 
 TEST_F(state_transition, eofcreate_initcontainer_aborts)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     const auto init_code = bytecode{Opcode{OP_INVALID}};
     const auto init_container = eof_bytecode(init_code, 0);
 
@@ -429,7 +429,7 @@ TEST_F(state_transition, eofcreate_initcontainer_aborts)
 
 TEST_F(state_transition, eofcreate_deploy_container_max_size)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     block.gas_limit = 10'000'000;
     tx.gas_limit = block.gas_limit;
     pre.get(tx.sender).balance = tx.gas_limit * tx.max_gas_price + tx.value + 1;
@@ -460,7 +460,7 @@ TEST_F(state_transition, eofcreate_deploy_container_max_size)
 
 TEST_F(state_transition, eofcreate_deploy_container_too_large)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     block.gas_limit = 10'000'000;
     tx.gas_limit = block.gas_limit;
     pre.get(tx.sender).balance = tx.gas_limit * tx.max_gas_price + tx.value + 1;
@@ -489,7 +489,7 @@ TEST_F(state_transition, eofcreate_deploy_container_too_large)
 
 TEST_F(state_transition, eofcreate_appended_data_size_larger_than_64K)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     block.gas_limit = 10'000'000;
     tx.gas_limit = block.gas_limit;
     pre.get(tx.sender).balance = tx.gas_limit * tx.max_gas_price + tx.value + 1;
@@ -526,7 +526,7 @@ TEST_F(state_transition, eofcreate_appended_data_size_larger_than_64K)
 
 TEST_F(state_transition, eofcreate_deploy_container_with_aux_data_too_large)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     block.gas_limit = 10'000'000;
     tx.gas_limit = block.gas_limit;
     pre.get(tx.sender).balance = tx.gas_limit * tx.max_gas_price + tx.value + 1;
@@ -555,7 +555,7 @@ TEST_F(state_transition, eofcreate_deploy_container_with_aux_data_too_large)
 
 TEST_F(state_transition, eofcreate_nested_eofcreate)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     const auto deploy_data = "abcdef"_hex;
     const auto deploy_container = eof_bytecode(bytecode(OP_INVALID)).data(deploy_data);
 
@@ -591,7 +591,7 @@ TEST_F(state_transition, eofcreate_nested_eofcreate)
 
 TEST_F(state_transition, eofcreate_nested_eofcreate_revert)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
 
     const auto deploy_data_nested = "ffffff"_hex;
     const auto deploy_container_nested =
@@ -617,7 +617,7 @@ TEST_F(state_transition, eofcreate_nested_eofcreate_revert)
 
 TEST_F(state_transition, eofcreate_caller_balance_too_low)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     const auto deploy_data = "abcdef"_hex;
     const auto deploy_container = eof_bytecode(bytecode{Opcode{OP_INVALID}}).data(deploy_data);
 
@@ -640,7 +640,7 @@ TEST_F(state_transition, eofcreate_caller_balance_too_low)
 
 TEST_F(state_transition, eofcreate_not_enough_gas_for_initcode_charge)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     const auto deploy_container = eof_bytecode(bytecode(OP_INVALID));
 
     const auto init_code = returncode(0, 0, 0);
@@ -668,7 +668,7 @@ TEST_F(state_transition, eofcreate_not_enough_gas_for_initcode_charge)
 
 TEST_F(state_transition, eofcreate_not_enough_gas_for_mem_expansion)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     auto deploy_container = eof_bytecode(bytecode(OP_INVALID));
     // max size aux data
     const auto aux_data_size = static_cast<uint16_t>(
@@ -702,7 +702,7 @@ TEST_F(state_transition, eofcreate_not_enough_gas_for_mem_expansion)
 
 TEST_F(state_transition, returncode_not_enough_gas_for_mem_expansion)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     block.gas_limit = 10'000'000;
     tx.gas_limit = block.gas_limit;
     pre.get(tx.sender).balance = tx.gas_limit * tx.max_gas_price + tx.value + 1;
@@ -739,7 +739,7 @@ TEST_F(state_transition, eofcreate_clears_returndata)
 {
     static constexpr auto returning_address = 0x3000_address;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     const auto deploy_container = eof_bytecode(OP_STOP);
 
     const auto init_code = returncode(0, 0, 0);
@@ -771,7 +771,7 @@ TEST_F(state_transition, eofcreate_clears_returndata)
 
 TEST_F(state_transition, eofcreate_failure_after_eofcreate_success)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     block.gas_limit = 10'000'000;
     tx.gas_limit = block.gas_limit;
     pre.get(tx.sender).balance = tx.gas_limit * tx.max_gas_price + tx.value + 1;
@@ -802,7 +802,7 @@ TEST_F(state_transition, eofcreate_failure_after_eofcreate_success)
 
 TEST_F(state_transition, eofcreate_call_created_contract)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     const auto deploy_data = "abcdef"_hex;  // 3 bytes
     const auto static_aux_data =
         "aabbccdd00000000000000000000000000000000000000000000000000000000"_hex;  // 32 bytes

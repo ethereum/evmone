@@ -16,14 +16,14 @@ TEST_P(evm, eof1_execution)
     execute(code);
     EXPECT_STATUS(EVMC_UNDEFINED_INSTRUCTION);
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     execute(code);
     EXPECT_STATUS(EVMC_SUCCESS);
 }
 
 TEST_P(evm, eof1_execution_with_data_section)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     // data section contains ret(0, 1)
     const auto code = eof_bytecode(mstore8(0, 1) + OP_STOP, 2).data(ret(0, 1));
 
@@ -34,7 +34,7 @@ TEST_P(evm, eof1_execution_with_data_section)
 
 TEST_P(evm, eof_data_only_contract)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     auto code = "EF0001 010004 020001 0001 FFdaaa 00 00800000 FE"_hex;
     const auto data_size_ptr = &code[code.find(0xda)];
 
@@ -57,7 +57,7 @@ TEST_P(evm, eof1_dataload)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     // data is 64 bytes long
     const auto data = bytes(8, 0x0) + bytes(8, 0x11) + bytes(8, 0x22) + bytes(8, 0x33) +
                       bytes(8, 0xaa) + bytes(8, 0xbb) + bytes(8, 0xcc) + bytes(8, 0xdd);
@@ -106,7 +106,7 @@ TEST_P(evm, eof1_dataloadn)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     // data is 64 bytes long
     const auto data = bytes(8, 0x0) + bytes(8, 0x11) + bytes(8, 0x22) + bytes(8, 0x33) +
                       bytes(8, 0xaa) + bytes(8, 0xbb) + bytes(8, 0xcc) + bytes(8, 0xdd);
@@ -139,7 +139,7 @@ TEST_P(evm, eof1_datasize)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
 
     // no data section
     auto code = eof_bytecode(bytecode(OP_DATASIZE) + ret_top(), 2);
@@ -179,7 +179,7 @@ TEST_P(evm, eof1_datacopy)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     // data is 64 bytes long
     const auto data = bytes(8, 0x0) + bytes(8, 0x11) + bytes(8, 0x22) + bytes(8, 0x33) +
                       bytes(8, 0xaa) + bytes(8, 0xbb) + bytes(8, 0xcc) + bytes(8, 0xdd);
@@ -239,7 +239,7 @@ TEST_P(evm, datacopy_memory_cost)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     const auto data = bytes{0};
     const auto code = eof_bytecode(bytecode(1) + 0 + 0 + OP_DATACOPY + OP_STOP, 3).data(data);
     execute(18, code);
@@ -254,7 +254,7 @@ TEST_P(evm, eof_eofcreate)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     const auto deploy_data = "abcdef"_hex;
     const auto aux_data = "aabbccddeeff"_hex;
     const auto deploy_data_size = static_cast<uint16_t>(deploy_data.size() + aux_data.size());
@@ -311,7 +311,7 @@ TEST_P(evm, eofcreate_staticmode)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     msg.flags |= EVMC_STATIC;
     const auto code = eof_bytecode(4 * push0() + OP_EOFCREATE + "00" + OP_STOP, 4)
                           .container(eof_bytecode(push0() + push0() + OP_REVERT, 2));

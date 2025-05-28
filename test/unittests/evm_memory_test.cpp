@@ -176,7 +176,7 @@ struct
 
 TEST_P(evm, memory_access)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     // This test checks if instructions accessing memory properly respond with out-of-gas
     // error for combinations of memory offset and memory size arguments.
 

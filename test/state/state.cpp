@@ -460,7 +460,7 @@ std::variant<TransactionProperties, std::error_code> validate_transaction(
         break;
 
     case Transaction::Type::initcodes:
-        if (rev < EVMC_OSAKA)
+        if (rev < EVMC_EXPERIMENTAL)
             return make_error_code(TX_TYPE_NOT_SUPPORTED);
         if (tx.initcodes.size() > MAX_INITCODE_COUNT)
             return make_error_code(INIT_CODE_COUNT_LIMIT_EXCEEDED);

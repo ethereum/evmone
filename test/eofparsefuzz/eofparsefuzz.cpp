@@ -7,7 +7,7 @@
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noexcept
 {
     const evmone::bytes_view eof{data, data_size};
-    if (evmone::validate_eof(EVMC_OSAKA, evmone::ContainerKind::runtime, eof) ==
+    if (evmone::validate_eof(EVMC_EXPERIMENTAL, evmone::ContainerKind::runtime, eof) ==
         evmone::EOFValidationError::success)
         (void)evmone::read_valid_eof1_header(eof);
     return 0;

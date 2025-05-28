@@ -44,7 +44,7 @@ TEST_F(state_transition, legacy_extcodesize_eof)
 {
     pre.insert(target, {.code = eof_bytecode("FE")});
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     tx.to = To;
     pre.insert(*tx.to, {
                            .code = bytecode(push(target) + sstore(1, OP_EXTCODESIZE)),
@@ -57,7 +57,7 @@ TEST_F(state_transition, legacy_extcodehash_eof)
 {
     pre.insert(target, {.code = eof_bytecode("FE")});
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     tx.to = To;
     pre.insert(*tx.to, {
                            .code = bytecode(push(target) + sstore(1, OP_EXTCODEHASH)),
@@ -72,7 +72,7 @@ TEST_F(state_transition, legacy_extcodecopy_eof)
         0x1111111111111111111111111111111111111111111111111111111111111111_bytes32;
     pre.insert(target, {.code = eof_bytecode("FE")});
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     tx.to = To;
     pre.insert(*tx.to, {
                            .code = bytecode(mstore(0, ones) + push(20) + push0() + push0() +

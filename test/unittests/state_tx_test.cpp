@@ -154,7 +154,7 @@ TEST(state_tx, validate_eof_create_transaction)
     EXPECT_FALSE(holds_alternative<std::error_code>(
         validate_transaction(state, block, tx, EVMC_PRAGUE, 60000, 0)));
     EXPECT_FALSE(holds_alternative<std::error_code>(
-        validate_transaction(state, block, tx, EVMC_OSAKA, 60000, 0)));
+        validate_transaction(state, block, tx, EVMC_EXPERIMENTAL, 60000, 0)));
 }
 
 TEST(state_tx, validate_tx_data_cost)
