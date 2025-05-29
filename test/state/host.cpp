@@ -322,7 +322,7 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
     const auto initcode = (msg.kind == EVMC_EOFCREATE ? bytes_view{msg.code, msg.code_size} :
                                                         bytes_view{msg.input_data, msg.input_size});
 
-    if (m_rev >= EVMC_OSAKA && msg.kind != EVMC_EOFCREATE && msg.depth == 0)
+    if (m_rev >= EVMC_EXPERIMENTAL && msg.kind != EVMC_EOFCREATE && msg.depth == 0)
     {
         // EOF initcode is not allowed for legacy creation tx
         // We cannot let the EVM handle that on the initial `EF` invalid instruction,
@@ -372,7 +372,7 @@ evmc::Result Host::create(const evmc_message& msg) noexcept
     {
         if (code[0] == 0xEF)
         {
-            if (m_rev >= EVMC_OSAKA)
+            if (m_rev >= EVMC_EXPERIMENTAL)
             {
                 // Only EOFCREATE/TXCREATE is allowed to deploy code starting with
                 // EF. It must be valid EOF, which was validated before execution.

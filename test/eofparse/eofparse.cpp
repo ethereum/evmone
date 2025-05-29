@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
             }
 
             const auto& eof = *o;
-            const auto err = evmone::validate_eof(EVMC_OSAKA, container_kind, eof);
+            const auto err = evmone::validate_eof(EVMC_EXPERIMENTAL, container_kind, eof);
             if (err != evmone::EOFValidationError::success)
             {
                 std::cout << "err: " << evmone::get_error_message(err) << "\n";

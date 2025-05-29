@@ -126,7 +126,7 @@ docker run --entrypoint evmone-bench ethereum/evmone /src/test/benchmarks
 evmone supports EOFv1. Since EOF validation is done once during deploy-time, evmone does not revalidate during execution of bytecode. To force EOF revalidation, you can use the `validate_eof` option, example:
 
 ```
-evmc run --vm libevmone.so,validate_eof --rev 14 "EF00"
+evmc run --vm libevmone.so,validate_eof --rev 15 "EF00"
 ```
 
 ## References

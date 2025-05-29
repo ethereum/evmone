@@ -512,7 +512,7 @@ void validate_state(const TestState& state, evmc_revision rev)
             throw std::invalid_argument("unexpected code at precompile address " + hex0x(addr));
 
         const bool allowedEF = (rev >= EVMC_PRAGUE && is_code_delegated(acc.code)) ||
-                               (rev >= EVMC_OSAKA && is_eof_container(acc.code)) ||
+                               (rev >= EVMC_EXPERIMENTAL && is_eof_container(acc.code)) ||
                                // exceptions to EIP-3541 rule existing on Mainnet
                                acc.code == "EF"_hex || acc.code == "EFF09f918bf09f9fa9"_hex;
         if (rev >= EVMC_LONDON && !allowedEF && !acc.code.empty() && acc.code[0] == 0xEF)
@@ -529,7 +529,7 @@ void validate_state(const TestState& state, evmc_revision rev)
                 "EIP-7702 delegation designator at " + hex0x(addr) + " has invalid size");
         }
 
-        if (rev >= EVMC_OSAKA && is_eof_container(acc.code))
+        if (rev >= EVMC_EXPERIMENTAL && is_eof_container(acc.code))
         {
             if (const auto result = validate_eof(rev, ContainerKind::runtime, acc.code);
                 result != EOFValidationError::success)

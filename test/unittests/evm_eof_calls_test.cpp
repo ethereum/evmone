@@ -20,7 +20,7 @@ TEST_P(evm, extdelegatecall)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     constexpr auto callee = 0xca11ee_address;
     host.access_account(callee);
     host.accounts[callee].code = "EF00"_hex;
@@ -60,7 +60,7 @@ TEST_P(evm, extdelegatecall_oog_depth_limit)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     constexpr auto callee = 0xca11ee_address;
     host.access_account(callee);
     host.accounts[callee].code = "EF00"_hex;
@@ -85,7 +85,7 @@ TEST_P(evm, extcall_failing_with_value)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     constexpr auto callee = 0xca11ee_address;
     host.access_account(callee);
     host.accounts[callee] = {};
@@ -114,7 +114,7 @@ TEST_P(evm, extcall_with_value_depth_limit)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
 
     constexpr auto call_dst = 0x00000000000000000000000000000000000000aa_address;
     host.accounts[call_dst] = {};
@@ -133,7 +133,7 @@ TEST_P(evm, extcall_depth_limit)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     constexpr auto callee = 0xca11ee_address;
     host.access_account(callee);
     host.accounts[callee].code = "EF00"_hex;
@@ -155,7 +155,7 @@ TEST_P(evm, extcall_value_zero_to_nonexistent_account)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     host.call_result.gas_left = 1000;
 
     const auto code = eof_bytecode(extcall(0xaa).input(0, 0x40) + OP_STOP, 4);
@@ -187,7 +187,7 @@ TEST_P(evm, extcall_new_account_creation_cost)
 
     msg.recipient = msg_dst;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     {
         auto gas_before_call = 3 * 3 + 3 + 3 + 2600;
         auto gas_left = safe_call_gas - gas_before_call;
@@ -247,7 +247,7 @@ TEST_P(evm, extcall_oog_after_balance_check)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     // Create the call destination account.
     host.accounts[0x0000000000000000000000000000000000000000_address] = {};
     auto code = eof_bytecode(extcall(0).value(1) + OP_POP + OP_STOP, 4);
@@ -261,7 +261,7 @@ TEST_P(evm, extcall_oog_after_depth_check)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     // Create the call recipient account.
     host.accounts[0x0000000000000000000000000000000000000000_address] = {};
     msg.depth = 1024;
@@ -277,7 +277,7 @@ TEST_P(evm, returndataload)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     const auto call_output =
         0x497f3c9f61479c1cfa53f0373d39d2bf4e5f73f71411da62f1d6b85c03a60735_bytes32;
     host.call_result.output_data = std::data(call_output.bytes);
@@ -295,7 +295,7 @@ TEST_P(evm, returndataload_cost)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     const uint8_t call_output[32]{};
     host.call_result.output_data = std::data(call_output);
     host.call_result.output_size = std::size(call_output);
@@ -314,7 +314,7 @@ TEST_P(evm, returndataload_oog)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     const uint8_t call_output[32]{};
     host.call_result.output_data = std::data(call_output);
     host.call_result.output_size = std::size(call_output);
@@ -340,7 +340,7 @@ TEST_P(evm, returndataload_outofrange)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     {
         const auto call_output =
             "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"_hex;  // 31 bytes
@@ -456,7 +456,7 @@ TEST_P(evm, returndataload_empty)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     execute(eof_bytecode(extstaticcall(0) + returndataload(0) + ret_top(), 3));
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_EQ(bytes_view(result.output_data, result.output_size), evmc::bytes32(0));
@@ -476,7 +476,7 @@ TEST_P(evm, returndataload_outofrange_highbits)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     const uint8_t call_output[34]{};
     host.call_result.output_data = std::data(call_output);
     host.call_result.output_size = std::size(call_output);
@@ -495,7 +495,7 @@ TEST_P(evm, extcall_gas_refund_aggregation_different_calls)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     constexpr auto callee = 0xca11ee_address;
     host.access_account(callee);
     host.accounts[callee].code = "EF00"_hex;
@@ -516,7 +516,7 @@ TEST_P(evm, extcall_gas_refund_aggregation_same_calls)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     constexpr auto callee = 0xaa_address;
     host.access_account(callee);
     host.accounts[callee].code = "EF00"_hex;
@@ -543,7 +543,7 @@ TEST_P(evm, eof_returndatacopy)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     const auto call_output =
         0x497f3c9f61479c1cfa53f0373d39d2bf4e5f73f71411da62f1d6b85c03a60735_bytes32;
     host.call_result.output_data = std::data(call_output.bytes);
@@ -562,7 +562,7 @@ TEST_P(evm, eof_returndatacopy_empty)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     execute(eof_bytecode(extcall(0) + returndatacopy(0, 0, 0) + ret(0, 32), 4));
     EXPECT_EQ(result.status_code, EVMC_SUCCESS);
     EXPECT_OUTPUT_INT(0);
@@ -574,7 +574,7 @@ TEST_P(evm, eof_returndatacopy_oog)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     const uint8_t call_output[1]{};
     host.call_result.output_data = std::data(call_output);
     host.call_result.output_size = std::size(call_output);
@@ -601,7 +601,7 @@ TEST_P(evm, eof_returndatacopy_cost)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     const uint8_t call_output[1]{};
     host.call_result.output_data = std::data(call_output);
     host.call_result.output_size = std::size(call_output);
@@ -621,7 +621,7 @@ TEST_P(evm, eof_returndatacopy_outofrange)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     const uint8_t call_output[2]{0xab, 0xcd};
     host.call_result.output_data = std::data(call_output);
     host.call_result.output_size = std::size(call_output);
@@ -654,7 +654,7 @@ TEST_P(evm, eof_returndatacopy_outofrange_highbits)
     if (is_advanced())
         return;
 
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
     const uint8_t call_output[2]{0xab, 0xcd};
     host.call_result.output_data = std::data(call_output);
     host.call_result.output_size = std::size(call_output);

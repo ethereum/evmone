@@ -35,7 +35,7 @@ protected:
         std::string name;
     };
 
-    evmc_revision rev = EVMC_OSAKA;
+    evmc_revision rev = EVMC_EXPERIMENTAL;
     std::vector<TestCase> test_cases;
 
     /// Adds the case to test cases.

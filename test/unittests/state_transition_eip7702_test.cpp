@@ -240,7 +240,7 @@ TEST_F(state_transition, eip7702_delegated_mode_propagation_call)
 
 TEST_F(state_transition, eip7702_delegated_mode_propagation_extcall)
 {
-    rev = EVMC_OSAKA;
+    rev = EVMC_EXPERIMENTAL;
 
     constexpr auto delegate = 0xde1e_address;
     constexpr auto identity_precompile = 0x04_address;

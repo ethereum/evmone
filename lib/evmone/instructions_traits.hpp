@@ -173,28 +173,29 @@ constexpr inline GasCostTable gas_costs = []() noexcept {
     table[EVMC_PRAGUE] = table[EVMC_CANCUN];
 
     table[EVMC_OSAKA] = table[EVMC_PRAGUE];
-    table[EVMC_OSAKA][OP_DUPN] = 3;
-    table[EVMC_OSAKA][OP_SWAPN] = 3;
-    table[EVMC_OSAKA][OP_EXCHANGE] = 3;
-    table[EVMC_OSAKA][OP_RJUMP] = 2;
-    table[EVMC_OSAKA][OP_RJUMPI] = 4;
-    table[EVMC_OSAKA][OP_RJUMPV] = 4;
-    table[EVMC_OSAKA][OP_CALLF] = 5;
-    table[EVMC_OSAKA][OP_RETF] = 3;
-    table[EVMC_OSAKA][OP_JUMPF] = 5;
-    table[EVMC_OSAKA][OP_DATALOAD] = 4;
-    table[EVMC_OSAKA][OP_DATALOADN] = 3;
-    table[EVMC_OSAKA][OP_DATASIZE] = 2;
-    table[EVMC_OSAKA][OP_DATACOPY] = 3;
-    table[EVMC_OSAKA][OP_RETURNDATALOAD] = 3;
-    table[EVMC_OSAKA][OP_EXTCALL] = warm_storage_read_cost;
-    table[EVMC_OSAKA][OP_EXTDELEGATECALL] = warm_storage_read_cost;
-    table[EVMC_OSAKA][OP_EXTSTATICCALL] = warm_storage_read_cost;
-    table[EVMC_OSAKA][OP_EOFCREATE] = 32000;
-    table[EVMC_OSAKA][OP_TXCREATE] = 32000;
-    table[EVMC_OSAKA][OP_RETURNCODE] = 0;
 
     table[EVMC_EXPERIMENTAL] = table[EVMC_OSAKA];
+
+    table[EVMC_EXPERIMENTAL][OP_DUPN] = 3;
+    table[EVMC_EXPERIMENTAL][OP_SWAPN] = 3;
+    table[EVMC_EXPERIMENTAL][OP_EXCHANGE] = 3;
+    table[EVMC_EXPERIMENTAL][OP_RJUMP] = 2;
+    table[EVMC_EXPERIMENTAL][OP_RJUMPI] = 4;
+    table[EVMC_EXPERIMENTAL][OP_RJUMPV] = 4;
+    table[EVMC_EXPERIMENTAL][OP_CALLF] = 5;
+    table[EVMC_EXPERIMENTAL][OP_RETF] = 3;
+    table[EVMC_EXPERIMENTAL][OP_JUMPF] = 5;
+    table[EVMC_EXPERIMENTAL][OP_DATALOAD] = 4;
+    table[EVMC_EXPERIMENTAL][OP_DATALOADN] = 3;
+    table[EVMC_EXPERIMENTAL][OP_DATASIZE] = 2;
+    table[EVMC_EXPERIMENTAL][OP_DATACOPY] = 3;
+    table[EVMC_EXPERIMENTAL][OP_RETURNDATALOAD] = 3;
+    table[EVMC_EXPERIMENTAL][OP_EXTCALL] = warm_storage_read_cost;
+    table[EVMC_EXPERIMENTAL][OP_EXTDELEGATECALL] = warm_storage_read_cost;
+    table[EVMC_EXPERIMENTAL][OP_EXTSTATICCALL] = warm_storage_read_cost;
+    table[EVMC_EXPERIMENTAL][OP_EOFCREATE] = 32000;
+    table[EVMC_EXPERIMENTAL][OP_TXCREATE] = 32000;
+    table[EVMC_EXPERIMENTAL][OP_RETURNCODE] = 0;
 
     return table;
 }();
@@ -202,7 +203,7 @@ constexpr inline GasCostTable gas_costs = []() noexcept {
 static_assert(gas_costs[EVMC_MAX_REVISION][OP_ADD] > 0, "gas costs missing for a revision");
 
 /// The revision related to introduction of the EOFv1.
-constexpr auto REV_EOF1 = EVMC_OSAKA;
+constexpr auto REV_EOF1 = EVMC_EXPERIMENTAL;
 
 
 /// The EVM instruction traits.
@@ -423,7 +424,7 @@ constexpr inline std::array<Traits, 256> traits = []() noexcept {
     table[OP_CREATE2] = {"CREATE2", 0, false, 4, -3, EVMC_CONSTANTINOPLE};
     table[OP_RETURNDATALOAD] = {"RETURNDATALOAD", 0, false, 1, 0, {}, REV_EOF1};
     table[OP_EOFCREATE] = {"EOFCREATE", 1, false, 4, -3, {}, REV_EOF1};
-    table[OP_TXCREATE] = {"TXCREATE", 0, false, 5, -4, EVMC_OSAKA, REV_EOF1};
+    table[OP_TXCREATE] = {"TXCREATE", 0, false, 5, -4, EVMC_EXPERIMENTAL, REV_EOF1};
     table[OP_RETURNCODE] = {"RETURNCODE", 1, true, 2, -2, {}, REV_EOF1};
     table[OP_EXTCALL] = {"EXTCALL", 0, false, 4, -3, {}, REV_EOF1};
     table[OP_EXTDELEGATECALL] = {"EXTDELEGATECALL", 0, false, 3, -2, {}, REV_EOF1};

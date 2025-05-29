@@ -22,7 +22,7 @@ struct EOFValidationTest
     {
         struct Expectation
         {
-            evmc_revision rev = EVMC_OSAKA;
+            evmc_revision rev = EVMC_EXPERIMENTAL;
             bool result = false;
         };
         std::string name;
