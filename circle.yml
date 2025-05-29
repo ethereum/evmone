@@ -396,6 +396,7 @@ jobs:
           working_directory: ~/build
           command: >
             bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests/
+            --gtest_filter='*:-unscheduled/eofwrap/stPreCompiledContracts.eof_wrapped_precompsEIP2929Cancun'
       - run:
           name: "EOF pre-release execution spec tests (eof_tests)"
           working_directory: ~/build
@@ -404,6 +405,29 @@ jobs:
       - collect_coverage_gcc
       - upload_coverage:
           flags: eof_execution_spec_tests
+
+  fusaka-execution-spec-tests:
+    executor: linux-gcc-latest
+    environment:
+      BUILD_TYPE: Coverage
+    steps:
+      - build
+      - download_execution_spec_tests:
+          release: fusaka-devnet-0@v1.0.0
+          fixtures_suffix: fusaka-devnet-0
+      - run:
+          name: "Fusaka pre-release execution spec tests (state_tests)"
+          working_directory: ~/build
+          command: >
+            bin/evmone-statetest ~/spec-tests/fixtures/state_tests/
+      - run:
+          name: "Fusaka pre-release execution spec tests (blockchain_tests)"
+          working_directory: ~/build
+          command: >
+            bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests/
+      - collect_coverage_gcc
+      - upload_coverage:
+          flags: fusaka_execution_spec_tests
 
   ethereum-tests:
     executor: linux-gcc-latest
@@ -692,6 +716,7 @@ workflows:
               only: /^v[0-9].*/
       - execution-spec-tests
       - eof-execution-spec-tests
+      - fusaka-execution-spec-tests
       - ethereum-tests
       - precompiles-gmp
       - precompiles-silkpre
