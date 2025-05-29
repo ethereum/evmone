@@ -119,32 +119,32 @@ PrecompileAnalysis expmod_analyze(bytes_view input, evmc_revision rev) noexcept
         return std::max(8 * uint64_t{tail_len} + uint64_t{head_bits}, uint64_t{1});
     };
 
-    static constexpr auto calc_mult_complexity_eip2565 = [](uint32_t y) noexcept {
-        const auto x = uint64_t{y};
-        const auto w = (x + 7) / 8;
-        return w * w;  // max value: 0x04000000'00000000
+    static constexpr auto calc_mult_complexity_eip2565 = [](uint32_t max_len) noexcept {
+        const auto num_words = (uint64_t{max_len} + 7) / 8;
+        return num_words * num_words;  // max value: 0x04000000'00000000
     };
-    static constexpr auto calc_mult_complexity_eip198 = [](uint32_t y) noexcept {
-        const auto x = uint64_t{y};
-        const auto xx = x * x;
-        if (x <= 64)
-            return xx;
-        else if (x <= 1024)
-            return xx / 4 + 96 * x - 3072;
-        else
-            return xx / 16 + 480 * x - 199680;  // max value: 0x100001df'dffcf220
+    static constexpr auto calc_mult_complexity_eip198 = [](uint32_t max_len) noexcept {
+        const auto max_len_squared = uint64_t{max_len} * max_len;
+        if (max_len <= 64)
+            return max_len_squared;
+        if (max_len <= 1024)
+            return max_len_squared / 4 + 96 * max_len - 3072;
+        // max value: 0x100001df'dffcf220
+        return max_len_squared / 16 + 480 * uint64_t{max_len} - 199680;
     };
 
     struct Params
     {
         int64_t min_gas;
         unsigned final_divisor;
-        uint64_t (*calc_mult_complexity)(uint32_t y) noexcept;
+        uint64_t (*calc_mult_complexity)(uint32_t max_len) noexcept;
     };
-    static constexpr Params byzantium_params{0, 20, calc_mult_complexity_eip198};
-    static constexpr Params berlin_params{200, 3, calc_mult_complexity_eip2565};
-    const auto& [min_gas, final_divisor, calc_mult_complexity] =
-        (rev >= EVMC_BERLIN) ? berlin_params : byzantium_params;
+    const auto& [min_gas, final_divisor, calc_mult_complexity] = [rev]() noexcept -> Params {
+        if (rev >= EVMC_BERLIN)
+            return {200, 3, calc_mult_complexity_eip2565};
+        else  // Byzantium
+            return {0, 20, calc_mult_complexity_eip198};
+    }();
 
     static constexpr size_t INPUT_HEADER_REQUIRED_SIZE = 3 * sizeof(uint256);
     uint8_t input_header[INPUT_HEADER_REQUIRED_SIZE]{};
