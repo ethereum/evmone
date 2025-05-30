@@ -422,7 +422,7 @@ JacPoint<IntT> mul(const ModArith<IntT>& m, const Point<IntT>& p, const IntT& c)
     // assert(c < m.mod);
 
     JacPoint<IntT> r;
-    const auto jp = JacPoint<IntT>{p.x, p.y, 1};
+    const auto jp = JacPoint<IntT>{p.x, p.y, m.to_mont(1)};
     const auto bit_width = sizeof(IntT) * 8 - intx::clz(c);
     for (auto i = bit_width; i != 0; --i)
     {
