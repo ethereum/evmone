@@ -4,7 +4,7 @@
 #pragma once
 
 #include "ecc.hpp"
-#include <ethash/hash_types.hpp>
+#include "hash_types.h"
 #include <evmc/evmc.hpp>
 #include <optional>
 

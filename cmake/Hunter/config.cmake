@@ -10,13 +10,6 @@ hunter_cmake_args(
 )
 
 hunter_config(
-    ethash
-    VERSION 1.1.0
-    URL https://github.com/chfast/ethash/archive/v1.1.0.tar.gz
-    SHA1 b5625c876d7de3997800a9d7546f0657a7fdb3af
-)
-
-hunter_config(
     intx
     VERSION 0.13.0
     URL https://github.com/chfast/intx/archive/v0.13.0.tar.gz
