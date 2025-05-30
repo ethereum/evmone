@@ -210,26 +210,41 @@ JacPoint<IntT> add(
 {
     static_assert(A == 0, "point addition procedure is simplified for a = 0");
 
+    if (p.z == 1)
+    {
+        assert(p.x != 0);
+        assert(p.y != 0);
+    }
+
     if (p.z == 0)
         return q;
     if (q.z == 0)
         return p;
 
     /*
-    Z1Z1 = Z12
-    Z2Z2 = Z22
+    Z1Z1 = Z1^2
+    Z2Z2 = Z2^2
     U1 = X1*Z2Z2
     U2 = X2*Z1Z1
-    S1 = Y1*Z2*Z2Z2
-    S2 = Y2*Z1*Z1Z1
+    t0 = Z2*Z2Z2
+    S1 = Y1*t0
+    t1 = Z1*Z1Z1
+    S2 = Y2*t1
     H = U2-U1
-    HH = H2
+    HH = H^2
     HHH = H*HH
     r = S2-S1
     V = U1*HH
-    X3 = r2-HHH-2*V
-    Y3 = r*(V-X3)-S1*HHH
-    Z3 = Z1*Z2*H
+    t2 = r^2
+    t3 = 2*V
+    t4 = t2-HHH
+    X3 = t4-t3
+    t5 = V-X3
+    t6 = S1*HHH
+    t7 = r*t5
+    Y3 = t7-t6
+    t8 = Z2*H
+    Z3 = Z1*t8
     */
 
     const auto& [x1, y1, z1] = p;
@@ -239,14 +254,19 @@ JacPoint<IntT> add(
     const auto z2z2 = m.mul(z2, z2);
     const auto u1 = m.mul(x1, z2z2);
     const auto u2 = m.mul(x2, z1z1);
-    const auto s1 = m.mul(m.mul(y1, z2), z2z2);
-    const auto s2 = m.mul(m.mul(y2, z1), z1z1);
+    const auto t0 = m.mul(z2, z2z2);
+    const auto s1 = m.mul(y1, t0);
+    const auto t1 = m.mul(z1, z1z1);
+    const auto s2 = m.mul(y2, t1);
     const auto h = m.sub(u2, u1);
     const auto hh = m.mul(h, h);
     const auto hhh = m.mul(h, hh);
     const auto r = m.sub(s2, s1);
     const auto v = m.mul(u1, hh);
-    const auto x3 = m.sub(m.sub(m.mul(r, r), hhh), m.add(v, v));
+    const auto t2 = m.mul(r, r);
+    const auto t3 = m.add(v, v);
+    const auto t4 = m.sub(t2, hhh);
+    const auto x3 = m.sub(t4, t3);
     const auto y3 = m.sub(m.mul(r, m.sub(v, x3)), m.mul(s1, hhh));
     const auto z3 = m.mul(m.mul(z1, z2), h);
 
