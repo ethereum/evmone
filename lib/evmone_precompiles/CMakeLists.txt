@@ -16,6 +16,10 @@ target_sources(
     bn254.hpp
     bn254.cpp
     ecc.hpp
+    hash_types.h
+    keccak.h
+    keccak.hpp
+    keccak.c
     pairing/bn254/fields.hpp
     pairing/bn254/pairing.cpp
     pairing/bn254/utils.hpp
