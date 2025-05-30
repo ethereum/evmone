@@ -10,5 +10,6 @@ add_executable(
     lru_cache_bench.cpp
 )
 
-target_link_libraries(evmone-bench-internal PRIVATE evmone evmone::evmmax benchmark::benchmark)
+# TODO: Not sure why evmone::precompiles must be here, but otherwise this don't link.
+target_link_libraries(evmone-bench-internal PRIVATE evmone evmone::precompiles evmone::evmmax benchmark::benchmark)
 target_include_directories(evmone-bench-internal PRIVATE ${evmone_private_include_dir})
