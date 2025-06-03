@@ -469,7 +469,7 @@ static void from_json(const json::json& j_t, StateTransitionTest& o)
     if (const auto info_it = j_t.find("_info"); info_it != j_t.end())
     {
         // Parse input labels to improve test readability.
-        // EEST don't use labels so exclude this code from coverage
+        // EEST doesn't use labels, so exclude this code from coverage
         // to help with ethereum/tests -> EEST conversion.
         // LCOV_EXCL_START
         if (const auto labels_it = info_it->find("labels"); labels_it != info_it->end())
@@ -482,10 +482,9 @@ static void from_json(const json::json& j_t, StateTransitionTest& o)
 
     for (const auto& [rev_name, expectations] : j_t.at("post").items())
     {
-        // TODO(c++20): Use emplace_back with aggregate initialization.
-        o.cases.push_back({to_rev(rev_name),
+        o.cases.emplace_back(to_rev(rev_name),
             expectations.get<std::vector<StateTransitionTest::Case::Expectation>>(),
-            from_json_with_rev(j_t.at("env"), to_rev(rev_name))});
+            from_json_with_rev(j_t.at("env"), to_rev(rev_name)));
     }
 }
 
