@@ -8,7 +8,7 @@
 #include "execution_state.hpp"
 #include "instructions_traits.hpp"
 #include "instructions_xmacro.hpp"
-#include <ethash/keccak.hpp>
+#include <evmone_precompiles/keccak.hpp>
 
 namespace evmone
 {

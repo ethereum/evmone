@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <ethash/keccak.hpp>
 #include <evmc/evmc.hpp>
 #include <evmc/hex.hpp>
+#include <evmone_precompiles/keccak.hpp>
 #include <bit>
 
 namespace evmone

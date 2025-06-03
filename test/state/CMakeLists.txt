@@ -4,7 +4,7 @@
 
 add_library(evmone-state STATIC)
 add_library(evmone::state ALIAS evmone-state)
-target_link_libraries(evmone-state PUBLIC evmc::evmc_cpp PRIVATE evmone evmone::precompiles ethash::keccak)
+target_link_libraries(evmone-state PUBLIC evmone::precompiles evmc::evmc_cpp PRIVATE evmone)
 target_include_directories(evmone-state PRIVATE ${evmone_private_include_dir})
 target_sources(
     evmone-state PRIVATE
@@ -45,6 +45,9 @@ target_sources(
 
 option(EVMONE_PRECOMPILES_SILKPRE "Enable precompiles from silkpre library (for benchmarking only)" OFF)
 if(EVMONE_PRECOMPILES_SILKPRE)
+    # Silkpre requires the ethash library, so enable it in Hunter.
+    hunter_add_package(ethash)
+
     include(FetchContent)
     FetchContent_Declare(
         silkpre
