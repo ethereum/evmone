@@ -66,6 +66,10 @@ if(CABLE_COMPILER_GNULIKE)
         $<$<CXX_COMPILER_ID:Clang,AppleClang>:-Wunreachable-code-aggressive>
     )
 
+    # The -mtune=generic does not work well yet in current compilers.
+    # Pick a good baseline for tuning.
+    cable_add_cxx_compiler_flag_if_supported(-mtune=haswell)
+
     if(CABLE_COMPILER_CLANG)
         # Enable Clang's Source Based Coverage.
         # https://clang.llvm.org/docs/SourceBasedCodeCoverage.html
