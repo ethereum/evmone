@@ -8,7 +8,7 @@ set(HUNTER_USE_CACHE_SERVERS NO CACHE STRING "Download binaries from Hunter cach
 include(HunterGate)
 
 HunterGate(
-    URL "https://github.com/cpp-pm/hunter/archive/v0.25.8.tar.gz"
-    SHA1 "26c79d587883ec910bce168e25f6ac4595f97033"
+    URL "https://github.com/cpp-pm/hunter/archive/v0.26.0.tar.gz"
+    SHA1 "b1944539bad88a7cc006b4f3e4028a72a8ae46d1"
     LOCAL
 )
