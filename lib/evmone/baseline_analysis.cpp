@@ -53,7 +53,7 @@ CodeAnalysis analyze_legacy(bytes_view code)
     std::fill_n(&d[code.size()], total_size - code.size(), 0);
 
     auto m = new (&d[aligned_code_size]) BitsetSpan::word_type[bitset_words];
-    BitsetSpan s{m};
+    const BitsetSpan s{m};
 
     analyze_jumpdests(s, code);
 
