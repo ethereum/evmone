@@ -48,16 +48,16 @@ CodeAnalysis analyze_legacy(bytes_view code)
     const auto bitset_words = (code.size() + (BitsetSpan::WORD_BITS)) / BitsetSpan::WORD_BITS;
     const auto total_size = aligned_code_size + bitset_words * sizeof(BitsetSpan::word_type);
 
-    auto d = std::make_unique_for_overwrite<uint8_t[]>(total_size);
-    std::ranges::copy(code, d.get());
-    std::fill_n(&d[code.size()], total_size - code.size(), 0);
+    auto storage = std::make_unique_for_overwrite<uint8_t[]>(total_size);
+    std::ranges::copy(code, storage.get());                           // Copy code.
+    std::fill_n(&storage[code.size()], total_size - code.size(), 0);  // Pad code and init bitset.
 
-    auto m = new (&d[aligned_code_size]) BitsetSpan::word_type[bitset_words];
-    const BitsetSpan s{m};
+    const auto bitset_storage =
+        new (&storage[aligned_code_size]) BitsetSpan::word_type[bitset_words];
+    const BitsetSpan jumpdest_bitset{bitset_storage};
+    analyze_jumpdests(jumpdest_bitset, code);
 
-    analyze_jumpdests(s, code);
-
-    return {std::move(d), code.size(), s};
+    return {std::move(storage), code.size(), jumpdest_bitset};
 }
 
 CodeAnalysis analyze_eof1(bytes_view container)
