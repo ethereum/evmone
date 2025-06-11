@@ -26,6 +26,18 @@ struct Point
 static_assert(Point<unsigned>{}.is_inf());
 
 template <typename IntT>
+inline Point<IntT> to_mont(const ModArith<IntT>& m, const Point<IntT>& p)
+{
+    return {m.to_mont(p.x), m.to_mont(p.y)};
+}
+
+template <typename IntT>
+inline Point<IntT> from_mont(const ModArith<IntT>& m, const Point<IntT>& p)
+{
+    return {m.from_mont(p.x), m.from_mont(p.y)};
+}
+
+template <typename IntT>
 struct ProjPoint
 {
     IntT x = 0;
@@ -92,19 +104,21 @@ inline Point<IntT> to_affine(const ModArith<IntT>& s, const ProjPoint<IntT>& p) 
 }
 
 /// Adds two elliptic curve points in affine coordinates
-/// and returns the result in affine coordinates.
+/// and returns the result in affine coordinates. It takes argument points in Montgomery form and
+/// returns point in Montgomery form.
 template <typename IntT>
-Point<IntT> add(const ModArith<IntT>& m, const Point<IntT>& p, const Point<IntT>& q) noexcept
+Point<IntT> add_in_mont(
+    const ModArith<IntT>& m, const Point<IntT>& p, const Point<IntT>& q) noexcept
 {
     if (p.is_inf())
         return q;
     if (q.is_inf())
         return p;
 
-    const auto x1 = m.to_mont(p.x);
-    const auto y1 = m.to_mont(p.y);
-    const auto x2 = m.to_mont(q.x);
-    const auto y2 = m.to_mont(q.y);
+    const auto& x1 = p.x;
+    const auto& y1 = p.y;
+    const auto& x2 = q.x;
+    const auto& y2 = q.y;
 
     // Use classic formula for point addition.
     // https://en.wikipedia.org/wiki/Elliptic_curve_point_multiplication#Point_operations
@@ -125,7 +139,15 @@ Point<IntT> add(const ModArith<IntT>& m, const Point<IntT>& p, const Point<IntT>
 
     const auto xr = m.sub(m.sub(m.mul(slope, slope), x1), x2);
     const auto yr = m.sub(m.mul(m.sub(x1, xr), slope), y1);
-    return {m.from_mont(xr), m.from_mont(yr)};
+    return {xr, yr};
+}
+
+/// Adds two elliptic curve points in affine coordinates
+/// and returns the result in affine coordinates.
+template <typename IntT>
+Point<IntT> add(const ModArith<IntT>& m, const Point<IntT>& p, const Point<IntT>& q) noexcept
+{
+    return from_mont(m, add_in_mont(m, to_mont(m, p), to_mont(m, q)));
 }
 
 template <typename IntT, int A = 0>
