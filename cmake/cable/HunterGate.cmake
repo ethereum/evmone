@@ -25,7 +25,7 @@
 # This is a gate file to Hunter package manager.
 # Include this file using `include` command and add package you need, example:
 #
-#     cmake_minimum_required(VERSION 3.5)
+#     cmake_minimum_required(VERSION 3.10)
 #
 #     include("cmake/HunterGate.cmake")
 #     HunterGate(
@@ -45,10 +45,10 @@
 option(HUNTER_ENABLED "Enable Hunter package manager support" ON)
 
 if(HUNTER_ENABLED)
-  if(CMAKE_VERSION VERSION_LESS "3.5")
+  if(CMAKE_VERSION VERSION_LESS "3.10")
     message(
         FATAL_ERROR
-        "At least CMake version 3.5 required for Hunter dependency management."
+        "At least CMake version 3.10 required for Hunter dependency management."
         " Update CMake or set HUNTER_ENABLED to OFF."
     )
   endif()
@@ -253,7 +253,7 @@ function(hunter_gate_download dir)
   file(
       WRITE
       "${cmakelists}"
-      "cmake_minimum_required(VERSION 3.5)\n"
+      "cmake_minimum_required(VERSION 3.10)\n"
       "if(POLICY CMP0114)\n"
       "  cmake_policy(SET CMP0114 NEW)\n"
       "endif()\n"

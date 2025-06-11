@@ -4,11 +4,6 @@
 
 include(hunter_cmake_args)
 
-hunter_cmake_args(
-    ethash
-    CMAKE_ARGS -DETHASH_BUILD_ETHASH=OFF
-)
-
 hunter_config(
     intx
     VERSION 0.13.0
@@ -17,7 +12,7 @@ hunter_config(
 )
 
 # Propagate BENCHMARK_ENABLE_LIBPFM to google/benchmark.
-# https://github.com/google/benchmark/blob/v1.9.3/CMakeLists.txt#L42
+# https://github.com/google/benchmark/blob/v1.9.4/CMakeLists.txt#L42
 option(BENCHMARK_ENABLE_LIBPFM "Enable performance counters provided by libpfm" OFF)
 
 hunter_config(
