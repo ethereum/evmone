@@ -3,12 +3,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "precompiles_stubs.hpp"
+#include <evmc/evmc.hpp>
 #include <algorithm>
 #include <cassert>
 #include <iostream>
 
 namespace evmone::state
 {
+using evmc::bytes;
+using evmc::bytes_view;
+
 namespace
 {
 /// Returns the expmod result for the known inputs or empty bytes if not found.
@@ -102,8 +106,13 @@ bytes expmod_lookup_result(bytes_view base, bytes_view exp, bytes_view mod)
 }  // namespace
 
 
-void expmod_stub(bytes_view base, bytes_view exp, bytes_view mod, uint8_t* output) noexcept
+void expmod_stub(std::span<const uint8_t> in_base, std::span<const uint8_t> in_exp,
+    std::span<const uint8_t> in_mod, uint8_t* output) noexcept
 {
+    bytes_view base{in_base.data(), in_base.size()};
+    bytes_view exp{in_exp.data(), in_exp.size()};
+    bytes_view mod{in_mod.data(), in_mod.size()};
+
     // Keep the output size before the mod normalization.
     const auto output_size = mod.size();
 

@@ -8,7 +8,8 @@
 
 namespace evmone::state
 {
-void expmod_gmp(bytes_view base, bytes_view exp, bytes_view mod, uint8_t* output) noexcept
+void expmod_gmp(std::span<const uint8_t> base, std::span<const uint8_t> exp,
+    std::span<const uint8_t> mod, uint8_t* output) noexcept
 {
     mpz_t b, e, m, r;  // NOLINT(*-isolate-declaration)
     mpz_inits(b, e, m, r, nullptr);
