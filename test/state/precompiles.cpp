@@ -382,10 +382,11 @@ ExecutionResult expmod_execute(
     const auto exp = payload.subspan(base_len, exp_len);
     const auto mod = mod_requires_padding ? std::span{output, mod_len} : mod_explicit;
 
-    uint8_t evmone_output[1024];  // Use a separate buffer not to overwrite the truncated mod.
-    const auto in_range = crypto::modexp(base, exp, mod, evmone_output);
-    if (in_range)
+    if (std::max(base.size(), mod.size()) <= MODEXP_LEN_LIMIT_EIP7823)
     {
+        uint8_t evmone_output[1024];  // Use a separate buffer not to overwrite the truncated mod.
+
+        crypto::modexp(base, exp, mod, evmone_output);
         uint8_t gmp_output[1024];
         expmod_gmp(base, exp, mod, gmp_output);
         if (std::memcmp(evmone_output, gmp_output, mod_len) != 0)

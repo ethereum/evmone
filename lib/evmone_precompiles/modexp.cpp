@@ -149,17 +149,15 @@ UIntT load_from_bytes(std::span<const uint8_t> data)
 
 namespace evmone::crypto
 {
-bool modexp(std::span<const uint8_t> base, std::span<const uint8_t> exp,
+void modexp(std::span<const uint8_t> base, std::span<const uint8_t> exp,
     std::span<const uint8_t> mod, uint8_t* output) noexcept
 {
     static constexpr auto MAX_INPUT_SIZE = 1024;
-    if (base.size() > MAX_INPUT_SIZE || exp.size() > MAX_INPUT_SIZE || mod.size() > MAX_INPUT_SIZE)
-        return false;
-
-    const auto size = std::max(mod.size(), base.size());
+    assert(base.size() <= MAX_INPUT_SIZE);
+    assert(mod.size() <= MAX_INPUT_SIZE);
 
     intx::uint<MAX_INPUT_SIZE * 8> max_res;
-    if (size <= 32)
+    if (const auto size = std::max(mod.size(), base.size()); size <= 32)
     {
         max_res = modexp_impl(load_from_bytes<uint256>(base), exp, load_from_bytes<uint256>(mod));
     }
@@ -184,7 +182,6 @@ bool modexp(std::span<const uint8_t> base, std::span<const uint8_t> exp,
     }
 
     trunc(std::span{output, mod.size()}, max_res);
-    return true;
 }
 
 
