@@ -3,10 +3,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #pragma once
-#include <evmc/evmc.hpp>
-#include <intx/intx.hpp>
+#include <span>
+#include <cstdint>
 
 namespace evmone::crypto
 {
-bool modexp(evmc::bytes_view base, evmc::bytes_view exp, evmc::bytes_view mod, uint8_t* output);
+bool modexp(std::span<const uint8_t> base, std::span<const uint8_t> exp, std::span<const uint8_t> mod, uint8_t* output) noexcept;
 }

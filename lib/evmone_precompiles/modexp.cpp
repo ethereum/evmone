@@ -16,7 +16,7 @@ void trunc(std::span<uint8_t> dst, const intx::uint<N>& x) noexcept
 }
 
 template <typename UIntT>
-UIntT modexp_odd(const UIntT& base, evmc::bytes_view exp, const UIntT& mod)
+UIntT modexp_odd(const UIntT& base, std::span<const uint8_t> exp, const UIntT& mod)
 {
     const evmmax::ModArith<UIntT> arith(mod);
 
@@ -40,7 +40,7 @@ UIntT modexp_odd(const UIntT& base, evmc::bytes_view exp, const UIntT& mod)
 }
 
 template <typename UIntT>
-UIntT modexp_pow_of_two(const UIntT& base, evmc::bytes_view exp, const UIntT& mod)
+UIntT modexp_pow_of_two(const UIntT& base, std::span<const uint8_t> exp, const UIntT& mod)
 {
     // FIXME: It should compute the value correctly for mod == 1, just checking if covered by tests.
     assert(mod != 1);
@@ -99,7 +99,7 @@ UIntT modinv_2k(const UIntT& x, size_t k)
 }
 
 template <typename UIntT>
-UIntT modexp_impl(const UIntT& base, evmc::bytes_view exp, const UIntT& mod)
+UIntT modexp_impl(const UIntT& base, std::span<const uint8_t> exp, const UIntT& mod)
 {
     // FIXME: We should strip leading 0 bits/bytes of exp. The gas cost model requires it.
 
@@ -129,7 +129,7 @@ UIntT modexp_impl(const UIntT& base, evmc::bytes_view exp, const UIntT& mod)
 }
 
 template <typename UIntT>
-UIntT load_from_bytes(evmc::bytes_view data)
+UIntT load_from_bytes(std::span<const uint8_t> data)
 {
     constexpr auto num_bytes = UIntT::num_words * sizeof(typename UIntT::word_type);
     assert(data.size() <= num_bytes);
@@ -139,10 +139,9 @@ UIntT load_from_bytes(evmc::bytes_view data)
     }
     else
     {
-        evmc::bytes tmp;
-        tmp.resize(num_bytes);
+        uint8_t tmp[sizeof(UIntT)]{};
         std::memcpy(&tmp[num_bytes - data.size()], data.data(), data.size());
-        return intx::be::unsafe::load<UIntT>(tmp.data());
+        return intx::be::load<UIntT>(tmp);
     }
 }
 
@@ -150,7 +149,8 @@ UIntT load_from_bytes(evmc::bytes_view data)
 
 namespace evmone::crypto
 {
-bool modexp(evmc::bytes_view base, evmc::bytes_view exp, evmc::bytes_view mod, uint8_t* output)
+bool modexp(std::span<const uint8_t> base, std::span<const uint8_t> exp,
+    std::span<const uint8_t> mod, uint8_t* output) noexcept
 {
     static constexpr auto MAX_INPUT_SIZE = 1024;
     if (base.size() > MAX_INPUT_SIZE || exp.size() > MAX_INPUT_SIZE || mod.size() > MAX_INPUT_SIZE)
