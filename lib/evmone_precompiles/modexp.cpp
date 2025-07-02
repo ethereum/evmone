@@ -99,36 +99,6 @@ UIntT modinv_2k(const UIntT& x, size_t k)
 }
 
 template <typename UIntT>
-UIntT modexp_impl(const UIntT& base, std::span<const uint8_t> exp, const UIntT& mod)
-{
-    // FIXME: We should strip leading 0 bits/bytes of exp. The gas cost model requires it.
-
-    // is odd
-    if ((mod & UIntT{1}) == UIntT{1})
-    {
-        return modexp_odd(base, exp, mod);
-    }
-    else if ((mod << (clz(mod) + 1)) == 0)  // is power of 2
-    {
-        return modexp_pow_of_two(base, exp, mod);
-    }
-    else  // is even
-    {
-        const auto mod_tailing_zeros = ctz(mod);
-
-        auto const N = mod >> mod_tailing_zeros;
-        const UIntT K = UIntT{1} << mod_tailing_zeros;
-
-        const auto x1 = modexp_odd(base, exp, N);
-        const auto x2 = modexp_pow_of_two(base, exp, K);
-
-        const auto N_inv = modinv_2k(N, mod_tailing_zeros);
-
-        return x1 + (((x2 - x1) * N_inv) % K) * N;
-    }
-}
-
-template <typename UIntT>
 UIntT load_from_bytes(std::span<const uint8_t> data)
 {
     constexpr auto num_bytes = UIntT::num_words * sizeof(typename UIntT::word_type);
@@ -145,6 +115,44 @@ UIntT load_from_bytes(std::span<const uint8_t> data)
     }
 }
 
+template <size_t Size>
+void modexp_impl(std::span<const uint8_t> base_bytes, std::span<const uint8_t> exp,
+    std::span<const uint8_t> mod_bytes, uint8_t* output) noexcept
+{
+    using UIntT = intx::uint<Size * 8>;
+    const auto base = load_from_bytes<UIntT>(base_bytes);
+    const auto mod = load_from_bytes<UIntT>(mod_bytes);
+
+
+    // FIXME: We should strip leading 0 bits/bytes of exp. The gas cost model requires it.
+
+    UIntT result;
+    if ((mod & UIntT{1}) == UIntT{1})// is odd
+    {
+        result = modexp_odd(base, exp, mod);
+    }
+    else if ((mod << (clz(mod) + 1)) == 0)  // is power of 2
+    {
+        result = modexp_pow_of_two(base, exp, mod);
+    }
+    else  // is even
+    {
+        const auto mod_tailing_zeros = ctz(mod);
+
+        auto const N = mod >> mod_tailing_zeros;
+        const UIntT K = UIntT{1} << mod_tailing_zeros;
+
+        const auto x1 = modexp_odd(base, exp, N);
+        const auto x2 = modexp_pow_of_two(base, exp, K);
+
+        const auto N_inv = modinv_2k(N, mod_tailing_zeros);
+
+        result = x1 + (((x2 - x1) * N_inv) % K) * N;
+    }
+
+    trunc(std::span{output, mod_bytes.size()}, result);
+}
+
 }  // namespace
 
 namespace evmone::crypto
@@ -156,32 +164,26 @@ void modexp(std::span<const uint8_t> base, std::span<const uint8_t> exp,
     assert(base.size() <= MAX_INPUT_SIZE);
     assert(mod.size() <= MAX_INPUT_SIZE);
 
-    intx::uint<MAX_INPUT_SIZE * 8> max_res;
     if (const auto size = std::max(mod.size(), base.size()); size <= 32)
     {
-        max_res = modexp_impl(load_from_bytes<uint256>(base), exp, load_from_bytes<uint256>(mod));
+        modexp_impl<32>(base, exp, mod, output);
     }
     else if (size <= 64)
     {
-        max_res = modexp_impl(load_from_bytes<uint512>(base), exp, load_from_bytes<uint512>(mod));
+        modexp_impl<64>(base, exp, mod, output);
     }
     else if (size <= 128)
     {
-        max_res = modexp_impl(
-            load_from_bytes<intx::uint<1024>>(base), exp, load_from_bytes<intx::uint<1024>>(mod));
+        modexp_impl<128>(base, exp, mod, output);
     }
     else if (size <= 256)
     {
-        max_res = modexp_impl(
-            load_from_bytes<intx::uint<2048>>(base), exp, load_from_bytes<intx::uint<2048>>(mod));
+        modexp_impl<256>(base, exp, mod, output);
     }
     else
     {
-        max_res = modexp_impl(load_from_bytes<intx::uint<MAX_INPUT_SIZE * 8>>(base), exp,
-            load_from_bytes<intx::uint<MAX_INPUT_SIZE * 8>>(mod));
+        modexp_impl<MAX_INPUT_SIZE>(base, exp, mod, output);
     }
-
-    trunc(std::span{output, mod.size()}, max_res);
 }
 
 
