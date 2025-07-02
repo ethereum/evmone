@@ -127,7 +127,7 @@ void modexp_impl(std::span<const uint8_t> base_bytes, std::span<const uint8_t> e
     // FIXME: We should strip leading 0 bits/bytes of exp. The gas cost model requires it.
 
     UIntT result;
-    if ((mod & UIntT{1}) == UIntT{1})// is odd
+    if ((mod & UIntT{1}) == UIntT{1})  // is odd
     {
         result = modexp_odd(base, exp, mod);
     }
@@ -163,6 +163,10 @@ void modexp(std::span<const uint8_t> base, std::span<const uint8_t> exp,
     static constexpr auto MAX_INPUT_SIZE = 1024;
     assert(base.size() <= MAX_INPUT_SIZE);
     assert(mod.size() <= MAX_INPUT_SIZE);
+
+
+    const auto it = std::ranges::find_if(exp, [](auto x) { return x != 0; });
+    exp = std::span{it, exp.end()};
 
     if (const auto size = std::max(mod.size(), base.size()); size <= 32)
     {
