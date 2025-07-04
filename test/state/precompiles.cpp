@@ -9,6 +9,7 @@
 #include <evmone_precompiles/bls.hpp>
 #include <evmone_precompiles/bn254.hpp>
 #include <evmone_precompiles/kzg.hpp>
+#include <evmone_precompiles/modexp.hpp>
 #include <evmone_precompiles/ripemd160.hpp>
 #include <evmone_precompiles/secp256k1.hpp>
 #include <evmone_precompiles/sha256.hpp>
@@ -378,6 +379,12 @@ ExecutionResult expmod_execute(
     const auto base = payload.subspan(0, base_len);
     const auto exp = payload.subspan(base_len, exp_len);
     const auto mod = mod_requires_padding ? std::span{output, mod_len} : mod_explicit;
+
+    if (std::max(base.size(), mod.size()) <= MODEXP_LEN_LIMIT_EIP7823)
+    {
+        crypto::modexp(base, exp, mod, output);
+        return {EVMC_SUCCESS, mod_len};
+    }
 
 #ifdef EVMONE_PRECOMPILES_GMP
     expmod_gmp(base, exp, mod, output);
