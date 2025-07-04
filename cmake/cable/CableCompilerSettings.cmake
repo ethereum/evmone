@@ -159,12 +159,5 @@ macro(cable_configure_compiler)
             endif()
             unset(blacklist_file)
         endif()
-
-        # The "Coverage" build type.
-        if(CABLE_COMPILER_CLANG)
-            set(CMAKE_CXX_FLAGS_COVERAGE "-fprofile-instr-generate -fcoverage-mapping")
-        elseif(CABLE_COMPILER_GNU)
-            set(CMAKE_CXX_FLAGS_COVERAGE "--coverage")
-        endif()
     endif()
 endmacro()

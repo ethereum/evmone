@@ -9,6 +9,7 @@ if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/evmc/.git)
 endif()
 
 option(BUILD_SHARED_LIBS "Build evmone as a shared library" ON)
+option(COVERAGE "Build with coverage instrumentation" OFF)
 option(EVMONE_TESTING "Build tests and test tools" OFF)
 option(EVMONE_FUZZING "Instrument libraries and build fuzzing tools" OFF)
 
@@ -65,18 +66,28 @@ if(CABLE_COMPILER_GNULIKE)
         $<$<CXX_COMPILER_ID:Clang,AppleClang>:-Wnewline-eof>
         $<$<CXX_COMPILER_ID:Clang,AppleClang>:-Wunreachable-code-aggressive>
     )
-
-    if(CABLE_COMPILER_CLANG)
-        # Enable Clang's Source Based Coverage.
-        # https://clang.llvm.org/docs/SourceBasedCodeCoverage.html
-        # We can enable optimizations and disable asserts.
-        set(CMAKE_CXX_FLAGS_COVERAGE "-O2 -DNDEBUG -fprofile-instr-generate -fcoverage-mapping")
-    elseif(CABLE_COMPILER_GNU)
-        set(CMAKE_CXX_FLAGS_COVERAGE "--coverage")
-    endif()
 elseif(MSVC)
     add_compile_options(/wd4324)  # Disabled warning about alignment caused by alignas.
     add_compile_options(/wd5030)  # Allow using unknown attributes.
+endif()
+
+if(CMAKE_BUILD_TYPE STREQUAL "Coverage")
+    message(FATAL_ERROR "Use -DCOVERAGE=1")
+endif()
+
+if(COVERAGE)
+    add_compile_options(
+        $<$<CXX_COMPILER_ID:GNU>:--coverage>
+
+        # Enable Clang's Source Based Coverage.
+        # https://clang.llvm.org/docs/SourceBasedCodeCoverage.html
+        $<$<CXX_COMPILER_ID:Clang,AppleClang>:-fprofile-instr-generate>
+        $<$<CXX_COMPILER_ID:Clang,AppleClang>:-fcoverage-mapping>
+    )
+    add_link_options(
+        $<$<CXX_COMPILER_ID:GNU>:--coverage>
+        $<$<CXX_COMPILER_ID:Clang,AppleClang>:-fprofile-instr-generate>
+    )
 endif()
 
 set(CMAKE_C_VISIBILITY_PRESET hidden)
@@ -107,16 +118,10 @@ endif()
 include(GNUInstallDirs)
 
 if(EVMONE_FUZZING)
-    if(NOT ${CMAKE_CXX_COMPILER_ID} MATCHES Clang OR ${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS 8)
-        message(FATAL_ERROR "Clang 8+ compiler is required for fuzzing")
-    endif()
-
     set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build evmone as a shared library" FORCE)
     set(EVMONE_TESTING ON CACHE BOOL "Build tests and test tools" FORCE)
 
-    string(TOUPPER ${CMAKE_BUILD_TYPE} build_type)
-    string(COMPARE EQUAL ${build_type} COVERAGE fuzzing_coverage)
-    if(NOT fuzzing_coverage)
+    if(NOT COVERAGE)
         # Add fuzzing instrumentation only for non-coverage builds.
         # The coverage builds should be without fuzzing instrumentation to allow
         # running fuzzing corpus once and getting code coverage.
