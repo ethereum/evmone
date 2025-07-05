@@ -7,7 +7,6 @@
 #include <evmc/evmc.h>
 #include <evmc/utils.h>
 #include <memory>
-#include <vector>
 
 namespace evmone
 {
@@ -15,30 +14,66 @@ using evmc::bytes_view;
 class ExecutionState;
 class VM;
 
+/// A span type for a bitset.
+struct BitsetSpan
+{
+    using word_type = uint64_t;
+    static constexpr size_t WORD_BITS = sizeof(word_type) * 8;
+
+    word_type* m_array = nullptr;
+
+    explicit BitsetSpan(word_type* array) noexcept : m_array{array} {}
+
+    [[nodiscard]] bool test(size_t index) const noexcept
+    {
+        const auto [word, bit_mask] = get_ref(index);
+        return (word & bit_mask) != 0;
+    }
+
+    void set(size_t index) const noexcept
+    {
+        const auto& [word, bit_mask] = get_ref(index);
+        word |= bit_mask;
+    }
+
+private:
+    struct Ref
+    {
+        word_type& word_ref;
+        word_type bit_mask;
+    };
+
+    [[nodiscard, gnu::always_inline, msvc::forceinline]] Ref get_ref(size_t index) const noexcept
+    {
+        const auto word_index = index / WORD_BITS;
+        const auto bit_index = index % WORD_BITS;
+        const auto bit_mask = word_type{1} << bit_index;
+        return {m_array[word_index], bit_mask};
+    }
+};
+
 namespace baseline
 {
 class CodeAnalysis
 {
-public:
-    using JumpdestMap = std::vector<bool>;
-
 private:
     bytes_view m_raw_code;         ///< Unmodified full code.
     bytes_view m_executable_code;  ///< Executable code section.
-    JumpdestMap m_jumpdest_map;    ///< Map of valid jump destinations.
     EOF1Header m_eof_header;       ///< The EOF header.
 
     /// Padded code for faster legacy code execution.
     /// If not nullptr the executable_code must point to it.
     std::unique_ptr<uint8_t[]> m_padded_code;
 
+    BitsetSpan m_jumpdest_bitset{nullptr};
+
 public:
     /// Constructor for legacy code.
-    CodeAnalysis(std::unique_ptr<uint8_t[]> padded_code, size_t code_size, JumpdestMap map)
+    CodeAnalysis(std::unique_ptr<uint8_t[]> padded_code, size_t code_size, BitsetSpan map)
       : m_raw_code{padded_code.get(), code_size},
         m_executable_code{padded_code.get(), code_size},
-        m_jumpdest_map{std::move(map)},
-        m_padded_code{std::move(padded_code)}
+        m_padded_code{std::move(padded_code)},
+        m_jumpdest_bitset{map}
     {}
 
     /// Constructor for EOF.
@@ -61,9 +96,9 @@ public:
     /// Check if given position is valid jump destination. Use only for legacy code.
     [[nodiscard]] bool check_jumpdest(uint64_t position) const noexcept
     {
-        if (position >= m_jumpdest_map.size())
+        if (position >= m_raw_code.size())
             return false;
-        return m_jumpdest_map[static_cast<size_t>(position)];
+        return m_jumpdest_bitset.test(static_cast<size_t>(position));
     }
 };
 
