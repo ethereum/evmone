@@ -7,7 +7,7 @@ if(NOT type STREQUAL STATIC_LIBRARY)
     message(FATAL_ERROR "The evmone must be built as static library")
 endif()
 
-if(fuzzing_coverage)
+if(COVERAGE)
     set(CMAKE_EXE_LINKER_FLAGS "-fsanitize=fuzzer")
 else()
     string(REPLACE fuzzer-no-link fuzzer CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS})

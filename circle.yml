@@ -352,7 +352,8 @@ jobs:
   execution-spec-tests:
     executor: linux-gcc-latest
     environment:
-      BUILD_TYPE: Coverage
+      BUILD_TYPE: Debug
+      CMAKE_OPTIONS: -DCOVERAGE=1
     steps:
       - build
       - download_execution_spec_tests:
@@ -380,7 +381,8 @@ jobs:
   eof-execution-spec-tests:
     executor: linux-gcc-latest
     environment:
-      BUILD_TYPE: Coverage
+      BUILD_TYPE: Debug
+      CMAKE_OPTIONS: -DCOVERAGE=1
     steps:
       - build
       - download_execution_spec_tests:
@@ -409,7 +411,8 @@ jobs:
   fusaka-execution-spec-tests:
     executor: linux-gcc-latest
     environment:
-      BUILD_TYPE: Coverage
+      BUILD_TYPE: Debug
+      CMAKE_OPTIONS: -DCOVERAGE=1
     steps:
       - build
       - download_execution_spec_tests:
@@ -432,7 +435,7 @@ jobs:
   ethereum-tests:
     executor: linux-gcc-latest
     environment:
-      BUILD_TYPE: Coverage
+      BUILD_TYPE: Debug
     steps:
       - build
       - download_execution_tests:
@@ -474,8 +477,8 @@ jobs:
   precompiles-gmp:
     executor: linux-gcc-latest
     environment:
-      BUILD_TYPE: Coverage
-      CMAKE_OPTIONS: -DCMAKE_CXX_FLAGS=-Og -DEVMONE_PRECOMPILES_GMP=1
+      BUILD_TYPE: Release
+      CMAKE_OPTIONS: -DCOVERAGE=1 -DEVMONE_PRECOMPILES_GMP=1
     steps:
       - run:
           name: "Install GMP"
@@ -497,8 +500,8 @@ jobs:
   precompiles-silkpre:
     executor: linux-gcc-latest
     environment:
-      BUILD_TYPE: Coverage
-      CMAKE_OPTIONS: -DCMAKE_CXX_FLAGS=-Og -DEVMONE_PRECOMPILES_SILKPRE=1
+      BUILD_TYPE: Release
+      CMAKE_OPTIONS: -DCOVERAGE=1 -DEVMONE_PRECOMPILES_SILKPRE=1
     steps:
       - run:
           name: "Install GMP"
@@ -534,7 +537,8 @@ jobs:
   gcc-latest-coverage:
     executor: linux-gcc-latest
     environment:
-      BUILD_TYPE: Coverage
+      BUILD_TYPE: Debug
+      CMAKE_OPTIONS: -DCOVERAGE=1
       TESTS_FILTER: unittests|integration
     steps:
       - build
@@ -586,7 +590,8 @@ jobs:
     executor: linux-clang-latest
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 4
-      BUILD_TYPE: Coverage
+      BUILD_TYPE: Release
+      CMAKE_OPTIONS: -DCOVERAGE=1
     steps:
       - build
       - test
