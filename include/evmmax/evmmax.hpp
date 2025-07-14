@@ -90,6 +90,7 @@ public:
         for (size_t i = 0; i != S; ++i)
         {
             uint64_t c = 0;
+#pragma GCC unroll 8
             for (size_t j = 0; j != S; ++j)
                 std::tie(c, t[j]) = addmul(t[j], x[j], y[i], c);
             auto tmp = intx::addc(t[S], c);
@@ -98,6 +99,7 @@ public:
 
             const auto m = t[0] * m_mod_inv;
             std::tie(c, std::ignore) = addmul(t[0], m, mod[0], 0);
+#pragma GCC unroll 8
             for (size_t j = 1; j != S; ++j)
                 std::tie(c, t[j - 1]) = addmul(t[j], m, mod[j], c);
             tmp = intx::addc(t[S], c);
