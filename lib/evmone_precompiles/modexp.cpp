@@ -145,7 +145,9 @@ void modexp(std::span<const uint8_t> base, std::span<const uint8_t> exp,
     const auto it = std::ranges::find_if(exp, [](auto x) { return x != 0; });
     exp = std::span{it, exp.end()};
 
-    if (const auto size = std::max(mod.size(), base.size()); size <= 32)
+    if (const auto size = std::max(mod.size(), base.size()); size <= 16)
+        modexp_impl<16>(base, exp, mod, output);
+    else if (size <= 32)
         modexp_impl<32>(base, exp, mod, output);
     else if (size <= 64)
         modexp_impl<64>(base, exp, mod, output);
