@@ -11,6 +11,13 @@ hunter_config(
     SHA1 3e868e3018fe9f2b2f067442c879e4f312d2d707
 )
 
+hunter_config(
+    GTest
+    VERSION 1.17.0
+    URL https://github.com/google/googletest/archive/v1.17.0.tar.gz
+    SHA1 8a8ee424e8275ec4b480ba4a0d1ba94b5dee3ee4
+)
+
 # Propagate BENCHMARK_ENABLE_LIBPFM to google/benchmark.
 # https://github.com/google/benchmark/blob/v1.9.4/CMakeLists.txt#L42
 option(BENCHMARK_ENABLE_LIBPFM "Enable performance counters provided by libpfm" OFF)
