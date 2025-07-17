@@ -352,6 +352,11 @@ inline void sar(StackTop stack) noexcept
     x = (x >> y) | (sign_mask << mask_shift);
 }
 
+inline void clz(StackTop stack) noexcept
+{
+    stack.top() = clz(stack.top());
+}
+
 inline Result keccak256(StackTop stack, int64_t gas_left, ExecutionState& state) noexcept
 {
     const auto& index = stack.pop();
