@@ -26,6 +26,7 @@ enum Opcode : uint8_t
     OP_MULMOD = 0x09,
     OP_EXP = 0x0a,
     OP_SIGNEXTEND = 0x0b,
+    OP_CLZ = 0x0c,
 
     OP_LT = 0x10,
     OP_GT = 0x11,

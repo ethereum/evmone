@@ -49,6 +49,7 @@ constexpr inline GasCostTable gas_costs = []() noexcept {
     table[EVMC_FRONTIER][OP_MULMOD] = 8;
     table[EVMC_FRONTIER][OP_EXP] = 10;
     table[EVMC_FRONTIER][OP_SIGNEXTEND] = 5;
+    table[EVMC_FRONTIER][OP_CLZ] = undefined;  // CLZ not available before Osaka
     table[EVMC_FRONTIER][OP_LT] = 3;
     table[EVMC_FRONTIER][OP_GT] = 3;
     table[EVMC_FRONTIER][OP_SLT] = 3;
@@ -173,6 +174,7 @@ constexpr inline GasCostTable gas_costs = []() noexcept {
     table[EVMC_PRAGUE] = table[EVMC_CANCUN];
 
     table[EVMC_OSAKA] = table[EVMC_PRAGUE];
+    table[EVMC_OSAKA][OP_CLZ] = 3;  // CLZ available from Osaka with 3 gas cost
 
     table[EVMC_EXPERIMENTAL] = table[EVMC_OSAKA];
 
@@ -266,6 +268,7 @@ constexpr inline std::array<Traits, 256> traits = []() noexcept {
     table[OP_MULMOD] = {"MULMOD", 0, false, 3, -2, EVMC_FRONTIER, REV_EOF1};
     table[OP_EXP] = {"EXP", 0, false, 2, -1, EVMC_FRONTIER, REV_EOF1};
     table[OP_SIGNEXTEND] = {"SIGNEXTEND", 0, false, 2, -1, EVMC_FRONTIER, REV_EOF1};
+    table[OP_CLZ] = {"CLZ", 0, false, 1, 0, EVMC_OSAKA, REV_EOF1};
 
     table[OP_LT] = {"LT", 0, false, 2, -1, EVMC_FRONTIER, REV_EOF1};
     table[OP_GT] = {"GT", 0, false, 2, -1, EVMC_FRONTIER, REV_EOF1};
