@@ -264,27 +264,7 @@ inline void signextend(StackTop stack) noexcept
 inline void clz(StackTop stack) noexcept
 {
     auto& x = stack.top();
-    
-    // Count leading zeros in the 256-bit number
-    uint32_t leading_zeros = 0;
-    
-    // Check each 64-bit word from most significant to least significant
-    for (size_t i = 4; i > 0; --i)
-    {
-        if (x[i - 1] == 0)
-        {
-            leading_zeros += 64;
-        }
-        else
-        {
-            // Count leading zeros in this 64-bit word
-            // Use GCC/Clang builtin for efficiency
-            leading_zeros += static_cast<uint32_t>(__builtin_clzll(x[i - 1]));
-            break;
-        }
-    }
-    
-    x = leading_zeros;
+    x = intx::clz(x);
 }
 
 inline void lt(StackTop stack) noexcept

@@ -49,7 +49,6 @@ constexpr inline GasCostTable gas_costs = []() noexcept {
     table[EVMC_FRONTIER][OP_MULMOD] = 8;
     table[EVMC_FRONTIER][OP_EXP] = 10;
     table[EVMC_FRONTIER][OP_SIGNEXTEND] = 5;
-    table[EVMC_FRONTIER][OP_CLZ] = undefined;  // CLZ not available before Osaka
     table[EVMC_FRONTIER][OP_LT] = 3;
     table[EVMC_FRONTIER][OP_GT] = 3;
     table[EVMC_FRONTIER][OP_SLT] = 3;
@@ -174,7 +173,7 @@ constexpr inline GasCostTable gas_costs = []() noexcept {
     table[EVMC_PRAGUE] = table[EVMC_CANCUN];
 
     table[EVMC_OSAKA] = table[EVMC_PRAGUE];
-    table[EVMC_OSAKA][OP_CLZ] = 3;  // CLZ available from Osaka with 3 gas cost
+    table[EVMC_OSAKA][OP_CLZ] = 3;
 
     table[EVMC_EXPERIMENTAL] = table[EVMC_OSAKA];
 
