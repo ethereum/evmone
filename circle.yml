@@ -1,6 +1,6 @@
 version: 2.1
 orbs:
-  codecov: codecov/codecov@5.0.3
+  codecov: codecov/codecov@5.4.3
   win: circleci/windows@5.0
 
 executors:
@@ -221,6 +221,29 @@ commands:
           path: ~/coverage
           destination: coverage
 
+  collect_coverage_clang:
+    description: "Collect coverage data (clang)"
+    steps:
+      - run:
+          name: "Collect coverage data (clang)"
+          working_directory: ~/build
+          command: |
+            OBJECTS="-object bin/evmone-unittests -object bin/evmone-statetest -object bin/evmone-blockchaintest -object bin/evmone-t8n"
+            ARGS="lib/libevmone.so $OBJECTS -Xdemangler llvm-cxxfilt -instr-profile=evmone.profdata -ignore-filename-regex=include/evmc"
+
+            mkdir ~/coverage
+            llvm-profdata merge -sparse *.profraw -o evmone.profdata
+            
+            llvm-cov export -format=lcov $ARGS > ~/coverage/coverage.lcov
+            
+            llvm-cov show $ARGS -format=html -show-directory-coverage -show-line-counts-or-regions -o ~/coverage/html
+
+            llvm-cov report $ARGS > ~/coverage/report.txt
+            llvm-cov report $ARGS -use-color
+      - store_artifacts:
+          path: ~/coverage
+          destination: coverage
+
   upload_coverage:
     description: "Upload coverage data"
     parameters:
@@ -229,7 +252,8 @@ commands:
     steps:
       - codecov/upload:
           plugins: noop
-          files: ../build/coverage.json
+          disable_search: true
+          files: ../build/coverage.json,../coverage/coverage.lcov
           flags: <<parameters.flags>>
 
   package:
@@ -535,20 +559,6 @@ jobs:
       - build
       - test
 
-
-  gcc-latest-coverage:
-    executor: linux-gcc-latest
-    environment:
-      BUILD_TYPE: Debug
-      CMAKE_OPTIONS: -DCOVERAGE=1
-      TESTS_FILTER: unittests|integration
-    steps:
-      - build
-      - test
-      - collect_coverage_gcc
-      - upload_coverage:
-          flags: unittests
-
   gcc-latest-memcheck:
     executor: linux-gcc-latest
     environment:
@@ -591,28 +601,15 @@ jobs:
   clang-latest-coverage:
     executor: linux-clang-latest
     environment:
-      CMAKE_BUILD_PARALLEL_LEVEL: 4
       BUILD_TYPE: Release
       CMAKE_OPTIONS: -DCOVERAGE=1
+      TESTS_FILTER: unittests|integration
     steps:
       - build
       - test
-      - run:
-          name: "Coverage report"
-          working_directory: ~/build
-          command: |
-            OBJECTS="-object bin/evmone-unittests -object bin/evmone-statetest -object bin/evmone-blockchaintest -object bin/evmone-t8n"
-            ARGS="lib/libevmone.so $OBJECTS -Xdemangler llvm-cxxfilt -instr-profile=evmone.profdata -ignore-filename-regex=include/evmc"
-            
-            mkdir ~/coverage
-            llvm-profdata merge -sparse *.profraw -o evmone.profdata
-            llvm-cov show $ARGS -format=html -show-directory-coverage -show-line-counts-or-regions -o ~/coverage/html
-
-            llvm-cov report $ARGS > ~/coverage/report.txt
-            llvm-cov report $ARGS -use-color
-      - store_artifacts:
-          path: ~/coverage
-          destination: coverage
+      - collect_coverage_clang
+      - upload_coverage:
+          flags: unittests
 
   fuzzing:
     executor: linux-clang-xlarge
@@ -730,7 +727,6 @@ workflows:
       - cmake-min
       - gcc-min
       - clang-min
-      - gcc-latest-coverage
       - gcc-latest-memcheck
       - clang-latest-sanitizers
       - clang-latest-coverage
