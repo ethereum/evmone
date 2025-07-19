@@ -127,8 +127,7 @@ PrecompileAnalysis expmod_analyze(bytes_view input, evmc_revision rev) noexcept
         // With EIP-7823 the computation never overflows.
         assert(max_len <= MODEXP_LEN_LIMIT_EIP7823);
         const auto num_words = (max_len + 7) / 8;
-        const auto num_words_squared = num_words * num_words;
-        const auto mult_complexity = max_len <= 32 ? num_words_squared : num_words_squared * 2;
+        const auto mult_complexity = max_len <= 32 ? 16 : num_words * num_words * 2;
         return uint64_t{mult_complexity};
     };
     static constexpr auto calc_mult_complexity_eip2565 = [](uint32_t max_len) noexcept {
@@ -153,7 +152,7 @@ PrecompileAnalysis expmod_analyze(bytes_view input, evmc_revision rev) noexcept
     };
     const auto& [min_gas, final_divisor, calc_mult_complexity] = [rev]() noexcept -> Params {
         if (rev >= EVMC_OSAKA)
-            return {500, 3, calc_mult_complexity_eip7883};
+            return {500, 1, calc_mult_complexity_eip7883};
         else if (rev >= EVMC_BERLIN)
             return {200, 3, calc_mult_complexity_eip2565};
         else  // Byzantium
