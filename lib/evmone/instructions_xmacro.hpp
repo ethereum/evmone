@@ -63,7 +63,7 @@
     ON_OPCODE_IDENTIFIER(OP_SHL, shl)                         \
     ON_OPCODE_IDENTIFIER(OP_SHR, shr)                         \
     ON_OPCODE_IDENTIFIER(OP_SAR, sar)                         \
-    ON_OPCODE_UNDEFINED(0x1e)                                 \
+    ON_OPCODE_IDENTIFIER(OP_CLZ, clz)                         \
     ON_OPCODE_UNDEFINED(0x1f)                                 \
                                                               \
     ON_OPCODE_IDENTIFIER(OP_KECCAK256, keccak256)             \
