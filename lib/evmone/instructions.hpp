@@ -261,6 +261,12 @@ inline void signextend(StackTop stack) noexcept
     }
 }
 
+inline void clz(StackTop stack) noexcept
+{
+    auto& x = stack.top();
+    x = intx::clz(x);
+}
+
 inline void lt(StackTop stack) noexcept
 {
     const auto& x = stack.pop();

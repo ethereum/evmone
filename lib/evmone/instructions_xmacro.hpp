@@ -44,7 +44,7 @@
     ON_OPCODE_IDENTIFIER(OP_MULMOD, mulmod)                   \
     ON_OPCODE_IDENTIFIER(OP_EXP, exp)                         \
     ON_OPCODE_IDENTIFIER(OP_SIGNEXTEND, signextend)           \
-    ON_OPCODE_UNDEFINED(0x0c)                                 \
+    ON_OPCODE_IDENTIFIER(OP_CLZ, clz)                         \
     ON_OPCODE_UNDEFINED(0x0d)                                 \
     ON_OPCODE_UNDEFINED(0x0e)                                 \
     ON_OPCODE_UNDEFINED(0x0f)                                 \

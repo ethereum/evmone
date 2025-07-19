@@ -140,6 +140,7 @@ constexpr bool instruction_only_in_evmone(evmc_revision rev, Opcode op) noexcept
     case OP_EOFCREATE:
     case OP_TXCREATE:
     case OP_RETURNCODE:
+    case OP_CLZ:
         return true;
     default:
         return false;
