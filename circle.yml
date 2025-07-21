@@ -1,6 +1,6 @@
 version: 2.1
 orbs:
-  codecov: codecov/codecov@5.0.3
+  codecov: codecov/codecov@5.4.3
   win: circleci/windows@5.0
 
 executors:
@@ -221,6 +221,29 @@ commands:
           path: ~/coverage
           destination: coverage
 
+  collect_coverage_clang:
+    description: "Collect coverage data (clang)"
+    steps:
+      - run:
+          name: "Collect coverage data (clang)"
+          working_directory: ~/build
+          command: |
+            OBJECTS="-object bin/evmone-unittests -object bin/evmone-statetest -object bin/evmone-blockchaintest -object bin/evmone-t8n"
+            ARGS="lib/libevmone.so $OBJECTS -Xdemangler llvm-cxxfilt -instr-profile=evmone.profdata -ignore-filename-regex=include/evmc"
+
+            mkdir ~/coverage
+            llvm-profdata merge -sparse *.profraw -o evmone.profdata
+            
+            llvm-cov export -format=lcov $ARGS -skip-expansions > ~/coverage/coverage.lcov
+            
+            llvm-cov show $ARGS -format=html -show-directory-coverage -show-line-counts-or-regions -o ~/coverage/html
+
+            llvm-cov report $ARGS > ~/coverage/report.txt
+            llvm-cov report $ARGS -use-color
+      - store_artifacts:
+          path: ~/coverage
+          destination: coverage
+
   upload_coverage:
     description: "Upload coverage data"
     parameters:
@@ -229,7 +252,8 @@ commands:
     steps:
       - codecov/upload:
           plugins: noop
-          files: ../build/coverage.json
+          disable_search: true
+          files: ../build/coverage.json,../coverage/coverage.lcov
           flags: <<parameters.flags>>
 
   package:
@@ -350,9 +374,9 @@ jobs:
             ghr -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME -n "$name" $prerelease_flag $CIRCLE_TAG ~/package
 
   execution-spec-tests:
-    executor: linux-gcc-latest
+    executor: linux-clang-latest
     environment:
-      BUILD_TYPE: Debug
+      BUILD_TYPE: Release
       CMAKE_OPTIONS: -DCOVERAGE=1
     steps:
       - build
@@ -363,25 +387,25 @@ jobs:
       - run:
           name: "Execution spec tests (develop, state_tests)"
           # Tests for in-development EVM revision currently passing.
-          working_directory: ~/spec-tests/fixtures/state_tests
+          working_directory: ~/build
           command: >
-            ~/build/bin/evmone-statetest ~/spec-tests/fixtures/state_tests
+            bin/evmone-statetest ~/spec-tests/fixtures/state_tests
       - run:
           name: "Execution spec tests (develop, blockchain_tests)"
           # Tests for in-development EVM revision currently passing.
           # - The block_hashes_history test is disabled because it takes too long.
-          working_directory: ~/spec-tests/fixtures/blockchain_tests
+          working_directory: ~/build
           command: >
-            ~/build/bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests
+            bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests
             --gtest_filter='-*block_hashes.block_hashes_history'
-      - collect_coverage_gcc
+      - collect_coverage_clang
       - upload_coverage:
-          flags: execution_spec_tests
+          flags: eest-develop
 
   eof-execution-spec-tests:
-    executor: linux-gcc-latest
+    executor: linux-clang-latest
     environment:
-      BUILD_TYPE: Debug
+      BUILD_TYPE: Release
       CMAKE_OPTIONS: -DCOVERAGE=1
     steps:
       - build
@@ -404,14 +428,14 @@ jobs:
           working_directory: ~/build
           command: >
             bin/evmone-eoftest ~/spec-tests/fixtures/eof_tests
-      - collect_coverage_gcc
+      - collect_coverage_clang
       - upload_coverage:
-          flags: eof_execution_spec_tests
+          flags: eest-eof
 
   fusaka-execution-spec-tests:
-    executor: linux-gcc-latest
+    executor: linux-clang-latest
     environment:
-      BUILD_TYPE: Debug
+      BUILD_TYPE: Release
       CMAKE_OPTIONS: -DCOVERAGE=1
     steps:
       - build
@@ -430,14 +454,15 @@ jobs:
           command: >
             bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests/
             --gtest_filter='-cancun/eip4844_blobs/blob_txs.valid_blob_tx_combinations:frontier/precompiles/precompiles.precompiles:osaka/eip7594_peerdas/max_blob_per_tx.max_blobs_per_tx_fork_transition:osaka/eip7825_transaction_gas_limit_cap/tx_gas_limit.transaction_gas_limit_cap_at_transition:osaka/eip7918_blob_reserve_price/*.*:osaka/eip7934_block_rlp_limit/max_block_rlp_size.block_at_rlp_size_limit_boundary:osaka/eip7939_count_leading_zeros/*.*:osaka/eip7951_p256verify_precompiles/*.*:prague/eip7702_set_code_tx/set_code_txs.set_code_to_precompile'
-      - collect_coverage_gcc
+      - collect_coverage_clang
       - upload_coverage:
-          flags: fusaka_execution_spec_tests
+          flags: eest-fusaka
 
   ethereum-tests:
-    executor: linux-gcc-latest
+    executor: linux-clang-latest
     environment:
-      BUILD_TYPE: Debug
+      BUILD_TYPE: Release
+      CMAKE_OPTIONS: -DCOVERAGE=1
     steps:
       - build
       - download_execution_tests:
@@ -472,12 +497,12 @@ jobs:
             bin/evmone-blockchaintest
             ~/tests/BlockchainTests/InvalidBlocks
             ~/tests/LegacyTests/Cancun/BlockchainTests/InvalidBlocks
-      - collect_coverage_gcc
+      - collect_coverage_clang
       - upload_coverage:
-          flags: ethereum_tests
+          flags: eest-legacy
 
   precompiles-gmp:
-    executor: linux-gcc-latest
+    executor: linux-clang-latest
     environment:
       BUILD_TYPE: Release
       CMAKE_OPTIONS: -DCOVERAGE=1 -DEVMONE_PRECOMPILES_GMP=1
@@ -487,20 +512,19 @@ jobs:
           command: sudo apt-get -q update && sudo apt-get -qy install libgmp-dev
       - build
       - download_execution_spec_tests:
-          release: v4.1.0
+          release: v4.5.0
           fixtures_suffix: develop
       - run:
           name: "Execution spec tests (state_tests)"
-          working_directory: ~/spec-tests/fixtures/state_tests
+          working_directory: ~/build
           command: >
-            ~/build/bin/evmone-statetest ~/spec-tests/fixtures/state_tests
-      - collect_coverage_gcc
+            bin/evmone-statetest ~/spec-tests/fixtures/state_tests
+      - collect_coverage_clang
       - upload_coverage:
-          flags: eest_gmp
-
+          flags: eest-develop-gmp
 
   precompiles-silkpre:
-    executor: linux-gcc-latest
+    executor: linux-clang-latest
     environment:
       BUILD_TYPE: Release
       CMAKE_OPTIONS: -DCOVERAGE=1 -DEVMONE_PRECOMPILES_SILKPRE=1
@@ -510,16 +534,16 @@ jobs:
           command: sudo apt-get -q update && sudo apt-get -qy install libgmp-dev
       - build
       - download_execution_tests:
-          rev: v16.0
+          rev: v17.1
           legacy: false
       - run:
           name: "State tests"
           working_directory: ~/build
           command: |
             bin/evmone-statetest ~/tests/GeneralStateTests
-      - collect_coverage_gcc
+      - collect_coverage_clang
       - upload_coverage:
-          flags: ethereum_tests_silkpre
+          flags: eest-legacy-silkpre
 
   gcc-min:
     executor: linux-gcc-min
@@ -534,20 +558,6 @@ jobs:
     steps:
       - build
       - test
-
-
-  gcc-latest-coverage:
-    executor: linux-gcc-latest
-    environment:
-      BUILD_TYPE: Debug
-      CMAKE_OPTIONS: -DCOVERAGE=1
-      TESTS_FILTER: unittests|integration
-    steps:
-      - build
-      - test
-      - collect_coverage_gcc
-      - upload_coverage:
-          flags: unittests
 
   gcc-latest-memcheck:
     executor: linux-gcc-latest
@@ -593,28 +603,15 @@ jobs:
   clang-latest-coverage:
     executor: linux-clang-latest
     environment:
-      CMAKE_BUILD_PARALLEL_LEVEL: 4
       BUILD_TYPE: Release
       CMAKE_OPTIONS: -DCOVERAGE=1
+      TESTS_FILTER: unittests|integration
     steps:
       - build
       - test
-      - run:
-          name: "Coverage report"
-          working_directory: ~/build
-          command: |
-            OBJECTS="-object bin/evmone-unittests -object bin/evmone-statetest -object bin/evmone-blockchaintest -object bin/evmone-t8n"
-            ARGS="lib/libevmone.so $OBJECTS -Xdemangler llvm-cxxfilt -instr-profile=evmone.profdata -ignore-filename-regex=include/evmc"
-            
-            mkdir ~/coverage
-            llvm-profdata merge -sparse *.profraw -o evmone.profdata
-            llvm-cov show $ARGS -format=html -show-directory-coverage -show-line-counts-or-regions -o ~/coverage/html
-
-            llvm-cov report $ARGS > ~/coverage/report.txt
-            llvm-cov report $ARGS -use-color
-      - store_artifacts:
-          path: ~/coverage
-          destination: coverage
+      - collect_coverage_clang
+      - upload_coverage:
+          flags: evmone-unittests
 
   fuzzing:
     executor: linux-clang-xlarge
@@ -732,7 +729,6 @@ workflows:
       - cmake-min
       - gcc-min
       - clang-min
-      - gcc-latest-coverage
       - gcc-latest-memcheck
       - clang-latest-sanitizers
       - clang-latest-coverage
