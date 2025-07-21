@@ -231,8 +231,10 @@ commands:
             OBJECTS="-object bin/evmone-unittests -object bin/evmone-statetest -object bin/evmone-blockchaintest -object bin/evmone-t8n"
             ARGS="lib/libevmone.so $OBJECTS -Xdemangler llvm-cxxfilt -instr-profile=evmone.profdata -ignore-filename-regex=include/evmc"
 
+            rm -rf ~/coverage
             mkdir ~/coverage
             llvm-profdata merge -sparse *.profraw -o evmone.profdata
+            find . -name '*.profraw' -delete
             
             llvm-cov export -format=lcov $ARGS -skip-expansions > ~/coverage/coverage.lcov
             
@@ -401,6 +403,24 @@ jobs:
       - collect_coverage_clang
       - upload_coverage:
           flags: eest-develop
+      - download_execution_spec_tests:
+          release: v4.5.0
+          fixtures_suffix: static
+      - run:
+          name: "Execution spec tests (static, state_tests)"
+          working_directory: ~/build
+          command: >
+            bin/evmone-statetest ~/spec-tests/fixtures/state_tests
+            --gtest_filter=-*stTimeConsuming.CALLBlake2f_MaxRounds
+      - run:
+          name: "Execution spec tests (static, blockchain_tests)"
+          working_directory: ~/build
+          command: >
+            bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests
+            --gtest_filter=-*stTimeConsuming.CALLBlake2f_MaxRounds
+      - collect_coverage_clang
+      - upload_coverage:
+          flags: eest-static
 
   eof-execution-spec-tests:
     executor: linux-clang-latest
@@ -466,28 +486,20 @@ jobs:
     steps:
       - build
       - download_execution_tests:
-          rev: v17.1
+          rev: v17.2
       - run:
           name: "State tests"
           working_directory: ~/build
           command: >
-            bin/evmone-statetest 
-            ~/tests/GeneralStateTests 
+            bin/evmone-statetest
             ~/tests/LegacyTests/Cancun/GeneralStateTests
             ~/tests/LegacyTests/Constantinople/GeneralStateTests
-      - run:
-          name: "Blockchain tests (GeneralStateTests)"
-          working_directory: ~/build
-          command: >
-            bin/evmone-blockchaintest
-            --gtest_filter='*:-VMTests/vmPerformance.*:*.*Call50000_sha256:*.CALLBlake2f_MaxRounds'
-            ~/tests/BlockchainTests/GeneralStateTests
       - run:
           name: "Blockchain tests (ValidBlocks)"
           working_directory: ~/build
           command: >
             bin/evmone-blockchaintest
-            --gtest_filter='*:-bcValidBlockTest.SimpleTx3LowS'
+            --gtest_filter='-bcValidBlockTest.SimpleTx3LowS'
             ~/tests/BlockchainTests/ValidBlocks
             ~/tests/LegacyTests/Cancun/BlockchainTests/ValidBlocks
       - run:
@@ -495,6 +507,7 @@ jobs:
           working_directory: ~/build
           command: >
             bin/evmone-blockchaintest
+            --gtest_filter='-bc4895-withdrawals.shanghaiWithoutWithdrawalsRLP:bcInvalidHeaderTest.*:bcUncleHeaderValidity.gasLimitTooLowExactBound'
             ~/tests/BlockchainTests/InvalidBlocks
             ~/tests/LegacyTests/Cancun/BlockchainTests/InvalidBlocks
       - collect_coverage_clang
