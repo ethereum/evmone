@@ -136,3 +136,6 @@ set_tests_properties(
     ${PREFIX}/filter PROPERTIES
     FAIL_REGULAR_EXPRESSION "failing_test_case"
 )
+
+get_directory_property(ALL_TESTS TESTS)
+set_tests_properties(${ALL_TESTS} PROPERTIES ENVIRONMENT LLVM_PROFILE_FILE=${CMAKE_BINARY_DIR}/integration-%p.profraw)

@@ -156,3 +156,6 @@ set_tests_properties(
     FIXTURES_CLEANUP ${TEST_CASE}
     PASS_REGULAR_EXPRESSION ${EXPECTED_OUT}
 )
+
+get_directory_property(ALL_TESTS TESTS)
+set_tests_properties(${ALL_TESTS} PROPERTIES ENVIRONMENT LLVM_PROFILE_FILE=${CMAKE_BINARY_DIR}/integration-%p.profraw)

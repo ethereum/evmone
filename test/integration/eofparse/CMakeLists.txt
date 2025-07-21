@@ -23,3 +23,6 @@ set_tests_properties(${PREFIX}/example_input_file PROPERTIES PASS_REGULAR_EXPRES
 
 add_test(NAME ${PREFIX}/exit_code COMMAND sh -c "${CROSSCOMPILING_EMULATOR} $<TARGET_FILE:evmone-eofparse> <${CMAKE_CURRENT_SOURCE_DIR}/two_errors.txt >/dev/null; echo $?")
 set_tests_properties(${PREFIX}/exit_code PROPERTIES PASS_REGULAR_EXPRESSION "2")
+
+get_directory_property(ALL_TESTS TESTS)
+set_tests_properties(${ALL_TESTS} PROPERTIES ENVIRONMENT LLVM_PROFILE_FILE=${CMAKE_BINARY_DIR}/integration-%p.profraw)
