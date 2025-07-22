@@ -25,6 +25,13 @@ hunter_config(
     SHA1 8411927bd2fa7c8fc6dff4c53a31cde4a9017f9c
 )
 
+hunter_config(
+    nlohmann_json
+    VERSION 3.12.0
+    URL https://github.com/nlohmann/json/archive/v3.12.0.tar.gz
+    SHA1 815212d8acbddc87009667c52ba98a8404efec18
+)
+
 # Propagate BENCHMARK_ENABLE_LIBPFM to google/benchmark.
 # https://github.com/google/benchmark/blob/v1.9.4/CMakeLists.txt#L42
 option(BENCHMARK_ENABLE_LIBPFM "Enable performance counters provided by libpfm" OFF)
