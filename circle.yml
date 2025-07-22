@@ -379,6 +379,7 @@ jobs:
     executor: linux-clang-latest
     environment:
       BUILD_TYPE: Release
+      CMAKE_GENERATOR: Ninja
       CMAKE_OPTIONS: -DCOVERAGE=1
     steps:
       - build
@@ -426,6 +427,7 @@ jobs:
     executor: linux-clang-latest
     environment:
       BUILD_TYPE: Release
+      CMAKE_GENERATOR: Ninja
       CMAKE_OPTIONS: -DCOVERAGE=1
     steps:
       - build
@@ -456,6 +458,7 @@ jobs:
     executor: linux-clang-latest
     environment:
       BUILD_TYPE: Release
+      CMAKE_GENERATOR: Ninja
       CMAKE_OPTIONS: -DCOVERAGE=1
     steps:
       - build
@@ -482,6 +485,7 @@ jobs:
     executor: linux-clang-latest
     environment:
       BUILD_TYPE: Release
+      CMAKE_GENERATOR: Ninja
       CMAKE_OPTIONS: -DCOVERAGE=1
     steps:
       - build
@@ -617,6 +621,7 @@ jobs:
     executor: linux-clang-latest
     environment:
       BUILD_TYPE: Release
+      CMAKE_GENERATOR: Ninja
       CMAKE_OPTIONS: -DCOVERAGE=1
       TESTS_FILTER: unittests|integration
     steps:
@@ -629,6 +634,7 @@ jobs:
   fuzzing:
     executor: linux-clang-xlarge
     environment:
+      CMAKE_GENERATOR: Ninja
       CMAKE_OPTIONS: -DEVMONE_FUZZING=ON
     steps:
       - build
