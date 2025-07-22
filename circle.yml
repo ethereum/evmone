@@ -470,13 +470,13 @@ jobs:
           working_directory: ~/build
           command: >
             bin/evmone-statetest ~/spec-tests/fixtures/state_tests/
-            --gtest_filter='-cancun/eip4844_blobs/blob_txs.invalid_tx_blob_count:frontier/precompiles/precompiles.precompiles:osaka/eip7594_peerdas/max_blob_per_tx.invalid_max_blobs_per_tx:osaka/eip7825_transaction_gas_limit_cap/tx_gas_limit.transaction_gas_limit_cap:osaka/eip7951_p256verify_precompiles/*.*:prague/eip7702_set_code_tx/set_code_txs.set_code_to_precompile'
+            --gtest_filter='-frontier/precompiles/precompiles.precompiles:osaka/eip7825_transaction_gas_limit_cap/tx_gas_limit.transaction_gas_limit_cap:osaka/eip7951_p256verify_precompiles/*.*:prague/eip7702_set_code_tx/set_code_txs.set_code_to_precompile'
       - run:
           name: "Fusaka pre-release execution spec tests (blockchain_tests)"
           working_directory: ~/build
           command: >
             bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests/
-            --gtest_filter='-cancun/eip4844_blobs/blob_txs.valid_blob_tx_combinations:frontier/precompiles/precompiles.precompiles:osaka/eip7594_peerdas/max_blob_per_tx.max_blobs_per_tx_fork_transition:osaka/eip7825_transaction_gas_limit_cap/tx_gas_limit.transaction_gas_limit_cap_at_transition:osaka/eip7918_blob_reserve_price/*.*:osaka/eip7934_block_rlp_limit/max_block_rlp_size.block_at_rlp_size_limit_boundary:osaka/eip7951_p256verify_precompiles/*.*:prague/eip7702_set_code_tx/set_code_txs.set_code_to_precompile'
+            --gtest_filter='-cancun/eip4844_blobs/blob_txs.valid_blob_tx_combinations:frontier/precompiles/precompiles.precompiles:osaka/eip7825_transaction_gas_limit_cap/tx_gas_limit.transaction_gas_limit_cap_at_transition:osaka/eip7918_blob_reserve_price/*.*:osaka/eip7934_block_rlp_limit/max_block_rlp_size.block_at_rlp_size_limit_boundary:osaka/eip7951_p256verify_precompiles/*.*:prague/eip7702_set_code_tx/set_code_txs.set_code_to_precompile'
       - collect_coverage_clang
       - upload_coverage:
           flags: eest-fusaka

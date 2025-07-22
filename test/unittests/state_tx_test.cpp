@@ -195,3 +195,44 @@ TEST(state_tx, validate_tx_data_cost)
     EXPECT_EQ(get_props(EVMC_CANCUN).min_gas_cost, 0);
     EXPECT_EQ(get_props(EVMC_PRAGUE).min_gas_cost, 21000 + (4 * 3 + 2) * 10);
 }
+
+TEST(state_tx, max_blob_count)
+{
+    const BlockInfo block{
+        .gas_limit = 1'000'000,
+        .base_fee = 1,
+        .blob_gas_used = 786432,
+        .excess_blob_gas = 0,
+        .blob_base_fee = 1,
+    };
+    Transaction tx{
+        .type = Transaction::Type::blob,
+        .gas_limit = 60000,
+        .max_gas_price = block.base_fee,
+        .max_blob_gas_price = 1,
+        .sender = 0x02_address,
+        .to = 0x01_address,
+    };
+    const TestState state{{tx.sender, {.balance = 1'000'000}}};
+    const auto blob_gas_limit = static_cast<int64_t>(max_blob_gas_per_block(EVMC_CANCUN));
+
+    // Add MAX_TX_BLOB_COUNT blobs
+    for (size_t i = 0; i < MAX_TX_BLOB_COUNT; ++i)
+    {
+        auto h = 0x0100000000000000000000000000000000000000000000000000000000000000_bytes32;
+        h.bytes[31] = static_cast<uint8_t>(i);
+        tx.blob_hashes.emplace_back(h);
+    }
+
+    // Should be valid
+    EXPECT_FALSE(holds_alternative<std::error_code>(
+        validate_transaction(state, block, tx, EVMC_CANCUN, block.gas_limit, blob_gas_limit)));
+
+    // Add one more blob to exceed the limit
+    tx.blob_hashes.emplace_back(
+        0x01000000000000000000000000000000000000000000000000000000000000FF_bytes32);
+
+    EXPECT_EQ(std::get<std::error_code>(validate_transaction(
+                  state, block, tx, EVMC_CANCUN, block.gas_limit, blob_gas_limit)),
+        make_error_code(ErrorCode::BLOB_GAS_LIMIT_EXCEEDED));
+}

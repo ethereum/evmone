@@ -12,6 +12,9 @@
 
 namespace evmone::state
 {
+/// EIP-7594: The maximum number of blobs that can be included in a transaction.
+constexpr auto MAX_TX_BLOB_COUNT = 6;
+
 using AccessList = std::vector<std::pair<address, std::vector<bytes32>>>;
 
 struct Authorization
