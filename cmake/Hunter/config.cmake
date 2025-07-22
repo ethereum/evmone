@@ -18,6 +18,13 @@ hunter_config(
     SHA1 8a8ee424e8275ec4b480ba4a0d1ba94b5dee3ee4
 )
 
+hunter_config(
+    CLI11
+    VERSION 2.5.0
+    URL https://github.com/CLIUtils/CLI11/archive/v2.5.0.tar.gz
+    SHA1 8411927bd2fa7c8fc6dff4c53a31cde4a9017f9c
+)
+
 # Propagate BENCHMARK_ENABLE_LIBPFM to google/benchmark.
 # https://github.com/google/benchmark/blob/v1.9.4/CMakeLists.txt#L42
 option(BENCHMARK_ENABLE_LIBPFM "Enable performance counters provided by libpfm" OFF)
