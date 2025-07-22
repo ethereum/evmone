@@ -296,6 +296,11 @@ inline bytecode eq(bytecode a, bytecode b)
     return b + a + OP_EQ;
 }
 
+inline bytecode clz(bytecode a)
+{
+    return a + OP_CLZ;
+}
+
 inline bytecode byte(bytecode a, bytecode n)
 {
     return a + n + OP_BYTE;

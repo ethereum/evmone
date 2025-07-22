@@ -115,6 +115,7 @@ constexpr bool instruction_only_in_evmone(evmc_revision rev, Opcode op) noexcept
 
     switch (op)
     {
+    case OP_CLZ:
     case OP_BLOBHASH:
     case OP_BLOBBASEFEE:
     case OP_RJUMP:

@@ -41,6 +41,7 @@ enum Opcode : uint8_t
     OP_SHL = 0x1b,
     OP_SHR = 0x1c,
     OP_SAR = 0x1d,
+    OP_CLZ = 0x1e,
 
     OP_KECCAK256 = 0x20,
 
