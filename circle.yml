@@ -57,17 +57,17 @@ executors:
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
   macos:
-    resource_class: macos.m1.large.gen1
+    resource_class: m4pro.medium
     macos:
-      xcode: 16.2.0
+      xcode: 16.4.0
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 8
   macos-xcode-min:
     resource_class: macos.m1.medium.gen1
     macos:
-      xcode: 15.0.0
+      xcode: 16.0.0
     environment:
-      CMAKE_BUILD_PARALLEL_LEVEL: 4
+      CMAKE_BUILD_PARALLEL_LEVEL: 6
 
 commands:
   install_cmake:
