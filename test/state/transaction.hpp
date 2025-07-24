@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "blob_schedule.hpp"
 #include "bloom_filter.hpp"
 #include "state_diff.hpp"
 #include <intx/intx.hpp>
@@ -12,12 +13,6 @@
 
 namespace evmone::state
 {
-/// The cost of a single blob in gas units (EIP-4844).
-constexpr auto GAS_PER_BLOB = 0x20000;  // 2**17
-
-/// The maximum number of blobs that can be included in a transaction (EIP-7594).
-constexpr auto MAX_TX_BLOB_COUNT = 6;
-
 using AccessList = std::vector<std::pair<address, std::vector<bytes32>>>;
 
 struct Authorization

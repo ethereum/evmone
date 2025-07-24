@@ -9,6 +9,7 @@ target_include_directories(evmone-state PRIVATE ${evmone_private_include_dir})
 target_sources(
     evmone-state PRIVATE
     account.hpp
+    blob_schedule.hpp
     block.hpp
     block.cpp
     bloom_filter.hpp
