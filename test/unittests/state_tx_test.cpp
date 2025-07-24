@@ -236,3 +236,14 @@ TEST(state_tx, max_blob_count)
                   state, block, tx, EVMC_CANCUN, block.gas_limit, blob_gas_limit)),
         make_error_code(ErrorCode::BLOB_GAS_LIMIT_EXCEEDED));
 }
+
+TEST(state_tx, max_gas_limit_exceeded)
+{
+    const BlockInfo block{.gas_limit = MAX_TX_GAS_LIMIT + 1};
+    const Transaction tx{.gas_limit = block.gas_limit};
+    const TestState state;
+
+    EXPECT_EQ(std::get<std::error_code>(
+                  validate_transaction(state, block, tx, EVMC_OSAKA, block.gas_limit, 0)),
+        make_error_code(ErrorCode::MAX_GAS_LIMIT_EXCEEDED));
+}

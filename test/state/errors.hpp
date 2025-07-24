@@ -33,6 +33,7 @@ enum ErrorCode : int
     INIT_CODE_EMPTY,
     INIT_CODE_COUNT_LIMIT_EXCEEDED,
     INIT_CODE_COUNT_ZERO,
+    MAX_GAS_LIMIT_EXCEEDED,
     UNKNOWN_ERROR,
 };
 
@@ -91,6 +92,8 @@ inline const std::error_category& evmone_category() noexcept
                 return "max initcode count exceeded";
             case INIT_CODE_COUNT_ZERO:
                 return "initcode list empty";
+            case MAX_GAS_LIMIT_EXCEEDED:
+                return "max gas limit exceeded";
             case UNKNOWN_ERROR:
                 return "Unknown error";
             default:

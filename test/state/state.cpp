@@ -501,6 +501,9 @@ std::variant<TransactionProperties, std::error_code> validate_transaction(
 
     assert(tx.max_priority_gas_price <= tx.max_gas_price);
 
+    if (rev >= EVMC_OSAKA && tx.gas_limit > MAX_TX_GAS_LIMIT)
+        return make_error_code(MAX_GAS_LIMIT_EXCEEDED);
+
     if (tx.gas_limit > block_gas_left)
         return make_error_code(GAS_LIMIT_REACHED);
 
