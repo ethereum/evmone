@@ -13,6 +13,9 @@
 
 namespace evmone::state
 {
+/// The maximum allowed gas limit for a transaction (EIP-7825).
+constexpr auto MAX_TX_GAS_LIMIT = 0x1000000;  // 2**24
+
 using AccessList = std::vector<std::pair<address, std::vector<bytes32>>>;
 
 struct Authorization
