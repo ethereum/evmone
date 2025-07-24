@@ -1161,7 +1161,8 @@ TEST_F(state_transition, txcreate_from_blob_tx)
 
     tx.to = To;
     tx.max_blob_gas_price = *block.blob_base_fee;
-    pre.get(tx.sender).balance = 0x20000 * tx.max_blob_gas_price + tx.gas_limit * tx.max_gas_price;
+    pre.get(tx.sender).balance =
+        GAS_PER_BLOB * tx.max_blob_gas_price + tx.gas_limit * tx.max_gas_price;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_container});
 
     expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
@@ -2346,7 +2347,8 @@ TEST_F(state_transition, legacy_txcreate_from_blob_tx)
 
     tx.to = To;
     tx.max_blob_gas_price = *block.blob_base_fee;
-    pre.get(tx.sender).balance = 0x20000 * tx.max_blob_gas_price + tx.gas_limit * tx.max_gas_price;
+    pre.get(tx.sender).balance =
+        GAS_PER_BLOB * tx.max_blob_gas_price + tx.gas_limit * tx.max_gas_price;
     pre.insert(*tx.to, {.nonce = 1, .code = factory_code});
 
     expect.post[tx.sender].nonce = pre.get(tx.sender).nonce + 1;
