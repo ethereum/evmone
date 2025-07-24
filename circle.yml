@@ -423,37 +423,6 @@ jobs:
       - upload_coverage:
           flags: eest-static
 
-  eof-execution-spec-tests:
-    executor: linux-clang-latest
-    environment:
-      BUILD_TYPE: Release
-      CMAKE_GENERATOR: Ninja
-      CMAKE_OPTIONS: -DCOVERAGE=1
-    steps:
-      - build
-      - download_execution_spec_tests:
-          release: eip7692@v3.0.0
-          fixtures_suffix: eip7692
-      - run:
-          name: "EOF pre-release execution spec tests (state_tests)"
-          working_directory: ~/build
-          command: >
-            bin/evmone-statetest ~/spec-tests/fixtures/state_tests/
-      - run:
-          name: "EOF pre-release execution spec tests (blockchain_tests)"
-          working_directory: ~/build
-          command: >
-            bin/evmone-blockchaintest ~/spec-tests/fixtures/blockchain_tests/
-            --gtest_filter='*:-unscheduled/eofwrap/stPreCompiledContracts.eof_wrapped_precompsEIP2929Cancun'
-      - run:
-          name: "EOF pre-release execution spec tests (eof_tests)"
-          working_directory: ~/build
-          command: >
-            bin/evmone-eoftest ~/spec-tests/fixtures/eof_tests
-      - collect_coverage_clang
-      - upload_coverage:
-          flags: eest-eof
-
   fusaka-execution-spec-tests:
     executor: linux-clang-latest
     environment:
@@ -740,7 +709,6 @@ workflows:
             tags:
               only: /^v[0-9].*/
       - execution-spec-tests
-      - eof-execution-spec-tests
       - fusaka-execution-spec-tests
       - ethereum-tests
       - precompiles-gmp
