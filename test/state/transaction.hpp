@@ -12,7 +12,10 @@
 
 namespace evmone::state
 {
-/// EIP-7594: The maximum number of blobs that can be included in a transaction.
+/// The cost of a single blob in gas units (EIP-4844).
+constexpr auto GAS_PER_BLOB = 0x20000;  // 2**17
+
+/// The maximum number of blobs that can be included in a transaction (EIP-7594).
 constexpr auto MAX_TX_BLOB_COUNT = 6;
 
 using AccessList = std::vector<std::pair<address, std::vector<bytes32>>>;
@@ -64,11 +67,7 @@ struct Transaction
     };
 
     /// Returns amount of blob gas used by this transaction
-    [[nodiscard]] uint64_t blob_gas_used() const
-    {
-        static constexpr auto GAS_PER_BLOB = 0x20000;
-        return GAS_PER_BLOB * blob_hashes.size();
-    }
+    [[nodiscard]] uint64_t blob_gas_used() const { return GAS_PER_BLOB * blob_hashes.size(); }
 
     Type type = Type::legacy;
     bytes data;

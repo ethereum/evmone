@@ -66,7 +66,7 @@ TEST_F(state_transition, tx_blob_gas_price)
     block.blob_base_fee = 1;
     block.blob_gas_used = 786432;
 
-    pre.get(tx.sender).balance = 0x20000 + tx.gas_limit * tx.max_gas_price;
+    pre.get(tx.sender).balance = GAS_PER_BLOB + tx.gas_limit * tx.max_gas_price;
 
     expect.post[Coinbase].exists = false;  // all gas is burned, Coinbase gets nothing
     expect.status = EVMC_SUCCESS;
