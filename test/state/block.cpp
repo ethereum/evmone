@@ -5,6 +5,7 @@
 #include "block.hpp"
 #include "blob_schedule.hpp"
 #include "rlp.hpp"
+#include "transaction.hpp"
 
 namespace evmone::state
 {
@@ -74,13 +75,21 @@ intx::uint256 compute_blob_gas_price(evmc_revision rev, uint64_t excess_blob_gas
     return fake_exponential(MIN_BLOB_GASPRICE, excess_blob_gas, fraction);
 }
 
-uint64_t calc_excess_blob_gas(
-    evmc_revision rev, uint64_t parent_blob_gas_used, uint64_t parent_excess_blob_gas) noexcept
+uint64_t calc_excess_blob_gas(evmc_revision rev, uint64_t parent_blob_gas_used,
+    uint64_t parent_excess_blob_gas, uint64_t parent_base_fee,
+    const intx::uint256& parent_blob_base_fee) noexcept
 {
+    /// The base cost of a blob (EIP-7918).
+    constexpr auto BLOB_BASE_COST = 0x2000;
+
     const auto schedule = get_blob_schedule(rev);
     const auto target_blob_gas_per_block = uint64_t{schedule.target} * GAS_PER_BLOB;
     if (parent_excess_blob_gas + parent_blob_gas_used < target_blob_gas_per_block)
         return 0;
+
+    if (rev >= EVMC_OSAKA && BLOB_BASE_COST * parent_base_fee > GAS_PER_BLOB * parent_blob_base_fee)
+        return parent_excess_blob_gas +
+               parent_blob_gas_used * (schedule.max - schedule.target) / schedule.target;
 
     return parent_excess_blob_gas + parent_blob_gas_used - target_blob_gas_per_block;
 }

@@ -74,8 +74,9 @@ uint64_t max_blob_gas_per_block(evmc_revision rev) noexcept;
 intx::uint256 compute_blob_gas_price(evmc_revision rev, uint64_t excess_blob_gas) noexcept;
 
 /// Computes the current excess blob gas based on parameters of the parent block.
-uint64_t calc_excess_blob_gas(
-    evmc_revision rev, uint64_t parent_blob_gas_used, uint64_t parent_excess_blob_gas) noexcept;
+uint64_t calc_excess_blob_gas(evmc_revision rev, uint64_t parent_blob_gas_used,
+    uint64_t parent_excess_blob_gas, uint64_t parent_base_fee,
+    const intx::uint256& parent_blob_base_fee) noexcept;
 
 /// Defines how to RLP-encode a Withdrawal.
 [[nodiscard]] bytes rlp_encode(const Withdrawal& withdrawal);
