@@ -166,9 +166,12 @@ bool validate_block(
             return false;
 
         // Check that the excess blob gas was updated correctly.
+        const auto parent_blob_base_fee =
+            state::compute_blob_gas_price(rev, parent_header->excess_blob_gas.value_or(0));
         if (*test_block.block_info.excess_blob_gas !=
             state::calc_excess_blob_gas(rev, parent_header->blob_gas_used.value_or(0),
-                parent_header->excess_blob_gas.value_or(0)))
+                parent_header->excess_blob_gas.value_or(0), parent_header->base_fee_per_gas,
+                parent_blob_base_fee))
             return false;
 
         // Ensure the total blob gas spent is at most equal to the limit

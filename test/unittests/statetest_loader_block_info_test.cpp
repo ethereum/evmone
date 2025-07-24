@@ -250,6 +250,7 @@ TEST(statetest_loader, block_info_parent_blob_gas)
             "currentBaseFee": "7",
             "currentRandom": "0x00",
             "withdrawals": [],
+            "parentBaseFee": "7",
             "parentExcessBlobGas": "1",
             "parentBlobGasUsed": "0x60000"
         })";
