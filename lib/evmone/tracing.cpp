@@ -6,6 +6,7 @@
 #include "execution_state.hpp"
 #include "instructions_traits.hpp"
 #include <evmc/hex.hpp>
+#include <fstream>
 #include <stack>
 
 namespace evmone
@@ -63,6 +64,51 @@ class HistogramTracer : public Tracer
 
 public:
     explicit HistogramTracer(std::ostream& out) noexcept : m_out{out} {}
+};
+
+class InstructionCounter : public Tracer
+{
+    std::stack<bytes_view> m_codes;
+    std::array<unsigned, 256> m_counters{};
+    std::string_view m_out_file_path;
+
+    void on_execution_start(
+        evmc_revision /*rev*/, const evmc_message& /*msg*/, bytes_view code) noexcept override
+    {
+        m_codes.emplace(code);
+    }
+
+    void on_instruction_start(uint32_t pc, const intx::uint256* /*stack_top*/, int /*stack_height*/,
+        int64_t /*gas*/, const ExecutionState& /*state*/) noexcept override
+    {
+        const auto& code = m_codes.top();
+        m_counters[code[pc]]++;
+    }
+
+    void on_execution_end(const evmc_result& /*result*/) noexcept override { m_codes.pop(); }
+
+public:
+    explicit InstructionCounter(std::string_view out_file_path) noexcept
+      : m_out_file_path{out_file_path}
+    {}
+
+    ~InstructionCounter() noexcept override
+    {
+        std::ofstream out{std::string{m_out_file_path}};
+        out << "{\n";
+        bool first = true;
+        for (size_t i = 0; i < std::size(m_counters); ++i)
+        {
+            if (m_counters[i] == 0)
+                continue;
+            if (first)
+                first = false;
+            else
+                out << ",\n";
+            out << "  \"" << get_name(static_cast<uint8_t>(i)) << "\": " << m_counters[i];
+        }
+        out << "\n}\n";
+    }
 };
 
 
@@ -140,6 +186,11 @@ public:
 std::unique_ptr<Tracer> create_histogram_tracer(std::ostream& out)
 {
     return std::make_unique<HistogramTracer>(out);
+}
+
+std::unique_ptr<Tracer> create_instruction_counter(std::string_view out_file_path)
+{
+    return std::make_unique<InstructionCounter>(out_file_path);
 }
 
 std::unique_ptr<Tracer> create_instruction_tracer(std::ostream& out)
