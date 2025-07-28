@@ -12,9 +12,9 @@ namespace evmmax::ecc
 template <int N>
 struct Constant : std::integral_constant<int, N>
 {
-    consteval explicit(false) Constant(int value) noexcept
+    consteval explicit(false) Constant(int v) noexcept
     {
-        if (N != value)
+        if (N != v)
             intx::unreachable();
     }
 };
