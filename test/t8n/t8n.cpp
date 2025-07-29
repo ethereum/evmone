@@ -11,6 +11,7 @@
 #include "../utils/utils.hpp"
 #include <evmone/evmone.h>
 #include <evmone/version.h>
+#include <evmone/vm.hpp>
 #include <nlohmann/json.hpp>
 #include <filesystem>
 #include <fstream>
@@ -36,6 +37,8 @@ int main(int argc, const char* argv[])
     std::optional<uint64_t> block_reward;
     uint64_t chain_id = 0;
     bool trace = false;
+    fs::path opcode_count_filename;
+    std::string opcode_count_file;
     bool pre_state_only = false;
 
     try
@@ -72,6 +75,8 @@ int main(int argc, const char* argv[])
                 output_body_file = argv[i];
             else if (arg == "--trace")
                 trace = true;
+            else if (arg == "--opcode.count" && ++i < argc)
+                opcode_count_filename = argv[i];
             else if (arg == "--state.reward" && ++i < argc)
             {
                 if (argv[i] == "-1"sv)  // Hack to compute the root hash of the pre-state.
@@ -136,6 +141,11 @@ int main(int argc, const char* argv[])
 
             if (trace)
                 vm.set_option("trace", "1");
+            if (!opcode_count_filename.empty())
+            {
+                opcode_count_file = (output_dir / opcode_count_filename).string();
+                vm.set_option("opcode.count", opcode_count_file.c_str());
+            }
 
             std::vector<state::Log> txs_logs;
 
