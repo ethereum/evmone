@@ -34,7 +34,7 @@ constexpr auto analyze<PrecompileId::identity> = identity_analyze;
 template <>
 constexpr auto analyze<PrecompileId::ecrecover> = ecrecover_analyze;
 template <>
-[[maybe_unused]] constexpr auto analyze<PrecompileId::expmod> = expmod_analyze;
+constexpr auto analyze<PrecompileId::expmod> = expmod_analyze;
 template <>
 constexpr auto analyze<PrecompileId::ecadd> = ecadd_analyze;
 template <>
@@ -202,6 +202,7 @@ void precompile(benchmark::State& state)
     state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
 }
 
+template <ExecuteFn Fn>
 void modexp(benchmark::State& state)
 {
     const auto base_mod_len = static_cast<size_t>(state.range(0));
@@ -228,7 +229,7 @@ void modexp(benchmark::State& state)
     int64_t total_gas_used = 0;
     for ([[maybe_unused]] auto _ : state)
     {
-        auto r = expmod_execute(input.get(), input_len, output.get(), base_mod_len);
+        auto r = Fn(input.get(), input_len, output.get(), base_mod_len);
         benchmark::DoNotOptimize(r);
         total_gas_used += gas_cost;
     }
@@ -237,31 +238,36 @@ void modexp(benchmark::State& state)
     state.counters["gas_used"] = Counter(static_cast<double>(gas_cost));
     state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
 }
-BENCHMARK(modexp)
-    ->ArgNames({"mod_len", "exp_bits"})
-    ->Args({1 * 8, 604})
-    ->Args({2 * 8, 152})
-    ->Args({3 * 8, 68})
-    ->Args({4 * 8, 39})
-    ->Args({5 * 8, 25})
-    ->Args({6 * 8, 18})
-    ->Args({7 * 8, 13})
-    ->Args({8 * 8, 10})
-    ->Args({9 * 8, 8})
-    ->Args({10 * 8, 7})
-    ->Args({11 * 8, 6})
-    ->Args({12 * 8, 5})
-    ->Args({14 * 8, 4})
-    ->Args({17 * 8, 3})
-    ->Args({24 * 8, 2})
-    ->Args({25 * 8, 1})
-    ->Args({32 * 8, 2})
-    ->Args({33 * 8, 2})
-    ->Args({63 * 8, 2})
-    ->Args({64 * 8, 2})
-    ->Args({65 * 8, 2})
-    ->Args({127 * 8, 2})
-    ->Args({128 * 8, 2});
+#define MODEXP_ARGS                     \
+    ->ArgNames({"mod_len", "exp_bits"}) \
+        ->Args({1 * 8, 604})            \
+        ->Args({2 * 8, 152})            \
+        ->Args({3 * 8, 68})             \
+        ->Args({4 * 8, 39})             \
+        ->Args({5 * 8, 25})             \
+        ->Args({6 * 8, 18})             \
+        ->Args({7 * 8, 13})             \
+        ->Args({8 * 8, 10})             \
+        ->Args({9 * 8, 8})              \
+        ->Args({10 * 8, 7})             \
+        ->Args({11 * 8, 6})             \
+        ->Args({12 * 8, 5})             \
+        ->Args({14 * 8, 4})             \
+        ->Args({17 * 8, 3})             \
+        ->Args({24 * 8, 2})             \
+        ->Args({25 * 8, 1})             \
+        ->Args({32 * 8, 2})             \
+        ->Args({33 * 8, 2})             \
+        ->Args({63 * 8, 2})             \
+        ->Args({64 * 8, 2})             \
+        ->Args({65 * 8, 2})             \
+        ->Args({127 * 8, 2})            \
+        ->Args({128 * 8, 2})
+BENCHMARK(modexp<expmod_execute>) MODEXP_ARGS;
+#ifdef EVMONE_PRECOMPILES_GMP
+BENCHMARK(modexp<expmod_execute_gmp>) MODEXP_ARGS;
+#endif
+#undef MODEXP_ARGS
 
 BENCHMARK_TEMPLATE(precompile, PrecompileId::identity, identity_execute);
 
@@ -277,8 +283,10 @@ BENCHMARK_TEMPLATE(precompile, PrecompileId::ecrecover, libsecp256k1);
 
 namespace bench_expmod
 {
+constexpr auto evmone = expmod_execute;
+BENCHMARK(precompile<PrecompileId::expmod, evmone>);
 #ifdef EVMONE_PRECOMPILES_GMP
-constexpr auto gmp = expmod_execute;
+constexpr auto gmp = expmod_execute_gmp;
 BENCHMARK(precompile<PrecompileId::expmod, gmp>);
 #endif
 #ifdef EVMONE_PRECOMPILES_SILKPRE

@@ -404,6 +404,19 @@ ExecutionResult expmod_execute(
     return {EVMC_SUCCESS, mod.size()};
 }
 
+#ifdef EVMONE_PRECOMPILES_GMP
+ExecutionResult expmod_execute_gmp(
+    const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept
+{
+    const auto [base, exp, mod] = expmod_parse_input(input, input_size, output, output_size);
+    if (mod.empty())
+        return {EVMC_SUCCESS, output_size};
+
+    expmod_gmp(base, exp, mod, output);
+    return {EVMC_SUCCESS, mod.size()};
+}
+#endif
+
 ExecutionResult ecadd_execute(const uint8_t* input, size_t input_size, uint8_t* output,
     [[maybe_unused]] size_t output_size) noexcept
 {
