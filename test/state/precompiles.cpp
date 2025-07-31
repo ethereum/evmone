@@ -327,7 +327,8 @@ ExecutionResult ripemd160_execute(const uint8_t* input, size_t input_size, uint8
     return {EVMC_SUCCESS, 32};
 }
 
-ExecutionResult expmod_execute(
+static std::tuple<std::span<const uint8_t>, std::span<const uint8_t>, std::span<const uint8_t>>
+expmod_parse_input(
     const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept
 {
     static constexpr auto LEN_SIZE = sizeof(intx::uint256);
@@ -341,7 +342,7 @@ ExecutionResult expmod_execute(
     if (input_size <= HEADER_SIZE) [[unlikely]]
     {
         std::fill_n(output, output_size, 0);
-        return {EVMC_SUCCESS, output_size};
+        return {};
     }
 
     const auto base_len = intx::be::unsafe::load<uint32_t>(&input[LEN32_OFF]);
@@ -362,7 +363,7 @@ ExecutionResult expmod_execute(
     {
         // The modulus is zero, so the result is zero.
         std::fill_n(output, output_size, 0);
-        return {EVMC_SUCCESS, output_size};
+        return {};
     }
 
     const auto mod_requires_padding = mod_explicit.size() != mod_len;
@@ -379,10 +380,20 @@ ExecutionResult expmod_execute(
     const auto exp = payload.subspan(base_len, exp_len);
     const auto mod = mod_requires_padding ? std::span{output, mod_len} : mod_explicit;
 
+    return {base, exp, mod};
+}
+
+ExecutionResult expmod_execute(
+    const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept
+{
+    const auto [base, exp, mod] = expmod_parse_input(input, input_size, output, output_size);
+    if (mod.empty())
+        return {EVMC_SUCCESS, output_size};
+
     if (std::max(base.size(), mod.size()) <= MODEXP_LEN_LIMIT_EIP7823)
     {
         crypto::modexp(base, exp, mod, output);
-        return {EVMC_SUCCESS, mod_len};
+        return {EVMC_SUCCESS, output_size};
     }
 
 #ifdef EVMONE_PRECOMPILES_GMP
@@ -392,6 +403,19 @@ ExecutionResult expmod_execute(
 #endif
     return {EVMC_SUCCESS, mod.size()};
 }
+
+#ifdef EVMONE_PRECOMPILES_GMP
+ExecutionResult expmod_execute_gmp(
+    const uint8_t* input, size_t input_size, uint8_t* output, size_t output_size) noexcept
+{
+    const auto [base, exp, mod] = expmod_parse_input(input, input_size, output, output_size);
+    if (mod.empty())
+        return {EVMC_SUCCESS, output_size};
+
+    expmod_gmp(base, exp, mod, output);
+    return {EVMC_SUCCESS, mod.size()};
+}
+#endif
 
 ExecutionResult ecadd_execute(const uint8_t* input, size_t input_size, uint8_t* output,
     [[maybe_unused]] size_t output_size) noexcept
