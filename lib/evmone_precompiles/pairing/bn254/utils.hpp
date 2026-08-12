@@ -359,16 +359,14 @@ constexpr void lin_func(
 /// Computes f^2 for f in Fq12. For more ref https://eprint.iacr.org/2010/354.pdf Algorithm 22
 [[nodiscard]] constexpr Fq12 square(const Fq12& f) noexcept
 {
-    const Fq2& ksi = Fq6Config::ksi;
-
     const auto& a0 = f.coeffs[0];
     const auto& a1 = f.coeffs[1];
     auto c0 = a0 - a1;
-    auto c3 = a0 - Fq6({ksi * a1.coeffs[2], a1.coeffs[0], a1.coeffs[1]});
+    auto c3 = a0 - Fq6({a1.coeffs[2] * ksi, a1.coeffs[0], a1.coeffs[1]});
     auto c2 = a0 * a1;
     c0 = c0 * c3 + c2;
     const auto c1 = c2 + c2;
-    c2 = Fq6({ksi * c2.coeffs[2], c2.coeffs[0], c2.coeffs[1]});
+    c2 = Fq6({c2.coeffs[2] * ksi, c2.coeffs[0], c2.coeffs[1]});
     c0 = c0 + c2;
 
     return Fq12({c0, c1});
@@ -384,15 +382,15 @@ constexpr std::pair<Fq2, Fq2> fq4_square(const std::pair<Fq2, Fq2>& a) noexcept
     const auto t0 = a0 * a0;
     const auto t1 = a1 * a1;
 
-    const auto c0 = t1 * Fq6Config::ksi + t0;
+    const auto c0 = t1 * ksi + t0;
     auto c1 = a0 + a1;
     c1 = c1 * c1 - t0 - t1;
 
     return {c0, c1};
 }
 
-/// Computes `c^2` for `x` from Fq^12 where `x^(FieldPrime^6 - 1) == 1`.
-/// This is Fq^12 subgroup called cyclotomic polynomials or group of `r` roots of unity.
+/// Computes `c^2` for `c` from the cyclotomic subgroup of Fq^12, i.e. `c^(p^4 - p^2 + 1) == 1`
+/// where `p` is FieldPrime. This holds after the easy part of the final exponentiation.
 constexpr Fq12 cyclotomic_square(const Fq12& c) noexcept
 {
     const auto& g = c.coeffs[0];
@@ -410,7 +408,7 @@ constexpr Fq12 cyclotomic_square(const Fq12& c) noexcept
     const auto [t01, t12] = fq4_square({h0, g2});  // Typo in paper t01 <-> t12
     const auto [t02, aux] = fq4_square({g1, h2});
 
-    const auto t10 = aux * Fq6Config::ksi;
+    const auto t10 = aux * ksi;
 
     const auto c00 = (t00 + t00 + t00) - (g0 + g0);
     const auto c01 = (t01 + t01 + t01) - (g1 + g1);

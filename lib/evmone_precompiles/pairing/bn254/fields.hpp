@@ -21,9 +21,14 @@ struct Fq6Config
     using BaseFieldT = Fq;
     using ValueT = Fq2;
     static constexpr uint8_t DEGREE = 3;
-    static constexpr auto ksi = Fq2({Fq(9_u256), Fq(1_u256)});
 };
 using Fq6 = ecc::ExtFieldElem<Fq6Config>;
+
+struct ksi_t
+{};
+
+/// The non-residue ksi = 9 + u defining the Fq^6 extension.
+inline constexpr ksi_t ksi;
 
 /// Specifies Fq^12 extension field for bn254 curve. Fq^6 field extended with irreducible
 /// `w^2 - v` polynomial over the Fq^2 field. `v` is the Fq^6 field element.
@@ -45,6 +50,18 @@ constexpr Fq2 multiply(const Fq2& a, const Fq2& b) noexcept
     return Fq2({a0 * b0 - a1 * b1, a1 * b0 + a0 * b1});
 }
 
+/// Multiplies an Fq^2 field element by ksi.
+constexpr Fq2 operator*(const Fq2& a, ksi_t /*ksi*/) noexcept
+{
+    // (a0 + a1·u)·(9 + u) = (9a0 − a1) + (a0 + 9a1)·u needs 2 multiplications instead of 4.
+    // TODO: The multiplications by 9 can be done with additions only. This is now faster
+    //   with Clang but much slower with GCC: revisit once Fq addition and multiplication
+    //   are optimized.
+    constexpr Fq NINE{9_u256};
+    const auto& [a0, a1] = a.coeffs;
+    return Fq2({a0 * NINE - a1, a1 * NINE + a0});
+}
+
 /// Squares an Fq^2 field element.
 constexpr Fq2 sqr(const Fq2& a) noexcept
 {
@@ -61,14 +78,12 @@ constexpr Fq6 multiply(const Fq6& a, const Fq6& b) noexcept
     const auto& [a0, a1, a2] = a.coeffs;
     const auto& [b0, b1, b2] = b.coeffs;
 
-    const Fq2& ksi = Fq6Config::ksi;
-
     const auto t0 = a0 * b0;
     const auto t1 = a1 * b1;
     const auto t2 = a2 * b2;
 
     const auto c0 = ((a1 + a2) * (b1 + b2) - t1 - t2) * ksi + t0;
-    const auto c1 = (a0 + a1) * (b0 + b1) - t0 - t1 + ksi * t2;
+    const auto c1 = (a0 + a1) * (b0 + b1) - t0 - t1 + t2 * ksi;
     const auto c2 = (a0 + a2) * (b0 + b2) - t0 - t2 + t1;
 
     return Fq6({c0, c1, c2});
@@ -83,9 +98,7 @@ constexpr Fq12 multiply(const Fq12& a, const Fq12& b) noexcept
     const auto t0 = a0 * b0;
     const auto t1 = a1 * b1;
 
-    const Fq2& ksi = Fq6Config::ksi;
-
-    const auto c0 = t0 + Fq6({ksi * t1.coeffs[2], t1.coeffs[0], t1.coeffs[1]});  // gamma is sparse.
+    const auto c0 = t0 + Fq6({t1.coeffs[2] * ksi, t1.coeffs[0], t1.coeffs[1]});  // gamma is sparse.
     const auto c1 = (a0 + a1) * (b0 + b1) - t0 - t1;
 
     return Fq12({c0, c1});
@@ -113,8 +126,6 @@ inline Fq6 inverse(const Fq6& f) noexcept
 {
     const auto& [a0, a1, a2] = f.coeffs;
 
-    const Fq2& ksi = Fq6Config::ksi;
-
     const auto t0 = a0 * a0;
     const auto t1 = a1 * a1;
     const auto t2 = a2 * a2;
@@ -123,8 +134,8 @@ inline Fq6 inverse(const Fq6& f) noexcept
     const auto t4 = a0 * a2;
     const auto t5 = a2 * a1;
 
-    const auto c0 = t0 - ksi * t5;
-    const auto c1 = ksi * t2 - t3;
+    const auto c0 = t0 - t5 * ksi;
+    const auto c1 = t2 * ksi - t3;
     const auto c2 = t1 - t4;
 
     const auto t = a0 * c0 + (a2 * c1 + a1 * c2) * ksi;
@@ -141,9 +152,7 @@ inline Fq12 inverse(const Fq12& f) noexcept
     auto t0 = a0 * a0;
     auto t1 = a1 * a1;
 
-    const Fq2& ksi = Fq6Config::ksi;
-
-    t0 = t0 - Fq6({ksi * t1.coeffs[2], t1.coeffs[0], t1.coeffs[1]});  // gamma is sparse.
+    t0 = t0 - Fq6({t1.coeffs[2] * ksi, t1.coeffs[0], t1.coeffs[1]});  // gamma is sparse.
     t1 = t0.inv();
 
     const auto c0 = a0 * t1;
