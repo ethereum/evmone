@@ -16,9 +16,9 @@ on:
 env:
   BUILD_DIR: build
   CMAKE_BUILD_PARALLEL_LEVEL: 4
-  # The newest GCC on the ubuntu-24.04 image, which otherwise defaults to GCC 13.
-  CC: gcc-14
-  CXX: g++-14
+  # The default GCC on the ubuntu-26.04 image, where GCC 16 is only a pre-release snapshot.
+  CC: gcc-15
+  CXX: g++-15
   # A benchmark is identified by the name of the fixture it ran, so a release which renames
   # the fixtures starts the series over. Bump this deliberately, with the archive's digest.
   BENCHMARK_FIXTURES_RELEASE: benchmark@v0.0.7
@@ -28,9 +28,8 @@ env:
 jobs:
   benchmark:
     name: Benchmark ${{ matrix.name }}
-    # CodSpeed ships its instrumented Valgrind for Ubuntu 22.04, Ubuntu 24.04 and Debian 12 only,
-    # and bails out with "Unsupported system" anywhere else, so the image cannot be `latest`.
-    runs-on: ubuntu-24.04
+    # Pin OS version for compatibility with CodSpeed's instrumented Valgrind.
+    runs-on: ubuntu-26.04
     permissions:
       contents: read # required for actions/checkout
       id-token: write # required for OIDC authentication with CodSpeed
