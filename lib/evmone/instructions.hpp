@@ -41,6 +41,10 @@ public:
 
     /// Assigns the value to the stack top and moves the stack top pointer up.
     void push(const uint256& value) noexcept { *m_end++ = value; }
+
+    /// Pushes a 64-bit value without a uint256 temporary,
+    /// which GCC 15 and 16 build on the stack and copy.
+    void push(uint64_t value) noexcept { *m_end++ = value; }
 };
 
 
@@ -844,7 +848,7 @@ inline void msize(StackTop stack, ExecutionState& state) noexcept
 
 inline Result gas(StackTop stack, int64_t gas_left, ExecutionState& /*state*/) noexcept
 {
-    stack.push(gas_left);
+    stack.push(static_cast<uint64_t>(gas_left));
     return {EVMC_SUCCESS, gas_left};
 }
 
