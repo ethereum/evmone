@@ -301,8 +301,11 @@ public:
 /// Performs the Almost Montgomery Multiplication (AMM).
 ///
 /// The AMM is a relaxed version of the Montgomery multiplication producing a result in Montgomery
-/// form which is in range [0, 2⋅mod) in plain form, i.e., it may be larger than the modulus.
+/// form which is in range [0, R), i.e., it may be larger than the modulus.
 /// This allows to skip the final conditional subtraction in most cases, improving performance.
+///
+/// For any x, y < R the reduction computes t = (x⋅y + q⋅mod) / R with q < R, so t < R + mod.
+/// If t ≥ R (r_carry), subtracting mod once brings it below R.
 ///
 /// The inputs are expected to be in Montgomery form.
 /// Additionally, passing y=1 converts x from Montgomery form back to plain form,
