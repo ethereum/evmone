@@ -155,7 +155,7 @@ const Instruction* op_jumpi(const Instruction* instr, AdvancedExecutionState& st
 
 const Instruction* op_pc(const Instruction* instr, AdvancedExecutionState& state) noexcept
 {
-    state.stack.push(instr->arg.number);
+    state.stack.push(static_cast<uint64_t>(instr->arg.number));
     return ++instr;
 }
 
