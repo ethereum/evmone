@@ -51,7 +51,7 @@ constexpr Fq2 multiply(const Fq2& a, const Fq2& b) noexcept
 }
 
 /// Multiplies an Fq^2 field element by ksi.
-constexpr Fq2 operator*(const Fq2& a, ksi_t /*ksi*/) noexcept
+constexpr Fq2 operator*(const Fq2& a, ksi_t) noexcept
 {
     // (a0 + a1·u)·(9 + u) = (9a0 − a1) + (a0 + 9a1)·u needs 2 multiplications instead of 4.
     // TODO: The multiplications by 9 can be done with additions only. This is now faster
