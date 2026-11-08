@@ -9,7 +9,7 @@ if [ "$(uname -s)" = Darwin ]; then
   sysctl -n machdep.cpu.brand_string
 else
   (lscpu | grep -E "Model name|Vendor ID|^CPU\(s\)") || true
-  sudo sysctl -w kernel.perf_event_paranoid=1 > /dev/null || true
+  sudo -n sysctl -w kernel.perf_event_paranoid=1 > /dev/null || true
 fi
 cmake -S . -B ../build -DCMAKE_BUILD_TYPE=Release > ../cfg.log
 INTX=$(dirname "$(dirname "$(find ~/.hunter -name intx.hpp -path '*Install*' | head -1)")")

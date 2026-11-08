@@ -22,6 +22,8 @@ using u64 = uint64_t;
 namespace evmone::crypto
 {
 EVMONE_PRESERVE_NONE void proto_sqr4(u64* r, const u64* x, const u64* m, u64 m_inv) noexcept;
+EVMONE_PRESERVE_NONE void proto_sqr_chain4(
+    u64* r, const u64* x, size_t k, const u64* m, u64 m_inv) noexcept;
 EVMONE_PRESERVE_NONE void proto_ahead4(
     u64* r, const u64* x, const u64* y, const u64* m, u64 m_inv) noexcept;
 }  // namespace evmone::crypto
@@ -106,7 +108,28 @@ static int test(long trials)
         if (r1 != r3 && fails++ < 3)
             std::printf("FAIL prod\n");
     }
-    std::printf("%s %ld of %ld\n", fails ? "FAILED" : "OK", fails, 3 * trials);
+    for (long t = 0; t < trials / 10; ++t)
+    {
+        for (auto& w : m)
+            w = word(rng);
+        m[0] |= 1;
+        if (m[n - 1] == 0)
+            m[n - 1] = 1;
+        const auto mi = inv_neg(m[0]);
+        for (auto& w : x)
+            w = word(rng);
+        const size_t k = 1 + rng() % 9;
+        std::vector<u64> a = x, b(n);
+        for (size_t i = 0; i < k; ++i)
+        {
+            amm::ref_amm(b.data(), a.data(), a.data(), m.data(), mi, n);
+            a = b;
+        }
+        evmone::crypto::proto_sqr_chain4(r2.data(), x.data(), k, m.data(), mi);
+        if (a != r2 && fails++ < 3)
+            std::printf("FAIL chain\n");
+    }
+    std::printf("%s %ld of %ld\n", fails ? "FAILED" : "OK", fails, 3 * trials + trials / 10);
     return fails != 0;
 }
 
@@ -199,6 +222,42 @@ static void bench1(size_t reps)
     std::printf("\n");
 }
 
+static void bench_chain(size_t reps)
+{
+    std::mt19937_64 rng{4};
+    alignas(64) u64 m[4];
+    alignas(64) u64 a[4];
+    alignas(64) u64 b[4];
+    for (auto& w : m)
+        w = rng();
+    m[0] |= 1;
+    m[3] |= u64{1} << 63;
+    for (auto& w : a)
+        w = rng() >> 1;
+    const auto mi = inv_neg(m[0]);
+    const size_t k = 40000;
+    static Cycles cyc;
+    double best_ns = 1e30;
+    u64 best_c = ~u64{0};
+    evmone::crypto::proto_sqr_chain4(b, a, k, m, mi);
+    for (size_t rep = 0; rep < reps; ++rep)
+    {
+        const auto t0 = std::chrono::steady_clock::now();
+        cyc.start();
+        evmone::crypto::proto_sqr_chain4(b, a, k, m, mi);
+        const auto c = cyc.stop();
+        const auto ns = std::chrono::duration<double, std::nano>(std::chrono::steady_clock::now() - t0).count();
+        if (ns < best_ns)
+            best_ns = ns;
+        if (c != 0 && c < best_c)
+            best_c = c;
+    }
+    std::printf("%-6s %s ns/call %6.2f", "chain", "lat", best_ns / double(k));
+    if (best_c != ~u64{0})
+        std::printf("  cyc/call %6.1f", double(best_c) / double(k));
+    std::printf("\n");
+}
+
 int main(int argc, char** argv)
 {
     if (argc > 1 && std::strcmp(argv[1], "test") == 0)
@@ -209,6 +268,7 @@ int main(int argc, char** argv)
         bench1<Prod, 1>(reps);
         bench1<Ahead, 1>(reps);
         bench1<Sqr, 1>(reps);
+        bench_chain(reps);
         bench1<Prod, 4>(reps);
         bench1<Ahead, 4>(reps);
         bench1<Sqr, 4>(reps);

@@ -262,4 +262,26 @@ EVMONE_PRESERVE_NONE void proto_ahead4(uint64_t* r, const uint64_t* x, const uin
         sub_words(c, m, std::make_index_sequence<4>{});
     copy_words<0, 0, 4>(r, c);
 }
+/// k squarings of x, the intermediate values in a local buffer.
+EVMONE_PRESERVE_NONE void proto_sqr_chain4(
+    uint64_t* r, const uint64_t* x, size_t k, const uint64_t* m, uint64_t m_inv) noexcept
+{
+    alignas(32) std::array<uint64_t, 4> v;  // NOLINT(*-member-init)
+    copy_words<0, 0, 4>(v, x);
+#ifdef __aarch64__
+    std::array<uint64_t, 4> mw;  // NOLINT(*-member-init): copied below.
+    copy_words<0, 0, 4>(mw, m);
+    m = mw.data();
+#endif
+    for (size_t i = 0; i < k; ++i)
+    {
+        std::array<uint64_t, 5> c;  // NOLINT(*-member-init)
+        std::array<uint64_t, 4> q;  // NOLINT(*-member-init)
+        low_chunk<4, 4, false>(c, q, nullptr, v.data(), v.data(), m, m_inv);
+        if (c[4] != 0) [[unlikely]]
+            sub_words(c, m, std::make_index_sequence<4>{});
+        copy_words<0, 0, 4>(v, c);
+    }
+    copy_words<0, 0, 4>(r, v);
+}
 }  // namespace evmone::crypto
