@@ -76,7 +76,7 @@ constexpr uint64_t addmul(std::span<uint64_t> r, std::span<const uint64_t> p,
 /// https://eprint.iacr.org/2011/239.pdf
 ///
 /// Computes r = x * y * R^-1 mod m for r, x, y and mod of n > 0 words. Requires odd mod with a
-/// non-zero top word and mod⋅mod_inv ≡ -1 (mod 2⁶⁴). r must not alias x or y.
+/// non-zero top word and mod⋅mod_inv ≡ -1 (mod 2⁶⁴). r must not alias x, y or mod.
 EVMONE_PRESERVE_NONE void mul_amm_generic(uint64_t* r, const uint64_t* x, const uint64_t* y,
     const uint64_t* mod, uint64_t mod_inv, size_t n) noexcept;
 

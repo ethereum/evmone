@@ -75,3 +75,9 @@ TEST(evmone, set_option_cgoto)
     EXPECT_EQ(vm.set_option("cgoto", "no"), EVMC_SET_OPTION_INVALID_NAME);
 #endif
 }
+
+TEST(evmone, set_option_opcode_count)
+{
+    evmc::VM vm{evmc_create_evmone()};
+    EXPECT_EQ(vm.set_option("opcode.count", ""), EVMC_SET_OPTION_SUCCESS);
+}
