@@ -386,37 +386,35 @@ void modexp_odd(std::span<uint64_t> result, std::span<const uint64_t> base, Expo
         return std::pair{v >> tz, lo + tz};
     };
 
-    // The squarings run in batches before each multiplication, for 4 words in a single call.
-    const auto square = [&](size_t k) noexcept {
-        if (n == 4)
-            return sqr_n_amm_256(r_cur.data(), r_cur.data(), k, mod.data(), mod_inv);
-        for (; k != 0; --k)
-        {
-            amm(r_tmp, r_cur, r_cur);
-            std::swap(r_cur, r_tmp);
-        }
-    };
-
     // The top bit is always set, so the first window ends there and is loaded directly.
     auto [v_top, pos] = window(exp_bits - 1);
     std::ranges::copy(precomputed(v_top), r_cur.begin());
 
-    size_t squarings = 0;
     while (pos != 0)
     {
-        --pos;
-        ++squarings;  // Square for this bit.
-        if (!exp[pos])
-            continue;
-
-        const auto [v, lo] = window(pos);
-        square(squarings + (pos - lo));  // One more square for each remaining window bit.
-        squarings = 0;
-        amm(r_tmp, r_cur, precomputed(v));
-        std::swap(r_cur, r_tmp);
+        // Square for each bit down to the next window and its bits, then multiply by its value.
+        // Without a set bit left, only square. For 4 words the squarings are a single call.
+        auto hi = pos - 1;
+        while (hi != 0 && !exp[hi])
+            --hi;
+        const auto [v, lo] = exp[hi] ? window(hi) : std::pair<size_t, size_t>{};
+        if (n == 4)
+            sqr_n_amm_256(r_cur.data(), r_cur.data(), pos - lo, mod.data(), mod_inv);
+        else
+        {
+            for (auto b = lo; b != pos; ++b)
+            {
+                amm(r_tmp, r_cur, r_cur);
+                std::swap(r_cur, r_tmp);
+            }
+        }
+        if (v != 0)
+        {
+            amm(r_tmp, r_cur, precomputed(v));
+            std::swap(r_cur, r_tmp);
+        }
         pos = lo;
     }
-    square(squarings);
 
     // Convert from Montgomery form: multiply by 1. Reuses precomputed(1) storage.
     std::ranges::fill(base_mont, uint64_t{0});
