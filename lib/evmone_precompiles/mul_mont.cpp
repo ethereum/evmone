@@ -508,6 +508,55 @@ template <size_t W, size_t K, size_t H>
     }
 }
 
+// clang-format off
+/// Adds s[i]⋅rdx to the accumulator for s[i] in a register, as MULX_ADD().
+#define MULX_ADD_REG(i, dl, dh)                \
+    "mulxq %[s" #i "], %[lo], %[hi]\n\t"       \
+    "adcxq %[lo], %[" #dl "]\n\t"              \
+    "adoxq %[hi], %[" #dh "]\n\t"
+#define SET_ROW_REG                                                       \
+    "mulxq %[s0], %[a0], %[a1]\n\t"                                       \
+    "mulxq %[s1], %[lo], %[a2]\n\t" "addq %[lo], %[a1]\n\t"               \
+    "mulxq %[s2], %[lo], %[a3]\n\t" "adcq %[lo], %[a2]\n\t"               \
+    "mulxq %[s3], %[lo], %[a4]\n\t" "adcq %[lo], %[a3]\n\t" "adcq $0, %[a4]"
+#define ADD_ROW_REG                                                                \
+    "xorl %k[top], %k[top]\n\t"                                                    \
+    MULX_ADD_REG(0, a0, a1) MULX_ADD_REG(1, a1, a2) MULX_ADD_REG(2, a2, a3)         \
+    "mulxq %[s3], %[lo], %[hi]\n\t" "adcxq %[lo], %[a3]\n\t" "adcxq %[top], %[hi]\n\t" \
+    "adoxq %[hi], %[a4]\n\t" "adoxq %[top], %[top]"
+#define REG_S_OPERANDS [s0] "r"(s[0]), [s1] "r"(s[1]), [s2] "r"(s[2]), [s3] "r"(s[3])
+// clang-format on
+
+/// The product rows of Row<4> for s[] in registers.
+struct RegRow4
+{
+    /// Sets a[0..4] = s[]⋅y.
+    template <size_t K>
+    [[gnu::always_inline]] static void set(
+        std::array<uint64_t, K>& a, const std::array<uint64_t, 4>& s, uint64_t y) noexcept
+    {
+        static constexpr size_t P = 0;
+        uint64_t lo = 0;
+        asm(SET_ROW_REG : ROW_OPERANDS4("=&r"), [lo] "=&r"(lo) : REG_S_OPERANDS, "d"(y) : "cc");
+    }
+    /// Adds s[]⋅y to a[P..P+4], the carry goes to a[P+5].
+    template <size_t P, size_t K>
+    [[gnu::always_inline]] static void add_new(
+        std::array<uint64_t, K>& a, const std::array<uint64_t, 4>& s, uint64_t y) noexcept
+    {
+        uint64_t lo = 0;
+        uint64_t hi = 0;
+        asm(ADD_ROW_REG
+            : ROW_OPERANDS4("+r"), [top] "=&r"(a[P + 5]), [lo] "=&r"(lo), [hi] "=&r"(hi)
+            : REG_S_OPERANDS, "d"(y)
+            : "cc");
+    }
+};
+
+#undef REG_S_OPERANDS
+#undef ADD_ROW_REG
+#undef SET_ROW_REG
+#undef MULX_ADD_REG
 // NOLINTEND(hicpp-no-assembler,misc-const-correctness)
 #undef DEFINE_ROW
 #undef T_OPERANDS4
@@ -1033,6 +1082,44 @@ EVMONE_PRESERVE_NONE void mul_amm_asm(uint64_t* r, const uint64_t* x, const uint
     default:
         return mul_amm_blocks<3>(r, x, y, mod, mod_inv, n);
     }
+}
+
+EVMONE_PRESERVE_NONE void sqr_n_amm_256_asm(
+    uint64_t* r, const uint64_t* x, size_t k, const uint64_t* mod, uint64_t mod_inv) noexcept
+{
+    assert(mod[0] * mod_inv == ~uint64_t{0});
+    assert(mod[3] != 0);
+    // The value stays in registers between the squarings.
+    std::array<uint64_t, 4> v;  // NOLINT(*-member-init): copied below.
+    copy_words<0, 0, 4>(v, x);
+#ifdef __aarch64__
+    std::array<uint64_t, 4> mw;  // NOLINT(*-member-init): copied below.
+    copy_words<0, 0, 4>(mw, mod);
+    mod = mw.data();
+#endif
+    for (; k != 0; --k)
+    {
+        std::array<uint64_t, 5> c;  // NOLINT(*-member-init): set below.
+#ifdef __x86_64__
+        std::array<uint64_t, 9> a;  // NOLINT(*-member-init): the rows set the words.
+        RegRow4::set(a, v, v[0]);
+        Row<4>::add_cancel_new<0>(a, mod, a[0] * mod_inv);
+        RegRow4::add_new<1>(a, v, v[1]);
+        Row<4>::add_cancel<1>(a, mod, a[1] * mod_inv);
+        RegRow4::add_new<2>(a, v, v[2]);
+        Row<4>::add_cancel<2>(a, mod, a[2] * mod_inv);
+        RegRow4::add_new<3>(a, v, v[3]);
+        Row<4>::add_cancel<3>(a, mod, a[3] * mod_inv);
+        copy_words<0, 4, 5>(c, a);
+#else
+        std::array<uint64_t, 4> q;  // NOLINT(*-member-init): set by low_chunk().
+        low_chunk<4, 4, false>(c, q, nullptr, v.data(), v.data(), mod, mod_inv);
+#endif
+        if (c[4] != 0) [[unlikely]]
+            sub_words(c, mod, std::make_index_sequence<4>{});
+        copy_words<0, 0, 4>(v, c);
+    }
+    copy_words<0, 0, 4>(r, v);
 }
 
 #ifdef __x86_64__

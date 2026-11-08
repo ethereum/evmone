@@ -392,20 +392,27 @@ void modexp_odd(std::span<uint64_t> result, std::span<const uint64_t> base, Expo
 
     while (pos != 0)
     {
-        --pos;
-        amm(r_tmp, r_cur, r_cur);  // Square for this bit.
-        std::swap(r_cur, r_tmp);
-        if (!exp[pos])
-            continue;
-
-        const auto [v, lo] = window(pos);
-        for (auto b = lo; b != pos; ++b)  // One more square for each remaining window bit.
+        // Square for each bit down to the next window and its bits, then multiply by its value.
+        // Without a set bit left, only square. For 4 words the squarings are a single call.
+        auto hi = pos - 1;
+        while (hi != 0 && !exp[hi])
+            --hi;
+        const auto [v, lo] = exp[hi] ? window(hi) : std::pair<size_t, size_t>{};
+        if (n == 4)
+            sqr_n_amm_256(r_cur.data(), r_cur.data(), pos - lo, mod.data(), mod_inv);
+        else
         {
-            amm(r_tmp, r_cur, r_cur);
+            for (auto b = lo; b != pos; ++b)
+            {
+                amm(r_tmp, r_cur, r_cur);
+                std::swap(r_cur, r_tmp);
+            }
+        }
+        if (v != 0)
+        {
+            amm(r_tmp, r_cur, precomputed(v));
             std::swap(r_cur, r_tmp);
         }
-        amm(r_tmp, r_cur, precomputed(v));
-        std::swap(r_cur, r_tmp);
         pos = lo;
     }
 

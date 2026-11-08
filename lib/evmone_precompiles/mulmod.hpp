@@ -87,6 +87,18 @@ EVMONE_PRESERVE_NONE void mul_amm_asm(uint64_t* r, const uint64_t* x, const uint
     const uint64_t* mod, uint64_t mod_inv, size_t n) noexcept;
 #endif
 
+/// Computes k ≥ 0 almost Montgomery squarings of x of 4 words: as many mul_amm_generic(r, x, x)
+/// calls, each squaring the result of the previous. r may alias x.
+EVMONE_PRESERVE_NONE void sqr_n_amm_256_generic(
+    uint64_t* r, const uint64_t* x, size_t k, const uint64_t* mod, uint64_t mod_inv) noexcept;
+
+#if defined(__x86_64__) || defined(__aarch64__)
+/// Computes sqr_n_amm_256_generic() with assembly, on x86-64 with the BMI2 and ADX instructions,
+/// which the CPU must have.
+EVMONE_PRESERVE_NONE void sqr_n_amm_256_asm(
+    uint64_t* r, const uint64_t* x, size_t k, const uint64_t* mod, uint64_t mod_inv) noexcept;
+#endif
+
 /// Computes mul_amm_generic(), with assembly on AArch64 and on x86-64 if the CPU has the BMI2 and
 /// ADX instructions.
 inline void mul_amm(uint64_t* r, const uint64_t* x, const uint64_t* y, const uint64_t* mod,
@@ -101,6 +113,25 @@ inline void mul_amm(uint64_t* r, const uint64_t* x, const uint64_t* y, const uin
         return mul_amm_asm(r, x, y, mod, mod_inv, n);
 #endif
     mul_amm_generic(r, x, y, mod, mod_inv, n);
+#endif
+}
+
+/// Computes sqr_n_amm_256_generic(), with assembly on AArch64 and on x86-64 if the CPU has the
+/// BMI2 and ADX instructions.
+inline void sqr_n_amm_256(
+    uint64_t* r, const uint64_t* x, size_t k, const uint64_t* mod, uint64_t mod_inv) noexcept
+{
+#ifdef __aarch64__
+    sqr_n_amm_256_asm(r, x, k, mod, mod_inv);
+#else
+#ifdef __x86_64__
+    if (cpu_has_adx)
+    {
+        sqr_n_amm_256_asm(r, x, k, mod, mod_inv);
+        return;
+    }
+#endif
+    sqr_n_amm_256_generic(r, x, k, mod, mod_inv);
 #endif
 }
 
