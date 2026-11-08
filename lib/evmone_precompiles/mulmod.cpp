@@ -57,6 +57,16 @@ void mul_amm_256(std::span<uint64_t, 4> r, std::span<const uint64_t, 4> x,
 }
 }  // namespace
 
+EVMONE_PRESERVE_NONE void sqr_n_amm_256_generic(
+    uint64_t* r, const uint64_t* x, size_t k, const uint64_t* mod, uint64_t mod_inv) noexcept
+{
+    const std::span<uint64_t, 4> rs{r, 4};
+    if (r != x)
+        std::copy_n(x, 4, r);
+    for (; k != 0; --k)
+        mul_amm_256(rs, rs, rs, std::span<const uint64_t, 4>{mod, 4}, mod_inv);
+}
+
 EVMONE_PRESERVE_NONE void mul_amm_generic(uint64_t* r_ptr, const uint64_t* x_ptr,
     const uint64_t* y_ptr, const uint64_t* mod_ptr, uint64_t mod_inv, size_t n) noexcept
 {

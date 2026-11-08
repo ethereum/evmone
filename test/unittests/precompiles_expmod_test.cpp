@@ -495,6 +495,53 @@ TEST(expmod, mul_amm_saturated_words)
     }
 }
 
+TEST(expmod, sqr_n_amm_256)
+{
+    // The 4-word squaring chain, also in place, against as many mul_amm_generic() squarings,
+    // with mostly all-ones words.
+    std::mt19937_64 rng{2};  // NOLINT(cert-msc51-cpp)
+    const auto word = [&rng] {
+        switch (rng() % 8)
+        {
+        case 0:
+            return uint64_t{0};
+        case 1:
+            return uint64_t{rng()};
+        case 2:
+            return ~uint64_t{1};
+        default:
+            return ~uint64_t{0};
+        }
+    };
+    std::array<uint64_t, 4> m{};
+    std::array<uint64_t, 4> x{};
+    for (size_t i = 0; i < 4000; ++i)
+    {
+        std::ranges::generate(m, word);
+        m[0] |= 1;
+        if (m[3] == 0)
+            m[3] = 1;
+        std::ranges::generate(x, word);
+        const auto mod_inv = -evmone::crypto::modinv_pow2(m[0]);
+        const auto k = i % 8;
+        auto expected = x;
+        for (size_t j = 0; j < k; ++j)
+        {
+            std::array<uint64_t, 4> t{};
+            evmone::crypto::mul_amm_generic(
+                t.data(), expected.data(), expected.data(), m.data(), mod_inv, 4);
+            expected = t;
+        }
+        std::array<uint64_t, 4> r{};
+        evmone::crypto::sqr_n_amm_256(r.data(), x.data(), k, m.data(), mod_inv);
+        EXPECT_EQ(r, expected) << "i=" << i;
+        auto r_generic = x;
+        evmone::crypto::sqr_n_amm_256_generic(
+            r_generic.data(), r_generic.data(), k, m.data(), mod_inv);
+        EXPECT_EQ(r_generic, expected) << "i=" << i;
+    }
+}
+
 TEST(expmod, analysis_oog)
 {
     // Tests the gas cost calculation of the expmod precompile.

@@ -386,28 +386,37 @@ void modexp_odd(std::span<uint64_t> result, std::span<const uint64_t> base, Expo
         return std::pair{v >> tz, lo + tz};
     };
 
-    // The top bit is always set, so the first window ends there and is loaded directly.
-    auto [v_top, pos] = window(exp_bits - 1);
-    std::ranges::copy(precomputed(v_top), r_cur.begin());
-
-    while (pos != 0)
-    {
-        --pos;
-        amm(r_tmp, r_cur, r_cur);  // Square for this bit.
-        std::swap(r_cur, r_tmp);
-        if (!exp[pos])
-            continue;
-
-        const auto [v, lo] = window(pos);
-        for (auto b = lo; b != pos; ++b)  // One more square for each remaining window bit.
+    // The squarings run in batches before each multiplication, for 4 words in a single call.
+    const auto square = [&](size_t k) noexcept {
+        if (n == 4)
+            return sqr_n_amm_256(r_cur.data(), r_cur.data(), k, mod.data(), mod_inv);
+        for (; k != 0; --k)
         {
             amm(r_tmp, r_cur, r_cur);
             std::swap(r_cur, r_tmp);
         }
+    };
+
+    // The top bit is always set, so the first window ends there and is loaded directly.
+    auto [v_top, pos] = window(exp_bits - 1);
+    std::ranges::copy(precomputed(v_top), r_cur.begin());
+
+    size_t squarings = 0;
+    while (pos != 0)
+    {
+        --pos;
+        ++squarings;  // Square for this bit.
+        if (!exp[pos])
+            continue;
+
+        const auto [v, lo] = window(pos);
+        square(squarings + (pos - lo));  // One more square for each remaining window bit.
+        squarings = 0;
         amm(r_tmp, r_cur, precomputed(v));
         std::swap(r_cur, r_tmp);
         pos = lo;
     }
+    square(squarings);
 
     // Convert from Montgomery form: multiply by 1. Reuses precomputed(1) storage.
     std::ranges::fill(base_mont, uint64_t{0});
