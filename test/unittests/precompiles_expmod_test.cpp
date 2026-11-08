@@ -444,8 +444,8 @@ TEST_P(expmod, large_inputs)
 TEST(expmod, mul_amm_saturated_words)
 {
     // The almost Montgomery multiplication for every n mod 4 and up to 4 chunks of 4 words, with
-    // mostly all-ones words: random words almost never take its rarer carries. On x86-64 mul_amm()
-    // is the BMI2 and ADX implementation, when the CPU has them.
+    // mostly all-ones words: random words almost never take its rarer carries. mul_amm() is the
+    // assembly on AArch64, and on x86-64 if the CPU has the BMI2 and ADX instructions.
     using Uint = intx::uint<64 * 32>;
     const auto to_uint = [](const std::vector<uint64_t>& v) {
         Uint u;
