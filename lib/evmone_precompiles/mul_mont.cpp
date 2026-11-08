@@ -4,6 +4,8 @@
 
 #include "modarith.hpp"
 #include "mulmod.hpp"
+#include <array>
+#include <utility>
 
 #ifdef __x86_64__
 
@@ -46,8 +48,12 @@ namespace
     "adcxq %[" #z "], %[hi]\n\t"                     \
     "adoxq %[hi], %[" #dh "]\n\t"
 
-/// Adds src[0..3]⋅rdx to the accumulator a0..a4, leaving the OF carry pending to the next word.
+/// Adds src[0..W-1]⋅rdx to the accumulator a0..aW, leaving the OF carry pending to the next word.
 /// The zero register z keeps zero and CF = OF = 0 on entry.
+#define MULX_ADD_ROW1(src, z) MULX_ADD_LAST(0, src, a0, a1, z)
+#define MULX_ADD_ROW2(src, z) MULX_ADD(0, src, a0, a1) MULX_ADD_LAST(8, src, a1, a2, z)
+#define MULX_ADD_ROW3(src, z) \
+    MULX_ADD(0, src, a0, a1) MULX_ADD(8, src, a1, a2) MULX_ADD_LAST(16, src, a2, a3, z)
 #define MULX_ADD_ROW4(src, z)                                                    \
     MULX_ADD(0, src, a0, a1) MULX_ADD(8, src, a1, a2) MULX_ADD(16, src, a2, a3) \
         MULX_ADD_LAST(24, src, a3, a4, z)
@@ -225,9 +231,6 @@ template <size_t W = 4>
 
 // NOLINTEND(hicpp-no-assembler,misc-const-correctness)
 #undef SUB_UNLESS_BORROW
-#undef MULX_ADD_ROW4
-#undef MULX_ADD_LAST
-#undef MULX_ADD
 
 /// The CIOS rows: returns the result below 2m (or below R + m) in r0..r3 and the carry word c.
 /// The reduce(a0, a1, a2, a3, a4, a5) adds q⋅m[] for q = a0⋅m_inv to the accumulator.
@@ -344,8 +347,388 @@ EVMONE_PRESERVE_NONE intx::uint256 mul_mont_256_sparse_adx(
     return {t4, t0, t1, t2};
 }
 
+// The almost Montgomery multiplication for any number of words n, for modexp: CIOS with the rows
+// in blocks of R ≤ 4 words of y. A block goes over x and m in chunks of W ≤ 4 words: a chunk adds
+// the products of all the block's rows to a window of registers, stores the words that are done
+// and passes the others as the carry into the next chunk. The lowest chunk computes the block's
+// factors q. The first block takes n mod 4 rows and the last chunk n mod 4 words (4 instead of 0).
+// The accumulator is r[] and its top word, at most 1. For n ≤ 4 the whole multiplication is a
+// single chunk of a single block, all in registers.
+
+// NOLINTBEGIN(hicpp-no-assembler,misc-const-correctness)
+// clang-format off
+#define SET_ROW1 "mulxq (%[s]), %[a0], %[a1]"
+#define SET_ROW2 SET_ROW1 "\n\t"                                                      \
+    "mulxq 8(%[s]), %[lo], %[a2]\n\t" "addq %[lo], %[a1]\n\t" "adcq $0, %[a2]"
+#define SET_ROW3 SET_ROW1 "\n\t"                                                      \
+    "mulxq 8(%[s]), %[lo], %[a2]\n\t" "addq %[lo], %[a1]\n\t"                       \
+    "mulxq 16(%[s]), %[lo], %[a3]\n\t" "adcq %[lo], %[a2]\n\t" "adcq $0, %[a3]"
+#define SET_ROW4 SET_ROW1 "\n\t"                                                      \
+    "mulxq 8(%[s]), %[lo], %[a2]\n\t" "addq %[lo], %[a1]\n\t"                       \
+    "mulxq 16(%[s]), %[lo], %[a3]\n\t" "adcq %[lo], %[a2]\n\t"                      \
+    "mulxq 24(%[s]), %[lo], %[a4]\n\t" "adcq %[lo], %[a3]\n\t" "adcq $0, %[a4]"
+
+#define ROW_OPERANDS1(c) [a0] c(a[P]), [a1] c(a[P + 1])
+#define ROW_OPERANDS2(c) ROW_OPERANDS1(c), [a2] c(a[P + 2])
+#define ROW_OPERANDS3(c) ROW_OPERANDS2(c), [a3] c(a[P + 3])
+#define ROW_OPERANDS4(c) ROW_OPERANDS3(c), [a4] c(a[P + 4])
+
+#define ADD_T1(top) "addq %[t0], %[a0]\n\t" "adcq " top ", %[a1]\n\t" "adcq $0, %[a2]\n\t" "adcq $0, %[a3]\n\t" "adcq $0, %[a4]"
+#define ADD_T2(top) "addq %[t0], %[a0]\n\t" "adcq %[t1], %[a1]\n\t" "adcq " top ", %[a2]\n\t" "adcq $0, %[a3]\n\t" "adcq $0, %[a4]"
+#define ADD_T3(top) "addq %[t0], %[a0]\n\t" "adcq %[t1], %[a1]\n\t" "adcq %[t2], %[a2]\n\t" "adcq " top ", %[a3]\n\t" "adcq $0, %[a4]"
+#define ADD_T4(top) "addq %[t0], %[a0]\n\t" "adcq %[t1], %[a1]\n\t" "adcq %[t2], %[a2]\n\t" "adcq %[t3], %[a3]\n\t" "adcq " top ", %[a4]"
+#define T_OPERANDS1 [t0] "m"(t[0])
+#define T_OPERANDS2 T_OPERANDS1, [t1] "m"(t[1])
+#define T_OPERANDS3 T_OPERANDS2, [t2] "m"(t[2])
+#define T_OPERANDS4 T_OPERANDS3, [t3] "m"(t[3])
+// clang-format on
+
+/// The rows of W-word chunks s[] times the multiplier y in RDX, on the words a[P..P+W+1] of a
+/// window.
+template <size_t W>
+struct Row;
+
+#define DEFINE_ROW(W)                                                                              \
+    template <>                                                                                    \
+    struct Row<W>                                                                                  \
+    {                                                                                              \
+        /** Sets a[P..P+W] = s[]⋅y. */                                                             \
+        template <size_t P, size_t K>                                                              \
+        [[gnu::always_inline]] static void set(                                                    \
+            std::array<uint64_t, K>& a, const uint64_t* s, uint64_t y) noexcept                    \
+        {                                                                                          \
+            [[maybe_unused]] uint64_t lo = 0;                                                      \
+            asm(SET_ROW##W                                                                         \
+                : ROW_OPERANDS##W("=&r"), [lo] "=&r"(lo)                                           \
+                : [s] "r"(s), "d"(y), "m"(words<W>(s))                                             \
+                : "cc");                                                                           \
+        }                                                                                          \
+        /** Adds s[]⋅y to a[P..P+W], the carry goes to a[P+W+1]. */                                \
+        template <size_t P, size_t K>                                                              \
+        [[gnu::always_inline]] static void add_new(                                                \
+            std::array<uint64_t, K>& a, const uint64_t* s, uint64_t y) noexcept                    \
+        {                                                                                          \
+            uint64_t lo = 0;                                                                       \
+            uint64_t hi = 0;                                                                       \
+            asm("xorl %k[top], %k[top]\n\t" MULX_ADD_ROW##W(s, top) "adoxq %[top], %[top]"         \
+                : ROW_OPERANDS##W("+r"), [top] "=&r"(a[P + W + 1]), [lo] "=&r"(lo), [hi] "=&r"(hi) \
+                : [s] "r"(s), "d"(y), "m"(words<W>(s))                                             \
+                : "cc");                                                                           \
+        }                                                                                          \
+        /** Adds s[]⋅y to a[P..P+W+1] where y makes a[P] 0. */                                     \
+        template <size_t P, size_t K>                                                              \
+        [[gnu::always_inline]] static void add_cancel(                                             \
+            std::array<uint64_t, K>& a, const uint64_t* s, uint64_t y) noexcept                    \
+        {                                                                                          \
+            uint64_t lo = 0;                                                                       \
+            uint64_t hi = 0;                                                                       \
+            asm("xorl %k[lo], %k[lo]\n\t" MULX_ADD_ROW##W(s, a0) "adoxq %[a0], %[top]"             \
+                : ROW_OPERANDS##W("+r"), [top] "+r"(a[P + W + 1]), [lo] "=&r"(lo), [hi] "=&r"(hi)  \
+                : [s] "r"(s), "d"(y), "m"(words<W>(s))                                             \
+                : "cc");                                                                           \
+        }                                                                                          \
+        /** Adds s[]⋅y to a[P..P+W+1]. */                                                          \
+        template <size_t P, size_t K>                                                              \
+        [[gnu::always_inline]] static void add(                                                    \
+            std::array<uint64_t, K>& a, const uint64_t* s, uint64_t y) noexcept                    \
+        {                                                                                          \
+            uint64_t lo = 0;                                                                       \
+            uint64_t hi = 0;                                                                       \
+            asm("xorl %k[lo], %k[lo]\n\t" MULX_ADD_ROW##W(s, z) "adoxq %[z], %[top]"               \
+                : ROW_OPERANDS##W("+r"), [top] "+r"(a[P + W + 1]), [lo] "=&r"(lo), [hi] "=&r"(hi)  \
+                : [s] "r"(s), "d"(y), [z] "r"(uint64_t{0}), "m"(words<W>(s))                       \
+                : "cc");                                                                           \
+        }                                                                                          \
+        /** Adds t[0..W-1] to a[0..4]. */                                                          \
+        template <size_t K>                                                                        \
+        [[gnu::always_inline]] static void add_t(                                                  \
+            std::array<uint64_t, K>& a, const uint64_t* t) noexcept                                \
+        {                                                                                          \
+            static constexpr size_t P = 0;                                                         \
+            asm(ADD_T##W("$0") : ROW_OPERANDS4("+r") : T_OPERANDS##W : "cc");                      \
+        }                                                                                          \
+        /** Adds t[0..W-1] and top⋅2^(64W) to a[0..4]. */                                          \
+        template <size_t K>                                                                        \
+        [[gnu::always_inline]] static void add_t_top(                                              \
+            std::array<uint64_t, K>& a, const uint64_t* t, uint64_t top) noexcept                  \
+        {                                                                                          \
+            static constexpr size_t P = 0;                                                         \
+            asm(ADD_T##W("%[top]") : ROW_OPERANDS4("+r") : T_OPERANDS##W, [top] "r"(top) : "cc");  \
+        }                                                                                          \
+    };
+
+DEFINE_ROW(1)
+DEFINE_ROW(2)
+DEFINE_ROW(3)
+DEFINE_ROW(4)
+
+/// Adds h[] to a[W+1..4] for W < 4 and propagates the carry up to a[W+4].
+template <size_t W, size_t K, size_t H>
+[[gnu::always_inline]] inline void add_high(
+    std::array<uint64_t, K>& a, const std::array<uint64_t, H>& h) noexcept
+{
+    static constexpr size_t P = W + 1;
+    if constexpr (W == 1)
+    {
+        asm("addq %[h0], %[a0]\n\tadcq %[h1], %[a1]\n\tadcq %[h2], %[a2]\n\tadcq $0, %[a3]"
+            : ROW_OPERANDS3("+r")
+            : [h0] "r"(h[0]), [h1] "r"(h[1]), [h2] "r"(h[2])
+            : "cc");
+    }
+    else if constexpr (W == 2)
+    {
+        asm("addq %[h0], %[a0]\n\tadcq %[h1], %[a1]\n\tadcq $0, %[a2]\n\tadcq $0, %[a3]"
+            : ROW_OPERANDS3("+r")
+            : [h0] "r"(h[0]), [h1] "r"(h[1])
+            : "cc");
+    }
+    else
+    {
+        asm("addq %[h0], %[a0]\n\tadcq $0, %[a1]\n\tadcq $0, %[a2]\n\tadcq $0, %[a3]"
+            : ROW_OPERANDS3("+r")
+            : [h0] "r"(h[0])
+            : "cc");
+    }
+}
+
+// NOLINTEND(hicpp-no-assembler,misc-const-correctness)
+#undef DEFINE_ROW
+#undef T_OPERANDS4
+#undef T_OPERANDS3
+#undef T_OPERANDS2
+#undef T_OPERANDS1
+#undef ADD_T4
+#undef ADD_T3
+#undef ADD_T2
+#undef ADD_T1
+#undef ROW_OPERANDS4
+#undef ROW_OPERANDS3
+#undef ROW_OPERANDS2
+#undef ROW_OPERANDS1
+#undef SET_ROW4
+#undef SET_ROW3
+#undef SET_ROW2
+#undef SET_ROW1
+#undef MULX_ADD_ROW4
+#undef MULX_ADD_ROW3
+#undef MULX_ADD_ROW2
+#undef MULX_ADD_ROW1
+#undef MULX_ADD_LAST
+#undef MULX_ADD
+
+// The copies between the windows and the memory spell out the word indices: a loop over a
+// std::array keeps GCC from holding its words in registers.
+
+/// Copies s[S..S+C-1] to d[D..D+C-1].
+template <size_t D, size_t S, typename Dst, typename Src, size_t... I>
+[[gnu::always_inline]] inline void copy_words(
+    Dst& d, const Src& s, std::index_sequence<I...>) noexcept
+{
+    ((d[D + I] = s[S + I]), ...);
+}
+
+template <size_t D, size_t S, size_t C, typename Dst, typename Src>
+[[gnu::always_inline]] inline void copy_words(Dst& d, const Src& s) noexcept
+{
+    copy_words<D, S>(d, s, std::make_index_sequence<C>{});
+}
+
+/// Row r of the lowest chunk: computes q[r] and adds q[r]⋅m[], which makes a[r] 0.
+/// Without ADD_T the window is still empty at row 0.
+template <size_t W, bool ADD_T, size_t r, size_t K, size_t R>
+[[gnu::always_inline]] inline void low_chunk_row(std::array<uint64_t, K>& a,
+    std::array<uint64_t, R>& q, const uint64_t* x, const uint64_t* y, const uint64_t* m,
+    uint64_t m_inv) noexcept
+{
+    if constexpr (r == 0 && !ADD_T)
+    {
+        Row<W>::template set<0>(a, x, y[0]);
+        a[W + 1] = 0;
+    }
+    else
+        Row<W>::template add_new<r>(a, x, y[r]);
+    q[r] = a[r] * m_inv;
+    Row<W>::template add_cancel<r>(a, m, q[r]);
+}
+
+template <size_t W, bool ADD_T, size_t K, size_t R, size_t... I>
+[[gnu::always_inline]] inline void low_chunk_rows(std::array<uint64_t, K>& a,
+    std::array<uint64_t, R>& q, const uint64_t* x, const uint64_t* y, const uint64_t* m,
+    uint64_t m_inv, std::index_sequence<I...>) noexcept
+{
+    (low_chunk_row<W, ADD_T, I>(a, q, x, y, m, m_inv), ...);
+}
+
+/// The lowest chunk of a block of R rows, of W ≥ R words: computes q[] and the carry c[] into
+/// the next chunk. With ADD_T it starts from the accumulator words t[0..W-1], which it shifts by
+/// R words.
+template <size_t W, size_t R, bool ADD_T>
+[[gnu::always_inline]] inline void low_chunk(std::array<uint64_t, R + 1>& c,
+    std::array<uint64_t, R>& q, uint64_t* t, const uint64_t* x, const uint64_t* y,
+    const uint64_t* m, uint64_t m_inv) noexcept
+{
+    static_assert(W >= R);
+    std::array<uint64_t, W + R + 1> a;  // NOLINT(*-member-init): the rows set the words.
+    if constexpr (ADD_T)
+    {
+        copy_words<0, 0, W>(a, t);
+        a[W] = 0;
+    }
+    low_chunk_rows<W, ADD_T>(a, q, x, y, m, m_inv, std::make_index_sequence<R>{});
+    copy_words<0, R, W - R>(t, a);
+    copy_words<0, W, R + 1>(c, a);
+}
+
+/// Row r of a chunk above the lowest: the word a[r] is then done.
+template <size_t W, size_t r, size_t K, size_t R>
+[[gnu::always_inline]] inline void chunk_row(std::array<uint64_t, K>& a, uint64_t* out,
+    const uint64_t* x, const uint64_t* y, const uint64_t* m,
+    const std::array<uint64_t, R>& q) noexcept
+{
+    Row<W>::template add_new<r>(a, x, y[r]);
+    Row<W>::template add<r>(a, m, q[r]);
+    if constexpr (r <= W)
+        out[r] = a[r];
+}
+
+template <size_t W, size_t K, size_t R, size_t... I>
+[[gnu::always_inline]] inline void chunk_rows(std::array<uint64_t, K>& a, uint64_t* out,
+    const uint64_t* x, const uint64_t* y, const uint64_t* m, const std::array<uint64_t, R>& q,
+    std::index_sequence<I...>) noexcept
+{
+    (chunk_row<W, I>(a, out, x, y, m, q), ...);
+}
+
+/// A chunk of W words of a block of R rows, with the carry c[] from the chunk below.
+/// With ADD_T it adds the accumulator words t[0..W-1]. It stores the words that are done to out[]
+/// and the carry into the next chunk to c[], but the last chunk stores all the words of the
+/// accumulator except its top word, which it adds before and replaces after.
+template <size_t W, size_t R, bool ADD_T, bool LAST>
+[[gnu::always_inline]] inline void chunk(std::array<uint64_t, R + 1>& c, const uint64_t* t,
+    uint64_t* out, const uint64_t* x, const uint64_t* y, const uint64_t* m,
+    const std::array<uint64_t, R>& q, uint64_t& top) noexcept
+{
+    std::array<uint64_t, W + R + 1> a;  // NOLINT(*-member-init): the rows set the words.
+    copy_words<0, 0, R + 1>(a, c);
+    if constexpr (W > R)
+        copy_words<R + 1, 0, W - R>(a, std::array<uint64_t, W - R>{});
+    if constexpr (ADD_T)
+    {
+        static_assert(R == 4);
+        if constexpr (LAST)
+            Row<W>::add_t_top(a, t, top);
+        else
+            Row<W>::add_t(a, t);
+    }
+
+    // For W < R the carry words above the chunk would be the top words of the first rows,
+    // which take only a carry. Leave them out and add them after the rows.
+    static constexpr bool SPLIT = W < R;
+    static_assert(!SPLIT || LAST);
+    std::array<uint64_t, SPLIT ? R - W : 1> h{};
+    if constexpr (SPLIT)
+        copy_words<0, W + 1, R - W>(h, a);
+
+    chunk_rows<W>(a, out, x, y, m, q, std::make_index_sequence<R>{});
+
+    if constexpr (SPLIT)
+        add_high<W>(a, h);
+    if constexpr (W + 1 < R)
+        copy_words<W + 1, W + 1, R - W - 1>(out, a);
+    if constexpr (LAST)
+    {
+        copy_words<R, R, W>(out, a);
+        top = a[W + R];
+    }
+    else
+    {
+        copy_words<R, R, W - R>(out, a);
+        copy_words<0, W, R + 1>(c, a);
+    }
+}
+
+/// A block of R rows for n = 4⋅k + S words, which shifts the accumulator t[] by R words.
+template <size_t R, bool ADD_T, size_t S>
+[[gnu::always_inline]] inline void block(uint64_t* t, const uint64_t* x, const uint64_t* y,
+    const uint64_t* m, uint64_t m_inv, size_t k, uint64_t& top) noexcept
+{
+    std::array<uint64_t, R + 1> c;  // NOLINT(*-member-init): set by low_chunk().
+    std::array<uint64_t, R> q;      // NOLINT(*-member-init): set by low_chunk().
+    low_chunk<4, R, ADD_T>(c, q, t, x, y, m, m_inv);
+    static constexpr size_t LAST_W = S == 0 ? 4 : S;
+    const auto last = S == 0 ? k - 1 : k;
+    for (size_t j = 1; j < last; ++j)
+        chunk<4, R, ADD_T, false>(c, t + 4 * j, t + 4 * j - R, x + 4 * j, y, m + 4 * j, q, top);
+    chunk<LAST_W, R, ADD_T, true>(
+        c, t + 4 * last, t + 4 * last - R, x + 4 * last, y, m + 4 * last, q, top);
+}
+
+/// The almost Montgomery multiplication for n = 4⋅k + S > 4 words.
+template <size_t S>
+[[gnu::noinline]] void mul_amm_blocks(uint64_t* r, const uint64_t* x, const uint64_t* y,
+    const uint64_t* m, uint64_t m_inv, size_t n) noexcept
+{
+    static constexpr size_t FIRST_R = S == 0 ? 4 : S;
+    const auto k = n / 4;
+    uint64_t top = 0;
+    block<FIRST_R, false, S>(r, x, y, m, m_inv, k, top);
+    for (size_t i = FIRST_R; i < n; i += 4)
+        block<4, true, S>(r, x, y + i, m, m_inv, k, top);
+    if (top != 0)
+        sub({r, n}, {m, n});
+}
+
+/// The almost Montgomery multiplication for N ≤ 4 words.
+template <size_t N>
+[[gnu::always_inline]] inline void mul_amm_small(
+    uint64_t* r, const uint64_t* x, const uint64_t* y, const uint64_t* m, uint64_t m_inv) noexcept
+{
+    std::array<uint64_t, N + 1> c;  // NOLINT(*-member-init): set by low_chunk().
+    std::array<uint64_t, N> q;      // NOLINT(*-member-init): set by low_chunk().
+    low_chunk<N, N, false>(c, q, r, x, y, m, m_inv);
+    if (c[N] != 0)
+    {
+        [&]<size_t... I>(std::index_sequence<I...>) {
+            bool borrow = false;
+            ((std::tie(c[I], borrow) = intx::subc(c[I], m[I], borrow)), ...);
+        }(std::make_index_sequence<N>{});
+    }
+    copy_words<0, 0, N>(r, c);
+}
+
 }  // namespace
 
+EVMONE_PRESERVE_NONE void mul_amm_asm(uint64_t* r, const uint64_t* x, const uint64_t* y,
+    const uint64_t* mod, uint64_t mod_inv, size_t n) noexcept
+{
+    assert(mod[0] * mod_inv == ~uint64_t{0});
+    assert(mod[n - 1] != 0);
+    assert(r != x && r != y);
+    if (n == 4) [[likely]]
+        return mul_amm_small<4>(r, x, y, mod, mod_inv);
+    switch (n)
+    {
+    case 1:
+        return mul_amm_small<1>(r, x, y, mod, mod_inv);
+    case 2:
+        return mul_amm_small<2>(r, x, y, mod, mod_inv);
+    case 3:
+        return mul_amm_small<3>(r, x, y, mod, mod_inv);
+    default:
+        break;
+    }
+    switch (n % 4)
+    {
+    case 0:
+        return mul_amm_blocks<0>(r, x, y, mod, mod_inv, n);
+    case 1:
+        return mul_amm_blocks<1>(r, x, y, mod, mod_inv, n);
+    case 2:
+        return mul_amm_blocks<2>(r, x, y, mod, mod_inv, n);
+    default:
+        return mul_amm_blocks<3>(r, x, y, mod, mod_inv, n);
+    }
+}
 
 EVMONE_PRESERVE_NONE intx::uint256 mul_mont_256_generic(
     const intx::uint256& x, const intx::uint256& y, const intx::uint256& m, uint64_t m_inv) noexcept

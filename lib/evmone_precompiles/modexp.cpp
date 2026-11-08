@@ -298,84 +298,6 @@ public:
     }
 };
 
-/// Performs the Almost Montgomery Multiplication (AMM).
-///
-/// The AMM is a relaxed version of the Montgomery multiplication producing a result in Montgomery
-/// form which is in range [0, R), i.e., it may be larger than the modulus.
-/// This allows to skip the final conditional subtraction in most cases, improving performance.
-///
-/// For any x, y < R the reduction computes t = (x⋅y + q⋅mod) / R with q < R, so t < R + mod.
-/// If t ≥ R (r_carry), subtracting mod once brings it below R.
-///
-/// The inputs are expected to be in Montgomery form.
-/// Additionally, passing y=1 converts x from Montgomery form back to plain form,
-/// because for x = aR: mul_amm(x, 1) = aR⋅1⋅R⁻¹ % mod = a % mod.
-///
-/// See "Efficient Software Implementations of Modular Exponentiation":
-/// https://eprint.iacr.org/2011/239.pdf
-///
-/// Computes r = x * y * R^-1 mod m (Almost Montgomery Multiplication).
-/// r must not alias x or y.
-template <size_t N = std::dynamic_extent>
-void mul_amm(std::span<uint64_t, N> r, std::span<const uint64_t, N> x,
-    std::span<const uint64_t, N> y, std::span<const uint64_t, N> mod, uint64_t mod_inv) noexcept
-{
-    // Use Coarsely Integrated Operand Scanning (CIOS) method with the "almost" reduction.
-    const auto n = r.size();
-    // GCC 11-13 generate several times slower loops without these two facts.
-    INTX_REQUIRE(n > 0);
-    INTX_REQUIRE(x.size() == n);
-    INTX_REQUIRE(mod.size() == n);
-    INTX_REQUIRE(mod.back() != 0);
-    INTX_REQUIRE(mod[0] * mod_inv + 1 == 0);                     // Negative mod inverse identity.
-    INTX_REQUIRE(r.data() != x.data() && r.data() != y.data());  // r must not alias inputs.
-    assert(y.size() == n);
-
-    const auto r_lo = r.subspan(0, n - 1);
-    const auto r_hi = r.subspan(1);
-    const auto mod_hi = mod.subspan(1);
-
-    // First iteration: r is uninitialized, so use mul instead of addmul.
-    bool r_carry = false;
-    {
-        const auto c1 = crypto::mul(r, x, y[0]);
-
-        const auto m = r[0] * mod_inv;
-        const auto p = umul(mod[0], m) + r[0];
-        assert(p[0] == 0);  // The lowest word is canceled by m.
-
-        const auto c3 = addmul(r_lo, r_hi, mod_hi, m, p[1]);
-        std::tie(r[n - 1], r_carry) = intx::addc(c1, c3);
-    }
-
-    // Remaining iterations.
-    for (size_t i = 1; i != n; ++i)
-    {
-        const auto c1 = addmul(r, r, x, y[i]);
-
-        const auto m = r[0] * mod_inv;
-        const auto p = umul(mod[0], m) + r[0];
-        assert(p[0] == 0);  // The lowest word is canceled by m.
-
-        const auto c3 = addmul(r_lo, r_hi, mod_hi, m, p[1]);
-        std::tie(r[n - 1], r_carry) = intx::addc(c1, c3, r_carry);
-    }
-
-    assert(!r_carry || less(r, mod));  // r_carry => r < mod.
-    if (r_carry)
-        sub(r, mod);
-}
-
-/// Almost Montgomery Multiplication specialized for 4-word (256-bit) operands.
-/// Delegates to mul_amm_256 in mulmod.cpp.
-template <>
-[[gnu::always_inline]] inline void mul_amm<4>(std::span<uint64_t, 4> r,
-    std::span<const uint64_t, 4> x, std::span<const uint64_t, 4> y,
-    std::span<const uint64_t, 4> mod, uint64_t mod_inv) noexcept
-{
-    mul_amm_256(r, x, y, mod, mod_inv);
-}
-
 /// Maximum window width used by the windowed method in modexp_odd.
 constexpr unsigned MAX_WINDOW_WIDTH = 5;
 static_assert(MAX_WINDOW_WIDTH <= 8, "Exponent::window() covers at most two adjacent bytes");
@@ -434,72 +356,67 @@ void modexp_odd(std::span<uint64_t> result, std::span<const uint64_t> base, Expo
     std::ranges::copy(base, u.subspan(n).begin());
     rem(base_mont, u, mod, rem_scratch);
 
-    // Double-buffer exponentiation loop, parameterized by mul_amm size.
-    const auto exp_loop = [&]<size_t N>() {
-        auto r_cur = std::span<uint64_t, N>{result};
-        auto r_tmp = std::span<uint64_t, N>{u.first(n)};
-        const auto m = std::span<const uint64_t, N>{mod};
-
-        // base_mont^v, for odd v.
-        const auto precomputed = [table, n](size_t v) noexcept {
-            return std::span<uint64_t, N>{table.subspan((v / 2) * n, n)};
-        };
-
-        // Fill the precomputed table (precomputed(1) is already set).
-        if (table_size > 1)
-        {
-            mul_amm<N>(r_tmp, precomputed(1), precomputed(1), m, mod_inv);  // r_tmp = base_mont^2.
-            for (size_t v = 3; v < 2 * table_size; v += 2)
-                mul_amm<N>(precomputed(v), precomputed(v - 2), r_tmp, m, mod_inv);
-        }
-
-        // The widest window of at most w bits ending at bit `hi`, which must be set. Trailing
-        // zero bits are trimmed off, so the value is odd and only odd table entries are
-        // needed. Returns the value and the index of its lowest bit.
-        const auto window = [exp, w](size_t hi) noexcept {
-            const auto lo = hi + 1 >= w ? hi + 1 - w : size_t{0};
-            const auto v = exp.window(lo, hi);
-            const auto tz = static_cast<size_t>(std::countr_zero(v));  // v != 0: exp[hi] is set.
-            return std::pair{v >> tz, lo + tz};
-        };
-
-        // The top bit is always set, so the first window ends there and is loaded directly.
-        auto [v_top, pos] = window(exp_bits - 1);
-        std::ranges::copy(precomputed(v_top), r_cur.begin());
-
-        while (pos != 0)
-        {
-            --pos;
-            mul_amm<N>(r_tmp, r_cur, r_cur, m, mod_inv);  // Square for this bit.
-            std::swap(r_cur, r_tmp);
-            if (!exp[pos])
-                continue;
-
-            const auto [v, lo] = window(pos);
-            for (auto b = lo; b != pos; ++b)  // One more square for each remaining window bit.
-            {
-                mul_amm<N>(r_tmp, r_cur, r_cur, m, mod_inv);
-                std::swap(r_cur, r_tmp);
-            }
-            mul_amm<N>(r_tmp, r_cur, precomputed(v), m, mod_inv);
-            std::swap(r_cur, r_tmp);
-            pos = lo;
-        }
-
-        // Convert from Montgomery form: multiply by 1. Reuses precomputed(1) storage.
-        std::ranges::fill(base_mont, uint64_t{0});
-        base_mont[0] = 1;
-        mul_amm<N>(r_tmp, r_cur, std::span<const uint64_t, N>{base_mont}, m, mod_inv);
-
-        // If the result ended up in scratch, copy to result.
-        if (r_tmp.data() != result.data())
-            std::ranges::copy(r_tmp, result.begin());
+    // Double-buffer exponentiation loop.
+    auto r_cur = result;
+    auto r_tmp = u.first(n);
+    const auto amm = [mod, mod_inv](std::span<uint64_t> r, std::span<const uint64_t> x,
+                         std::span<const uint64_t> y) noexcept {
+        mul_amm(r.data(), x.data(), y.data(), mod.data(), mod_inv, mod.size());
     };
 
-    if (n == 4)
-        exp_loop.operator()<4>();
-    else
-        exp_loop.operator()<std::dynamic_extent>();
+    // base_mont^v, for odd v.
+    const auto precomputed = [table, n](
+                                 size_t v) noexcept { return table.subspan((v / 2) * n, n); };
+
+    // Fill the precomputed table (precomputed(1) is already set).
+    if (table_size > 1)
+    {
+        amm(r_tmp, precomputed(1), precomputed(1));  // r_tmp = base_mont^2.
+        for (size_t v = 3; v < 2 * table_size; v += 2)
+            amm(precomputed(v), precomputed(v - 2), r_tmp);
+    }
+
+    // The widest window of at most w bits ending at bit `hi`, which must be set. Trailing
+    // zero bits are trimmed off, so the value is odd and only odd table entries are
+    // needed. Returns the value and the index of its lowest bit.
+    const auto window = [exp, w](size_t hi) noexcept {
+        const auto lo = hi + 1 >= w ? hi + 1 - w : size_t{0};
+        const auto v = exp.window(lo, hi);
+        const auto tz = static_cast<size_t>(std::countr_zero(v));  // v != 0: exp[hi] is set.
+        return std::pair{v >> tz, lo + tz};
+    };
+
+    // The top bit is always set, so the first window ends there and is loaded directly.
+    auto [v_top, pos] = window(exp_bits - 1);
+    std::ranges::copy(precomputed(v_top), r_cur.begin());
+
+    while (pos != 0)
+    {
+        --pos;
+        amm(r_tmp, r_cur, r_cur);  // Square for this bit.
+        std::swap(r_cur, r_tmp);
+        if (!exp[pos])
+            continue;
+
+        const auto [v, lo] = window(pos);
+        for (auto b = lo; b != pos; ++b)  // One more square for each remaining window bit.
+        {
+            amm(r_tmp, r_cur, r_cur);
+            std::swap(r_cur, r_tmp);
+        }
+        amm(r_tmp, r_cur, precomputed(v));
+        std::swap(r_cur, r_tmp);
+        pos = lo;
+    }
+
+    // Convert from Montgomery form: multiply by 1. Reuses precomputed(1) storage.
+    std::ranges::fill(base_mont, uint64_t{0});
+    base_mont[0] = 1;
+    amm(r_tmp, r_cur, base_mont);
+
+    // If the result ended up in scratch, copy to result.
+    if (r_tmp.data() != result.data())
+        std::ranges::copy(r_tmp, result.begin());
 
     // Reduce if necessary: AMM can produce mod <= r < 2*mod.
     if (!less(result, mod))

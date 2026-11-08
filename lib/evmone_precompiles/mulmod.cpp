@@ -6,6 +6,9 @@
 
 namespace evmone::crypto
 {
+namespace
+{
+/// The almost Montgomery multiplication for 4 words.
 void mul_amm_256(std::span<uint64_t, 4> r, std::span<const uint64_t, 4> x,
     std::span<const uint64_t, 4> y, std::span<const uint64_t, 4> mod, uint64_t mod_inv) noexcept
 {
@@ -52,4 +55,62 @@ void mul_amm_256(std::span<uint64_t, 4> r, std::span<const uint64_t, 4> x,
 
     std::ranges::copy(t, r.begin());
 }
+}  // namespace
+
+EVMONE_PRESERVE_NONE void mul_amm_generic(uint64_t* r_ptr, const uint64_t* x_ptr,
+    const uint64_t* y_ptr, const uint64_t* mod_ptr, uint64_t mod_inv, size_t n) noexcept
+{
+    if (n == 4)
+    {
+        return mul_amm_256(std::span<uint64_t, 4>{r_ptr, 4}, std::span<const uint64_t, 4>{x_ptr, 4},
+            std::span<const uint64_t, 4>{y_ptr, 4}, std::span<const uint64_t, 4>{mod_ptr, 4},
+            mod_inv);
+    }
+    const std::span r{r_ptr, n};
+    const std::span x{x_ptr, n};
+    const std::span y{y_ptr, n};
+    const std::span mod{mod_ptr, n};
+
+    // Use Coarsely Integrated Operand Scanning (CIOS) method with the "almost" reduction.
+    // GCC 11-13 generate several times slower loops without this fact.
+    INTX_REQUIRE(n > 0);
+    INTX_REQUIRE(mod.back() != 0);
+    INTX_REQUIRE(mod[0] * mod_inv + 1 == 0);                     // Negative mod inverse identity.
+    INTX_REQUIRE(r.data() != x.data() && r.data() != y.data());  // r must not alias inputs.
+
+    const auto r_lo = r.subspan(0, n - 1);
+    const auto r_hi = r.subspan(1);
+    const auto mod_hi = mod.subspan(1);
+
+    // First iteration: r is uninitialized, so use mul instead of addmul.
+    bool r_carry = false;
+    {
+        const auto c1 = crypto::mul(r, x, y[0]);
+
+        const auto m = r[0] * mod_inv;
+        const auto p = umul(mod[0], m) + r[0];
+        assert(p[0] == 0);  // The lowest word is canceled by m.
+
+        const auto c3 = addmul(r_lo, r_hi, mod_hi, m, p[1]);
+        std::tie(r[n - 1], r_carry) = intx::addc(c1, c3);
+    }
+
+    // Remaining iterations.
+    for (size_t i = 1; i != n; ++i)
+    {
+        const auto c1 = addmul(r, r, x, y[i]);
+
+        const auto m = r[0] * mod_inv;
+        const auto p = umul(mod[0], m) + r[0];
+        assert(p[0] == 0);  // The lowest word is canceled by m.
+
+        const auto c3 = addmul(r_lo, r_hi, mod_hi, m, p[1]);
+        std::tie(r[n - 1], r_carry) = intx::addc(c1, c3, r_carry);
+    }
+
+    assert(!r_carry || less(r, mod));  // r_carry => r < mod.
+    if (r_carry)
+        sub(r, mod);
+}
+
 }  // namespace evmone::crypto
