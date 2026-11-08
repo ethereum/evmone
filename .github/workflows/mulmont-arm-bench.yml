@@ -1,0 +1,28 @@
+name: Montgomery ARM benchmark
+
+on:
+  push:
+    branches:
+      - ci/mulmont-arm-bench
+
+permissions:
+  contents: read
+
+jobs:
+  bench:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-24.04-arm, cc: gcc-14, cxx: g++-14}
+          - {os: ubuntu-24.04-arm, cc: clang-18, cxx: clang++-18}
+          - {os: macos-15, cc: cc, cxx: c++}
+    runs-on: ${{ matrix.os }}
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - run: bench/arm-mulmont/run.sh 7c237c3d292dbc981bc9eec8f77d5db6e1e35e0c
