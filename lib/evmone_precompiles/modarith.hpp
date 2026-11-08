@@ -72,6 +72,90 @@ constexpr std::pair<uint64_t, uint64_t> addmul(
 #endif
 }
 
+// The x86-64 Montgomery multiplication kernels use all registers: let the callers save only the
+// registers they need.
+#ifdef __x86_64__
+#if __has_attribute(preserve_none)
+#define EVMONE_PRESERVE_NONE __attribute__((preserve_none))
+#endif
+#endif
+#ifndef EVMONE_PRESERVE_NONE
+#define EVMONE_PRESERVE_NONE
+#endif
+
+#ifdef __x86_64__
+#if defined(__BMI2__) && defined(__ADX__)
+inline constexpr bool cpu_has_adx = true;
+#else
+/// Whether the CPU has the BMI2 and ADX instructions, set at the program start (false until then).
+[[gnu::visibility("hidden")]] extern const bool cpu_has_adx;
+#endif
+
+/// Computes the Montgomery product x⋅y⋅2⁻²⁵⁶ % m with portable code.
+/// Requires odd m, x < m, y < m and m⋅m_inv ≡ -1 (mod 2⁶⁴). The result is less than m.
+EVMONE_PRESERVE_NONE intx::uint256 mul_mont_256_generic(const intx::uint256& x,
+    const intx::uint256& y, const intx::uint256& m, uint64_t m_inv) noexcept;
+
+// The kernels below compute mul_mont_256_generic() with the BMI2 and ADX instructions if the CPU
+// has them: the program start sets them, they run mul_mont_256_generic() until then.
+
+/// The Montgomery multiplication kernel for any m.
+[[gnu::visibility("hidden")]] extern decltype(&mul_mont_256_generic) mul_mont_256;
+
+/// The Montgomery multiplication kernel for m < 2²⁵⁵.
+[[gnu::visibility("hidden")]] extern decltype(&mul_mont_256_generic) mul_mont_256_sparse;
+
+/// The Montgomery multiplication kernel for the pseudo-Mersenne m = 2²⁵⁶ - c, c < 2⁶⁴.
+[[gnu::visibility("hidden")]] extern decltype(&mul_mont_256_generic) mul_mont_256_pm;
+
+/// The P-256 field prime 2²⁵⁶ - 2²²⁴ + 2¹⁹² + 2⁹⁶ - 1.
+inline constexpr intx::uint256 P256_FIELD_PRIME{
+    0xffffffffffffffff, 0x00000000ffffffff, 0, 0xffffffff00000001};
+
+/// The Montgomery multiplication kernel for m = P256_FIELD_PRIME.
+[[gnu::visibility("hidden")]] extern decltype(&mul_mont_256_generic) mul_mont_256_p256;
+#endif
+
+/// Computes the Montgomery product x⋅y⋅R⁻¹ % mod for R = 2^(64⋅N) of N-word UintT, portably.
+/// Requires odd mod, x < mod, y < mod and mod⋅mod_inv ≡ -1 (mod 2⁶⁴). The result is less than mod.
+template <typename UintT>
+constexpr UintT mul_mont_generic(
+    const UintT& x, const UintT& y, const UintT& mod, uint64_t mod_inv) noexcept
+{
+    // Coarsely Integrated Operand Scanning (CIOS) Method
+    // Based on 2.3.2 from
+    // High-Speed Algorithms & Architectures For Number-Theoretic Cryptosystems
+    // https://www.microsoft.com/en-us/research/wp-content/uploads/1998/06/97Acar.pdf
+
+    constexpr auto S = UintT::num_words;  // TODO(C++23): Make it static
+
+    intx::uint<UintT::num_bits + 64> t;
+    for (size_t i = 0; i != S; ++i)
+    {
+        uint64_t c = 0;
+#pragma GCC unroll 8
+        for (size_t j = 0; j != S; ++j)
+            std::tie(c, t[j]) = addmul(t[j], x[j], y[i], c);
+        auto tmp = intx::addc(t[S], c);
+        t[S] = tmp.value;
+        const auto d = tmp.carry;  // TODO: Carry is 0 for sparse modulus.
+
+        const auto m = t[0] * mod_inv;
+        std::tie(c, std::ignore) = addmul(t[0], m, mod[0], 0);
+#pragma GCC unroll 8
+        for (size_t j = 1; j != S; ++j)
+            std::tie(c, t[j - 1]) = addmul(t[j], m, mod[j], c);
+        tmp = intx::addc(t[S], c);
+        t[S - 1] = tmp.value;
+        t[S] = d + tmp.carry;  // TODO: Carry is 0 for sparse modulus.
+    }
+
+    if (t >= mod)
+        t -= mod;
+
+    return static_cast<UintT>(t);
+}
+
 /// Performs a modular addition. Requires x < mod and y < mod.
 template <typename UintT>
 constexpr UintT modadd(const UintT& x, const UintT& y, const UintT& mod) noexcept
@@ -501,40 +585,29 @@ public:
     /// Inputs must be in Montgomery form: x = aR, y = bR.
     /// This computes Montgomery multiplication xyR⁻¹ % mod what gives aRbRR⁻¹ % mod = abR % mod.
     /// The result (abR) is in Montgomery form.
+#ifdef __x86_64__
+    // The kernel selection below must fold to a single call.
+    [[gnu::always_inline]]
+#endif
     constexpr UintT mul(const UintT& x, const UintT& y) const noexcept
     {
-        // Coarsely Integrated Operand Scanning (CIOS) Method
-        // Based on 2.3.2 from
-        // High-Speed Algorithms & Architectures For Number-Theoretic Cryptosystems
-        // https://www.microsoft.com/en-us/research/wp-content/uploads/1998/06/97Acar.pdf
-
-        constexpr auto S = UintT::num_words;  // TODO(C++23): Make it static
-
-        intx::uint<UintT::num_bits + 64> t;
-        for (size_t i = 0; i != S; ++i)
+#ifdef __x86_64__
+        if constexpr (std::is_same_v<UintT, intx::uint256>)
         {
-            uint64_t c = 0;
-#pragma GCC unroll 8
-            for (size_t j = 0; j != S; ++j)
-                std::tie(c, t[j]) = addmul(t[j], x[j], y[i], c);
-            auto tmp = intx::addc(t[S], c);
-            t[S] = tmp.value;
-            const auto d = tmp.carry;  // TODO: Carry is 0 for sparse modulus.
-
-            const auto m = t[0] * mod_inv_;
-            std::tie(c, std::ignore) = addmul(t[0], m, mod_[0], 0);
-#pragma GCC unroll 8
-            for (size_t j = 1; j != S; ++j)
-                std::tie(c, t[j - 1]) = addmul(t[j], m, mod_[j], c);
-            tmp = intx::addc(t[S], c);
-            t[S - 1] = tmp.value;
-            t[S] = d + tmp.carry;  // TODO: Carry is 0 for sparse modulus.
+            if (!std::is_constant_evaluated())
+            {
+                if ((mod_[1] & mod_[2] & mod_[3]) == ~uint64_t{0})
+                    return mul_mont_256_pm(x, y, mod_, mod_inv_);
+                if (mod_ == P256_FIELD_PRIME)
+                    return mul_mont_256_p256(x, y, mod_, mod_inv_);
+                if (mod_[3] < (uint64_t{1} << 63))
+                    return mul_mont_256_sparse(x, y, mod_, mod_inv_);
+                return mul_mont_256(x, y, mod_, mod_inv_);
+            }
         }
+#endif
 
-        if (t >= mod_)
-            t -= mod_;
-
-        return static_cast<UintT>(t);
+        return mul_mont_generic(x, y, mod_, mod_inv_);
     }
 
     /// Performs a modular addition.

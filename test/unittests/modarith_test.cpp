@@ -13,6 +13,8 @@ using namespace evmone::crypto;
 
 constexpr auto P23 = 23_u256;
 constexpr auto BN254Mod = 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47_u256;
+constexpr auto BN254_ORDER =
+    0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001_u256;
 constexpr auto Secp256k1Mod =
     0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f_u256;
 constexpr auto SECP256K1_ORDER =
@@ -37,9 +39,10 @@ template <typename>
 class modarith_test : public testing::Test
 {};
 
-using test_types = testing::Types<ModA<uint256, P23>, ModA<uint256, BN254Mod>,
-    ModA<uint256, Secp256k1Mod>, ModA<uint256, SECP256K1_ORDER>, ModA<uint256, SECP256R1_MOD>,
-    ModA<uint256, SECP256R1_ORDER>, ModA<uint256, M256>, ModA<uint384, BLS12384Mod>>;
+using test_types =
+    testing::Types<ModA<uint256, P23>, ModA<uint256, BN254Mod>, ModA<uint256, BN254_ORDER>,
+        ModA<uint256, Secp256k1Mod>, ModA<uint256, SECP256K1_ORDER>, ModA<uint256, SECP256R1_MOD>,
+        ModA<uint256, SECP256R1_ORDER>, ModA<uint256, M256>, ModA<uint384, BLS12384Mod>>;
 TYPED_TEST_SUITE(modarith_test, test_types);
 
 TYPED_TEST(modarith_test, to_from_mont)
@@ -156,6 +159,37 @@ TYPED_TEST(modarith_test, mul)
             const auto p = m.from_mont(pm);
             EXPECT_EQ(p, expected);
         }
+    }
+}
+
+/// Returns a pseudo-random value less than m.mod() with the word k % N saturated:
+/// such values hit more carry edge cases.
+template <typename Mod>
+static auto random_value(const Mod& m, std::mt19937_64& rng, size_t k) noexcept
+{
+    using Uint = Mod::uint;
+    Uint v;
+    for (size_t i = 0; i < Uint::num_words; ++i)
+        v[i] = rng();
+    v[k % Uint::num_words] = ~uint64_t{0};
+    return v % m.mod();
+}
+
+TYPED_TEST(modarith_test, mul_random)
+{
+    using Uint = TypeParam::uint;
+    const TypeParam m;
+    std::mt19937_64 rng{1};  // NOLINT(cert-msc51-cpp)
+    for (size_t i = 0; i < 1000; ++i)
+    {
+        const auto x = random_value(m, rng, i);
+        const auto y = random_value(m, rng, i / Uint::num_words);
+        const auto pm = m.mul(m.to_mont(x), m.to_mont(y));
+        EXPECT_LT(pm, m.mod());
+        EXPECT_EQ(m.from_mont(pm), udivrem(umul(x, y), m.mod()).rem);
+        // On x86-64 ModArith<uint256>::mul() has the BMI2 and ADX kernels.
+        EXPECT_EQ(pm,
+            mul_mont_generic(m.to_mont(x), m.to_mont(y), m.mod(), compute_mont_mod_inv(m.mod())));
     }
 }
 
