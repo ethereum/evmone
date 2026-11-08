@@ -30,6 +30,19 @@ namespace evmone::crypto
 {
 namespace
 {
+/// Returns the Montgomery factor q = t⋅m_inv mod 2⁶⁴.
+[[gnu::always_inline]] inline uint64_t mul_q(uint64_t t, uint64_t m_inv) noexcept
+{
+#ifdef __x86_64__
+    // The rows take q in RDX. Multiplying a copy of m_inv there keeps the copy off the critical
+    // path: Clang copies t instead.
+    asm("imulq %[t], %[q]" : [q] "+d"(m_inv) : [t] "r"(t) : "cc");  // NOLINT(hicpp-no-assembler)
+    return m_inv;
+#else
+    return t * m_inv;
+#endif
+}
+
 #ifdef __x86_64__
 // The asm scratch outputs are not const: clang-tidy does not see asm outputs as modifications.
 // NOLINTBEGIN(hicpp-no-assembler,misc-const-correctness)
@@ -266,7 +279,7 @@ template <typename ReduceFn>
 {
     assert(m[0] * m_inv == ~uint64_t{0});
     return [&m, m_inv](uint64_t& a0, uint64_t& a1, uint64_t& a2, uint64_t& a3, uint64_t& a4,
-               uint64_t& a5) noexcept { reduce_row(a0, a1, a2, a3, a4, a5, m, a0 * m_inv); };
+               uint64_t& a5) noexcept { reduce_row(a0, a1, a2, a3, a4, a5, m, mul_q(a0, m_inv)); };
 }
 
 EVMONE_PRESERVE_NONE intx::uint256 mul_mont_256_adx(
@@ -296,7 +309,7 @@ EVMONE_PRESERVE_NONE intx::uint256 mul_mont_256_pm_adx(
     uint64_t cw = 0;
     mont_rows(r0, r1, r2, r3, cw, words(&x[0]), &y[0],
         [c, m_inv](uint64_t& a0, uint64_t& a1, uint64_t& a2, uint64_t& a3, uint64_t& a4,
-            uint64_t& a5) noexcept { reduce_row_pm(a1, a2, a3, a4, a5, c, a0 * m_inv); });
+            uint64_t& a5) noexcept { reduce_row_pm(a1, a2, a3, a4, a5, c, mul_q(a0, m_inv)); });
     final_sub(r0, r1, r2, r3, cw, words(&m[0]));
     return {r0, r1, r2, r3};
 }
@@ -336,13 +349,13 @@ EVMONE_PRESERVE_NONE intx::uint256 mul_mont_256_sparse_adx(
     uint64_t t3 = 0;
     uint64_t t4 = 0;
     first_row(t0, t1, t2, t3, t4, xw, y[0]);
-    reduce_row_sparse(t0, t1, t2, t3, t4, mw, t0 * m_inv);
+    reduce_row_sparse(t0, t1, t2, t3, t4, mw, mul_q(t0, m_inv));
     product_row_sparse(t1, t2, t3, t4, t0, xw, y[1]);
-    reduce_row_sparse(t1, t2, t3, t4, t0, mw, t1 * m_inv);
+    reduce_row_sparse(t1, t2, t3, t4, t0, mw, mul_q(t1, m_inv));
     product_row_sparse(t2, t3, t4, t0, t1, xw, y[2]);
-    reduce_row_sparse(t2, t3, t4, t0, t1, mw, t2 * m_inv);
+    reduce_row_sparse(t2, t3, t4, t0, t1, mw, mul_q(t2, m_inv));
     product_row_sparse(t3, t4, t0, t1, t2, xw, y[3]);
-    reduce_row_sparse(t3, t4, t0, t1, t2, mw, t3 * m_inv);
+    reduce_row_sparse(t3, t4, t0, t1, t2, mw, mul_q(t3, m_inv));
 
     final_sub(t4, t0, t1, t2, mw);
     return {t4, t0, t1, t2};
@@ -840,7 +853,7 @@ template <size_t W, bool ADD_T, size_t r, size_t K, size_t R>
         Row<W>::template set<0>(a, x, y[0]);
     else
         Row<W>::template add_new<r>(a, x, y[r]);
-    q[r] = a[r] * m_inv;
+    q[r] = mul_q(a[r], m_inv);
     if constexpr (EMPTY)
         Row<W>::template add_cancel_new<r>(a, m, q[r]);
     else
