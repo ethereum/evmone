@@ -7,7 +7,7 @@
 #include <array>
 #include <utility>
 
-#ifdef __x86_64__
+#if defined(__x86_64__) || defined(__aarch64__)
 
 // The Montgomery multiplication for 4-word operands using MULX (BMI2) and ADCX/ADOX (ADX).
 //
@@ -30,6 +30,7 @@ namespace evmone::crypto
 {
 namespace
 {
+#ifdef __x86_64__
 // The asm scratch outputs are not const: clang-tidy does not see asm outputs as modifications.
 // NOLINTBEGIN(hicpp-no-assembler,misc-const-correctness)
 // clang-format off
@@ -346,6 +347,7 @@ EVMONE_PRESERVE_NONE intx::uint256 mul_mont_256_sparse_adx(
     final_sub(t4, t0, t1, t2, mw);
     return {t4, t0, t1, t2};
 }
+#endif
 
 // The almost Montgomery multiplication for any number of words n, for modexp: CIOS with the rows
 // in blocks of R ≤ 4 words of y. A block goes over x and m in chunks of W ≤ 4 words: a chunk adds
@@ -355,6 +357,7 @@ EVMONE_PRESERVE_NONE intx::uint256 mul_mont_256_sparse_adx(
 // The accumulator is r[] and its top word, at most 1. For n ≤ 4 the whole multiplication is a
 // single chunk of a single block, all in registers.
 
+#ifdef __x86_64__
 // NOLINTBEGIN(hicpp-no-assembler,misc-const-correctness)
 // clang-format off
 #define SET_ROW1 "mulxq (%[s]), %[a0], %[a1]"
@@ -515,6 +518,249 @@ template <size_t W, size_t K, size_t H>
 #undef MULX_ADD_ROW1
 #undef MULX_ADD_LAST
 #undef MULX_ADD
+#else
+// The aarch64 rows compute the low halves of the products, add them in a carry chain, then compute
+// the high halves into the same registers and add them in another chain one word up.
+
+// NOLINTBEGIN(hicpp-no-assembler,misc-const-correctness)
+// clang-format off
+#define LO(i) "mul %[t" #i "], %[s" #i "], %[y]\n\t"
+#define HI(i) "umulh %[t" #i "], %[s" #i "], %[y]\n\t"
+#define LOS1 LO(0)
+#define LOS2 LOS1 LO(1)
+#define LOS3 LOS2 LO(2)
+#define LOS4 LOS3 LO(3)
+// Without the low half of s[0]⋅y, which cancels a[0].
+#define LOSC1
+#define LOSC2 LO(1)
+#define LOSC3 LO(1) LO(2)
+#define LOSC4 LO(1) LO(2) LO(3)
+#define HIS1 HI(0)
+#define HIS2 HIS1 HI(1)
+#define HIS3 HIS2 HI(2)
+#define HIS4 HIS3 HI(3)
+
+#define ADD_LO0 "adds %[a0], %[a0], %[t0]\n\t"
+// The carry of a[0] + lo(s[0]⋅y) = 0 (mod 2⁶⁴) is a[0] ≠ 0.
+#define CANCEL_LO0 "subs xzr, %[a0], #1\n\t"
+// The low halves; MUL and UMULH keep the flags, so the carry waits for the high half of the last
+// product, which cannot overflow.
+#define LO_PASS1(op0) op0
+#define LO_PASS2(op0) op0 "adcs %[a1], %[a1], %[t1]\n\t"
+#define LO_PASS3(op0) op0 "adcs %[a1], %[a1], %[t1]\n\t" "adcs %[a2], %[a2], %[t2]\n\t"
+#define LO_PASS4(op0) op0 "adcs %[a1], %[a1], %[t1]\n\t" "adcs %[a2], %[a2], %[t2]\n\t" \
+    "adcs %[a3], %[a3], %[t3]\n\t"
+#define ABSORB(i) "adc %[t" #i "], %[t" #i "], xzr\n\t"
+// The high halves, one word up; the carry goes to the top word.
+#define HI_PASS1 ABSORB(0) "adds %[a1], %[a1], %[t0]\n\t"
+#define HI_PASS2 ABSORB(1) "adds %[a1], %[a1], %[t0]\n\t" "adcs %[a2], %[a2], %[t1]\n\t"
+#define HI_PASS3 ABSORB(2) "adds %[a1], %[a1], %[t0]\n\t" "adcs %[a2], %[a2], %[t1]\n\t" \
+    "adcs %[a3], %[a3], %[t2]\n\t"
+#define HI_PASS4 ABSORB(3) "adds %[a1], %[a1], %[t0]\n\t" "adcs %[a2], %[a2], %[t1]\n\t" \
+    "adcs %[a3], %[a3], %[t2]\n\t" "adcs %[a4], %[a4], %[t3]\n\t"
+#define TOP_NEW "adc %[top], xzr, xzr"
+#define TOP_ADD "adc %[top], %[top], xzr"
+
+#define SET1 "mul %[a0], %[s0], %[y]\n\t" "umulh %[a1], %[s0], %[y]"
+#define SET2 "mul %[a0], %[s0], %[y]\n\t" "umulh %[t0], %[s0], %[y]\n\t" LO(1) HI2(1) \
+    "adds %[a1], %[t1], %[t0]\n\t" "adc %[a2], %[u1], xzr"
+#define SET3 "mul %[a0], %[s0], %[y]\n\t" "umulh %[t0], %[s0], %[y]\n\t" LO(1) HI2(1) LO(2) HI2(2) \
+    "adds %[a1], %[t1], %[t0]\n\t" "adcs %[a2], %[t2], %[u1]\n\t" "adc %[a3], %[u2], xzr"
+#define SET4 "mul %[a0], %[s0], %[y]\n\t" "umulh %[t0], %[s0], %[y]\n\t" LO(1) HI2(1) LO(2) HI2(2) \
+    LO(3) HI2(3) "adds %[a1], %[t1], %[t0]\n\t" "adcs %[a2], %[t2], %[u1]\n\t" \
+    "adcs %[a3], %[t3], %[u2]\n\t" "adc %[a4], %[u3], xzr"
+#define HI2(i) "umulh %[u" #i "], %[s" #i "], %[y]\n\t"
+
+#define ROW_OPERANDS1(c) [a0] c(a[P]), [a1] c(a[P + 1])
+#define ROW_OPERANDS2(c) ROW_OPERANDS1(c), [a2] c(a[P + 2])
+#define ROW_OPERANDS3(c) ROW_OPERANDS2(c), [a3] c(a[P + 3])
+#define ROW_OPERANDS4(c) ROW_OPERANDS3(c), [a4] c(a[P + 4])
+#define S_OPERANDS1 [s0] "r"(s[0])
+#define S_OPERANDS2 S_OPERANDS1, [s1] "r"(s[1])
+#define S_OPERANDS3 S_OPERANDS2, [s2] "r"(s[2])
+#define S_OPERANDS4 S_OPERANDS3, [s3] "r"(s[3])
+#define TMP_OPERANDS1 [t0] "=&r"(t[0])
+#define TMP_OPERANDS2 TMP_OPERANDS1, [t1] "=&r"(t[1])
+#define TMP_OPERANDS3 TMP_OPERANDS2, [t2] "=&r"(t[2])
+#define TMP_OPERANDS4 TMP_OPERANDS3, [t3] "=&r"(t[3])
+#define SET_TMP_OPERANDS1 [t0] "=&r"(t[0])
+#define SET_TMP_OPERANDS2 SET_TMP_OPERANDS1, [t1] "=&r"(t[1]), [u1] "=&r"(h[1])
+#define SET_TMP_OPERANDS3 SET_TMP_OPERANDS2, [t2] "=&r"(t[2]), [u2] "=&r"(h[2])
+#define SET_TMP_OPERANDS4 SET_TMP_OPERANDS3, [t3] "=&r"(t[3]), [u3] "=&r"(h[3])
+
+#define ADD_T1(top) "adds %[a0], %[a0], %[u0]\n\t" "adcs %[a1], %[a1], " top "\n\t" \
+    "adcs %[a2], %[a2], xzr\n\t" "adcs %[a3], %[a3], xzr\n\t" "adc %[a4], %[a4], xzr"
+#define ADD_T2(top) "adds %[a0], %[a0], %[u0]\n\t" "adcs %[a1], %[a1], %[u1]\n\t" \
+    "adcs %[a2], %[a2], " top "\n\t" "adcs %[a3], %[a3], xzr\n\t" "adc %[a4], %[a4], xzr"
+#define ADD_T3(top) "adds %[a0], %[a0], %[u0]\n\t" "adcs %[a1], %[a1], %[u1]\n\t" \
+    "adcs %[a2], %[a2], %[u2]\n\t" "adcs %[a3], %[a3], " top "\n\t" "adc %[a4], %[a4], xzr"
+#define ADD_T4(top) "adds %[a0], %[a0], %[u0]\n\t" "adcs %[a1], %[a1], %[u1]\n\t" \
+    "adcs %[a2], %[a2], %[u2]\n\t" "adcs %[a3], %[a3], %[u3]\n\t" "adc %[a4], %[a4], " top
+#define T_OPERANDS1 [u0] "r"(t[0])
+#define T_OPERANDS2 T_OPERANDS1, [u1] "r"(t[1])
+#define T_OPERANDS3 T_OPERANDS2, [u2] "r"(t[2])
+#define T_OPERANDS4 T_OPERANDS3, [u3] "r"(t[3])
+// clang-format on
+
+template <size_t W>
+struct Row;
+
+#define DEFINE_ROW(W)                                                                             \
+    template <>                                                                                   \
+    struct Row<W>                                                                                 \
+    {                                                                                             \
+        template <size_t P, size_t K>                                                             \
+        [[gnu::always_inline]] static void set(                                                   \
+            std::array<uint64_t, K>& a, const uint64_t* s, uint64_t y) noexcept                   \
+        {                                                                                         \
+            [[maybe_unused]] std::array<uint64_t, W> t;                                           \
+            [[maybe_unused]] std::array<uint64_t, W> h;                                           \
+            asm(SET##W                                                                            \
+                : ROW_OPERANDS##W("=&r"), SET_TMP_OPERANDS##W                                     \
+                : S_OPERANDS##W, [y] "r"(y)                                                       \
+                : "cc");                                                                          \
+        }                                                                                         \
+        template <size_t P, size_t K>                                                             \
+        [[gnu::always_inline]] static void add_new(                                               \
+            std::array<uint64_t, K>& a, const uint64_t* s, uint64_t y) noexcept                   \
+        {                                                                                         \
+            std::array<uint64_t, W> t;                                                            \
+            asm(LOS##W LO_PASS##W(ADD_LO0) HIS##W HI_PASS##W TOP_NEW                              \
+                : ROW_OPERANDS##W("+r"), [top] "=&r"(a[P + W + 1]), TMP_OPERANDS##W               \
+                : S_OPERANDS##W, [y] "r"(y)                                                       \
+                : "cc");                                                                          \
+        }                                                                                         \
+        template <size_t P, size_t K>                                                             \
+        [[gnu::always_inline]] static void add_cancel(                                            \
+            std::array<uint64_t, K>& a, const uint64_t* s, uint64_t y) noexcept                   \
+        {                                                                                         \
+            std::array<uint64_t, W> t;                                                            \
+            asm(LOSC##W LO_PASS##W(CANCEL_LO0) HIS##W HI_PASS##W TOP_ADD                          \
+                : ROW_OPERANDS##W("+r"), [top] "+r"(a[P + W + 1]), TMP_OPERANDS##W                \
+                : S_OPERANDS##W, [y] "r"(y)                                                       \
+                : "cc");                                                                          \
+        }                                                                                         \
+        template <size_t P, size_t K>                                                             \
+        [[gnu::always_inline]] static void add(                                                   \
+            std::array<uint64_t, K>& a, const uint64_t* s, uint64_t y) noexcept                   \
+        {                                                                                         \
+            std::array<uint64_t, W> t;                                                            \
+            asm(LOS##W LO_PASS##W(ADD_LO0) HIS##W HI_PASS##W TOP_ADD                              \
+                : ROW_OPERANDS##W("+r"), [top] "+r"(a[P + W + 1]), TMP_OPERANDS##W                \
+                : S_OPERANDS##W, [y] "r"(y)                                                       \
+                : "cc");                                                                          \
+        }                                                                                         \
+        template <size_t K>                                                                       \
+        [[gnu::always_inline]] static void add_t(                                                 \
+            std::array<uint64_t, K>& a, const uint64_t* t) noexcept                               \
+        {                                                                                         \
+            static constexpr size_t P = 0;                                                        \
+            asm(ADD_T##W("xzr") : ROW_OPERANDS4("+r") : T_OPERANDS##W : "cc");                    \
+        }                                                                                         \
+        template <size_t K>                                                                       \
+        [[gnu::always_inline]] static void add_t_top(                                             \
+            std::array<uint64_t, K>& a, const uint64_t* t, uint64_t top) noexcept                 \
+        {                                                                                         \
+            static constexpr size_t P = 0;                                                        \
+            asm(ADD_T##W("%[top]") : ROW_OPERANDS4("+r") : T_OPERANDS##W, [top] "r"(top) : "cc"); \
+        }                                                                                         \
+    };
+
+DEFINE_ROW(1)
+DEFINE_ROW(2)
+DEFINE_ROW(3)
+DEFINE_ROW(4)
+
+template <size_t W, size_t K, size_t H>
+[[gnu::always_inline]] inline void add_high(
+    std::array<uint64_t, K>& a, const std::array<uint64_t, H>& h) noexcept
+{
+    static constexpr size_t P = W + 1;
+    if constexpr (W == 1)
+    {
+        asm("adds %[a0], %[a0], %[h0]\n\tadcs %[a1], %[a1], %[h1]\n\t"
+            "adcs %[a2], %[a2], %[h2]\n\tadc %[a3], %[a3], xzr"
+            : ROW_OPERANDS3("+r")
+            : [h0] "r"(h[0]), [h1] "r"(h[1]), [h2] "r"(h[2])
+            : "cc");
+    }
+    else if constexpr (W == 2)
+    {
+        asm("adds %[a0], %[a0], %[h0]\n\tadcs %[a1], %[a1], %[h1]\n\t"
+            "adcs %[a2], %[a2], xzr\n\tadc %[a3], %[a3], xzr"
+            : ROW_OPERANDS3("+r")
+            : [h0] "r"(h[0]), [h1] "r"(h[1])
+            : "cc");
+    }
+    else
+    {
+        asm("adds %[a0], %[a0], %[h0]\n\tadcs %[a1], %[a1], xzr\n\t"
+            "adcs %[a2], %[a2], xzr\n\tadc %[a3], %[a3], xzr"
+            : ROW_OPERANDS3("+r")
+            : [h0] "r"(h[0])
+            : "cc");
+    }
+}
+
+// NOLINTEND(hicpp-no-assembler,misc-const-correctness)
+#undef DEFINE_ROW
+#undef T_OPERANDS4
+#undef T_OPERANDS3
+#undef T_OPERANDS2
+#undef T_OPERANDS1
+#undef ADD_T4
+#undef ADD_T3
+#undef ADD_T2
+#undef ADD_T1
+#undef SET_TMP_OPERANDS4
+#undef SET_TMP_OPERANDS3
+#undef SET_TMP_OPERANDS2
+#undef SET_TMP_OPERANDS1
+#undef TMP_OPERANDS4
+#undef TMP_OPERANDS3
+#undef TMP_OPERANDS2
+#undef TMP_OPERANDS1
+#undef S_OPERANDS4
+#undef S_OPERANDS3
+#undef S_OPERANDS2
+#undef S_OPERANDS1
+#undef ROW_OPERANDS4
+#undef ROW_OPERANDS3
+#undef ROW_OPERANDS2
+#undef ROW_OPERANDS1
+#undef HI2
+#undef SET4
+#undef SET3
+#undef SET2
+#undef SET1
+#undef TOP_ADD
+#undef TOP_NEW
+#undef HI_PASS4
+#undef HI_PASS3
+#undef HI_PASS2
+#undef HI_PASS1
+#undef ABSORB
+#undef LO_PASS4
+#undef LO_PASS3
+#undef LO_PASS2
+#undef LO_PASS1
+#undef CANCEL_LO0
+#undef ADD_LO0
+#undef HIS4
+#undef HIS3
+#undef HIS2
+#undef HIS1
+#undef LOSC4
+#undef LOSC3
+#undef LOSC2
+#undef LOSC1
+#undef LOS4
+#undef LOS3
+#undef LOS2
+#undef LOS1
+#undef HI
+#undef LO
+#endif
 
 // The copies between the windows and the memory spell out the word indices: a loop over a
 // std::array keeps GCC from holding its words in registers.
@@ -698,7 +944,7 @@ template <size_t N>
 
 }  // namespace
 
-EVMONE_PRESERVE_NONE void mul_amm_adx(uint64_t* r, const uint64_t* x, const uint64_t* y,
+EVMONE_PRESERVE_NONE void mul_amm_asm(uint64_t* r, const uint64_t* x, const uint64_t* y,
     const uint64_t* mod, uint64_t mod_inv, size_t n) noexcept
 {
     assert(mod[0] * mod_inv == ~uint64_t{0});
@@ -730,6 +976,7 @@ EVMONE_PRESERVE_NONE void mul_amm_adx(uint64_t* r, const uint64_t* x, const uint
     }
 }
 
+#ifdef __x86_64__
 EVMONE_PRESERVE_NONE intx::uint256 mul_mont_256_generic(
     const intx::uint256& x, const intx::uint256& y, const intx::uint256& m, uint64_t m_inv) noexcept
 {
@@ -765,6 +1012,7 @@ namespace
     return true;
 }();
 }  // namespace
+#endif
 #endif
 }  // namespace evmone::crypto
 

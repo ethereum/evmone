@@ -80,22 +80,28 @@ constexpr uint64_t addmul(std::span<uint64_t> r, std::span<const uint64_t> p,
 EVMONE_PRESERVE_NONE void mul_amm_generic(uint64_t* r, const uint64_t* x, const uint64_t* y,
     const uint64_t* mod, uint64_t mod_inv, size_t n) noexcept;
 
-#ifdef __x86_64__
-/// Computes mul_amm_generic() with the BMI2 and ADX instructions.
-EVMONE_PRESERVE_NONE void mul_amm_adx(uint64_t* r, const uint64_t* x, const uint64_t* y,
+#if defined(__x86_64__) || defined(__aarch64__)
+/// Computes mul_amm_generic() with assembly, on x86-64 with the BMI2 and ADX instructions, which
+/// the CPU must have.
+EVMONE_PRESERVE_NONE void mul_amm_asm(uint64_t* r, const uint64_t* x, const uint64_t* y,
     const uint64_t* mod, uint64_t mod_inv, size_t n) noexcept;
 #endif
 
-/// Computes mul_amm_generic(), on x86-64 with the BMI2 and ADX instructions if the CPU has them.
-/// The compilers move the check out of the loops of calls.
+/// Computes mul_amm_generic(), with assembly on AArch64 and on x86-64 if the CPU has the BMI2 and
+/// ADX instructions.
 inline void mul_amm(uint64_t* r, const uint64_t* x, const uint64_t* y, const uint64_t* mod,
     uint64_t mod_inv, size_t n) noexcept
 {
+#ifdef __aarch64__
+    mul_amm_asm(r, x, y, mod, mod_inv, n);
+#else
 #ifdef __x86_64__
+    // The compilers move the check out of the loops of calls.
     if (cpu_has_adx)
-        return mul_amm_adx(r, x, y, mod, mod_inv, n);
+        return mul_amm_asm(r, x, y, mod, mod_inv, n);
 #endif
     mul_amm_generic(r, x, y, mod, mod_inv, n);
+#endif
 }
 
 }  // namespace evmone::crypto
