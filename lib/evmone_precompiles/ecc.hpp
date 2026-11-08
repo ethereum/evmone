@@ -6,6 +6,7 @@
 #include "modarith.hpp"
 #include <optional>
 #include <span>
+#include <utility>
 
 namespace evmone::crypto::ecc
 {
@@ -33,6 +34,11 @@ class FieldElement
     static constexpr ModArith<uint_type> Fp{Spec::ORDER};
 
     uint_type value_;
+
+    /// Initializes the value directly with the result of op() in the internal ModArith form.
+    template <typename Op>
+    [[gnu::always_inline]] constexpr FieldElement(std::in_place_t, Op op) noexcept : value_{op()}
+    {}
 
     /// Wraps a value into the Element type assuming it is already in the internal ModArith form.
     [[gnu::always_inline]] static constexpr FieldElement wrap(const uint_type& v) noexcept
@@ -85,7 +91,9 @@ public:
 
     friend constexpr auto operator*(const FieldElement& a, const FieldElement& b) noexcept
     {
-        return wrap(Fp.mul(a.value_, b.value_));
+        // The out-of-line multiplication returns via memory: let it write to the result directly.
+        // GCC otherwise copies the result with 16-byte loads which miss the store forwarding.
+        return FieldElement{std::in_place, [&] { return Fp.mul(a.value_, b.value_); }};
     }
 
     friend constexpr auto operator+(const FieldElement& a, const FieldElement& b) noexcept

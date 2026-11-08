@@ -29,6 +29,7 @@ target_sources(
     modarith.hpp
     modexp.hpp
     modexp.cpp
+    mul_mont.cpp
     mulmod.hpp
     mulmod.cpp
     ripemd160.hpp

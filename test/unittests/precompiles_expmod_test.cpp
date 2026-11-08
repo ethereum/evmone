@@ -3,10 +3,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <evmc/hex.hpp>
+#include <evmone_precompiles/mulmod.hpp>
 #include <gtest/gtest.h>
 #include <intx/intx.hpp>
 #include <test/state/precompiles_internal.hpp>
 #include <test/utils/utils.hpp>
+#include <algorithm>
+#include <random>
+#include <vector>
 #ifdef EVMONE_PRECOMPILES_GMP
 #include <test/state/precompiles_gmp.hpp>
 #endif
@@ -435,6 +439,60 @@ TEST_P(expmod, large_inputs)
 
     // Large exponent (256 bytes): 2^(0x00...03) mod 6 = 8 mod 6 = 2.
     expect_last_byte(run({0x02}, make_val(256, 0x00, 0x03), {0x06}), 2);
+}
+
+TEST(expmod, mul_amm_saturated_words)
+{
+    // The almost Montgomery multiplication for every n mod 4 and up to 4 chunks of 4 words, with
+    // mostly all-ones words: random words almost never take its rarer carries. On x86-64 mul_amm()
+    // is the BMI2 and ADX implementation, when the CPU has them.
+    using Uint = intx::uint<64 * 32>;
+    const auto to_uint = [](const std::vector<uint64_t>& v) {
+        Uint u;
+        for (size_t i = 0; i < v.size(); ++i)
+            u[i] = v[i];
+        return u;
+    };
+    std::mt19937_64 rng{1};  // NOLINT(cert-msc51-cpp)
+    const auto word = [&rng] {
+        switch (rng() % 8)
+        {
+        case 0:
+            return uint64_t{0};
+        case 1:
+            return uint64_t{rng()};
+        case 2:
+            return ~uint64_t{1};
+        default:
+            return ~uint64_t{0};
+        }
+    };
+    for (size_t n = 1; n <= 16; ++n)
+    {
+        std::vector<uint64_t> m(n);
+        std::vector<uint64_t> x(n);
+        std::vector<uint64_t> y(n);
+        std::vector<uint64_t> r(n);
+        std::vector<uint64_t> r_generic(n);
+        for (int i = 0; i < 1000; ++i)
+        {
+            std::ranges::generate(m, word);
+            m[0] |= 1;
+            if (m[n - 1] == 0)
+                m[n - 1] = 1;
+            std::ranges::generate(x, word);
+            std::ranges::generate(y, word);
+            const auto mod_inv = -evmone::crypto::modinv_pow2(m[0]);
+            evmone::crypto::mul_amm(r.data(), x.data(), y.data(), m.data(), mod_inv, n);
+            evmone::crypto::mul_amm_generic(
+                r_generic.data(), x.data(), y.data(), m.data(), mod_inv, n);
+            const auto mod = to_uint(m);
+            EXPECT_EQ(intx::udivrem(to_uint(r) << (64 * n), mod).rem,
+                intx::udivrem(to_uint(x) * to_uint(y), mod).rem)
+                << "n=" << n << " i=" << i;
+            EXPECT_EQ(r_generic, r) << "n=" << n << " i=" << i;
+        }
+    }
 }
 
 TEST(expmod, analysis_oog)

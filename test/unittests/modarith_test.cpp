@@ -4,7 +4,9 @@
 
 #include <evmone_precompiles/modarith.hpp>
 #include <gtest/gtest.h>
+#include <algorithm>
 #include <array>
+#include <random>
 
 using namespace intx;
 using namespace evmone::crypto;
@@ -13,6 +15,13 @@ constexpr auto P23 = 23_u256;
 constexpr auto BN254Mod = 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47_u256;
 constexpr auto Secp256k1Mod =
     0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f_u256;
+constexpr auto BN254Order = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001_u256;
+constexpr auto Secp256k1Order =
+    0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141_u256;
+constexpr auto Secp256r1Mod =
+    0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff_u256;
+constexpr auto Secp256r1Order =
+    0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551_u256;
 constexpr auto M256 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff_u256;
 constexpr auto BLS12384Mod =
     0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab_u384;
@@ -29,8 +38,10 @@ template <typename>
 class modarith_test : public testing::Test
 {};
 
-using test_types = testing::Types<ModA<uint256, P23>, ModA<uint256, BN254Mod>,
-    ModA<uint256, Secp256k1Mod>, ModA<uint256, M256>, ModA<uint384, BLS12384Mod>>;
+using test_types =
+    testing::Types<ModA<uint256, P23>, ModA<uint256, BN254Mod>, ModA<uint256, BN254Order>,
+        ModA<uint256, Secp256k1Mod>, ModA<uint256, Secp256k1Order>, ModA<uint256, Secp256r1Mod>,
+        ModA<uint256, Secp256r1Order>, ModA<uint256, M256>, ModA<uint384, BLS12384Mod>>;
 TYPED_TEST_SUITE(modarith_test, test_types);
 
 TYPED_TEST(modarith_test, to_from_mont)
@@ -145,6 +156,68 @@ TYPED_TEST(modarith_test, mul)
             const auto p = m.from_mont(pm);
             EXPECT_EQ(p, expected);
         }
+    }
+}
+
+/// Returns a pseudo-random value less than m.mod() with the word k % N saturated:
+/// such values hit more carry edge cases.
+template <typename Mod>
+static auto random_value(const Mod& m, std::mt19937_64& rng, size_t k) noexcept
+{
+    using Uint = Mod::uint;
+    Uint v;
+    for (size_t i = 0; i < Uint::num_words; ++i)
+        v[i] = rng();
+    v[k % Uint::num_words] = ~uint64_t{0};
+    return v % m.mod();
+}
+
+TYPED_TEST(modarith_test, mul_random)
+{
+    using Uint = TypeParam::uint;
+    const TypeParam m;
+    std::mt19937_64 rng{1};  // NOLINT(cert-msc51-cpp)
+    for (size_t i = 0; i < 1000; ++i)
+    {
+        const auto x = random_value(m, rng, i);
+        const auto y = random_value(m, rng, i / Uint::num_words);
+        const auto pm = m.mul(m.to_mont(x), m.to_mont(y));
+        EXPECT_LT(pm, m.mod());
+        EXPECT_EQ(m.from_mont(pm), udivrem(umul(x, y), m.mod()).rem);
+        // On x86-64 ModArith<uint256>::mul() has the BMI2 and ADX kernels.
+        EXPECT_EQ(pm,
+            mul_mont_generic(m.to_mont(x), m.to_mont(y), m.mod(), compute_mont_mod_inv(m.mod())));
+    }
+}
+
+TYPED_TEST(modarith_test, inv_random)
+{
+    // The prime factors of M256 = 2²⁵⁶ - 1, the only modulus here with non-invertible values > 0.
+    static constexpr std::array M256_FACTORS{3_u256, 5_u256, 17_u256, 257_u256, 641_u256,
+        65537_u256, 274177_u256, 6700417_u256, 67280421310721_u256, 59649589127497217_u256,
+        5704689200685129054721_u256};
+
+    const TypeParam m;
+    std::mt19937_64 rng{2};  // NOLINT(cert-msc51-cpp)
+    for (size_t i = 0; i < 1000; ++i)
+    {
+        const auto x = random_value(m, rng, i);
+        const auto xm_inv = m.inv(m.to_mont(x));
+        const bool invertible = [&] {
+            if constexpr (std::is_same_v<typename TypeParam::uint, uint256>)
+            {
+                if (m.mod() == M256)
+                    return std::ranges::none_of(M256_FACTORS, [&](auto p) { return x % p == 0; });
+            }
+            return x != 0;
+        }();
+        if (!invertible)
+        {
+            EXPECT_EQ(xm_inv, 0);
+            continue;
+        }
+        EXPECT_LT(xm_inv, m.mod());
+        EXPECT_EQ(m.from_mont(m.mul(m.to_mont(x), xm_inv)), 1);
     }
 }
 

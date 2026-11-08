@@ -59,11 +59,43 @@ constexpr uint64_t addmul(std::span<uint64_t> r, std::span<const uint64_t> p,
     return c;
 }
 
-/// Almost Montgomery Multiplication for 256-bit (4-word) operands.
-/// Computes r = x * y * R^-1 mod m.
-/// Arguments x and y must be already in the "almost" Montgomery form.
-/// Result r must not alias x or y.
-void mul_amm_256(std::span<uint64_t, 4> r, std::span<const uint64_t, 4> x,
-    std::span<const uint64_t, 4> y, std::span<const uint64_t, 4> mod, uint64_t mod_inv) noexcept;
+/// Performs the Almost Montgomery Multiplication (AMM) of n-word values for R = 2^(64n).
+///
+/// The AMM is a relaxed version of the Montgomery multiplication producing a result in Montgomery
+/// form which is in range [0, R), i.e., it may be larger than the modulus.
+/// This allows to skip the final conditional subtraction in most cases, improving performance.
+///
+/// For any x, y < R the reduction computes t = (x⋅y + q⋅mod) / R with q < R, so t < R + mod.
+/// If t ≥ R, subtracting mod once brings it below R.
+///
+/// The inputs are expected to be in Montgomery form.
+/// Additionally, passing y=1 converts x from Montgomery form back to plain form,
+/// because for x = aR: mul_amm(x, 1) = aR⋅1⋅R⁻¹ % mod = a % mod.
+///
+/// See "Efficient Software Implementations of Modular Exponentiation":
+/// https://eprint.iacr.org/2011/239.pdf
+///
+/// Computes r = x * y * R^-1 mod m for r, x, y and mod of n > 0 words. Requires odd mod with a
+/// non-zero top word and mod⋅mod_inv ≡ -1 (mod 2⁶⁴). r must not alias x or y.
+EVMONE_PRESERVE_NONE void mul_amm_generic(uint64_t* r, const uint64_t* x, const uint64_t* y,
+    const uint64_t* mod, uint64_t mod_inv, size_t n) noexcept;
+
+#ifdef __x86_64__
+/// Computes mul_amm_generic() with the BMI2 and ADX instructions.
+EVMONE_PRESERVE_NONE void mul_amm_adx(uint64_t* r, const uint64_t* x, const uint64_t* y,
+    const uint64_t* mod, uint64_t mod_inv, size_t n) noexcept;
+#endif
+
+/// Computes mul_amm_generic(), on x86-64 with the BMI2 and ADX instructions if the CPU has them.
+/// The compilers move the check out of the loops of calls.
+inline void mul_amm(uint64_t* r, const uint64_t* x, const uint64_t* y, const uint64_t* mod,
+    uint64_t mod_inv, size_t n) noexcept
+{
+#ifdef __x86_64__
+    if (cpu_has_adx)
+        return mul_amm_adx(r, x, y, mod, mod_inv, n);
+#endif
+    mul_amm_generic(r, x, y, mod, mod_inv, n);
+}
 
 }  // namespace evmone::crypto
