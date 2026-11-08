@@ -1,9 +1,9 @@
 #!/bin/bash
-# Builds the precompiles benchmark for master, crypto/main before the review fixes (PREV) and this
-# commit, runs the related unit tests of this commit and compares the benchmarks.
+# Builds the precompiles benchmark for master, crypto/main before the review fixes (prev: this commit
+# with the files in bench/arm-mulmont/prev) and this commit, runs the related unit tests of this
+# commit and compares the benchmarks.
 set -euo pipefail
 BASE=$1
-PREV=$2
 cd "$(git rev-parse --show-toplevel)"
 echo "### host: $(uname -sm), $($CXX --version | head -1)"
 if [ "$(uname -s)" = Darwin ]; then
@@ -12,7 +12,8 @@ else
   (lscpu | grep -E "Model name|Vendor ID|^CPU\(s\)") || true; NPROC=$(nproc)
 fi
 git worktree add --detach ../base "$BASE" > /dev/null
-git worktree add --detach ../prev "$PREV" > /dev/null
+git worktree add --detach ../prev HEAD > /dev/null
+(cd bench/arm-mulmont/prev && find . -type f -exec cp {} ../../../../prev/{} \;)
 ln -s "$PWD" ../head
 for v in base prev head; do
   cmake -S ../$v -B ../build-$v -DCMAKE_BUILD_TYPE=Release -DEVMONE_TESTING=ON > ../cfg-$v.log
