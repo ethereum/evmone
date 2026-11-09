@@ -72,9 +72,10 @@ EVMONE_PRESERVE_NONE void mul_amm_generic(uint64_t* r_ptr, const uint64_t* x_ptr
 {
     if (n == 4)
     {
-        return mul_amm_256(std::span<uint64_t, 4>{r_ptr, 4}, std::span<const uint64_t, 4>{x_ptr, 4},
+        mul_amm_256(std::span<uint64_t, 4>{r_ptr, 4}, std::span<const uint64_t, 4>{x_ptr, 4},
             std::span<const uint64_t, 4>{y_ptr, 4}, std::span<const uint64_t, 4>{mod_ptr, 4},
             mod_inv);
+        return;
     }
     const std::span r{r_ptr, n};
     const std::span x{x_ptr, n};

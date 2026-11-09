@@ -110,7 +110,10 @@ inline void mul_amm(uint64_t* r, const uint64_t* x, const uint64_t* y, const uin
 #ifdef __x86_64__
     // The compilers move the check out of the loops of calls.
     if (cpu_has_adx)
-        return mul_amm_asm(r, x, y, mod, mod_inv, n);
+    {
+        mul_amm_asm(r, x, y, mod, mod_inv, n);
+        return;
+    }
 #endif
     mul_amm_generic(r, x, y, mod, mod_inv, n);
 #endif
