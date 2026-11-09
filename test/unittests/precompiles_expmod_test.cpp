@@ -391,6 +391,36 @@ TEST_P(expmod, inputs)
         {"05", "03", "18", "05"},
         // Even base with the low word of zero: the parity comes from the low word, not the top.
         {"010000000000000000", "02", "06", "04"},
+        // Modulus 2^255: 4 power-of-two words, the 5-bit window.
+        {"967c4f22f421fdb9d204cad08c5f83584b422d9afa92b510c01620f7c11ba9d1",
+            "f47393e42fd1cfc2d70a8c60e3f7a6c6fbae555f52fb09da2f6a2c731cb13a0b",
+            "8000000000000000000000000000000000000000000000000000000000000000",
+            "620e7743fcb4f4704194d4b1d3d4313d110a1843303fd641a5b0f3ffb0f7aaf1"},
+        // Modulus 2^256: 4 power-of-two words, the 2-bit window.
+        {"dd04ba5bd566a8eb840011a0f934c1d353d7c49d8c4a842be2fc10d4b8f6ffad", "091fa2",
+            "010000000000000000000000000000000000000000000000000000000000000000",
+            "009142c8764ff56829579eb9510997598fab84fd5c5b347c80285c1a1eda150969"},
+        // Modulus odd⋅2^200: 4 power-of-two words, the 4-bit window.
+        {"9d54373894ae76e94344981485d9a0d337dce3fa86fef1e22fe4fd9b5af0634b",
+            "c2a23720651b4f50b1f870703ed30e65c3ed4e1f",
+            "4c03513f85f48f00000000000000000000000000000000000000000000000000",
+            "2f62f613ac87f341a06c0ea4a54d676c2792acd0ad5aaa09c247ec0508ba4ee3"},
+        // Modulus odd⋅2^150: 3 power-of-two words, the 3-bit window.
+        {"975b58e596b7e5073e98627425a6595ad08e74503beeb351", "fb48d2435128e85f",
+            "034658e8f11b72018534a48bccc0000000000000000000000000000000000000",
+            "0200f8adddefebd325cdfb0a66c02b03b22471bf8881c641bdf98fd1dba723b1"},
+        // Modulus 3⋅2^190: 3 power-of-two words, the 4-bit window.
+        {"d193f24414685e560034322e2c6cd558fa45bf5cfcf1beff964a528a3c0db2d5",
+            "febf948a4a1685cfcd52d7efdaff93cb", "c00000000000000000000000000000000000000000000000",
+            "4a8f26cbe20b27f7520c4e8f9046613d5b093c9dcbf73a4d"},
+        // Modulus odd⋅2^127: 2 power-of-two words, the 4-bit window.
+        {"8e622e501e8ef872cf5b696a03f581eee7528e8e99cada085ac5008a3ba4f88d",
+            "0c91208e6ea2229463343ed780",
+            "ab9804bf4e908a7bb0063fa2a9029d6c80000000000000000000000000000000",
+            "61b309ee8594c5c5f0dc106577a37365196f20c36014661b9032d6072add3e01"},
+        // Even base, modulus 2^150: the exponent is below the bit width of k = 150.
+        {"3e74452179d8cd5f98d1b6ac91c879ef9ae956", "95", "40000000000000000000000000000000000000",
+            "20000000000000000000000000000000000000"},
     };
 
     for (const auto& [base_hex, exp_hex, mod_hex, expected_result_hex] : test_cases)

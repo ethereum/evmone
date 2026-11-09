@@ -296,9 +296,20 @@ public:
             bytes |= size_t{bytes_[byte_index - 1]} << 8;
         return (bytes >> (lo % 8)) & ((size_t{1} << (hi + 1 - lo)) - 1);
     }
+
+    /// Returns the widest window of at most w bits ending at bit hi, which must be set, with the
+    /// trailing zero bits trimmed off: the window value, which is odd, and the index of its lowest
+    /// bit.
+    [[nodiscard]] std::pair<size_t, size_t> odd_window(size_t hi, unsigned w) const noexcept
+    {
+        const auto lo = hi + 1 >= w ? hi + 1 - w : size_t{0};
+        const auto v = window(lo, hi);
+        const auto tz = static_cast<size_t>(std::countr_zero(v));  // v != 0: bit hi is set.
+        return {v >> tz, lo + tz};
+    }
 };
 
-/// Maximum window width used by the windowed method in modexp_odd.
+/// Maximum window width of the sliding-window exponentiation.
 constexpr unsigned MAX_WINDOW_WIDTH = 5;
 static_assert(MAX_WINDOW_WIDTH <= 8, "Exponent::window() covers at most two adjacent bytes");
 
@@ -376,18 +387,8 @@ void modexp_odd(std::span<uint64_t> result, std::span<const uint64_t> base, Expo
             amm(precomputed(v), precomputed(v - 2), r_tmp);
     }
 
-    // The widest window of at most w bits ending at bit `hi`, which must be set. Trailing
-    // zero bits are trimmed off, so the value is odd and only odd table entries are
-    // needed. Returns the value and the index of its lowest bit.
-    const auto window = [exp, w](size_t hi) noexcept {
-        const auto lo = hi + 1 >= w ? hi + 1 - w : size_t{0};
-        const auto v = exp.window(lo, hi);
-        const auto tz = static_cast<size_t>(std::countr_zero(v));  // v != 0: exp[hi] is set.
-        return std::pair{v >> tz, lo + tz};
-    };
-
     // The top bit is always set, so the first window ends there and is loaded directly.
-    auto [v_top, pos] = window(exp_bits - 1);
+    auto [v_top, pos] = exp.odd_window(exp_bits - 1, w);
     std::ranges::copy(precomputed(v_top), r_cur.begin());
 
     while (pos != 0)
@@ -397,7 +398,7 @@ void modexp_odd(std::span<uint64_t> result, std::span<const uint64_t> base, Expo
         auto hi = pos - 1;
         while (hi != 0 && !exp[hi])
             --hi;
-        const auto [v, lo] = exp[hi] ? window(hi) : std::pair<size_t, size_t>{};
+        const auto [v, lo] = exp[hi] ? exp.odd_window(hi, w) : std::pair<size_t, size_t>{};
         if (n == 4)
             sqr_n_amm_256(r_cur.data(), r_cur.data(), pos - lo, mod.data(), mod_inv);
         else
@@ -439,6 +440,93 @@ void mask_pow2(std::span<uint64_t> x, unsigned k) noexcept
     // This implementation assumes the x.size() matches the k so we always mask the top word.
     // For k % 64 == 0, we don't mask anything.
     x.back() &= ~uint64_t{0} >> (-k % 64);
+}
+
+/// Computes x[] * y[] mod 2^(64N).
+template <size_t N>
+[[gnu::always_inline]] inline std::array<uint64_t, N> mul_lo(
+    const std::array<uint64_t, N>& x, const std::array<uint64_t, N>& y) noexcept
+{
+    std::array<uint64_t, N> r;  // NOLINT(*-pro-type-member-init)
+    uint64_t c = 0;
+#pragma GCC unroll 4
+    for (size_t j = 0; j != N; ++j)
+        std::tie(c, r[j]) = addmul(0, x[j], y[0], c);
+#pragma GCC unroll 4
+    for (size_t i = 1; i != N; ++i)
+    {
+        c = 0;
+#pragma GCC unroll 4
+        for (size_t j = 0; i + j != N; ++j)
+            std::tie(c, r[i + j]) = addmul(r[i + j], x[j], y[i], c);
+    }
+    return r;
+}
+
+/// Computes x[]^2 mod 2^(64N).
+template <size_t N>
+[[gnu::always_inline]] inline std::array<uint64_t, N> sqr_lo(
+    const std::array<uint64_t, N>& x) noexcept
+{
+    // The cross products x[i]⋅x[j] for i < j, doubled, then the squares x[i]².
+    std::array<uint64_t, N> r{};
+#pragma GCC unroll 4
+    for (size_t i = 0; i + 1 < N; ++i)
+    {
+        uint64_t c = 0;
+#pragma GCC unroll 4
+        for (size_t j = i + 1; i + j < N; ++j)
+            std::tie(c, r[i + j]) = addmul(r[i + j], x[i], x[j], c);
+    }
+    bool carry = false;
+#pragma GCC unroll 4
+    for (size_t i = 1; i != N; ++i)
+        std::tie(r[i], carry) = addc(r[i], r[i], carry);
+    carry = false;
+#pragma GCC unroll 4
+    for (size_t i = 0; i < N; i += 2)
+    {
+        const auto p = umul(x[i / 2], x[i / 2]);
+        std::tie(r[i], carry) = addc(r[i], p[0], carry);
+        if (i + 1 < N)
+            std::tie(r[i + 1], carry) = addc(r[i + 1], p[1], carry);
+    }
+    return r;
+}
+
+/// Computes r[] = r[]^e % 2^(64N) for r[] of N words with the sliding window, where e is the low
+/// num_bits bits of exp, the top one set.
+template <size_t N>
+void modexp_pow2_fixed(std::span<uint64_t> r, Exponent exp, size_t num_bits) noexcept
+{
+    assert(r.size() == N);
+    const auto w = window_width(num_bits);
+
+    // base^v for odd v at the index v / 2.
+    std::array<std::array<uint64_t, N>, MAX_PRECOMPUTED> table;  // NOLINT(*-pro-type-member-init)
+    std::ranges::copy(r, table[0].begin());
+    if (w > 1)
+    {
+        const auto base2 = sqr_lo(table[0]);
+        for (size_t i = 1; i != size_t{1} << (w - 1); ++i)
+            table[i] = mul_lo(table[i - 1], base2);
+    }
+
+    auto [v_top, pos] = exp.odd_window(num_bits - 1, w);
+    auto x = table[v_top / 2];
+    while (pos != 0)
+    {
+        auto hi = pos - 1;
+        while (hi != 0 && !exp[hi])
+            --hi;
+        const auto [v, lo] = exp[hi] ? exp.odd_window(hi, w) : std::pair<size_t, size_t>{};
+        for (auto b = lo; b != pos; ++b)
+            x = sqr_lo(x);
+        if (v != 0)
+            x = mul_lo(x, table[v / 2]);
+        pos = lo;
+    }
+    std::ranges::copy(x, r.begin());
 }
 
 /// Computes r[] = base[]^exp % 2^k.
@@ -499,15 +587,42 @@ void modexp_pow2(std::span<uint64_t> r, std::span<const uint64_t> base, Exponent
     const auto [_, pad] = std::ranges::copy(base_k, r_k.begin());
     std::ranges::fill(std::span{pad, r_k.end()}, uint64_t{0});
 
-    for (auto i = num_bits - 1; i != 0; --i)
+    switch (num_pow2_words)
     {
-        mul(tmp, r_k, r_k);
-        std::swap(r_k, tmp);
-
-        if (exp[i - 1])
+    case 1:
+    {
+        // The binary method with plain multiplications.
+        const auto b = r_k[0];
+        auto x = b;
+        for (auto i = num_bits - 1; i != 0; --i)
         {
-            mul(tmp, r_k, base_k);
+            x *= x;
+            if (exp[i - 1])
+                x *= b;
+        }
+        r_k[0] = x;
+        break;
+    }
+    case 2:
+        modexp_pow2_fixed<2>(r_k, exp, num_bits);
+        break;
+    case 3:
+        modexp_pow2_fixed<3>(r_k, exp, num_bits);
+        break;
+    case 4:
+        modexp_pow2_fixed<4>(r_k, exp, num_bits);
+        break;
+    default:
+        for (auto i = num_bits - 1; i != 0; --i)
+        {
+            mul(tmp, r_k, r_k);
             std::swap(r_k, tmp);
+
+            if (exp[i - 1])
+            {
+                mul(tmp, r_k, base_k);
+                std::swap(r_k, tmp);
+            }
         }
     }
 
