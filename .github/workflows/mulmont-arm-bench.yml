@@ -25,4 +25,4 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - run: bench/arm-mulmont/run.sh 5bda077af86d79d0330854085dc89be3c110e06b
+      - run: bench/arm-mulmont/sqr/run.sh
