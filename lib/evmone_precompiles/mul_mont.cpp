@@ -7,6 +7,10 @@
 #include <array>
 #include <utility>
 
+#ifdef __x86_64__
+#include <cpuid.h>
+#endif
+
 #if defined(__x86_64__) || defined(__aarch64__)
 
 // The Montgomery multiplication for 4-word operands using MULX (BMI2) and ADCX/ADOX (ADX).
@@ -1136,8 +1140,13 @@ constinit decltype(&mul_mont_256_generic) mul_mont_256_pm = mul_mont_256_pm_adx;
 constinit decltype(&mul_mont_256_generic) mul_mont_256_p256 = mul_mont_256_p256_adx;
 #else
 extern const bool cpu_has_adx = []() noexcept {
-    __builtin_cpu_init();
-    return __builtin_cpu_supports("bmi2") && __builtin_cpu_supports("adx");
+    // TODO(clang-19): __builtin_cpu_supports("adx") is available since Clang 19.
+    unsigned eax = 0;
+    unsigned ebx = 0;
+    unsigned ecx = 0;
+    unsigned edx = 0;
+    return __get_cpuid_count(7, 0, &eax, &ebx, &ecx, &edx) != 0 && (ebx & bit_BMI2) != 0 &&
+           (ebx & bit_ADX) != 0;
 }();
 
 constinit decltype(&mul_mont_256_generic) mul_mont_256 = mul_mont_256_generic;
