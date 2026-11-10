@@ -2,54 +2,34 @@
 
 ## Review guidelines
 
-When reviewing changes (code, tests, build scripts, documentation, workflows), expand the review beyond correctness and style. Actively look for:
+Divergence from the Ethereum execution specification is a consensus bug and outranks every other finding. Check against the latest merged EIPs (the spec) and ethereum/execution-specs (the reference implementation), not only the released test fixtures, which lag them. Report disagreements between the two instead of picking one.
 
-### Vulnerabilities
-- Injection risks (SQL/command/template), unsafe string handling, path traversal, deserialization hazards.
-- Memory-safety issues (OOB reads/writes, use-after-free patterns, integer overflow/underflow, uninitialized data).
-- Crypto misuse (non-constant-time operations on secrets, weak randomness, incorrect nonce handling, missing domain separation, insecure parameters).
-- Authentication/authorization gaps, privilege escalation paths, and broken access controls.
-- Supply-chain risks (unpinned dependencies, unsafe download/exec patterns, overly broad CI permissions).
+Also look for:
+- Attacker-controlled inputs (bytecode, transactions, precompile inputs) causing a crash, undefined behavior, or work not bounded by the gas charged.
+- Off-by-one, sign/width, and overflow errors, especially in shifts, carries/borrows, and limb arithmetic.
+- Word-size assumptions (CI also builds 32-bit x86 and riscv32).
+- Unpinned or unverified downloads and overly broad permissions in CI workflows.
+- Non-obvious invariants that no `assert` pins.
+- Hot-path changes (EVM instructions, the interpreter loop, precompile cores) without disassembly or benchmark evidence.
 
-### Security regressions
-- Changes that weaken previous security properties (e.g., removal of validation, relaxed checks, reduced entropy, widened accepted inputs).
-- New feature flags or configuration paths that silently disable protections.
-- Debug/diagnostic code that could leak secrets or sensitive data in logs, metrics, crashes, or error messages.
+The execution-specs tests, which CI runs on every PR, provide the behavioral coverage: suggest a unit test only for what they cannot pin, and report behavior they miss as a gap in them.
 
-### Safety issues
-- Unexpected behavior under malformed, adversarial, or extreme inputs (fuzz-like thinking).
-- Denial-of-service vectors (algorithmic complexity, unbounded loops/recursion, large allocations, input-triggered worst cases).
-- Concurrency hazards (data races, deadlocks, TOCTOU, improper locking/atomic usage).
-- Resource handling (file descriptors, handles, memory, temporary files, cleanup on error paths).
+evmone deliberately implements the simplest code for the current specification: hardcoded current constants, missing extension points for future EIPs, and missing fast paths for degenerate inputs are not findings. Suggest maintainability changes only when they reduce bug risk.
 
-### Correctness bugs
-- Off-by-one errors, boundary conditions, and sign/width issues (especially around shifts, carries/borrows, and limb arithmetic).
-- Undefined/implementation-defined behavior (C/C++), especially shifts, aliasing, and overflow.
-- Error handling and propagation: ensure failures are detected, returned, and tested.
-- Cross-platform/endianness/word-size assumptions that may break on other targets.
+## Writing code
 
-### What to include in review feedback
-- Call out risks explicitly and suggest mitigations or tests.
-- Recommend additional unit tests, property tests, fuzzing targets, or negative tests where appropriate.
-- Suggest clarity/maintainability improvements when they reduce future bug risk.
-- Flag any unclear invariants, missing comments, or undocumented assumptions.
+- Doc comments (`///`) state the contract: what the code computes, preconditions, result ranges, aliasing. Match the style of neighboring declarations, but point out a wrong style instead of copying it.
+- How the code works (algorithm, implementation details, compiler behavior) goes in `//` comments next to it, inside the body for a function.
 
-Other suggestions and improvements are welcome as long as they are constructive, actionable, and help improve quality, security, and maintainability.
+## Commits and pull requests
 
-## Building
+- Commit messages explain the problem, the change and its effect; the diff shows the details. Mention testing only when it went beyond what CI runs.
+- PRs are squash-merged, so a single-commit PR's title and description match its commit; update them whenever the commit changes. Post anything else, such as benchmark results, as PR comments.
 
-This repository uses out-of-source CMake builds. Common build directories live under `build/`, e.g.:
+## Building and testing
 
-- `build/debug`
-- `build/release`
+CMake builds live under `build/`. Reuse an existing one with `cmake --build <build-dir>`, or configure one with tests enabled and warnings as errors, as in CI: `cmake -B build/debug -DCMAKE_BUILD_TYPE=Debug -DEVMONE_TESTING=ON -DCMAKE_COMPILE_WARNING_AS_ERROR=TRUE`.
 
-If a build directory already exists, build it directly:
-
-- `cmake --build build/debug`
-
-## Testing
-
-All tests can be run via CTest. Make sure the build is up to date.
-
-- `ctest --test-dir build/debug --output-on-failure`
-- to filter tests use `-R <regex>`
+- Unit and integration tests: `ctest --test-dir <build-dir> --output-on-failure` (filter with `-R <regex>`).
+- execution-specs tests: `<build-dir>/bin/evmone test <fixtures>/state_tests <fixtures>/blockchain_tests`, with the fixtures release pinned in `circle.yml`.
+- Format C++ changes with clang-format; if CI's lint job still reports a difference, apply its diff. Leave clang-tidy to CI and fix what it reports.

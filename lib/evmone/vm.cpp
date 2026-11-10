@@ -59,6 +59,7 @@ evmc_set_option_result set_option(evmc_vm* c_vm, char const* c_name, char const*
     else if (name == "opcode.count")
     {
         vm.add_tracer(create_instruction_counter(value));
+        return EVMC_SET_OPTION_SUCCESS;
     }
     return EVMC_SET_OPTION_INVALID_NAME;
 }

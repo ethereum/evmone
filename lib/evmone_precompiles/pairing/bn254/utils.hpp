@@ -191,53 +191,69 @@ constexpr ecc::ProjPoint<E2> add(
     return {X3, Y3, Z3};
 }
 
-/// Computes `N` doubles of the point `a` in Jacobian coordinates.
-template <int N>
-constexpr ecc::ProjPoint<E2> n_dbl(const ecc::ProjPoint<E2>& a) noexcept
+/// Applies `sqr` to `a` N times.
+template <int N, typename T, typename SqrFn>
+constexpr T n_sqr(const T& a, SqrFn sqr) noexcept
 {
-    auto r = dbl(a);
-    for (int i = 0; i < N - 1; ++i)
-        r = dbl(r);
+    static_assert(N > 0);
+    auto r = sqr(a);
+    for (int i = 1; i < N; ++i)
+        r = sqr(r);
 
     return r;
 }
 
-/// Addchain generated algorithm which multiplies point `a` in Jacobian coordinated
-/// by X (curve seed).
-constexpr ecc::ProjPoint<E2> mul_by_X(const ecc::ProjPoint<E2>& a) noexcept
+struct X_t
+{};
+
+/// The curve seed X = 4965661367192848881.
+inline constexpr X_t X;
+
+/// Addchain generated algorithm raising `a` to the power of X (curve seed),
+/// with `sqr` squaring a value and `mul` combining two of them.
+template <typename T, typename SqrFn, typename MulFn>
+constexpr T pow_by_X(const T& a, SqrFn sqr, MulFn mul) noexcept
 {
-    auto t0 = dbl(a);
-    auto t2 = dbl(t0);
-    auto c = dbl(t2);
-    auto t4 = dbl(c);
-    auto t6 = add(a, t4);
-    t4 = add(t6, t0);
-    auto t8 = add(a, t4);
-    auto t10 = add(c, t6);
-    auto t12 = dbl(t6);
-    t8 = add(t8, t4);
-    t4 = add(t8, t0);
-    t12 = n_dbl<6>(t12);
-    t2 = add(t12, t2);
-    t2 = add(t2, t10);
-    t2 = n_dbl<7>(t2);
-    t10 = add(t2, t10);
-    t10 = n_dbl<8>(t10);
-    t10 = add(t10, t4);
-    t0 = add(t10, t0);
-    t0 = n_dbl<6>(t0);
-    t6 = add(t0, t6);
-    t6 = n_dbl<8>(t6);
-    t6 = add(t6, t4);
-    t6 = n_dbl<6>(t6);
-    t6 = add(t6, t4);
-    t6 = n_dbl<10>(t6);
-    t8 = add(t6, t8);
-    t8 = n_dbl<6>(t8);
-    t4 = add(t4, t8);
-    c = add(t4, c);
+    auto t0 = sqr(a);
+    auto t2 = sqr(t0);
+    auto c = sqr(t2);
+    auto t4 = sqr(c);
+    auto t6 = mul(a, t4);
+    t4 = mul(t6, t0);
+    auto t8 = mul(a, t4);
+    auto t10 = mul(c, t6);
+    auto t12 = sqr(t6);
+    t8 = mul(t8, t4);
+    t4 = mul(t8, t0);
+    t12 = n_sqr<6>(t12, sqr);
+    t2 = mul(t12, t2);
+    t2 = mul(t2, t10);
+    t2 = n_sqr<7>(t2, sqr);
+    t10 = mul(t2, t10);
+    t10 = n_sqr<8>(t10, sqr);
+    t10 = mul(t10, t4);
+    t0 = mul(t10, t0);
+    t0 = n_sqr<6>(t0, sqr);
+    t6 = mul(t0, t6);
+    t6 = n_sqr<8>(t6, sqr);
+    t6 = mul(t6, t4);
+    t6 = n_sqr<6>(t6, sqr);
+    t6 = mul(t6, t4);
+    t6 = n_sqr<10>(t6, sqr);
+    t8 = mul(t6, t8);
+    t8 = n_sqr<6>(t8, sqr);
+    t4 = mul(t4, t8);
+    c = mul(t4, c);
 
     return c;
+}
+
+/// Multiplies the point `a` by X.
+constexpr ecc::ProjPoint<E2> operator*(const ecc::ProjPoint<E2>& a, X_t) noexcept
+{
+    return pow_by_X(
+        a, [](const auto& p) { return dbl(p); },
+        [](const auto& p, const auto& q) { return add(p, q); });
 }
 
 /// Checks that point `p_aff` is in proper subgroup of points from twisted curve over Fq2 field.
@@ -246,7 +262,7 @@ constexpr bool g2_subgroup_check(const ecc::AffinePoint<E2>& p_aff) noexcept
 {
     const auto p = ecc::ProjPoint<E2>{p_aff};
 
-    const auto px = mul_by_X(p);
+    const auto px = p * X;
     const auto px1 = add(px, p);
     const auto _2px = dbl(px);
 
@@ -359,16 +375,14 @@ constexpr void lin_func(
 /// Computes f^2 for f in Fq12. For more ref https://eprint.iacr.org/2010/354.pdf Algorithm 22
 [[nodiscard]] constexpr Fq12 square(const Fq12& f) noexcept
 {
-    const Fq2& ksi = Fq6Config::ksi;
-
     const auto& a0 = f.coeffs[0];
     const auto& a1 = f.coeffs[1];
     auto c0 = a0 - a1;
-    auto c3 = a0 - Fq6({ksi * a1.coeffs[2], a1.coeffs[0], a1.coeffs[1]});
+    auto c3 = a0 - Fq6({a1.coeffs[2] * ksi, a1.coeffs[0], a1.coeffs[1]});
     auto c2 = a0 * a1;
     c0 = c0 * c3 + c2;
     const auto c1 = c2 + c2;
-    c2 = Fq6({ksi * c2.coeffs[2], c2.coeffs[0], c2.coeffs[1]});
+    c2 = Fq6({c2.coeffs[2] * ksi, c2.coeffs[0], c2.coeffs[1]});
     c0 = c0 + c2;
 
     return Fq12({c0, c1});
@@ -384,15 +398,15 @@ constexpr std::pair<Fq2, Fq2> fq4_square(const std::pair<Fq2, Fq2>& a) noexcept
     const auto t0 = a0 * a0;
     const auto t1 = a1 * a1;
 
-    const auto c0 = t1 * Fq6Config::ksi + t0;
+    const auto c0 = t1 * ksi + t0;
     auto c1 = a0 + a1;
     c1 = c1 * c1 - t0 - t1;
 
     return {c0, c1};
 }
 
-/// Computes `c^2` for `x` from Fq^12 where `x^(FieldPrime^6 - 1) == 1`.
-/// This is Fq^12 subgroup called cyclotomic polynomials or group of `r` roots of unity.
+/// Computes `c^2` for `c` from the cyclotomic subgroup of Fq^12, i.e. `c^(p^4 - p^2 + 1) == 1`
+/// where `p` is FieldPrime. This holds after the easy part of the final exponentiation.
 constexpr Fq12 cyclotomic_square(const Fq12& c) noexcept
 {
     const auto& g = c.coeffs[0];
@@ -410,7 +424,7 @@ constexpr Fq12 cyclotomic_square(const Fq12& c) noexcept
     const auto [t01, t12] = fq4_square({h0, g2});  // Typo in paper t01 <-> t12
     const auto [t02, aux] = fq4_square({g1, h2});
 
-    const auto t10 = aux * Fq6Config::ksi;
+    const auto t10 = aux * ksi;
 
     const auto c00 = (t00 + t00 + t00) - (g0 + g0);
     const auto c01 = (t01 + t01 + t01) - (g1 + g1);
@@ -423,53 +437,13 @@ constexpr Fq12 cyclotomic_square(const Fq12& c) noexcept
     return Fq12({Fq6({c00, c01, c02}), Fq6({c10, c11, c12})});
 }
 
-/// Computes `cyclotomic_square` N times.
-template <int N>
-constexpr Fq12 n_cyclotomic_square(const Fq12& c) noexcept
-{
-    auto r = c;
-    for (int i = 0; i < N; ++i)
-        r = cyclotomic_square(r);
-
-    return r;
-}
-
 /// Computes `a^X` where `X` is the curve seed parameter
 /// and `a` is from cyclotomic subgroup of Fq^12.
 constexpr Fq12 cyclotomic_pow_to_X(const Fq12& a) noexcept
 {
-    auto t0 = cyclotomic_square(a);
-    auto t2 = cyclotomic_square(t0);
-    auto c = cyclotomic_square(t2);
-    auto t4 = cyclotomic_square(c);
-    auto t6 = a * t4;
-    t4 = t6 * t0;
-    auto t8 = a * t4;
-    auto t10 = c * t6;
-    auto t12 = cyclotomic_square(t6);
-    t8 = t8 * t4;
-    t4 = t8 * t0;
-    t12 = n_cyclotomic_square<6>(t12);
-    t2 = t12 * t2;
-    t2 = t2 * t10;
-    t2 = n_cyclotomic_square<7>(t2);
-    t10 = t2 * t10;
-    t10 = n_cyclotomic_square<8>(t10);
-    t10 = t10 * t4;
-    t0 = t10 * t0;
-    t0 = n_cyclotomic_square<6>(t0);
-    t6 = t0 * t6;
-    t6 = n_cyclotomic_square<8>(t6);
-    t6 = t6 * t4;
-    t6 = n_cyclotomic_square<6>(t6);
-    t6 = t6 * t4;
-    t6 = n_cyclotomic_square<10>(t6);
-    t8 = t6 * t8;
-    t8 = n_cyclotomic_square<6>(t8);
-    t4 = t4 * t8;
-    c = t4 * c;
-
-    return c;
+    return pow_by_X(
+        a, [](const auto& f) { return cyclotomic_square(f); },
+        [](const auto& f, const auto& g) { return f * g; });
 }
 
 }  // namespace evmone::crypto::bn254

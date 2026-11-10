@@ -16,7 +16,6 @@ constexpr void multiply_by_lin_func_value(
     Fq12& fr, const std::array<Fq2, 3>& t, const Fq& x, const Fq& y) noexcept
 {
     const Fq12 f = fr;
-    const auto& ksi = Fq6Config::ksi;
 
     const auto t0y = t[0] * y;
     const auto t1x = t[1] * x;

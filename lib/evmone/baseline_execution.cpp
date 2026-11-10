@@ -48,7 +48,7 @@ inline evmc_status_code check_requirements(const CostTable& cost_table, int64_t&
         !instr::has_const_gas_cost(Op) || instr::gas_costs[EVMC_FRONTIER][Op] != instr::undefined,
         "undefined instructions must not be handled by check_requirements()");
 
-    auto gas_cost = instr::gas_costs[EVMC_FRONTIER][Op];  // Init assuming const cost.
+    auto gas_cost = int64_t{instr::gas_costs[EVMC_FRONTIER][Op]};  // Init assuming const cost.
     if constexpr (!instr::has_const_gas_cost(Op))
     {
         gas_cost = cost_table[Op];  // If not, load the cost from the current revision cost table.
@@ -176,7 +176,7 @@ int64_t dispatch(const CostTable& cost_table, ExecutionState& state, int64_t gas
         {
             const auto offset = static_cast<uint32_t>(position.code_it - code);
             const auto stack_height = static_cast<int>(position.stack_end - stack_bottom);
-            if (offset < state.original_code.size())  // Skip STOP from code padding.
+            if (offset < state.code.size())  // Skip STOP from code padding.
             {
                 tracer->notify_instruction_start(
                     offset, position.stack_end - 1, stack_height, gas, state);
@@ -272,7 +272,7 @@ evmc_result execute(VM& vm, const evmc_host_interface& host, evmc_host_context* 
     auto& state = vm.get_execution_state(static_cast<size_t>(msg.depth));
     state.reset(msg, rev, host, ctx, code);
 
-    state.analysis.baseline = &analysis;  // Assign code analysis for instruction implementations.
+    state.jumpdest_bitset = analysis.jumpdest_bitset();
 
     const auto& cost_table = get_baseline_cost_table(state.rev);
 

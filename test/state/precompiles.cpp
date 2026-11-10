@@ -864,16 +864,20 @@ evmc::Result call_precompile(evmc_revision rev, const evmc_message& msg) noexcep
     const auto [gas_cost, max_output_size] = analyze(input, rev);
     const auto gas_left = msg.gas - gas_cost;
     if (gas_left < 0)
-        return evmc::Result{EVMC_OUT_OF_GAS};
+        return evmc::Result{EVMC_OUT_OF_GAS, {.left = msg.state_gas}};
 
     // Allocate buffer for the precompile's output and pass its ownership to evmc::Result.
     // TODO: This can be done more elegantly by providing constructor evmc::Result(std::unique_ptr).
     const auto output_data = new (std::nothrow) uint8_t[max_output_size];  // TODO: handle nullptr.
     const auto [status_code, output_size] =
         execute(msg.input_data, msg.input_size, output_data, max_output_size);
-    const evmc_result result{status_code, status_code == EVMC_SUCCESS ? gas_left : 0, 0,
-        output_data, output_size,
-        [](const evmc_result* res) noexcept { delete[] res->output_data; }};
-    return evmc::Result{result};
+    return evmc::Result{{
+        .status_code = status_code,
+        .gas_left = status_code == EVMC_SUCCESS ? gas_left : 0,
+        .state_gas = {.left = msg.state_gas},
+        .output_data = output_data,
+        .output_size = output_size,
+        .release = [](const evmc_result* res) noexcept { delete[] res->output_data; },
+    }};
 }
 }  // namespace evmone::state

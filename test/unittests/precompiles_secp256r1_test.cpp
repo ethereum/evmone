@@ -43,6 +43,22 @@ const P256VerifyInput VALID_INPUTS[]{
         G.x.value(),
         G.y.value(),
     },
+    {
+        // s is 2²¹¹ in Montgomery form, so its inversion starts with 211 halvings.
+        0xe4e07c26c991c0d95d8056b8b9b3ee94fd97fcace24780feb1a55bcce5ef83e7_u256,
+        0x6bf85d5fe84598b10ca6199ec09ccd7d35dcd7195fdd1dc7737a0c67006ef251_u256,
+        0x455770059d208ffa62df7005e277ffffedd356b381e07ad21c9958082f1d0712_u256,
+        0x0c901d423c831ca85e27c73c263ba132721bb9d7a84c4f0380b2a6756fd60133_u256,
+        0x1c8870234dec878504c174144fa4b14b66a651691606d8173e55bd37e381569e_u256,
+    },
+    {
+        // s in Montgomery form needs 620 safegcd divsteps, the most we found for the order.
+        0xfc0f69b129955591d2a768f0b65119837fde68a53be43d4ea2c231a7ca756fba_u256,
+        0x6bf85d5fe84598b10ca6199ec09ccd7d35dcd7195fdd1dc7737a0c67006ef251_u256,
+        0xb4fc47bcdfbf49002283b7a3330f100284fc6cfd0054fd6f755e686a6db87be0_u256,
+        0x0c901d423c831ca85e27c73c263ba132721bb9d7a84c4f0380b2a6756fd60133_u256,
+        0x1c8870234dec878504c174144fa4b14b66a651691606d8173e55bd37e381569e_u256,
+    },
 };
 
 const P256VerifyInput INVALID_INPUTS[]{

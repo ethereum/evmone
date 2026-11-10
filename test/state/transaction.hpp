@@ -17,6 +17,9 @@ namespace evmone::state
 /// The maximum allowed gas limit for a transaction (EIP-7825).
 constexpr auto MAX_TX_GAS_LIMIT = 0x1000000;  // 2**24
 
+/// The maximum allowed transaction gas limit of both dimensions: execution + state (EIP-8037).
+constexpr auto MAX_TX_TOTAL_GAS_LIMIT = std::numeric_limits<uint32_t>::max();
+
 using AccessList = std::vector<std::pair<address, std::vector<bytes32>>>;
 
 /// Decodes an EIP-7702 authorization.
@@ -104,6 +107,9 @@ struct TransactionProperties
     /// The amount of gas provided to the EVM for the transaction execution.
     int64_t execution_gas_limit = 0;
 
+    /// The amount of state-gas spendable by EVM on state increase (since EIP-8037).
+    int64_t state_gas_limit = 0;
+
     /// The minimal amount of gas the transaction must use.
     int64_t min_gas_cost = 0;
 };
@@ -132,9 +138,12 @@ struct TransactionReceipt
     /// Amount of gas used by this transaction (after refund, with the min gas applied).
     int64_t gas_used = 0;
 
-    /// Amount of gas refund applied to gas_used (capped by the min gas cost of EIP-7623).
-    /// Effectively, the difference between "block" and "user" gas.
-    int64_t gas_refund = 0;
+    /// Amount of gas counted against the block gas limit by this transaction (EIP-7778).
+    int64_t block_gas_used = 0;
+
+    /// The amount of state-gas used by this transaction (since EIP-8037).
+    /// It is the state-gas part of #block_gas_used; the rest is the execution-gas part.
+    int64_t state_gas_used = 0;
 
     /// Amount of gas used by this and previous transactions in the block.
     int64_t cumulative_gas_used = 0;

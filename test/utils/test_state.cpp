@@ -7,6 +7,13 @@
 
 namespace evmone::test
 {
+bytes32 TestAccount::get_code_hash() const noexcept
+{
+    if (code_hash.has_value())
+        return *code_hash;
+    return code.empty() ? state::Account::EMPTY_CODE_HASH : keccak256(code);
+}
+
 std::optional<state::StateView::Account> TestState::get_account(const address& addr) const noexcept
 {
     const auto it = find(addr);
@@ -14,8 +21,7 @@ std::optional<state::StateView::Account> TestState::get_account(const address& a
         return std::nullopt;
 
     const auto& acc = it->second;
-    // TODO: Cache code hash for MTP root hash calculation?
-    return Account{acc.nonce, acc.balance, keccak256(acc.code), !acc.storage.empty()};
+    return Account{acc.nonce, acc.balance, acc.get_code_hash(), !acc.storage.empty()};
 }
 
 bytes TestState::get_account_code(const address& addr) const noexcept
@@ -35,7 +41,10 @@ void TestState::apply(const state::StateDiff& diff)
         a.nonce = m.nonce;
         a.balance = m.balance;
         if (m.code.has_value())
+        {
             a.code = *m.code;  // TODO: Consider taking rvalue ref to avoid code copy.
+            a.code_hash = keccak256(a.code);
+        }
         for (const auto& [k, v] : m.modified_storage)
         {
             if (v)
@@ -73,10 +82,10 @@ bytes32 TestBlockHashes::get_block_hash(int64_t block_number) const noexcept
 [[nodiscard]] std::variant<state::TransactionReceipt, std::error_code> transition(TestState& state,
     const state::BlockInfo& block, const state::BlockHashes& block_hashes,
     const state::Transaction& tx, evmc_revision rev, evmc::VM& vm, int64_t block_gas_left,
-    int64_t blob_gas_left)
+    int64_t block_state_gas_left, int64_t blob_gas_left)
 {
-    const auto tx_props_or_error =
-        state::validate_transaction(state, block, tx, rev, block_gas_left, blob_gas_left);
+    const auto tx_props_or_error = state::validate_transaction(
+        state, block, tx, rev, block_gas_left, block_state_gas_left, blob_gas_left);
     if (const auto err = get_if<std::error_code>(&tx_props_or_error))
         return *err;
 

@@ -8,12 +8,12 @@
 #include <test/utils/rlp_encode.hpp>
 #include <test/utils/statetest.hpp>
 #include <test/utils/test_report.hpp>
-#include <iostream>
+#include <ostream>
 
 namespace evmone::test
 {
-void run_state_test(
-    const StateTransitionTest& test, evmc::VM& vm, bool trace_summary, TestReport& report)
+void run_state_test(const StateTransitionTest& test, evmc::VM& vm, const StateTestOptions& options,
+    TestReport& report)
 {
     report.start_case(test.name);
     for (const auto& [rev, cases, block] : test.cases)
@@ -61,6 +61,7 @@ void run_state_test(
             const auto res =
                 error ? error :
                         transition(state, block, test.block_hashes, *tx, rev, vm, block.gas_limit,
+                            block.gas_limit,
                             static_cast<int64_t>(state::max_blob_gas_per_block(blob_params)));
 
             if (holds_alternative<state::TransactionReceipt>(res))
@@ -72,19 +73,34 @@ void run_state_test(
 
             const auto state_root = state::mpt_hash(state);
 
-            if (trace_summary)
+            const auto* const receipt = get_if<state::TransactionReceipt>(&res);
+            const auto logs_hash =
+                receipt != nullptr ? test::logs_hash(receipt->logs) : test::logs_hash({});
+
+            if (options.trace_summary || options.state_diff)
             {
-                std::clog << '{';
+                auto& out = options.output;
+                out << '{';
                 if (holds_alternative<state::TransactionReceipt>(res))  // if tx valid
                 {
                     const auto& r = get<state::TransactionReceipt>(res);
                     if (r.status == EVMC_SUCCESS)
-                        std::clog << R"("pass":true)";
+                        out << R"("pass":true)";
                     else
-                        std::clog << R"("pass":false,"error":")" << r.status << '"';
-                    std::clog << R"(,"gasUsed":"0x)" << std::hex << r.gas_used << R"(",)";
+                        out << R"("pass":false,"error":")" << r.status << '"';
+                    out << R"(,"gasUsed":")" << hex0x(r.gas_used) << R"(",)";
                 }
-                std::clog << R"("stateRoot":"0x)" << hex(state_root) << "\"}\n";
+                out << R"("logsHash":")" << hex0x(logs_hash) << R"(",)";
+                out << R"("stateRoot":")" << hex0x(state_root) << '"';
+                if (options.state_diff)
+                {
+                    out << R"(,"stateDiff":)";
+                    const auto& diff = holds_alternative<state::TransactionReceipt>(res) ?
+                                           get<state::TransactionReceipt>(res).state_diff :
+                                           state::StateDiff{};
+                    out << to_json(diff).dump();
+                }
+                out << "}\n";
             }
 
             if (!expected.exception.empty())
@@ -100,9 +116,6 @@ void run_state_test(
                 const auto& reason = get<std::error_code>(res);
                 report.check(is_expected_tx_exception(reason, expected.exception),
                     "transaction rejection reason", reason, expected.exception);
-
-                report.check_eq(
-                    "logs hash", logs_hash(std::vector<state::Log>()), expected.logs_hash);
             }
             else
             {
@@ -112,11 +125,9 @@ void run_state_test(
                         "unexpected invalid transaction: " + get<std::error_code>(res).message());
                     return;
                 }
-
-                report.check_eq("logs hash", logs_hash(get<state::TransactionReceipt>(res).logs),
-                    expected.logs_hash);
             }
 
+            report.check_eq("logs hash", logs_hash, expected.logs_hash);
             report.check_eq("state root", state_root, expected.state_hash);
         }
     }

@@ -31,23 +31,6 @@ inline void impl(AdvancedExecutionState& state) noexcept
     state.adjust_stack_size(instr::traits[Op].stack_height_change);
 }
 
-template <Opcode Op, evmc_status_code CoreFn(StackTop, ExecutionState&) noexcept = core::impl<Op>>
-inline evmc_status_code impl(AdvancedExecutionState& state) noexcept
-{
-    const auto status = CoreFn(state.stack, state);
-    state.adjust_stack_size(instr::traits[Op].stack_height_change);
-    return status;
-}
-
-template <Opcode Op,
-    evmc_status_code CoreFn(StackTop, int64_t&, ExecutionState&) noexcept = core::impl<Op>>
-inline evmc_status_code impl(AdvancedExecutionState& state) noexcept
-{
-    const auto status = CoreFn(state.stack, state.gas_left, state);
-    state.adjust_stack_size(instr::traits[Op].stack_height_change);
-    return status;
-}
-
 template <Opcode Op, Result CoreFn(StackTop, int64_t, ExecutionState&) noexcept = core::impl<Op>>
 inline evmc_status_code impl(AdvancedExecutionState& state) noexcept
 {
@@ -81,14 +64,6 @@ inline code_iterator impl(AdvancedExecutionState& state, code_iterator pos) noex
 /// implementation. Definition not provided.
 template <code_iterator InstrFn(AdvancedExecutionState&, code_iterator)>
 const Instruction* op(const Instruction* /*instr*/, AdvancedExecutionState& state) noexcept;
-
-/// Wraps the generic instruction implementation to advanced instruction function signature.
-template <Result InstrFn(AdvancedExecutionState&, code_iterator) noexcept>
-const Instruction* op(const Instruction* instr, AdvancedExecutionState& state) noexcept;
-
-/// Wraps the generic instruction implementation to advanced instruction function signature.
-template <TermResult InstrFn(AdvancedExecutionState&, code_iterator) noexcept>
-const Instruction* op(const Instruction* instr, AdvancedExecutionState& state) noexcept;
 
 namespace
 {
@@ -156,10 +131,10 @@ const Instruction* op_jump(const Instruction*, AdvancedExecutionState& state) no
     const auto dst = state.stack.pop();
     auto pc = -1;
     if (std::numeric_limits<int>::max() < dst ||
-        (pc = find_jumpdest(*state.analysis.advanced, static_cast<int>(dst))) < 0)
+        (pc = find_jumpdest(*state.analysis, static_cast<int>(dst))) < 0)
         return state.exit(EVMC_BAD_JUMP_DESTINATION);
 
-    return &state.analysis.advanced->instrs[static_cast<size_t>(pc)];
+    return &state.analysis->instrs[static_cast<size_t>(pc)];
 }
 
 const Instruction* op_jumpi(const Instruction* instr, AdvancedExecutionState& state) noexcept
@@ -180,7 +155,7 @@ const Instruction* op_jumpi(const Instruction* instr, AdvancedExecutionState& st
 
 const Instruction* op_pc(const Instruction* instr, AdvancedExecutionState& state) noexcept
 {
-    state.stack.push(instr->arg.number);
+    state.stack.push(static_cast<uint64_t>(instr->arg.number));
     return ++instr;
 }
 

@@ -18,9 +18,10 @@ target_sources(
     bn254.cpp
     ecc.hpp
     hash_types.h
+    int_bytes.hpp
     keccak.h
     keccak.hpp
-    keccak.c
+    keccak.cpp
     pairing/bn254/fields.hpp
     pairing/bn254/pairing.cpp
     pairing/bn254/utils.hpp

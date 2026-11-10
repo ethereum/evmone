@@ -54,11 +54,18 @@ constexpr uint64_t compute_mont_mod_inv(const UintT& mod) noexcept
     return -modinv_pow2(mod[0]);
 }
 
+/// Computes a⋅b + t + c, which always fits in 128 bits. Returns {high word, low word}.
 constexpr std::pair<uint64_t, uint64_t> addmul(
     uint64_t t, uint64_t a, uint64_t b, uint64_t c) noexcept
 {
+    // TODO(GCC): The intx::uint128 sum is kept in a stack slot.
+#if INTX_HAS_BUILTIN_INT128 && !defined(__clang__)
+    const auto p = intx::builtin_uint128{a} * b + t + c;
+    return {static_cast<uint64_t>(p >> 64), static_cast<uint64_t>(p)};
+#else
     const auto p = intx::umul(a, b) + t + c;
     return {p[1], p[0]};
+#endif
 }
 
 /// Performs a modular addition. Requires x < mod and y < mod.

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "modarith.hpp"
 #include <intx/intx.hpp>
 #include <ranges>
 #include <span>
@@ -39,11 +40,7 @@ constexpr uint64_t mul(std::span<uint64_t> r, std::span<const uint64_t> x, uint6
     uint64_t c = 0;
 #pragma GCC unroll 4
     for (size_t i = 0; i != x.size(); ++i)
-    {
-        const auto p = umul(x[i], y) + c;
-        r[i] = p[0];
-        c = p[1];
-    }
+        std::tie(c, r[i]) = addmul(0, x[i], y, c);
     return c;
 }
 
@@ -58,11 +55,7 @@ constexpr uint64_t addmul(std::span<uint64_t> r, std::span<const uint64_t> p,
 
 #pragma GCC unroll 4
     for (size_t i = 0; i != x.size(); ++i)
-    {
-        const auto t = umul(x[i], y) + p[i] + c;
-        r[i] = t[0];
-        c = t[1];
-    }
+        std::tie(c, r[i]) = addmul(p[i], x[i], y, c);
     return c;
 }
 

@@ -71,6 +71,7 @@ target_sources(
     state_transition_create_test.cpp
     state_transition_eip7702_test.cpp
     state_transition_eip7778_block_gas_test.cpp
+    state_transition_eip8037_state_gas_test.cpp
     state_transition_extcode_test.cpp
     state_transition_selfdestruct_test.cpp
     state_transition_snippets_test.cpp
@@ -79,6 +80,7 @@ target_sources(
     state_transition_transient_storage_test.cpp
     state_transition_tx_test.cpp
     state_tx_test.cpp
+    statediff_export_test.cpp
     statetest_loader_block_info_test.cpp
     statetest_loader_test.cpp
     statetest_loader_tx_test.cpp

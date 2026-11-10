@@ -39,7 +39,16 @@ struct TestAccount
     std::map<bytes32, bytes32> storage;
     bytes code;
 
-    bool operator==(const TestAccount&) const noexcept = default;
+    /// The cached hash of the code. If absent, the hash is computed from the code when needed.
+    std::optional<bytes32> code_hash;
+
+    [[nodiscard]] bytes32 get_code_hash() const noexcept;
+
+    /// Compares the accounts ignoring the cached code hash.
+    bool operator==(const TestAccount& o) const noexcept
+    {
+        return nonce == o.nonce && balance == o.balance && storage == o.storage && code == o.code;
+    }
 };
 
 /// Ethereum State representation for tests.
@@ -72,7 +81,7 @@ public:
 [[nodiscard]] std::variant<state::TransactionReceipt, std::error_code> transition(TestState& state,
     const state::BlockInfo& block, const state::BlockHashes& block_hashes,
     const state::Transaction& tx, evmc_revision rev, evmc::VM& vm, int64_t block_gas_left,
-    int64_t blob_gas_left);
+    int64_t block_state_gas_left, int64_t blob_gas_left);
 
 /// Wrapping of state::finalize() which operates on TestState.
 void finalize(TestState& state, evmc_revision rev, const address& coinbase,

@@ -12,6 +12,11 @@
 #include <iostream>
 #include <vector>
 
+#ifdef CODSPEED_ENABLED
+#include <codspeed.h>
+#include <measurement.hpp>
+#endif
+
 namespace evmone::test
 {
 namespace fs = std::filesystem;
@@ -121,11 +126,26 @@ void run_fixture(const std::string& name, const json::json& fixture, const RunOp
     switch (classify(fixture))
     {
     case Format::state_test:
-        run_state_test(make_state_test(name, fixture), vm, options.trace_summary, report);
+        run_state_test(make_state_test(name, fixture), vm,
+            {.output = std::clog,
+                .trace_summary = options.trace_summary,
+                .state_diff = options.state_diff},
+            report);
         break;
     case Format::blockchain_test:
-        run_blockchain_test(make_blockchain_test(name, fixture), vm, report);
+    {
+        const auto test = make_blockchain_test(name, fixture);
+#ifdef CODSPEED_ENABLED
+        codspeed::CodSpeed::getInstance();  // Sets up the hooks and the integration name, once.
+        measurement_start();
+#endif
+        run_blockchain_test(test, vm, report);
+#ifdef CODSPEED_ENABLED
+        measurement_stop();
+        measurement_set_executed_benchmark(name);  // The fixture's name is the benchmark's URI.
+#endif
         break;
+    }
     case Format::unsupported:
         throw UnsupportedTestFeature{
             "unsupported fixture format: " + fixture.at("_info").at("fixture-format").dump()};
@@ -192,6 +212,7 @@ int run_tests(std::span<const TestCase> cases, std::ostream& out, const RunOptio
     Progress row{out, cases.size()};
     size_t failed = 0;
     size_t skipped = 0;
+    size_t deselected = 0;
     size_t passed = 0;
 
     for (const auto& test : cases)
@@ -204,11 +225,14 @@ int run_tests(std::span<const TestCase> cases, std::ostream& out, const RunOptio
 
         // The file counts once, for the worst its fixtures reached. It is skipped only when
         // nothing in it ran at all, so one fixture running is enough to give it a verdict.
+        // No result at all means the filter emptied the file: deselected, not skipped.
         static constexpr auto is = [](Outcome outcome) {
             return [outcome](const Result& result) { return result.outcome == outcome; };
         };
         auto outcome = Outcome::passed;
-        if (std::ranges::any_of(results, is(Outcome::failed)))
+        if (results.empty())
+            outcome = Outcome::deselected;
+        else if (std::ranges::any_of(results, is(Outcome::failed)))
             outcome = Outcome::failed;
         else if (std::ranges::none_of(results, is(Outcome::passed)))
             outcome = Outcome::skipped;
@@ -223,6 +247,9 @@ int run_tests(std::span<const TestCase> cases, std::ostream& out, const RunOptio
             break;
         case Outcome::skipped:
             ++skipped;
+            break;
+        case Outcome::deselected:
+            ++deselected;
             break;
         }
 
@@ -276,6 +303,8 @@ int run_tests(std::span<const TestCase> cases, std::ostream& out, const RunOptio
     summary << passed << " passed";
     if (skipped != 0)
         summary << ", " << skipped << " skipped";
+    if (deselected != 0)
+        summary << ", " << deselected << " deselected";
     summary << " in " << std::fixed << std::setprecision(2) << elapsed.count() << "s";
     out << '\n';
     banner(out, std::move(summary).str());

@@ -3,11 +3,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "ripemd160.hpp"
+#include "int_bytes.hpp"
 #include <algorithm>
 #include <array>
 #include <bit>
 #include <cstdint>
-#include <type_traits>
 #include <utility>
 
 #if defined(_LIBCPP_VERSION) && _LIBCPP_VERSION < 180000
@@ -20,16 +20,6 @@ namespace evmone::crypto
 {
 namespace
 {
-// TODO(C++23): Use std::byteswap.
-template <std::integral T>
-constexpr T byteswap(T value) noexcept
-{
-    static_assert(std::has_unique_object_representations_v<T>, "T may not have padding bits");
-    auto value_representation = std::bit_cast<std::array<std::byte, sizeof(T)>>(value);
-    std::ranges::reverse(value_representation);
-    return std::bit_cast<T>(value_representation);
-}
-
 /// @file
 /// The implementation of the RIPEMD-160 hash function
 /// based on the "RIPEMD-160: A Strengthened Version of RIPEMD"
@@ -42,27 +32,39 @@ constexpr size_t N = R * B;  ///< Number of steps.
 
 using State = std::array<uint32_t, RIPEMD160_HASH_SIZE / sizeof(uint32_t)>;
 
-using BinaryFunction = uint32_t (*)(uint32_t, uint32_t, uint32_t) noexcept;
+/// Boolean function, numbered by the round index.
+template <std::size_t I>
+uint32_t boolean_fn(uint32_t x, uint32_t y, uint32_t z) noexcept = delete;
 
-// TODO: Functions from the array of function pointers are not inlined by GCC:
-//       https://gcc.gnu.org/bugzilla/show_bug.cgi?id=114452
-// TODO(C++23): Mark these as [[always_inline]]
-constexpr BinaryFunction binary_functions[R] = {
-    // f₁(x, y, z) = x ⊕ y ⊕ z
-    [](uint32_t x, uint32_t y, uint32_t z) noexcept { return x ^ y ^ z; },
+template <>  // f₁(x, y, z) = x ⊕ y ⊕ z
+[[gnu::always_inline]] inline uint32_t boolean_fn<0>(uint32_t x, uint32_t y, uint32_t z) noexcept
+{
+    return x ^ y ^ z;
+}
 
-    // f₂(x, y, z) = (x ∧ y) ∨ (¬x ∧ z) ⇔ ((y ⊕ z) ∧ x) ⊕ z
-    [](uint32_t x, uint32_t y, uint32_t z) noexcept { return ((y ^ z) & x) ^ z; },
+template <>  // f₂(x, y, z) = (x ∧ y) ∨ (¬x ∧ z)
+[[gnu::always_inline]] inline uint32_t boolean_fn<1>(uint32_t x, uint32_t y, uint32_t z) noexcept
+{
+    return ((y ^ z) & x) ^ z;
+}
 
-    // f₃(x, y, z) = (x ∨ ¬y) ⊕ z
-    [](uint32_t x, uint32_t y, uint32_t z) noexcept { return (x | ~y) ^ z; },
+template <>  // f₃(x, y, z) = (x ∨ ¬y) ⊕ z
+[[gnu::always_inline]] inline uint32_t boolean_fn<2>(uint32_t x, uint32_t y, uint32_t z) noexcept
+{
+    return (x | ~y) ^ z;
+}
 
-    // f₄(x, y, z) = (x ∧ z) ∨ (y ∧ ¬z) ⇔ ((x ⊕ y) ∧ z) ⊕ y
-    [](uint32_t x, uint32_t y, uint32_t z) noexcept { return ((x ^ y) & z) ^ y; },
+template <>  // f₄(x, y, z) = (x ∧ z) ∨ (y ∧ ¬z)
+[[gnu::always_inline]] inline uint32_t boolean_fn<3>(uint32_t x, uint32_t y, uint32_t z) noexcept
+{
+    return ((x ^ y) & z) ^ y;
+}
 
-    // f₅(x, y, z) = x ⊕ (y ∨ ¬z)
-    [](uint32_t x, uint32_t y, uint32_t z) noexcept { return x ^ (y | ~z); },
-};
+template <>  // f₅(x, y, z) = x ⊕ (y ∨ ¬z)
+[[gnu::always_inline]] inline uint32_t boolean_fn<4>(uint32_t x, uint32_t y, uint32_t z) noexcept
+{
+    return x ^ (y | ~z);
+}
 
 /// Added constants.
 constexpr uint32_t constants[L][R] = {
@@ -119,36 +121,13 @@ constexpr int rotate_amount[L][N] = {
     },
 };
 
-/// Converts native representation to/from little-endian.
-inline auto to_le(std::integral auto x) noexcept
-{
-    if constexpr (std::endian::native == std::endian::big)
-        return byteswap(x);
-    return x;
-}
-
-template <typename T>
-inline T load_le(const std::byte* data) noexcept
-{
-    std::array<std::byte, sizeof(T)> bytes{};
-    std::copy_n(data, sizeof(T), bytes.begin());
-    return to_le(std::bit_cast<T>(bytes));
-}
-
-inline std::byte* store_le(std::byte* out, std::integral auto x) noexcept
-{
-    return std::ranges::copy(std::bit_cast<std::array<std::byte, sizeof(x)>>(to_le(x)), out).out;
-}
-
 template <size_t J>
-inline void step(State z[L], const std::byte* block) noexcept
+[[gnu::always_inline]] inline void step(State z[L], const std::byte* block) noexcept
 {
     static constexpr auto I = J / B;  // round index
-    static constexpr BinaryFunction fs[]{binary_functions[I], binary_functions[R - 1 - I]};
 
     for (size_t i = 0; i < L; ++i)
     {
-        const auto f = fs[i];
         const auto w = load_le<uint32_t>(&block[sizeof(uint32_t) * word_index[i][J]]);
         const auto k = constants[i][I];
         const auto s = rotate_amount[i][J];
@@ -159,8 +138,10 @@ inline void step(State z[L], const std::byte* block) noexcept
         const auto d = z[i][3];
         const auto e = z[i][4];
 
+        const auto f = (i == 0) ? boolean_fn<I>(b, c, d) : boolean_fn<R - 1 - I>(b, c, d);
+
         z[i][0] = e;
-        z[i][1] = std::rotl(a + f(b, c, d) + w + k, s) + e;
+        z[i][1] = std::rotl(a + f + w + k, s) + e;
         z[i][2] = b;
         z[i][3] = std::rotl(c, 10);
         z[i][4] = d;

@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
+#include "bitset_span.hpp"
+#include "state_gas.hpp"
 #include <evmc/evmc.hpp>
 #include <intx/intx.hpp>
 #include <cassert>
@@ -13,15 +15,6 @@
 
 namespace evmone
 {
-namespace advanced
-{
-struct AdvancedCodeAnalysis;
-}
-namespace baseline
-{
-class CodeAnalysis;
-}
-
 using evmc::bytes;
 using evmc::bytes_view;
 using intx::uint256;
@@ -67,6 +60,8 @@ class Memory
     };
 
     /// Owned pointer to allocated memory.
+    // TODO: Use a dedicated byte type for the data, e.g. enum class Byte : uint8_t. Stores through
+    // uint8_t or std::byte may alias any object, the memory size included; such stores cannot.
     std::unique_ptr<uint8_t[], FreeDeleter> m_data;
 
     /// The "virtual" size of the memory.
@@ -77,11 +72,43 @@ class Memory
 
     [[noreturn, gnu::cold]] static void handle_out_of_memory() noexcept { std::terminate(); }
 
+    // TODO: Allocate the data aligned to 32 bytes, with allocate_at_least(), instead of realloc().
     void allocate_capacity() noexcept
     {
         m_data.reset(static_cast<uint8_t*>(std::realloc(m_data.release(), m_capacity)));
         if (!m_data) [[unlikely]]
             handle_out_of_memory();
+    }
+
+    /// Returns the pointer to the data at the offset, a multiple of 32, so aligned as the data.
+    [[nodiscard, gnu::returns_nonnull]] uint8_t* aligned_at(size_t offset) noexcept
+    {
+        assert(offset % 32 == 0);
+        assert(offset < m_capacity);
+        return std::assume_aligned<alignof(std::max_align_t)>(&m_data[offset]);
+    }
+
+    /// grow() within the capacity.
+    void grow_within_capacity(size_t new_size) noexcept
+    {
+        std::memset(aligned_at(m_size), 0, new_size - m_size);
+        m_size = new_size;
+    }
+
+    /// grow() past the capacity. Out of line, so that the growths within the capacity pay nothing
+    /// for the realloc() call.
+    [[gnu::noinline]] void grow_capacity(size_t new_size) noexcept
+    {
+        m_capacity *= 2;  // Double the capacity.
+
+        if (m_capacity < new_size)  // If not enough.
+        {
+            // Set capacity to required size rounded to multiple of page_size.
+            m_capacity = ((new_size + (page_size - 1)) / page_size) * page_size;
+        }
+
+        allocate_capacity();
+        grow_within_capacity(new_size);
     }
 
 public:
@@ -91,6 +118,9 @@ public:
     uint8_t& operator[](size_t index) noexcept { return m_data[index]; }
 
     [[nodiscard]] size_t size() const noexcept { return m_size; }
+
+    /// Returns the size of the allocated memory.
+    [[nodiscard]] size_t capacity() const noexcept { return m_capacity; }
 
     /// Grows the memory to the given size. The extent is filled with zeros.
     ///
@@ -103,20 +133,10 @@ public:
         // Allow only growing memory. Include hint for optimizing compiler.
         INTX_REQUIRE(new_size > m_size);
 
-        if (new_size > m_capacity)
-        {
-            m_capacity *= 2;  // Double the capacity.
-
-            if (m_capacity < new_size)  // If not enough.
-            {
-                // Set capacity to required size rounded to multiple of page_size.
-                m_capacity = ((new_size + (page_size - 1)) / page_size) * page_size;
-            }
-
-            allocate_capacity();
-        }
-        std::memset(&m_data[m_size], 0, new_size - m_size);
-        m_size = new_size;
+        if (new_size > m_capacity) [[unlikely]]
+            grow_capacity(new_size);
+        else
+            grow_within_capacity(new_size);
     }
 
     /// Virtually clears the memory by setting its size to 0. The capacity stays unchanged.
@@ -128,17 +148,19 @@ public:
 class ExecutionState
 {
 public:
+    /// The executed code, without the padding Baseline adds after it.
+    bytes_view code;
+
+    /// The bitset of the valid jump destinations in the code, set by Baseline's execute().
+    BitsetSpan jumpdest_bitset{nullptr};
+
     int64_t gas_refund = 0;
     Memory memory;
     const evmc_message* msg = nullptr;
     evmc::HostContext host;
     evmc_revision rev = {};
-    bytes return_data;
-
-    /// Reference to original EVM code.
-    bytes_view original_code;
-
     evmc_status_code status = EVMC_SUCCESS;
+    bytes return_data;
     size_t output_offset = 0;
     size_t output_size = 0;
 
@@ -146,13 +168,8 @@ private:
     evmc_tx_context m_tx = {};
 
 public:
-    /// Pointer to code analysis.
-    /// This should be set and used internally by execute() function of a particular interpreter.
-    union
-    {
-        const baseline::CodeAnalysis* baseline = nullptr;
-        const advanced::AdvancedCodeAnalysis* advanced;
-    } analysis{};
+    /// The frame's state-gas counters (EIP-8037).
+    StateGas state_gas;
 
     /// Stack space allocation.
     ///
@@ -164,7 +181,11 @@ public:
     ExecutionState(const evmc_message& message, evmc_revision revision,
         const evmc_host_interface& host_interface, evmc_host_context* host_ctx,
         bytes_view _code) noexcept
-      : msg{&message}, host{host_interface, host_ctx}, rev{revision}, original_code{_code}
+      : code{_code},
+        msg{&message},
+        host{host_interface, host_ctx},
+        rev{revision},
+        state_gas{{.left = message.state_gas}}
     {}
 
     /// Resets the contents of the ExecutionState so that it could be reused.
@@ -173,12 +194,13 @@ public:
         bytes_view _code) noexcept
     {
         gas_refund = 0;
+        state_gas = {{.left = message.state_gas}};
         memory.clear();
         msg = &message;
         host = {host_interface, host_ctx};
         rev = revision;
         return_data.clear();
-        original_code = _code;
+        code = _code;
         status = EVMC_SUCCESS;
         output_offset = 0;
         output_size = 0;
@@ -202,13 +224,23 @@ public:
 /// success, and the output is the memory range recorded in the state.
 inline evmc_result make_execution_result(ExecutionState& state, int64_t gas_left) noexcept
 {
+    if (state.rev >= EVMC_AMSTERDAM && state.status != EVMC_SUCCESS)
+    {
+        // Unsuccessful frame doesn't commit any state changes, roll-back all state-gas costs.
+        gas_left += state.state_gas.spilled;
+        state.state_gas.left = state.msg->state_gas;
+        state.state_gas.spilled = 0;
+    }
+
     // An exceptional halt consumes all gas; only a success or revert keeps gas_left.
     if (state.status != EVMC_SUCCESS && state.status != EVMC_REVERT)
         gas_left = 0;
     const auto gas_refund = (state.status == EVMC_SUCCESS) ? state.gas_refund : 0;
 
     assert(state.output_size != 0 || state.output_offset == 0);
-    return evmc::make_result(state.status, gas_left, gas_refund,
-        state.output_size != 0 ? &state.memory[state.output_offset] : nullptr, state.output_size);
+    return evmc::Result{state.status, gas_left, gas_refund,
+        state.output_size != 0 ? &state.memory[state.output_offset] : nullptr, state.output_size,
+        state.state_gas}
+        .release_raw();
 }
 }  // namespace evmone

@@ -33,10 +33,10 @@ constexpr bool add(std::span<uint64_t> x, std::span<const uint64_t> y) noexcept
 constexpr void mul(
     std::span<uint64_t> r, std::span<const uint64_t> x, std::span<const uint64_t> y) noexcept
 {
-    assert(!x.empty());
-    assert(!y.empty());
-    assert(r.size() >= std::max(x.size(), y.size()));
-    assert(r.size() <= x.size() + y.size());  // No tail zeroing: r may truncate but not exceed.
+    INTX_REQUIRE(!x.empty());
+    INTX_REQUIRE(!y.empty());
+    INTX_REQUIRE(r.size() >= std::max(x.size(), y.size()));
+    INTX_REQUIRE(r.size() <= x.size() + y.size());  // No tail zeroing: r may truncate, not exceed.
 
     // Ensure y is the shorter one to simplify the implementation and to have shorter outer loop.
     if (x.size() < y.size())
@@ -156,7 +156,7 @@ struct ModLoad
 ModLoad load_mod(std::span<uint64_t> storage, std::span<const uint8_t> data) noexcept
 {
     const auto top = load(storage, data);
-    assert(!top.empty());  // Modulus of zero must be handled outside.
+    INTX_REQUIRE(!top.empty());  // Modulus of zero must be handled outside.
 
     // Find first non-zero word from bottom.
     const auto it = std::ranges::find_if(top, [](auto w) { return w != 0; });
@@ -183,12 +183,12 @@ ModLoad load_mod(std::span<uint64_t> storage, std::span<const uint8_t> data) noe
 void rem(std::span<uint64_t> r, std::span<const uint64_t> u, std::span<const uint64_t> d,
     std::span<uint64_t> scratch) noexcept
 {
-    assert(!d.empty());
-    assert(!u.empty());
-    assert(d.back() != 0);
-    assert(u.back() != 0);
-    assert(r.size() >= d.size());
-    assert(u.size() > d.size());  // Because used only for to-Montgomery conversion.
+    INTX_REQUIRE(!d.empty());
+    INTX_REQUIRE(!u.empty());
+    INTX_REQUIRE(d.back() != 0);
+    INTX_REQUIRE(u.back() != 0);
+    INTX_REQUIRE(r.size() >= d.size());
+    INTX_REQUIRE(u.size() > d.size());  // Because used only for to-Montgomery conversion.
     assert(scratch.size() >= 2 * u.size() + 2);
 
     // Layout: un[u.size()+1] | dn[d.size()] | q[u.size()+1-d.size()]
@@ -196,10 +196,10 @@ void rem(std::span<uint64_t> r, std::span<const uint64_t> u, std::span<const uin
     const auto dn = scratch.subspan(u.size() + 1, d.size());
     const auto q_buf = scratch.subspan(u.size() + 1 + d.size(), u.size() + 1 - d.size());
 
-    un.back() = 0;  // Only the extra top word needs zeroing; the rest is set by normalization.
-
     // Normalize: left-shift both u and d so that the MSB of d's top word is set.
     const auto shift = static_cast<unsigned>(std::countl_zero(d.back()));
+
+    un.back() = 0;  // Only the extra top word needs zeroing; the rest is set by normalization.
 
     if (shift != 0)
     {
@@ -301,8 +301,11 @@ public:
 /// Performs the Almost Montgomery Multiplication (AMM).
 ///
 /// The AMM is a relaxed version of the Montgomery multiplication producing a result in Montgomery
-/// form which is in range [0, 2⋅mod) in plain form, i.e., it may be larger than the modulus.
+/// form which is in range [0, R), i.e., it may be larger than the modulus.
 /// This allows to skip the final conditional subtraction in most cases, improving performance.
+///
+/// For any x, y < R the reduction computes t = (x⋅y + q⋅mod) / R with q < R, so t < R + mod.
+/// If t ≥ R (r_carry), subtracting mod once brings it below R.
 ///
 /// The inputs are expected to be in Montgomery form.
 /// Additionally, passing y=1 converts x from Montgomery form back to plain form,
@@ -319,13 +322,14 @@ void mul_amm(std::span<uint64_t, N> r, std::span<const uint64_t, N> x,
 {
     // Use Coarsely Integrated Operand Scanning (CIOS) method with the "almost" reduction.
     const auto n = r.size();
-    assert(n > 0);
-    assert(x.size() == n);
+    // GCC 11-13 generate several times slower loops without these two facts.
+    INTX_REQUIRE(n > 0);
+    INTX_REQUIRE(x.size() == n);
+    INTX_REQUIRE(mod.size() == n);
+    INTX_REQUIRE(mod.back() != 0);
+    INTX_REQUIRE(mod[0] * mod_inv + 1 == 0);                     // Negative mod inverse identity.
+    INTX_REQUIRE(r.data() != x.data() && r.data() != y.data());  // r must not alias inputs.
     assert(y.size() == n);
-    assert(mod.size() == n);
-    assert(mod.back() != 0);
-    assert(mod[0] * mod_inv + 1 == 0);                     // The negative modulus inverse identity.
-    assert(r.data() != x.data() && r.data() != y.data());  // r must not alias inputs.
 
     const auto r_lo = r.subspan(0, n - 1);
     const auto r_hi = r.subspan(1);
@@ -401,10 +405,10 @@ constexpr unsigned window_width(size_t exp_bits) noexcept
 void modexp_odd(std::span<uint64_t> result, std::span<const uint64_t> base, Exponent exp,
     std::span<const uint64_t> mod, std::span<uint64_t> scratch) noexcept
 {
-    assert(!mod.empty() && mod.back() != 0);    // mod must be trimmed.
-    assert(!base.empty() && base.back() != 0);  // base must be trimmed.
-    assert(result.size() == mod.size());
-    assert(!exp.empty());
+    INTX_REQUIRE(!mod.empty() && mod.back() != 0);    // mod must be trimmed.
+    INTX_REQUIRE(!base.empty() && base.back() != 0);  // base must be trimmed.
+    INTX_REQUIRE(result.size() == mod.size());
+    INTX_REQUIRE(!exp.empty());
 
     const auto n = mod.size();
     const auto mod_inv = -modinv_pow2(mod[0]);
@@ -520,10 +524,10 @@ void mask_pow2(std::span<uint64_t> x, unsigned k) noexcept
 void modexp_pow2(std::span<uint64_t> r, std::span<const uint64_t> base, Exponent exp, unsigned k,
     std::span<uint64_t> scratch) noexcept
 {
-    assert(k != 0);                             // Modulus of 1 should be covered as "odd".
-    assert(!exp.empty());                       // Exponent of zero must be handled outside.
-    assert(!base.empty() && base.back() != 0);  // base must be trimmed.
-    assert(r.data() != base.data());            // No in-place operation.
+    INTX_REQUIRE(k != 0);                             // Modulus of 1 should be covered as "odd".
+    INTX_REQUIRE(!exp.empty());                       // Exponent of zero must be handled outside.
+    INTX_REQUIRE(!base.empty() && base.back() != 0);  // base must be trimmed.
+    INTX_REQUIRE(r.data() != base.data());            // No in-place operation.
 
     const size_t num_pow2_words = (k + 63) / 64;
     assert(r.size() >= num_pow2_words);
@@ -595,8 +599,8 @@ void modexp_pow2(std::span<uint64_t> r, std::span<const uint64_t> base, Exponent
 void modinv_pow2(
     std::span<uint64_t> r, std::span<const uint64_t> x, std::span<uint64_t> scratch) noexcept
 {
-    assert(!x.empty() && (x[0] & 1) != 0);  // x must be odd.
-    assert(!r.empty());
+    INTX_REQUIRE(!x.empty() && (x[0] & 1) != 0);  // x must be odd.
+    INTX_REQUIRE(!r.empty());
     assert(scratch.size() >= 2 * r.size());
 
     r[0] = crypto::modinv_pow2(x[0]);              // Good start: 64 correct bits.
@@ -648,7 +652,7 @@ void modexp(std::span<const uint8_t> base_bytes, std::span<const uint8_t> exp_by
     const auto base = load({alloc.allocate(declared_base_size), declared_base_size}, base_bytes);
     const auto [mod_odd, mod_tz, mod_size] =
         load_mod({alloc.allocate(declared_mod_size), declared_mod_size}, mod_bytes);
-    assert(!mod_odd.empty());  // Modulus of zero must be handled outside.
+    INTX_REQUIRE(!mod_odd.empty());  // Modulus of zero must be handled outside.
     // Result sized to actual mod value, not declared byte length. store() zero-fills leading bytes.
     const auto result = std::span{alloc.allocate(mod_size), mod_size};
     std::ranges::fill(result, uint64_t{0});

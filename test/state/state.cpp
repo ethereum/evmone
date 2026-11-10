@@ -9,6 +9,8 @@
 #include "state_view.hpp"
 #include <evmone/constants.hpp>
 #include <evmone/delegation.hpp>
+#include <evmone/instructions_traits.hpp>
+#include <evmone/state_gas.hpp>
 #include <algorithm>
 #include <ranges>
 
@@ -61,9 +63,15 @@ struct TransactionCost
 TransactionCost compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& tx) noexcept
 {
     static constexpr auto TX_BASE_COST = 21000;
+    static constexpr auto TX_BASE_COST_AMSTERDAM = 12000;
+    static constexpr auto TX_VALUE_COST = 6000;
     static constexpr auto TX_CREATE_COST = 32000;
     static constexpr auto ACCESS_LIST_ADDRESS_COST = 2400;
     static constexpr auto ACCESS_LIST_STORAGE_KEY_COST = 1900;
+    static constexpr auto ACCESS_LIST_ADDRESS_COST_AMSTERDAM =
+        instr::additional_cold_account_access(EVMC_AMSTERDAM);
+    static constexpr auto ACCESS_LIST_STORAGE_KEY_COST_AMSTERDAM =
+        instr::ADDITIONAL_COLD_STORAGE_ACCESS;
     static constexpr auto ACCESS_LIST_ADDRESS_BYTES = 20;
     static constexpr auto ACCESS_LIST_STORAGE_KEY_BYTES = 32;
     static constexpr auto DATA_TOKEN_COST = 4;
@@ -71,9 +79,28 @@ TransactionCost compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& 
     static constexpr auto TOTAL_COST_FLOOR_PER_TOKEN = 10;
     static constexpr auto TOTAL_COST_FLOOR_PER_BYTE = 16 * 4;
 
+    // EXECUTION_PER_AUTH_BASE_COST, the execution cost of processing a single authorization:
+    // the calldata cost of the 101-byte authorization tuple, the signature recovery, the cold
+    // authority access and two warm writes (EIP-8037).
+    static constexpr auto AUTHORIZATION_EXECUTION_COST =
+        101 * 16 + 3000 + instr::COLD_ACCOUNT_ACCESS_AMSTERDAM + 2 * instr::WARM_ACCESS;
+
     const auto is_create = !tx.to.has_value();
 
-    const auto create_cost = (is_create && rev >= EVMC_HOMESTEAD) ? TX_CREATE_COST : 0;
+    const auto recipient_cost = [&] {
+        if (rev < EVMC_AMSTERDAM)  // EIP-2780.
+            return 0;
+        if (is_create)
+            return instr::CREATE_ACCESS;       // Cold account access + account write.
+        if (*tx.to == tx.sender) [[unlikely]]  // Transaction to self.
+            return 0;
+        return instr::COLD_ACCOUNT_ACCESS_AMSTERDAM + (tx.value != 0 ? TX_VALUE_COST : 0);
+    }();
+    const auto base_cost =
+        ((rev >= EVMC_AMSTERDAM) ? TX_BASE_COST_AMSTERDAM : TX_BASE_COST) + recipient_cost;
+
+    const auto create_cost =
+        (is_create && rev >= EVMC_HOMESTEAD && rev < EVMC_AMSTERDAM) ? TX_CREATE_COST : 0;
 
     const auto num_tokens = static_cast<int64_t>(compute_tx_data_tokens(rev, tx.data));
     const auto data_cost = num_tokens * DATA_TOKEN_COST;
@@ -82,11 +109,16 @@ TransactionCost compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& 
     const auto access_list_num_bytes =
         static_cast<int64_t>(num_addresses * ACCESS_LIST_ADDRESS_BYTES +
                              num_storage_keys * ACCESS_LIST_STORAGE_KEY_BYTES);
-    const auto access_list_cost = static_cast<int64_t>(
-        num_addresses * ACCESS_LIST_ADDRESS_COST + num_storage_keys * ACCESS_LIST_STORAGE_KEY_COST);
+    const auto address_cost =
+        (rev >= EVMC_AMSTERDAM) ? ACCESS_LIST_ADDRESS_COST_AMSTERDAM : ACCESS_LIST_ADDRESS_COST;
+    const auto storage_key_cost = (rev >= EVMC_AMSTERDAM) ? ACCESS_LIST_STORAGE_KEY_COST_AMSTERDAM :
+                                                            ACCESS_LIST_STORAGE_KEY_COST;
+    const auto access_list_cost = static_cast<int64_t>(num_addresses) * address_cost +
+                                  static_cast<int64_t>(num_storage_keys) * storage_key_cost;
 
-    const auto auth_list_cost =
-        static_cast<int64_t>(tx.authorization_list.size()) * AUTHORIZATION_EMPTY_ACCOUNT_COST;
+    const auto auth_cost =
+        (rev >= EVMC_AMSTERDAM) ? AUTHORIZATION_EXECUTION_COST : AUTHORIZATION_EMPTY_ACCOUNT_COST;
+    const auto auth_list_cost = static_cast<int64_t>(tx.authorization_list.size()) * auth_cost;
 
     const auto initcode_cost =
         (is_create && rev >= EVMC_SHANGHAI) ? INITCODE_WORD_COST * num_words(tx.data.size()) : 0;
@@ -95,7 +127,7 @@ TransactionCost compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& 
     const auto access_list_data_cost =
         (rev >= EVMC_AMSTERDAM) ? access_list_num_bytes * TOTAL_COST_FLOOR_PER_BYTE : 0;
 
-    const auto intrinsic_cost = TX_BASE_COST + create_cost + data_cost + access_list_data_cost +
+    const auto intrinsic_cost = base_cost + create_cost + data_cost + access_list_data_cost +
                                 access_list_cost + auth_list_cost + initcode_cost;
 
     int64_t data_min_cost = 0;
@@ -104,21 +136,32 @@ TransactionCost compute_tx_intrinsic_cost(evmc_revision rev, const Transaction& 
     else if (rev >= EVMC_PRAGUE)  // Cost per token capturing num of zero-nonzero bytes (EIP-7623).
         data_min_cost = TOTAL_COST_FLOOR_PER_TOKEN * num_tokens;
 
-    // Compute "floor" cost (EIP-7623).
+    // Compute the calldata floor cost (EIP-7623), including the access list data (EIP-7981).
     const auto min_cost =
-        (rev >= EVMC_PRAGUE) ? TX_BASE_COST + data_min_cost + access_list_data_cost : 0;
+        (rev >= EVMC_PRAGUE) ? base_cost + data_min_cost + access_list_data_cost : 0;
 
     return {intrinsic_cost, min_cost};
 }
 
-int64_t process_authorization_list(
-    State& state, uint64_t chain_id, const AuthorizationList& authorization_list)
+/// A revertible applied authorization (EIP-2780).
+struct AppliedAuthorization
+{
+    Account* authority = nullptr;
+    std::optional<bytes32> initial_code_hash;
+};
+
+/// Applies the authorization list (EIP-7702) and returns the delegation refund. From Amsterdam,
+/// charges the state-dependent costs instead of the refund and records the applied authorizations
+/// to revert them on halt; returns nullopt when out of gas (EIP-2780).
+[[nodiscard]] std::optional<int64_t> process_authorization_list(State& state, const Transaction& tx,
+    evmc_revision rev, int64_t& gas_left, StateGas& state_gas,
+    std::vector<AppliedAuthorization>& applied)
 {
     int64_t delegation_refund = 0;
-    for (const auto& auth : authorization_list)
+    for (const auto& auth : tx.authorization_list)
     {
         // 1. Verify the chain id is either 0 or the chain’s current ID.
-        if (auth.chain_id != 0 && auth.chain_id != chain_id)
+        if (auth.chain_id != 0 && auth.chain_id != tx.chain_id)
             continue;
 
         // 2. Verify the nonce is less than 2**64 - 1.
@@ -133,7 +176,7 @@ int64_t process_authorization_list(
 
         // Get or create the authority account.
         // It is still empty at this point until nonce bump following successful authorization.
-        auto& authority = state.get_or_insert(*authority_addr, {.erase_if_empty = true});
+        auto& authority = state.get_or_insert(*authority_addr);
 
         // 4. Add authority to accessed_addresses (as defined in EIP-2929.)
         authority.access_status = EVMC_ACCESS_WARM;
@@ -148,18 +191,55 @@ int64_t process_authorization_list(
         if (auth.nonce != authority.nonce)
             continue;
 
+        if (rev >= EVMC_AMSTERDAM)  // The state-dependent costs replace the refund (EIP-2780).
+        {
+            // TODO: Extract the 23 to global constant. Also use to check delegation (fuzzing).
+            static constexpr auto AUTHORIZATION_STATE_GAS = 23 * COST_PER_STATE_BYTE;
+            // TODO: Replace the linear search with a "written" account flag
+            //   or by processing the authorizations sorted by authority.
+            const auto already_applied = std::ranges::find(applied, &authority,
+                                             &AppliedAuthorization::authority) != applied.end();
+            // The first write to the authority: it is not the sender, not the value recipient
+            // (paid by TX_VALUE_COST) and not an already applied authority.
+            if (authority_addr != tx.sender && (tx.value == 0 || tx.to != authority_addr) &&
+                !already_applied)
+            {
+                if ((gas_left -= instr::ACCOUNT_WRITE) < 0)
+                    return std::nullopt;
+            }
+            // A new account and a net-new delegation indicator: no code at the transaction start
+            // and none set since. An applied authority is not empty because of its nonce bump.
+            assert(!authority.is_empty() || !authority.code_changed);
+            if (authority.code_hash == Account::EMPTY_CODE_HASH && !authority.code_changed)
+            {
+                int64_t state_gas_cost = 0;
+                // TODO: State knows the nonexistent → existent transition. Record it as a flag.
+                if (authority.is_empty())
+                    state_gas_cost += NEW_ACCOUNT_STATE_GAS;
+                if (!is_zero(auth.addr))
+                    state_gas_cost += AUTHORIZATION_STATE_GAS;
+                if (!state_gas.charge(gas_left, state_gas_cost))
+                    return std::nullopt;
+            }
+            assert(!authority.code_changed || already_applied);
+            applied.emplace_back(&authority,
+                authority.code_changed ? std::nullopt : std::optional{authority.code_hash});
+        }
         // 7. Add PER_EMPTY_ACCOUNT_COST - PER_AUTH_BASE_COST gas to the global refund counter
         // if authority exists in the trie.
         // Successful authorization validation makes an account non-empty.
         // We apply the refund only if the account has existed before.
         // We detect "exists in the trie" by inspecting _empty_ property (EIP-161) because _empty_
         // implies an account doesn't exist in the state (EIP-7523).
-        if (!authority.is_empty())
+        else if (!authority.is_empty())
         {
             static constexpr auto EXISTING_AUTHORITY_REFUND =
                 AUTHORIZATION_EMPTY_ACCOUNT_COST - AUTHORIZATION_BASE_COST;
             delegation_refund += EXISTING_AUTHORITY_REFUND;
         }
+
+        // 9. Increase the nonce of authority by one.
+        ++authority.nonce;
 
         // As a special case, if address is 0 do not write the designation.
         // Clear the account’s code and reset the account’s code hash to the empty hash.
@@ -187,14 +267,11 @@ int64_t process_authorization_list(
                 authority.code_hash = keccak256(designation);
             }
         }
-
-        // 9. Increase the nonce of authority by one.
-        ++authority.nonce;
     }
     return delegation_refund;
 }
 
-evmc_message build_message(const Transaction& tx, int64_t execution_gas_limit) noexcept
+evmc_message build_message(const Transaction& tx, const TransactionProperties& tx_props) noexcept
 {
     const auto recipient = tx.to.has_value() ? *tx.to : compute_create_address(tx.sender, tx.nonce);
 
@@ -202,7 +279,8 @@ evmc_message build_message(const Transaction& tx, int64_t execution_gas_limit) n
         .kind = tx.to.has_value() ? EVMC_CALL : EVMC_CREATE,
         .flags = 0,
         .depth = 0,
-        .gas = execution_gas_limit,
+        .gas = tx_props.execution_gas_limit,
+        .state_gas = tx_props.state_gas_limit,
         .recipient = recipient,
         .sender = tx.sender,
         .input_data = tx.data.data(),
@@ -213,6 +291,85 @@ evmc_message build_message(const Transaction& tx, int64_t execution_gas_limit) n
         .code_size = 0,
     };
 }
+
+/// Applies the authorizations (EIP-7702), resolves the delegation and calls the top-level message.
+[[nodiscard]] evmc::Result process_top_level(
+    State& state, Host& host, evmc_revision rev, const Transaction& tx, evmc_message msg)
+{
+    const auto state_gas_limit = msg.state_gas;
+    StateGas state_gas{{.left = state_gas_limit}};
+
+    std::vector<AppliedAuthorization> applied;
+    const auto delegation_refund =
+        process_authorization_list(state, tx, rev, msg.gas, state_gas, applied);
+
+    // The authorizations' state-gas (left and spilled) stays consumed even if the call fails
+    // (EIP-2780).
+    const auto auth_state_gas = state_gas;
+
+    // Resolves the delegation and, from Amsterdam, charges the recipient creation or the
+    // delegation target access. These are exclusive because a delegated recipient exists.
+    const auto prepare_call = [&] {
+        // Creating the recipient account costs state-gas, refilled if the call fails (EIP-8037).
+        if (!tx.to.has_value())
+            return rev < EVMC_AMSTERDAM || host.account_exists(msg.recipient) ||
+                   state_gas.charge(msg.gas, NEW_ACCOUNT_STATE_GAS);
+
+        const auto delegate = get_delegate_address(host, *tx.to);
+        if (!delegate.has_value())
+            return rev < EVMC_AMSTERDAM || tx.value == 0 || host.account_exists(*tx.to) ||
+                   state_gas.charge(msg.gas, NEW_ACCOUNT_STATE_GAS);
+
+        assert(host.account_exists(*tx.to));
+        msg.code_address = *delegate;
+        msg.flags |= EVMC_DELEGATED;
+        const auto warm = host.access_account(msg.code_address) == EVMC_ACCESS_WARM;
+        if (rev < EVMC_AMSTERDAM)
+            return true;
+        // The delegation target access (EIP-2780).
+        msg.gas -= warm ? instr::WARM_ACCESS : instr::COLD_ACCOUNT_ACCESS_AMSTERDAM;
+        return msg.gas >= 0;
+    };
+
+    if (!delegation_refund.has_value() || !prepare_call())
+    {
+        // Out of gas before the call: the execution-gas is consumed, the state-gas is returned
+        // and the authorizations are reverted (EIP-2780).
+        assert(rev >= EVMC_AMSTERDAM);
+        for (const auto& [authority, initial_code_hash] : applied)
+        {
+            --authority->nonce;
+            if (initial_code_hash.has_value())
+            {
+                authority->code_changed = false;
+
+                // Restore initial code hash. TODO: This is only needed for .is_empty() to work.
+                authority->code_hash = *initial_code_hash;
+            }
+        }
+        assert(
+            std::ranges::none_of(applied, [](const auto& a) { return a.authority->code_changed; }));
+        return evmc::Result{EVMC_OUT_OF_GAS, {.left = state_gas_limit}};
+    }
+
+    msg.state_gas = state_gas.left;
+    auto result = host.call(msg);
+    if (result.status_code == EVMC_SUCCESS)
+    {
+        result.state_gas.spilled += state_gas.spilled;
+    }
+    else
+    {
+        // Rollback state-gas costs.
+        assert(result.state_gas.left == msg.state_gas);
+        assert(result.state_gas.spilled == 0);
+        if (result.status_code == EVMC_REVERT)
+            result.gas_left += state_gas.spilled - auth_state_gas.spilled;
+        result.state_gas = auth_state_gas;
+    }
+    result.gas_refund += *delegation_refund;  // Kept even if the call fails (EIP-7702).
+    return result;
+}
 }  // namespace
 
 StateDiff State::build_diff(evmc_revision rev) const
@@ -221,8 +378,25 @@ StateDiff State::build_diff(evmc_revision rev) const
     diff.modified_accounts.reserve(m_modified.size());
     for (const auto& [addr, m] : m_modified)
     {
-        if (m.nonexistent)
+        if (rev >= EVMC_AMSTERDAM && m.loaded)
+        {
+            // Loading is reading (EIP-7928): warming doesn't load and rollback doesn't unload.
+            auto& keys = diff.reads.emplace_back(addr, std::vector<bytes32>{}).second;
+            for (const auto& [k, v] : m.storage)
+            {
+                if (v.loaded)
+                    keys.emplace_back(k);
+            }
+        }
+        if (!m.loaded || m.nonexistent)
+        {
+            // A not-loaded or nonexistent account holds no change.
+            assert(m.is_empty() && !m.destructed && !m.erase_if_empty && !m.just_created &&
+                   !m.code_changed);
+            assert(std::ranges::all_of(m.storage | std::views::values,
+                [](const auto& v) { return v.current == v.original; }));
             continue;
+        }
         if (m.destructed)
         {
             if (rev >= EVMC_AMSTERDAM && m.balance != 0)
@@ -247,9 +421,7 @@ StateDiff State::build_diff(evmc_revision rev) const
         // Unconditionally report nonce and balance as modified.
         // TODO: We don't have information if the balance/nonce has actually changed.
         //   One option is to just keep the original values. This may be handy for RPC.
-        // TODO(clang): In AppleClang 15 emplace_back without StateDiff::Entry doesn't compile.
-        //   NOLINTNEXTLINE(modernize-use-emplace)
-        auto& a = diff.modified_accounts.emplace_back(StateDiff::Entry{addr, m.nonce, m.balance});
+        auto& a = diff.modified_accounts.emplace_back(addr, m.nonce, m.balance);
 
         // Output only the new code.
         // TODO: Output also the code hash. It will be needed for DB update and MPT hash.
@@ -265,90 +437,109 @@ StateDiff State::build_diff(evmc_revision rev) const
     return diff;
 }
 
-Account& State::insert(const address& addr, Account account)
+std::pair<Account&, bool> State::get_or_create(const address& addr)
 {
-    assert(!account.nonexistent);  // No need to insert nonexistent accounts.
-    const auto [it, inserted] = m_modified.try_emplace(addr, std::move(account));
-    if (!inserted)
-    {
-        assert(it->second.nonexistent);  // Overwrite only nonexistent accounts.
-        it->second = std::move(account);
-    }
-    return it->second;
-}
-
-Account* State::find(const address& addr) noexcept
-{
-    // TODO: Avoid the double lookup (find+insert). Nonexistent accounts are still re-queried from
-    //   the initial state on every call; they could be cached as nonexistent nodes.
-    if (const auto it = m_modified.find(addr); it != m_modified.end())
-        return it->second.nonexistent ? nullptr : &it->second;
-    if (const auto cacc = m_initial.get_account(addr); cacc)
-        return &insert(addr, {.nonce = cacc->nonce,
-                                 .balance = cacc->balance,
-                                 .code_hash = cacc->code_hash,
-                                 .has_initial_storage = cacc->has_storage});
-    return nullptr;
+    auto& acc = get(addr);
+    if (!acc.nonexistent)
+        return {acc, false};
+    journal_account_flags(acc);
+    // The account is created in place: a nonexistent account holds nothing but the warm status
+    // and the warm storage slots, which must survive (EIP-2929).
+    acc.nonexistent = false;
+    return {acc, true};
 }
 
 Account& State::get(const address& addr) noexcept
 {
-    auto acc = find(addr);
-    assert(acc != nullptr);
-    return *acc;
-}
-
-Account& State::get_or_insert(const address& addr, Account account)
-{
-    if (const auto acc = find(addr); acc != nullptr)
-        return *acc;
-    return insert(addr, std::move(account));
-}
-
-bytes_view State::get_code(const address& addr)
-{
-    auto* a = find(addr);
-    if (a == nullptr)
-        return {};
-    if (a->code_hash == Account::EMPTY_CODE_HASH)
-        return {};
-    if (a->code.empty())
-        a->code = m_initial.get_account_code(addr);
-    return a->code;
-}
-
-Account& State::touch(const address& addr)
-{
-    auto& acc = get_or_insert(addr, {.erase_if_empty = true});
-    if (!acc.erase_if_empty && acc.is_empty())
+    auto& acc = access(addr);
+    if (!acc.loaded) [[unlikely]]
     {
-        journal_account_flags(addr, acc);
+        // Load the account from the initial state. A miss is cached as a nonexistent account,
+        // so the initial state is queried once per address rather than once per access.
+        assert(acc.is_empty() && !acc.nonexistent && !acc.destructed && !acc.erase_if_empty);
+        acc.loaded = true;
+        if (const auto cacc = m_initial.get_account(addr); cacc)
+        {
+            acc.nonce = cacc->nonce;
+            acc.balance = cacc->balance;
+            acc.code_hash = cacc->code_hash;
+            acc.has_initial_storage = cacc->has_storage;
+        }
+        else
+        {
+            acc.nonexistent = true;
+        }
+    }
+    // A nonexistent account is readable: its zero fields are what a missing account holds.
+    assert(!acc.nonexistent ||
+           (acc.is_empty() && !acc.erase_if_empty && !acc.just_created && !acc.code_changed));
+    return acc;
+}
+
+Account& State::get_or_insert(const address& addr)
+{
+    auto& acc = get(addr);
+    if (acc.nonexistent)
+    {
+        acc.nonexistent = false;
         acc.erase_if_empty = true;
     }
     return acc;
 }
 
+bytes_view State::get_code(const address& addr)
+{
+    // A nonexistent account has the empty code hash, so it needs no separate check.
+    auto& a = get(addr);
+    if (a.code_hash == Account::EMPTY_CODE_HASH)
+        return {};
+    if (a.code.empty())
+        a.code = m_initial.get_account_code(addr);
+    return a.code;
+}
+
+Account& State::touch(const address& addr)
+{
+    auto& acc = get(addr);
+    if (!acc.erase_if_empty && acc.is_empty())  // Also true for a nonexistent account.
+    {
+        journal_account_flags(acc);
+        acc.nonexistent = false;
+        acc.erase_if_empty = true;
+    }
+    return acc;
+}
+
+StorageValue& State::access_storage(const address& addr, const bytes32& key)
+{
+    return access(addr).storage[key];
+}
+
 StorageValue& State::get_storage(const address& addr, const bytes32& key)
 {
     // TODO: Avoid account lookup by giving the reference to the account's storage to Host.
-    auto& acc = get(addr);
-    const auto [it, missing] = acc.storage.try_emplace(key);
-    if (missing)
+    auto& acc = access(addr);
+    assert(acc.loaded);  // The storage of the executing account, loaded to run its code.
+    auto& slot = acc.storage[key];
+    if (!slot.loaded)
     {
-        const auto initial_value = m_initial.get_storage(addr, key);
-        it->second = {initial_value, initial_value};
+        // Load the value from the initial state. A slot only warmed keeps its access status.
+        slot.loaded = true;
+        slot.original = m_initial.get_storage(addr, key);
+        slot.current = slot.original;
     }
-    return it->second;
+    return slot;
 }
 
-void State::journal_balance_change(const address& addr, const intx::uint256& prev_balance)
+void State::journal_balance_change(Account& acc)
 {
-    m_journal.emplace_back(JournalBalanceChange{{addr}, prev_balance});
+    m_journal.emplace_back(JournalBalanceChange{{&acc}, acc.balance});
 }
 
 void State::journal_storage_change(StorageValue& slot)
 {
-    m_journal.emplace_back(JournalStorageChange{&slot, slot.current, slot.access_status});
+    m_journal.emplace_back(
+        JournalStorageChange{&slot, slot.current, slot.access_status, slot.loaded});
 }
 
 void State::journal_transient_storage_change(bytes32& slot)
@@ -356,61 +547,79 @@ void State::journal_transient_storage_change(bytes32& slot)
     m_journal.emplace_back(JournalTransientStorageChange{&slot, slot});
 }
 
-void State::journal_bump_nonce(const address& addr)
+void State::journal_bump_nonce(Account& acc)
 {
-    m_journal.emplace_back(JournalNonceBump{addr});
+    m_journal.emplace_back(JournalNonceBump{{&acc}});
 }
 
-void State::journal_create(const address& addr)
+void State::journal_create(Account& acc)
 {
-    m_journal.emplace_back(JournalCreate{{addr}});
+    m_journal.emplace_back(JournalCreate{{&acc}});
 }
 
-void State::journal_new_account(const address& addr)
-{
-    // Revert restores the account to "nonexistent". The other flags are irrelevant/default.
-    m_journal.emplace_back(JournalAccountFlags{{addr}, EVMC_ACCESS_COLD, true, false, false});
-}
-
-void State::journal_account_flags(const address& addr, const Account& acc)
+void State::journal_account_flags(Account& acc)
 {
     m_journal.emplace_back(JournalAccountFlags{
-        {addr}, acc.access_status, acc.nonexistent, acc.destructed, acc.erase_if_empty});
+        {&acc}, acc.access_status, acc.nonexistent, acc.destructed, acc.erase_if_empty});
 }
+
+namespace
+{
+/// Resets the account value fields and flags set by a create. The balance and the storage are
+/// restored by their own journal entries, which are always replayed first.
+void clear_value(Account& a) noexcept
+{
+    a.nonce = 0;
+    a.code_hash = Account::EMPTY_CODE_HASH;
+    a.code.clear();
+    a.just_created = false;
+    a.code_changed = false;
+}
+}  // namespace
 
 void State::rollback(size_t checkpoint)
 {
-    while (m_journal.size() != checkpoint)
+    assert(checkpoint <= m_journal.size());
+    for (const auto& entry : m_journal | std::views::drop(checkpoint) | std::views::reverse)
     {
         std::visit(
-            [this](const auto& e) {
+            [](const auto& e) {
                 using T = std::decay_t<decltype(e)>;
                 if constexpr (std::is_same_v<T, JournalNonceBump>)
                 {
-                    get(e.addr).nonce -= 1;
+                    auto& a = *e.acc;
+                    assert(!a.nonexistent);  // Replayed before the flags entry un-creating it.
+                    a.nonce -= 1;
                 }
                 else if constexpr (std::is_same_v<T, JournalAccountFlags>)
                 {
-                    auto& a = get(e.addr);
+                    auto& a = *e.acc;
                     a.access_status = e.access_status;
-                    a.nonexistent = e.nonexistent;
                     a.destructed = e.destructed;
                     a.erase_if_empty = e.erase_if_empty;
-                    // TODO: On restoring nonexistent (un-created create) the node keeps its
-                    //   code/storage/transient buffers until tx end; could clear them here.
+                    if (e.nonexistent)
+                    {
+                        // An account which did not exist holds nothing. Only the non-existence
+                        // is restored: the existence is set by journaled creation or by loading.
+                        a.nonexistent = true;
+                        assert(a.balance == 0);  // Restored by the balance entries replayed first.
+                        clear_value(a);
+                    }
                 }
                 else if constexpr (std::is_same_v<T, JournalCreate>)
                 {
                     // Revert a create over a pre-existing account.
                     // TODO: Why this account is not always "touched"?
-                    auto& a = get(e.addr);
-                    a.nonce = 0;
-                    a.code_hash = Account::EMPTY_CODE_HASH;
-                    a.code.clear();
+                    auto& a = *e.acc;
+                    assert(!a.nonexistent);
+                    clear_value(a);
                 }
                 else if constexpr (std::is_same_v<T, JournalStorageChange>)
                 {
-                    e.slot->current = e.prev_value;
+                    if (e.prev_loaded)
+                        e.slot->current = e.prev_value;
+                    else  // Warmed before loading: any later value change is already reverted.
+                        assert(e.slot->current == e.slot->original);
                     e.slot->access_status = e.prev_access_status;
                 }
                 else if constexpr (std::is_same_v<T, JournalTransientStorageChange>)
@@ -419,7 +628,9 @@ void State::rollback(size_t checkpoint)
                 }
                 else if constexpr (std::is_same_v<T, JournalBalanceChange>)
                 {
-                    get(e.addr).balance = e.prev_balance;
+                    auto& a = *e.acc;
+                    assert(!a.nonexistent);  // Replayed before the flags entry un-creating it.
+                    a.balance = e.prev_balance;
                 }
                 else
                 {
@@ -427,16 +638,16 @@ void State::rollback(size_t checkpoint)
                     static_assert(std::is_void_v<T>, "unhandled journal entry type");
                 }
             },
-            m_journal.back());
-        m_journal.pop_back();
+            entry);
     }
+    m_journal.resize(checkpoint);
 }
 
-/// Validates transaction and computes its execution gas limit (the amount of gas provided to EVM).
-/// @return  Execution gas limit or transaction validation error.
+/// Validates transaction and computes the gas limits it provides to the EVM.
+/// @return  The transaction's computed gas properties or a validation error.
 std::variant<TransactionProperties, std::error_code> validate_transaction(
     const StateView& state_view, const BlockInfo& block, const Transaction& tx, evmc_revision rev,
-    int64_t block_gas_left, int64_t blob_gas_left) noexcept
+    int64_t block_gas_left, int64_t block_state_gas_left, int64_t blob_gas_left) noexcept
 {
     if (tx.chain_id_protected() && tx.chain_id != block.chain_id)
         return make_error_code(INVALID_CHAIN_ID);
@@ -497,11 +708,25 @@ std::variant<TransactionProperties, std::error_code> validate_transaction(
 
     assert(tx.max_priority_gas_price <= tx.max_gas_price);
 
-    if (rev >= EVMC_OSAKA && tx.gas_limit > MAX_TX_GAS_LIMIT)
+    if (rev == EVMC_OSAKA && tx.gas_limit > MAX_TX_GAS_LIMIT)
         return make_error_code(GAS_LIMIT_EXCEEDS_MAXIMUM);
 
-    if (tx.gas_limit > block_gas_left)
-        return make_error_code(GAS_ALLOWANCE_EXCEEDED);
+    if (rev >= EVMC_AMSTERDAM && tx.gas_limit > int64_t{MAX_TX_TOTAL_GAS_LIMIT})
+        return make_error_code(GAS_LIMIT_EXCEEDS_MAXIMUM);
+
+    if (rev < EVMC_AMSTERDAM)
+    {
+        if (tx.gas_limit > block_gas_left)
+            return make_error_code(GAS_ALLOWANCE_EXCEEDED);
+    }
+    else
+    {
+        // Check gas limits in both dimensions.
+        if (std::min(tx.gas_limit, int64_t{MAX_TX_GAS_LIMIT}) > block_gas_left)
+            return make_error_code(GAS_ALLOWANCE_EXCEEDED);
+        if (tx.gas_limit > block_state_gas_left)
+            return make_error_code(GAS_ALLOWANCE_EXCEEDED);
+    }
 
     if (tx.max_gas_price < block.base_fee)
         return make_error_code(INSUFFICIENT_MAX_FEE_PER_GAS);
@@ -537,20 +762,22 @@ std::variant<TransactionProperties, std::error_code> validate_transaction(
     max_total_fee += tx.value;
 
     if (tx.type == Transaction::Type::blob)
-    {
-        const auto total_blob_gas = tx.blob_gas_used();
-        // FIXME: Can overflow uint256.
-        max_total_fee += total_blob_gas * tx.max_blob_gas_price;
-    }
+        max_total_fee += umul(uint256{tx.blob_gas_used()}, tx.max_blob_gas_price);
     if (sender_acc.balance < max_total_fee)
         return make_error_code(INSUFFICIENT_ACCOUNT_FUNDS);
 
     const auto [intrinsic_cost, min_cost] = compute_tx_intrinsic_cost(rev, tx);
-    if (tx.gas_limit < std::max(intrinsic_cost, min_cost))
+
+    // The transaction state-gas limit is all above the cap constant (EIP-8037).
+    const auto state_gas_limit =
+        rev >= EVMC_AMSTERDAM ? std::max(tx.gas_limit - MAX_TX_GAS_LIMIT, int64_t{0}) : 0;
+
+    // Transaction gas limit with state-gas limit excluded must cover intrinsic and min cost.
+    if (tx.gas_limit - state_gas_limit < std::max(intrinsic_cost, min_cost))
         return make_error_code(INTRINSIC_GAS_TOO_LOW);
 
-    const auto execution_gas_limit = tx.gas_limit - intrinsic_cost;
-    return TransactionProperties{execution_gas_limit, min_cost};
+    const auto execution_gas_limit = tx.gas_limit - intrinsic_cost - state_gas_limit;
+    return TransactionProperties{execution_gas_limit, state_gas_limit, min_cost};
 }
 
 StateDiff finalize(const StateView& state_view, evmc_revision rev, const address& coinbase,
@@ -590,9 +817,6 @@ TransactionReceipt transition(const StateView& state_view, const BlockInfo& bloc
     assert(sender_acc.nonce < MAX_NONCE);  // Required for valid tx.
     ++sender_acc.nonce;                    // Bump sender nonce.
 
-    const auto delegation_refund =
-        process_authorization_list(state, tx.chain_id, tx.authorization_list);
-
     const auto base_fee = (rev >= EVMC_LONDON) ? block.base_fee : 0;
     assert(tx.max_gas_price >= base_fee);                   // Required for valid tx.
     assert(tx.max_gas_price >= tx.max_priority_gas_price);  // Required for valid tx.
@@ -618,7 +842,7 @@ TransactionReceipt transition(const StateView& state_view, const BlockInfo& bloc
 
     Host host{rev, vm, state, block, block_hashes, tx};
 
-    auto message = build_message(tx, tx_props.execution_gas_limit);
+    const auto message = build_message(tx, tx_props);
 
     sender_acc.access_status = EVMC_ACCESS_WARM;  // Sender is always warm.
     host.access_account(message.recipient);  // Recipient (incl. create address) is always warm.
@@ -628,47 +852,48 @@ TransactionReceipt transition(const StateView& state_view, const BlockInfo& bloc
         if (is_precompile(rev, a))  // Precompile storage is never accessed.
             continue;
         for (const auto& key : storage_keys)
-            state.get_storage(a, key).access_status = EVMC_ACCESS_WARM;
+            state.access_storage(a, key).access_status = EVMC_ACCESS_WARM;
     }
     // EIP-3651: Warm COINBASE.
-    // This may create an empty coinbase account. The account cannot be created unconditionally
-    // because this breaks old revisions.
     if (rev >= EVMC_SHANGHAI)
         host.access_account(block.coinbase);
 
-    if (tx.to.has_value())
-    {
-        if (const auto delegate = get_delegate_address(host, *tx.to))
-        {
-            message.code_address = *delegate;
-            message.flags |= EVMC_DELEGATED;
-            host.access_account(message.code_address);
-        }
-    }
+    const auto result = process_top_level(state, host, rev, tx, message);
 
-    const auto result = host.call(message);
+    const auto gas_used_b4_refund = tx.gas_limit - result.gas_left - result.state_gas.left;
 
-    const auto gas_used_b4_refund = tx.gas_limit - result.gas_left;
-
-    const auto max_refund_quotient = rev >= EVMC_LONDON ? 5 : 2;
-    const auto refund_limit = gas_used_b4_refund / max_refund_quotient;
-    const auto refund = std::min(delegation_refund + result.gas_refund, refund_limit);
+    const auto refund_limit = rev >= EVMC_LONDON ? gas_used_b4_refund / 5 : gas_used_b4_refund / 2;
+    const auto refund = std::min(result.gas_refund, refund_limit);
     auto gas_used = gas_used_b4_refund - refund;
-    assert(gas_used > 0);
+    assert(gas_used > 0);  // The refund is capped at a fraction of the gas used.
 
     // The gas used by the transaction must be at least the min_gas_cost (EIP-7623).
     gas_used = std::max(gas_used, tx_props.min_gas_cost);
 
-    // For block gas accounting, compute the gas refund capped by the min gas cost (EIP-7778).
-    const auto block_gas_used = std::max(gas_used_b4_refund, tx_props.min_gas_cost);
-    const auto gas_refund = block_gas_used - gas_used;
+    const auto state_gas_used =
+        tx_props.state_gas_limit - result.state_gas.left + result.state_gas.spilled;
+    assert(state_gas_used >= 0);
+
+    // For block gas accounting, exclude refunds and enforce the min gas cost, raised by the
+    // state gas so state-gas spending cannot discount it (EIP-7778, EIP-8037).
+    const auto block_gas_used =
+        (rev >= EVMC_AMSTERDAM) ?
+            std::max(gas_used_b4_refund, tx_props.min_gas_cost + state_gas_used) :
+            gas_used;
 
     sender_acc.balance += tx_max_cost - gas_used * effective_gas_price;
     state.touch(block.coinbase).balance += gas_used * priority_gas_price;
 
     // Cumulative gas used is unknown in this scope.
-    TransactionReceipt receipt{tx.type, result.status_code, gas_used, gas_refund, {},
-        host.take_logs(), {}, state.build_diff(rev)};
+    TransactionReceipt receipt{
+        .type = tx.type,
+        .status = result.status_code,
+        .gas_used = gas_used,
+        .block_gas_used = block_gas_used,
+        .state_gas_used = state_gas_used,
+        .logs = host.take_logs(),
+        .state_diff = state.build_diff(rev),
+    };
 
     // Cannot put it into constructor call because logs are std::moved from host instance.
     receipt.logs_bloom_filter = compute_bloom_filter(receipt.logs);

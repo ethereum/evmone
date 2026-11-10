@@ -4,6 +4,7 @@
 #pragma once
 
 #include <evmc/evmc.hpp>
+#include <test/state/bal.hpp>
 #include <test/state/bloom_filter.hpp>
 #include <test/state/requests.hpp>
 #include <test/state/transaction.hpp>
@@ -56,11 +57,12 @@ struct TransitionResult
     state::BloomFilter bloom;   ///< Logs bloom over all accepted transactions.
     int64_t blob_gas_left = 0;  ///< Blob gas remaining out of the budget passed in.
     TestState block_state;      ///< State after applying the block.
+    state::BlockAccessList block_access_list;  ///< Empty before Amsterdam (EIP-7928).
 };
 
 /// Applies a block of transactions to a copy of @p state: block-start system call, the
-/// transactions, request collection, block-end system call, and finalization. The system calls
-/// and request collection are skipped when `opts.skip_system_calls` is set.
+/// transactions, finalization (incl. the withdrawals), request collection and block-end system
+/// call. The system calls and request collection are skipped when `opts.skip_system_calls` is set.
 ///
 /// Shared block-transition core for the blockchain test runner and the t8n tool. It performs
 /// no validation/assertions and produces no output; callers interpret the returned result.
