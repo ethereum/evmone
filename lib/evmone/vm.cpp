@@ -90,6 +90,40 @@ ExecutionState& VM::get_execution_state(size_t depth) noexcept
     return m_execution_states[depth];
 }
 
+std::shared_ptr<baseline::CodeAnalysis> CodeCache::get(const evmc::bytes32& code_hash)
+{
+    const auto it = map_.find(code_hash);
+    if (it == map_.end())
+        return nullptr;
+    lru_list_.splice(lru_list_.begin(), lru_list_, it->second);
+    return it->second->second;
+}
+
+void CodeCache::put(const evmc::bytes32& code_hash, std::shared_ptr<baseline::CodeAnalysis> code)
+{
+    auto it = map_.find(code_hash);
+    lru_list_.emplace_front(code_hash, std::move(code));
+    if (it != map_.end())
+    {
+        lru_list_.erase(it->second);
+        map_.erase(it);
+    }
+    map_[code_hash] = lru_list_.begin();
+
+    if (map_.size() > SIZE)
+    {
+        auto last = lru_list_.end();
+        --last;
+        map_.erase(last->first);
+        lru_list_.pop_back();
+    }
+}
+
+bool VM::has_cached_execution() const noexcept
+{
+    return execute == static_cast<decltype(execute)>(baseline::execute);
+}
+
 }  // namespace evmone
 
 extern "C" {
