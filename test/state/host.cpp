@@ -7,6 +7,7 @@
 #include "system_contracts.hpp"
 #include <evmone/constants.hpp>
 #include <evmone/state_gas.hpp>
+#include <evmone/vm.hpp>
 
 namespace evmone::state
 {
@@ -302,11 +303,19 @@ evmc::Result Host::execute_message(const evmc_message& msg) noexcept
     if ((msg.flags & EVMC_DELEGATED) == 0 && is_precompile(m_rev, msg.code_address))
         return call_precompile(m_rev, msg);
 
-    // TODO: get_code() performs the account lookup. Add a way to get an account with code?
-    const auto code = m_state.get_code(msg.code_address);
-    if (code.empty())  // Skip trivial execution.
+    // A nonexistent account has the empty code hash, so it needs no separate check.
+    const auto& code_acc = m_state.get(msg.code_address);
+    if (code_acc.code_hash == Account::EMPTY_CODE_HASH)  // Skip trivial execution.
         return evmc::Result{EVMC_SUCCESS, msg.gas, 0, {.left = msg.state_gas}};
 
+    auto* const vm = static_cast<VM*>(m_vm.get_raw_pointer());
+    if (vm->has_cached_execution())
+    {
+        return vm->execute_cached_code(*this, m_rev, msg, code_acc.code_hash,
+            [this](const address& addr) { return m_state.get_code(addr); });
+    }
+
+    const auto code = m_state.get_code(msg.code_address);
     return m_vm.execute(*this, m_rev, msg, code.data(), code.size());
 }
 
